@@ -1,0 +1,42 @@
+# Docker
+docker-compose.override.yml
+.env.docker
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Database
+*.sqlite
+*.db
+
+# PostgreSQL
+pg_data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Node modules (if any at root level)
+node_modules/
+
+# Environment files (keep .env.example)
+.env
+!.env.example

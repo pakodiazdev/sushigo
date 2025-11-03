@@ -1,0 +1,22 @@
+{
+    // Configuración de saltos de línea
+    "files.eol": "\n",
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    // Explorador
+    "explorer.autoReveal": true,
+    "explorer.compactFolders": false,
+    // Iconos
+    "material-icon-theme.activeIconPack": "react",
+    "workbench.iconTheme": "material-icon-theme",
+    // EditorConfig
+    "editorconfig.enable": true,
+    // Git
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    // Editor
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit"
+    }
+}
