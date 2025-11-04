@@ -1,26 +1,26 @@
 # API Project Rules & Conventions
 
-Reglas y convenciones establecidas para el proyecto sushigo-api.
+Rules and conventions established for the sushigo-api project.
 
-## 📋 Tabla de Contenidos
+## 📋 Table of Contents
 
-- [Documentación](#documentación)
-- [Código](#código)
-- [Estructura de Archivos](#estructura-de-archivos)
+- [Documentation](#documentation)
+- [Code](#code)
+- [File Structure](#file-structure)
 - [Seeders](#seeders)
 - [Swagger/OpenAPI](#swaggeropenapi)
-- [Configuración](#configuración)
+- [Configuration](#configuration)
 
 ---
 
-## 📚 Documentación
+## 📚 Documentation
 
 ### PHPDoc
 
-**❌ NO usar PHPDoc cuando el tipado de PHP es suficiente:**
+**❌ DO NOT use PHPDoc when PHP typing is sufficient:**
 
 ```php
-// ❌ MAL - PHPDoc redundante
+// ❌ BAD - Redundant PHPDoc
 /**
  * Get the user's name.
  * @return string
@@ -30,17 +30,17 @@ public function getName(): string
     return $this->name;
 }
 
-// ✅ BIEN - Tipado fuerte sin PHPDoc
+// ✅ GOOD - Strong typing without PHPDoc
 public function getName(): string
 {
     return $this->name;
 }
 ```
 
-**✅ USAR PHPDoc solo cuando agregue valor:**
+**✅ USE PHPDoc only when it adds value:**
 
 ```php
-// ✅ BIEN - Documenta lógica compleja o contexto de negocio
+// ✅ GOOD - Documents complex logic or business context
 /**
  * Calculate user discount based on loyalty points and purchase history.
  * Applies tier-based discounts: Bronze (5%), Silver (10%), Gold (15%)
@@ -51,66 +51,66 @@ public function calculateDiscount(User $user): float
 }
 ```
 
-### Propiedades de Clase
+### Class Properties
 
-**Usar tipado fuerte en lugar de anotaciones:**
+**Use strong typing instead of annotations:**
 
 ```php
-// ❌ MAL
+// ❌ BAD
 /**
  * @var string
  */
 protected $signature = 'command:name';
 
-// ✅ BIEN
+// ✅ GOOD
 protected string $signature = 'command:name';
 
-// ⚠️ ACEPTABLE - Cuando no se puede tipar directamente
+// ⚠️ ACCEPTABLE - When direct typing is not possible
 protected $fillable = ['name', 'email'];
 protected $casts = ['is_active' => 'boolean'];
 ```
 
-### Comentarios Inline
+### Inline Comments
 
-**Evitar comentarios obvios o superfluos:**
+**Avoid obvious or superfluous comments:**
 
 ```php
-// ❌ MAL - Comentarios que repiten el código
+// ❌ BAD - Comments that repeat the code
 // Create roles
 $roles = ['admin', 'user'];
 
 // Assign permissions
 $role->syncPermissions($permissions);
 
-// ✅ BIEN - Sin comentarios superfluos
+// ✅ GOOD - No superfluous comments
 $roles = ['admin', 'user'];
 $role->syncPermissions($permissions);
 
-// ✅ BIEN - Comentario que agrega contexto
+// ✅ GOOD - Comment adds context
 // Prevent race condition when multiple workers process the same job
 $this->lock()->get();
 ```
 
 ---
 
-## 💻 Código
+## 💻 Code
 
-### Tipado
+### Typing
 
-**Siempre usar tipado fuerte en PHP 8.2:**
+**Always use strong typing in PHP 8.2:**
 
 ```php
-// ✅ Parámetros y retornos tipados
+// ✅ Typed parameters and returns
 public function createUser(string $name, string $email): User
 {
     return User::create(['name' => $name, 'email' => $email]);
 }
 
-// ✅ Propiedades tipadas
+// ✅ Typed properties
 protected string $table = 'users';
 protected array $fillable = ['name', 'email'];
 
-// ✅ Tipos nullable explícitos
+// ✅ Explicit nullable types
 public function findUser(?int $id): ?User
 {
     return $id ? User::find($id) : null;
@@ -120,29 +120,29 @@ public function findUser(?int $id): ?User
 ### Laravel Best Practices
 
 ```php
-// ✅ Usar updateOrCreate para evitar duplicados
+// ✅ Use updateOrCreate to avoid duplicates
 Role::updateOrCreate(
     ['name' => $roleName, 'guard_name' => 'api'],
     ['description' => 'Role description']
 );
 
-// ✅ Usar métodos descriptivos
+// ✅ Use descriptive methods
 public function isAdmin(): bool
 {
     return $this->hasRole('admin');
 }
 
-// ✅ Evitar lógica de negocio en controladores
-// Usar Services, Actions o Domain Logic
+// ✅ Avoid business logic in controllers
+// Use Services, Actions or Domain Logic
 ```
 
 ---
 
-## 📁 Estructura de Archivos
+## 📁 File Structure
 
 ### Responses vs Resources
 
-**Entity Responses (Solo para Swagger/OpenAPI):**
+**Entity Responses (Swagger/OpenAPI Only):**
 
 ```
 app/Http/Responses/Entities/
@@ -151,7 +151,7 @@ app/Http/Responses/Entities/
 └── PermissionResponse.php
 ```
 
-Estas clases son **solo para documentación** de Swagger, no contienen lógica:
+These classes are **documentation only** for Swagger, contain no logic:
 
 ```php
 /**
@@ -174,7 +174,7 @@ class UserResponse
 }
 ```
 
-**Resources (Para transformar datos):**
+**Resources (Transform Data):**
 
 ```
 app/Http/Resources/
@@ -183,7 +183,7 @@ app/Http/Resources/
 └── RoleResource.php
 ```
 
-Estas clases transforman modelos a JSON:
+These classes transform models to JSON:
 
 ```php
 class UserResource extends JsonResource
@@ -205,7 +205,7 @@ class UserResource extends JsonResource
 ✅ Controllers: UserController, AuthController
 ✅ Models: User, Role, Permission
 ✅ Seeders: UserSeeder, RoleSeeder
-✅ Commands: SeederLock, SeederUnlock (sin sufijo Command)
+✅ Commands: SeederLock, SeederUnlock (no Command suffix)
 ✅ Responses: UserResponse, RoleResponse
 ✅ Resources: UserResource, UserCollection
 ```
@@ -214,53 +214,53 @@ class UserResource extends JsonResource
 
 ## 🌱 Seeders
 
-### Sistema de Base Classes
+### Base Classes System
 
-**Usar las clases base según el propósito:**
+**Use base classes according to purpose:**
 
 ```php
-// 🔒 LockedSeeder - Datos críticos que se bloquean
+// 🔒 LockedSeeder - Critical data that gets locked
 class RoleSeeder extends LockedSeeder
 {
     public function run(): void
     {
-        // Se ejecuta UNA vez y se BLOQUEA automáticamente
+        // Runs ONCE and LOCKS automatically
         Role::updateOrCreate(['name' => 'admin'], ['guard_name' => 'api']);
     }
 }
 
-// ✓ OnceSeeder - Datos iniciales que no se bloquean
+// ✓ OnceSeeder - Initial data that doesn't lock
 class UserSeeder extends OnceSeeder
 {
     public function run(): void
     {
-        // Se ejecuta UNA vez pero NO se bloquea
+        // Runs ONCE but does NOT lock
         User::factory(10)->create();
     }
 }
 
-// 🔄 RepeatableSeeder - Datos dinámicos
+// 🔄 RepeatableSeeder - Dynamic data
 class CacheSeeder extends RepeatableSeeder
 {
     public function run(): void
     {
-        // Se ejecuta SIEMPRE
+        // Runs ALWAYS
         Cache::flush();
     }
 }
 ```
 
-### Guía de Selección
+### Selection Guide
 
 ```
-¿Modifica estructura del sistema? (Roles, Permisos, Config)
-└─ Usa LockedSeeder 🔒
+Does it modify system structure? (Roles, Permissions, Config)
+└─ Use LockedSeeder 🔒
 
-¿Crea datos iniciales importantes? (Users, Categorías)
-└─ Usa OnceSeeder ✓
+Does it create important initial data? (Users, Categories)
+└─ Use OnceSeeder ✓
 
-¿Actualiza datos dinámicos? (Stock, Cache, Sync)
-└─ Usa RepeatableSeeder 🔄
+Does it update dynamic data? (Stock, Cache, Sync)
+└─ Use RepeatableSeeder 🔄
 ```
 
 ### Best Practices
@@ -287,13 +287,13 @@ class UserSeeder extends OnceSeeder
 {
     public function run(): void
     {
-        // No usar datos hardcodeados sensibles
+        // Don't use hardcoded sensitive data
         User::create([
             'email' => 'admin@example.com',
             'password' => 'password123', // ❌
         ]);
 
-        // No mezclar lógica de negocio
+        // Don't mix business logic
         $user = User::first();
         $user->sendWelcomeEmail(); // ❌
     }
@@ -304,9 +304,9 @@ class UserSeeder extends OnceSeeder
 
 ## 📖 Swagger/OpenAPI
 
-### Configuración de URLs
+### URL Configuration
 
-**Usar variables de entorno:**
+**Use environment variables:**
 
 ```php
 // config/l5-swagger.php
@@ -325,7 +325,7 @@ API_URL=http://localhost:8080
 
 ### Entity Responses
 
-**Documentar en carpeta dedicada:**
+**Document in dedicated folder:**
 
 ```php
 namespace App\Http\Responses\Entities;
@@ -373,22 +373,22 @@ public function show(int $id): JsonResponse
 
 ### UI Customizations
 
-**Ajustes de interfaz en `resources/views/vendor/l5-swagger/index.blade.php`:**
+**Interface adjustments in `resources/views/vendor/l5-swagger/index.blade.php`:**
 
 ```css
-/* Posición del botón de login */
+/* Login button position */
 .custom-login-button {
-    top: 70px; /* Evitar solapamiento con selector de definiciones */
+    top: 70px; /* Avoid overlap with definition selector */
 }
 ```
 
 ---
 
-## ⚙️ Configuración
+## ⚙️ Configuration
 
-### Archivos de Configuración
+### Configuration Files
 
-**Centralizar configuraciones:**
+**Centralize configurations:**
 
 ```php
 // config/seeders.php
@@ -410,9 +410,9 @@ return [
 ];
 ```
 
-### Variables de Entorno
+### Environment Variables
 
-**Variables obligatorias:**
+**Required variables:**
 
 ```bash
 # .env
@@ -442,13 +442,13 @@ PASSPORT_PUBLIC_KEY=...
 
 ## 🐳 Docker
 
-### Estructura
+### Structure
 
 ```
 docker/
 ├── dev/
 │   ├── Dockerfile
-│   └── config/          # ✅ CORRECTO (no "cofig")
+│   └── config/          # ✅ CORRECT (not "cofig")
 │       ├── dev/
 │       │   └── init.sh
 │       └── prod/
@@ -457,44 +457,44 @@ docker/
 
 ### Init Script
 
-**El script `init.sh` debe:**
+**The `init.sh` script should:**
 
 ```bash
 #!/bin/bash
 
-# 1. Aplicar migraciones
+# 1. Apply migrations
 php artisan migrate --force
 
-# 2. Ejecutar seeders (respeta locks)
+# 2. Run seeders (respects locks)
 php artisan db:seed --force
 
-# 3. Mostrar estado de seeders
+# 3. Show seeder status
 php artisan seeder:status
 
-# 4. Generar documentación Swagger
+# 4. Generate Swagger documentation
 php artisan l5-swagger:generate
 ```
 
 ---
 
-## 📊 Comandos Artisan Disponibles
+## 📊 Available Artisan Commands
 
 ### Seeders
 
 ```bash
-# Información general
+# General information
 php artisan seeders:info
 
-# Estado de ejecución
+# Execution status
 php artisan seeder:status
 php artisan seeder:status --environment=production
 
-# Bloquear/Desbloquear
+# Lock/Unlock
 php artisan seeder:lock RoleSeeder --notes="Critical data"
 php artisan seeder:unlock UserSeeder
 php artisan seeder:unlock --all
 
-# Ejecutar seeders
+# Run seeders
 php artisan db:seed
 php artisan db:seed --class=Database\\Seeders\\Development\\UserSeeder
 php artisan migrate:fresh --seed
@@ -503,53 +503,53 @@ php artisan migrate:fresh --seed
 ### Swagger
 
 ```bash
-# Generar documentación
+# Generate documentation
 php artisan l5-swagger:generate
 
-# Ver documentación
+# View documentation
 # http://localhost:8080/api/documentation
 ```
 
 ---
 
-## ✅ Checklist para Nuevas Features
+## ✅ New Features Checklist
 
-### Antes de Commit
+### Before Commit
 
-- [ ] Eliminar PHPDoc innecesario (usar tipado fuerte)
-- [ ] Eliminar comentarios superfluos
-- [ ] Usar `updateOrCreate` en seeders para evitar duplicados
-- [ ] Configurar seeders con clase base apropiada (Locked/Once/Repeatable)
-- [ ] Documentar endpoints en Swagger si es API pública
-- [ ] Usar Entity Responses para schemas de Swagger
-- [ ] Configuración en archivos `.php`, no hardcodeada
-- [ ] Variables sensibles en `.env`
+- [ ] Remove unnecessary PHPDoc (use strong typing)
+- [ ] Remove superfluous comments
+- [ ] Use `updateOrCreate` in seeders to avoid duplicates
+- [ ] Configure seeders with appropriate base class (Locked/Once/Repeatable)
+- [ ] Document endpoints in Swagger if public API
+- [ ] Use Entity Responses for Swagger schemas
+- [ ] Configuration in `.php` files, not hardcoded
+- [ ] Sensitive variables in `.env`
 
 ### Testing
 
-- [ ] Probar seeders: `php artisan migrate:fresh --seed`
-- [ ] Verificar locks: `php artisan seeder:status`
-- [ ] Generar Swagger: `php artisan l5-swagger:generate`
-- [ ] Verificar tipos con análisis estático (si aplica)
+- [ ] Test seeders: `php artisan migrate:fresh --seed`
+- [ ] Verify locks: `php artisan seeder:status`
+- [ ] Generate Swagger: `php artisan l5-swagger:generate`
+- [ ] Verify types with static analysis (if applicable)
 
 ---
 
 ## 🚫 Anti-Patterns
 
-### Evitar
+### Avoid
 
 ```php
-// ❌ PHPDoc redundante con tipado
+// ❌ Redundant PHPDoc with typing
 /**
  * @var string
  */
 protected $name;
 
-// ❌ Comentarios obvios
+// ❌ Obvious comments
 // Get all users
 $users = User::all();
 
-// ❌ Lógica de negocio en controllers
+// ❌ Business logic in controllers
 public function store(Request $request)
 {
     $user = new User();
@@ -559,11 +559,11 @@ public function store(Request $request)
     $user->save();
 }
 
-// ❌ Datos sensibles hardcodeados
+// ❌ Hardcoded sensitive data
 $password = 'admin123'; // ❌
 
-// ❌ Seeders sin tracking
-class RoleSeeder extends Seeder // ❌ Usar base classes
+// ❌ Seeders without tracking
+class RoleSeeder extends Seeder // ❌ Use base classes
 {
     public function run(): void
     {
@@ -572,25 +572,25 @@ class RoleSeeder extends Seeder // ❌ Usar base classes
 }
 ```
 
-### Preferir
+### Prefer
 
 ```php
-// ✅ Tipado fuerte sin PHPDoc
+// ✅ Strong typing without PHPDoc
 protected string $name;
 
-// ✅ Código auto-explicativo
+// ✅ Self-explanatory code
 $users = User::all();
 
-// ✅ Lógica en Services/Actions
+// ✅ Logic in Services/Actions
 public function store(StoreUserRequest $request)
 {
     return $this->userService->createUser($request->validated());
 }
 
-// ✅ Configuración en archivos
+// ✅ Configuration in files
 $users = config('seeders.development_users');
 
-// ✅ Seeders con tracking
+// ✅ Seeders with tracking
 class RoleSeeder extends LockedSeeder
 {
     public function run(): void
@@ -602,9 +602,9 @@ class RoleSeeder extends LockedSeeder
 
 ---
 
-## 📚 Referencias
+## 📚 References
 
-- Documentación Laravel: https://laravel.com/docs
+- Laravel Documentation: https://laravel.com/docs
 - PSR-12 Coding Standard: https://www.php-fig.org/psr/psr-12/
 - OpenAPI Specification: https://swagger.io/specification/
 - Laravel Spatie Permissions: https://spatie.be/docs/laravel-permission
@@ -612,6 +612,6 @@ class RoleSeeder extends LockedSeeder
 
 ---
 
-**Última actualización:** Noviembre 4, 2025
-**Versión:** 1.0
-**Proyecto:** sushigo-api (Laravel 12.x + PHP 8.2)
+**Last updated:** November 4, 2025
+**Version:** 1.0
+**Project:** sushigo-api (Laravel 12.x + PHP 8.2)
