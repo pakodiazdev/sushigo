@@ -31,10 +31,10 @@ RUN npm install -g yarn
 RUN a2enmod rewrite headers
 
 # Copy Supervisor configuration
-COPY docker/dev/cofig/dev/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/dev/config/dev/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy initialization script
-COPY docker/dev/cofig/dev/init.sh /usr/local/bin/init.sh
+COPY docker/dev/config/dev/init.sh /usr/local/bin/init.sh
 RUN chmod +x /usr/local/bin/init.sh
 
 # Set working directory

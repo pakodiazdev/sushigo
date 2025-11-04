@@ -2,7 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use Database\Seeders\Development\DevelopmentSeeder;
+use Database\Seeders\Production\ProductionSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -10,16 +11,21 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $environment = app()->environment();
+        $environments = config('seeders.environments', []);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $this->command->info("🌱 Running seeders for environment: {$environment}");
+
+        if (isset($environments[$environment])) {
+            $seederClass = $environments[$environment];
+            $this->call($seederClass);
+        } else {
+            $this->command->warn("⚠️  No specific seeder configured for environment: {$environment}");
+            $this->command->warn("⚠️  Add seeder in config/seeders.php");
+        }
+
+        $this->command->info("✅ Seeding completed for environment: {$environment}");
     }
 }

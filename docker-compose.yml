@@ -10,7 +10,7 @@ services:
       - "${REACT_APP_PORT:-5173}:${VITE_PORT:-5173}"
     volumes:
       - ./:/app
-      - ./docker/dev/cofig/dev/000-default.conf:/etc/apache2/sites-available/000-default.conf
+      - ./docker/dev/config/dev/000-default.conf:/etc/apache2/sites-available/000-default.conf
     environment:
       - VITE_PORT=${VITE_PORT:-5173}
       - DB_HOST=pgsql

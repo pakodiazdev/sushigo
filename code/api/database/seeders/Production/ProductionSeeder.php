@@ -1,0 +1,28 @@
+<?php
+
+namespace Database\Seeders\Production;
+
+use Illuminate\Database\Seeder;
+
+class ProductionSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $this->command->info("🚀 Starting Production Seeders...");
+        $this->command->newLine();
+
+        $seeders = [
+            RoleSeeder::class,
+            PermissionSeeder::class,
+        ];
+
+        foreach ($seeders as $seederClass) {
+            $seeder = new $seederClass();
+            $seeder->setCommand($this->command);
+            $seeder();
+        }
+
+        $this->command->newLine();
+        $this->command->info("✅ Production seeders completed!");
+    }
+}

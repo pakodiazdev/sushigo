@@ -136,22 +136,32 @@ else
     print_warning "⚠ Hubo un problema con las migraciones, continuando..."
 fi
 
-# Ejecutar seeders si existen
-if [ -d "database/seeders" ] && [ "$(ls -A database/seeders/*.php 2>/dev/null)" ]; then
-    print_message "Ejecutando seeders..."
-    if php artisan db:seed --force; then
-        print_message "✓ Seeders ejecutados correctamente"
-    else
-        print_warning "⚠ Hubo un problema con los seeders, continuando..."
-    fi
+# Ejecutar seeders automáticamente
+print_message "Ejecutando seeders..."
+print_message "  Environment: $APP_ENV"
+
+if php artisan db:seed --force; then
+    print_message "✓ Seeders ejecutados correctamente"
+
+    # Mostrar estado de los seeders
+    print_message "Estado de los seeders:"
+    php artisan seeder:status --no-ansi | head -n 15
 else
-    print_message "✓ No hay seeders para ejecutar"
+    print_warning "⚠ Hubo un problema con los seeders, continuando..."
 fi
 
 # Crear link de storage público
 print_message "Creando link simbólico de storage..."
 php artisan storage:link --force || true
 print_message "✓ Link de storage creado"
+
+# Generar documentación de Swagger
+print_message "Generando documentación de Swagger..."
+if php artisan l5-swagger:generate; then
+    print_message "✓ Documentación de Swagger generada correctamente"
+else
+    print_warning "⚠ Hubo un problema al generar la documentación de Swagger, continuando..."
+fi
 
 # Crear directorios de logs de supervisor
 mkdir -p /var/log/supervisor
