@@ -1,12 +1,38 @@
 {
-  "name": "Dev Container",
+  "name": "SushiGo",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "dev",
   "workspaceFolder": "/app",
   "customizations": {
     "vscode": {
       "settings": {},
-      "extensions": []
+      "extensions": [
+        "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+        "vstirbu.vscode-mermaid-preview",
+        // === AI / Productivity ===
+        "github.copilot",
+        "github.copilot-chat",
+        "openai.chatgpt", // ChatGPT Official (OpenAI)
+        "codegpt.code-gpt", // alternativa avanzada a ChatGPT
+        // === Docs / Diagrams ===
+        "vstirbu.vscode-mermaid-preview",
+        "shd101wyy.markdown-preview-enhanced",
+        // === Laravel / PHP ===
+        "amiralizadeh9480.laravel-extra-intellisense",
+        "stef-k.laravel-goto-controller",
+        "ryannaddy.laravel-artisan",
+        "bmewburn.vscode-intelephense-client",
+        "onecentlin.laravel-blade",
+        // === React / JS / TS ===
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "dsznajder.es7-react-js-snippets",
+        "formulahendry.auto-rename-tag",
+        // === DevOps / Tools ===
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        "eamodio.gitlens"
+      ]
     }
   }
 }
