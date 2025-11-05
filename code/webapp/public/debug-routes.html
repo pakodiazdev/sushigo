@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Routes</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .ok { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h2>Debug de Rutas</h2>
+    <button onclick="checkRoutes()">Verificar Rutas</button>
+    <div id="output"></div>
+    
+    <script>
+        function checkRoutes() {
+            const output = document.getElementById('output');
+            let html = '<h3>Estado Actual:</h3>';
+            
+            // Check localStorage
+            const authStorage = localStorage.getItem('auth-storage');
+            html += '<p><strong>Auth Storage:</strong> ' + (authStorage ? '<span class="ok">✓ Existe</span>' : '<span class="error">✗ No existe</span>') + '</p>';
+            
+            if (authStorage) {
+                const parsed = JSON.parse(authStorage);
+                html += '<pre>' + JSON.stringify(parsed, null, 2) + '</pre>';
+            }
+            
+            // Check current path
+            html += '<p><strong>Ruta actual:</strong> ' + window.location.pathname + '</p>';
+            
+            // Check sidebar
+            const sidebar = document.querySelector('aside');
+            html += '<p><strong>Sidebar:</strong> ' + (sidebar ? '<span class="ok">✓ Montado</span>' : '<span class="error">✗ No montado</span>') + '</p>';
+            
+            if (sidebar) {
+                const items = sidebar.querySelectorAll('nav ul li');
+                html += '<p><strong>Items en sidebar:</strong> ' + items.length + '</p>';
+                html += '<ul>';
+                items.forEach((item, i) => {
+                    const link = item.querySelector('a');
+                    const text = link ? link.textContent.trim() : 'N/A';
+                    const href = link ? link.getAttribute('href') : 'N/A';
+                    html += '<li>' + (i+1) + '. ' + text + ' → ' + href + '</li>';
+                });
+                html += '</ul>';
+            }
+            
+            output.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

@@ -108,17 +108,60 @@ else
     print_message "✓ APP_KEY ya configurada"
 fi
 
-# Crear directorios de storage si no existen y establecer permisos
-print_message "Configurando permisos..."
+# Asegurarse de que los directorios de storage existen antes de generar keys
+print_message "Configurando directorios de storage..."
 mkdir -p storage/framework/sessions
 mkdir -p storage/framework/views
 mkdir -p storage/framework/cache
 mkdir -p storage/logs
 mkdir -p bootstrap/cache
-
 chown -R www-data:www-data storage bootstrap/cache
-chmod -R 775 storage bootstrap/cache
-print_message "✓ Permisos configurados"
+
+# Verificar y generar keys de Laravel Passport SOLO si no existen
+PASSPORT_PRIVATE_KEY="storage/oauth-private.key"
+PASSPORT_PUBLIC_KEY="storage/oauth-public.key"
+
+print_message "Verificando keys de Laravel Passport..."
+
+# Verificar si las keys existen y son válidas
+if [ ! -f "$PASSPORT_PRIVATE_KEY" ] || [ ! -s "$PASSPORT_PRIVATE_KEY" ] || [ ! -f "$PASSPORT_PUBLIC_KEY" ] || [ ! -s "$PASSPORT_PUBLIC_KEY" ]; then
+    print_message "Generando keys de Laravel Passport como www-data..."
+
+    # Generar keys como www-data para que coincida con el usuario de Apache/PHP
+    su -s /bin/bash www-data -c "cd $API_DIR && php artisan passport:keys --force"
+
+    # Verificar que las keys se hayan creado correctamente
+    if [ ! -f "$PASSPORT_PRIVATE_KEY" ] || [ ! -s "$PASSPORT_PRIVATE_KEY" ]; then
+        print_error "❌ No se pudo generar oauth-private.key o está vacío"
+        ls -la storage/ || true
+        exit 1
+    fi
+
+    if [ ! -f "$PASSPORT_PUBLIC_KEY" ] || [ ! -s "$PASSPORT_PUBLIC_KEY" ]; then
+        print_error "❌ No se pudo generar oauth-public.key o está vacío"
+        ls -la storage/ || true
+        exit 1
+    fi
+
+    # Asegurar ownership y permisos correctos (ambas claves con 600)
+    chown www-data:www-data "$PASSPORT_PRIVATE_KEY"
+    chmod 600 "$PASSPORT_PRIVATE_KEY"
+    chown www-data:www-data "$PASSPORT_PUBLIC_KEY"
+    chmod 600 "$PASSPORT_PUBLIC_KEY"
+
+    print_message "✓ Keys de Passport generadas y configuradas (private: 600, public: 600)"
+else
+    print_message "✓ Keys de Passport ya existen, se mantienen sin cambios"
+fi
+
+# Establecer permisos generales de storage (excluyendo oauth keys)
+print_message "Configurando permisos generales de storage..."
+chown -R www-data:www-data storage bootstrap/cache
+find storage -type d -exec chmod 775 {} \;
+find storage -type f ! -name 'oauth-*.key' -exec chmod 664 {} \;
+chmod -R 775 bootstrap/cache
+
+print_message "✓ Permisos de storage configurados (oauth-*.key excluidas del cambio)"
 
 # Limpiar caché
 print_message "Limpiando caché..."

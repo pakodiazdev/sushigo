@@ -12,6 +12,7 @@ class DevelopmentSeeder extends Seeder
         $this->command->newLine();
 
         $seeders = [
+            PassportClientSeeder::class,
             RoleSeeder::class,
             PermissionSeeder::class,
             UserSeeder::class,

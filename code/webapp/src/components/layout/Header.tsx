@@ -1,13 +1,47 @@
-import { Menu, Moon, Sun, Bell, Search, User } from 'lucide-react';
+import { Menu, Moon, Sun, Bell, Search, User, LogOut, Settings, UserCircle, ChevronDown } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { useAuthStore } from '@/stores/auth.store';
+import { useRouter } from '@tanstack/react-router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import logoImage from '@/assets/sushigo-logo.png';
+import { useState, useRef, useEffect } from 'react';
 
 export default function Header() {
     const { theme, toggleTheme } = useTheme();
-    const { toggleMobileSidebar, toggleSidebar } = useSidebar();
+    const { toggleMobileSidebar } = useSidebar();
+    const { user } = useAuthStore();
+    const router = useRouter();
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const mobileMenuRef = useRef<HTMLDivElement>(null);
+    const desktopMenuRef = useRef<HTMLDivElement>(null);
+
+    const handleLogout = () => {
+        setIsUserMenuOpen(false);
+        router.navigate({ to: '/logout' });
+    };
+
+    // Cerrar menú al hacer clic fuera
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const clickedOutsideMobile = mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node);
+            const clickedOutsideDesktop = desktopMenuRef.current && !desktopMenuRef.current.contains(event.target as Node);
+
+            if (clickedOutsideMobile && clickedOutsideDesktop) {
+                setIsUserMenuOpen(false);
+            }
+        };
+
+        if (isUserMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isUserMenuOpen]);
 
     return (
         <header className="sticky top-0 z-40 border-b shadow-sm bg-sushigo-navy lg:bg-background">
@@ -32,16 +66,6 @@ export default function Header() {
                             className="h-full w-auto object-contain"
                         />
                     </div>
-
-                    {/* Desktop Sidebar Toggle */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={toggleSidebar}
-                        className="hidden lg:flex"
-                    >
-                        <Menu className="h-5 w-5" />
-                    </Button>
 
                     {/* Search Bar - Visible desde tablet */}
                     <div className="hidden md:block relative">
@@ -85,13 +109,118 @@ export default function Header() {
                         )}
                     </Button>
 
+                    {/* User profile - Mobile/Tablet */}
+                    <div className="lg:hidden" ref={mobileMenuRef}>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                className="flex items-center gap-2 px-2 py-1.5 md:px-3 md:py-2 rounded-lg hover:bg-sushigo-cream/10 transition-colors"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sushigo-cream to-sushigo-cream/80 flex items-center justify-center text-sushigo-navy shadow-sm">
+                                    <User className="h-4 w-4" />
+                                </div>
+                                {/* Mostrar nombre en tablet (md) y ocultar en móvil pequeño */}
+                                <span className="hidden md:inline-block font-medium text-sushigo-cream">{user?.name || 'Usuario'}</span>
+                                <ChevronDown className="hidden md:block h-4 w-4 text-sushigo-cream/80" />
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent open={isUserMenuOpen} align="right">
+                                <div className="px-3 py-2 border-b">
+                                    <p className="font-medium text-sm">{user?.name || 'Usuario'}</p>
+                                    <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
+                                </div>
+
+                                <DropdownMenuItem
+                                    icon={<UserCircle className="h-4 w-4" />}
+                                    onClick={() => {
+                                        setIsUserMenuOpen(false);
+                                        router.navigate({ to: '/Configuracion' });
+                                    }}
+                                >
+                                    Mi Perfil
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    icon={<Settings className="h-4 w-4" />}
+                                    onClick={() => {
+                                        setIsUserMenuOpen(false);
+                                        router.navigate({ to: '/Configuracion' });
+                                    }}
+                                >
+                                    Configuración
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem
+                                    icon={<LogOut className="h-4 w-4" />}
+                                    onClick={handleLogout}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                    Cerrar Sesión
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+
                     {/* User profile - Desktop only */}
-                    <Button variant="ghost" className="gap-2 hidden lg:flex">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sushigo-navy to-sushigo-navy/80 flex items-center justify-center text-sushigo-cream shadow-sm">
-                            <User className="h-4 w-4" />
-                        </div>
-                        <span className="font-medium">Admin</span>
-                    </Button>
+                    <div className="hidden lg:flex items-center gap-2" ref={desktopMenuRef}>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sushigo-navy to-sushigo-navy/80 flex items-center justify-center text-sushigo-cream shadow-sm">
+                                    <User className="h-4 w-4" />
+                                </div>
+                                <span className="font-medium">{user?.name || 'Usuario'}</span>
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent open={isUserMenuOpen} align="right">
+                                <DropdownMenuItem
+                                    icon={<UserCircle className="h-4 w-4" />}
+                                    onClick={() => {
+                                        setIsUserMenuOpen(false);
+                                        router.navigate({ to: '/Configuracion' });
+                                    }}
+                                >
+                                    Mi Perfil
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    icon={<Settings className="h-4 w-4" />}
+                                    onClick={() => {
+                                        setIsUserMenuOpen(false);
+                                        router.navigate({ to: '/Configuracion' });
+                                    }}
+                                >
+                                    Configuración
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem
+                                    icon={<LogOut className="h-4 w-4" />}
+                                    onClick={handleLogout}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                    Cerrar Sesión
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Botón de logout separado - visible en pantallas grandes */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleLogout}
+                            title="Cerrar sesión"
+                            className="text-foreground hover:bg-accent"
+                        >
+                            <LogOut className="h-5 w-5" />
+                        </Button>
+                    </div>
                 </div>
             </div>
         </header>
