@@ -80,6 +80,23 @@ docker exec -it dev_container php artisan test --filter=OpeningBalanceTest
 docker exec -it dev_container php artisan test --coverage
 ```
 
+### 👤 Usuarios de Testing
+
+El proyecto incluye 3 usuarios pre-configurados con diferentes roles y asignaciones a unidades operativas:
+
+| Usuario | Email | Password | Role | Operating Units |
+|---------|-------|----------|------|-----------------|
+| **Super Admin** | `superadmin@sushigo.com` | `admin123456` | super-admin | Todas (OWNER) |
+| **Admin** | `admin@sushigo.com` | `admin123456` | admin | Todas (MANAGER) |
+| **Inventory Manager** | `inventory@sushigo.com` | `inventory123456` | inventory-manager | Main + Buffer (INVENTORY) |
+
+**Unidades Operativas creadas por defecto:**
+- **Inventario Principal** (BRANCH_MAIN)
+- **Área de Recepción** (BRANCH_BUFFER)
+- **Devoluciones** (BRANCH_RETURN)
+
+**Nota**: Estos usuarios se crean automáticamente al ejecutar `php artisan migrate:fresh --seed`
+
 ### 📊 Suite de Tests Implementada
 
 #### ✅ OpeningBalanceTest (11 pruebas)
