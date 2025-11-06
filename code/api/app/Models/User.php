@@ -30,4 +30,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get the operating units assigned to this user.
+     */
+    public function operatingUnits()
+    {
+        return $this->belongsToMany(OperatingUnit::class, 'operating_unit_users');
+    }
 }
