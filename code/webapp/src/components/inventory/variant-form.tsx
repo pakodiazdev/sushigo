@@ -5,6 +5,7 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
+import { useToast } from '@/components/ui/toast-provider'
 import { itemVariantApi, itemApi } from '@/services/inventory-api'
 import type { ItemVariant } from '@/types/inventory'
 import axios from 'axios'
@@ -17,6 +18,7 @@ interface VariantFormProps {
 }
 
 export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }: VariantFormProps) {
+  const { showSuccess, showError } = useToast()
   const isEditing = !!variant
 
   const [formData, setFormData] = useState({
@@ -62,12 +64,20 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
       return itemVariantApi.create(data)
     },
     onSuccess: () => {
+      showSuccess(
+        `Variant ${isEditing ? 'updated' : 'created'} successfully`,
+        isEditing ? 'Variant Updated' : 'Variant Created'
+      )
       onSuccess()
     },
     onError: (error: any) => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors)
       }
+      showError(
+        error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} variant`,
+        'Error'
+      )
     },
   })
 

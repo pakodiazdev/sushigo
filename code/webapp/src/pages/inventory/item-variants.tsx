@@ -9,6 +9,7 @@ import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
+import { useToast } from '@/components/ui/toast-provider'
 import { itemVariantApi } from '@/services/inventory-api'
 import type { ItemVariant } from '@/types/inventory'
 import { VariantForm, VariantDetails } from '@/components/inventory'
@@ -19,6 +20,7 @@ export const Route = createFileRoute('/inventory/item-variants')({
 
 export function ItemVariantsPage() {
   const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null)
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
@@ -42,6 +44,13 @@ export function ItemVariantsPage() {
       queryClient.invalidateQueries({ queryKey: ['item-variants'] })
       setIsDetailsPanelOpen(false)
       setSelectedVariant(null)
+      showSuccess('Variant deleted successfully', 'Variant Deleted')
+    },
+    onError: (error: any) => {
+      showError(
+        error.response?.data?.message || 'Failed to delete variant. It may have existing stock.',
+        'Delete Error'
+      )
     },
   })
 

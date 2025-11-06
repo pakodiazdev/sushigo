@@ -5,6 +5,7 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
+import { useToast } from '@/components/ui/toast-provider'
 import { inventoryLocationApi, itemVariantApi, stockMovementApi } from '@/services/inventory-api'
 import axios from 'axios'
 
@@ -21,6 +22,7 @@ export function OpeningBalanceForm({
   preselectedLocationId,
   preselectedVariantId,
 }: OpeningBalanceFormProps) {
+  const { showSuccess, showError } = useToast()
   const [formData, setFormData] = useState({
     inventory_location_id: preselectedLocationId || 0,
     item_variant_id: preselectedVariantId || 0,
@@ -77,12 +79,20 @@ export function OpeningBalanceForm({
   const mutation = useMutation({
     mutationFn: (data: typeof formData) => stockMovementApi.openingBalance(data),
     onSuccess: () => {
+      showSuccess(
+        'Opening balance registered successfully',
+        'Stock Updated'
+      )
       onSuccess()
     },
     onError: (error: any) => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors)
       }
+      showError(
+        error.response?.data?.message || 'Failed to register opening balance',
+        'Error'
+      )
     },
   })
 

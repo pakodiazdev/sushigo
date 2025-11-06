@@ -5,6 +5,7 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
+import { useToast } from '@/components/ui/toast-provider'
 import { inventoryLocationApi, itemVariantApi, stockMovementApi, stockApi } from '@/services/inventory-api'
 import axios from 'axios'
 
@@ -21,6 +22,7 @@ export function StockOutForm({
   preselectedLocationId,
   preselectedVariantId,
 }: StockOutFormProps) {
+  const { showSuccess, showError, showWarning } = useToast()
   const [formData, setFormData] = useState({
     location_id: preselectedLocationId || 0,
     variant_id: preselectedVariantId || 0,
@@ -93,12 +95,30 @@ export function StockOutForm({
   const mutation = useMutation({
     mutationFn: (data: typeof formData) => stockMovementApi.stockOut(data),
     onSuccess: () => {
+      const isSale = formData.reason === 'SALE'
+      const profitAmount = isSale ? totalRevenue - totalCost : 0
+      
+      if (isSale && profitAmount < 0) {
+        showWarning(
+          `Stock out registered, but sale resulted in negative profit: $${Math.abs(profitAmount).toFixed(2)}`,
+          'Sale at Loss'
+        )
+      } else {
+        showSuccess(
+          `Stock ${isSale ? 'sale' : 'consumption'} registered successfully`,
+          'Stock Updated'
+        )
+      }
       onSuccess()
     },
     onError: (error: any) => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors)
       }
+      showError(
+        error.response?.data?.message || 'Failed to register stock out',
+        'Error'
+      )
     },
   })
 

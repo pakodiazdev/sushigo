@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
+import { useToast } from '@/components/ui/toast-provider'
 import { inventoryLocationApi } from '@/services/inventory-api'
 import type { InventoryLocation } from '@/types/inventory'
 import axios from 'axios'
@@ -16,6 +17,7 @@ interface LocationFormProps {
 }
 
 export function LocationForm({ location, onSuccess, onCancel }: LocationFormProps) {
+  const { showSuccess, showError } = useToast()
   const [formData, setFormData] = useState({
     operating_unit_id: location?.operating_unit_id || 0,
     name: location?.name || '',
@@ -39,22 +41,42 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
 
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) => inventoryLocationApi.create(data),
-    onSuccess,
+    onSuccess: () => {
+      showSuccess(
+        'Location created successfully',
+        'Location Created'
+      )
+      onSuccess()
+    },
     onError: (error: any) => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors)
       }
+      showError(
+        error.response?.data?.message || 'Failed to create location',
+        'Error'
+      )
     },
   })
 
   const updateMutation = useMutation({
     mutationFn: (data: typeof formData) =>
       inventoryLocationApi.update(location!.id, data),
-    onSuccess,
+    onSuccess: () => {
+      showSuccess(
+        'Location updated successfully',
+        'Location Updated'
+      )
+      onSuccess()
+    },
     onError: (error: any) => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors)
       }
+      showError(
+        error.response?.data?.message || 'Failed to update location',
+        'Error'
+      )
     },
   })
 

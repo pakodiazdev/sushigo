@@ -9,6 +9,7 @@ import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
+import { useToast } from '@/components/ui/toast-provider'
 import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
 import { ItemForm, ItemDetails } from '@/components/inventory'
@@ -19,6 +20,7 @@ export const Route = createFileRoute('/inventory/items')({
 
 export function InventoryItemsPage() {
   const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
@@ -46,6 +48,13 @@ export function InventoryItemsPage() {
       queryClient.invalidateQueries({ queryKey: ['items'] })
       setIsDetailsPanelOpen(false)
       setSelectedItem(null)
+      showSuccess('Item deleted successfully', 'Item Deleted')
+    },
+    onError: (error: any) => {
+      showError(
+        error.response?.data?.message || 'Failed to delete item. It may have existing variants.',
+        'Delete Error'
+      )
     },
   })
 

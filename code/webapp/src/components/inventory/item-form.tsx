@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
+import { useToast } from '@/components/ui/toast-provider'
 import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
 
@@ -15,6 +16,7 @@ interface ItemFormProps {
 }
 
 export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
+  const { showSuccess, showError } = useToast()
   const [formData, setFormData] = useState({
     sku: item?.sku || '',
     name: item?.name || '',
@@ -29,22 +31,42 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
 
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) => itemApi.create(data),
-    onSuccess,
+    onSuccess: () => {
+      showSuccess(
+        'Item created successfully',
+        'Item Created'
+      )
+      onSuccess()
+    },
     onError: (error: any) => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors)
       }
+      showError(
+        error.response?.data?.message || 'Failed to create item',
+        'Error'
+      )
     },
   })
 
   const updateMutation = useMutation({
     mutationFn: (data: typeof formData) =>
       itemApi.update(item!.id, data),
-    onSuccess,
+    onSuccess: () => {
+      showSuccess(
+        'Item updated successfully',
+        'Item Updated'
+      )
+      onSuccess()
+    },
     onError: (error: any) => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors)
       }
+      showError(
+        error.response?.data?.message || 'Failed to update item',
+        'Error'
+      )
     },
   })
 

@@ -9,6 +9,7 @@ import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
+import { useToast } from '@/components/ui/toast-provider'
 import { inventoryLocationApi } from '@/services/inventory-api'
 import type { InventoryLocation } from '@/types/inventory'
 import { LocationForm, LocationDetails } from '@/components/inventory'
@@ -19,6 +20,7 @@ export const Route = createFileRoute('/inventory/locations')({
 
 export function InventoryLocationsPage() {
   const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
   const [selectedLocation, setSelectedLocation] = useState<InventoryLocation | null>(null)
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
@@ -46,6 +48,13 @@ export function InventoryLocationsPage() {
       queryClient.invalidateQueries({ queryKey: ['inventory-locations'] })
       setIsDetailsPanelOpen(false)
       setSelectedLocation(null)
+      showSuccess('Location deleted successfully', 'Location Deleted')
+    },
+    onError: (error: any) => {
+      showError(
+        error.response?.data?.message || 'Failed to delete location. It may have existing stock.',
+        'Delete Error'
+      )
     },
   })
 
