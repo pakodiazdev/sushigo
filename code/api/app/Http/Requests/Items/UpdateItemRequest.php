@@ -20,7 +20,7 @@ class UpdateItemRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $item = $this->route('id');
+        $item = Item::findOrFail($this->route('id'));
         return $this->user()->can('update', $item);
     }
 

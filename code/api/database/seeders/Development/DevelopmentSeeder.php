@@ -15,11 +15,11 @@ class DevelopmentSeeder extends Seeder
             PassportClientSeeder::class,
             RoleSeeder::class,
             PermissionSeeder::class,
-            UserSeeder::class,
-            UserRoleSeeder::class,
             \Database\Seeders\BranchSeeder::class,
             \Database\Seeders\OperatingUnitSeeder::class,
             \Database\Seeders\InventoryLocationSeeder::class,
+            UserSeeder::class,
+            UserRoleSeeder::class,
             \Database\Seeders\UnitOfMeasureSeeder::class,
             \Database\Seeders\UomConversionSeeder::class,
         ];

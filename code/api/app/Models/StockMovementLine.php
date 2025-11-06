@@ -16,6 +16,10 @@ class StockMovementLine extends Model
         'conversion_factor',
         'unit_cost',
         'line_total',
+        'sale_price',
+        'sale_total',
+        'profit_margin',
+        'profit_total',
         'meta',
     ];
 
@@ -25,6 +29,10 @@ class StockMovementLine extends Model
         'conversion_factor' => 'decimal:6',
         'unit_cost' => 'decimal:4',
         'line_total' => 'decimal:4',
+        'sale_price' => 'decimal:4',
+        'sale_total' => 'decimal:4',
+        'profit_margin' => 'decimal:4',
+        'profit_total' => 'decimal:4',
         'meta' => 'array',
     ];
 

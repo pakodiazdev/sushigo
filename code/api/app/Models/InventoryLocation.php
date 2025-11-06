@@ -17,12 +17,15 @@ class InventoryLocation extends Model
         'name',
         'type',
         'is_primary',
+        'is_active',
         'priority',
+        'notes',
         'meta',
     ];
 
     protected $casts = [
         'is_primary' => 'boolean',
+        'is_active' => 'boolean',
         'priority' => 'integer',
         'meta' => 'array',
     ];

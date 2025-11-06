@@ -11,38 +11,46 @@ use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use Illuminate\Support\Facades\DB;
 
-class OpeningBalanceService
+class StockOutService
 {
     /**
-     * Register opening balance for an item variant at a specific location
+     * Register a stock outbound movement (SALE or CONSUMPTION)
      *
-     * @param int $inventoryLocationId The inventory location ID
+     * @param int $inventoryLocationId The inventory location ID (from location)
      * @param int $itemVariantId The item variant ID
-     * @param float $quantity Quantity in entry UOM
-     * @param int $entryUomId Unit of measure for the entry
-     * @param float|null $unitCost Cost per unit in entry UOM (optional)
+     * @param float $quantity Quantity in transaction UOM
+     * @param int $transactionUomId Unit of measure for the transaction
+     * @param string $reason Movement reason (SALE or CONSUMPTION)
+     * @param float|null $salePrice Sale price per unit in transaction UOM (optional, for SALE movements)
      * @param int|null $userId User performing the operation
      * @param string|null $reference External reference number
      * @param string|null $notes Additional notes
      * @return StockMovement
      * @throws \Exception
      */
-    public function registerOpeningBalance(
+    public function registerStockOut(
         int $inventoryLocationId,
         int $itemVariantId,
         float $quantity,
-        int $entryUomId,
-        ?float $unitCost = null,
+        int $transactionUomId,
+        string $reason,
+        ?float $salePrice = null,
         ?int $userId = null,
         ?string $reference = null,
         ?string $notes = null
     ): StockMovement {
+        // Validate reason
+        if (!in_array($reason, [StockMovement::REASON_SALE, StockMovement::REASON_CONSUMPTION])) {
+            throw new \Exception("Invalid reason for stock out: {$reason}. Must be SALE or CONSUMPTION.");
+        }
+
         return DB::transaction(function () use (
             $inventoryLocationId,
             $itemVariantId,
             $quantity,
-            $entryUomId,
-            $unitCost,
+            $transactionUomId,
+            $reason,
+            $salePrice,
             $userId,
             $reference,
             $notes
@@ -50,52 +58,81 @@ class OpeningBalanceService
             // Validate location
             $location = InventoryLocation::findOrFail($inventoryLocationId);
             
-            // Validate variant
+            // Validate variant with item and UOM
             $variant = ItemVariant::with(['item', 'unitOfMeasure'])->findOrFail($itemVariantId);
             
-            // Validate entry UOM
-            $entryUom = UnitOfMeasure::findOrFail($entryUomId);
+            // Validate transaction UOM
+            $transactionUom = UnitOfMeasure::findOrFail($transactionUomId);
             
             // Convert quantity to base UOM
             $conversionFactor = 1.0;
             $baseQuantity = $quantity;
             
-            if ($entryUomId !== $variant->uom_id) {
-                $conversion = $this->getConversion($entryUomId, $variant->uom_id);
+            if ($transactionUomId !== $variant->uom_id) {
+                $conversion = $this->getConversion($transactionUomId, $variant->uom_id);
                 if (!$conversion) {
                     throw new \Exception(
-                        "No conversion found from {$entryUom->code} to {$variant->unitOfMeasure->code}"
+                        "No conversion found from {$transactionUom->code} to {$variant->unitOfMeasure->code}"
                     );
                 }
                 $conversionFactor = $conversion->factor;
                 $baseQuantity = $quantity * $conversionFactor;
             }
             
-            // Calculate unit cost in base UOM
-            $baseCost = null;
-            if ($unitCost !== null) {
-                // If cost is per entry UOM, convert to base UOM
-                $baseCost = $conversionFactor != 0 ? $unitCost / $conversionFactor : 0;
+            // Check stock availability
+            $stock = Stock::where('inventory_location_id', $inventoryLocationId)
+                ->where('item_variant_id', $itemVariantId)
+                ->first();
+                
+            if (!$stock) {
+                throw new \Exception(
+                    "No stock found for variant {$variant->sku} at location {$location->name}"
+                );
+            }
+            
+            $availableQty = $stock->on_hand - $stock->reserved;
+            if ($baseQuantity > $availableQty) {
+                throw new \Exception(
+                    "Insufficient stock. Available: {$availableQty}, Requested: {$baseQuantity}"
+                );
+            }
+            
+            // Get current average unit cost from variant
+            $unitCost = $variant->avg_unit_cost ?? 0;
+            
+            // Calculate pricing and profit (only for SALE movements)
+            $saleTotal = null;
+            $profitMargin = null;
+            $profitTotal = null;
+            
+            if ($reason === StockMovement::REASON_SALE && $salePrice !== null) {
+                $saleTotal = $quantity * $salePrice;
+                
+                // Convert sale price to base UOM for profit calculation
+                $salePriceBase = $conversionFactor != 0 ? $salePrice / $conversionFactor : 0;
+                $profitMargin = $salePriceBase - $unitCost;
+                $profitTotal = $baseQuantity * $profitMargin;
             }
             
             // Create stock movement
             $movement = StockMovement::create([
-                'from_location_id' => null,
-                'to_location_id' => $inventoryLocationId,
+                'from_location_id' => $inventoryLocationId,
+                'to_location_id' => null, // Outbound movement has no destination
                 'item_variant_id' => $itemVariantId,
                 'user_id' => $userId,
                 'qty' => $baseQuantity,
-                'reason' => StockMovement::REASON_OPENING_BALANCE,
+                'reason' => $reason,
                 'status' => StockMovement::STATUS_POSTED,
                 'reference' => $reference,
                 'notes' => $notes,
                 'meta' => [
                     'original_qty' => $quantity,
-                    'original_uom' => $entryUom->code,
-                    'original_uom_id' => $entryUomId,
+                    'original_uom' => $transactionUom->code,
+                    'original_uom_id' => $transactionUomId,
                     'conversion_factor' => $conversionFactor,
                     'unit_cost' => $unitCost,
-                    'base_cost' => $baseCost,
+                    'sale_price' => $salePrice,
+                    'profit_margin' => $profitMargin,
                 ],
                 'posted_at' => now(),
             ]);
@@ -104,40 +141,23 @@ class OpeningBalanceService
             StockMovementLine::create([
                 'stock_movement_id' => $movement->id,
                 'item_variant_id' => $itemVariantId,
-                'uom_id' => $entryUomId,
+                'uom_id' => $transactionUomId,
                 'qty' => $quantity,
                 'base_qty' => $baseQuantity,
                 'conversion_factor' => $conversionFactor,
-                'unit_cost' => $baseCost,
-                'line_total' => $baseCost ? $baseQuantity * $baseCost : null,
+                'unit_cost' => $unitCost,
+                'line_total' => $baseQuantity * $unitCost,
+                'sale_price' => $salePrice,
+                'sale_total' => $saleTotal,
+                'profit_margin' => $profitMargin,
+                'profit_total' => $profitTotal,
                 'meta' => [],
             ]);
             
-            // Update or create stock record
-            $stock = Stock::where('inventory_location_id', $inventoryLocationId)
-                ->where('item_variant_id', $itemVariantId)
-                ->first();
-
-            if ($stock) {
-                // Update existing stock
-                $stock->increment('on_hand', $baseQuantity);
-            } else {
-                // Create new stock record
-                $stock = Stock::create([
-                    'inventory_location_id' => $inventoryLocationId,
-                    'item_variant_id' => $itemVariantId,
-                    'on_hand' => $baseQuantity,
-                    'reserved' => 0,
-                    'meta' => [],
-                ]);
-            }
+            // Decrement stock
+            $stock->decrement('on_hand', $baseQuantity);
             
-            // Update variant costing if cost provided
-            if ($baseCost !== null && $baseCost > 0) {
-                $this->updateVariantCosting($variant, $baseQuantity, $baseCost);
-            }
-            
-            return $movement->fresh(['lines', 'toLocation', 'itemVariant.item']);
+            return $movement->fresh(['lines', 'fromLocation', 'itemVariant.item', 'itemVariant.unitOfMeasure']);
         });
     }
     
@@ -175,29 +195,5 @@ class OpeningBalanceService
         }
         
         return null;
-    }
-    
-    /**
-     * Update variant costing with weighted average
-     */
-    protected function updateVariantCosting(ItemVariant $variant, float $newQty, float $newCost): void
-    {
-        $currentQty = $variant->stock()->sum('on_hand');
-        $currentAvg = $variant->avg_unit_cost;
-        
-        // Calculate previous quantity (before this movement)
-        $previousQty = max(0, $currentQty - $newQty);
-        
-        // Calculate new weighted average
-        if ($previousQty + $newQty > 0) {
-            $newAvg = (($previousQty * $currentAvg) + ($newQty * $newCost)) / ($previousQty + $newQty);
-        } else {
-            $newAvg = $newCost;
-        }
-        
-        $variant->update([
-            'last_unit_cost' => $newCost,
-            'avg_unit_cost' => $newAvg,
-        ]);
     }
 }

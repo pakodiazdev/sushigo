@@ -14,6 +14,7 @@ class Stock extends Model
         'item_variant_id',
         'on_hand',
         'reserved',
+        'weighted_avg_cost',
         'meta',
     ];
 
@@ -21,6 +22,7 @@ class Stock extends Model
         'on_hand' => 'decimal:4',
         'reserved' => 'decimal:4',
         'available' => 'decimal:4',
+        'weighted_avg_cost' => 'decimal:4',
         'meta' => 'array',
     ];
 

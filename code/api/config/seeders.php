@@ -32,22 +32,22 @@ return [
 
     'development_users' => [
         [
-            'name' => 'Admin User',
-            'email' => 'admin@sushigo.com',
+            'name' => 'Super Admin',
+            'email' => 'superadmin@sushigo.com',
             'password' => 'admin123456',
             'role' => 'super-admin',
         ],
         [
-            'name' => 'Demo User',
-            'email' => 'demo@sushigo.com',
-            'password' => 'demo123456',
-            'role' => 'user',
+            'name' => 'Admin User',
+            'email' => 'admin@sushigo.com',
+            'password' => 'admin123456',
+            'role' => 'admin',
         ],
         [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'role' => 'user',
+            'name' => 'Inventory Manager',
+            'email' => 'inventory@sushigo.com',
+            'password' => 'inventory123456',
+            'role' => 'inventory-manager',
         ],
     ],
 

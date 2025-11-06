@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Items;
 
+use App\Models\ItemVariant;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -21,7 +22,7 @@ class UpdateItemVariantRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $variant = $this->route('id');
+        $variant = ItemVariant::findOrFail($this->route('id'));
         return $this->user()->can('update', $variant);
     }
 
