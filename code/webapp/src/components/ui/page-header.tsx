@@ -3,10 +3,11 @@ import { type ReactNode } from 'react';
 interface PageHeaderProps {
     title: string;
     description: string;
+    action?: ReactNode;
     children?: ReactNode;
 }
 
-export function PageHeader({ title, description, children }: PageHeaderProps) {
+export function PageHeader({ title, description, action, children }: PageHeaderProps) {
     return (
         <div className="space-y-1 p-6 rounded-xl bg-gradient-to-r from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/50 border border-sushigo-cream/50">
             <div className="flex items-center justify-between">
@@ -18,7 +19,7 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
                         {description}
                     </p>
                 </div>
-                {children}
+                {action || children}
             </div>
         </div>
     );

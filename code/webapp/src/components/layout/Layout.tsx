@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useEffect } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Loader2 } from 'lucide-react';
 
 export default function Layout() {
@@ -101,6 +102,13 @@ export default function Layout() {
                 <Header />
 
                 <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gradient-to-br from-sushigo-cream/30 via-background to-sushigo-navy/5">
+                    {/* Breadcrumbs - Only show if not on home page */}
+                    {currentPath !== '/' && (
+                        <div className="mb-4">
+                            <Breadcrumbs />
+                        </div>
+                    )}
+                    
                     <Outlet />
                 </main>
             </div>
