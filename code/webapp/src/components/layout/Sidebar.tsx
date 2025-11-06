@@ -46,7 +46,7 @@ const menuItems: MenuItem[] = [
             { label: 'Variantes', path: '/inventory/item-variants' },
         ]
     },
-    { icon: BarChart3, label: 'Reportes', path: '/reportes' },
+    { icon: BarChart3, label: 'Stock Dashboard', path: '/stock-dashboard' },
     { icon: Settings, label: 'Configuración', path: '/configuracion' },
 ];
 
