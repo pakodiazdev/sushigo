@@ -21,6 +21,11 @@ use App\Http\Controllers\Api\V1\InventoryLocation\DeleteInventoryLocationControl
 use App\Http\Controllers\Api\V1\InventoryLocation\ListInventoryLocationsController;
 use App\Http\Controllers\Api\V1\InventoryLocation\ShowInventoryLocationController;
 use App\Http\Controllers\Api\V1\InventoryLocation\UpdateInventoryLocationController;
+use App\Http\Controllers\Api\V1\OperatingUnit\CreateOperatingUnitController;
+use App\Http\Controllers\Api\V1\OperatingUnit\DeleteOperatingUnitController;
+use App\Http\Controllers\Api\V1\OperatingUnit\ListOperatingUnitsController;
+use App\Http\Controllers\Api\V1\OperatingUnit\ShowOperatingUnitController;
+use App\Http\Controllers\Api\V1\OperatingUnit\UpdateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\AddUserToOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\ListOperatingUnitUsersController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitController;
@@ -106,6 +111,18 @@ Route::prefix('v1')->group(function () {
             Route::post('/', CreateInventoryLocationController::class)->name('inventory-locations.create');
             Route::put('/{id}', UpdateInventoryLocationController::class)->name('inventory-locations.update');
             Route::delete('/{id}', DeleteInventoryLocationController::class)->name('inventory-locations.delete');
+        });
+    });
+
+    // Operating Units (Public read, protected write)
+    Route::prefix('operating-units')->group(function () {
+        Route::get('/', ListOperatingUnitsController::class)->name('operating-units.list');
+        Route::get('/{id}', ShowOperatingUnitController::class)->name('operating-units.show');
+
+        Route::middleware('auth:api')->group(function () {
+            Route::post('/', CreateOperatingUnitController::class)->name('operating-units.create');
+            Route::put('/{id}', UpdateOperatingUnitController::class)->name('operating-units.update');
+            Route::delete('/{id}', DeleteOperatingUnitController::class)->name('operating-units.delete');
         });
     });
 
