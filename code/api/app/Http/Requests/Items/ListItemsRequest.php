@@ -22,6 +22,26 @@ class ListItemsRequest extends FormRequest
         return true; // Public endpoint
     }
 
+    protected function prepareForValidation(): void
+    {
+        // Convert string "true"/"false" from query params to actual booleans
+        $filters = [];
+        
+        if ($this->has('is_stocked')) {
+            $filters['is_stocked'] = filter_var($this->is_stocked, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        }
+        
+        if ($this->has('is_perishable')) {
+            $filters['is_perishable'] = filter_var($this->is_perishable, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        }
+        
+        if ($this->has('is_active')) {
+            $filters['is_active'] = filter_var($this->is_active, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        }
+        
+        $this->merge($filters);
+    }
+
     public function rules(): array
     {
         return [
