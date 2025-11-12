@@ -41,6 +41,7 @@ const menuItems: MenuItem[] = [
         icon: Warehouse,
         label: 'Inventario',
         subItems: [
+            { label: '+ Nuevo Producto', path: '/inventory/items?wizard=true' },
             { label: 'Ubicaciones', path: '/inventory/locations' },
             { label: 'Items', path: '/inventory/items' },
             { label: 'Variantes', path: '/inventory/item-variants' },

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { useState, useEffect } from 'react'
+import { createFileRoute, useSearch } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Package, Box, AlertCircle, Wand2 } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
@@ -16,11 +16,17 @@ import { ItemForm, ItemDetails, ProductWizard } from '@/components/inventory'
 
 export const Route = createFileRoute('/inventory/items')({
   component: InventoryItemsPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      wizard: search?.wizard === 'true' || search?.wizard === true,
+    }
+  },
 })
 
 export function InventoryItemsPage() {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
+  const search = useSearch({ from: '/inventory/items' })
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
@@ -29,6 +35,13 @@ export function InventoryItemsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+
+  // Auto-open wizard if URL param is set
+  useEffect(() => {
+    if (search.wizard) {
+      setIsWizardOpen(true)
+    }
+  }, [search.wizard])
 
   // Fetch items with filters
   const { data, isLoading } = useQuery({
