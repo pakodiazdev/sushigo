@@ -13,3 +13,6 @@ export { VariantDetails } from './variant-details'
 // Stock Movement Components
 export { OpeningBalanceForm } from './opening-balance-form'
 export { StockOutForm } from './stock-out-form'
+
+// Wizard Components
+export { ProductWizard } from './product-wizard'

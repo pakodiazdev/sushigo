@@ -8,7 +8,7 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * Remove the 'is_pickable' field added in 2025_11_12_000003
      * to align with original architecture design.
      */
