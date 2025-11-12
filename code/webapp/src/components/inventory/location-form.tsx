@@ -34,7 +34,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
   const { data: operatingUnits } = useQuery({
     queryKey: ['operating-units'],
     queryFn: async () => {
-      const response = await axios.get('http://localhost:8000/api/v1/operating-units')
+      const response = await axios.get('http://localhost:8080/api/v1/operating-units')
       return response.data.data
     },
   })

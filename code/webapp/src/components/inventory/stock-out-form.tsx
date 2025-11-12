@@ -54,7 +54,7 @@ export function StockOutForm({
     queryKey: ['units-of-measure-for-select'],
     queryFn: async () => {
       const api = axios.create({
-        baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
+        baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
       })
       const response = await api.get('/units-of-measure', {
         params: { is_active: true, per_page: 100 },
