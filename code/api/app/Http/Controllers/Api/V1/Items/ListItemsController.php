@@ -15,6 +15,7 @@ use App\Models\Item;
  *   @OA\Parameter(name="type", in="query", @OA\Schema(type="string", enum={"INSUMO", "PRODUCTO", "ACTIVO"})),
  *   @OA\Parameter(name="is_stocked", in="query", @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="is_perishable", in="query", @OA\Schema(type="boolean")),
+ *   @OA\Parameter(name="is_manufactured", in="query", @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15)),

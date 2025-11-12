@@ -40,6 +40,7 @@ class ShowItemController extends Controller
                 'type' => $item->type,
                 'is_stocked' => $item->is_stocked,
                 'is_perishable' => $item->is_perishable,
+                'is_manufactured' => $item->is_manufactured,
                 'is_active' => $item->is_active,
                 'variants_count' => $item->variants->count(),
                 'created_at' => $item->created_at,

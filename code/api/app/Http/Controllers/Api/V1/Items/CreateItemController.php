@@ -38,6 +38,7 @@ class CreateItemController extends Controller
             'type' => $request->type,
             'is_stocked' => $request->input('is_stocked', true),
             'is_perishable' => $request->input('is_perishable', false),
+            'is_manufactured' => $request->input('is_manufactured', true),
             'is_active' => $request->input('is_active', true),
             'meta' => [],
         ]);
@@ -51,6 +52,7 @@ class CreateItemController extends Controller
                 'type' => $item->type,
                 'is_stocked' => $item->is_stocked,
                 'is_perishable' => $item->is_perishable,
+                'is_manufactured' => $item->is_manufactured,
                 'is_active' => $item->is_active,
                 'created_at' => $item->created_at,
                 'updated_at' => $item->updated_at,

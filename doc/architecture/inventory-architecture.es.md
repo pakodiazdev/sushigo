@@ -127,6 +127,7 @@ erDiagram
     enum type "INSUMO|PRODUCTO|ACTIVO"
     boolean is_stocked
     boolean is_perishable
+    boolean is_manufactured
   }
 
   ITEM_VARIANT {
@@ -338,6 +339,7 @@ classDiagram
     +type: ItemType
     +is_stocked: bool
     +is_perishable: bool
+    +is_manufactured: bool
     +registerVariant(data)
   }
 
@@ -593,7 +595,10 @@ classDiagram
     - Propiedades: `id`, `operating_unit_id`, `name`, `type`, `is_primary`.
     - Acciones: `markPrimary()` (se usa en ajustes iniciales de la unidad).
 - **Item**
-    - Propiedades: `id`, `sku`, `name`, `type`, `is_stocked`, `is_perishable`.
+    - Propiedades: `id`, `sku`, `name`, `type`, `is_stocked`, `is_perishable`, `is_manufactured`.
+    - **`is_manufactured`**: Indica si el item se fabrica/prepara internamente (`true`) o se compra para reventa (`false`). Esto permite diferenciar entre:
+        - **Productos manufacturados** (`is_manufactured=true`): Platillos del menú que se preparan en cocina usando insumos según recetas.
+        - **Productos de reventa** (`is_manufactured=false`): Items que se compran ya terminados (ej: dulcería coreana, bebidas embotelladas) y se revenden directamente sin transformación.
     - Acciones: `registerVariant(data)` encapsula la creación de variantes a través de factories/acciones.
 - **ItemVariant**
     - Propiedades: `id`, `item_id`, `code`, `name`, `uom_id`, `track_lot`, `track_serial`.

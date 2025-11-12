@@ -23,6 +23,7 @@ interface WizardData {
     type: 'INSUMO' | 'PRODUCTO' | 'ACTIVO'
     is_stocked: boolean
     is_perishable: boolean
+    is_manufactured: boolean
     is_active: boolean
   }
   // Step 2: Variant
@@ -57,6 +58,7 @@ const INITIAL_DATA: WizardData = {
     type: 'PRODUCTO',
     is_stocked: true,
     is_perishable: false,
+    is_manufactured: true,
     is_active: true,
   },
   variant: {
@@ -536,6 +538,11 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                 checked={wizardData.item.is_perishable}
                 onChange={(e) => updateItemData('is_perishable', e.target.checked)}
                 label="Producto perecedero"
+              />
+              <Checkbox
+                checked={wizardData.item.is_manufactured}
+                onChange={(e) => updateItemData('is_manufactured', e.target.checked)}
+                label="Se fabrica en casa (desmarca si es reventa)"
               />
               <Checkbox
                 checked={wizardData.item.is_active}

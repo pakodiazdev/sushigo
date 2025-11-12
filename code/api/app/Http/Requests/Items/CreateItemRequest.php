@@ -16,6 +16,7 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="type", type="string", enum={"INSUMO", "PRODUCTO", "ACTIVO"}, example="INSUMO", description="Item type"),
  *   @OA\Property(property="is_stocked", type="boolean", example=true, description="Track in inventory (default: true)"),
  *   @OA\Property(property="is_perishable", type="boolean", example=false, description="Has expiration date (default: false)"),
+ *   @OA\Property(property="is_manufactured", type="boolean", example=true, description="Manufactured in-house (true) or purchased for resale (false) - default: true"),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Active status (default: true)"),
  * )
  */
@@ -35,6 +36,7 @@ class CreateItemRequest extends FormRequest
             'type' => ['required', 'string', Rule::in([Item::TYPE_INSUMO, Item::TYPE_PRODUCTO, Item::TYPE_ACTIVO])],
             'is_stocked' => ['nullable', 'boolean'],
             'is_perishable' => ['nullable', 'boolean'],
+            'is_manufactured' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }
