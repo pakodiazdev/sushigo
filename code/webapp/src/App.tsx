@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
+import { ToastProvider } from '@/components/ui/toast-provider';
 import { routeTree } from './routeTree.gen';
 
 const queryClient = new QueryClient({
@@ -33,8 +34,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <SidebarProvider>
-          <RouterProvider router={router} />
-          <ReactQueryDevtools initialIsOpen={false} />
+          <ToastProvider>
+            <RouterProvider router={router} />
+            <ReactQueryDevtools initialIsOpen={false} />
+          </ToastProvider>
         </SidebarProvider>
       </ThemeProvider>
     </QueryClientProvider>
