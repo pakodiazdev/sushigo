@@ -14,6 +14,7 @@ class InventoryLocation extends Model
 
     protected $fillable = [
         'operating_unit_id',
+        'code',
         'name',
         'type',
         'is_primary',
@@ -37,6 +38,7 @@ class InventoryLocation extends Model
     public const TYPE_BAR = 'BAR';
     public const TYPE_RETURN = 'RETURN';
     public const TYPE_WASTE = 'WASTE';
+    public const TYPE_DISPLAY = 'DISPLAY';
 
     /**
      * Get the operating unit that owns this location

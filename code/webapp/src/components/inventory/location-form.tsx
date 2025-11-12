@@ -20,6 +20,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
   const { showSuccess, showError } = useToast()
   const [formData, setFormData] = useState({
     operating_unit_id: location?.operating_unit_id || 0,
+    code: location?.code || '',
     name: location?.name || '',
     type: location?.type || 'MAIN' as const,
     priority: location?.priority || 100,
@@ -142,6 +143,19 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         </FormField>
 
         <FormField
+          label="Código"
+          error={errors.code}
+          hint="Código único opcional (ej., MESA-REC-01, ALM-PRIN)"
+        >
+          <Input
+            value={formData.code}
+            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+            placeholder="ej., MESA-REC-01"
+            error={!!errors.code}
+          />
+        </FormField>
+
+        <FormField
           label="Nombre de la Ubicación"
           required
           error={errors.name}
@@ -166,9 +180,10 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
           >
             <option value="">Seleccione un tipo</option>
             <option value="MAIN">Almacén Principal</option>
-            <option value="TEMP">Temporal</option>
+            <option value="DISPLAY">Mesa de Exhibición / Display</option>
             <option value="KITCHEN">Cocina</option>
             <option value="BAR">Bar</option>
+            <option value="TEMP">Temporal</option>
             <option value="RETURN">Devoluciones</option>
             <option value="WASTE">Desperdicios</option>
           </Select>

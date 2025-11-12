@@ -45,8 +45,8 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
   const { data: uomData } = useQuery({
     queryKey: ['units-of-measure'],
     queryFn: async () => {
-      const response = await apiClient.get('/units-of-measure', { 
-        params: { is_active: true, per_page: 100 } 
+      const response = await apiClient.get('/units-of-measure', {
+        params: { is_active: true, per_page: 100 }
       })
       return response
     },

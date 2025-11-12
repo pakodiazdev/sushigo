@@ -221,10 +221,10 @@ export function StockOutForm({
           {currentStock && selectedVariant && (
             <div
               className={`border rounded-lg p-3 text-sm ${hasInsufficientStock
-                  ? 'bg-red-50 border-red-200'
-                  : hasLowStock
-                    ? 'bg-yellow-50 border-yellow-200'
-                    : 'bg-blue-50 border-blue-200'
+                ? 'bg-red-50 border-red-200'
+                : hasLowStock
+                  ? 'bg-yellow-50 border-yellow-200'
+                  : 'bg-blue-50 border-blue-200'
                 }`}
             >
               <div className="flex items-center gap-2 mb-2">
@@ -235,10 +235,10 @@ export function StockOutForm({
                 )}
                 <span
                   className={`font-semibold ${hasInsufficientStock
-                      ? 'text-red-900'
-                      : hasLowStock
-                        ? 'text-yellow-900'
-                        : 'text-blue-900'
+                    ? 'text-red-900'
+                    : hasLowStock
+                      ? 'text-yellow-900'
+                      : 'text-blue-900'
                     }`}
                 >
                   Current Stock
@@ -356,8 +356,8 @@ export function StockOutForm({
             selectedVariant && (
               <div
                 className={`border rounded-lg p-4 ${profitAmount >= 0
-                    ? 'bg-green-50 border-green-200'
-                    : 'bg-red-50 border-red-200'
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
                   }`}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -375,8 +375,8 @@ export function StockOutForm({
                   </div>
                   <span
                     className={`text-sm px-2 py-1 rounded ${profitAmount >= 0
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
                       }`}
                   >
                     {profitMargin.toFixed(1)}% margin

@@ -15,23 +15,23 @@ This file exports a single, pre-configured axios instance (`apiClient`) that all
 #### Features:
 
 1. **Centralized Base URL**
-   - Configured via `VITE_API_URL` environment variable
-   - Default: `http://localhost:8080/api/v1`
-   - Easy to change for different environments (dev, staging, production)
+    - Configured via `VITE_API_URL` environment variable
+    - Default: `http://localhost:8080/api/v1`
+    - Easy to change for different environments (dev, staging, production)
 
 2. **Automatic Authentication**
-   - Request interceptor automatically adds `Bearer` token from localStorage
-   - Reads from `auth-storage` (Zustand store)
-   - No need to manually add auth headers in each API call
+    - Request interceptor automatically adds `Bearer` token from localStorage
+    - Reads from `auth-storage` (Zustand store)
+    - No need to manually add auth headers in each API call
 
 3. **Global Error Handling**
-   - Response interceptor handles 401 (Unauthorized) errors
-   - Automatically redirects to `/login` and clears auth storage
-   - Consistent error handling across the app
+    - Response interceptor handles 401 (Unauthorized) errors
+    - Automatically redirects to `/login` and clears auth storage
+    - Consistent error handling across the app
 
 4. **Standard Headers**
-   - `Content-Type: application/json`
-   - `Accept: application/json`
+    - `Content-Type: application/json`
+    - `Accept: application/json`
 
 ## 📁 File Structure
 
@@ -54,58 +54,55 @@ src/
 ### Import the Client
 
 ```typescript
-import { apiClient } from '@/lib/api-client'
+import { apiClient } from "@/lib/api-client";
 ```
 
 ### Make API Calls
 
 ```typescript
 // GET request
-const response = await apiClient.get('/inventory-locations')
+const response = await apiClient.get("/inventory-locations");
 
 // GET with params
-const response = await apiClient.get('/items', {
-  params: { type: 'PRODUCTO', is_active: true }
-})
+const response = await apiClient.get("/items", {
+    params: { type: "PRODUCTO", is_active: true },
+});
 
 // POST request
-const response = await apiClient.post('/items', {
-  sku: 'PROD-001',
-  name: 'Product Name'
-})
+const response = await apiClient.post("/items", {
+    sku: "PROD-001",
+    name: "Product Name",
+});
 
 // PUT request
-const response = await apiClient.put('/items/123', {
-  name: 'Updated Name'
-})
+const response = await apiClient.put("/items/123", {
+    name: "Updated Name",
+});
 
 // DELETE request
-await apiClient.delete('/items/123')
+await apiClient.delete("/items/123");
 ```
 
 ### Example: Creating an API Service
 
 ```typescript
 // src/services/inventory-api.ts
-import { apiClient } from '@/lib/api-client'
-import type { PaginatedResponse, Item } from '@/types/inventory'
+import { apiClient } from "@/lib/api-client";
+import type { PaginatedResponse, Item } from "@/types/inventory";
 
 export const itemApi = {
-  list: (params?: { type?: string; is_active?: boolean }) =>
-    apiClient.get<PaginatedResponse<Item>>('/items', { params }),
+    list: (params?: { type?: string; is_active?: boolean }) =>
+        apiClient.get<PaginatedResponse<Item>>("/items", { params }),
 
-  get: (id: number) =>
-    apiClient.get<Item>(`/items/${id}`),
+    get: (id: number) => apiClient.get<Item>(`/items/${id}`),
 
-  create: (data: Partial<Item>) =>
-    apiClient.post<Item>('/items', data),
+    create: (data: Partial<Item>) => apiClient.post<Item>("/items", data),
 
-  update: (id: number, data: Partial<Item>) =>
-    apiClient.put<Item>(`/items/${id}`, data),
+    update: (id: number, data: Partial<Item>) =>
+        apiClient.put<Item>(`/items/${id}`, data),
 
-  delete: (id: number) =>
-    apiClient.delete(`/items/${id}`),
-}
+    delete: (id: number) => apiClient.delete(`/items/${id}`),
+};
 ```
 
 ### Example: Using in a Component
@@ -141,16 +138,19 @@ VITE_API_URL=http://localhost:8080/api/v1
 ### Different Environments
 
 **Development** (`.env.development`):
+
 ```bash
 VITE_API_URL=http://localhost:8080/api/v1
 ```
 
 **Production** (`.env.production`):
+
 ```bash
 VITE_API_URL=https://api.sushigo.com/api/v1
 ```
 
 **Staging** (`.env.staging`):
+
 ```bash
 VITE_API_URL=https://staging-api.sushigo.com/api/v1
 ```
@@ -167,50 +167,56 @@ VITE_API_URL=https://staging-api.sushigo.com/api/v1
 ## 🚫 What NOT to Do
 
 ❌ **DON'T** create new axios instances in components:
+
 ```typescript
 // ❌ BAD
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api/v1'
-})
+    baseURL: "http://localhost:8080/api/v1",
+});
 ```
 
 ❌ **DON'T** hardcode URLs:
+
 ```typescript
 // ❌ BAD
-const response = await axios.get('http://localhost:8080/api/v1/items')
+const response = await axios.get("http://localhost:8080/api/v1/items");
 ```
 
 ❌ **DON'T** manually add auth headers:
+
 ```typescript
 // ❌ BAD
-const response = await apiClient.get('/items', {
-  headers: {
-    Authorization: `Bearer ${token}`  // Already handled by interceptor
-  }
-})
+const response = await apiClient.get("/items", {
+    headers: {
+        Authorization: `Bearer ${token}`, // Already handled by interceptor
+    },
+});
 ```
 
 ## ✅ Best Practices
 
 ✅ **DO** use the centralized `apiClient`:
+
 ```typescript
 // ✅ GOOD
-import { apiClient } from '@/lib/api-client'
-const response = await apiClient.get('/items')
+import { apiClient } from "@/lib/api-client";
+const response = await apiClient.get("/items");
 ```
 
 ✅ **DO** create typed API services:
+
 ```typescript
 // ✅ GOOD
 export const itemApi = {
-  list: () => apiClient.get<PaginatedResponse<Item>>('/items'),
-}
+    list: () => apiClient.get<PaginatedResponse<Item>>("/items"),
+};
 ```
 
 ✅ **DO** use relative paths (no base URL):
+
 ```typescript
 // ✅ GOOD
-apiClient.get('/items')  // Base URL is already configured
+apiClient.get("/items"); // Base URL is already configured
 ```
 
 ## 📊 Benefits
@@ -227,17 +233,19 @@ apiClient.get('/items')  // Base URL is already configured
 If you find code using direct axios calls, refactor it:
 
 **Before**:
-```typescript
-import axios from 'axios'
 
-const response = await axios.get('http://localhost:8080/api/v1/items')
+```typescript
+import axios from "axios";
+
+const response = await axios.get("http://localhost:8080/api/v1/items");
 ```
 
 **After**:
-```typescript
-import { apiClient } from '@/lib/api-client'
 
-const response = await apiClient.get('/items')
+```typescript
+import { apiClient } from "@/lib/api-client";
+
+const response = await apiClient.get("/items");
 ```
 
 ## 📝 Summary
