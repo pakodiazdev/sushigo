@@ -31,6 +31,7 @@ interface WizardData {
     code: string
     name: string
     uom_id: number
+    sale_price: number
     min_stock: number
     max_stock: number
     is_active: boolean
@@ -65,6 +66,7 @@ const INITIAL_DATA: WizardData = {
     code: '',
     name: '',
     uom_id: 0,
+    sale_price: 0,
     min_stock: 0,
     max_stock: 0,
     is_active: true,
@@ -260,6 +262,9 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
     }
     if (!wizardData.variant.uom_id) {
       newErrors.uom_id = 'Debe seleccionar una unidad de medida'
+    }
+    if (!wizardData.variant.sale_price || wizardData.variant.sale_price <= 0) {
+      newErrors.sale_price = 'Precio de venta debe ser mayor a 0'
     }
 
     setErrors(newErrors)
@@ -595,6 +600,22 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                   </option>
                 ))}
               </Select>
+            </FormField>
+
+            <FormField 
+              label="Precio de Venta" 
+              required
+              error={errors.sale_price}
+            >
+              <Input
+                type="number"
+                step="0.01"
+                value={wizardData.variant.sale_price}
+                onChange={(e) =>
+                  updateVariantData('sale_price', Number(e.target.value))
+                }
+                placeholder="0.00"
+              />
             </FormField>
 
             <div className="grid grid-cols-2 gap-4">
