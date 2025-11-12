@@ -26,7 +26,7 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
     is_perishable: item?.is_perishable ?? false,
     is_active: item?.is_active ?? true,
   })
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const createMutation = useMutation({
@@ -72,7 +72,7 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.sku || formData.sku.length < 2) {
       newErrors.sku = 'SKU must be at least 2 characters'
     }
@@ -82,16 +82,16 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
     if (!formData.type) {
       newErrors.type = 'Type is required'
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    
+
     if (!validate()) return
-    
+
     try {
       if (item) {
         await updateMutation.mutateAsync(formData)
@@ -165,19 +165,19 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
 
         <div className="space-y-3 rounded-lg border border-gray-200 p-4">
           <h4 className="text-sm font-medium text-gray-900">Item Properties</h4>
-          
+
           <Checkbox
             checked={formData.is_stocked}
             onChange={(e) => setFormData({ ...formData, is_stocked: e.target.checked })}
             label="Track inventory for this item"
           />
-          
+
           <Checkbox
             checked={formData.is_perishable}
             onChange={(e) => setFormData({ ...formData, is_perishable: e.target.checked })}
             label="Perishable (has expiration date)"
           />
-          
+
           <Checkbox
             checked={formData.is_active}
             onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}

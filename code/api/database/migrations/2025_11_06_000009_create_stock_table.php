@@ -17,18 +17,18 @@ return new class extends Migration
                 ->constrained('inventory_locations')
                 ->cascadeOnDelete()
                 ->comment('Inventory location reference');
-            
+
             $table->foreignId('item_variant_id')
                 ->constrained('item_variants')
                 ->cascadeOnDelete()
                 ->comment('Item variant reference');
-            
+
             $table->decimal('on_hand', 15, 4)->default(0)->comment('Available quantity in base unit');
             $table->decimal('reserved', 15, 4)->default(0)->comment('Reserved quantity in base unit');
             $table->decimal('available', 15, 4)
                 ->storedAs('on_hand - reserved')
                 ->comment('Computed available quantity');
-            
+
             $table->json('meta')->nullable()->comment('Additional metadata');
             $table->timestamps();
 

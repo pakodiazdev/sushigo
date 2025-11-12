@@ -17,10 +17,10 @@ return new class extends Migration
                 ->constrained('media_galleries')
                 ->cascadeOnDelete()
                 ->comment('Gallery reference');
-            
+
             $table->morphs('attachable', 'attachable_idx');
             $table->boolean('is_primary')->default(false)->comment('Whether this is the primary gallery for entity');
-            
+
             $table->json('meta')->nullable()->comment('Additional metadata');
             $table->timestamps();
 

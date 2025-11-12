@@ -39,7 +39,7 @@ class DeleteItemVariantController extends Controller
 
         // Delete stock records (with 0 on_hand)
         $variant->stock()->delete();
-        
+
         // Delete the variant
         $variant->delete();
 

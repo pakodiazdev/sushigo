@@ -30,19 +30,19 @@ class StockOutTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->seed();
-        
+
         $this->user = User::first();
         Passport::actingAs($this->user);
 
         // Create test data
         $this->baseUom = UnitOfMeasure::where('code', 'KG')->first();
         $this->transactionUom = UnitOfMeasure::where('code', 'GR')->first();
-        
+
         $operatingUnit = OperatingUnit::first();
         $this->location = InventoryLocation::where('operating_unit_id', $operatingUnit->id)->first();
-        
+
         $item = Item::create([
             'sku' => 'ITM-TEST-001',
             'name' => 'Test Item',
@@ -50,7 +50,7 @@ class StockOutTest extends TestCase
             'type' => 'INSUMO',
             'description' => 'Test item for stock out',
         ]);
-        
+
         $this->variant = ItemVariant::create([
             'item_id' => $item->id,
             'sku' => 'VAR-TEST-001',
@@ -63,7 +63,7 @@ class StockOutTest extends TestCase
             'last_unit_cost' => 50.0000,
             'sale_price' => 75.0000,
         ]);
-        
+
         // Create initial stock
         Stock::create([
             'inventory_location_id' => $this->location->id,
@@ -73,7 +73,7 @@ class StockOutTest extends TestCase
         ]);
     }
 
-    
+
     #[Test]
     public function it_registers_a_sale_with_profit_calculation()
     {
@@ -109,7 +109,7 @@ class StockOutTest extends TestCase
         $this->assertEquals('SALE', $response->json('data.reason'));
         $this->assertEquals('POSTED', $response->json('data.status'));
         $this->assertEquals('10.0000', $response->json('data.qty'));
-        
+
         // Verify profit calculation in line
         $line = StockMovementLine::first();
         $this->assertEquals(75.0000, (float) $line->sale_price);
@@ -117,7 +117,7 @@ class StockOutTest extends TestCase
         $this->assertEquals(50.0000, (float) $line->unit_cost);
         $this->assertEquals(25.0000, (float) $line->profit_margin); // 75 - 50
         $this->assertEquals(250.0000, (float) $line->profit_total); // 10 * 25
-        
+
         // Verify stock was decremented
         $stock = Stock::where('inventory_location_id', $this->location->id)
             ->where('item_variant_id', $this->variant->id)
@@ -125,7 +125,7 @@ class StockOutTest extends TestCase
         $this->assertEquals(90.0000, (float) $stock->on_hand);
     }
 
-    
+
     #[Test]
     public function it_registers_consumption_without_sale_price()
     {
@@ -141,14 +141,14 @@ class StockOutTest extends TestCase
 
         $response->assertStatus(201);
         $this->assertEquals('CONSUMPTION', $response->json('data.reason'));
-        
+
         // Verify no profit calculation for consumption
         $line = StockMovementLine::first();
         $this->assertNull($line->sale_price);
         $this->assertNull($line->sale_total);
         $this->assertNull($line->profit_margin);
         $this->assertNull($line->profit_total);
-        
+
         // Verify stock was decremented
         $stock = Stock::where('inventory_location_id', $this->location->id)
             ->where('item_variant_id', $this->variant->id)
@@ -156,7 +156,7 @@ class StockOutTest extends TestCase
         $this->assertEquals(95.0000, (float) $stock->on_hand);
     }
 
-    
+
     #[Test]
     public function it_validates_insufficient_stock()
     {
@@ -173,11 +173,11 @@ class StockOutTest extends TestCase
             ->assertJson([
                 'success' => false,
             ]);
-        
+
         $this->assertStringContainsString('Insufficient stock', $response->json('message'));
     }
 
-    
+
     #[Test]
     public function it_handles_uom_conversion_for_sales()
     {
@@ -202,13 +202,13 @@ class StockOutTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        
+
         // Verify conversion
         $line = StockMovementLine::first();
         $this->assertEquals(5000.0000, (float) $line->qty); // Original qty in GR
         $this->assertEquals(5.0000, (float) $line->base_qty); // Converted to KG
         $this->assertEquals(0.001, (float) $line->conversion_factor);
-        
+
         // Verify profit calculation (sale price should be converted to base UOM)
         // Sale price per GR = 0.075, so per KG = 0.075 / 0.001 = 75
         // Profit margin = 75 - 50 = 25 per KG
@@ -217,7 +217,7 @@ class StockOutTest extends TestCase
         $this->assertEquals(375.0000, (float) $line->sale_total); // 5000 * 0.075
         $this->assertEquals(25.0000, (float) $line->profit_margin); // 75 - 50 (converted to base)
         $this->assertEquals(125.0000, (float) $line->profit_total); // 5 * 25
-        
+
         // Verify stock was decremented in base UOM
         $stock = Stock::where('inventory_location_id', $this->location->id)
             ->where('item_variant_id', $this->variant->id)
@@ -225,7 +225,7 @@ class StockOutTest extends TestCase
         $this->assertEquals(95.0000, (float) $stock->on_hand); // 100 - 5
     }
 
-    
+
     #[Test]
     public function it_validates_required_fields()
     {
@@ -241,7 +241,7 @@ class StockOutTest extends TestCase
             ]);
     }
 
-    
+
     #[Test]
     public function it_validates_reason_must_be_sale_or_consumption()
     {
@@ -257,7 +257,7 @@ class StockOutTest extends TestCase
             ->assertJsonValidationErrors(['reason']);
     }
 
-    
+
     #[Test]
     public function it_validates_quantity_must_be_positive()
     {
@@ -273,7 +273,7 @@ class StockOutTest extends TestCase
             ->assertJsonValidationErrors(['qty']);
     }
 
-    
+
     #[Test]
     public function it_returns_404_for_nonexistent_location()
     {
@@ -289,7 +289,7 @@ class StockOutTest extends TestCase
             ->assertJsonValidationErrors(['inventory_location_id']);
     }
 
-    
+
     #[Test]
     public function it_calculates_zero_profit_when_cost_equals_price()
     {
@@ -303,7 +303,7 @@ class StockOutTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        
+
         $line = StockMovementLine::first();
         $this->assertEquals(50.0000, (float) $line->sale_price);
         $this->assertEquals(50.0000, (float) $line->unit_cost);
@@ -311,7 +311,7 @@ class StockOutTest extends TestCase
         $this->assertEquals(0.0000, (float) $line->profit_total);
     }
 
-    
+
     #[Test]
     public function it_records_negative_profit_for_loss_sales()
     {
@@ -325,7 +325,7 @@ class StockOutTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        
+
         $line = StockMovementLine::first();
         $this->assertEquals(30.0000, (float) $line->sale_price);
         $this->assertEquals(50.0000, (float) $line->unit_cost);

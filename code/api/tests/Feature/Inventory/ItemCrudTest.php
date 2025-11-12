@@ -11,7 +11,7 @@ class ItemCrudTest extends InventoryTestCase
 {
     use RefreshDatabase;
 
-    
+
     #[Test]
     public function it_can_list_items()
     {
@@ -39,7 +39,7 @@ class ItemCrudTest extends InventoryTestCase
         $this->assertCount(3, $response->json('data'));
     }
 
-    
+
     #[Test]
     public function it_can_filter_items_by_type()
     {
@@ -56,7 +56,7 @@ class ItemCrudTest extends InventoryTestCase
         $this->assertCount(2, $response->json('data'));
     }
 
-    
+
     #[Test]
     public function it_can_search_items_by_name()
     {
@@ -73,7 +73,7 @@ class ItemCrudTest extends InventoryTestCase
         $this->assertCount(2, $response->json('data'));
     }
 
-    
+
     #[Test]
     public function it_can_create_item()
     {
@@ -103,7 +103,7 @@ class ItemCrudTest extends InventoryTestCase
         ]);
     }
 
-    
+
     #[Test]
     public function it_auto_uppercases_sku_and_type()
     {
@@ -117,14 +117,14 @@ class ItemCrudTest extends InventoryTestCase
 
         // Assert
         $response->assertStatus(201);
-        
+
         $this->assertDatabaseHas('items', [
             'sku' => 'SALM-001', // Uppercased
             'type' => 'INSUMO', // Uppercased
         ]);
     }
 
-    
+
     #[Test]
     public function it_validates_sku_uniqueness()
     {
@@ -143,7 +143,7 @@ class ItemCrudTest extends InventoryTestCase
             ->assertJsonValidationErrors(['sku']);
     }
 
-    
+
     #[Test]
     public function it_validates_item_type()
     {
@@ -159,7 +159,7 @@ class ItemCrudTest extends InventoryTestCase
             ->assertJsonValidationErrors(['type']);
     }
 
-    
+
     #[Test]
     public function it_can_show_item()
     {
@@ -189,7 +189,7 @@ class ItemCrudTest extends InventoryTestCase
             ]);
     }
 
-    
+
     #[Test]
     public function it_can_update_item()
     {
@@ -216,7 +216,7 @@ class ItemCrudTest extends InventoryTestCase
         ]);
     }
 
-    
+
     #[Test]
     public function it_can_delete_item_without_variants()
     {
@@ -231,7 +231,7 @@ class ItemCrudTest extends InventoryTestCase
         $this->assertSoftDeleted('items', ['id' => $item->id]);
     }
 
-    
+
     #[Test]
     public function it_cannot_delete_item_with_variants()
     {

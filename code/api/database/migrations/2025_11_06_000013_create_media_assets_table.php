@@ -17,15 +17,15 @@ return new class extends Migration
                 ->constrained('media_galleries')
                 ->cascadeOnDelete()
                 ->comment('Parent gallery reference');
-            
+
             $table->string('path', 500)->comment('Storage path to file');
             $table->string('mime_type', 100)->comment('File MIME type');
             $table->string('filename', 255)->comment('Original filename');
             $table->unsignedBigInteger('size')->default(0)->comment('File size in bytes');
-            
+
             $table->integer('position')->default(0)->comment('Display order within gallery');
             $table->boolean('is_primary')->default(false)->comment('Whether this is the primary image');
-            
+
             $table->json('meta')->nullable()->comment('Additional metadata (transformations, dimensions, etc.)');
             $table->timestamps();
             $table->softDeletes();
@@ -51,7 +51,7 @@ return new class extends Migration
         Schema::table('media_galleries', function (Blueprint $table) {
             $table->dropForeign(['cover_media_id']);
         });
-        
+
         Schema::dropIfExists('media_assets');
     }
 };

@@ -27,7 +27,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
     is_active: location?.is_active ?? true,
     notes: location?.notes || '',
   })
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Fetch operating units for the select
@@ -82,7 +82,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.operating_unit_id) {
       newErrors.operating_unit_id = 'Operating unit is required'
     }
@@ -95,16 +95,16 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
     if (formData.priority < 0 || formData.priority > 1000) {
       newErrors.priority = 'Priority must be between 0 and 1000'
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    
+
     if (!validate()) return
-    
+
     try {
       if (location) {
         await updateMutation.mutateAsync(formData)

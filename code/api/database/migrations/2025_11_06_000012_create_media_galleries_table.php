@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('cover_media_id')
                 ->nullable()
                 ->comment('Cover/primary media asset ID');
-            
+
             $table->boolean('is_shared')->default(false)->comment('Whether gallery can be reused');
             $table->json('meta')->nullable()->comment('Additional metadata');
             $table->timestamps();

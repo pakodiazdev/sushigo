@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { 
-  Package, 
-  Calendar, 
-  Tag, 
+import {
+  Package,
+  Calendar,
+  Tag,
   Edit,
   Trash2,
   Box,
@@ -80,11 +80,10 @@ export function ItemDetails({
             </span>
           </div>
           <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-              item.is_active
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.is_active
                 ? 'bg-green-100 text-green-800'
                 : 'bg-red-100 text-red-800'
-            }`}
+              }`}
           >
             {item.is_active ? 'Active' : 'Inactive'}
           </span>

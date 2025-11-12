@@ -14,12 +14,12 @@ interface BreadcrumbsProps {
 
 /**
  * Breadcrumbs component - Shows navigation trail
- * 
+ *
  * @example
  * ```tsx
  * // Auto-generated from route
  * <Breadcrumbs />
- * 
+ *
  * // Custom items
  * <Breadcrumbs items={[
  *   { label: 'Inventario', path: '/inventory' },
@@ -55,7 +55,7 @@ export function Breadcrumbs({ className, items }: BreadcrumbsProps) {
         return (
           <div key={item.path} className="flex items-center gap-2">
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            
+
             {isLast ? (
               <span className="font-medium text-foreground" aria-current="page">
                 {item.label}
@@ -87,14 +87,14 @@ function generateBreadcrumbs(path: string): BreadcrumbItem[] {
     '/clientes': 'Clientes',
     '/reportes': 'Reportes',
     '/configuracion': 'Configuración',
-    
+
     // Inventory routes
     '/inventory': 'Inventario',
     '/inventory/locations': 'Ubicaciones',
     '/inventory/items': 'Items',
     '/inventory/item-variants': 'Variantes',
     '/inventory/stock-movements': 'Movimientos de Stock',
-    
+
     // Units of Measure
     '/inventory/units-of-measure': 'Unidades de Medida',
   };
@@ -111,7 +111,7 @@ function generateBreadcrumbs(path: string): BreadcrumbItem[] {
   segments.forEach((segment) => {
     currentPath += `/${segment}`;
     const label = routeLabels[currentPath] || formatSegment(segment);
-    
+
     breadcrumbs.push({
       label,
       path: currentPath,

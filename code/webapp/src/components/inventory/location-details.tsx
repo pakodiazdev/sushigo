@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { 
-  MapPin, 
-  Package, 
-  Calendar, 
-  Tag, 
+import {
+  MapPin,
+  Package,
+  Calendar,
+  Tag,
   Building2,
   Edit,
   Trash2,
@@ -102,11 +102,10 @@ export function LocationDetails({
               label="Primary Location"
               value={
                 <span
-                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                    location.is_primary
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${location.is_primary
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}
+                    }`}
                 >
                   {location.is_primary ? 'Yes' : 'No'}
                 </span>
@@ -118,11 +117,10 @@ export function LocationDetails({
               label="Status"
               value={
                 <span
-                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                    location.is_active
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${location.is_active
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
-                  }`}
+                    }`}
                 >
                   {location.is_active ? 'Active' : 'Inactive'}
                 </span>

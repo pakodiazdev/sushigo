@@ -14,7 +14,7 @@ use Tests\Feature\Inventory\InventoryTestCase;
 
 class InventoryLocationCrudTest extends InventoryTestCase
 {
-    
+
     #[Test]
     public function it_lists_inventory_locations()
     {
@@ -36,7 +36,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         $this->assertGreaterThanOrEqual(1, $response->json('meta.total'));
     }
 
-    
+
     #[Test]
     public function it_filters_locations_by_operating_unit()
     {
@@ -52,7 +52,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         }
     }
 
-    
+
     #[Test]
     public function it_filters_locations_by_type()
     {
@@ -69,7 +69,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         $this->assertGreaterThanOrEqual(1, count($locations));
     }
 
-    
+
     #[Test]
     public function it_filters_locations_by_is_active()
     {
@@ -83,7 +83,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         }
     }
 
-    
+
     #[Test]
     public function it_creates_inventory_location()
     {
@@ -131,7 +131,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         ]);
     }
 
-    
+
     #[Test]
     public function it_uses_default_values_when_creating_location()
     {
@@ -153,7 +153,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
             ]);
     }
 
-    
+
     #[Test]
     public function it_validates_required_fields_when_creating()
     {
@@ -163,7 +163,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
             ->assertJsonValidationErrors(['operating_unit_id', 'name', 'type']);
     }
 
-    
+
     #[Test]
     public function it_validates_operating_unit_exists_when_creating()
     {
@@ -177,7 +177,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
             ->assertJsonValidationErrors(['operating_unit_id']);
     }
 
-    
+
     #[Test]
     public function it_validates_location_type_enum()
     {
@@ -193,7 +193,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
             ->assertJsonValidationErrors(['type']);
     }
 
-    
+
     #[Test]
     public function it_shows_inventory_location_with_stock_summary()
     {
@@ -221,7 +221,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
             ]);
     }
 
-    
+
     #[Test]
     public function it_updates_inventory_location()
     {
@@ -252,7 +252,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         ]);
     }
 
-    
+
     #[Test]
     public function it_updates_only_provided_fields()
     {
@@ -272,7 +272,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
             ]);
     }
 
-    
+
     #[Test]
     public function it_deletes_inventory_location_without_stock()
     {
@@ -294,7 +294,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         ]);
     }
 
-    
+
     #[Test]
     public function it_prevents_deleting_location_with_stock()
     {
@@ -331,7 +331,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         ]);
     }
 
-    
+
     #[Test]
     public function it_returns_404_when_location_not_found()
     {

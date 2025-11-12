@@ -17,7 +17,7 @@ return new class extends Migration
                 ->constrained('branches')
                 ->cascadeOnDelete()
                 ->comment('Parent branch reference');
-            
+
             $table->string('name', 255)->comment('Operating unit display name');
             $table->enum('type', [
                 'BRANCH_MAIN',
@@ -25,7 +25,7 @@ return new class extends Migration
                 'BRANCH_RETURN',
                 'EVENT_TEMP'
             ])->comment('Type of operating unit');
-            
+
             $table->date('start_date')->nullable()->comment('Start date for temporary units (events)');
             $table->date('end_date')->nullable()->comment('End date for temporary units (events)');
             $table->boolean('is_active')->default(true)->comment('Unit operational status');

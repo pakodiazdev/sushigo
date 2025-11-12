@@ -17,7 +17,7 @@ return new class extends Migration
                 ->constrained('operating_units')
                 ->cascadeOnDelete()
                 ->comment('Parent operating unit reference');
-            
+
             $table->string('name', 255)->comment('Location display name');
             $table->enum('type', [
                 'MAIN',
@@ -27,7 +27,7 @@ return new class extends Migration
                 'RETURN',
                 'WASTE'
             ])->comment('Type of inventory location');
-            
+
             $table->boolean('is_primary')->default(false)->comment('Primary location flag for unit');
             $table->integer('priority')->default(0)->comment('Sort priority for display');
             $table->json('meta')->nullable()->comment('Additional metadata');

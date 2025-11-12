@@ -5,10 +5,10 @@ Complete implementation of Opening Balance and Stock Out forms with real-time ca
 ## 📁 Files Created
 
 1. **`src/components/inventory/opening-balance-form.tsx`** (305 lines)
-   - Form for registering initial inventory
-   
+    - Form for registering initial inventory
+
 2. **`src/components/inventory/stock-out-form.tsx`** (445 lines)
-   - Form for stock removal (sales/consumption)
+    - Form for stock removal (sales/consumption)
 
 **Total**: ~750 lines of production-ready code
 
@@ -19,6 +19,7 @@ Complete implementation of Opening Balance and Stock Out forms with real-time ca
 **Purpose**: Register initial inventory levels when starting to track stock for a product.
 
 #### Key Features
+
 - **Location Selection**: Dropdown of active inventory locations
 - **Variant Selection**: Dropdown of active item variants with item info
 - **Auto-fill UoM**: Automatically selects variant's default unit of measure
@@ -31,16 +32,18 @@ Complete implementation of Opening Balance and Stock Out forms with real-time ca
 - **Server Errors**: Backend validation errors displayed per field
 
 #### Form Fields
-| Field | Type | Required | Validation | Auto-fill |
-|-------|------|----------|------------|-----------|
-| Location | Select | Yes | Must be > 0 | No |
-| Item Variant | Select | Yes | Must be > 0 | No |
-| Quantity | Number | Yes | Must be > 0 | No |
-| Unit of Measure | Select | Yes | Must be > 0 | Yes (from variant) |
-| Unit Cost | Number | Yes | Must be >= 0 | No |
-| Notes | Textarea | No | - | No |
+
+| Field           | Type     | Required | Validation   | Auto-fill          |
+| --------------- | -------- | -------- | ------------ | ------------------ |
+| Location        | Select   | Yes      | Must be > 0  | No                 |
+| Item Variant    | Select   | Yes      | Must be > 0  | No                 |
+| Quantity        | Number   | Yes      | Must be > 0  | No                 |
+| Unit of Measure | Select   | Yes      | Must be > 0  | Yes (from variant) |
+| Unit Cost       | Number   | Yes      | Must be >= 0 | No                 |
+| Notes           | Textarea | No       | -            | No                 |
 
 #### Real-time Calculations
+
 ```typescript
 Total Cost = quantity × unit_cost
 
@@ -56,6 +59,7 @@ Total Cost: $1,250.00
 **Purpose**: Register inventory removal for sales or internal consumption.
 
 #### Key Features
+
 - **Location Selection**: Dropdown of active inventory locations
 - **Variant Selection**: Dropdown of active item variants
 - **Current Stock Display**: Real-time stock levels (on hand, reserved, available)
@@ -70,19 +74,21 @@ Total Cost: $1,250.00
 - **Notes Field**: Optional reference or comments
 
 #### Form Fields
-| Field | Type | Required | Validation | Auto-fill |
-|-------|------|----------|------------|-----------|
-| Location | Select | Yes | Must be > 0 | No |
-| Item Variant | Select | Yes | Must be > 0 | No |
-| Quantity | Number | Yes | Must be > 0, <= available | No |
-| Unit of Measure | Select | Yes | Must be > 0 | Yes (from variant) |
-| Reason | Select | Yes | SALE or CONSUMPTION | No |
-| Sale Price | Number | Conditional* | Must be > 0 if SALE | No |
-| Notes | Textarea | No | - | No |
+
+| Field           | Type     | Required      | Validation                | Auto-fill          |
+| --------------- | -------- | ------------- | ------------------------- | ------------------ |
+| Location        | Select   | Yes           | Must be > 0               | No                 |
+| Item Variant    | Select   | Yes           | Must be > 0               | No                 |
+| Quantity        | Number   | Yes           | Must be > 0, <= available | No                 |
+| Unit of Measure | Select   | Yes           | Must be > 0               | Yes (from variant) |
+| Reason          | Select   | Yes           | SALE or CONSUMPTION       | No                 |
+| Sale Price      | Number   | Conditional\* | Must be > 0 if SALE       | No                 |
+| Notes           | Textarea | No            | -                         | No                 |
 
 \* Required only when Reason = SALE
 
 #### Real-time Calculations (for SALE)
+
 ```typescript
 Total Revenue = quantity × sale_price
 Total Cost = quantity × unit_cost (from variant)
@@ -103,15 +109,18 @@ Profit Margin: 48.0%
 #### Stock Status Indicators
 
 **Normal Stock (Blue)**
+
 - Available stock is above minimum level
 - Sufficient quantity for operation
 
 **Low Stock (Yellow)**
+
 - Available stock is below minimum level (from variant.min_stock)
 - Warning shown but operation allowed
 - Message: "⚠️ Stock below minimum level (X)"
 
 **Insufficient Stock (Red)**
+
 - Requested quantity exceeds available stock
 - Submit button disabled
 - Message: "❌ Insufficient stock for this operation"
@@ -122,31 +131,34 @@ Profit Margin: 48.0%
 ### Visual States
 
 #### OpeningBalanceForm
+
 1. **Variant Info Card** (Blue)
-   - `bg-blue-50 border-blue-200`
-   - Shows: Item name, Default UoM, Last cost
-   - Icon: Package (blue)
+    - `bg-blue-50 border-blue-200`
+    - Shows: Item name, Default UoM, Last cost
+    - Icon: Package (blue)
 
 2. **Total Cost Display** (Green)
-   - `bg-green-50 border-green-200`
-   - Large bold amount: `text-2xl font-bold`
-   - Icon: DollarSign (green)
-   - Calculation breakdown shown below
+    - `bg-green-50 border-green-200`
+    - Large bold amount: `text-2xl font-bold`
+    - Icon: DollarSign (green)
+    - Calculation breakdown shown below
 
 #### StockOutForm
+
 1. **Current Stock Card** (Dynamic Color)
-   - **Normal**: `bg-blue-50 border-blue-200` (blue text)
-   - **Low Stock**: `bg-yellow-50 border-yellow-200` (yellow text)
-   - **Insufficient**: `bg-red-50 border-red-200` (red text)
-   - Grid shows: On Hand, Reserved, Available
+    - **Normal**: `bg-blue-50 border-blue-200` (blue text)
+    - **Low Stock**: `bg-yellow-50 border-yellow-200` (yellow text)
+    - **Insufficient**: `bg-red-50 border-red-200` (red text)
+    - Grid shows: On Hand, Reserved, Available
 
 2. **Profit Analysis Card** (Dynamic Color)
-   - **Profitable**: `bg-green-50 border-green-200` (green text)
-   - **Loss**: `bg-red-50 border-red-200` (red text)
-   - Shows: Revenue, Cost, Net Profit, Margin %
-   - Icon: TrendingUp
+    - **Profitable**: `bg-green-50 border-green-200` (green text)
+    - **Loss**: `bg-red-50 border-red-200` (red text)
+    - Shows: Revenue, Cost, Net Profit, Margin %
+    - Icon: TrendingUp
 
 ### Icons Used
+
 - `Package`: Variant info, stock status
 - `DollarSign`: Cost/price fields, total cost
 - `TrendingUp`: Profit analysis
@@ -156,57 +168,61 @@ Profit Margin: 48.0%
 ## 🔄 User Flows
 
 ### Opening Balance Flow
+
 1. User opens Opening Balance form (slide panel)
 2. User selects inventory location
 3. User selects item variant
-   - **System**: Variant info card appears
-   - **System**: UoM auto-filled from variant
+    - **System**: Variant info card appears
+    - **System**: UoM auto-filled from variant
 4. User enters quantity
 5. User enters unit cost
-   - **System**: Total cost calculated and displayed
+    - **System**: Total cost calculated and displayed
 6. User optionally adds notes
 7. User clicks "Register Opening Balance"
 8. **Validation**:
-   - All required fields present
-   - Quantity > 0
-   - Cost >= 0
+    - All required fields present
+    - Quantity > 0
+    - Cost >= 0
 9. **Success**: Stock created, form closes, parent refreshes
 10. **Error**: Field errors displayed inline
 
 ### Stock Out Flow (SALE)
+
 1. User opens Stock Out form (slide panel)
 2. User selects inventory location
 3. User selects item variant
-   - **System**: Current stock card appears
-   - **System**: UoM auto-filled from variant
-   - **System**: Checks available stock
+    - **System**: Current stock card appears
+    - **System**: UoM auto-filled from variant
+    - **System**: Checks available stock
 4. User enters quantity to remove
-   - **System**: Validates against available stock
-   - **System**: Shows warning if low stock
-   - **System**: Shows error if insufficient stock
+    - **System**: Validates against available stock
+    - **System**: Shows warning if low stock
+    - **System**: Shows error if insufficient stock
 5. User selects reason: "Sale"
 6. User enters sale price per unit
-   - **System**: Profit analysis card appears
-   - **System**: Calculates revenue, cost, profit, margin
+    - **System**: Profit analysis card appears
+    - **System**: Calculates revenue, cost, profit, margin
 7. User optionally adds notes
 8. User clicks "Register Stock Out"
 9. **Validation**:
-   - All required fields present
-   - Quantity > 0 and <= available
-   - Sale price > 0
+    - All required fields present
+    - Quantity > 0 and <= available
+    - Sale price > 0
 10. **Success**: Stock removed, form closes, parent refreshes
 11. **Error**: Field errors displayed inline
 
 ### Stock Out Flow (CONSUMPTION)
-1-4. Same as SALE flow
-5. User selects reason: "Consumption"
-   - **System**: Sale price field hidden
-   - **System**: Profit analysis hidden
+
+1-4. Same as SALE flow 5. User selects reason: "Consumption"
+
+- **System**: Sale price field hidden
+- **System**: Profit analysis hidden
+
 6. User optionally adds notes
 7. User clicks "Register Stock Out"
 8. **Validation**:
-   - All required fields present
-   - Quantity > 0 and <= available
+    - All required fields present
+    - Quantity > 0 and <= available
 9. **Success**: Stock removed, form closes, parent refreshes
 10. **Error**: Field errors displayed inline
 
@@ -215,6 +231,7 @@ Profit Margin: 48.0%
 ### Opening Balance Validations
 
 #### Client-Side
+
 ```typescript
 {
   inventory_location_id: Required, must be > 0
@@ -227,6 +244,7 @@ Profit Margin: 48.0%
 ```
 
 #### Server-Side
+
 - **Foreign key validation**: location_id, item_variant_id, uom_id must exist
 - **Duplicate check**: Prevents creating opening balance if stock already exists
 - **Location must be active**: Cannot register to inactive locations
@@ -235,6 +253,7 @@ Profit Margin: 48.0%
 ### Stock Out Validations
 
 #### Client-Side
+
 ```typescript
 {
   location_id: Required, must be > 0
@@ -248,6 +267,7 @@ Profit Margin: 48.0%
 ```
 
 #### Server-Side
+
 - **Foreign key validation**: location_id, variant_id, uom_id must exist
 - **Stock availability**: Quantity must not exceed available stock
 - **Location must be active**: Cannot remove from inactive locations
@@ -259,6 +279,7 @@ Profit Margin: 48.0%
 ### Endpoints Used
 
 #### Opening Balance
+
 ```
 POST /api/v1/inventory/opening-balance
 
@@ -298,6 +319,7 @@ Response (201 Created):
 ```
 
 #### Stock Out
+
 ```
 POST /api/v1/inventory/stock-out
 
@@ -352,6 +374,7 @@ Response (201 Created):
 ```
 
 #### Supporting APIs
+
 ```
 GET /api/v1/inventory-locations?is_active=true&per_page=100
 GET /api/v1/item-variants?is_active=true&per_page=200
@@ -418,72 +441,79 @@ function InventoryPage() {
 ## 📊 State Management
 
 ### React Query Keys
+
 ```typescript
 // Both forms use:
-['inventory-locations-for-select']  // Locations dropdown
-['item-variants-for-select']        // Variants dropdown
-['units-of-measure-for-select']     // UoM dropdown
-
-// StockOutForm additionally uses:
-['stock-by-variant', variantId]     // Current stock levels
+["inventory-locations-for-select"]["item-variants-for-select"][ // Locations dropdown // Variants dropdown
+    "units-of-measure-for-select"
+][ // UoM dropdown
+    // StockOutForm additionally uses:
+    ("stock-by-variant", variantId)
+]; // Current stock levels
 ```
 
 ### Local State
+
 Both forms manage:
+
 - `formData`: All form field values
 - `errors`: Client & server validation errors
 - `selectedVariant`: Currently selected variant object
 
 StockOutForm additionally manages:
+
 - `currentStock`: Real-time stock data from API
 
 ## 🚀 Next Steps
 
 ### Immediate Enhancements
+
 1. **Stock Transfer Form**
-   - Move stock between locations
-   - Similar structure to StockOutForm
-   - Shows stock at both source and destination
+    - Move stock between locations
+    - Similar structure to StockOutForm
+    - Shows stock at both source and destination
 
 2. **Stock Adjustment Form**
-   - Correct stock discrepancies
-   - Requires reason and approval
-   - Tracks who made adjustment
+    - Correct stock discrepancies
+    - Requires reason and approval
+    - Tracks who made adjustment
 
 3. **Batch Operations**
-   - Multiple variants in one opening balance
-   - Bulk stock out for invoices
-   - CSV import support
+    - Multiple variants in one opening balance
+    - Bulk stock out for invoices
+    - CSV import support
 
 ### Advanced Features
+
 1. **UoM Conversion on the fly**
-   - Select different UoM than variant's default
-   - Auto-convert quantities
-   - Show conversion factor
+    - Select different UoM than variant's default
+    - Auto-convert quantities
+    - Show conversion factor
 
 2. **Cost Prediction**
-   - Suggest unit cost based on recent purchases
-   - Show cost trend
-   - Alert on unusual costs
+    - Suggest unit cost based on recent purchases
+    - Show cost trend
+    - Alert on unusual costs
 
 3. **Stock Reservation**
-   - Reserve stock for pending orders
-   - Automatically release after timeout
-   - Show reserved quantities by order
+    - Reserve stock for pending orders
+    - Automatically release after timeout
+    - Show reserved quantities by order
 
 4. **Photo Upload**
-   - Attach photos of inventory
-   - Useful for opening balance verification
-   - S3/cloud storage integration
+    - Attach photos of inventory
+    - Useful for opening balance verification
+    - S3/cloud storage integration
 
 5. **Barcode Scanning**
-   - Scan variant codes
-   - Quick quantity entry
-   - Mobile-optimized interface
+    - Scan variant codes
+    - Quick quantity entry
+    - Mobile-optimized interface
 
 ## 🎯 Business Rules
 
 ### Opening Balance
+
 - ✅ Can only register opening balance once per variant per location
 - ✅ Creates stock record if none exists
 - ✅ Updates weighted average cost
@@ -491,6 +521,7 @@ StockOutForm additionally manages:
 - ✅ Generates stock movement record with type=IN, reason=OPENING_BALANCE
 
 ### Stock Out
+
 - ✅ Cannot remove more than available stock
 - ✅ Reduces on_hand quantity
 - ✅ Updates weighted average cost
@@ -499,6 +530,7 @@ StockOutForm additionally manages:
 - ✅ Generates stock movement record with type=OUT, reason=SALE|CONSUMPTION
 
 ### Stock Levels
+
 - ⚠️ **Warning** when available < min_stock (from variant)
 - ❌ **Error** when qty > available stock
 - ℹ️ **Info** shows current: on_hand, reserved, available
@@ -515,9 +547,9 @@ StockOutForm additionally manages:
 - **Error Handling**: User-friendly messages
 - **Dependencies**: 0 new dependencies added
 
-**Lines of Code**: ~750 across 2 files  
-**API Endpoints**: 6 endpoints integrated  
-**Components Reused**: 10 (SlidePanel, Button, Input, FormField, Select, Textarea)  
+**Lines of Code**: ~750 across 2 files
+**API Endpoints**: 6 endpoints integrated
+**Components Reused**: 10 (SlidePanel, Button, Input, FormField, Select, Textarea)
 **Estimated Bundle Size**: ~22KB gzipped
 
 ## 💡 Design Decisions

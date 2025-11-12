@@ -52,11 +52,10 @@ export function VariantDetails({ variant, onEdit, onDelete }: VariantDetailsProp
               {variant.code}
             </span>
             <span
-              className={`text-xs px-2 py-1 rounded-full ${
-                variant.is_active
+              className={`text-xs px-2 py-1 rounded-full ${variant.is_active
                   ? 'bg-green-100 text-green-700'
                   : 'bg-gray-100 text-gray-700'
-              }`}
+                }`}
             >
               {variant.is_active ? 'Active' : 'Inactive'}
             </span>

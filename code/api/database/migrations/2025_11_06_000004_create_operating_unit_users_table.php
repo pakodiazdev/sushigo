@@ -17,12 +17,12 @@ return new class extends Migration
                 ->constrained('users')
                 ->cascadeOnDelete()
                 ->comment('User reference');
-            
+
             $table->foreignId('operating_unit_id')
                 ->constrained('operating_units')
                 ->cascadeOnDelete()
                 ->comment('Operating unit reference');
-            
+
             $table->enum('assignment_role', [
                 'OWNER',
                 'MANAGER',
@@ -30,7 +30,7 @@ return new class extends Migration
                 'INVENTORY',
                 'AUDITOR'
             ])->comment('Role within the operating unit');
-            
+
             $table->boolean('is_active')->default(true)->comment('Assignment active status');
             $table->json('meta')->nullable()->comment('Additional metadata');
             $table->timestamps();

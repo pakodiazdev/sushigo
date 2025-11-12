@@ -108,7 +108,7 @@ export default function Layout() {
                             <Breadcrumbs />
                         </div>
                     )}
-                    
+
                     <Outlet />
                 </main>
             </div>

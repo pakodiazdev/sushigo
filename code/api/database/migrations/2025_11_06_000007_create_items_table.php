@@ -21,7 +21,7 @@ return new class extends Migration
                 'PRODUCTO',
                 'ACTIVO'
             ])->comment('Item classification type');
-            
+
             $table->boolean('is_stocked')->default(true)->comment('Whether item is tracked in inventory');
             $table->boolean('is_perishable')->default(false)->comment('Whether item has expiration date');
             $table->boolean('is_active')->default(true)->comment('Item active status');

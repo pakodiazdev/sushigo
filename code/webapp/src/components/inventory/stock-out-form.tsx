@@ -97,7 +97,7 @@ export function StockOutForm({
     onSuccess: () => {
       const isSale = formData.reason === 'SALE'
       const profitAmount = isSale ? totalRevenue - totalCost : 0
-      
+
       if (isSale && profitAmount < 0) {
         showWarning(
           `Stock out registered, but sale resulted in negative profit: $${Math.abs(profitAmount).toFixed(2)}`,
@@ -223,13 +223,12 @@ export function StockOutForm({
           {/* Current Stock Info */}
           {currentStock && selectedVariant && (
             <div
-              className={`border rounded-lg p-3 text-sm ${
-                hasInsufficientStock
+              className={`border rounded-lg p-3 text-sm ${hasInsufficientStock
                   ? 'bg-red-50 border-red-200'
                   : hasLowStock
-                  ? 'bg-yellow-50 border-yellow-200'
-                  : 'bg-blue-50 border-blue-200'
-              }`}
+                    ? 'bg-yellow-50 border-yellow-200'
+                    : 'bg-blue-50 border-blue-200'
+                }`}
             >
               <div className="flex items-center gap-2 mb-2">
                 {hasInsufficientStock ? (
@@ -238,13 +237,12 @@ export function StockOutForm({
                   <Package className="h-4 w-4 text-blue-600" />
                 )}
                 <span
-                  className={`font-semibold ${
-                    hasInsufficientStock
+                  className={`font-semibold ${hasInsufficientStock
                       ? 'text-red-900'
                       : hasLowStock
-                      ? 'text-yellow-900'
-                      : 'text-blue-900'
-                  }`}
+                        ? 'text-yellow-900'
+                        : 'text-blue-900'
+                    }`}
                 >
                   Current Stock
                 </span>
@@ -261,9 +259,8 @@ export function StockOutForm({
                 <div>
                   <div className="text-muted-foreground">Available</div>
                   <div
-                    className={`font-semibold ${
-                      hasLowStock ? 'text-yellow-700' : 'text-green-600'
-                    }`}
+                    className={`font-semibold ${hasLowStock ? 'text-yellow-700' : 'text-green-600'
+                      }`}
                   >
                     {currentStock.available || 0}
                   </div>
@@ -361,33 +358,29 @@ export function StockOutForm({
             formData.sale_price > 0 &&
             selectedVariant && (
               <div
-                className={`border rounded-lg p-4 ${
-                  profitAmount >= 0
+                className={`border rounded-lg p-4 ${profitAmount >= 0
                     ? 'bg-green-50 border-green-200'
                     : 'bg-red-50 border-red-200'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <TrendingUp
-                      className={`h-5 w-5 ${
-                        profitAmount >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}
+                      className={`h-5 w-5 ${profitAmount >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}
                     />
                     <span
-                      className={`font-semibold ${
-                        profitAmount >= 0 ? 'text-green-900' : 'text-red-900'
-                      }`}
+                      className={`font-semibold ${profitAmount >= 0 ? 'text-green-900' : 'text-red-900'
+                        }`}
                     >
                       Profit Analysis
                     </span>
                   </div>
                   <span
-                    className={`text-sm px-2 py-1 rounded ${
-                      profitAmount >= 0
+                    className={`text-sm px-2 py-1 rounded ${profitAmount >= 0
                         ? 'bg-green-100 text-green-700'
                         : 'bg-red-100 text-red-700'
-                    }`}
+                      }`}
                   >
                     {profitMargin.toFixed(1)}% margin
                   </span>
@@ -409,9 +402,8 @@ export function StockOutForm({
                   <div className="flex justify-between pt-2 border-t border-gray-200">
                     <span className="font-semibold">Net Profit:</span>
                     <span
-                      className={`font-bold text-lg ${
-                        profitAmount >= 0 ? 'text-green-700' : 'text-red-700'
-                      }`}
+                      className={`font-bold text-lg ${profitAmount >= 0 ? 'text-green-700' : 'text-red-700'
+                        }`}
                     >
                       ${profitAmount.toFixed(2)}
                     </span>

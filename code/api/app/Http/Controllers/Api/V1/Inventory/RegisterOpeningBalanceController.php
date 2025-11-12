@@ -38,9 +38,7 @@ use App\Services\Inventory\OpeningBalanceService;
  */
 class RegisterOpeningBalanceController extends Controller
 {
-    public function __construct(private OpeningBalanceService $service)
-    {
-    }
+    public function __construct(private OpeningBalanceService $service) {}
 
     public function __invoke(RegisterOpeningBalanceRequest $request)
     {

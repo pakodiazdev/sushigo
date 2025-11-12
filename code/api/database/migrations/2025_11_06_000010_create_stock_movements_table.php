@@ -18,26 +18,26 @@ return new class extends Migration
                 ->constrained('inventory_locations')
                 ->nullOnDelete()
                 ->comment('Source location (null for entries)');
-            
+
             $table->foreignId('to_location_id')
                 ->nullable()
                 ->constrained('inventory_locations')
                 ->nullOnDelete()
                 ->comment('Target location (null for exits)');
-            
+
             $table->foreignId('item_variant_id')
                 ->constrained('item_variants')
                 ->cascadeOnDelete()
                 ->comment('Item variant moved');
-            
+
             $table->foreignId('user_id')
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete()
                 ->comment('User who executed the movement');
-            
+
             $table->decimal('qty', 15, 4)->comment('Quantity moved in base unit');
-            
+
             $table->enum('reason', [
                 'TRANSFER',
                 'RETURN',
@@ -47,17 +47,17 @@ return new class extends Migration
                 'OPENING_BALANCE',
                 'COUNT_VARIANCE'
             ])->comment('Movement reason code');
-            
+
             $table->enum('status', [
                 'DRAFT',
                 'POSTED',
                 'REVERSED'
             ])->default('POSTED')->comment('Movement status');
-            
+
             $table->string('reference', 255)->nullable()->comment('External reference number');
             $table->unsignedBigInteger('related_id')->nullable()->comment('Related entity ID (sale, purchase, etc.)');
             $table->string('related_type', 100)->nullable()->comment('Related entity type');
-            
+
             $table->text('notes')->nullable()->comment('Movement notes');
             $table->json('meta')->nullable()->comment('Additional metadata (original_qty, original_uom, cost, etc.)');
             $table->timestamp('posted_at')->nullable()->comment('When movement was posted');

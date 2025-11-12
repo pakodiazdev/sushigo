@@ -5,6 +5,7 @@
 ### 1. ItemForm (`src/components/inventory/item-form.tsx`)
 
 **Features**:
+
 - ✅ Create & Update modes
 - ✅ SKU validation (unique, uppercase)
 - ✅ SKU disabled on edit (immutable after creation)
@@ -15,6 +16,7 @@
 - ✅ Loading states
 
 **Campos**:
+
 - SKU (required, min 2 chars, uppercase auto)
 - Name (required, min 3 chars)
 - Type (required, select con 3 opciones)
@@ -24,6 +26,7 @@
 ### 2. ItemDetails (`src/components/inventory/item-details.tsx`)
 
 **Features**:
+
 - ✅ SKU badge prominente
 - ✅ Status badge (Active/Inactive)
 - ✅ Variants counter con botón "View Variants"
@@ -34,6 +37,7 @@
 - ✅ Actions: Edit, Delete
 
 **Visual Indicators**:
+
 - 🔵 INSUMO = Blue badge
 - 🟢 PRODUCTO = Green badge
 - 🟣 ACTIVO = Purple badge
@@ -43,6 +47,7 @@
 ### 3. ItemsPage (`src/pages/inventory/items.tsx`)
 
 **Features**:
+
 - ✅ DataGrid con 6 columnas
 - ✅ SKU en monospace badge
 - ✅ Name con icon (Box/Package según type)
@@ -58,6 +63,7 @@
 ## 🎨 Detalles de UX
 
 ### Color Coding
+
 ```typescript
 INSUMO:   bg-blue-100   text-blue-800     // Materias primas
 PRODUCTO: bg-green-100  text-green-800    // Productos terminados
@@ -65,6 +71,7 @@ ACTIVO:   bg-purple-100 text-purple-800   // Activos fijos
 ```
 
 ### Icons Used
+
 - `Box` - Para INSUMO items
 - `Package` - Para PRODUCTO items
 - `CheckCircle` - Propiedades habilitadas
@@ -75,6 +82,7 @@ ACTIVO:   bg-purple-100 text-purple-800   // Activos fijos
 - `Edit`, `Trash2` - Actions
 
 ### Property Display
+
 ```
 ✅ Inventory Tracking: Enabled
    Stock levels are tracked for this item
@@ -85,18 +93,19 @@ ACTIVO:   bg-purple-100 text-purple-800   // Activos fijos
 
 ## 📊 Columnas del Grid
 
-| Column | Width | Alignment | Content |
-|--------|-------|-----------|---------|
-| SKU | 140px | Left | Monospace badge |
-| Name | Fluid | Left | Icon + Name + Description |
-| Type | 140px | Left | Colored badge |
-| Tracked | 100px | Center | Icon or dash |
-| Perishable | 100px | Center | Icon or dash |
-| Status | 100px | Center | Active/Inactive badge |
+| Column     | Width | Alignment | Content                   |
+| ---------- | ----- | --------- | ------------------------- |
+| SKU        | 140px | Left      | Monospace badge           |
+| Name       | Fluid | Left      | Icon + Name + Description |
+| Type       | 140px | Left      | Colored badge             |
+| Tracked    | 100px | Center    | Icon or dash              |
+| Perishable | 100px | Center    | Icon or dash              |
+| Status     | 100px | Center    | Active/Inactive badge     |
 
 ## 🔄 Flujos de Usuario
 
 ### Crear Item
+
 1. Click "New Item"
 2. Slide panel aparece
 3. Llenar SKU, Name, Type
@@ -104,6 +113,7 @@ ACTIVO:   bg-purple-100 text-purple-800   // Activos fijos
 5. Submit → Grid refresh
 
 ### Ver Detalles
+
 1. Click en fila del grid
 2. Panel details se abre
 3. Ver todas las properties
@@ -111,6 +121,7 @@ ACTIVO:   bg-purple-100 text-purple-800   // Activos fijos
 5. Botón "View Variants" (próximo)
 
 ### Editar Item
+
 1. Desde details, click "Edit"
 2. Panel details cierra
 3. Panel form abre con datos
@@ -118,6 +129,7 @@ ACTIVO:   bg-purple-100 text-purple-800   // Activos fijos
 5. Submit → Details se actualiza
 
 ### Eliminar Item
+
 1. Desde details, click "Delete"
 2. Confirmación modal
 3. Si acepta → Item eliminado
@@ -127,11 +139,13 @@ ACTIVO:   bg-purple-100 text-purple-800   // Activos fijos
 ## 🎯 Validaciones
 
 ### Client-side
+
 - ✅ SKU: min 2 chars, auto uppercase
 - ✅ Name: min 3 chars
 - ✅ Type: required selection
 
 ### Server-side
+
 - ✅ SKU unique (handled by backend)
 - ✅ Name unique per type (backend)
 - ✅ Errors displayed en footer del form
@@ -139,6 +153,7 @@ ACTIVO:   bg-purple-100 text-purple-800   // Activos fijos
 ## 🚀 Integración con Backend
 
 ### Endpoints Usados
+
 ```typescript
 GET    /api/v1/items?per_page=15          // List
 GET    /api/v1/items/{id}                 // Show
@@ -149,6 +164,7 @@ GET    /api/v1/item-variants?item_id={id} // Variants count
 ```
 
 ### Response Structure
+
 ```typescript
 // List
 {
@@ -170,11 +186,13 @@ GET    /api/v1/item-variants?item_id={id} // Variants count
 ## 📝 Próximos Pasos
 
 ### Immediate
+
 - [ ] Add filters (type, active, stocked)
 - [ ] Add search by SKU/name
 - [ ] Sort by columns
 
 ### Future Features
+
 - [ ] Bulk actions (activate/deactivate)
 - [ ] Export to CSV
 - [ ] Import from Excel

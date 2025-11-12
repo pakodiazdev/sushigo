@@ -57,17 +57,17 @@ class StockOutService
         ) {
             // Validate location
             $location = InventoryLocation::findOrFail($inventoryLocationId);
-            
+
             // Validate variant with item and UOM
             $variant = ItemVariant::with(['item', 'unitOfMeasure'])->findOrFail($itemVariantId);
-            
+
             // Validate transaction UOM
             $transactionUom = UnitOfMeasure::findOrFail($transactionUomId);
-            
+
             // Convert quantity to base UOM
             $conversionFactor = 1.0;
             $baseQuantity = $quantity;
-            
+
             if ($transactionUomId !== $variant->uom_id) {
                 $conversion = $this->getConversion($transactionUomId, $variant->uom_id);
                 if (!$conversion) {
@@ -78,42 +78,42 @@ class StockOutService
                 $conversionFactor = $conversion->factor;
                 $baseQuantity = $quantity * $conversionFactor;
             }
-            
+
             // Check stock availability
             $stock = Stock::where('inventory_location_id', $inventoryLocationId)
                 ->where('item_variant_id', $itemVariantId)
                 ->first();
-                
+
             if (!$stock) {
                 throw new \Exception(
                     "No stock found for variant {$variant->sku} at location {$location->name}"
                 );
             }
-            
+
             $availableQty = $stock->on_hand - $stock->reserved;
             if ($baseQuantity > $availableQty) {
                 throw new \Exception(
                     "Insufficient stock. Available: {$availableQty}, Requested: {$baseQuantity}"
                 );
             }
-            
+
             // Get current average unit cost from variant
             $unitCost = $variant->avg_unit_cost ?? 0;
-            
+
             // Calculate pricing and profit (only for SALE movements)
             $saleTotal = null;
             $profitMargin = null;
             $profitTotal = null;
-            
+
             if ($reason === StockMovement::REASON_SALE && $salePrice !== null) {
                 $saleTotal = $quantity * $salePrice;
-                
+
                 // Convert sale price to base UOM for profit calculation
                 $salePriceBase = $conversionFactor != 0 ? $salePrice / $conversionFactor : 0;
                 $profitMargin = $salePriceBase - $unitCost;
                 $profitTotal = $baseQuantity * $profitMargin;
             }
-            
+
             // Create stock movement
             $movement = StockMovement::create([
                 'from_location_id' => $inventoryLocationId,
@@ -136,7 +136,7 @@ class StockOutService
                 ],
                 'posted_at' => now(),
             ]);
-            
+
             // Create movement line
             StockMovementLine::create([
                 'stock_movement_id' => $movement->id,
@@ -153,14 +153,14 @@ class StockOutService
                 'profit_total' => $profitTotal,
                 'meta' => [],
             ]);
-            
+
             // Decrement stock
             $stock->decrement('on_hand', $baseQuantity);
-            
+
             return $movement->fresh(['lines', 'fromLocation', 'itemVariant.item', 'itemVariant.unitOfMeasure']);
         });
     }
-    
+
     /**
      * Get conversion between two UOMs (searches in both directions)
      */
@@ -171,17 +171,17 @@ class StockOutService
             ->where('to_uom_id', $toUomId)
             ->where('is_active', true)
             ->first();
-            
+
         if ($conversion) {
             return $conversion;
         }
-        
+
         // Try inverse conversion
         $inverseConversion = UomConversion::where('from_uom_id', $toUomId)
             ->where('to_uom_id', $fromUomId)
             ->where('is_active', true)
             ->first();
-            
+
         if ($inverseConversion) {
             // Create a virtual conversion with inverted factor
             $virtual = new UomConversion();
@@ -190,10 +190,10 @@ class StockOutService
             $virtual->factor = 1 / $inverseConversion->factor;
             $virtual->tolerance_percent = $inverseConversion->tolerance_percent;
             $virtual->is_active = true;
-            
+
             return $virtual;
         }
-        
+
         return null;
     }
 }

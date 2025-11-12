@@ -17,12 +17,12 @@ return new class extends Migration
                 ->constrained('units_of_measure')
                 ->cascadeOnDelete()
                 ->comment('Source unit of measure');
-            
+
             $table->foreignId('to_uom_id')
                 ->constrained('units_of_measure')
                 ->cascadeOnDelete()
                 ->comment('Target unit of measure');
-            
+
             $table->decimal('factor', 15, 6)->comment('Conversion factor (from * factor = to)');
             $table->decimal('tolerance', 8, 4)->default(0)->comment('Acceptable variance percentage');
             $table->boolean('is_active')->default(true)->comment('Conversion active status');

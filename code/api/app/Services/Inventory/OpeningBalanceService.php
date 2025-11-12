@@ -49,17 +49,17 @@ class OpeningBalanceService
         ) {
             // Validate location
             $location = InventoryLocation::findOrFail($inventoryLocationId);
-            
+
             // Validate variant
             $variant = ItemVariant::with(['item', 'unitOfMeasure'])->findOrFail($itemVariantId);
-            
+
             // Validate entry UOM
             $entryUom = UnitOfMeasure::findOrFail($entryUomId);
-            
+
             // Convert quantity to base UOM
             $conversionFactor = 1.0;
             $baseQuantity = $quantity;
-            
+
             if ($entryUomId !== $variant->uom_id) {
                 $conversion = $this->getConversion($entryUomId, $variant->uom_id);
                 if (!$conversion) {
@@ -70,14 +70,14 @@ class OpeningBalanceService
                 $conversionFactor = $conversion->factor;
                 $baseQuantity = $quantity * $conversionFactor;
             }
-            
+
             // Calculate unit cost in base UOM
             $baseCost = null;
             if ($unitCost !== null) {
                 // If cost is per entry UOM, convert to base UOM
                 $baseCost = $conversionFactor != 0 ? $unitCost / $conversionFactor : 0;
             }
-            
+
             // Create stock movement
             $movement = StockMovement::create([
                 'from_location_id' => null,
@@ -99,7 +99,7 @@ class OpeningBalanceService
                 ],
                 'posted_at' => now(),
             ]);
-            
+
             // Create movement line
             StockMovementLine::create([
                 'stock_movement_id' => $movement->id,
@@ -112,7 +112,7 @@ class OpeningBalanceService
                 'line_total' => $baseCost ? $baseQuantity * $baseCost : null,
                 'meta' => [],
             ]);
-            
+
             // Update or create stock record
             $stock = Stock::where('inventory_location_id', $inventoryLocationId)
                 ->where('item_variant_id', $itemVariantId)
@@ -131,16 +131,16 @@ class OpeningBalanceService
                     'meta' => [],
                 ]);
             }
-            
+
             // Update variant costing if cost provided
             if ($baseCost !== null && $baseCost > 0) {
                 $this->updateVariantCosting($variant, $baseQuantity, $baseCost);
             }
-            
+
             return $movement->fresh(['lines', 'toLocation', 'itemVariant.item']);
         });
     }
-    
+
     /**
      * Get conversion between two UOMs (searches in both directions)
      */
@@ -151,17 +151,17 @@ class OpeningBalanceService
             ->where('to_uom_id', $toUomId)
             ->where('is_active', true)
             ->first();
-            
+
         if ($conversion) {
             return $conversion;
         }
-        
+
         // Try inverse conversion
         $inverseConversion = UomConversion::where('from_uom_id', $toUomId)
             ->where('to_uom_id', $fromUomId)
             ->where('is_active', true)
             ->first();
-            
+
         if ($inverseConversion) {
             // Create a virtual conversion with inverted factor
             $virtual = new UomConversion();
@@ -170,13 +170,13 @@ class OpeningBalanceService
             $virtual->factor = 1 / $inverseConversion->factor;
             $virtual->tolerance_percent = $inverseConversion->tolerance_percent;
             $virtual->is_active = true;
-            
+
             return $virtual;
         }
-        
+
         return null;
     }
-    
+
     /**
      * Update variant costing with weighted average
      */
@@ -184,17 +184,17 @@ class OpeningBalanceService
     {
         $currentQty = $variant->stock()->sum('on_hand');
         $currentAvg = $variant->avg_unit_cost;
-        
+
         // Calculate previous quantity (before this movement)
         $previousQty = max(0, $currentQty - $newQty);
-        
+
         // Calculate new weighted average
         if ($previousQty + $newQty > 0) {
             $newAvg = (($previousQty * $currentAvg) + ($newQty * $newCost)) / ($previousQty + $newQty);
         } else {
             $newAvg = $newCost;
         }
-        
+
         $variant->update([
             'last_unit_cost' => $newCost,
             'avg_unit_cost' => $newAvg,

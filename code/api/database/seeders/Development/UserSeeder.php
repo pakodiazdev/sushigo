@@ -33,7 +33,7 @@ class UserSeeder extends OnceSeeder
             // Assign users to operating units based on their role
             if ($mainUnit) {
                 if (!$user->operatingUnits()->where('operating_unit_id', $mainUnit->id)->exists()) {
-                    $assignmentRole = match($userData['role']) {
+                    $assignmentRole = match ($userData['role']) {
                         'super-admin' => 'OWNER',
                         'admin' => 'MANAGER',
                         'inventory-manager' => 'INVENTORY',

@@ -5,16 +5,17 @@ Complete search and filtering system for DataGrid views with debounced search an
 ## 📁 Files Created
 
 1. **`src/components/ui/search-input.tsx`** (70 lines)
-   - Debounced search input component
-   
+    - Debounced search input component
+
 2. **`src/components/ui/filter-select.tsx`** (50 lines)
-   - Filter dropdown component
+    - Filter dropdown component
 
 **Total**: ~120 lines of reusable code
 
 ## ✨ Features
 
 ### SearchInput Component
+
 - **Debounced Input**: Prevents excessive API calls (300ms default)
 - **Clear Button**: X icon to quickly clear search
 - **Search Icon**: Visual indicator on the left
@@ -24,6 +25,7 @@ Complete search and filtering system for DataGrid views with debounced search an
 - **Accessibility**: Proper ARIA labels
 
 ### FilterSelect Component
+
 - **Label**: Descriptive label with optional icon
 - **All Option**: Default "All" placeholder for no filter
 - **Custom Options**: Array of value/label pairs
@@ -124,7 +126,7 @@ export function ItemsPage() {
           placeholder="Search by SKU or name..."
           className="flex-1"
         />
-        
+
         <div className="flex flex-wrap gap-4">
           <FilterSelect
             label="Type"
@@ -136,7 +138,7 @@ export function ItemsPage() {
               { value: 'ACTIVO', label: 'Activo' },
             ]}
           />
-          
+
           <FilterSelect
             label="Status"
             value={statusFilter}
@@ -181,7 +183,7 @@ export function ItemVariantsPage() {
           placeholder="Search by code or name..."
           className="flex-1"
         />
-        
+
         <FilterSelect
           label="Status"
           value={statusFilter}
@@ -224,7 +226,7 @@ export function LocationsPage() {
           placeholder="Search locations..."
           className="flex-1"
         />
-        
+
         <div className="flex flex-wrap gap-4">
           <FilterSelect
             label="Type"
@@ -239,7 +241,7 @@ export function LocationsPage() {
               { value: 'WASTE', label: 'Waste' },
             ]}
           />
-          
+
           <FilterSelect
             label="Status"
             value={statusFilter}
@@ -264,31 +266,34 @@ Updated all list methods to accept `search` parameter:
 // src/services/inventory-api.ts
 
 export const inventoryLocationApi = {
-  list: (params?: {
-    type?: string
-    is_active?: boolean
-    per_page?: number
-    search?: string  // ← Added
-  }) => api.get<PaginatedResponse<InventoryLocation>>('/inventory-locations', { params }),
-}
+    list: (params?: {
+        type?: string;
+        is_active?: boolean;
+        per_page?: number;
+        search?: string; // ← Added
+    }) =>
+        api.get<PaginatedResponse<InventoryLocation>>("/inventory-locations", {
+            params,
+        }),
+};
 
 export const itemApi = {
-  list: (params?: {
-    type?: string
-    is_active?: boolean
-    per_page?: number
-    search?: string  // ← Added
-  }) => api.get<PaginatedResponse<Item>>('/items', { params }),
-}
+    list: (params?: {
+        type?: string;
+        is_active?: boolean;
+        per_page?: number;
+        search?: string; // ← Added
+    }) => api.get<PaginatedResponse<Item>>("/items", { params }),
+};
 
 export const itemVariantApi = {
-  list: (params?: {
-    item_id?: number
-    is_active?: boolean
-    per_page?: number
-    search?: string  // ← Added
-  }) => api.get<PaginatedResponse<ItemVariant>>('/item-variants', { params }),
-}
+    list: (params?: {
+        item_id?: number;
+        is_active?: boolean;
+        per_page?: number;
+        search?: string; // ← Added
+    }) => api.get<PaginatedResponse<ItemVariant>>("/item-variants", { params }),
+};
 ```
 
 ## 🎯 How It Works
@@ -309,6 +314,7 @@ The SearchInput component implements debouncing to prevent excessive API calls:
 ```
 
 **Benefits**:
+
 - Reduces server load
 - Better user experience (no flickering)
 - Saves bandwidth
@@ -325,6 +331,7 @@ useQuery({
 ```
 
 **Benefits**:
+
 - Automatic cache management
 - Each filter combination cached separately
 - Instant results when switching back to previous filters
@@ -335,13 +342,14 @@ Only send non-empty parameters to API:
 
 ```typescript
 itemApi.list({
-  search: searchQuery || undefined,  // ← Only if has value
-  type: typeFilter || undefined,
-  is_active: statusFilter ? statusFilter === 'active' : undefined,
-})
+    search: searchQuery || undefined, // ← Only if has value
+    type: typeFilter || undefined,
+    is_active: statusFilter ? statusFilter === "active" : undefined,
+});
 ```
 
 **Benefits**:
+
 - Cleaner API calls
 - Backend can distinguish between "no filter" and "filter for empty"
 - Better query string readability
@@ -349,11 +357,13 @@ itemApi.list({
 ## 📱 Responsive Design
 
 ### Desktop Layout
+
 ```
 [=========================Search Input========================] [Type▼] [Status▼]
 ```
 
 ### Mobile Layout
+
 ```
 [=========================Search Input========================]
 
@@ -361,9 +371,10 @@ itemApi.list({
 ```
 
 Achieved with:
+
 ```jsx
 <div className="flex flex-col sm:flex-row gap-4">
-  {/* Stacks vertically on mobile, horizontal on desktop */}
+    {/* Stacks vertically on mobile, horizontal on desktop */}
 </div>
 ```
 
@@ -372,13 +383,13 @@ Achieved with:
 ### 1. Reset Page on Filter Change
 
 ```typescript
-const [currentPage, setCurrentPage] = useState(1)
-const [searchQuery, setSearchQuery] = useState('')
+const [currentPage, setCurrentPage] = useState(1);
+const [searchQuery, setSearchQuery] = useState("");
 
 // Reset page when search changes
 useEffect(() => {
-  setCurrentPage(1)
-}, [searchQuery, typeFilter, statusFilter])
+    setCurrentPage(1);
+}, [searchQuery, typeFilter, statusFilter]);
 ```
 
 ### 2. URL Parameters (Advanced)
@@ -386,22 +397,22 @@ useEffect(() => {
 Sync filters with URL for shareable links:
 
 ```typescript
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from "react-router-dom";
 
-const [searchParams, setSearchParams] = useSearchParams()
-const searchQuery = searchParams.get('search') || ''
-const typeFilter = searchParams.get('type') || ''
+const [searchParams, setSearchParams] = useSearchParams();
+const searchQuery = searchParams.get("search") || "";
+const typeFilter = searchParams.get("type") || "";
 
 const handleSearchChange = (value: string) => {
-  setSearchParams(params => {
-    if (value) {
-      params.set('search', value)
-    } else {
-      params.delete('search')
-    }
-    return params
-  })
-}
+    setSearchParams((params) => {
+        if (value) {
+            params.set("search", value);
+        } else {
+            params.delete("search");
+        }
+        return params;
+    });
+};
 ```
 
 ### 3. Clear All Filters Button
@@ -461,18 +472,16 @@ const activeFiltersCount = [searchQuery, typeFilter, statusFilter]
 ### Multi-Select Filters
 
 ```typescript
-const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
 const handleTypeToggle = (type: string) => {
-  setSelectedTypes(prev =>
-    prev.includes(type)
-      ? prev.filter(t => t !== type)
-      : [...prev, type]
-  )
-}
+    setSelectedTypes((prev) =>
+        prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
+    );
+};
 
 // In API call:
-type: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined
+type: selectedTypes.length > 0 ? selectedTypes.join(",") : undefined;
 ```
 
 ### Date Range Filters
@@ -490,14 +499,14 @@ created_to: endDate || undefined
 
 ```typescript
 const filterPresets = [
-  { name: 'Active Products', filters: { type: 'PRODUCTO', is_active: true } },
-  { name: 'Low Stock', filters: { low_stock: true } },
-]
+    { name: "Active Products", filters: { type: "PRODUCTO", is_active: true } },
+    { name: "Low Stock", filters: { low_stock: true } },
+];
 
 const applyPreset = (preset) => {
-  setTypeFilter(preset.filters.type || '')
-  setStatusFilter(preset.filters.is_active ? 'active' : '')
-}
+    setTypeFilter(preset.filters.type || "");
+    setStatusFilter(preset.filters.is_active ? "active" : "");
+};
 ```
 
 ## 📊 Performance Considerations
@@ -519,21 +528,21 @@ const applyPreset = (preset) => {
 
 ```typescript
 // ❌ Bad: Separate queries for each filter
-useQuery(['items', searchQuery])
-useQuery(['items', typeFilter])
+useQuery(["items", searchQuery]);
+useQuery(["items", typeFilter]);
 
 // ✅ Good: Combined query key
-useQuery(['items', searchQuery, typeFilter, statusFilter])
+useQuery(["items", searchQuery, typeFilter, statusFilter]);
 ```
 
 ### Memoization
 
 ```typescript
 const filteredOptions = useMemo(() => {
-  return items.filter(item => {
-    // Complex filtering logic
-  })
-}, [items, searchQuery, typeFilter])
+    return items.filter((item) => {
+        // Complex filtering logic
+    });
+}, [items, searchQuery, typeFilter]);
 ```
 
 ## 📈 Code Quality
@@ -552,17 +561,18 @@ const filteredOptions = useMemo(() => {
 
 ```typescript
 useEffect(() => {
-  const timer = setTimeout(() => {
-    onChange(localValue)
-  }, debounceMs)
+    const timer = setTimeout(() => {
+        onChange(localValue);
+    }, debounceMs);
 
-  return () => clearTimeout(timer)  // Cleanup on every render
-}, [localValue, debounceMs, onChange])
+    return () => clearTimeout(timer); // Cleanup on every render
+}, [localValue, debounceMs, onChange]);
 ```
 
 ### Controlled vs Uncontrolled
 
 SearchInput uses **both**:
+
 - **Uncontrolled** (localValue): Immediate typing feedback
 - **Controlled** (value prop): Debounced external state
 
@@ -571,12 +581,12 @@ This hybrid approach gives best UX.
 ### Empty String vs Undefined
 
 ```typescript
-search: searchQuery || undefined
+search: searchQuery || undefined;
 
 // Why not just searchQuery?
 // Because:
-search: ''   // Backend sees empty string, might interpret differently
-search: undefined  // Not included in query params at all
+search: ""; // Backend sees empty string, might interpret differently
+search: undefined; // Not included in query params at all
 ```
 
 ## 📝 Testing
@@ -588,13 +598,13 @@ describe('SearchInput', () => {
   test('debounces search input', async () => {
     const onChange = jest.fn()
     render(<SearchInput value="" onChange={onChange} debounceMs={300} />)
-    
+
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'test' } })
-    
+
     // Should not call immediately
     expect(onChange).not.toHaveBeenCalled()
-    
+
     // Should call after debounce
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith('test')
@@ -604,10 +614,10 @@ describe('SearchInput', () => {
   test('clears search on button click', () => {
     const onChange = jest.fn()
     render(<SearchInput value="test" onChange={onChange} />)
-    
+
     const clearButton = screen.getByLabelText('Clear search')
     fireEvent.click(clearButton)
-    
+
     expect(onChange).toHaveBeenCalledWith('')
   })
 })
@@ -616,6 +626,7 @@ describe('SearchInput', () => {
 ## 🔗 Related Components
 
 Works best with:
+
 - **DataGrid**: Display filtered results
 - **PageHeader**: Place filters in header area
 - **Button**: Clear all filters button

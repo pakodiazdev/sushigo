@@ -25,7 +25,7 @@ class ListOperatingUnitUsersController extends Controller
         $operatingUnit = OperatingUnit::findOrFail($id);
 
         $perPage = $request->input('per_page', 15);
-        
+
         $users = $operatingUnit->users()
             ->with('roles')
             ->paginate($perPage);

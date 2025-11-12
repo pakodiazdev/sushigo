@@ -3,6 +3,7 @@
 ## 📋 Descripción
 
 Módulo frontend moderno para gestión de inventario construido con:
+
 - **React 19** + **TypeScript**
 - **TanStack Router** (file-based routing)
 - **TanStack Query** (data fetching & caching)
@@ -14,32 +15,34 @@ Módulo frontend moderno para gestión de inventario construido con:
 ### Componentes Reutilizables
 
 1. **SlidePanel** (`src/components/ui/slide-panel.tsx`)
-   - Panel lateral deslizable con animaciones
-   - Soporte para diferentes tamaños (sm, md, lg, xl, full)
-   - Posición configurable (left/right)
-   - Subcomponentes: Header, Body, Footer
-   - Cerrar con ESC o backdrop click
+    - Panel lateral deslizable con animaciones
+    - Soporte para diferentes tamaños (sm, md, lg, xl, full)
+    - Posición configurable (left/right)
+    - Subcomponentes: Header, Body, Footer
+    - Cerrar con ESC o backdrop click
 
 2. **DataGrid** (`src/components/ui/data-grid.tsx`)
-   - Grid de datos con paginación
-   - Columnas configurables con renderizado personalizado
-   - Selección de filas
-   - Estados de carga y vacío
-   - Responsive
+    - Grid de datos con paginación
+    - Columnas configurables con renderizado personalizado
+    - Selección de filas
+    - Estados de carga y vacío
+    - Responsive
 
 3. **FormFields** (`src/components/ui/form-fields.tsx`)
-   - FormField wrapper con label, error, hint
-   - Select, Textarea, Checkbox personalizados
-   - Validación visual de errores
+    - FormField wrapper con label, error, hint
+    - Select, Textarea, Checkbox personalizados
+    - Validación visual de errores
 
 ### Módulos Implementados
 
 #### 1. Inventory Locations ✅ COMPLETO
 
 ##### Página Principal
+
 **Archivo**: `src/pages/inventory/locations.tsx`
 
 **Funcionalidades**:
+
 - ✅ Listado en grid de locations
 - ✅ Paginación
 - ✅ Click en fila abre slide panel de detalles
@@ -51,23 +54,25 @@ Módulo frontend moderno para gestión de inventario construido con:
 ##### Componentes Específicos
 
 1. **LocationForm** (`src/components/inventory/location-form.tsx`)
-   - Formulario create/update
-   - Validación de campos
-   - Select de Operating Units (API integrada)
-   - Manejo de errores del backend
+    - Formulario create/update
+    - Validación de campos
+    - Select de Operating Units (API integrada)
+    - Manejo de errores del backend
 
 2. **LocationDetails** (`src/components/inventory/location-details.tsx`)
-   - Vista detallada de location
-   - Stock summary (variantes, valor total)
-   - Información completa
-   - Acciones: Edit, Delete
+    - Vista detallada de location
+    - Stock summary (variantes, valor total)
+    - Información completa
+    - Acciones: Edit, Delete
 
 #### 2. Items ✅ COMPLETO
 
 ##### Página Principal
+
 **Archivo**: `src/pages/inventory/items.tsx`
 
 **Funcionalidades**:
+
 - ✅ Grid con 6 columnas (SKU, Name, Type, Tracked, Perishable, Status)
 - ✅ SKU inmutable después de creación (uppercase automático)
 - ✅ Sistema de color coding por tipo (INSUMO=azul, PRODUCTO=verde, ACTIVO=morado)
@@ -82,27 +87,29 @@ Módulo frontend moderno para gestión de inventario construido con:
 ##### Componentes Específicos
 
 1. **ItemForm** (`src/components/inventory/item-form.tsx`)
-   - Formulario create/update
-   - SKU inmutable en edición, uppercase automático
-   - Type select con descripciones
-   - 3 checkboxes (Tracked, Perishable, Active)
-   - Validación client-side + server errors
+    - Formulario create/update
+    - SKU inmutable en edición, uppercase automático
+    - Type select con descripciones
+    - 3 checkboxes (Tracked, Perishable, Active)
+    - Validación client-side + server errors
 
 2. **ItemDetails** (`src/components/inventory/item-details.tsx`)
-   - Vista detallada con SKU badge
-   - Contador de variantes (API)
-   - Type info card con color coding
-   - Properties con iconos visuales
-   - Acciones: Edit, Delete, View Variants
+    - Vista detallada con SKU badge
+    - Contador de variantes (API)
+    - Type info card con color coding
+    - Properties con iconos visuales
+    - Acciones: Edit, Delete, View Variants
 
 **📄 Documentación Completa**: `ITEMS_MODULE.md`
 
 #### 3. Item Variants ✅ COMPLETO
 
 ##### Página Principal
+
 **Archivo**: `src/pages/inventory/item-variants.tsx`
 
 **Funcionalidades**:
+
 - ✅ Grid con 6 columnas (Code, Variant Name, UoM, Stock Levels, Cost, Status)
 - ✅ Code inmutable con auto-uppercase
 - ✅ Integración con Items API para select dropdown
@@ -117,24 +124,24 @@ Módulo frontend moderno para gestión de inventario construido con:
 ##### Componentes Específicos
 
 1. **VariantForm** (`src/components/inventory/variant-form.tsx`)
-   - Formulario create/update
-   - Item select (disabled en edición)
-   - Code input con uppercase automático
-   - UoM select con type info
-   - Min/Max stock inputs con validación
-   - Cost input (last unit cost)
-   - Active checkbox
-   - Validación client-side + server errors
+    - Formulario create/update
+    - Item select (disabled en edición)
+    - Code input con uppercase automático
+    - UoM select con type info
+    - Min/Max stock inputs con validación
+    - Cost input (last unit cost)
+    - Active checkbox
+    - Validación client-side + server errors
 
 2. **VariantDetails** (`src/components/inventory/variant-details.tsx`)
-   - Vista detallada con code badge
-   - Parent item info con SKU
-   - Current stock summary (API call)
-   - UoM complete details (name, symbol, type, precision)
-   - Stock levels display (min/max)
-   - Cost information (last + avg)
-   - Timestamps
-   - Acciones: Edit, Delete
+    - Vista detallada con code badge
+    - Parent item info con SKU
+    - Current stock summary (API call)
+    - UoM complete details (name, symbol, type, precision)
+    - Stock levels display (min/max)
+    - Cost information (last + avg)
+    - Timestamps
+    - Acciones: Edit, Delete
 
 **📄 Documentación Completa**: `ITEM_VARIANTS_MODULE.md`
 
@@ -143,25 +150,25 @@ Módulo frontend moderno para gestión de inventario construido con:
 ##### Componentes
 
 1. **OpeningBalanceForm** (`src/components/inventory/opening-balance-form.tsx`)
-   - Registro de inventario inicial
-   - Location + Variant selection
-   - Quantity + Unit Cost inputs
-   - Auto-fill UoM from variant
-   - Real-time Total Cost calculation
-   - Variant info card display
-   - Notes field opcional
+    - Registro de inventario inicial
+    - Location + Variant selection
+    - Quantity + Unit Cost inputs
+    - Auto-fill UoM from variant
+    - Real-time Total Cost calculation
+    - Variant info card display
+    - Notes field opcional
 
 2. **StockOutForm** (`src/components/inventory/stock-out-form.tsx`)
-   - Salida de inventario (venta/consumo)
-   - Current stock display en tiempo real
-   - Stock availability validation
-   - Low stock warnings (yellow)
-   - Insufficient stock blocking (red)
-   - Reason selection (SALE/CONSUMPTION)
-   - Sale price (condicional para SALE)
-   - Real-time Profit Calculation
-   - Profit analysis card (revenue, cost, margin)
-   - Visual feedback (green=profit, red=loss)
+    - Salida de inventario (venta/consumo)
+    - Current stock display en tiempo real
+    - Stock availability validation
+    - Low stock warnings (yellow)
+    - Insufficient stock blocking (red)
+    - Reason selection (SALE/CONSUMPTION)
+    - Sale price (condicional para SALE)
+    - Real-time Profit Calculation
+    - Profit analysis card (revenue, cost, margin)
+    - Visual feedback (green=profit, red=loss)
 
 **📄 Documentación Completa**: `STOCK_MOVEMENT_FORMS.md`
 
@@ -172,6 +179,7 @@ Módulo frontend moderno para gestión de inventario construido con:
 **Archivos**: `src/components/ui/toast.tsx`, `src/components/ui/toast-provider.tsx`
 
 **Funcionalidades**:
+
 - ✅ 4 variantes (success, error, warning, info)
 - ✅ Auto-dismiss configurable (5s default)
 - ✅ Botón de cerrar manual
@@ -185,17 +193,18 @@ Módulo frontend moderno para gestión de inventario construido con:
 - ✅ Accesibilidad (ARIA labels, roles)
 
 **Uso**:
+
 ```typescript
-const { showSuccess, showError } = useToast()
+const { showSuccess, showError } = useToast();
 
 // Success toast
-showSuccess('Item created successfully!', 'Success')
+showSuccess("Item created successfully!", "Success");
 
-// Error toast  
-showError('Failed to delete item', 'Error')
+// Error toast
+showError("Failed to delete item", "Error");
 ```
 
-**📄 Documentación Completa**: `TOAST_NOTIFICATIONS_SYSTEM.md`  
+**📄 Documentación Completa**: `TOAST_NOTIFICATIONS_SYSTEM.md`
 **📄 Ejemplos de Integración**: `TOAST_INTEGRATION_EXAMPLES.md`
 
 ### Servicios API
@@ -203,8 +212,9 @@ showError('Failed to delete item', 'Error')
 **Archivo**: `src/services/inventory-api.ts`
 
 APIs implementadas:
+
 - `inventoryLocationApi` - CRUD completo
-- `itemApi` - CRUD completo  
+- `itemApi` - CRUD completo
 - `itemVariantApi` - CRUD completo
 - `stockApi` - List, byLocation, byVariant
 - `stockMovementApi` - openingBalance, stockOut
@@ -214,6 +224,7 @@ APIs implementadas:
 **Archivo**: `src/types/inventory.ts`
 
 Interfaces completas para:
+
 - InventoryLocation
 - Item
 - ItemVariant
@@ -284,23 +295,27 @@ src/
 ## 🎨 Flujo de Usuario
 
 ### Ver Locations
+
 1. Usuario ve grid con todas las locations
 2. Cada fila muestra: nombre, tipo, prioridad, primary, status
 3. Click en fila → Abre slide panel con detalles
 
 ### Crear Location
+
 1. Click en "New Location"
 2. Slide panel aparece desde la derecha
 3. Formulario con validación
 4. Submit → Cierra panel y refresca grid
 
 ### Editar Location
+
 1. Desde panel de detalles, click "Edit"
 2. Panel de detalles se cierra
 3. Panel de formulario se abre con datos precargados
 4. Submit → Actualiza y refresca
 
 ### Eliminar Location
+
 1. Desde panel de detalles, click "Delete"
 2. Confirmación
 3. Elimina y cierra panel
@@ -308,6 +323,7 @@ src/
 ## 🔄 Próximos Pasos Sugeridos
 
 ### Páginas Pendientes
+
 - [ ] Items (CRUD con slide panels)
 - [ ] Item Variants (CRUD con slide panels)
 - [ ] Stock View (por location/variant)
@@ -315,6 +331,7 @@ src/
 - [ ] Stock Out (formulario con profit calculation)
 
 ### Mejoras Sugeridas
+
 - [ ] Filtros en DataGrid
 - [ ] Búsqueda
 - [ ] Sorting en columnas

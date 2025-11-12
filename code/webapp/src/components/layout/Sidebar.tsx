@@ -37,8 +37,8 @@ const menuItems: MenuItem[] = [
     { icon: Package, label: 'Productos', path: '/productos' },
     { icon: ShoppingCart, label: 'Órdenes', path: '/ordenes' },
     { icon: Users, label: 'Clientes', path: '/clientes' },
-    { 
-        icon: Warehouse, 
+    {
+        icon: Warehouse,
         label: 'Inventario',
         subItems: [
             { label: 'Ubicaciones', path: '/inventory/locations' },
@@ -57,15 +57,15 @@ export default function Sidebar() {
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
     const toggleSubmenu = (label: string) => {
-        setExpandedMenus(prev => 
-            prev.includes(label) 
+        setExpandedMenus(prev =>
+            prev.includes(label)
                 ? prev.filter(item => item !== label)
                 : [...prev, label]
         );
     };
 
     const isSubmenuExpanded = (label: string) => expandedMenus.includes(label);
-    
+
     const isMenuItemActive = (item: MenuItem) => {
         if (item.path) {
             return currentPath === item.path;
