@@ -63,14 +63,9 @@ export function InventoryLocationsPage() {
       key: 'name',
       header: 'Name',
       render: (location) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{location.name}</span>
-          </div>
-          {location.code && (
-            <span className="text-xs text-muted-foreground ml-6">Code: {location.code}</span>
-          )}
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{location.name}</span>
         </div>
       ),
     },
@@ -80,21 +75,17 @@ export function InventoryLocationsPage() {
       render: (location) => {
         const typeColors: Record<string, string> = {
           MAIN: 'bg-blue-50 text-blue-700 ring-blue-700/10',
-          DISPLAY: 'bg-yellow-50 text-yellow-700 ring-yellow-700/10',
           KITCHEN: 'bg-purple-50 text-purple-700 ring-purple-700/10',
           BAR: 'bg-pink-50 text-pink-700 ring-pink-700/10',
           TEMP: 'bg-gray-50 text-gray-700 ring-gray-700/10',
           RETURN: 'bg-orange-50 text-orange-700 ring-orange-700/10',
-          WASTE: 'bg-red-50 text-red-700 ring-red-700/10',
         }
         const typeLabels: Record<string, string> = {
           MAIN: 'Almacén',
-          DISPLAY: 'Exhibición',
           KITCHEN: 'Cocina',
           BAR: 'Bar',
           TEMP: 'Temporal',
           RETURN: 'Devoluciones',
-          WASTE: 'Desperdicios',
         }
         return (
           <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${typeColors[location.type] || typeColors.MAIN}`}>
@@ -107,31 +98,21 @@ export function InventoryLocationsPage() {
       key: 'priority',
       header: 'Priority',
       render: (location) => (
-        <div className="flex items-center gap-1">
-          <span className="text-sm font-medium">{location.priority}</span>
-          {location.priority >= 900 && <span className="text-xs text-green-600">●</span>}
-          {location.priority >= 500 && location.priority < 900 && <span className="text-xs text-yellow-600">●</span>}
-          {location.priority < 500 && <span className="text-xs text-gray-400">●</span>}
-        </div>
+        <span className="text-sm font-medium">{location.priority}</span>
       ),
     },
     {
       key: 'is_active',
       header: 'Status',
       render: (location) => (
-        <div className="flex flex-col gap-1">
-          <span
-            className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${location.is_active
-                ? 'bg-green-50 text-green-700 ring-green-600/20'
-                : 'bg-gray-50 text-gray-600 ring-gray-500/10'
-              }`}
-          >
-            {location.is_active ? 'Activa' : 'Inactiva'}
-          </span>
-          {!location.is_pickable && (
-            <span className="text-xs text-orange-600">No pickable</span>
-          )}
-        </div>
+        <span
+          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${location.is_active
+            ? 'bg-green-50 text-green-700 ring-green-600/20'
+            : 'bg-gray-50 text-gray-600 ring-gray-500/10'
+            }`}
+        >
+          {location.is_active ? 'Activa' : 'Inactiva'}
+        </span>
       ),
     },
   ]
@@ -192,12 +173,10 @@ export function InventoryLocationsPage() {
           onChange={setTypeFilter}
           options={[
             { value: 'MAIN', label: 'Almacén Principal' },
-            { value: 'DISPLAY', label: 'Mesa Exhibición' },
             { value: 'KITCHEN', label: 'Cocina' },
             { value: 'BAR', label: 'Bar' },
             { value: 'TEMP', label: 'Temporal' },
             { value: 'RETURN', label: 'Devoluciones' },
-            { value: 'WASTE', label: 'Desperdicios' },
           ]}
         />
 

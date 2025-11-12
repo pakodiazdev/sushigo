@@ -20,34 +20,13 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
   const { showSuccess, showError } = useToast()
   const [formData, setFormData] = useState({
     operating_unit_id: location?.operating_unit_id || 0,
-    code: location?.code || '',
     name: location?.name || '',
     type: location?.type || 'MAIN' as const,
     priority: location?.priority || 100,
     is_primary: location?.is_primary || false,
     is_active: location?.is_active ?? true,
-    is_pickable: location?.is_pickable ?? true,
     notes: location?.notes || '',
   })
-
-  // Default priorities by type
-  const getDefaultPriority = (type: string): number => {
-    const defaults: Record<string, number> = {
-      DISPLAY: 900,
-      MAIN: 800,
-      KITCHEN: 700,
-      BAR: 700,
-      TEMP: 500,
-      RETURN: 100,
-      WASTE: 0,
-    }
-    return defaults[type] || 100
-  }
-
-  // Default pickable by type
-  const getDefaultPickable = (type: string): boolean => {
-    return type !== 'RETURN' && type !== 'WASTE'
-  }
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -163,19 +142,6 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         </FormField>
 
         <FormField
-          label="Código"
-          error={errors.code}
-          hint="Código único opcional (ej., MESA-REC-01, ALM-PRIN)"
-        >
-          <Input
-            value={formData.code}
-            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-            placeholder="ej., MESA-REC-01"
-            error={!!errors.code}
-          />
-        </FormField>
-
-        <FormField
           label="Nombre de la Ubicación"
           required
           error={errors.name}
@@ -195,26 +161,15 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         >
           <Select
             value={formData.type}
-            onChange={(e) => {
-              const newType = e.target.value as any
-              setFormData({
-                ...formData,
-                type: newType,
-                // Auto-apply defaults when type changes (only if not editing)
-                priority: location ? formData.priority : getDefaultPriority(newType),
-                is_pickable: location ? formData.is_pickable : getDefaultPickable(newType),
-              })
-            }}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
             error={!!errors.type}
           >
             <option value="">Seleccione un tipo</option>
             <option value="MAIN">Almacén Principal</option>
-            <option value="DISPLAY">Mesa de Exhibición / Display</option>
             <option value="KITCHEN">Cocina</option>
             <option value="BAR">Bar</option>
             <option value="TEMP">Temporal</option>
             <option value="RETURN">Devoluciones</option>
-            <option value="WASTE">Desperdicios</option>
           </Select>
         </FormField>
 
@@ -247,11 +202,6 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
             checked={formData.is_primary}
             onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })}
             label="Ubicación principal para esta unidad operativa"
-          />
-          <Checkbox
-            checked={formData.is_pickable}
-            onChange={(e) => setFormData({ ...formData, is_pickable: e.target.checked })}
-            label="Usar para picking/reserva automática"
           />
           <Checkbox
             checked={formData.is_active}

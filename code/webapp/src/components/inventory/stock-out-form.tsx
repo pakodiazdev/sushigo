@@ -197,8 +197,6 @@ export function StockOutForm({
               {sortedLocations.map((location: any) => (
                 <option key={location.id} value={location.id}>
                   {location.name} ({location.type})
-                  {location.code && ` [${location.code}]`}
-                  {location.priority !== undefined && ` — prio ${location.priority}`}
                 </option>
               ))}
             </Select>

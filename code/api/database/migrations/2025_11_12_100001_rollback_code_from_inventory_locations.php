@@ -8,15 +8,15 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     * 
+     * Remove the 'code' field added in 2025_11_12_000001
+     * to align with original architecture design.
      */
     public function up(): void
     {
         Schema::table('inventory_locations', function (Blueprint $table) {
-            $table->boolean('is_pickable')->default(true)->after('is_active')
-                ->comment('Whether this location can be used for automatic picking/reservation');
-
-            // Add index for filtering pickable locations
-            $table->index(['is_active', 'is_pickable']);
+            $table->dropIndex(['code']);
+            $table->dropColumn('code');
         });
     }
 
@@ -26,8 +26,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('inventory_locations', function (Blueprint $table) {
-            $table->dropIndex(['is_active', 'is_pickable']);
-            $table->dropColumn('is_pickable');
+            $table->string('code', 50)->nullable()->after('operating_unit_id')
+                ->comment('Unique code for quick identification (e.g., MESA-REC-01)');
+            $table->index('code');
         });
     }
 };

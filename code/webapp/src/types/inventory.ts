@@ -2,13 +2,11 @@
 export interface InventoryLocation {
   id: number
   operating_unit_id: number
-  code?: string
   name: string
-  type: 'MAIN' | 'TEMP' | 'KITCHEN' | 'BAR' | 'RETURN' | 'WASTE' | 'DISPLAY'
+  type: 'MAIN' | 'TEMP' | 'KITCHEN' | 'BAR' | 'RETURN'
   priority: number
   is_primary: boolean
   is_active: boolean
-  is_pickable: boolean
   notes?: string
   operating_unit?: {
     id: number

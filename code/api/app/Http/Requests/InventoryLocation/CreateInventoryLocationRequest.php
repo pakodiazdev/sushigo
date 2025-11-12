@@ -44,7 +44,7 @@ class CreateInventoryLocationRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $type = $this->input('type');
-        
+
         $this->merge([
             'priority' => $this->priority ?? \App\Models\InventoryLocation::getDefaultPriority($type ?? 'MAIN'),
             'is_primary' => $this->is_primary ?? false,
