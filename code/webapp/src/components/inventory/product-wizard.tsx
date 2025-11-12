@@ -43,7 +43,7 @@ interface WizardData {
   // Step 4: Opening Balances
   openingBalances: Array<{
     inventory_location_id: number
-    qty: number
+    quantity: number
     uom_id: number
     unit_cost: number
   }>
@@ -154,7 +154,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
     mutationFn: (balance: {
       inventory_location_id: number
       item_variant_id: number
-      qty: number
+      quantity: number
       uom_id: number
       unit_cost: number
     }) => apiClient.post('/inventory/opening-balance', balance),
@@ -209,8 +209,8 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
         ...prev.openingBalances,
         {
           inventory_location_id: 0,
-          qty: 0,
-          uom_id: wizardData.variant.uom_id,
+          quantity: 0,
+          uom_id: wizardData.variant.uom_id || 0,
           unit_cost: 0,
         },
       ],
@@ -292,7 +292,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
       if (!balance.inventory_location_id) {
         newErrors[`balance_${index}_location`] = 'Seleccione ubicación'
       }
-      if (balance.qty <= 0) {
+      if (balance.quantity <= 0) {
         newErrors[`balance_${index}_qty`] = 'Cantidad debe ser mayor a 0'
       }
       if (!balance.uom_id) {
@@ -778,9 +778,9 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                     <Input
                       type="number"
                       step="0.01"
-                      value={balance.qty}
+                      value={balance.quantity}
                       onChange={(e) =>
-                        updateOpeningBalance(index, 'qty', Number(e.target.value))
+                        updateOpeningBalance(index, 'quantity', Number(e.target.value))
                       }
                       placeholder="0.00"
                     />
