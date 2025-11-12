@@ -43,8 +43,8 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
     mutationFn: (data: typeof formData) => inventoryLocationApi.create(data),
     onSuccess: () => {
       showSuccess(
-        'Location created successfully',
-        'Location Created'
+        'Ubicación creada exitosamente',
+        'Ubicación Creada'
       )
       onSuccess()
     },
@@ -53,7 +53,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         setErrors(error.response.data.errors)
       }
       showError(
-        error.response?.data?.message || 'Failed to create location',
+        error.response?.data?.message || 'Error al crear la ubicación',
         'Error'
       )
     },
@@ -64,8 +64,8 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
       inventoryLocationApi.update(location!.id, data),
     onSuccess: () => {
       showSuccess(
-        'Location updated successfully',
-        'Location Updated'
+        'Ubicación actualizada exitosamente',
+        'Ubicación Actualizada'
       )
       onSuccess()
     },
@@ -74,7 +74,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         setErrors(error.response.data.errors)
       }
       showError(
-        error.response?.data?.message || 'Failed to update location',
+        error.response?.data?.message || 'Error al actualizar la ubicación',
         'Error'
       )
     },
@@ -84,16 +84,16 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
     const newErrors: Record<string, string> = {}
 
     if (!formData.operating_unit_id) {
-      newErrors.operating_unit_id = 'Operating unit is required'
+      newErrors.operating_unit_id = 'La unidad operativa es requerida'
     }
     if (!formData.name || formData.name.length < 3) {
-      newErrors.name = 'Name must be at least 3 characters'
+      newErrors.name = 'El nombre debe tener al menos 3 caracteres'
     }
     if (!formData.type) {
-      newErrors.type = 'Location type is required'
+      newErrors.type = 'El tipo de ubicación es requerido'
     }
     if (formData.priority < 0 || formData.priority > 1000) {
-      newErrors.priority = 'Priority must be between 0 and 1000'
+      newErrors.priority = 'La prioridad debe estar entre 0 y 1000'
     }
 
     setErrors(newErrors)
@@ -123,7 +123,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
     <form onSubmit={handleSubmit} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-6">
         <FormField
-          label="Operating Unit"
+          label="Unidad Operativa"
           required
           error={errors.operating_unit_id}
         >
@@ -132,7 +132,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
             onChange={(e) => setFormData({ ...formData, operating_unit_id: Number(e.target.value) })}
             error={!!errors.operating_unit_id}
           >
-            <option value="0">Select operating unit</option>
+            <option value="0">Seleccione una unidad operativa</option>
             {operatingUnits?.map((unit: any) => (
               <option key={unit.id} value={unit.id}>
                 {unit.name} ({unit.type})
@@ -142,20 +142,20 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         </FormField>
 
         <FormField
-          label="Location Name"
+          label="Nombre de la Ubicación"
           required
           error={errors.name}
         >
           <Input
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="e.g., Main Warehouse"
+            placeholder="ej., Almacén Principal"
             error={!!errors.name}
           />
         </FormField>
 
         <FormField
-          label="Location Type"
+          label="Tipo de Ubicación"
           required
           error={errors.type}
         >
@@ -164,21 +164,21 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
             onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
             error={!!errors.type}
           >
-            <option value="">Select type</option>
-            <option value="MAIN">Main Storage</option>
-            <option value="TEMP">Temporary</option>
-            <option value="KITCHEN">Kitchen</option>
+            <option value="">Seleccione un tipo</option>
+            <option value="MAIN">Almacén Principal</option>
+            <option value="TEMP">Temporal</option>
+            <option value="KITCHEN">Cocina</option>
             <option value="BAR">Bar</option>
-            <option value="RETURN">Return</option>
-            <option value="WASTE">Waste</option>
+            <option value="RETURN">Devoluciones</option>
+            <option value="WASTE">Desperdicios</option>
           </Select>
         </FormField>
 
         <FormField
-          label="Priority"
+          label="Prioridad"
           required
           error={errors.priority}
-          hint="Higher values indicate higher priority (0-1000)"
+          hint="Valores más altos indican mayor prioridad (0-1000)"
         >
           <Input
             type="number"
@@ -189,12 +189,12 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
           />
         </FormField>
 
-        <FormField label="Notes">
+        <FormField label="Notas">
           <Textarea
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             rows={3}
-            placeholder="Additional notes or description"
+            placeholder="Notas adicionales o descripción"
           />
         </FormField>
 
@@ -202,12 +202,12 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
           <Checkbox
             checked={formData.is_primary}
             onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })}
-            label="Primary location for this operating unit"
+            label="Ubicación principal para esta unidad operativa"
           />
           <Checkbox
             checked={formData.is_active}
             onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-            label="Active"
+            label="Activa"
           />
         </div>
       </SlidePanel.Body>
@@ -220,11 +220,11 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
             onClick={onCancel}
             disabled={isSubmitting}
           >
-            Cancel
+            Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {location ? 'Update' : 'Create'} Location
+            {location ? 'Actualizar' : 'Crear'} Ubicación
           </Button>
         </div>
 
@@ -233,7 +233,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
             <p className="text-sm text-red-800">
               {mutation.error instanceof Error
                 ? mutation.error.message
-                : 'An error occurred while saving the location'}
+                : 'Ocurrió un error al guardar la ubicación'}
             </p>
           </div>
         )}
