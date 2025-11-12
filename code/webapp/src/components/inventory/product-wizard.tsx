@@ -35,7 +35,7 @@ interface WizardData {
     max_stock: number
     is_active: boolean
   }
-  // Step 3: UoM Conversions (solo para INSUMO)
+  // Step 3: UoM Conversions (para items con is_stocked=true)
   conversions: Array<{
     from_uom_id: number
     to_uom_id: number
@@ -267,7 +267,8 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
   }
 
   const validateStep3 = (): boolean => {
-    if (wizardData.item.type !== 'INSUMO') return true
+    // Skip validation if item doesn't have inventory tracking
+    if (!wizardData.item.is_stocked) return true
 
     const newErrors: Record<string, string> = {}
 
@@ -336,8 +337,8 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
     } else if (currentStep === 3) {
       if (!validateStep3()) return
 
-      // Create conversions if type is INSUMO
-      if (wizardData.item.type === 'INSUMO' && wizardData.conversions.length > 0) {
+      // Create conversions if item is stocked and has conversions defined
+      if (wizardData.item.is_stocked && wizardData.conversions.length > 0) {
         try {
           await Promise.all(
             wizardData.conversions.map((conv) => createConversionMutation.mutateAsync(conv))
@@ -634,13 +635,13 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
             <div>
               <h3 className="text-lg font-semibold mb-2">Conversiones de Unidad</h3>
               <p className="text-sm text-muted-foreground">
-                {wizardData.item.type === 'INSUMO'
-                  ? 'Define las conversiones entre unidades (opcional para insumos)'
-                  : 'Las conversiones solo están disponibles para INSUMOS. Puedes continuar al siguiente paso.'}
+                {wizardData.item.is_stocked
+                  ? 'Define conversiones entre unidades de medida (ej: 1 caja = 24 unidades)'
+                  : 'Las conversiones solo están disponibles para items con inventario. Puedes continuar al siguiente paso.'}
               </p>
             </div>
 
-            {wizardData.item.type === 'INSUMO' && (
+            {wizardData.item.is_stocked && (
               <>
                 {wizardData.conversions.map((conversion, index) => (
                   <div

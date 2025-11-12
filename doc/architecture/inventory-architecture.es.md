@@ -608,6 +608,11 @@ classDiagram
     - Usada como catálogo; no expone métodos adicionales.
 - **UomConversion**
     - Propiedades: `id`, `from_uom_id`, `to_uom_id`, `factor`, `tolerance`, `is_active`.
+    - **Aplicación**: Disponible para cualquier item con `is_stocked=true`, no solo INSUMOS.
+    - **Casos de uso**:
+        - **INSUMO**: 1 kg = 1000 g (conversión entre escalas de medida)
+        - **PRODUCTO manufacturado**: 1 bandeja = 8 piezas (presentaciones de venta)
+        - **PRODUCTO reventa**: 1 caja = 24 unidades (compra mayoreo vs venta individual)
     - Acción: `convert(qty)` aplica factor y tolerancia (en la práctica se resuelve vía `TransfersService`/`CostingService`).
 - **Stock**
     - Propiedades: `id`, `inventory_location_id`, `item_variant_id`, `on_hand`, `reserved`.
