@@ -71,6 +71,14 @@ export function StockOutForm({
   const variants = variantsData?.data.data || []
   const units = uomData?.data.data || []
 
+  // Sort locations by priority (descending) and name
+  const sortedLocations = [...locations].sort((a: any, b: any) => {
+    const priorityA = a.priority ?? 0
+    const priorityB = b.priority ?? 0
+    if (priorityB !== priorityA) return priorityB - priorityA // Higher priority first
+    return (a.name || '').localeCompare(b.name || '')
+  })
+
   // Update variant info and UoM when variant changes
   useEffect(() => {
     if (formData.variant_id && variants.length > 0) {
@@ -186,9 +194,11 @@ export function StockOutForm({
               }
             >
               <option value="0">Select location...</option>
-              {locations.map((location: any) => (
+              {sortedLocations.map((location: any) => (
                 <option key={location.id} value={location.id}>
                   {location.name} ({location.type})
+                  {location.code && ` [${location.code}]`}
+                  {location.priority !== undefined && ` — prio ${location.priority}`}
                 </option>
               ))}
             </Select>

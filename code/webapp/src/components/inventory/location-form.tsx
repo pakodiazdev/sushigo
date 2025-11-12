@@ -26,8 +26,28 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
     priority: location?.priority || 100,
     is_primary: location?.is_primary || false,
     is_active: location?.is_active ?? true,
+    is_pickable: location?.is_pickable ?? true,
     notes: location?.notes || '',
   })
+
+  // Default priorities by type
+  const getDefaultPriority = (type: string): number => {
+    const defaults: Record<string, number> = {
+      DISPLAY: 900,
+      MAIN: 800,
+      KITCHEN: 700,
+      BAR: 700,
+      TEMP: 500,
+      RETURN: 100,
+      WASTE: 0,
+    }
+    return defaults[type] || 100
+  }
+
+  // Default pickable by type
+  const getDefaultPickable = (type: string): boolean => {
+    return type !== 'RETURN' && type !== 'WASTE'
+  }
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -175,7 +195,16 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         >
           <Select
             value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+            onChange={(e) => {
+              const newType = e.target.value as any
+              setFormData({
+                ...formData,
+                type: newType,
+                // Auto-apply defaults when type changes (only if not editing)
+                priority: location ? formData.priority : getDefaultPriority(newType),
+                is_pickable: location ? formData.is_pickable : getDefaultPickable(newType),
+              })
+            }}
             error={!!errors.type}
           >
             <option value="">Seleccione un tipo</option>
@@ -218,6 +247,11 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
             checked={formData.is_primary}
             onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })}
             label="Ubicación principal para esta unidad operativa"
+          />
+          <Checkbox
+            checked={formData.is_pickable}
+            onChange={(e) => setFormData({ ...formData, is_pickable: e.target.checked })}
+            label="Usar para picking/reserva automática"
           />
           <Checkbox
             checked={formData.is_active}

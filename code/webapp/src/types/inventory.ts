@@ -8,6 +8,7 @@ export interface InventoryLocation {
   priority: number
   is_primary: boolean
   is_active: boolean
+  is_pickable: boolean
   notes?: string
   operating_unit?: {
     id: number

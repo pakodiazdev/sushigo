@@ -7,11 +7,13 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="UpdateInventoryLocationRequest",
+ *   @OA\Property(property="code", type="string", maxLength=50, example="MESA-REC-01", description="Unique location code"),
  *   @OA\Property(property="name", type="string", maxLength=255, example="Updated Warehouse", description="Location name"),
- *   @OA\Property(property="type", type="string", enum={"MAIN", "TEMP", "KITCHEN", "WASTE", "EVENT"}, example="MAIN", description="Location type"),
- *   @OA\Property(property="priority", type="integer", example=150, description="Location priority"),
+ *   @OA\Property(property="type", type="string", enum={"MAIN", "DISPLAY", "KITCHEN", "BAR", "TEMP", "RETURN", "WASTE"}, example="MAIN", description="Location type"),
+ *   @OA\Property(property="priority", type="integer", example=150, description="Location priority (0-1000)"),
  *   @OA\Property(property="is_primary", type="boolean", example=true, description="Is primary location"),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Is location active"),
+ *   @OA\Property(property="is_pickable", type="boolean", example=true, description="Can be used for picking"),
  *   @OA\Property(property="notes", type="string", example="Updated notes", description="Additional notes"),
  * )
  */
@@ -25,11 +27,13 @@ class UpdateInventoryLocationRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'code' => ['nullable', 'string', 'max:50'],
             'name' => ['nullable', 'string', 'max:255'],
-            'type' => ['nullable', 'string', 'in:MAIN,TEMP,KITCHEN,WASTE,EVENT'],
-            'priority' => ['nullable', 'integer'],
+            'type' => ['nullable', 'string', 'in:MAIN,DISPLAY,KITCHEN,BAR,TEMP,RETURN,WASTE'],
+            'priority' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'is_primary' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
+            'is_pickable' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string'],
         ];
     }

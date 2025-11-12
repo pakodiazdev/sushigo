@@ -19,6 +19,7 @@ class InventoryLocation extends Model
         'type',
         'is_primary',
         'is_active',
+        'is_pickable',
         'priority',
         'notes',
         'meta',
@@ -27,6 +28,7 @@ class InventoryLocation extends Model
     protected $casts = [
         'is_primary' => 'boolean',
         'is_active' => 'boolean',
+        'is_pickable' => 'boolean',
         'priority' => 'integer',
         'meta' => 'array',
     ];
@@ -81,6 +83,14 @@ class InventoryLocation extends Model
     }
 
     /**
+     * Scope to filter pickable locations
+     */
+    public function scopePickable($query)
+    {
+        return $query->where('is_pickable', true)->where('is_active', true);
+    }
+
+    /**
      * Scope to filter by type
      */
     public function scopeType($query, string $type)
@@ -94,5 +104,34 @@ class InventoryLocation extends Model
     public function scopeByPriority($query)
     {
         return $query->orderBy('priority', 'desc')->orderBy('name');
+    }
+
+    /**
+     * Get default priority for a given type
+     */
+    public static function getDefaultPriority(string $type): int
+    {
+        return match ($type) {
+            self::TYPE_DISPLAY => 900,      // High priority - use first for sales
+            self::TYPE_MAIN => 800,          // Main storage - high priority
+            self::TYPE_KITCHEN => 700,       // Kitchen - medium-high
+            self::TYPE_BAR => 700,           // Bar - medium-high
+            self::TYPE_TEMP => 500,          // Temporary - medium
+            self::TYPE_RETURN => 100,        // Returns - low priority
+            self::TYPE_WASTE => 0,           // Waste - lowest priority
+            default => 100,
+        };
+    }
+
+    /**
+     * Determine if location should be pickable by default for given type
+     */
+    public static function getDefaultPickable(string $type): bool
+    {
+        return match ($type) {
+            self::TYPE_RETURN => false,      // Returns need review first
+            self::TYPE_WASTE => false,       // Waste is not pickable
+            default => true,
+        };
     }
 }
