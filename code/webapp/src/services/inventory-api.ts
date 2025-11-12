@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { apiClient } from '@/lib/api-client'
 import type {
   InventoryLocation,
   Item,
@@ -9,21 +9,8 @@ import type {
   EntityResponse,
 } from '@/types/inventory'
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// Request interceptor for adding auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+// Use centralized API client instead of creating a new instance
+const api = apiClient
 
 // Inventory Locations
 export const inventoryLocationApi = {

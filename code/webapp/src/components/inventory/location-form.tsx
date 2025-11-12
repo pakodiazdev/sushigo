@@ -7,8 +7,8 @@ import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fiel
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useToast } from '@/components/ui/toast-provider'
 import { inventoryLocationApi } from '@/services/inventory-api'
+import { apiClient } from '@/lib/api-client'
 import type { InventoryLocation } from '@/types/inventory'
-import axios from 'axios'
 
 interface LocationFormProps {
   location?: InventoryLocation | null
@@ -34,7 +34,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
   const { data: operatingUnits } = useQuery({
     queryKey: ['operating-units'],
     queryFn: async () => {
-      const response = await axios.get('http://localhost:8080/api/v1/operating-units')
+      const response = await apiClient.get('/operating-units')
       return response.data.data
     },
   })

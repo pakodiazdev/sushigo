@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { useToast } from '@/components/ui/toast-provider'
 import { inventoryLocationApi, itemVariantApi, stockMovementApi } from '@/services/inventory-api'
-import axios from 'axios'
+import { apiClient } from '@/lib/api-client'
 
 interface OpeningBalanceFormProps {
   onSuccess: () => void
@@ -51,10 +51,7 @@ export function OpeningBalanceForm({
   const { data: uomData } = useQuery({
     queryKey: ['units-of-measure-for-select'],
     queryFn: async () => {
-      const api = axios.create({
-        baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
-      })
-      const response = await api.get('/units-of-measure', {
+      const response = await apiClient.get('/units-of-measure', {
         params: { is_active: true, per_page: 100 },
       })
       return response
