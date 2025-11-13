@@ -61,10 +61,10 @@ export function SlidePanel({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 transition-opacity duration-300"
+        className="fixed inset-0 bg-black/50 transition-opacity duration-300"
         onClick={onClose}
         aria-hidden="true"
       />

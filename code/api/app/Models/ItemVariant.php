@@ -17,6 +17,7 @@ class ItemVariant extends Model
         'item_id',
         'uom_id',
         'code',
+        'barcode',
         'name',
         'description',
         'track_lot',

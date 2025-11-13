@@ -23,15 +23,15 @@ class ListUnitsOfMeasureRequest extends FormRequest
     {
         // Convert string "true"/"false" from query params to actual booleans
         $filters = [];
-        
+
         if ($this->has('is_active')) {
             $filters['is_active'] = filter_var($this->is_active, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         }
-        
+
         if ($this->has('is_decimal')) {
             $filters['is_decimal'] = filter_var($this->is_decimal, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         }
-        
+
         $this->merge($filters);
     }
 

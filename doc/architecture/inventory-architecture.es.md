@@ -27,16 +27,16 @@ El sistema debe garantizar:
 
 ## 2. Principios de diseño
 
-| Principio                      | Descripción                                                                         |
-| ------------------------------ | ----------------------------------------------------------------------------------- |
-| **Single Tenant Scope**        | Toda la data pertenece al tenant SushiGo; no se requiere aislamiento multi-cliente. |
+| Principio                      | Descripción                                                                            |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| **Single Tenant Scope**        | Toda la data pertenece al tenant SushiGo; no se requiere aislamiento multi-cliente.    |
 | **Operating Unit Abstraction** | Cada operación ocurre dentro de una unidad (inventario de sucursal o evento temporal). |
-| **Inventory by Location**      | Stock segregado por `InventoryLocation` (MAIN, KITCHEN, BAR, etc.).                 |
-| **Traceabilidad total**        | Cada movimiento genera `StockMovement` y líneas detalladas.                         |
-| **Expandable Architecture**    | Preparado para compras, lotes, producción y analítica.                              |
-| **Secure IDs**                 | IDs internos incrementales, externos expuestos como Hashids.                        |
-| **Service-Oriented Layering**  | Controladores delgados → Servicios de dominio → Modelos.                            |
-| **Laravel Native**             | Uso de patrones propios de Laravel 12 + Spatie Permission.                          |
+| **Inventory by Location**      | Stock segregado por `InventoryLocation` (MAIN, KITCHEN, BAR, etc.).                    |
+| **Traceabilidad total**        | Cada movimiento genera `StockMovement` y líneas detalladas.                            |
+| **Expandable Architecture**    | Preparado para compras, lotes, producción y analítica.                                 |
+| **Secure IDs**                 | IDs internos incrementales, externos expuestos como Hashids.                           |
+| **Service-Oriented Layering**  | Controladores delgados → Servicios de dominio → Modelos.                               |
+| **Laravel Native**             | Uso de patrones propios de Laravel 12 + Spatie Permission.                             |
 
 ---
 
@@ -260,8 +260,8 @@ erDiagram
 
 ### 3.4 Seguridad y roles
 
-El detalle del sistema de usuarios, roles y permisos se documenta en  
-[Security & User System Architecture](./security-and-user-system-architecture.md).  
+El detalle del sistema de usuarios, roles y permisos se documenta en
+[Security & User System Architecture](./security-and-user-system-architecture.md).
 Allí se describe el flujo de asignación, los roles base (`super-admin`, `admin`, `user`) y la estrategia para combinar permisos directos con roles contextuales.
 
 ---
@@ -276,13 +276,13 @@ Allí se describe el flujo de asignación, los roles base (`super-admin`, `admin
 
 **Esquema propuesto**
 
-| Tabla | Campos clave | Notas |
-|-------|--------------|-------|
-| `branches` | `id`, `code`, `name`, `region`, `timezone`, `is_active` | Catálogo de sucursales; inicialmente se crea una por defecto. |
-| `operating_units` | `branch_id`, `type`, `name`, `start_date`, `end_date`, `is_active` | Inventarios permanentes (`BRANCH_*`) o temporales (`EVENT_TEMP`). |
-| `inventory_locations` | `operating_unit_id`, `name`, `type`, `is_primary` | Localidades dentro de cada inventario (Main, Kitchen, Bar, Waste, etc.). |
-| `stock_movements` | `from_location_id`, `to_location_id`, `reason`, `related_id` | Permite traspasos inter-sucursal gracias al branch asociado a cada localidad. |
-| `event_closures` | `operating_unit_id`, `closed_at`, `kpis` | Aplica solo a inventarios temporales; ejecuta cierre y retorno a sucursal origen. |
+| Tabla                 | Campos clave                                                       | Notas                                                                             |
+| --------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `branches`            | `id`, `code`, `name`, `region`, `timezone`, `is_active`            | Catálogo de sucursales; inicialmente se crea una por defecto.                     |
+| `operating_units`     | `branch_id`, `type`, `name`, `start_date`, `end_date`, `is_active` | Inventarios permanentes (`BRANCH_*`) o temporales (`EVENT_TEMP`).                 |
+| `inventory_locations` | `operating_unit_id`, `name`, `type`, `is_primary`                  | Localidades dentro de cada inventario (Main, Kitchen, Bar, Waste, etc.).          |
+| `stock_movements`     | `from_location_id`, `to_location_id`, `reason`, `related_id`       | Permite traspasos inter-sucursal gracias al branch asociado a cada localidad.     |
+| `event_closures`      | `operating_unit_id`, `closed_at`, `kpis`                           | Aplica solo a inventarios temporales; ejecuta cierre y retorno a sucursal origen. |
 
 ---
 
@@ -584,63 +584,63 @@ classDiagram
 
 ### 3.8 Resumen de clases
 
-- **Branch**
-    - Propiedades: `id`, `code`, `name`, `region`, `timezone`, `is_active`.
-    - Acciones: `activate()` o `deactivate()` según disponibilidad operativa; define configuraciones por defecto (inventario principal, moneda).
-- **OperatingUnit**
-    - Propiedades: `id`, `branch_id`, `name`, `type`, `start_date`, `end_date`, `is_active`.
-    - Acciones conceptuales: `activate()` para habilitar operaciones, `scheduleClosure(date)` para marcar fecha de cierre (derivará en servicios como `EventsService`); `changeType()` restringido para transicionar entre `BRANCH_*` y `EVENT_TEMP`.
-    - Tipos disponibles: `BRANCH_MAIN` (inventario principal de sucursal), `BRANCH_BUFFER`/`BRANCH_RETURN` (almacenes auxiliares) y `EVENT_TEMP` (inventario temporal de eventos).
-- **InventoryLocation**
-    - Propiedades: `id`, `operating_unit_id`, `name`, `type`, `is_primary`.
-    - Acciones: `markPrimary()` (se usa en ajustes iniciales de la unidad).
-- **Item**
-    - Propiedades: `id`, `sku`, `name`, `type`, `is_stocked`, `is_perishable`, `is_manufactured`.
-    - **`is_manufactured`**: Indica si el item se fabrica/prepara internamente (`true`) o se compra para reventa (`false`). Esto permite diferenciar entre:
-        - **Productos manufacturados** (`is_manufactured=true`): Platillos del menú que se preparan en cocina usando insumos según recetas.
-        - **Productos de reventa** (`is_manufactured=false`): Items que se compran ya terminados (ej: dulcería coreana, bebidas embotelladas) y se revenden directamente sin transformación.
-    - Acciones: `registerVariant(data)` encapsula la creación de variantes a través de factories/acciones.
-- **ItemVariant**
-    - Propiedades: `id`, `item_id`, `code`, `name`, `uom_id`, `track_lot`, `track_serial`.
-    - Acciones: `changeDefaultUom(uom)` (valida reglas 1:1 en productos/activos), ganchos para lotes/serializados.
-- **UnitOfMeasure**
-    - Propiedades: `id`, `code`, `name`, `symbol`, `precision`, `is_decimal`.
-    - Usada como catálogo; no expone métodos adicionales.
-- **UomConversion**
-    - Propiedades: `id`, `from_uom_id`, `to_uom_id`, `factor`, `tolerance`, `is_active`.
-    - **Aplicación**: Disponible para cualquier item con `is_stocked=true`, no solo INSUMOS.
-    - **Casos de uso**:
-        - **INSUMO**: 1 kg = 1000 g (conversión entre escalas de medida)
-        - **PRODUCTO manufacturado**: 1 bandeja = 8 piezas (presentaciones de venta)
-        - **PRODUCTO reventa**: 1 caja = 24 unidades (compra mayoreo vs venta individual)
-    - Acción: `convert(qty)` aplica factor y tolerancia (en la práctica se resuelve vía `TransfersService`/`CostingService`).
-- **Stock**
-    - Propiedades: `id`, `inventory_location_id`, `item_variant_id`, `on_hand`, `reserved`.
-    - Acciones: `adjust(delta)` para restar/sumar existencias (llamado desde servicios de movimientos).
-- **StockMovement**
-    - Propiedades: `id`, `from_location_id`, `to_location_id`, `item_variant_id`, `qty`, `reason`, `meta`, `related_id`, `created_at`.
-    - Acciones: `post()` confirma y aplica el movimiento; `reverse(reason)` genera reversos controlados.
-- **StockMovementLine**
-    - Propiedades: `id`, `stock_movement_id`, `item_variant_id`, `uom_id`, `qty`, `base_qty`, `conversion_factor`, `meta`.
-    - Actúa como detalle del movimiento para soportar múltiples líneas y conversiones.
-- **StockCount / StockCountLine**
-    - Propiedades principales: `inventory_location_id`, `counted_at`, `status` y líneas con `qty`, `uom_id`, `base_qty`.
-    - Acciones: `finalize()` procesa diferencias contra `Stock`.
-- **Sale / SaleLine**
-    - Propiedades: `operating_unit_id`, `subtotal`, `total`, `created_at` y líneas con `qty`, `price`, `line_total`.
-    - Acciones: `registerPayment(data)` (orquestrado por `SalesService`), generación de movimientos `SALE`.
-- **Expense**
-    - Propiedades: `operating_unit_id`, `category`, `vendor`, `amount`, `notes`.
-    - Registro simple, asociado a reportes y cierres.
-- **EventClosure**
-    - Propiedades: `operating_unit_id`, `closed_at`, `kpis`.
-    - Acciones: `generateReport()` invoca servicios para KPIs, balances y retornos de stock.
-- **MediaGallery / MediaAsset / MediaAttachment**
-    - Propiedades principales: galería (`name`, `description`, `cover_media_id`, `is_shared`), assets (`path`, `mime_type`, `position`, `is_primary`, `meta`) y attachments (`attachable_type`, `attachable_id`, `is_primary`).
-    - Acciones: `setCover()` y `markAsPrimary()` aseguran portada única; `attach(model)`/`detach()` gestionan vínculos polimórficos con productos, variantes u otras entidades.
-- **MediaStorageService & Drivers**
-    - Interfaz `MediaStorageDriver` con operaciones `saveAsset()` y `getAsset()`; implementaciones locales (disco) y Cloudflare R2 previstas, extensibles a otros providers.
-    - `MediaStorageService` mantiene el driver activo (configurable por env), orquesta la persistencia de archivos y entrega URLs accesibles (incluyendo firmas temporales en nubes públicas).
+-   **Branch**
+    -   Propiedades: `id`, `code`, `name`, `region`, `timezone`, `is_active`.
+    -   Acciones: `activate()` o `deactivate()` según disponibilidad operativa; define configuraciones por defecto (inventario principal, moneda).
+-   **OperatingUnit**
+    -   Propiedades: `id`, `branch_id`, `name`, `type`, `start_date`, `end_date`, `is_active`.
+    -   Acciones conceptuales: `activate()` para habilitar operaciones, `scheduleClosure(date)` para marcar fecha de cierre (derivará en servicios como `EventsService`); `changeType()` restringido para transicionar entre `BRANCH_*` y `EVENT_TEMP`.
+    -   Tipos disponibles: `BRANCH_MAIN` (inventario principal de sucursal), `BRANCH_BUFFER`/`BRANCH_RETURN` (almacenes auxiliares) y `EVENT_TEMP` (inventario temporal de eventos).
+-   **InventoryLocation**
+    -   Propiedades: `id`, `operating_unit_id`, `name`, `type`, `is_primary`.
+    -   Acciones: `markPrimary()` (se usa en ajustes iniciales de la unidad).
+-   **Item**
+    -   Propiedades: `id`, `sku`, `name`, `type`, `is_stocked`, `is_perishable`, `is_manufactured`.
+    -   **`is_manufactured`**: Indica si el item se fabrica/prepara internamente (`true`) o se compra para reventa (`false`). Esto permite diferenciar entre:
+        -   **Productos manufacturados** (`is_manufactured=true`): Platillos del menú que se preparan en cocina usando insumos según recetas.
+        -   **Productos de reventa** (`is_manufactured=false`): Items que se compran ya terminados (ej: dulcería coreana, bebidas embotelladas) y se revenden directamente sin transformación.
+    -   Acciones: `registerVariant(data)` encapsula la creación de variantes a través de factories/acciones.
+-   **ItemVariant**
+    -   Propiedades: `id`, `item_id`, `code`, `name`, `uom_id`, `track_lot`, `track_serial`.
+    -   Acciones: `changeDefaultUom(uom)` (valida reglas 1:1 en productos/activos), ganchos para lotes/serializados.
+-   **UnitOfMeasure**
+    -   Propiedades: `id`, `code`, `name`, `symbol`, `precision`, `is_decimal`.
+    -   Usada como catálogo; no expone métodos adicionales.
+-   **UomConversion**
+    -   Propiedades: `id`, `from_uom_id`, `to_uom_id`, `factor`, `tolerance`, `is_active`.
+    -   **Aplicación**: Disponible para cualquier item con `is_stocked=true`, no solo INSUMOS.
+    -   **Casos de uso**:
+        -   **INSUMO**: 1 kg = 1000 g (conversión entre escalas de medida)
+        -   **PRODUCTO manufacturado**: 1 bandeja = 8 piezas (presentaciones de venta)
+        -   **PRODUCTO reventa**: 1 caja = 24 unidades (compra mayoreo vs venta individual)
+    -   Acción: `convert(qty)` aplica factor y tolerancia (en la práctica se resuelve vía `TransfersService`/`CostingService`).
+-   **Stock**
+    -   Propiedades: `id`, `inventory_location_id`, `item_variant_id`, `on_hand`, `reserved`.
+    -   Acciones: `adjust(delta)` para restar/sumar existencias (llamado desde servicios de movimientos).
+-   **StockMovement**
+    -   Propiedades: `id`, `from_location_id`, `to_location_id`, `item_variant_id`, `qty`, `reason`, `meta`, `related_id`, `created_at`.
+    -   Acciones: `post()` confirma y aplica el movimiento; `reverse(reason)` genera reversos controlados.
+-   **StockMovementLine**
+    -   Propiedades: `id`, `stock_movement_id`, `item_variant_id`, `uom_id`, `qty`, `base_qty`, `conversion_factor`, `meta`.
+    -   Actúa como detalle del movimiento para soportar múltiples líneas y conversiones.
+-   **StockCount / StockCountLine**
+    -   Propiedades principales: `inventory_location_id`, `counted_at`, `status` y líneas con `qty`, `uom_id`, `base_qty`.
+    -   Acciones: `finalize()` procesa diferencias contra `Stock`.
+-   **Sale / SaleLine**
+    -   Propiedades: `operating_unit_id`, `subtotal`, `total`, `created_at` y líneas con `qty`, `price`, `line_total`.
+    -   Acciones: `registerPayment(data)` (orquestrado por `SalesService`), generación de movimientos `SALE`.
+-   **Expense**
+    -   Propiedades: `operating_unit_id`, `category`, `vendor`, `amount`, `notes`.
+    -   Registro simple, asociado a reportes y cierres.
+-   **EventClosure**
+    -   Propiedades: `operating_unit_id`, `closed_at`, `kpis`.
+    -   Acciones: `generateReport()` invoca servicios para KPIs, balances y retornos de stock.
+-   **MediaGallery / MediaAsset / MediaAttachment**
+    -   Propiedades principales: galería (`name`, `description`, `cover_media_id`, `is_shared`), assets (`path`, `mime_type`, `position`, `is_primary`, `meta`) y attachments (`attachable_type`, `attachable_id`, `is_primary`).
+    -   Acciones: `setCover()` y `markAsPrimary()` aseguran portada única; `attach(model)`/`detach()` gestionan vínculos polimórficos con productos, variantes u otras entidades.
+-   **MediaStorageService & Drivers**
+    -   Interfaz `MediaStorageDriver` con operaciones `saveAsset()` y `getAsset()`; implementaciones locales (disco) y Cloudflare R2 previstas, extensibles a otros providers.
+    -   `MediaStorageService` mantiene el driver activo (configurable por env), orquesta la persistencia de archivos y entrega URLs accesibles (incluyendo firmas temporales en nubes públicas).
 
 > Nota: las “acciones” descritas se modelarán como métodos en servicios/aplicaciones (ej. `TransfersService` o acciones de dominio). El diagrama ayuda a visualizar responsabilidades antes de trasladarlas a capas de servicios y jobs.
 

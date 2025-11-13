@@ -135,8 +135,8 @@ export function InventoryItemsPage() {
       render: (item) => (
         <span
           className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${item.is_active
-              ? 'bg-green-50 text-green-700 ring-green-600/20'
-              : 'bg-gray-50 text-gray-600 ring-gray-500/10'
+            ? 'bg-green-50 text-green-700 ring-green-600/20'
+            : 'bg-gray-50 text-gray-600 ring-gray-500/10'
             }`}
         >
           {item.is_active ? 'Active' : 'Inactive'}
