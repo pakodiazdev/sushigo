@@ -87,19 +87,19 @@ export function SlidePanel({
             className
           )}
         >
-          <div className="flex h-full flex-col bg-white shadow-xl">
+          <div className="flex h-full flex-col bg-background shadow-xl">
             {/* Header */}
             {(title || description) && (
-              <div className="border-b border-gray-200 px-6 py-4">
+              <div className="border-b border-border px-6 py-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     {title && (
-                      <h2 className="text-lg font-semibold text-gray-900">
+                      <h2 className="text-lg font-semibold text-foreground">
                         {title}
                       </h2>
                     )}
                     {description && (
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {description}
                       </p>
                     )}
@@ -107,7 +107,7 @@ export function SlidePanel({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="ml-4 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="ml-4 rounded-md text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <span className="sr-only">Close panel</span>
                     <X className="h-6 w-6" />
@@ -136,7 +136,7 @@ SlidePanel.Header = function SlidePanelHeader({
   className?: string
 }) {
   return (
-    <div className={cn('border-b border-gray-200 px-6 py-4', className)}>
+    <div className={cn('border-b border-border px-6 py-4', className)}>
       {children}
     </div>
   )
@@ -162,7 +162,7 @@ SlidePanel.Footer = function SlidePanelFooter({
   return (
     <div
       className={cn(
-        'border-t border-gray-200 bg-gray-50 px-6 py-4',
+        'border-t border-border bg-muted/50 px-6 py-4',
         className
       )}
     >

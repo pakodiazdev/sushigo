@@ -53,8 +53,8 @@ export function VariantDetails({ variant, onEdit, onDelete }: VariantDetailsProp
             </span>
             <span
               className={`text-xs px-2 py-1 rounded-full ${variant.is_active
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-100 text-gray-700'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-100 text-gray-700'
                 }`}
             >
               {variant.is_active ? 'Active' : 'Inactive'}
@@ -138,13 +138,13 @@ export function VariantDetails({ variant, onEdit, onDelete }: VariantDetailsProp
               <InfoItem
                 icon={TrendingDown}
                 label="Min Stock"
-                value={variant.min_stock.toString()}
+                value={Number(variant.min_stock || 0).toString()}
                 iconColor="text-red-600"
               />
               <InfoItem
                 icon={TrendingUp}
                 label="Max Stock"
-                value={variant.max_stock.toString()}
+                value={Number(variant.max_stock || 0).toString()}
                 iconColor="text-green-600"
               />
             </div>
@@ -160,12 +160,12 @@ export function VariantDetails({ variant, onEdit, onDelete }: VariantDetailsProp
               <InfoItem
                 icon={DollarSign}
                 label="Last Unit Cost"
-                value={`$${variant.last_unit_cost.toFixed(2)}`}
+                value={`$${Number(variant.last_unit_cost || 0).toFixed(2)}`}
               />
               <InfoItem
                 icon={DollarSign}
                 label="Avg Unit Cost"
-                value={`$${variant.avg_unit_cost.toFixed(2)}`}
+                value={`$${Number(variant.avg_unit_cost || 0).toFixed(2)}`}
                 hint="Weighted average"
               />
             </div>

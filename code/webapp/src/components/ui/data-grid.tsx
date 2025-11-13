@@ -40,14 +40,14 @@ export function DataGrid<T extends Record<string, any>>({
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-gray-500">
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
         {emptyMessage}
       </div>
     )
@@ -57,9 +57,9 @@ export function DataGrid<T extends Record<string, any>>({
     <div className={cn('flex flex-col', className)}>
       <div className="overflow-x-auto">
         <div className="inline-block min-w-full align-middle">
-          <div className="overflow-hidden border border-gray-200 shadow sm:rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="overflow-hidden border border-border shadow sm:rounded-lg">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/50">
                 <tr>
                   {columns.map((column) => (
                     <th
@@ -67,7 +67,7 @@ export function DataGrid<T extends Record<string, any>>({
                       scope="col"
                       style={{ width: column.width }}
                       className={cn(
-                        'px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-500',
+                        'px-6 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground',
                         column.align === 'center' && 'text-center',
                         column.align === 'right' && 'text-right',
                         !column.align && 'text-left'
@@ -78,7 +78,7 @@ export function DataGrid<T extends Record<string, any>>({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
+              <tbody className="divide-y divide-border bg-card">
                 {data.map((item) => {
                   const rowId = getRowId(item)
                   const isSelected = selectedId === rowId
@@ -89,8 +89,8 @@ export function DataGrid<T extends Record<string, any>>({
                       onClick={() => onRowClick?.(item)}
                       className={cn(
                         'transition-colors',
-                        onRowClick && 'cursor-pointer hover:bg-gray-50',
-                        isSelected && 'bg-indigo-50'
+                        onRowClick && 'cursor-pointer hover:bg-muted/50',
+                        isSelected && 'bg-primary/10'
                       )}
                     >
                       {columns.map((column) => (
@@ -119,14 +119,14 @@ export function DataGrid<T extends Record<string, any>>({
 
       {/* Pagination */}
       {pagination && (
-        <div className="mt-4 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="mt-4 flex items-center justify-between border-t border-border bg-card px-4 py-3 sm:px-6">
           <div className="flex flex-1 justify-between sm:hidden">
             <button
               onClick={() =>
                 pagination.onPageChange(pagination.currentPage - 1)
               }
               disabled={pagination.currentPage === 1}
-              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="relative inline-flex items-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
@@ -135,16 +135,16 @@ export function DataGrid<T extends Record<string, any>>({
                 pagination.onPageChange(pagination.currentPage + 1)
               }
               disabled={pagination.currentPage === pagination.totalPages}
-              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="relative ml-3 inline-flex items-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>
           </div>
           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-gray-700">
-                Page <span className="font-medium">{pagination.currentPage}</span>{' '}
-                of <span className="font-medium">{pagination.totalPages}</span>
+              <p className="text-sm text-muted-foreground">
+                Page <span className="font-medium text-foreground">{pagination.currentPage}</span>{' '}
+                of <span className="font-medium text-foreground">{pagination.totalPages}</span>
               </p>
             </div>
             <div>
@@ -154,7 +154,7 @@ export function DataGrid<T extends Record<string, any>>({
                     pagination.onPageChange(pagination.currentPage - 1)
                   }
                   disabled={pagination.currentPage === 1}
-                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"
+                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-muted-foreground ring-1 ring-inset ring-input hover:bg-accent hover:text-accent-foreground focus:z-20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -163,7 +163,7 @@ export function DataGrid<T extends Record<string, any>>({
                     pagination.onPageChange(pagination.currentPage + 1)
                   }
                   disabled={pagination.currentPage === pagination.totalPages}
-                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"
+                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-muted-foreground ring-1 ring-inset ring-input hover:bg-accent hover:text-accent-foreground focus:z-20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>

@@ -43,25 +43,25 @@ export function ItemDetails({
         return {
           label: 'Insumo',
           description: 'Raw Material / Input',
-          color: 'bg-blue-100 text-blue-800',
+          color: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300',
         }
       case 'PRODUCTO':
         return {
           label: 'Producto',
           description: 'Finished Product',
-          color: 'bg-green-100 text-green-800',
+          color: 'bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300',
         }
       case 'ACTIVO':
         return {
           label: 'Activo',
           description: 'Asset',
-          color: 'bg-purple-100 text-purple-800',
+          color: 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300',
         }
       default:
         return {
           label: type,
           description: '',
-          color: 'bg-gray-100 text-gray-800',
+          color: 'bg-muted text-muted-foreground',
         }
     }
   }
@@ -74,15 +74,15 @@ export function ItemDetails({
         {/* SKU Badge */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Box className="h-5 w-5 text-gray-400" />
-            <span className="rounded-md bg-gray-100 px-3 py-1 font-mono text-sm font-medium text-gray-900">
+            <Box className="h-5 w-5 text-muted-foreground" />
+            <span className="rounded-md bg-muted px-3 py-1 font-mono text-sm font-medium text-foreground">
               {item.sku}
             </span>
           </div>
           <span
             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.is_active
-                ? 'bg-green-100 text-green-800'
-                : 'bg-red-100 text-red-800'
+              ? 'bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300'
+              : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
               }`}
           >
             {item.is_active ? 'Active' : 'Inactive'}
@@ -93,12 +93,12 @@ export function ItemDetails({
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100">
-                <Package className="h-6 w-6 text-indigo-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                <Package className="h-6 w-6 text-primary" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Variants</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-sm font-medium text-muted-foreground">Variants</p>
+                <p className="text-2xl font-semibold text-foreground">
                   {variantsCount}
                 </p>
               </div>
@@ -117,17 +117,17 @@ export function ItemDetails({
 
         {/* Type Information */}
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">Item Type</h3>
-          <div className="rounded-lg border border-gray-200 p-4">
+          <h3 className="text-sm font-semibold text-foreground">Item Type</h3>
+          <div className="rounded-lg border border-border p-4">
             <div className="flex items-start">
-              <Tag className="mt-0.5 h-5 w-5 text-gray-400" />
+              <Tag className="mt-0.5 h-5 w-5 text-muted-foreground" />
               <div className="ml-3">
                 <span
                   className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${typeInfo.color}`}
                 >
                   {typeInfo.label}
                 </span>
-                <p className="mt-2 text-sm text-gray-600">{typeInfo.description}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{typeInfo.description}</p>
               </div>
             </div>
           </div>
@@ -135,7 +135,7 @@ export function ItemDetails({
 
         {/* Properties */}
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">Properties</h3>
+          <h3 className="text-sm font-semibold text-foreground">Properties</h3>
 
           <div className="space-y-3">
             <PropertyItem
@@ -143,7 +143,7 @@ export function ItemDetails({
                 item.is_stocked ? (
                   <CheckCircle className="h-5 w-5 text-green-500" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-gray-400" />
+                  <AlertCircle className="h-5 w-5 text-muted-foreground" />
                 )
               }
               label="Inventory Tracking"
@@ -160,7 +160,7 @@ export function ItemDetails({
                 item.is_perishable ? (
                   <AlertCircle className="h-5 w-5 text-orange-500" />
                 ) : (
-                  <CheckCircle className="h-5 w-5 text-gray-400" />
+                  <CheckCircle className="h-5 w-5 text-muted-foreground" />
                 )
               }
               label="Perishable"
@@ -177,11 +177,11 @@ export function ItemDetails({
         {/* Description */}
         {item.description && (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-900">Description</h3>
-            <div className="rounded-lg bg-gray-50 p-4">
+            <h3 className="text-sm font-semibold text-foreground">Description</h3>
+            <div className="rounded-lg bg-muted/50 p-4">
               <div className="flex items-start">
-                <FileText className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-400" />
-                <p className="ml-3 text-sm text-gray-600">{item.description}</p>
+                <FileText className="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                <p className="ml-3 text-sm text-muted-foreground">{item.description}</p>
               </div>
             </div>
           </div>
@@ -189,7 +189,7 @@ export function ItemDetails({
 
         {/* Timestamps */}
         {item.created_at && (
-          <div className="space-y-2 border-t border-gray-200 pt-4">
+          <div className="space-y-2 border-t border-border pt-4">
             <InfoItem
               icon={<Calendar className="h-5 w-5" />}
               label="Created"
@@ -246,16 +246,16 @@ function PropertyItem({
   description: string
 }) {
   return (
-    <div className="flex items-start rounded-lg border border-gray-200 p-3">
+    <div className="flex items-start rounded-lg border border-border p-3">
       <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
         {icon}
       </div>
       <div className="ml-3 flex-1">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-gray-700">{label}</p>
-          <span className="text-sm font-semibold text-gray-900">{value}</span>
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <span className="text-sm font-semibold text-foreground">{value}</span>
         </div>
-        <p className="mt-1 text-xs text-gray-500">{description}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </div>
     </div>
   )
@@ -272,12 +272,12 @@ function InfoItem({
 }) {
   return (
     <div className="flex items-start">
-      <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-gray-400">
+      <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-muted-foreground">
         {icon}
       </div>
       <div className="ml-3 flex-1">
-        <p className="text-sm font-medium text-gray-500">{label}</p>
-        <p className="mt-0.5 text-sm text-gray-900">{value}</p>
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="mt-0.5 text-sm text-foreground">{value}</p>
       </div>
     </div>
   )

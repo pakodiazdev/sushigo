@@ -93,7 +93,7 @@ export function ItemVariantsPage() {
       header: 'Min/Max Stock',
       render: (variant) => (
         <div className="text-sm text-muted-foreground">
-          {variant.min_stock} / {variant.max_stock}
+          {Number(variant.min_stock || 0)} / {Number(variant.max_stock || 0)}
         </div>
       ),
     },
@@ -102,7 +102,7 @@ export function ItemVariantsPage() {
       header: 'Avg Cost',
       render: (variant) => (
         <span className="font-mono text-sm">
-          ${variant.avg_unit_cost.toFixed(2)}
+          ${Number(variant.avg_unit_cost || 0).toFixed(2)}
         </span>
       ),
     },
@@ -112,8 +112,8 @@ export function ItemVariantsPage() {
       render: (variant) => (
         <span
           className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${variant.is_active
-              ? 'bg-green-50 text-green-700 ring-green-600/20'
-              : 'bg-gray-50 text-gray-600 ring-gray-500/10'
+            ? 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-950/50 dark:text-green-300 dark:ring-green-800/50'
+            : 'bg-muted text-muted-foreground ring-border'
             }`}
         >
           {variant.is_active ? (
