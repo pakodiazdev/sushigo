@@ -12,10 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->boolean('is_manufactured')
-                ->default(true)
-                ->after('is_perishable')
-                ->comment('True if item is manufactured/prepared in-house, false if purchased for resale');
+            //
         });
     }
 
@@ -25,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->dropColumn('is_manufactured');
+            //
         });
     }
 };

@@ -19,7 +19,6 @@ class Item extends Model
         'type',
         'is_stocked',
         'is_perishable',
-        'is_manufactured',
         'is_active',
         'meta',
     ];
@@ -27,7 +26,6 @@ class Item extends Model
     protected $casts = [
         'is_stocked' => 'boolean',
         'is_perishable' => 'boolean',
-        'is_manufactured' => 'boolean',
         'is_active' => 'boolean',
         'meta' => 'array',
     ];
@@ -119,22 +117,6 @@ class Item extends Model
     public function isProducto(): bool
     {
         return $this->type === self::TYPE_PRODUCTO;
-    }
-
-    /**
-     * Check if item is manufactured/prepared in-house
-     */
-    public function isManufactured(): bool
-    {
-        return $this->is_manufactured === true;
-    }
-
-    /**
-     * Check if item is purchased for resale
-     */
-    public function isResale(): bool
-    {
-        return $this->is_manufactured === false;
     }
 
     /**
