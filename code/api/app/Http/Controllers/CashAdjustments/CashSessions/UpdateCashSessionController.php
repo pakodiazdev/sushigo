@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Http\Controllers\CashAdjustments\CashSessions;
+
+use App\Http\Controllers\Controller;
+use App\Models\CashSession;
+use App\Http\Requests\CashAdjustments\CashSessions\UpdateCashSessionRequest;
+use Illuminate\Http\JsonResponse;
+
+/**
+ * @OA\Put(
+ *   path="/api/v1/cash-sessions/{id}",
+ *   summary="Update Cash Session",
+ *   tags={"Cash Sessions"},
+ *   security={{"bearerAuth":{}}},
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Session ID"),
+ *   @OA\RequestBody(
+ *     required=true,
+ *     @OA\JsonContent(ref="#/components/schemas/UpdateCashSessionRequest")
+ *   ),
+ *   @OA\Response(response=200, description="Cash session updated successfully"),
+ *   @OA\Response(response=401, description="Unauthenticated"),
+ *   @OA\Response(response=403, description="Forbidden - Cannot update posted session"),
+ *   @OA\Response(response=404, description="Cash session not found"),
+ *   @OA\Response(response=422, description="Validation error")
+ * )
+ */
+class UpdateCashSessionController extends Controller
+{
+    public function __invoke(UpdateCashSessionRequest $request, CashSession $cashSession): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $cashSession->update($validated);
+
+        return response()->json([
+            'message' => 'Cash session updated successfully',
+            'data' => $cashSession->fresh('cashRegister.branch'),
+        ]);
+    }
+}

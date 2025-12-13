@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Http\Controllers\CashAdjustments\CashSessions;
+
+use App\Http\Controllers\Controller;
+use App\Models\CashSession;
+use Illuminate\Http\JsonResponse;
+
+/**
+ * @OA\Get(
+ *   path="/api/v1/cash-sessions/{id}",
+ *   summary="Show Cash Session",
+ *   tags={"Cash Sessions"},
+ *   security={{"bearerAuth":{}}},
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Session ID"),
+ *   @OA\Response(response=200, description="Cash session retrieved successfully"),
+ *   @OA\Response(response=401, description="Unauthenticated"),
+ *   @OA\Response(response=403, description="Forbidden"),
+ *   @OA\Response(response=404, description="Cash session not found")
+ * )
+ */
+class ShowCashSessionController extends Controller
+{
+    public function __invoke(CashSession $cashSession): JsonResponse
+    {
+        $cashSession->load([
+            'cashRegister.branch',
+            'adjustments.lines',
+            'expenses',
+        ]);
+
+        return response()->json([
+            'data' => $cashSession,
+        ]);
+    }
+}

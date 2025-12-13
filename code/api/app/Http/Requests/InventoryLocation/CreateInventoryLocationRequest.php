@@ -43,13 +43,22 @@ class CreateInventoryLocationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $type = $this->input('type');
+        $defaults = [];
 
-        $this->merge([
-            'priority' => $this->priority ?? \App\Models\InventoryLocation::getDefaultPriority($type ?? 'MAIN'),
-            'is_primary' => $this->is_primary ?? false,
-            'is_active' => $this->is_active ?? true,
-            'is_pickable' => $this->is_pickable ?? \App\Models\InventoryLocation::getDefaultPickable($type ?? 'MAIN'),
-        ]);
+        if (!$this->has('priority')) {
+            $defaults['priority'] = 100;
+        }
+
+        if (!$this->has('is_primary')) {
+            $defaults['is_primary'] = false;
+        }
+
+        if (!$this->has('is_active')) {
+            $defaults['is_active'] = true;
+        }
+
+        if (count($defaults) > 0) {
+            $this->merge($defaults);
+        }
     }
 }

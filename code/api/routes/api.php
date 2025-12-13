@@ -148,4 +148,95 @@ Route::prefix('v1')->group(function () {
         Route::post('opening-balance', RegisterOpeningBalanceController::class)->name('inventory.opening-balance');
         Route::post('stock-out', RegisterStockOutController::class)->name('inventory.stock-out');
     });
+
+    // Cash Adjustments Module (All Protected)
+    Route::middleware('auth:api')->group(function () {
+        // Cash Registers
+        Route::prefix('cash-registers')->group(function () {
+            Route::get('/', \App\Http\Controllers\CashAdjustments\CashRegisters\ListCashRegistersController::class)
+                ->name('cash-registers.list');
+            Route::post('/', \App\Http\Controllers\CashAdjustments\CashRegisters\CreateCashRegisterController::class)
+                ->name('cash-registers.create');
+            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashRegisters\ShowCashRegisterController::class)
+                ->name('cash-registers.show');
+            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\CashRegisters\UpdateCashRegisterController::class)
+                ->name('cash-registers.update');
+            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\CashRegisters\DeleteCashRegisterController::class)
+                ->name('cash-registers.delete');
+        });
+
+        // Cash Terminals
+        Route::prefix('cash-terminals')->group(function () {
+            Route::get('/', \App\Http\Controllers\CashAdjustments\CashTerminals\ListCashTerminalsController::class)
+                ->name('cash-terminals.list');
+            Route::post('/', \App\Http\Controllers\CashAdjustments\CashTerminals\CreateCashTerminalController::class)
+                ->name('cash-terminals.create');
+            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashTerminals\ShowCashTerminalController::class)
+                ->name('cash-terminals.show');
+            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\CashTerminals\UpdateCashTerminalController::class)
+                ->name('cash-terminals.update');
+            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\CashTerminals\DeleteCashTerminalController::class)
+                ->name('cash-terminals.delete');
+        });
+
+        // Bank Accounts
+        Route::prefix('bank-accounts')->group(function () {
+            Route::get('/', \App\Http\Controllers\CashAdjustments\BankAccounts\ListBankAccountsController::class)
+                ->name('bank-accounts.list');
+            Route::post('/', \App\Http\Controllers\CashAdjustments\BankAccounts\CreateBankAccountController::class)
+                ->name('bank-accounts.create');
+            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\BankAccounts\ShowBankAccountController::class)
+                ->name('bank-accounts.show');
+            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\BankAccounts\UpdateBankAccountController::class)
+                ->name('bank-accounts.update');
+            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\BankAccounts\DeleteBankAccountController::class)
+                ->name('bank-accounts.delete');
+        });
+
+        // Cash Sessions
+        Route::prefix('cash-sessions')->group(function () {
+            Route::get('/', \App\Http\Controllers\CashAdjustments\CashSessions\ListCashSessionsController::class)
+                ->name('cash-sessions.list');
+            Route::post('/', \App\Http\Controllers\CashAdjustments\CashSessions\CreateCashSessionController::class)
+                ->name('cash-sessions.create');
+            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashSessions\ShowCashSessionController::class)
+                ->name('cash-sessions.show');
+            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\CashSessions\UpdateCashSessionController::class)
+                ->name('cash-sessions.update');
+            Route::post('/{id}/post', \App\Http\Controllers\CashAdjustments\CashSessions\PostCashSessionController::class)
+                ->name('cash-sessions.post');
+            Route::get('/{id}/summary', \App\Http\Controllers\CashAdjustments\CashSessions\GetSessionSummaryController::class)
+                ->name('cash-sessions.summary');
+        });
+
+        // Cash Adjustments
+        Route::prefix('cash-adjustments')->group(function () {
+            Route::get('/', \App\Http\Controllers\CashAdjustments\CashAdjustments\ListCashAdjustmentsController::class)
+                ->name('cash-adjustments.list');
+            Route::post('/', \App\Http\Controllers\CashAdjustments\CashAdjustments\CreateCashAdjustmentController::class)
+                ->name('cash-adjustments.create');
+            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashAdjustments\ShowCashAdjustmentController::class)
+                ->name('cash-adjustments.show');
+            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\CashAdjustments\DeleteCashAdjustmentController::class)
+                ->name('cash-adjustments.delete');
+            Route::post('/{id}/post', \App\Http\Controllers\CashAdjustments\CashAdjustments\PostCashAdjustmentController::class)
+                ->name('cash-adjustments.post');
+        });
+
+        // Cash Expenses
+        Route::prefix('cash-expenses')->group(function () {
+            Route::get('/', \App\Http\Controllers\CashAdjustments\CashExpenses\ListCashExpensesController::class)
+                ->name('cash-expenses.list');
+            Route::post('/', \App\Http\Controllers\CashAdjustments\CashExpenses\CreateCashExpenseController::class)
+                ->name('cash-expenses.create');
+            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashExpenses\ShowCashExpenseController::class)
+                ->name('cash-expenses.show');
+            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\CashExpenses\UpdateCashExpenseController::class)
+                ->name('cash-expenses.update');
+            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\CashExpenses\DeleteCashExpenseController::class)
+                ->name('cash-expenses.delete');
+            Route::post('/{id}/post', \App\Http\Controllers\CashAdjustments\CashExpenses\PostCashExpenseController::class)
+                ->name('cash-expenses.post');
+        });
+    });
 });

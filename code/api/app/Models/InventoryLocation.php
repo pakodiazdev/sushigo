@@ -36,6 +36,7 @@ class InventoryLocation extends Model
     public const TYPE_KITCHEN = 'KITCHEN';
     public const TYPE_BAR = 'BAR';
     public const TYPE_RETURN = 'RETURN';
+    public const TYPE_WASTE = 'WASTE';
 
     /**
      * Get the operating unit that owns this location
