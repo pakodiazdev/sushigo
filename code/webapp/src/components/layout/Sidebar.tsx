@@ -18,6 +18,7 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/ui/logo';
+import { BranchSwitcher } from '@/components/auth';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -242,17 +243,26 @@ export default function Sidebar() {
                     </nav>
 
                     {/* Footer */}
-                    <div className="p-4 border-t">
-                        {!isCollapsed ? (
-                            <div className="text-xs text-muted-foreground">
-                                <p>© 2025 SushiGo</p>
-                                <p>v1.0.0</p>
-                            </div>
-                        ) : (
-                            <div className="text-xs text-center text-muted-foreground">
-                                <p>v1.0</p>
+                    <div className="border-t">
+                        {/* Branch Switcher */}
+                        {!isCollapsed && (
+                            <div className="p-2">
+                                <BranchSwitcher />
                             </div>
                         )}
+                        
+                        <div className="p-4">
+                            {!isCollapsed ? (
+                                <div className="text-xs text-muted-foreground">
+                                    <p>© 2025 SushiGo</p>
+                                    <p>v1.0.0</p>
+                                </div>
+                            ) : (
+                                <div className="text-xs text-center text-muted-foreground">
+                                    <p>v1.0</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </aside>
