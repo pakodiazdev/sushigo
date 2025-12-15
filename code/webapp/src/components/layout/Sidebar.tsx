@@ -11,6 +11,7 @@ import {
     Warehouse,
     ChevronDown,
     ChevronUp,
+    DollarSign,
     type LucideIcon
 } from 'lucide-react';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -45,6 +46,15 @@ const menuItems: MenuItem[] = [
             { label: 'Ubicaciones', path: '/inventory/locations' },
             { label: 'Items', path: '/inventory/items' },
             { label: 'Variantes', path: '/inventory/item-variants' },
+        ]
+    },
+    {
+        icon: DollarSign,
+        label: 'Caja',
+        subItems: [
+            { label: 'Cajas Registradoras', path: '/cash/registers' },
+            { label: 'Terminales', path: '/cash/terminals' },
+            { label: 'Cuentas Bancarias', path: '/cash/bank-accounts' },
         ]
     },
     { icon: BarChart3, label: 'Stock Dashboard', path: '/stock-dashboard' },
