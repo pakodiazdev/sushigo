@@ -11,6 +11,7 @@ interface SlidePanelProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   position?: 'right' | 'left'
   className?: string
+  noPadding?: boolean
 }
 
 const sizeClasses = {
@@ -30,6 +31,7 @@ export function SlidePanel({
   size = 'md',
   position = 'right',
   className,
+  noPadding = false,
 }: SlidePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -117,7 +119,10 @@ export function SlidePanel({
             )}
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className={cn(
+              'flex-1 overflow-y-auto',
+              !noPadding && 'px-6 py-6'
+            )}>
               {children}
             </div>
           </div>

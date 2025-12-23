@@ -8,7 +8,20 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     postgresql-client \
     supervisor \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
     && docker-php-ext-install zip pdo pdo_pgsql pgsql \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Docker CLI
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
+    && chmod a+r /etc/apt/keyrings/docker.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y docker-ce-cli docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x (LTS)
@@ -31,16 +44,16 @@ RUN npm install -g yarn
 RUN a2enmod rewrite headers
 
 # Copy Supervisor configuration
-COPY docker/dev/config/dev/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/app/config/dev/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy initialization script
-COPY docker/dev/config/dev/init.sh /usr/local/bin/init.sh
+COPY docker/app/config/dev/init.sh /usr/local/bin/init.sh
 RUN chmod +x /usr/local/bin/init.sh
 
 # Set working directory
 WORKDIR /app/code
 
-# Expose port
+# Expose port 80
 EXPOSE 80
 
 # Start initialization script

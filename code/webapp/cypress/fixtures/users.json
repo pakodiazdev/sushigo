@@ -1,0 +1,11 @@
+{
+  "admin": {
+    "email": "admin@sushigo.com",
+    "password": "admin123456",
+    "expectedName": "Admin User"
+  },
+  "invalidUser": {
+    "email": "invalid@test.com",
+    "password": "wrongpassword"
+  }
+}

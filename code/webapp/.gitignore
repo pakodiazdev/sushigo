@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 src/routeTree.gen.ts
+# Cypress
+cypress/videos
+cypress/screenshots
+cypress/downloads

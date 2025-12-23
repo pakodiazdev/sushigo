@@ -10,37 +10,64 @@ class CashTerminalSeeder extends Seeder
 {
     public function run(): void
     {
-        $branches = Branch::all();
+        $mainBranch = Branch::where('code', 'MAIN')->first();
 
-        foreach ($branches as $branch) {
-            // CLIP terminal
-            CashTerminal::create([
-                'branch_id' => $branch->id,
-                'provider' => 'CLIP',
-                'terminal_code' => "CLIP-{$branch->code}-01",
-                'last_four' => sprintf('%04d', rand(1000, 9999)),
-                'is_active' => true,
-            ]);
-
-            // MERCADOPAGO terminal
-            CashTerminal::create([
-                'branch_id' => $branch->id,
-                'provider' => 'MERCADOPAGO',
-                'terminal_code' => "MP-{$branch->code}-01",
-                'last_four' => sprintf('%04d', rand(1000, 9999)),
-                'is_active' => true,
-            ]);
-
-            // STRIPE terminal (optional)
-            CashTerminal::create([
-                'branch_id' => $branch->id,
-                'provider' => 'STRIPE',
-                'terminal_code' => "STR-{$branch->code}-01",
-                'last_four' => sprintf('%04d', rand(1000, 9999)),
-                'is_active' => false,
-            ]);
+        if (!$mainBranch) {
+            $this->command->warn('Main branch not found. Please run BranchSeeder first.');
+            return;
         }
 
-        $this->command->info('✓ Cash terminals seeded successfully');
+        // CLIP terminal
+        CashTerminal::updateOrCreate(
+            [
+                'branch_id' => $mainBranch->id,
+                'provider' => 'CLIP',
+                'account_ref' => 'CLIP-MAIN-01',
+            ],
+            [
+                'name' => 'Terminal CLIP Principal',
+                'last_four' => '5532',
+                'is_active' => true,
+                'meta' => [
+                    'description' => 'Terminal CLIP principal del local',
+                ],
+            ]
+        );
+
+        // MERCADOPAGO terminal
+        CashTerminal::updateOrCreate(
+            [
+                'branch_id' => $mainBranch->id,
+                'provider' => 'MERCADOPAGO',
+                'account_ref' => 'MP-MAIN-01',
+            ],
+            [
+                'name' => 'Terminal MercadoPago',
+                'last_four' => '3421',
+                'is_active' => true,
+                'meta' => [
+                    'description' => 'Terminal MercadoPago para pagos con tarjeta',
+                ],
+            ]
+        );
+
+        // STRIPE terminal (opcional/inactiva)
+        CashTerminal::updateOrCreate(
+            [
+                'branch_id' => $mainBranch->id,
+                'provider' => 'STRIPE',
+                'account_ref' => 'STR-MAIN-01',
+            ],
+            [
+                'name' => 'Terminal Stripe',
+                'last_four' => '7890',
+                'is_active' => false,
+                'meta' => [
+                    'description' => 'Terminal Stripe (reserva)',
+                ],
+            ]
+        );
+
+        $this->command->info('✅ Cash terminals seeded successfully');
     }
 }

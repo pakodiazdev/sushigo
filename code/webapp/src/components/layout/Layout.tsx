@@ -50,23 +50,28 @@ export default function Layout() {
             hasToken: !!token
         });
 
-        // Redirect to home if authenticated but on login page
-        if (isAuthenticated && user && currentPath === '/login') {
+        // Only redirect if we need to change pages
+        const shouldRedirectToHome = isAuthenticated && user && currentPath === '/login';
+        const shouldRedirectToLogin = !isAuthenticated && currentPath !== '/login' && currentPath !== '/logout';
+
+        if (shouldRedirectToHome) {
             console.log('[Layout] Redirecting to home - already authenticated');
             router.navigate({ to: '/' });
             return;
         }
 
-        // Redirect to login if not authenticated (except on login page)
-        if (!isAuthenticated && currentPath !== '/login') {
+        if (shouldRedirectToLogin) {
             console.log('[Layout] Redirecting to login - not authenticated');
             router.navigate({ to: '/login' });
             return;
         }
-    }, [isAuthenticated, isLoading, currentPath, user, token, router]);
 
-    // Show loading spinner while checking auth
-    if (isLoading) {
+        console.log('[Layout] No redirect needed, staying on:', currentPath);
+    }, [isAuthenticated, currentPath, user, router]);
+
+    // Show loading spinner while checking auth (but not on login/logout pages)
+    // Login page handles its own loading state to preserve form data
+    if (isLoading && currentPath !== '/login' && currentPath !== '/logout') {
         console.log('[Layout] Showing loading spinner');
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/30">

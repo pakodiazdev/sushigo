@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "SushiGo",
+      "Group": "Servers",
+      "Host": "pgsql",
+      "Port": 5432,
+      "MaintenanceDB": "sushigo_dev",
+      "Username": "admin",
+      "SSLMode": "prefer",
+      "PassFile": "/pgpass"
+    }
+  }
+}

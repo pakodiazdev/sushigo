@@ -2,40 +2,112 @@ services:
   dev:
     build:
       context: .
-      dockerfile: docker/dev/Dockerfile
+      dockerfile: docker/app/Dockerfile
     container_name: dev_container
     working_dir: /app/code
+    image: sushigo/dev:local
     ports:
-      - "8080:80"
       - "${REACT_APP_PORT:-5173}:${VITE_PORT:-5173}"
+    expose:
+      - "80"
+      - "443"
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./:/app
-      - ./docker/dev/config/dev/000-default.conf:/etc/apache2/sites-available/000-default.conf
+      - ./docker/app/config/dev/000-default.conf:/etc/apache2/sites-available/000-default.conf
     environment:
       - VITE_PORT=${VITE_PORT:-5173}
+      - VITE_HMR_HOST=${VITE_HMR_HOST:-sushigo.local}
+      - VITE_API_URL=${VITE_API_URL:-https://api.sushigo.local/api/v1}
+      - CYPRESS_baseUrl=${CYPRESS_baseUrl:-https://sushigo.local}
+      - APP_URL=${APP_URL:-https://api.sushigo.local}
+      - API_URL=${API_URL:-https://api.sushigo.local}
       - DB_HOST=pgsql
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=mydb
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - POSTGRES_DB=${POSTGRES_DB:-mydb}
       - POSTGRES_PORT=5432
+    extra_hosts:
+      - "sushigo.local:127.0.0.1"
     depends_on:
       pgsql:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  devtest:
+    image: sushigo/dev:local
+    container_name: devtest_container
+    working_dir: /app/code
+    ports:
+      - 8081:80
+      - 5174:5173
+    expose:
+      - "80"
+      - "443"
+      - "5173"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/app
+      - ./docker/app/config/dev/000-default.conf:/etc/apache2/sites-available/000-default.conf
+    environment:
+      - VITE_PORT=5173
+      - VITE_HMR_HOST=devtest.sushigo.local
+      - VITE_API_URL=https://devtest.api.sushigo.local/api/v1
+      - APP_ENV=devtest
+      - CYPRESS_baseUrl=${CYPRESS_baseUrl:-https://devtest.sushigo.local}
+      - APP_URL=${APP_URL:-https://api.sushigo.local}
+      - API_URL=${API_URL:-https://api.sushigo.local}
+      - DB_HOST=pgsql
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - POSTGRES_DB=mydb_devtest
+      - POSTGRES_PORT=5432
+    extra_hosts:
+      - "devtest.sushigo.local:127.0.0.1"
+    depends_on:
+      pgsql:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/html:/usr/share/nginx/html:ro
+      - ./docker/app/config/dev/cert:/etc/nginx/certs:ro
+    depends_on:
+      dev:
+        condition: service_healthy
+    networks:
+      - default
 
   pgsql:
     image: postgres:15
     container_name: postgres_container
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: mydb
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
     ports:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-      - ./docker/dev/config/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh
+      - ./docker/pgsql/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U admin -d mydb" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-mydb}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -44,12 +116,15 @@ services:
     image: dpage/pgadmin4:7.6
     container_name: pgadmin_container
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
       PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "False"
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "5050:80"
+    volumes:
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json
+      - ./docker/pgadmin/pgpass:/pgpass
     depends_on:
       pgsql:
         condition: service_healthy

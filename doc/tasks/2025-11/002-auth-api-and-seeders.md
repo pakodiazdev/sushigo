@@ -238,7 +238,7 @@ php artisan migrate:fresh --seed
 - `app/Models/SeederLog.php`
 
 ### Docker
-- `docker/dev/config/dev/init.sh`
+- `docker/app/config/dev/init.sh`
 
 ---
 

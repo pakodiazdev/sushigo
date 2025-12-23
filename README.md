@@ -1,6 +1,6 @@
 # SushiGo Tenant Platform
 
-Full-stack workspace that powers the SushiGo tenant inside the ComandaFlow ecosystem.  
+Full-stack workspace that powers the SushiGo tenant inside the ComandaFlow ecosystem.
 The repository bundles a Laravel API (inventory, auth and future operational modules), a React/Vite admin webapp, and Docker tooling for a one-command local environment.
 
 ## Project layout
@@ -31,7 +31,7 @@ cd <repo>
 docker compose up --build
 ```
 
-The `docker/dev/config/dev/init.sh` script bootstraps everything:
+The `docker/app/config/dev/init.sh` script bootstraps everything:
 
 - Installs Composer/NPM deps (API + webapp).
 - Waits for PostgreSQL, runs migrations and tracked seeders.

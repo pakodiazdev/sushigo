@@ -250,7 +250,7 @@ export default function Sidebar() {
                                 <BranchSwitcher />
                             </div>
                         )}
-                        
+
                         <div className="p-4">
                             {!isCollapsed ? (
                                 <div className="text-xs text-muted-foreground">

@@ -21,17 +21,17 @@ export function FormField({
   return (
     <div className={cn('space-y-1', className)}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-foreground">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
       {children}
       {hint && !error && (
-        <p className="text-sm text-gray-500">{hint}</p>
+        <p className="text-sm text-muted-foreground">{hint}</p>
       )}
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>
   )
@@ -47,9 +47,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       <select
         ref={ref}
         className={cn(
-          'block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm',
-          error && 'border-red-300 focus:border-red-500 focus:ring-red-500',
-          props.disabled && 'cursor-not-allowed bg-gray-50 text-gray-500',
+          'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          error && 'border-red-300 focus-visible:ring-red-500',
           className
         )}
         {...props}
@@ -72,9 +73,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         ref={ref}
         className={cn(
-          'block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm',
-          error && 'border-red-300 focus:border-red-500 focus:ring-red-500',
-          props.disabled && 'cursor-not-allowed bg-gray-50 text-gray-500',
+          'flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+          'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          error && 'border-red-300 focus-visible:ring-red-500',
           className
         )}
         {...props}
@@ -98,12 +100,12 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             ref={ref}
             type="checkbox"
             className={cn(
-              'h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500',
+              'h-4 w-4 rounded border-input text-primary focus:ring-ring focus:ring-2 focus:ring-offset-2',
               className
             )}
             {...props}
           />
-          <label htmlFor={props.id} className="ml-2 block text-sm text-gray-900">
+          <label htmlFor={props.id} className="ml-2 block text-sm text-foreground">
             {label}
           </label>
         </div>
@@ -115,7 +117,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
         ref={ref}
         type="checkbox"
         className={cn(
-          'h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500',
+          'h-4 w-4 rounded border-input text-primary focus:ring-ring focus:ring-2 focus:ring-offset-2',
           className
         )}
         {...props}

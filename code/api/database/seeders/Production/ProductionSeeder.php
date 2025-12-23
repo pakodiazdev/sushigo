@@ -18,6 +18,9 @@ class ProductionSeeder extends Seeder
             \Database\Seeders\BranchSeeder::class,
             \Database\Seeders\OperatingUnitSeeder::class,
             \Database\Seeders\InventoryLocationSeeder::class,
+            \Database\Seeders\CashTerminalSeeder::class,
+            \Database\Seeders\BankAccountSeeder::class,
+            \Database\Seeders\CashRegisterSeeder::class,
             \Database\Seeders\UnitOfMeasureSeeder::class,
             \Database\Seeders\UomConversionSeeder::class,
         ];

@@ -24,6 +24,10 @@ print_error() {
     echo -e "${BLUE}==>${NC} ${RED}$1${NC}"
 }
 
+# Generar certificados SSL si no existen
+print_message "Verificando certificados SSL..."
+#/usr/local/bin/generate-certs.sh
+
 # Directorio de trabajo del API
 API_DIR="/app/code/api"
 WEBAPP_DIR="/app/code/webapp"

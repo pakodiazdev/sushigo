@@ -22,13 +22,18 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: parseInt(process.env.VITE_PORT || '5173'),
+    allowedHosts: ['.localhost', '.dev', '.local', 'cypress-ui', 'sushigo.local', 'devtest.sushigo.local'],
     strictPort: true,
     watch: {
       usePolling: true,
     },
     hmr: {
-      clientPort: parseInt(process.env.VITE_PORT || '5173'),
-      host: 'localhost',
+      // Usar el protocolo del cliente (wss:// cuando se accede por HTTPS)
+      protocol: 'wss',
+      // Usar el host desde variable de entorno o default a sushigo.local
+      host: process.env.VITE_HMR_HOST || 'sushigo.local',
+      // Puerto 443 (HTTPS por defecto) - nginx proxy redirigirá el WebSocket
+      clientPort: 443,
     },
   },
 })

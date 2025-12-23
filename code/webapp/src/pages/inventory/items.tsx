@@ -294,6 +294,7 @@ export function InventoryItemsPage() {
         title="Wizard de Producto Completo"
         description="Crea un producto con variantes y existencias iniciales en 4 pasos"
         size="lg"
+        noPadding
       >
         <ProductWizard
           onSuccess={handleWizardSuccess}
