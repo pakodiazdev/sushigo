@@ -44,6 +44,11 @@ use Illuminate\Support\Facades\Route;
 
 // V1 API Routes
 Route::prefix('v1')->group(function () {
+    // Health check endpoint
+    Route::get('health', function () {
+        return response()->json(['status' => 'ok'], 200);
+    })->name('health');
+
     // Public auth routes
     Route::prefix('auth')->group(function () {
         Route::post('register', RegisterController::class)->name('auth.register');

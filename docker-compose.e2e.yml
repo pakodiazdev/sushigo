@@ -6,16 +6,14 @@ services:
       dockerfile: docker/app/Dockerfile
     container_name: e2e_container
     working_dir: /app/code
-    ports:
-      - ${VITE_APP_PORT:-5173}:5173
-      - ${API_APP_PORT:-8080}:80
     expose:
       - "80"
       - "443"
+      - "5173"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./:/app
-      - ./docker/app/config/dev/apache-simple.conf:/etc/apache2/sites-available/000-default.conf
+      - ./docker/app/config/dev/apache-e2e.conf:/etc/apache2/sites-available/000-default.conf
     environment:
       - ENV=e2e
       - VITE_APP_PORT=${VITE_APP_PORT:-5173}
@@ -27,18 +25,15 @@ services:
       - POSTGRES_PORT=5432
     extra_hosts:
       - "sushigo.e2e.local:127.0.0.1"
-    depends_on:
-      dev:
-        condition: service_healthy
-      pgsql:
-        condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:80/api/v1/health" ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 40s
     networks:
       - default
+
   cypress:
     image: cypress/included:13.17.0
     working_dir: /app/code/webapp
@@ -51,8 +46,12 @@ services:
       CYPRESS_baseUrl: ${CYPRESS_baseUrl:-https://sushigo.e2e.local}
     extra_hosts:
       - "sushigo.local:host-gateway"
+      - "sushigo.e2e.local:host-gateway"
     depends_on:
-      - dev
+      test_e2e:
+        condition: service_healthy
+    networks:
+      - default
     entrypoint: [ "/bin/sh", "-c" ]
     command: [ "npm install && npx cypress run" ] # 👀 UI en Docker (VNC/noVNC) para ver los tests en el navegador
   cypress-ui:

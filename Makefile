@@ -1,4 +1,4 @@
-.PHONY: help e2e-ui cypress-ui cypress-run cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed
+.PHONY: help e2e-ui cypress-ui cypress-run cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart
 
 # Colores para output
 GREEN  := \033[0;32m
@@ -14,6 +14,29 @@ db-seed: ## Ejecutar seeders de base de datos
 	@echo "$(GREEN)Ejecutando seeders...$(NC)"
 	@docker compose exec app php artisan db:seed
 	@echo "$(GREEN)✅ Seeders completados$(NC)"
+
+e2e-up: ## Iniciar solo el contenedor test_e2e (usa pgsql y nginx del stack principal)
+	@echo "$(GREEN)Iniciando contenedor E2E...$(NC)"
+	@docker compose -f docker-compose.e2e.yml up -d test_e2e
+	@echo "$(GREEN)Esperando a que el servicio esté listo...$(NC)"
+	@sleep 5
+	@docker compose -f docker-compose.e2e.yml ps test_e2e
+	@echo "$(GREEN)✅ Contenedor E2E iniciado$(NC)"
+	@echo "$(YELLOW)Accede a: https://sushigo.e2e.local$(NC)"
+	@echo "$(YELLOW)Nota: Asegúrate de que nginx y pgsql del stack principal estén corriendo$(NC)"
+
+e2e-down: ## Detener contenedor E2E
+	@echo "$(GREEN)Deteniendo contenedor E2E...$(NC)"
+	@docker compose -f docker-compose.e2e.yml down test_e2e
+	@echo "$(GREEN)✅ Contenedor E2E detenido$(NC)"
+
+e2e-restart: ## Reiniciar contenedor E2E
+	@echo "$(GREEN)Reiniciando contenedor E2E...$(NC)"
+	@docker compose -f docker-compose.e2e.yml restart test_e2e
+	@echo "$(GREEN)✅ Contenedor E2E reiniciado$(NC)"
+
+e2e-logs: ## Ver logs del contenedor E2E
+	@docker compose -f docker-compose.e2e.yml logs -f test_e2e
 
 e2e-ui: ## Abrir Cypress UI (interfaz interactiva con VNC en http://localhost:6080)
 	@echo "$(GREEN)Verificando contenedor cypress-ui...$(NC)"
