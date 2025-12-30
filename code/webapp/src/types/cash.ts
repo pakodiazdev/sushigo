@@ -16,7 +16,7 @@ export enum SessionStatus {
 }
 
 export enum AdjustmentType {
-  SALES = 'SALES',
+  EXTERNAL_IMPORT = 'EXTERNAL_IMPORT',
   CORRECTION = 'CORRECTION',
 }
 
@@ -88,6 +88,7 @@ export interface CashSession {
   operating_date: string
   opening_balance: string
   closing_balance: string | null
+  current_balance?: string // Calculated field from backend
   status: SessionStatus
   opened_by: number
   opened_at: string
@@ -107,13 +108,10 @@ export interface CashSession {
 export interface CashAdjustment {
   id: number
   cash_session_id: number
+  source_system: string | null
   type: AdjustmentType
   direction: Direction
-  source: string
-  external_id: string | null
-  reference: string | null
   notes: string | null
-  created_by: number
   posted_by: number | null
   posted_at: string | null
   meta: Record<string, any> | null
@@ -121,7 +119,6 @@ export interface CashAdjustment {
   updated_at: string
   // Relationships
   cash_session?: CashSession
-  created_by_user?: User
   posted_by_user?: User | null
   lines?: CashAdjustmentLine[]
 }
@@ -236,6 +233,7 @@ export interface SessionSummary {
   closing_balance: string
   total_incomes: string
   total_expenses: string
+  current_balance: string
 }
 
 export interface TenderSummary {
@@ -289,11 +287,9 @@ export interface CashSessionFormData {
 
 export interface CashAdjustmentFormData {
   cash_session_id: number
+  source_system?: string
   type: AdjustmentType
   direction: Direction
-  source: string
-  external_id?: string
-  reference?: string
   notes?: string
   meta?: Record<string, any>
   lines: CashAdjustmentLineFormData[]

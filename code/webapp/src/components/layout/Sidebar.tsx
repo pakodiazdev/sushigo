@@ -53,6 +53,7 @@ const menuItems: MenuItem[] = [
         icon: DollarSign,
         label: 'Caja',
         subItems: [
+            { label: '+ Abrir Sesión', path: '/cash/open-session' },
             { label: 'Cajas Registradoras', path: '/cash/registers' },
             { label: 'Terminales', path: '/cash/terminals' },
             { label: 'Cuentas Bancarias', path: '/cash/bank-accounts' },

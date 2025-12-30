@@ -56,6 +56,12 @@ class ListCashSessionsController extends Controller
         $perPage = $request->input('per_page', 15);
         $sessions = $query->paginate($perPage);
 
+        // Add calculated current_balance to each session
+        $sessions->getCollection()->transform(function ($session) {
+            $session->current_balance = number_format($session->calculateCurrentBalance(), 2, '.', '');
+            return $session;
+        });
+
         return response()->json($sessions);
     }
 }

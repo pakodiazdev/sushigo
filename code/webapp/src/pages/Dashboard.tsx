@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
     Users,
     ShoppingCart,
@@ -6,11 +8,22 @@ import {
     ArrowUp,
     ArrowDown,
     Package,
+    Plus,
+    Calendar,
+    Building2,
+    Eye,
     type LucideIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
+import { Button } from '@/components/ui/button';
+import { OpenSessionDialog, CreateAdjustmentDialog } from '@/components/cash';
+import { useCashSessions } from '@/services/cash-hooks';
+import { SessionStatusBadge, formatDate } from '@/components/cash/cash-utils';
+import { formatCurrency } from '@/services/cash-balance-service';
+import { useAuth } from '@/contexts/AuthContext';
+import { SessionStatus, CashSession } from '@/types/cash';
 import { cn } from '@/lib/utils';
 
 // Route export moved to index.tsx
@@ -122,11 +135,104 @@ function StatCard({ stat }: { stat: Stat }) {
     );
 }
 
+function SessionCard({ session, onRegisterAdjustment }: { session: CashSession; onRegisterAdjustment: (id: number) => void }) {
+    // Usar el current_balance que viene directamente de la sesión (calculado en el backend)
+    const currentBalance = session.current_balance || session.opening_balance || '0.00';
+
+    return (
+        <div className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent/50 transition-colors">
+            <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-semibold">
+                        {session.cash_register?.name || `Caja #${session.cash_register_id}`}
+                    </h3>
+                    <SessionStatusBadge status={session.status} />
+                </div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(session.operating_date)}
+                    </span>
+                    {session.cash_register?.branch && (
+                        <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {session.cash_register.branch.name}
+                        </span>
+                    )}
+                    <span className="text-xs">
+                        Fondo: {formatCurrency(session.opening_balance || '0')}
+                    </span>
+                </div>
+            </div>
+            <div className="flex items-center gap-3">
+                <div className="text-right">
+                    <p className="text-muted-foreground text-xs">Saldo Actual</p>
+                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                        {formatCurrency(currentBalance)}
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { }/* TODO: Navigate to session detail */}
+                    >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Ver Detalles
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={() => onRegisterAdjustment(session.id)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Registrar Ajuste
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Dashboard() {
+    const navigate = useNavigate();
+    const { currentBranch } = useAuth();
+    const [isOpenSessionDialogOpen, setIsOpenSessionDialogOpen] = useState(false);
+    const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
+    const [selectedSessionId, setSelectedSessionId] = useState<number | undefined>(undefined);
+
     const { data, isLoading, error } = useQuery({
         queryKey: ['dashboard'],
         queryFn: fetchDashboardData,
     });
+
+    // Fetch open cash sessions (DRAFT status)
+    const { data: sessionsData, isLoading: loadingSessions } = useCashSessions({
+        status: SessionStatus.DRAFT
+    });
+
+    const handleOpenSession = () => {
+        setIsOpenSessionDialogOpen(true);
+    };
+
+    const handleSessionSuccess = (sessionId: number) => {
+        console.log('Sesión creada:', sessionId);
+        alert('¡Sesión de caja abierta exitosamente!');
+    };
+
+    const handleCreateAdjustment = (sessionId?: number) => {
+        setSelectedSessionId(sessionId);
+        setIsAdjustmentDialogOpen(true);
+    };
+
+    const handleAdjustmentSuccess = () => {
+        console.log('Ajuste creado exitosamente');
+    };
+
+    const handleCloseAdjustment = () => {
+        setIsAdjustmentDialogOpen(false);
+        setSelectedSessionId(undefined);
+    };
 
     if (isLoading) {
         return (
@@ -179,6 +285,94 @@ export default function Dashboard() {
                     <StatCard key={index} stat={stat} />
                 ))}
             </div>
+
+            {/* Quick Actions */}
+            <Card className="border-sushigo-cream/50 bg-gradient-to-br from-card to-green-50 dark:to-green-950/20">
+                <CardHeader className="bg-gradient-to-r from-green-500/5 to-transparent">
+                    <CardTitle className="text-sushigo-navy dark:text-sushigo-cream flex items-center gap-2">
+                        <DollarSign className="h-5 w-5 text-green-600" />
+                        Acciones Rápidas
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                    <Button
+                        onClick={handleOpenSession}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Abrir Sesión de Caja
+                    </Button>
+                    <Button
+                        onClick={() => handleCreateAdjustment()}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={!sessionsData?.data || sessionsData.data.length === 0}
+                    >
+                        <DollarSign className="mr-2 h-4 w-4" />
+                        Registrar Ajuste
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => navigate({ to: '/cash/registers' })}
+                    >
+                        Ver Cajas Registradoras
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {/* Open Cash Sessions */}
+            <Card className="border-sushigo-cream/50 bg-gradient-to-br from-card to-sushigo-cream/10">
+                <CardHeader className="bg-gradient-to-r from-sushigo-navy/5 to-transparent">
+                    <CardTitle className="text-sushigo-navy dark:text-sushigo-cream flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                            <DollarSign className="h-5 w-5" />
+                            Sesiones de Caja Abiertas
+                        </span>
+                        {sessionsData?.data && (
+                            <span className="text-sm font-normal text-muted-foreground">
+                                {sessionsData.data.length} {sessionsData.data.length === 1 ? 'sesión' : 'sesiones'}
+                            </span>
+                        )}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {loadingSessions ? (
+                        <div className="flex items-center justify-center py-8">
+                            <div className="text-center">
+                                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                                <p className="text-sm text-muted-foreground">Cargando sesiones...</p>
+                            </div>
+                        </div>
+                    ) : sessionsData?.data && sessionsData.data.length > 0 ? (
+                        <div className="space-y-3">
+                            {sessionsData.data.map((session) => (
+                                <SessionCard
+                                    key={session.id}
+                                    session={session}
+                                    onRegisterAdjustment={handleCreateAdjustment}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <DollarSign className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
+                            <p className="text-sm text-muted-foreground mb-1">
+                                No hay sesiones de caja abiertas
+                            </p>
+                            <p className="text-xs text-muted-foreground mb-4">
+                                Abre una nueva sesión para comenzar las operaciones del día
+                            </p>
+                            <Button
+                                onClick={handleOpenSession}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Abrir Sesión
+                            </Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Recent Orders */}
             <Card className="border-sushigo-cream/50 bg-gradient-to-br from-card to-sushigo-cream/10">
@@ -240,6 +434,22 @@ export default function Dashboard() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Open Session Dialog */}
+            <OpenSessionDialog
+                isOpen={isOpenSessionDialogOpen}
+                onClose={() => setIsOpenSessionDialogOpen(false)}
+                onSuccess={handleSessionSuccess}
+                branchId={currentBranch?.id}
+            />
+
+            {/* Create Adjustment Dialog */}
+            <CreateAdjustmentDialog
+                isOpen={isAdjustmentDialogOpen}
+                onClose={handleCloseAdjustment}
+                onSuccess={handleAdjustmentSuccess}
+                cashSessionId={selectedSessionId}
+            />
         </PageContainer>
     );
 }

@@ -103,7 +103,7 @@ Como usuario del sistema (gerente, cajero, administrador), necesito interfaces v
     -   Actions: Add adjustment, Add expense (if DRAFT), Post session
     -   Calculations: Real-time closing balance calculation
 
--   [ ] 🎨 Create `OpenSessionDialog` component
+-   [x] 🎨 Create `OpenSessionDialog` component
     -   Fields: cash_register_id (select, required), operating_date (date picker, default today), opening_balance (number, optional)
     -   Validation: Prevent duplicate sessions (same register + date)
     -   Trigger: Button on sessions list page

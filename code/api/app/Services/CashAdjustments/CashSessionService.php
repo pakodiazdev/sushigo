@@ -117,55 +117,90 @@ class CashSessionService
      */
     public function getSessionSummary(CashSession $session): array
     {
-        $adjustments = $session->adjustments()->with('lines')->get();
-        $expenses = $session->expenses;
+        // Load relationships if not already loaded
+        if (!$session->relationLoaded('cashRegister')) {
+            $session->load('cashRegister');
+        }
 
-        // Calculate adjustment totals by direction
-        $inflowTotal = $adjustments
-            ->where('direction', 'INFLOW')
-            ->sum(fn($adj) => $adj->lines->sum('amount'));
+        $adjustments = $session->adjustments()->with(['lines.cardTerminal', 'lines.bankAccount'])->get();
+        $expenses = $session->expenses()->with(['cardTerminal', 'bankAccount'])->get();
 
-        $outflowTotal = $adjustments
-            ->where('direction', 'OUTFLOW')
-            ->sum(fn($adj) => $adj->lines->sum('amount'));
+        // Calculate income totals (INFLOW adjustments)
+        $incomes = [];
+        $totalIncomes = 0;
 
-        // Calculate totals by tender type
-        $tenderTotals = [
-            'CASH' => 0,
-            'CARD' => 0,
-            'TRANSFER' => 0,
-        ];
-
-        foreach ($adjustments as $adjustment) {
+        foreach ($adjustments->where('direction', 'INFLOW') as $adjustment) {
             foreach ($adjustment->lines as $line) {
-                $tenderTotals[$line->tender_type] += (float) $line->amount;
+                $tenderType = $line->tender_type;
+
+                if (!isset($incomes[$tenderType])) {
+                    $incomes[$tenderType] = [
+                        'tender_type' => $tenderType,
+                        'amount' => 0,
+                        'count' => 0,
+                    ];
+                }
+
+                $incomes[$tenderType]['amount'] += (float) $line->amount;
+                $incomes[$tenderType]['count']++;
+                $totalIncomes += (float) $line->amount;
             }
         }
 
-        // Calculate expense totals
-        $expensesTotal = $expenses->sum('amount');
-        $expensesByCategory = $expenses->groupBy('category')->map(fn($items) => $items->sum('amount'));
+        // Calculate expense totals (OUTFLOW adjustments + expenses)
+        $expensesData = [];
+        $totalExpenses = 0;
+
+        // Add OUTFLOW adjustments as expenses
+        foreach ($adjustments->where('direction', 'OUTFLOW') as $adjustment) {
+            foreach ($adjustment->lines as $line) {
+                $tenderType = $line->tender_type;
+
+                if (!isset($expensesData[$tenderType])) {
+                    $expensesData[$tenderType] = [
+                        'tender_type' => $tenderType,
+                        'amount' => 0,
+                        'count' => 0,
+                    ];
+                }
+
+                $expensesData[$tenderType]['amount'] += (float) $line->amount;
+                $expensesData[$tenderType]['count']++;
+                $totalExpenses += (float) $line->amount;
+            }
+        }
+
+        // Add expenses
+        foreach ($expenses as $expense) {
+            $tenderType = $expense->tender_type;
+
+            if (!isset($expensesData[$tenderType])) {
+                $expensesData[$tenderType] = [
+                    'tender_type' => $tenderType,
+                    'amount' => 0,
+                    'count' => 0,
+                ];
+            }
+
+            $expensesData[$tenderType]['amount'] += (float) $expense->amount;
+            $expensesData[$tenderType]['count']++;
+            $totalExpenses += (float) $expense->amount;
+        }
 
         return [
-            'session_id' => $session->id,
-            'cash_register' => $session->cashRegister->code,
-            'operating_date' => $session->operating_date->format('Y-m-d'),
-            'status' => $session->status,
-            'opening_balance' => (float) $session->opening_balance,
-            'closing_balance' => (float) $session->closing_balance,
-            'adjustments' => [
-                'inflow_total' => $inflowTotal,
-                'outflow_total' => $outflowTotal,
-                'net' => $inflowTotal - $outflowTotal,
-                'count' => $adjustments->count(),
+            'session' => $session,
+            'incomes' => array_values($incomes),
+            'expenses' => array_values($expensesData),
+            'closing_balance' => (string) $session->closing_balance,
+            'total_incomes' => (string) number_format($totalIncomes, 2, '.', ''),
+            'total_expenses' => (string) number_format($totalExpenses, 2, '.', ''),
+            'current_balance' => (string) number_format($session->calculateCurrentBalance(), 2, '.', ''),
+            // Debug info - temporal
+            '_debug' => [
+                'opening_balance' => (string) $session->opening_balance,
+                'opening_balance_type' => gettype($session->opening_balance),
+                'calculated_current' => $session->calculateCurrentBalance(),
             ],
-            'expenses' => [
-                'total' => $expensesTotal,
-                'by_category' => $expensesByCategory,
-                'count' => $expenses->count(),
-            ],
-            'tender_totals' => $tenderTotals,
-            'variance' => ($session->opening_balance + $inflowTotal - $outflowTotal - $expensesTotal) - $session->closing_balance,
         ];
     }
 

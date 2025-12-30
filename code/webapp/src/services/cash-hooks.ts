@@ -366,9 +366,16 @@ export function useCreateCashAdjustment() {
 
   return useMutation({
     mutationFn: (data: CashAdjustmentFormData) => cashAdjustmentApi.create(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['cash-adjustments'] })
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
+
+      // Invalidar el summary de la sesión específica para que se recalcule el saldo
+      const sessionId = response.data.data.cash_session_id
+      if (sessionId) {
+        queryClient.invalidateQueries({ queryKey: ['cash-sessions', sessionId, 'summary'] })
+      }
+
       showSuccess('El ajuste de caja ha sido creado exitosamente.', 'Ajuste creado')
     },
     onError: (error: any) => {
@@ -404,6 +411,10 @@ export function useDeleteCashAdjustment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-adjustments'] })
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
+      // Invalidar todos los summaries ya que no sabemos qué sesión fue afectada
+      queryClient.invalidateQueries({ queryKey: ['cash-sessions'], predicate: (query) =>
+        query.queryKey.length === 3 && query.queryKey[2] === 'summary'
+      })
       showSuccess('El ajuste de caja ha sido eliminado exitosamente.', 'Ajuste eliminado')
     },
     onError: (error: any) => {

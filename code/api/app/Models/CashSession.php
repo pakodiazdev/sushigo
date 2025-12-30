@@ -143,4 +143,40 @@ class CashSession extends Model
 
         return $opening + $inflows - $outflows - $expensesTotal;
     }
+
+    /**
+     * Calculate current balance including draft transactions
+     * Used for real-time balance display
+     */
+    public function calculateCurrentBalance(): float
+    {
+        $opening = $this->opening_balance ? (float) $this->opening_balance : 0.0;
+
+        // Sum ALL inflow adjustments (including drafts)
+        $inflows = 0.0;
+        $inflowAdjustments = $this->adjustments()
+            ->where('direction', CashAdjustment::DIRECTION_INFLOW)
+            ->with('lines')
+            ->get();
+
+        foreach ($inflowAdjustments as $adjustment) {
+            $inflows += (float) $adjustment->lines->sum('amount');
+        }
+
+        // Sum ALL outflow adjustments (including drafts)
+        $outflows = 0.0;
+        $outflowAdjustments = $this->adjustments()
+            ->where('direction', CashAdjustment::DIRECTION_OUTFLOW)
+            ->with('lines')
+            ->get();
+
+        foreach ($outflowAdjustments as $adjustment) {
+            $outflows += (float) $adjustment->lines->sum('amount');
+        }
+
+        // Sum ALL expenses (including drafts)
+        $expensesTotal = (float) $this->expenses()->sum('amount');
+
+        return $opening + $inflows - $outflows - $expensesTotal;
+    }
 }
