@@ -21,6 +21,7 @@ return [
 
     'allowed_origins' => [
         'http://localhost:5173',
+        'http://localhost:8005',
         'http://dev:5173',
         'http://localhost:80',
         'http://dev:80',

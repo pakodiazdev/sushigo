@@ -4,13 +4,12 @@ import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useCreateCashRegister, useUpdateCashRegister } from '@/services/cash-hooks'
-import { CashRegisterType, type CashRegister, type CashRegisterFormData } from '@/types/cash'
+import { CashRegisterType, type CashRegister, type CashRegisterFormData, type OperatingUnit } from '@/types/cash'
 import { Loader2 } from 'lucide-react'
 
 interface CashRegisterFormProps {
     register?: CashRegister | null
-    branches: Array<{ id: number; name: string }>
-    operatingUnits: Array<{ id: number; name: string; branch_id: number }>
+    operatingUnits: OperatingUnit[]
     isOpen: boolean
     onClose: () => void
     onSuccess: () => void
@@ -18,7 +17,6 @@ interface CashRegisterFormProps {
 
 export function CashRegisterForm({
     register,
-    branches,
     operatingUnits,
     isOpen,
     onClose,

@@ -3,6 +3,7 @@
 namespace Database\Seeders\Production;
 
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
 
 class ProductionSeeder extends Seeder
 {
@@ -17,6 +18,7 @@ class ProductionSeeder extends Seeder
             PermissionSeeder::class,
             \Database\Seeders\BranchSeeder::class,
             \Database\Seeders\OperatingUnitSeeder::class,
+            UserSeeder::class, // ⚠️ Creates default admin user - must be disabled after setup
             \Database\Seeders\InventoryLocationSeeder::class,
             \Database\Seeders\CashTerminalSeeder::class,
             \Database\Seeders\BankAccountSeeder::class,

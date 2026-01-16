@@ -14,6 +14,9 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 
     CREATE DATABASE mydb_devtest;
     GRANT ALL PRIVILEGES ON DATABASE mydb_devtest TO admin;
+
+    CREATE DATABASE sushigo_prod;
+    GRANT ALL PRIVILEGES ON DATABASE sushigo_prod TO admin;
 EOSQL
 
 echo "Testing database 'sushigo_test' created successfully"

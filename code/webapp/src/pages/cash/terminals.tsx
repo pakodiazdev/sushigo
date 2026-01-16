@@ -161,7 +161,7 @@ export function CashTerminalsPage() {
                     pagination={data?.meta ? {
                         currentPage: data.meta.current_page,
                         totalPages: data.meta.last_page,
-                        onPageChange: (page) => { /* Pagination disabled for now */ },
+                        onPageChange: () => { /* Pagination disabled for now */ },
                     } : undefined}
                 />
             </div>
