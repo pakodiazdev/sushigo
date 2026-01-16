@@ -48,3 +48,15 @@ phpunit.xml
 # CI/CD
 .github
 .gitlab-ci.yml
+
+code/api/vendor
+code/api/.env
+code/api/bootstrap/cache/*.php
+code/api/storage/*.log
+code/api/storage/framework/cache/*
+code/api/storage/framework/sessions/*
+code/api/storage/framework/views/*
+code/api/database/database.sqlite
+code/webapp/node_modules
+code/webapp/.env
+code/webapp/.env.example

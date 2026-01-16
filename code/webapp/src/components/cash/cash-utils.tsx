@@ -114,10 +114,10 @@ export function AdjustmentTypeBadge({ type, direction, className }: AdjustmentTy
     const isInflow = direction === Direction.INFLOW
 
     const variants: Record<AdjustmentType, { label: string; inflowClass: string; outflowClass: string }> = {
-        [AdjustmentType.SALES]: {
-            label: 'Ventas',
-            inflowClass: 'bg-green-600 text-white',
-            outflowClass: 'bg-red-600 text-white',
+        [AdjustmentType.EXTERNAL_IMPORT]: {
+            label: 'Importación Externa',
+            inflowClass: 'bg-blue-600 text-white',
+            outflowClass: 'bg-indigo-600 text-white',
         },
         [AdjustmentType.CORRECTION]: {
             label: 'Corrección',

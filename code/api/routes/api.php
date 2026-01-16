@@ -46,7 +46,25 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     // Health check endpoint
     Route::get('health', function () {
-        return response()->json(['status' => 'ok'], 200);
+        $dbStatus = 'ok';
+        $dbMessage = 'Database connection successful';
+
+        try {
+            \DB::connection()->getPdo();
+            \DB::connection()->getDatabaseName();
+        } catch (\Exception $e) {
+            $dbStatus = 'error';
+            $dbMessage = 'Database connection failed: ' . $e->getMessage();
+        }
+
+        return response()->json([
+            'status' => $dbStatus === 'ok' ? 'ok' : 'error',
+            'timestamp' => now()->toIso8601String(),
+            'database' => [
+                'status' => $dbStatus,
+                'message' => $dbMessage
+            ]
+        ], $dbStatus === 'ok' ? 200 : 503);
     })->name('health');
 
     // Public auth routes

@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
+      target: dev
     container_name: dev_container
     working_dir: /app/code
     image: sushigo/dev:local

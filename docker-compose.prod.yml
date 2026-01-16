@@ -1,0 +1,43 @@
+services:
+  api-prod:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: prod
+      args:
+        APP_KEY: "base64:HiigE2awVygrgb5vyAQoXzdCqyMkEOBViWqhQ0guqnc="
+        APP_ENV: "production"
+        APP_DEBUG: "false"
+        API_URL: "http://localhost:8090"
+        DB_CONNECTION: pgsql
+    volumes:
+      - ./docker/app/config/prod/init.sh:/init.sh
+    container_name: prod_api_sushigo
+    command: bash /init.sh
+    environment:
+      - DB_HOST=${POSTGRES_PROD_HOST:-pgsql}
+      - DB_PORT=${POSTGRES_PROD_PORT:-5432}
+      - DB_DATABASE=${POSTGRES_PROD_DB:-postgres}
+      - DB_USERNAME=${POSTGRES_PROD_USER:-admin}
+      - DB_PASSWORD=${POSTGRES_PROD_PASS:-admin}
+    ports:
+      - "8090:80"
+  front-prod:
+    build:
+      context: .
+      dockerfile: docker/nginx/prod/Dockerfile
+      target: runtime
+      args:
+        VITE_API_URL: http://localhost:8090/api/v1
+    container_name: prod_front_sushigo
+    ports:
+      - 8005:80
+  # environment:
+  #   - APP_KEY: "base64:HiigE2awVygrgb5vyAQoXzdCqyMkEOBViWqhQ0guqnc="
+  #   - APP_ENV: "production"
+  #   - APP_DEBUG: "false"
+  #   - POSTGRES_DB=${POSTGRES_DB:-mydb}
+  #   - POSTGRES_USER=${POSTGRES_USER:-admin}
+  #   - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+  #   - DB_HOST=pgsql
+  #   - DB_PORT=5432
