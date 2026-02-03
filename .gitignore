@@ -2,6 +2,10 @@
 docker-compose.override.yml
 .env.docker
 
+# Certificados passport
+oauth-private.key
+oauth-public.key
+
 # IDE
 .vscode/*
 !.vscode/settings.json
