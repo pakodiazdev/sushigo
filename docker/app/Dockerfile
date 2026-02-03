@@ -30,7 +30,7 @@ WORKDIR /app/code
 # Expose port 80
 EXPOSE 80
 
-FROM base as dev
+FROM base AS dev
 
 # Install Node.js 20.x (LTS)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
@@ -63,16 +63,36 @@ RUN chmod +x /usr/local/bin/init.sh
 # Start initialization script
 CMD ["/usr/local/bin/init.sh"]
 
+# Stage para instalar dependencias de Composer
+FROM base AS composer_deps
+WORKDIR /var/www/html/api
+COPY ./code/api/composer.json ./code/api/composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
+
+# Stage para instalar dependencias de NPM
+FROM node:20 AS npm_deps
+WORKDIR /webapp
+COPY ./code/webapp/package.json ./code/webapp/package-lock.json ./
+RUN npm ci
+
+# Stage para hacer build del frontend
+FROM npm_deps AS node_builder
+ARG API_URL
+ENV VITE_API_URL=${API_URL}
+COPY ./code/webapp /webapp
+RUN npm run generate
+RUN npm run build
+
 FROM base AS prod
 
-ARG APP_KEY
+# ARG APP_KEY
 ARG APP_ENV=production
 ARG APP_DEBUG=false
 ARG API_URL
 ARG DB_CONNECTION
 
 # Solo ENV para valores que NO cambian en runtime
-ENV APP_KEY=${APP_KEY}
+# ENV APP_KEY=${APP_KEY}
 ENV APP_ENV=${APP_ENV}
 ENV APP_DEBUG=${APP_DEBUG}
 ENV API_URL=${API_URL}
@@ -81,7 +101,7 @@ ENV DB_CONNECTION=${DB_CONNECTION}
 # DB credentials se pasarán vía environment en docker-compose (runtime)
 # NO usar ENV aquí para permitir valores dinámicos
 
-WORKDIR /var/www/html
+WORKDIR /var/www/html/api
 
 # 1) Apache -> /public (solo vhost, sin reemplazos globales)
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
@@ -93,23 +113,36 @@ RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-avail
     > /etc/apache2/conf-available/laravel.conf \
     && a2enconf laravel
 
-# 2) Composer deps con cache
-COPY ./code/api/composer.json ./code/api/composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
+# 2) Copiar dependencias de composer desde stage dedicado
+COPY --from=composer_deps /var/www/html/api/vendor /var/www/html/api/vendor
 
 # 3) App code
-COPY ./code/api /var/www/html/
+COPY ./code/api /var/www/html/api
 
 # 4) Permisos
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/api \
+    && chmod -R 775 /var/www/html/api/storage /var/www/html/api/bootstrap/cache
 
 # 5) Descubrir paquetes (ya con artisan presente)
-RUN php artisan package:discover --ansi
+## remove it
+# RUN php artisan package:discover --ansi
 
 # 6) Pre-generar claves de Passport y documentación Swagger
-RUN php artisan passport:keys --force \
-    && php artisan l5:generate
+# uncoment it
+# RUN php artisan passport:keys --force
+# RUN php artisan l5:generate
 
 # NOTA: config:cache, route:cache y view:cache se ejecutan en init.sh
 # para que usen las variables de entorno reales del runtime
+
+FROM prod AS preview
+
+COPY ./docker/app/config/preview/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+COPY --from=node_builder /webapp/dist /var/www/html/webapp
+
+COPY ./docker/app/config/preview/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+CMD [ "bash", "/usr/local/bin/entrypoint.sh" ]

@@ -1,0 +1,111 @@
+name: Deploy Preview (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch/Tag/SHA to deploy (e.g. feature/login, main, v1.2.3)"
+        required: true
+        default: "main"
+      service_suffix:
+        description: "Optional suffix (e.g. feat-login). Leave empty to reuse preview service."
+        required: false
+        default: ""
+      region:
+        description: "Override GCP region (optional)"
+        required: false
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: preview-deploy-${{ github.repository }}-${{ inputs.service_suffix || 'default' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ inputs.region != '' && inputs.region || vars.GCP_REGION }}
+      BASE_SERVICE: ${{ vars.CLOUD_RUN_SERVICE_PREVIEW }}
+
+      AR_LOCATION: ${{ vars.AR_LOCATION }}
+      AR_REPO: ${{ vars.AR_REPO }}
+      IMAGE_NAME: ${{ vars.IMAGE_NAME_PREVIEW }}
+
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Auth to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker auth for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${AR_LOCATION}-docker.pkg.dev" --quiet
+
+      - name: Compute service name
+        id: svc
+        run: |
+          set -euo pipefail
+          svc="${BASE_SERVICE}"
+          if [ -n "${{ inputs.service_suffix }}" ]; then
+            suf="$(echo "${{ inputs.service_suffix }}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-+|-+$//g')"
+            svc="${BASE_SERVICE}-${suf}"
+          fi
+          echo "service=${svc}" >> "$GITHUB_OUTPUT"
+          echo "SERVICE=${svc}" >> "$GITHUB_ENV"
+
+      - name: Compute image tag
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse --short=12 HEAD)"
+          echo "SHA=preview-${SHA}" >> "$GITHUB_ENV"
+
+      - name: Build image
+        run: |
+          set -euo pipefail
+          IMAGE_URI="${AR_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${SHA}"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+          docker build \
+            -f docker/app/Dockerfile \
+            --target preview \
+            --build-arg API_URL="${{ vars.API_URL_PREVIEW }}" \
+            -t "${IMAGE_URI}" \
+            .
+
+      - name: Push image
+        run: |
+          set -euo pipefail
+          docker push "${IMAGE_URI}"
+
+      - name: Deploy to Cloud Run (preview)
+        run: |
+          set -euo pipefail
+          gcloud run deploy "${SERVICE}" \
+            --image "${IMAGE_URI}" \
+            --region "${GCP_REGION}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Show service URL
+        run: |
+          set -euo pipefail
+          URL="$(gcloud run services describe "${SERVICE}" --region "${GCP_REGION}" --format='value(status.url)')"
+          echo "Preview URL: ${URL}"

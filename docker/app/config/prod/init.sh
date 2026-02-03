@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /var/www/html
+cd /var/www/html/api
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to be ready..."
