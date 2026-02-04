@@ -22,7 +22,7 @@ import { OpenSessionDialog, CreateAdjustmentDialog } from '@/components/cash';
 import { useCashSessions } from '@/services/cash-hooks';
 import { SessionStatusBadge, formatDate } from '@/components/cash/cash-utils';
 import { formatCurrency } from '@/services/cash-balance-service';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/auth.store';
 import { SessionStatus, CashSession } from '@/types/cash';
 import { cn } from '@/lib/utils';
 
@@ -196,7 +196,7 @@ function SessionCard({ session, onRegisterAdjustment }: { session: CashSession; 
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const { currentBranch } = useAuth();
+    const { currentBranch } = useAuthStore();
     const [isOpenSessionDialogOpen, setIsOpenSessionDialogOpen] = useState(false);
     const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState<number | undefined>(undefined);

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Building2, Check } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth.store'
 
 export function BranchSwitcher() {
-    const { currentBranch, availableBranches, switchBranch, isAdmin } = useAuth()
+    const { currentBranch, availableBranches, switchBranch, isAdmin } = useAuthStore()
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
 

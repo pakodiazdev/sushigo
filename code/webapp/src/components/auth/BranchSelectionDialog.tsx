@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Building2 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/stores/auth.store'
 import type { Branch } from '@/types/auth'
 
 export function BranchSelectionDialog() {
-    const { isAdmin, currentBranch, availableBranches, switchBranch } = useAuth()
+    const { isAdmin, currentBranch, availableBranches, switchBranch } = useAuthStore()
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)

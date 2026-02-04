@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { BranchSelectionDialog } from '@/components/auth';
 import { DevDebugger } from '@/components/dev';
@@ -35,18 +34,16 @@ declare module '@tanstack/react-router' {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ThemeProvider>
-          <SidebarProvider>
-            <ToastProvider>
-              <RouterProvider router={router} />
-              <BranchSelectionDialog />
-              <ReactQueryDevtools initialIsOpen={false} />
-              {import.meta.env.DEV && <DevDebugger />}
-            </ToastProvider>
-          </SidebarProvider>
-        </ThemeProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <SidebarProvider>
+          <ToastProvider>
+            <RouterProvider router={router} />
+            <BranchSelectionDialog />
+            <ReactQueryDevtools initialIsOpen={false} />
+            {import.meta.env.DEV && <DevDebugger />}
+          </ToastProvider>
+        </SidebarProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
