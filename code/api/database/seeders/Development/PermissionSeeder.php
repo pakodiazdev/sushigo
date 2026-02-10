@@ -61,6 +61,11 @@ class PermissionSeeder extends LockedSeeder
             'cash_expenses.update',
             'cash_expenses.delete',
             'cash_expenses.post',
+
+            // Employees
+            'employees.view',
+            'employees.create',
+            'employees.update',
         ];
 
         foreach ($permissions as $permission) {
@@ -85,7 +90,22 @@ class PermissionSeeder extends LockedSeeder
         if ($adminRole) {
             $adminRole->syncPermissions(
                 Permission::where('guard_name', 'api')
-                    ->where('name', 'like', 'users.%')
+                    ->where(function ($q) {
+                        $q->where('name', 'like', 'users.%')
+                            ->orWhere('name', 'like', 'employees.%');
+                    })
+                    ->get()
+            );
+        }
+
+        $managerRole = Role::where('name', 'manager')
+            ->where('guard_name', 'api')
+            ->first();
+
+        if ($managerRole) {
+            $managerRole->syncPermissions(
+                Permission::where('guard_name', 'api')
+                    ->where('name', 'like', 'employees.%')
                     ->get()
             );
         }

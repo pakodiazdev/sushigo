@@ -15,7 +15,6 @@ return new class extends Migration
             $table->string('code', 50)->nullable()->after('operating_unit_id')
                 ->comment('Unique code for quick identification (e.g., MESA-REC-01)');
 
-            // Add index for code lookups
             $table->index('code');
         });
     }

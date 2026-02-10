@@ -61,6 +61,11 @@ class PermissionSeeder extends LockedSeeder
             'cash_expenses.update',
             'cash_expenses.delete',
             'cash_expenses.post',
+
+            // Employees
+            'employees.view',
+            'employees.create',
+            'employees.update',
         ];
 
         foreach ($permissions as $permission) {

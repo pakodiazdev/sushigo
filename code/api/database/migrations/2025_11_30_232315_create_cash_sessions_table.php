@@ -21,13 +21,10 @@ return new class extends Migration
             $table->json('meta')->nullable()->comment('External batch IDs, notes, etc.');
             $table->timestamps();
 
-            // Indexes
             $table->index('cash_register_id');
             $table->index('operating_date');
             $table->index('status');
             $table->index(['cash_register_id', 'operating_date']);
-
-            // Unique constraint: one session per register per day
             $table->unique(['cash_register_id', 'operating_date'], 'unique_register_date');
         });
     }

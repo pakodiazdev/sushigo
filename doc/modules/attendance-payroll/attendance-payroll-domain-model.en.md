@@ -1,0 +1,1477 @@
+# 📐 Domain Model — Attendance & Payroll (SushiGo)
+
+**Version:** 1.0
+**Date:** 2026-02-09
+**Base:** attendance-payroll-spec v0.8 + mvp-scope
+**Status:** Frozen domain contract
+
+---
+
+## Table of Contents
+
+1. [Entity-Relationship Diagram (ER)](#1-entity-relationship-diagram-er)
+2. [Field Dictionaries](#2-field-dictionaries)
+3. [Enum Definitions](#3-enum-definitions)
+4. [UML Class Diagram](#4-uml-class-diagram)
+5. [State Diagrams](#5-state-diagrams)
+6. [Sequence Diagrams](#6-sequence-diagrams)
+7. [Integrity Rules and Constraints](#7-integrity-rules-and-constraints)
+
+---
+
+## 1) Entity-Relationship Diagram (ER)
+
+### 1.1 Subdomain: Employees and Configuration
+
+```mermaid
+erDiagram
+    Employee ||--o| User : "user_id"
+    Employee ||--|{ EmploymentPeriod : "employee_id"
+    Employee ||--|{ WageHistory : "employee_id"
+    Employee ||--|{ OvertimePayConfig : "employee_id"
+    Employee ||--|{ EmployeeBonusConfig : "employee_id"
+    Employee ||--|{ PunctualityException : "employee_id"
+
+    EmploymentPeriod }|--|| Branch : "branch_id"
+    EmploymentPeriod ||--|{ EmployeeSchedule : "employment_period_id"
+
+    EmployeeSchedule ||--|{ ScheduleDay : "employee_schedule_id"
+
+    EmployeeBonusConfig }|--|| PunctualityBonusGroup : "punctuality_bonus_group_id"
+
+    Employee {
+        bigint id PK
+        bigint user_id FK "nullable - access account"
+        string code UK "unique employee code"
+        string first_name
+        string last_name
+        enum role "MANAGER|COOK|KITCHEN_ASSISTANT|DELIVERY_DRIVER"
+        boolean is_active "default true"
+        json meta "nullable"
+    }
+
+    EmploymentPeriod {
+        bigint id PK
+        bigint employee_id FK
+        bigint branch_id FK
+        date start_date
+        date end_date "nullable"
+        boolean is_active "default true"
+    }
+
+    EmployeeSchedule {
+        bigint id PK
+        bigint employment_period_id FK
+        string name
+        date effective_from
+        date effective_to "nullable"
+        enum workday_type "FULL|PARTIAL"
+        smallint working_days_per_week "default 6"
+    }
+
+    ScheduleDay {
+        bigint id PK
+        bigint employee_schedule_id FK
+        smallint day_of_week "ISO 1-7"
+        boolean is_day_off "default false"
+        time expected_start "nullable"
+        time expected_lunch_end "nullable"
+        time expected_end "nullable"
+    }
+
+    WageHistory {
+        bigint id PK
+        bigint employee_id FK
+        decimal daily_wage
+        date effective_from
+        date effective_to "nullable"
+    }
+
+    OvertimePayConfig {
+        bigint id PK
+        bigint employee_id FK
+        enum method "LFT_PROPORTIONAL|AGREED_RATE"
+        decimal hourly_rate "nullable"
+        decimal lft_factor "nullable"
+        date effective_from
+        date effective_to "nullable"
+    }
+
+    PunctualityBonusGroup {
+        bigint id PK
+        string name
+        decimal weekly_bonus_amount
+        smallint working_days_divisor
+        boolean is_active "default true"
+    }
+
+    EmployeeBonusConfig {
+        bigint id PK
+        bigint employee_id FK
+        bigint punctuality_bonus_group_id FK
+        date effective_from
+        date effective_to "nullable"
+    }
+
+    PunctualityException {
+        bigint id PK
+        bigint employee_id FK
+        smallint day_of_week "nullable - ISO 1-7"
+        decimal forced_percentage
+        date effective_from
+        date effective_to "nullable"
+        string reason "nullable"
+    }
+```
+
+### 1.2 Subdomain: Daily Operations
+
+```mermaid
+erDiagram
+    Employee ||--|{ Attendance : "employee_id"
+    Employee ||--|{ PartialLeave : "employee_id"
+    Employee ||--|{ NegotiatedExtraDay : "employee_id"
+    Employee ||--|{ OvertimeBankMovement : "employee_id"
+
+    Attendance ||--o{ PartialLeave : "attendance_id"
+    Attendance ||--o{ OvertimeBankMovement : "attendance_id"
+
+    NegotiatedExtraDay }|--|| Branch : "branch_id"
+
+    Attendance {
+        bigint id PK
+        bigint employee_id FK
+        date date
+        datetime check_in "nullable"
+        datetime check_out "nullable"
+        datetime lunch_start "nullable"
+        datetime lunch_end "nullable"
+        integer entry_late_seconds "default 0"
+        integer lunch_late_seconds "default 0"
+        integer net_worked_minutes "nullable"
+        integer overtime_minutes "default 0"
+        boolean overtime_authorized "default false"
+        bigint overtime_authorized_by FK "nullable"
+        datetime overtime_authorized_at "nullable"
+        enum day_status "WORKED|DAY_OFF|LEAVE|VACATION|HOLIDAY|ABSENCE|EXTRA"
+        bigint confirmed_by FK "nullable"
+        json meta "nullable"
+    }
+
+    PartialLeave {
+        bigint id PK
+        bigint employee_id FK
+        bigint attendance_id FK "nullable"
+        date date
+        enum type "ARRIVE_LATE|LEAVE_EARLY|TAKE_TIME"
+        boolean is_paid
+        time start_time "nullable"
+        time end_time "nullable"
+        integer duration_minutes
+        text reason "nullable"
+        bigint approved_by FK
+    }
+
+    NegotiatedExtraDay {
+        bigint id PK
+        bigint employee_id FK
+        date date
+        bigint branch_id FK
+        decimal agreed_pay
+        bigint approved_by FK
+        text notes "nullable"
+    }
+
+    OvertimeBankMovement {
+        bigint id PK
+        bigint employee_id FK
+        bigint attendance_id FK "nullable"
+        date date
+        integer minutes
+        enum movement_type "EARNED|USED|PAID|ADJUSTMENT"
+        enum origin "AUTO|MANUAL"
+        enum valuation_method "nullable - LFT_PROPORTIONAL|AGREED_RATE"
+        decimal applied_rate "nullable"
+        decimal amount "nullable"
+        bigint authorized_by FK "nullable"
+        datetime authorized_at "nullable"
+        text reason "nullable"
+    }
+```
+
+### 1.3 Subdomain: Leaves, Vacations, and Holidays
+
+```mermaid
+erDiagram
+    Employee ||--|{ Leave : "employee_id"
+    Employee ||--|{ VacationEntitlement : "employee_id"
+    Employee ||--|{ VacationRequest : "employee_id"
+
+    Leave }|--|| LeaveType : "leave_type_id"
+
+    LeaveType {
+        bigint id PK
+        string name
+        string code UK
+        boolean is_paid "default false"
+        boolean is_partial "default false"
+        boolean generates_rest "default false"
+        boolean counts_for_bonus "default true"
+        boolean is_active "default true"
+    }
+
+    Leave {
+        bigint id PK
+        bigint employee_id FK
+        bigint leave_type_id FK
+        date start_date
+        date end_date
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        bigint approved_by FK "nullable"
+        datetime approved_at "nullable"
+        text notes "nullable"
+    }
+
+    Holiday {
+        bigint id PK
+        date date UK
+        string name
+        decimal pay_multiplier "default 2.0"
+        boolean is_active "default true"
+    }
+
+    VacationEntitlement {
+        bigint id PK
+        bigint employee_id FK
+        smallint year
+        decimal entitled_days
+        decimal used_days "default 0"
+    }
+
+    VacationRequest {
+        bigint id PK
+        bigint employee_id FK
+        date start_date
+        date end_date
+        decimal days_count
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        bigint approved_by FK "nullable"
+        datetime approved_at "nullable"
+        text notes "nullable"
+    }
+```
+
+### 1.4 Subdomain: Payroll Close
+
+```mermaid
+erDiagram
+    PayPeriod ||--|{ PayPeriodEmployee : "pay_period_id"
+    PayPeriodEmployee ||--|{ PayPeriodLine : "pay_period_employee_id"
+
+    PayPeriod }|--|| Branch : "branch_id"
+    PayPeriodEmployee }|--|| Employee : "employee_id"
+
+    PayPeriod {
+        bigint id PK
+        bigint branch_id FK
+        date period_start
+        date period_end
+        enum status "OPEN|CLOSED|REOPENED"
+        bigint closed_by FK "nullable"
+        datetime closed_at "nullable"
+        bigint reopened_by FK "nullable"
+        datetime reopened_at "nullable"
+        text reopen_reason "nullable"
+        json meta "nullable"
+    }
+
+    PayPeriodEmployee {
+        bigint id PK
+        bigint pay_period_id FK
+        bigint employee_id FK
+        decimal base_pay
+        decimal late_deductions "default 0"
+        decimal unpaid_leave_deductions "default 0"
+        decimal overtime_pay "default 0"
+        decimal extra_day_pay "default 0"
+        decimal punctuality_bonus "default 0"
+        decimal holiday_pay "default 0"
+        decimal other_adjustments "default 0"
+        decimal total_pay
+        decimal free_hours_earned "default 0"
+        json daily_snapshot
+    }
+
+    PayPeriodLine {
+        bigint id PK
+        bigint pay_period_employee_id FK
+        date date
+        enum concept "BASE_PAY|LATE_DEDUCTION|..."
+        string description
+        decimal amount
+        integer minutes "nullable"
+        json meta "nullable"
+    }
+```
+
+### 1.5 Subdomain: Punctuality Configuration
+
+```mermaid
+erDiagram
+    PunctualityBonusGroup ||--|{ EmployeeBonusConfig : "punctuality_bonus_group_id"
+    Employee ||--|{ EmployeeBonusConfig : "employee_id"
+    Employee ||--|{ PunctualityException : "employee_id"
+
+    PunctualityRange {
+        bigint id PK
+        integer min_seconds
+        integer max_seconds "nullable"
+        decimal bonus_percentage
+        smallint sort_order
+    }
+```
+
+### 1.6 Subdomain: Audit
+
+```mermaid
+erDiagram
+    AttendanceAuditLog {
+        bigint id PK
+        string auditable_type "polymorphic"
+        bigint auditable_id
+        enum action "CREATE|UPDATE|DELETE"
+        json old_values "nullable"
+        json new_values "nullable"
+        bigint user_id FK
+        text reason "nullable"
+    }
+```
+
+---
+
+## 2) Field Dictionaries
+
+### 2.1 `employees` — Employee Master Record
+
+| Field        | Type         | Null | Default | Description                                                                 | FR    |
+| ------------ | ------------ | ---- | ------- | --------------------------------------------------------------------------- | ----- |
+| `id`         | bigint       | NO   | auto    | PK                                                                          | —     |
+| `user_id`    | bigint FK    | YES  | NULL    | User account (→ `users`). NULL if no system access.                         | RF-01 |
+| `code`       | varchar(20)  | NO   | —       | Unique employee code (e.g. "EMP-001").                                      | RF-03 |
+| `first_name` | varchar(100) | NO   | —       | First name.                                                                 | RF-01 |
+| `last_name`  | varchar(100) | NO   | —       | Last name.                                                                  | RF-01 |
+| `role`       | enum         | NO   | —       | Functional role: `MANAGER`, `COOK`, `KITCHEN_ASSISTANT`, `DELIVERY_DRIVER`. | RF-02 |
+| `is_active`  | boolean      | NO   | true    | Active in the system. `false` = deactivated (soft-delete).                  | RF-05 |
+| `meta`       | json         | YES  | NULL    | Extensible metadata (phone, emergency contact, etc.).                       | RF-01 |
+| `created_at` | timestamp    | NO   | now     | —                                                                           | —     |
+| `updated_at` | timestamp    | NO   | now     | —                                                                           | —     |
+
+**Constraints:** UNIQUE(`code`). INDEX(`is_active`).
+
+---
+
+### 2.2 `employment_periods` — Employment Periods (Employee–Branch Assignment)
+
+| Field         | Type      | Null | Default | Description                                  | FR    |
+| ------------- | --------- | ---- | ------- | -------------------------------------------- | ----- |
+| `id`          | bigint    | NO   | auto    | PK                                           | —     |
+| `employee_id` | bigint FK | NO   | —       | Employee.                                    | RF-06 |
+| `branch_id`   | bigint FK | NO   | —       | Branch where they work (→ `branches`).       | RF-07 |
+| `start_date`  | date      | NO   | —       | Start of period.                             | RF-06 |
+| `end_date`    | date      | YES  | NULL    | End of period. NULL = currently active.      | RF-06 |
+| `is_active`   | boolean   | NO   | true    | Active period. Only one active per employee. | RF-06 |
+| `created_at`  | timestamp | NO   | now     | —                                            | —     |
+| `updated_at`  | timestamp | NO   | now     | —                                            | —     |
+
+**Business rule:** Maximum ONE active period (`is_active = true`) per `employee_id`.
+
+---
+
+### 2.3 `employee_schedules` — Work Schedules
+
+| Field                   | Type         | Null | Default | Description                                           | FR    |
+| ----------------------- | ------------ | ---- | ------- | ----------------------------------------------------- | ----- |
+| `id`                    | bigint       | NO   | auto    | PK                                                    | —     |
+| `employment_period_id`  | bigint FK    | NO   | —       | Associated employment period.                         | RF-09 |
+| `name`                  | varchar(100) | NO   | —       | Descriptive name (e.g. "Full schedule January 2026"). | RF-08 |
+| `effective_from`        | date         | NO   | —       | Effective start date.                                 | RF-09 |
+| `effective_to`          | date         | YES  | NULL    | Effective end date. NULL = currently active.          | RF-09 |
+| `workday_type`          | enum         | NO   | —       | `FULL` (full workday) or `PARTIAL` (variable).        | RF-10 |
+| `working_days_per_week` | smallint     | NO   | 6       | Working days per week (base for bonus proration).     | RF-34 |
+| `created_at`            | timestamp    | NO   | now     | —                                                     | —     |
+| `updated_at`            | timestamp    | NO   | now     | —                                                     | —     |
+
+---
+
+### 2.4 `schedule_days` — Day-of-Week Definitions
+
+| Field                  | Type      | Null | Default | Description                                   | FR    |
+| ---------------------- | --------- | ---- | ------- | --------------------------------------------- | ----- |
+| `id`                   | bigint    | NO   | auto    | PK                                            | —     |
+| `employee_schedule_id` | bigint FK | NO   | —       | Parent schedule.                              | RF-08 |
+| `day_of_week`          | smallint  | NO   | —       | ISO day: 1=Mon, 2=Tue, ..., 7=Sun.            | RF-08 |
+| `is_day_off`           | boolean   | NO   | false   | Scheduled day off.                            | RF-08 |
+| `expected_start`       | time      | YES  | NULL    | Expected clock-in time. NULL if `is_day_off`. | RF-08 |
+| `expected_lunch_end`   | time      | YES  | NULL    | Expected lunch return time.                   | RF-08 |
+| `expected_end`         | time      | YES  | NULL    | Expected clock-out time.                      | RF-08 |
+| `created_at`           | timestamp | NO   | now     | —                                             | —     |
+| `updated_at`           | timestamp | NO   | now     | —                                             | —     |
+
+**Constraints:** UNIQUE(`employee_schedule_id`, `day_of_week`).
+
+---
+
+### 2.5 `wage_histories` — Wage History
+
+| Field            | Type          | Null | Default | Description                                  | FR    |
+| ---------------- | ------------- | ---- | ------- | -------------------------------------------- | ----- |
+| `id`             | bigint        | NO   | auto    | PK                                           | —     |
+| `employee_id`    | bigint FK     | NO   | —       | Employee.                                    | RF-22 |
+| `daily_wage`     | decimal(10,2) | NO   | —       | Current daily wage.                          | RF-22 |
+| `effective_from` | date          | NO   | —       | Effective start date.                        | RF-22 |
+| `effective_to`   | date          | YES  | NULL    | Effective end date. NULL = currently active. | RF-22 |
+| `created_at`     | timestamp     | NO   | now     | —                                            | —     |
+| `updated_at`     | timestamp     | NO   | now     | —                                            | —     |
+
+---
+
+### 2.6 `overtime_pay_configs` — Overtime Pay Configuration per Employee
+
+| Field            | Type          | Null | Default | Description                                                             | FR     |
+| ---------------- | ------------- | ---- | ------- | ----------------------------------------------------------------------- | ------ |
+| `id`             | bigint        | NO   | auto    | PK                                                                      | —      |
+| `employee_id`    | bigint FK     | NO   | —       | Employee.                                                               | RF-47c |
+| `method`         | enum          | NO   | —       | `LFT_PROPORTIONAL` or `AGREED_RATE`.                                    | DC-03  |
+| `hourly_rate`    | decimal(10,2) | YES  | NULL    | Fixed hourly rate. Only when method = `AGREED_RATE`.                    | DC-03  |
+| `lft_factor`     | decimal(5,2)  | YES  | NULL    | LFT factor (e.g. 2.00 = double). Only when method = `LFT_PROPORTIONAL`. | DC-03  |
+| `effective_from` | date          | NO   | —       | Effective start date.                                                   | RF-47c |
+| `effective_to`   | date          | YES  | NULL    | End date. NULL = currently active.                                      | RF-47c |
+| `created_at`     | timestamp     | NO   | now     | —                                                                       | —      |
+| `updated_at`     | timestamp     | NO   | now     | —                                                                       | —      |
+
+---
+
+### 2.7 `attendances` — Daily Attendance Record
+
+| Field                    | Type      | Null | Default | Description                                                                          | FR            |
+| ------------------------ | --------- | ---- | ------- | ------------------------------------------------------------------------------------ | ------------- |
+| `id`                     | bigint    | NO   | auto    | PK                                                                                   | —             |
+| `employee_id`            | bigint FK | NO   | —       | Employee.                                                                            | RF-11         |
+| `date`                   | date      | NO   | —       | Work day date.                                                                       | RF-11         |
+| `check_in`               | datetime  | YES  | NULL    | Actual clock-in time.                                                                | RF-11         |
+| `check_out`              | datetime  | YES  | NULL    | Actual clock-out time.                                                               | RF-12         |
+| `lunch_start`            | datetime  | YES  | NULL    | Lunch break start (optional).                                                        | RF-14         |
+| `lunch_end`              | datetime  | YES  | NULL    | Lunch break return.                                                                  | RF-15a        |
+| `entry_late_seconds`     | integer   | NO   | 0       | Entry tardiness in seconds (calculated: check_in − expected_start). 0 if on time.    | RF-13, RF-15a |
+| `lunch_late_seconds`     | integer   | NO   | 0       | Lunch return tardiness in seconds (calculated: lunch_end − expected_lunch_end).      | RF-15a        |
+| `net_worked_minutes`     | integer   | YES  | NULL    | Net minutes worked (excluding lunch). Calculated.                                    | RF-14         |
+| `overtime_minutes`       | integer   | NO   | 0       | Extra minutes worked (check_out − expected_end).                                     | RF-42         |
+| `overtime_authorized`    | boolean   | NO   | false   | Did Manager authorize overtime pay?                                                  | DC-01, RF-47a |
+| `overtime_authorized_by` | bigint FK | YES  | NULL    | User who authorized (→ `users`).                                                     | RF-47b        |
+| `overtime_authorized_at` | datetime  | YES  | NULL    | When it was authorized.                                                              | RF-47b        |
+| `day_status`             | enum      | NO   | —       | Day status: `WORKED`, `DAY_OFF`, `LEAVE`, `VACATION`, `HOLIDAY`, `ABSENCE`, `EXTRA`. | RF-16         |
+| `confirmed_by`           | bigint FK | YES  | NULL    | User who confirmed the status (→ `users`).                                           | RF-15         |
+| `meta`                   | json      | YES  | NULL    | Additional data.                                                                     | —             |
+| `created_at`             | timestamp | NO   | now     | —                                                                                    | —             |
+| `updated_at`             | timestamp | NO   | now     | —                                                                                    | —             |
+
+**Constraints:** UNIQUE(`employee_id`, `date`). INDEX(`date`). INDEX(`day_status`).
+
+---
+
+### 2.8 `partial_leaves` — Partial Leaves
+
+| Field              | Type      | Null | Default | Description                                                                                 | FR     |
+| ------------------ | --------- | ---- | ------- | ------------------------------------------------------------------------------------------- | ------ |
+| `id`               | bigint    | NO   | auto    | PK                                                                                          | —      |
+| `employee_id`      | bigint FK | NO   | —       | Employee.                                                                                   | RF-25a |
+| `attendance_id`    | bigint FK | YES  | NULL    | Reference to the day's attendance record (if exists).                                       | RF-25a |
+| `date`             | date      | NO   | —       | Leave date.                                                                                 | RF-25a |
+| `type`             | enum      | NO   | —       | `ARRIVE_LATE`, `LEAVE_EARLY`, `TAKE_TIME`.                                                  | RF-25a |
+| `is_paid`          | boolean   | NO   | —       | `true` = paid leave, `false` = unpaid leave.                                                | RF-25a |
+| `start_time`       | time      | YES  | NULL    | Leave start time (nullable if only duration is specified).                                  | RF-25a |
+| `end_time`         | time      | YES  | NULL    | Leave end time.                                                                             | RF-25a |
+| `duration_minutes` | integer   | NO   | —       | Total duration in minutes. If start/end provided, calculated; otherwise directly specified. | RF-25a |
+| `reason`           | text      | YES  | NULL    | Leave reason.                                                                               | RF-25a |
+| `approved_by`      | bigint FK | NO   | —       | User who approved (→ `users`).                                                              | RF-25a |
+| `created_at`       | timestamp | NO   | now     | —                                                                                           | —      |
+| `updated_at`       | timestamp | NO   | now     | —                                                                                           | —      |
+
+---
+
+### 2.9 `negotiated_extra_days` — Negotiated Extra Days
+
+| Field         | Type          | Null | Default | Description               | FR           |
+| ------------- | ------------- | ---- | ------- | ------------------------- | ------------ |
+| `id`          | bigint        | NO   | auto    | PK                        | —            |
+| `employee_id` | bigint FK     | NO   | —       | Employee.                 | RF-38        |
+| `date`        | date          | NO   | —       | Extra day date.           | RF-39        |
+| `branch_id`   | bigint FK     | NO   | —       | Branch where they worked. | RF-39        |
+| `agreed_pay`  | decimal(10,2) | NO   | —       | Agreed pay.               | RF-39, RN-10 |
+| `approved_by` | bigint FK     | NO   | —       | Who approved (→ `users`). | RF-39, RN-09 |
+| `notes`       | text          | YES  | NULL    | Notes/observations.       | RF-39        |
+| `created_at`  | timestamp     | NO   | now     | —                         | —            |
+| `updated_at`  | timestamp     | NO   | now     | —                         | —            |
+
+**Constraints:** UNIQUE(`employee_id`, `date`).
+
+---
+
+### 2.10 `overtime_bank_movements` — Overtime Bank Movements
+
+| Field              | Type          | Null | Default | Description                                                            | FR            |
+| ------------------ | ------------- | ---- | ------- | ---------------------------------------------------------------------- | ------------- |
+| `id`               | bigint        | NO   | auto    | PK                                                                     | —             |
+| `employee_id`      | bigint FK     | NO   | —       | Employee.                                                              | RF-42         |
+| `attendance_id`    | bigint FK     | YES  | NULL    | Reference to the attendance record (for automatic EARNED/PAID).        | RF-47b        |
+| `date`             | date          | NO   | —       | Movement date.                                                         | RF-45         |
+| `minutes`          | integer       | NO   | —       | Movement minutes (always positive; type indicates direction).          | RF-45         |
+| `movement_type`    | enum          | NO   | —       | `EARNED`, `USED`, `PAID`, `ADJUSTMENT`.                                | RF-44         |
+| `origin`           | enum          | NO   | —       | `AUTO` (system) or `MANUAL` (manual entry).                            | RF-43, RF-45  |
+| `valuation_method` | enum          | YES  | NULL    | Valuation method (only for `PAID`): `LFT_PROPORTIONAL`, `AGREED_RATE`. | RF-47b, DC-03 |
+| `applied_rate`     | decimal(10,2) | YES  | NULL    | Applied rate (only for `PAID`).                                        | RF-47b        |
+| `amount`           | decimal(10,2) | YES  | NULL    | Resulting amount (only for `PAID`).                                    | RF-47b        |
+| `authorized_by`    | bigint FK     | YES  | NULL    | Who authorized (→ `users`).                                            | RF-45, RF-47a |
+| `authorized_at`    | datetime      | YES  | NULL    | When it was authorized.                                                | RF-47a        |
+| `reason`           | text          | YES  | NULL    | Movement reason/justification.                                         | RF-45         |
+| `created_at`       | timestamp     | NO   | now     | —                                                                      | —             |
+| `updated_at`       | timestamp     | NO   | now     | —                                                                      | —             |
+
+---
+
+### 2.11 `leave_types` — Leave Type Catalog
+
+| Field              | Type         | Null | Default | Description                               | FR    |
+| ------------------ | ------------ | ---- | ------- | ----------------------------------------- | ----- |
+| `id`               | bigint       | NO   | auto    | PK                                        | —     |
+| `name`             | varchar(100) | NO   | —       | Leave type name.                          | RF-24 |
+| `code`             | varchar(30)  | NO   | —       | Unique code (e.g. `MEDICAL`, `PERSONAL`). | RF-24 |
+| `is_paid`          | boolean      | NO   | false   | Paid leave by default.                    | RF-24 |
+| `is_partial`       | boolean      | NO   | false   | Allows partial use (hours/minutes)?       | RF-24 |
+| `generates_rest`   | boolean      | NO   | false   | Generates proportional rest?              | RF-24 |
+| `counts_for_bonus` | boolean      | NO   | true    | Counts for punctuality bonus?             | RF-24 |
+| `is_active`        | boolean      | NO   | true    | Active in catalog.                        | RF-24 |
+| `created_at`       | timestamp    | NO   | now     | —                                         | —     |
+| `updated_at`       | timestamp    | NO   | now     | —                                         | —     |
+
+**Constraints:** UNIQUE(`code`).
+
+---
+
+### 2.12 `leaves` — Leave Requests (Full Day or Range)
+
+| Field           | Type      | Null | Default   | Description                                     | FR    |
+| --------------- | --------- | ---- | --------- | ----------------------------------------------- | ----- |
+| `id`            | bigint    | NO   | auto      | PK                                              | —     |
+| `employee_id`   | bigint FK | NO   | —         | Employee.                                       | RF-25 |
+| `leave_type_id` | bigint FK | NO   | —         | Leave type from catalog.                        | RF-25 |
+| `start_date`    | date      | NO   | —         | Start date.                                     | RF-25 |
+| `end_date`      | date      | NO   | —         | End date (= start_date if single day).          | RF-25 |
+| `status`        | enum      | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. | RF-25 |
+| `approved_by`   | bigint FK | YES  | NULL      | Who approved (→ `users`).                       | RF-25 |
+| `approved_at`   | datetime  | YES  | NULL      | When it was approved.                           | RF-25 |
+| `notes`         | text      | YES  | NULL      | Notes.                                          | RF-25 |
+| `created_at`    | timestamp | NO   | now       | —                                               | —     |
+| `updated_at`    | timestamp | NO   | now       | —                                               | —     |
+
+---
+
+### 2.13 `holidays` — Holiday Catalog
+
+| Field            | Type         | Null | Default | Description                                     | FR    |
+| ---------------- | ------------ | ---- | ------- | ----------------------------------------------- | ----- |
+| `id`             | bigint       | NO   | auto    | PK                                              | —     |
+| `date`           | date         | NO   | —       | Holiday date.                                   | RF-29 |
+| `name`           | varchar(100) | NO   | —       | Holiday name.                                   | RF-29 |
+| `pay_multiplier` | decimal(3,1) | NO   | 2.0     | Pay factor: 1.0 normal, 2.0 double, 3.0 triple. | RF-30 |
+| `is_active`      | boolean      | NO   | true    | Active.                                         | RF-29 |
+| `created_at`     | timestamp    | NO   | now     | —                                               | —     |
+| `updated_at`     | timestamp    | NO   | now     | —                                               | —     |
+
+**Constraints:** UNIQUE(`date`).
+
+---
+
+### 2.14 `vacation_entitlements` — Vacation Entitlements
+
+| Field           | Type         | Null | Default | Description                                    | FR    |
+| --------------- | ------------ | ---- | ------- | ---------------------------------------------- | ----- |
+| `id`            | bigint       | NO   | auto    | PK                                             | —     |
+| `employee_id`   | bigint FK    | NO   | —       | Employee.                                      | RF-26 |
+| `year`          | smallint     | NO   | —       | Corresponding year.                            | RF-26 |
+| `entitled_days` | decimal(5,2) | NO   | —       | Vacation days entitled (MX Federal Labor Law). | RF-26 |
+| `used_days`     | decimal(5,2) | NO   | 0.00    | Days used.                                     | RF-26 |
+| `created_at`    | timestamp    | NO   | now     | —                                              | —     |
+| `updated_at`    | timestamp    | NO   | now     | —                                              | —     |
+
+**Constraints:** UNIQUE(`employee_id`, `year`).
+
+**Computed column (app-level):** `remaining_days = entitled_days − used_days`.
+
+---
+
+### 2.15 `vacation_requests` — Vacation Requests
+
+| Field         | Type         | Null | Default   | Description                                     | FR    |
+| ------------- | ------------ | ---- | --------- | ----------------------------------------------- | ----- |
+| `id`          | bigint       | NO   | auto      | PK                                              | —     |
+| `employee_id` | bigint FK    | NO   | —         | Employee.                                       | RF-27 |
+| `start_date`  | date         | NO   | —         | Start date.                                     | RF-27 |
+| `end_date`    | date         | NO   | —         | End date.                                       | RF-27 |
+| `days_count`  | decimal(5,2) | NO   | —         | Days requested.                                 | RF-27 |
+| `status`      | enum         | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. | RF-27 |
+| `approved_by` | bigint FK    | YES  | NULL      | Who approved (→ `users`).                       | RF-27 |
+| `approved_at` | datetime     | YES  | NULL      | When.                                           | RF-27 |
+| `notes`       | text         | YES  | NULL      | Notes.                                          | RF-27 |
+| `created_at`  | timestamp    | NO   | now       | —                                               | —     |
+| `updated_at`  | timestamp    | NO   | now       | —                                               | —     |
+
+---
+
+### 2.16 `punctuality_ranges` — Punctuality Bonus Ranges
+
+| Field              | Type         | Null | Default | Description                                        | FR    |
+| ------------------ | ------------ | ---- | ------- | -------------------------------------------------- | ----- |
+| `id`               | bigint       | NO   | auto    | PK                                                 | —     |
+| `min_seconds`      | integer      | NO   | —       | Lower bound of range (inclusive).                  | RF-32 |
+| `max_seconds`      | integer      | YES  | NULL    | Upper bound (exclusive). NULL = no limit (26:00+). | RF-32 |
+| `bonus_percentage` | decimal(5,2) | NO   | —       | Applicable bonus percentage.                       | RF-32 |
+| `sort_order`       | smallint     | NO   | —       | Evaluation order.                                  | RF-32 |
+| `created_at`       | timestamp    | NO   | now     | —                                                  | —     |
+| `updated_at`       | timestamp    | NO   | now     | —                                                  | —     |
+
+---
+
+### 2.17 `punctuality_bonus_groups` — Punctuality Bonus Groups
+
+| Field                  | Type          | Null | Default | Description                                                | FR    |
+| ---------------------- | ------------- | ---- | ------- | ---------------------------------------------------------- | ----- |
+| `id`                   | bigint        | NO   | auto    | PK                                                         | —     |
+| `name`                 | varchar(50)   | NO   | —       | Group name (e.g. "Group $110", "Group $100", "Group $50"). | RF-33 |
+| `weekly_bonus_amount`  | decimal(10,2) | NO   | —       | Weekly base bonus amount.                                  | RF-33 |
+| `working_days_divisor` | smallint      | NO   | —       | Divisor for daily proration (e.g. 6 or 3).                 | RF-34 |
+| `is_active`            | boolean       | NO   | true    | Active.                                                    | RF-33 |
+| `created_at`           | timestamp     | NO   | now     | —                                                          | —     |
+| `updated_at`           | timestamp     | NO   | now     | —                                                          | —     |
+
+---
+
+### 2.18 `employee_bonus_configs` — Employee → Bonus Group Assignment
+
+| Field                        | Type      | Null | Default | Description                                  | FR    |
+| ---------------------------- | --------- | ---- | ------- | -------------------------------------------- | ----- |
+| `id`                         | bigint    | NO   | auto    | PK                                           | —     |
+| `employee_id`                | bigint FK | NO   | —       | Employee.                                    | RF-33 |
+| `punctuality_bonus_group_id` | bigint FK | NO   | —       | Assigned bonus group.                        | RF-33 |
+| `effective_from`             | date      | NO   | —       | Effective start date.                        | RF-33 |
+| `effective_to`               | date      | YES  | NULL    | Effective end date. NULL = currently active. | RF-33 |
+| `created_at`                 | timestamp | NO   | now     | —                                            | —     |
+| `updated_at`                 | timestamp | NO   | now     | —                                            | —     |
+
+---
+
+### 2.19 `punctuality_exceptions` — Per-Employee Punctuality Exceptions
+
+| Field               | Type         | Null | Default | Description                                           | FR    |
+| ------------------- | ------------ | ---- | ------- | ----------------------------------------------------- | ----- |
+| `id`                | bigint       | NO   | auto    | PK                                                    | —     |
+| `employee_id`       | bigint FK    | NO   | —       | Employee.                                             | RF-37 |
+| `day_of_week`       | smallint     | YES  | NULL    | ISO day (1-7). NULL = applies every day.              | RF-37 |
+| `forced_percentage` | decimal(5,2) | NO   | —       | Forced percentage (e.g. 0.00 for Andrea Tue/Wed/Thu). | RF-37 |
+| `effective_from`    | date         | NO   | —       | Effective start date.                                 | RF-37 |
+| `effective_to`      | date         | YES  | NULL    | End. NULL = currently active.                         | RF-37 |
+| `reason`            | varchar(255) | YES  | NULL    | Exception reason.                                     | RF-37 |
+| `created_at`        | timestamp    | NO   | now     | —                                                     | —     |
+| `updated_at`        | timestamp    | NO   | now     | —                                                     | —     |
+
+---
+
+### 2.20 `pay_periods` — Pay Periods (Weekly Close)
+
+| Field           | Type      | Null | Default | Description                   | FR           |
+| --------------- | --------- | ---- | ------- | ----------------------------- | ------------ |
+| `id`            | bigint    | NO   | auto    | PK                            | —            |
+| `branch_id`     | bigint FK | NO   | —       | Branch.                       | RF-20        |
+| `period_start`  | date      | NO   | —       | Period start (Monday).        | RF-20        |
+| `period_end`    | date      | NO   | —       | Period end (Sunday).          | RF-20        |
+| `status`        | enum      | NO   | `OPEN`  | `OPEN`, `CLOSED`, `REOPENED`. | RF-20, RF-21 |
+| `closed_by`     | bigint FK | YES  | NULL    | Who closed (→ `users`).       | RF-20        |
+| `closed_at`     | datetime  | YES  | NULL    | When it was closed.           | RF-20        |
+| `reopened_by`   | bigint FK | YES  | NULL    | Who reopened (→ `users`).     | RF-21        |
+| `reopened_at`   | datetime  | YES  | NULL    | When it was reopened.         | RF-21        |
+| `reopen_reason` | text      | YES  | NULL    | Reopen reason.                | RF-21        |
+| `meta`          | json      | YES  | NULL    | Additional data.              | —            |
+| `created_at`    | timestamp | NO   | now     | —                             | —            |
+| `updated_at`    | timestamp | NO   | now     | —                             | —            |
+
+**Constraints:** UNIQUE(`branch_id`, `period_start`, `period_end`).
+
+---
+
+### 2.21 `pay_period_employees` — Per-Employee Snapshot at Close
+
+| Field                     | Type          | Null | Default | Description                               | FR     |
+| ------------------------- | ------------- | ---- | ------- | ----------------------------------------- | ------ |
+| `id`                      | bigint        | NO   | auto    | PK                                        | —      |
+| `pay_period_id`           | bigint FK     | NO   | —       | Pay period.                               | RF-20  |
+| `employee_id`             | bigint FK     | NO   | —       | Employee.                                 | RF-49  |
+| `base_pay`                | decimal(10,2) | NO   | —       | Period base pay.                          | RF-23  |
+| `late_deductions`         | decimal(10,2) | NO   | 0.00    | Total deductions for tardiness >30 min.   | RN-00  |
+| `unpaid_leave_deductions` | decimal(10,2) | NO   | 0.00    | Total deductions for unpaid leaves.       | RN-00d |
+| `overtime_pay`            | decimal(10,2) | NO   | 0.00    | Total authorized overtime pay.            | RF-47b |
+| `extra_day_pay`           | decimal(10,2) | NO   | 0.00    | Total negotiated extra day pay.           | RF-41  |
+| `punctuality_bonus`       | decimal(10,2) | NO   | 0.00    | Total punctuality bonus.                  | RF-34  |
+| `holiday_pay`             | decimal(10,2) | NO   | 0.00    | Extra pay for holidays worked.            | RF-31  |
+| `other_adjustments`       | decimal(10,2) | NO   | 0.00    | Other adjustments (positive or negative). | —      |
+| `total_pay`               | decimal(10,2) | NO   | —       | **Total payable** (sum of all items).     | RF-49  |
+| `free_hours_earned`       | decimal(4,2)  | NO   | 0.00    | Free hours earned for punctuality.        | RF-36  |
+| `daily_snapshot`          | json          | NO   | —       | Frozen daily evidence (day-by-day table). | RF-20  |
+| `created_at`              | timestamp     | NO   | now     | —                                         | —      |
+| `updated_at`              | timestamp     | NO   | now     | —                                         | —      |
+
+**Constraints:** UNIQUE(`pay_period_id`, `employee_id`).
+
+**`total_pay` formula:**
+```
+total_pay = base_pay
+          - late_deductions
+          - unpaid_leave_deductions
+          + overtime_pay
+          + extra_day_pay
+          + punctuality_bonus
+          + holiday_pay
+          + other_adjustments
+```
+
+---
+
+### 2.22 `pay_period_lines` — Close Detail Lines
+
+| Field                    | Type          | Null | Default | Description                                | FR    |
+| ------------------------ | ------------- | ---- | ------- | ------------------------------------------ | ----- |
+| `id`                     | bigint        | NO   | auto    | PK                                         | —     |
+| `pay_period_employee_id` | bigint FK     | NO   | —       | Employee snapshot.                         | RF-49 |
+| `date`                   | date          | NO   | —       | Date the line corresponds to.              | RF-49 |
+| `concept`                | enum          | NO   | —       | Concept (see enum below).                  | RF-49 |
+| `description`            | varchar(255)  | NO   | —       | Human-readable description.                | RF-49 |
+| `amount`                 | decimal(10,2) | NO   | —       | Amount (negative for deductions).          | RF-49 |
+| `minutes`                | integer       | YES  | NULL    | Related minutes (for time-based concepts). | RF-49 |
+| `meta`                   | json          | YES  | NULL    | Additional context (rate, method, etc.).   | RF-49 |
+| `created_at`             | timestamp     | NO   | now     | —                                          | —     |
+| `updated_at`             | timestamp     | NO   | now     | —                                          | —     |
+
+---
+
+### 2.23 `attendance_audit_logs` — Change Audit Log
+
+| Field            | Type         | Null | Default | Description                                                  | FR    |
+| ---------------- | ------------ | ---- | ------- | ------------------------------------------------------------ | ----- |
+| `id`             | bigint       | NO   | auto    | PK                                                           | —     |
+| `auditable_type` | varchar(100) | NO   | —       | Model type (polymorphic, e.g. `Attendance`, `PartialLeave`). | RF-19 |
+| `auditable_id`   | bigint       | NO   | —       | Modified record ID.                                          | RF-19 |
+| `action`         | enum         | NO   | —       | `CREATE`, `UPDATE`, `DELETE`.                                | RF-19 |
+| `old_values`     | json         | YES  | NULL    | Values before the change.                                    | RF-19 |
+| `new_values`     | json         | YES  | NULL    | Values after the change.                                     | RF-19 |
+| `user_id`        | bigint FK    | NO   | —       | Who made the change (→ `users`).                             | RF-19 |
+| `reason`         | text         | YES  | NULL    | Change justification.                                        | RF-19 |
+| `created_at`     | timestamp    | NO   | now     | —                                                            | —     |
+
+---
+
+## 3) Enum Definitions
+
+### 3.1 Domain Enums
+
+| Enum                        | Values                                                                                                         | Used in                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **EmployeeRole**            | `MANAGER`, `COOK`, `KITCHEN_ASSISTANT`, `DELIVERY_DRIVER`                                                      | `employees.role`                                                          |
+| **WorkdayType**             | `FULL`, `PARTIAL`                                                                                              | `employee_schedules.workday_type`                                         |
+| **DayStatus**               | `WORKED`, `DAY_OFF`, `LEAVE`, `VACATION`, `HOLIDAY`, `ABSENCE`, `EXTRA`                                        | `attendances.day_status`                                                  |
+| **PartialLeaveType**        | `ARRIVE_LATE`, `LEAVE_EARLY`, `TAKE_TIME`                                                                      | `partial_leaves.type`                                                     |
+| **OvertimeMovementType**    | `EARNED`, `USED`, `PAID`, `ADJUSTMENT`                                                                         | `overtime_bank_movements.movement_type`                                   |
+| **OvertimeOrigin**          | `AUTO`, `MANUAL`                                                                                               | `overtime_bank_movements.origin`                                          |
+| **OvertimeValuationMethod** | `LFT_PROPORTIONAL`, `AGREED_RATE`                                                                              | `overtime_pay_configs.method`, `overtime_bank_movements.valuation_method` |
+| **LeaveStatus**             | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`                                                                 | `leaves.status`, `vacation_requests.status`                               |
+| **PayPeriodStatus**         | `OPEN`, `CLOSED`, `REOPENED`                                                                                   | `pay_periods.status`                                                      |
+| **PayConcept**              | `BASE_PAY`, `LATE_DEDUCTION`, `UNPAID_LEAVE`, `OVERTIME`, `EXTRA_DAY`, `PUNCTUALITY_BONUS`, `HOLIDAY`, `OTHER` | `pay_period_lines.concept`                                                |
+| **AuditAction**             | `CREATE`, `UPDATE`, `DELETE`                                                                                   | `attendance_audit_logs.action`                                            |
+
+---
+
+## 4) UML Class Diagram
+
+### 4.1 Domain Classes — Employees and Configuration
+
+```mermaid
+classDiagram
+    class Employee {
+        +int id
+        +int user_id
+        +string code
+        +string first_name
+        +string last_name
+        +EmployeeRole role
+        +bool is_active
+        --
+        +activeEmploymentPeriod() EmploymentPeriod
+        +currentSchedule() EmployeeSchedule
+        +currentWage() WageHistory
+        +currentOvertimeConfig() OvertimePayConfig
+        +currentBonusGroup() PunctualityBonusGroup
+        +overtimeBankBalance() int
+        +vacationBalance(year) decimal
+        +isActive() bool
+    }
+
+    class EmploymentPeriod {
+        +int id
+        +int employee_id
+        +int branch_id
+        +date start_date
+        +date end_date
+        +bool is_active
+        --
+        +isActive() bool
+        +durationInDays() int
+        +schedules() Collection~EmployeeSchedule~
+    }
+
+    class EmployeeSchedule {
+        +int id
+        +int employment_period_id
+        +string name
+        +date effective_from
+        +date effective_to
+        +WorkdayType workday_type
+        +int working_days_per_week
+        --
+        +isEffective(date) bool
+        +dayConfig(dayOfWeek) ScheduleDay
+        +workingDays() Collection~ScheduleDay~
+    }
+
+    class ScheduleDay {
+        +int id
+        +int employee_schedule_id
+        +int day_of_week
+        +bool is_day_off
+        +time expected_start
+        +time expected_lunch_end
+        +time expected_end
+        --
+        +isDayOff() bool
+        +expectedDurationMinutes() int
+    }
+
+    class WageHistory {
+        +int id
+        +int employee_id
+        +decimal daily_wage
+        +date effective_from
+        +date effective_to
+        --
+        +isEffective(date) bool
+        +minuteRate() decimal
+    }
+
+    class OvertimePayConfig {
+        +int id
+        +int employee_id
+        +OvertimeValuationMethod method
+        +decimal hourly_rate
+        +decimal lft_factor
+        +date effective_from
+        +date effective_to
+        --
+        +isEffective(date) bool
+        +calculatePay(minutes, dailyWage) decimal
+    }
+
+    Employee "1" --> "*" EmploymentPeriod
+    Employee "1" --> "*" WageHistory
+    Employee "1" --> "*" OvertimePayConfig
+    EmploymentPeriod "1" --> "*" EmployeeSchedule
+    EmployeeSchedule "1" --> "7" ScheduleDay
+```
+
+### 4.2 Domain Classes — Daily Operations
+
+```mermaid
+classDiagram
+    class Attendance {
+        +int id
+        +int employee_id
+        +date date
+        +datetime check_in
+        +datetime check_out
+        +datetime lunch_start
+        +datetime lunch_end
+        +int entry_late_seconds
+        +int lunch_late_seconds
+        +int net_worked_minutes
+        +int overtime_minutes
+        +bool overtime_authorized
+        +DayStatus day_status
+        --
+        +registerCheckIn(datetime) void
+        +registerCheckOut(datetime, authorizeOvertime) void
+        +registerLunchEnd(datetime) void
+        +calculateLateness(schedule) void
+        +calculateNetWorked() void
+        +calculateOvertime(schedule) void
+        +entryLateMinutes() int
+        +lunchLateMinutes() int
+        +isLateDeductible() bool
+        +deductibleMinutes() int
+    }
+
+    class PartialLeave {
+        +int id
+        +int employee_id
+        +int attendance_id
+        +date date
+        +PartialLeaveType type
+        +bool is_paid
+        +time start_time
+        +time end_time
+        +int duration_minutes
+        +string reason
+        +int approved_by
+        --
+        +deductionAmount(minuteRate) decimal
+        +isPaid() bool
+        +isUnpaid() bool
+    }
+
+    class NegotiatedExtraDay {
+        +int id
+        +int employee_id
+        +date date
+        +int branch_id
+        +decimal agreed_pay
+        +int approved_by
+        +string notes
+        --
+        +isApproved() bool
+    }
+
+    class OvertimeBankMovement {
+        +int id
+        +int employee_id
+        +int attendance_id
+        +date date
+        +int minutes
+        +OvertimeMovementType movement_type
+        +OvertimeOrigin origin
+        +OvertimeValuationMethod valuation_method
+        +decimal applied_rate
+        +decimal amount
+        +int authorized_by
+        --
+        +balanceImpact() int
+        +isEarned() bool
+        +isPaid() bool
+    }
+
+    Attendance "1" --> "*" PartialLeave
+    Attendance "1" --> "0..*" OvertimeBankMovement
+    Employee "1" --> "*" Attendance
+    Employee "1" --> "*" PartialLeave
+    Employee "1" --> "*" NegotiatedExtraDay
+    Employee "1" --> "*" OvertimeBankMovement
+```
+
+### 4.3 Domain Classes — Payroll Close
+
+```mermaid
+classDiagram
+    class PayPeriod {
+        +int id
+        +int branch_id
+        +date period_start
+        +date period_end
+        +PayPeriodStatus status
+        +int closed_by
+        +datetime closed_at
+        --
+        +isOpen() bool
+        +isClosed() bool
+        +close(userId) void
+        +reopen(userId, reason) void
+        +generateSnapshot() void
+        +employees() Collection~PayPeriodEmployee~
+    }
+
+    class PayPeriodEmployee {
+        +int id
+        +int pay_period_id
+        +int employee_id
+        +decimal base_pay
+        +decimal late_deductions
+        +decimal unpaid_leave_deductions
+        +decimal overtime_pay
+        +decimal extra_day_pay
+        +decimal punctuality_bonus
+        +decimal holiday_pay
+        +decimal other_adjustments
+        +decimal total_pay
+        +decimal free_hours_earned
+        +json daily_snapshot
+        --
+        +calculateTotal() decimal
+        +breakdown() array
+        +dailyEvidence() array
+    }
+
+    class PayPeriodLine {
+        +int id
+        +int pay_period_employee_id
+        +date date
+        +PayConcept concept
+        +string description
+        +decimal amount
+        +int minutes
+        +json meta
+        --
+        +isDeduction() bool
+        +isAddition() bool
+    }
+
+    class PayrollCalculator {
+        <<Service>>
+        --
+        +calculateBasePay(employee, period) decimal
+        +calculateLateDeductions(attendances) decimal
+        +calculateUnpaidLeaveDeductions(leaves) decimal
+        +calculateOvertimePay(movements) decimal
+        +calculateExtraDayPay(extraDays) decimal
+        +calculatePunctualityBonus(attendances, config) decimal
+        +calculateFreeHours(punctualDays) decimal
+        +generatePayPeriod(branch, start, end) PayPeriod
+    }
+
+    PayPeriod "1" --> "*" PayPeriodEmployee
+    PayPeriodEmployee "1" --> "*" PayPeriodLine
+    PayrollCalculator ..> PayPeriod : creates
+    PayrollCalculator ..> PayPeriodEmployee : calculates
+```
+
+### 4.4 Domain Classes — Punctuality
+
+```mermaid
+classDiagram
+    class PunctualityRange {
+        +int id
+        +int min_seconds
+        +int max_seconds
+        +decimal bonus_percentage
+        +int sort_order
+        --
+        +matches(lateSeconds) bool
+    }
+
+    class PunctualityBonusGroup {
+        +int id
+        +string name
+        +decimal weekly_bonus_amount
+        +int working_days_divisor
+        --
+        +dailyBonusAmount() decimal
+    }
+
+    class EmployeeBonusConfig {
+        +int id
+        +int employee_id
+        +int punctuality_bonus_group_id
+        +date effective_from
+        +date effective_to
+        --
+        +isEffective(date) bool
+    }
+
+    class PunctualityException {
+        +int id
+        +int employee_id
+        +int day_of_week
+        +decimal forced_percentage
+        +date effective_from
+        +date effective_to
+        --
+        +isEffective(date) bool
+        +appliesToDay(dayOfWeek) bool
+    }
+
+    class PunctualityService {
+        <<Service>>
+        --
+        +evaluateDay(attendance, schedule) decimal
+        +getApplicablePercentage(lateSeconds) decimal
+        +checkException(employee, date) decimal|null
+        +calculateDailyBonus(employee, date) decimal
+        +calculateWeeklyBonus(employee, period) decimal
+        +calculateFreeHours(punctualDays) decimal
+    }
+
+    PunctualityService ..> PunctualityRange : uses
+    PunctualityService ..> PunctualityBonusGroup : uses
+    PunctualityService ..> PunctualityException : checks
+    EmployeeBonusConfig --> PunctualityBonusGroup
+```
+
+---
+
+## 5) State Diagrams
+
+### 5.1 Pay Period Lifecycle (`PayPeriod`)
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN : Create period
+
+    OPEN --> CLOSED : Manager closes week
+    note right of CLOSED
+        Frozen snapshot.
+        No edits (except Admin).
+    end note
+
+    CLOSED --> REOPENED : Admin reopens (with reason + audit)
+    REOPENED --> CLOSED : Recalculate and close again
+
+    CLOSED --> [*] : Period finalized
+```
+
+### 5.2 Request Lifecycle (Leave / VacationRequest)
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING : Employee/Manager creates request
+
+    PENDING --> APPROVED : Manager/Admin approves
+    PENDING --> REJECTED : Manager/Admin rejects
+    PENDING --> CANCELLED : Requester cancels
+
+    APPROVED --> CANCELLED : Admin cancels (with audit)
+
+    APPROVED --> [*]
+    REJECTED --> [*]
+    CANCELLED --> [*]
+```
+
+### 5.3 Attendance Day Flow (`Attendance`)
+
+```mermaid
+stateDiagram-v2
+    [*] --> NoRecord : Start of day
+
+    NoRecord --> CheckInRecorded : Manager records check-in
+    note right of CheckInRecorded
+        Calculates entry_late_seconds
+        against expected_start.
+        If >30 min → automatic deduction.
+    end note
+
+    CheckInRecorded --> LunchRecorded : Records lunch return
+    note right of LunchRecorded
+        Calculates lunch_late_seconds
+        against expected_lunch_end.
+        If >30 min → automatic deduction.
+    end note
+
+    CheckInRecorded --> CheckOutRecorded : Records check-out (no lunch)
+    LunchRecorded --> CheckOutRecorded : Records check-out
+
+    CheckOutRecorded --> DayClosed : Manager confirms day
+    note right of DayClosed
+        Calculates overtime_minutes.
+        Manager decides: pay OT? Yes/No.
+        Generates OvertimeBankMovement.
+    end note
+
+    DayClosed --> [*]
+
+    state "Parallel events" as parallel {
+        [*] --> PartialLeaveRecorded : Partial leave registered
+        [*] --> ExtraDayRecorded : Marked as Extra
+        [*] --> AbsenceRecorded : Marked as absence/day off
+    }
+```
+
+### 5.4 Overtime Bank Movements
+
+```mermaid
+stateDiagram-v2
+    [*] --> EARNED : Check-out with overtime_minutes > 0 (AUTO)
+    [*] --> EARNED : Authorized manual entry (MANUAL)
+
+    EARNED --> PAID : Manager authorizes payment at close
+    note right of PAID
+        Recorded: method, rate,
+        amount, who authorized.
+    end note
+
+    EARNED --> USED : Redeemed for time off
+    EARNED --> ADJUSTMENT : Administrative correction
+
+    PAID --> [*]
+    USED --> [*]
+    ADJUSTMENT --> [*]
+```
+
+---
+
+## 6) Sequence Diagrams
+
+### 6.1 Check-in Registration (Daily Operation)
+
+```mermaid
+sequenceDiagram
+    actor M as Manager
+    participant UI as "Today" View
+    participant API as AttendanceController
+    participant Svc as AttendanceService
+    participant DB as Database
+
+    M->>UI: Selects employee, records clock-in time
+    UI->>API: POST /attendances { employee_id, check_in }
+    API->>Svc: registerCheckIn(employee, checkInTime)
+
+    Svc->>DB: Get employee's current schedule
+    DB-->>Svc: ScheduleDay (expected_start)
+
+    Svc->>Svc: Calculate entry_late_seconds = check_in - expected_start
+
+    alt Tardiness > 30 minutes (1800s)
+        Svc->>Svc: Mark as deductible (RF-15b)
+    end
+
+    Svc->>DB: INSERT/UPDATE attendance
+    Svc->>DB: INSERT attendance_audit_log
+
+    Svc-->>API: Attendance created
+    API-->>UI: 201 Created + data
+    UI-->>M: Confirmation (shows tardiness if applicable)
+```
+
+### 6.2 Check-out Registration with Overtime Decision
+
+```mermaid
+sequenceDiagram
+    actor M as Manager
+    participant UI as "Today" View
+    participant API as AttendanceController
+    participant Svc as AttendanceService
+    participant OTSvc as OvertimeService
+    participant DB as Database
+
+    M->>UI: Records employee's clock-out time
+    UI->>API: PATCH /attendances/{id} { check_out }
+    API->>Svc: registerCheckOut(attendance, checkOutTime)
+
+    Svc->>DB: Get current schedule
+    DB-->>Svc: ScheduleDay (expected_end)
+
+    Svc->>Svc: Calculate overtime_minutes = check_out - expected_end
+    Svc->>Svc: Calculate net_worked_minutes
+
+    alt overtime_minutes > 0
+        Svc-->>API: Requires OT decision
+        API-->>UI: Prompt: Authorize overtime pay?
+        UI-->>M: Shows overtime_minutes, requests decision
+
+        alt Manager authorizes payment
+            M->>UI: Yes, pay
+            UI->>API: PATCH /attendances/{id} { overtime_authorized: true }
+            API->>OTSvc: authorizeOvertimePay(attendance, manager)
+
+            OTSvc->>DB: Get employee's OvertimePayConfig
+            DB-->>OTSvc: Config (method, rate)
+
+            OTSvc->>OTSvc: Calculate amount by method
+            OTSvc->>DB: INSERT overtime_bank_movement (EARNED + PAID)
+            OTSvc->>DB: UPDATE attendance (overtime_authorized = true)
+        else Manager does not authorize
+            M->>UI: Do not pay
+            UI->>API: PATCH /attendances/{id} { overtime_authorized: false }
+            API->>OTSvc: recordOvertimeHistorical(attendance)
+            OTSvc->>DB: INSERT overtime_bank_movement (EARNED, no payment)
+        end
+    end
+
+    Svc->>DB: UPDATE attendance (check_out, net_worked_minutes, overtime_minutes)
+    Svc->>DB: INSERT attendance_audit_log
+    API-->>UI: 200 OK
+```
+
+### 6.3 Weekly Close (Snapshot)
+
+```mermaid
+sequenceDiagram
+    actor M as Manager/Admin
+    participant UI as Close View
+    participant API as PayPeriodController
+    participant Calc as PayrollCalculator
+    participant Punct as PunctualityService
+    participant DB as Database
+
+    M->>UI: Selects week, requests preview
+    UI->>API: GET /pay-periods/preview?start=...&end=...
+
+    API->>Calc: generatePreview(branch, start, end)
+    Calc->>DB: Get active employees for the period
+    DB-->>Calc: Employee list
+
+    loop For each employee
+        Calc->>DB: Get attendances for the period
+        Calc->>DB: Get current wage
+        Calc->>DB: Get partial_leaves
+        Calc->>DB: Get negotiated_extra_days
+        Calc->>DB: Get overtime_bank_movements (PAID)
+
+        Calc->>Calc: calculateBasePay(wage, daysWorked)
+        Calc->>Calc: calculateLateDeductions(attendances)
+        Calc->>Calc: calculateUnpaidLeaveDeductions(partialLeaves)
+        Calc->>Calc: calculateOvertimePay(movements)
+        Calc->>Calc: calculateExtraDayPay(extraDays)
+
+        Calc->>Punct: calculateWeeklyBonus(employee, attendances)
+        Punct->>DB: Get bonus config + exceptions + ranges
+        Punct-->>Calc: punctualityBonus + freeHours
+
+        Calc->>Calc: Generate daily_snapshot (day-by-day evidence)
+        Calc->>Calc: Sum total_pay
+    end
+
+    Calc-->>API: Preview with totals and breakdown
+    API-->>UI: Preview JSON
+    UI-->>M: Summary table with breakdown
+
+    M->>UI: Confirms close
+    UI->>API: POST /pay-periods { branch_id, period_start, period_end }
+
+    API->>Calc: generateAndClose(branch, start, end, userId)
+    Calc->>DB: INSERT pay_period (status=CLOSED)
+    Calc->>DB: INSERT pay_period_employees (frozen snapshot)
+    Calc->>DB: INSERT pay_period_lines (detail by concept/day)
+    Calc->>DB: INSERT attendance_audit_log
+
+    API-->>UI: 201 Created (period closed)
+    UI-->>M: Successful close confirmation
+```
+
+### 6.4 Partial Leave Registration
+
+```mermaid
+sequenceDiagram
+    actor M as Manager
+    participant UI as "Today" View
+    participant API as PartialLeaveController
+    participant Svc as LeaveService
+    participant DB as Database
+
+    M->>UI: Records partial leave for employee
+    UI->>API: POST /partial-leaves { employee_id, date, type, is_paid, duration_minutes, reason }
+    API->>Svc: registerPartialLeave(data)
+
+    Svc->>Svc: Validate type (ARRIVE_LATE|LEAVE_EARLY|TAKE_TIME)
+    Svc->>Svc: Validate duration > 0
+
+    Svc->>DB: Find attendance for the day
+    DB-->>Svc: Attendance (or null)
+
+    alt Attendance exists
+        Svc->>DB: INSERT partial_leave (with attendance_id)
+    else No attendance exists
+        Svc->>DB: INSERT partial_leave (attendance_id = null)
+    end
+
+    Svc->>DB: INSERT attendance_audit_log
+
+    Svc-->>API: PartialLeave created
+    API-->>UI: 201 Created
+
+    note over UI: If is_paid=false, the deduction is<br/>calculated at weekly close (minute by minute)
+```
+
+---
+
+## 7) Integrity Rules and Constraints
+
+### 7.1 Uniqueness Constraints
+
+| Table                   | Constraint                                        | Description                                            |
+| ----------------------- | ------------------------------------------------- | ------------------------------------------------------ |
+| `employees`             | UNIQUE(`code`)                                    | Employee code unique system-wide.                      |
+| `attendances`           | UNIQUE(`employee_id`, `date`)                     | One attendance record per employee per day.            |
+| `negotiated_extra_days` | UNIQUE(`employee_id`, `date`)                     | One extra day per employee per date.                   |
+| `schedule_days`         | UNIQUE(`employee_schedule_id`, `day_of_week`)     | One configuration per day of week per schedule.        |
+| `vacation_entitlements` | UNIQUE(`employee_id`, `year`)                     | One vacation entitlement record per employee per year. |
+| `holidays`              | UNIQUE(`date`)                                    | One holiday per date.                                  |
+| `pay_periods`           | UNIQUE(`branch_id`, `period_start`, `period_end`) | One period per branch and date range.                  |
+| `pay_period_employees`  | UNIQUE(`pay_period_id`, `employee_id`)            | One snapshot per employee per period.                  |
+| `leave_types`           | UNIQUE(`code`)                                    | Leave type code unique.                                |
+
+### 7.2 Data-Level Business Rules
+
+| Rule                                 | Validation                                                                            | Reference     |
+| ------------------------------------ | ------------------------------------------------------------------------------------- | ------------- |
+| Only one active employment period    | `employment_periods` with `is_active=true` per `employee_id` must be ≤ 1              | RF-06         |
+| Tardiness in seconds ≥ 0             | `entry_late_seconds >= 0` and `lunch_late_seconds >= 0`                               | RF-13         |
+| Leave duration > 0                   | `partial_leaves.duration_minutes > 0`                                                 | RF-25a        |
+| Agreed pay > 0                       | `negotiated_extra_days.agreed_pay > 0`                                                | RF-39         |
+| Daily wage > 0                       | `wage_histories.daily_wage > 0`                                                       | RF-22         |
+| Weekly bonus ≥ 0                     | `punctuality_bonus_groups.weekly_bonus_amount >= 0`                                   | RF-33         |
+| Bonus percentage 0–100               | `punctuality_ranges.bonus_percentage BETWEEN 0 AND 100`                               | RF-32         |
+| Forced percentage 0–100              | `punctuality_exceptions.forced_percentage BETWEEN 0 AND 100`                          | RF-37         |
+| Closed period not editable           | If `pay_periods.status = CLOSED`, do not allow INSERT/UPDATE on lines (except reopen) | RN-16         |
+| Paid overtime requires authorization | `overtime_bank_movements.movement_type = PAID` requires `authorized_by IS NOT NULL`   | DC-01, RF-47a |
+| Vacation balance ≥ 0                 | `vacation_entitlements.entitled_days - used_days >= 0` (app-level)                    | RF-26         |
+
+### 7.3 Recommended Indexes
+
+| Table                     | Index                                      | Justification                   |
+| ------------------------- | ------------------------------------------ | ------------------------------- |
+| `attendances`             | (`date`)                                   | Queries by date ("Today" view). |
+| `attendances`             | (`employee_id`, `date`)                    | Fast lookup by employee+date.   |
+| `attendances`             | (`day_status`)                             | Status filters.                 |
+| `partial_leaves`          | (`employee_id`, `date`)                    | Lookup by employee+date.        |
+| `overtime_bank_movements` | (`employee_id`, `date`)                    | Balance and bank queries.       |
+| `pay_periods`             | (`branch_id`, `status`)                    | Open periods by branch.         |
+| `employment_periods`      | (`employee_id`, `is_active`)               | Active period by employee.      |
+| `employee_schedules`      | (`employment_period_id`, `effective_from`) | Current schedule.               |
+| `wage_histories`          | (`employee_id`, `effective_from`)          | Current wage.                   |
+| `attendance_audit_logs`   | (`auditable_type`, `auditable_id`)         | Polymorphic audit lookup.       |
+
+---
+
+## Entity Summary
+
+| #   | Entity                | Table                      | Subdomain        |
+| --- | --------------------- | -------------------------- | ---------------- |
+| 1   | Employee              | `employees`                | Employees        |
+| 2   | EmploymentPeriod      | `employment_periods`       | Employees        |
+| 3   | EmployeeSchedule      | `employee_schedules`       | Schedules        |
+| 4   | ScheduleDay           | `schedule_days`            | Schedules        |
+| 5   | WageHistory           | `wage_histories`           | Employees        |
+| 6   | OvertimePayConfig     | `overtime_pay_configs`     | Configuration    |
+| 7   | Attendance            | `attendances`              | Daily Operations |
+| 8   | PartialLeave          | `partial_leaves`           | Daily Operations |
+| 9   | NegotiatedExtraDay    | `negotiated_extra_days`    | Daily Operations |
+| 10  | OvertimeBankMovement  | `overtime_bank_movements`  | Overtime         |
+| 11  | LeaveType             | `leave_types`              | Catalogs         |
+| 12  | Leave                 | `leaves`                   | Leaves           |
+| 13  | Holiday               | `holidays`                 | Catalogs         |
+| 14  | VacationEntitlement   | `vacation_entitlements`    | Vacations        |
+| 15  | VacationRequest       | `vacation_requests`        | Vacations        |
+| 16  | PunctualityRange      | `punctuality_ranges`       | Punctuality      |
+| 17  | PunctualityBonusGroup | `punctuality_bonus_groups` | Punctuality      |
+| 18  | EmployeeBonusConfig   | `employee_bonus_configs`   | Punctuality      |
+| 19  | PunctualityException  | `punctuality_exceptions`   | Punctuality      |
+| 20  | PayPeriod             | `pay_periods`              | Payroll          |
+| 21  | PayPeriodEmployee     | `pay_period_employees`     | Payroll          |
+| 22  | PayPeriodLine         | `pay_period_lines`         | Payroll          |
+| 23  | AttendanceAuditLog    | `attendance_audit_logs`    | Audit            |
+
+---
+
+> **Traceability:** Each field in the dictionary references the FR/BR/DC that originated it.
+> **Conventions:** Table names in snake_case plural, models in PascalCase singular, FKs `{model}_id`, automatic timestamps, soft deletes where applicable, JSON `meta` for extensibility.

@@ -15,7 +15,6 @@ return new class extends Migration
             $table->boolean('is_pickable')->default(true)->after('is_active')
                 ->comment('Whether this location can be used for automatic picking/reservation');
 
-            // Add index for filtering pickable locations
             $table->index(['is_active', 'is_pickable']);
         });
     }

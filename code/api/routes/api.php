@@ -4,6 +4,11 @@ use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
+use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
+use App\Http\Controllers\Api\V1\Employees\ShowEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
 use App\Http\Controllers\Api\V1\Items\CreateItemController;
 use App\Http\Controllers\Api\V1\Items\CreateItemVariantController;
 use App\Http\Controllers\Api\V1\Items\DeleteItemController;
@@ -170,6 +175,15 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('inventory')->group(function () {
         Route::post('opening-balance', RegisterOpeningBalanceController::class)->name('inventory.opening-balance');
         Route::post('stock-out', RegisterStockOutController::class)->name('inventory.stock-out');
+    });
+
+    // Employees (All Protected)
+    Route::middleware('auth:api')->prefix('employees')->group(function () {
+        Route::get('/', ListEmployeesController::class)->name('employees.list')->middleware('permission:employees.view');
+        Route::post('/', CreateEmployeeController::class)->name('employees.create')->middleware('permission:employees.create');
+        Route::get('/{employee}', ShowEmployeeController::class)->name('employees.show')->middleware('permission:employees.view');
+        Route::put('/{employee}', UpdateEmployeeController::class)->name('employees.update')->middleware('permission:employees.update');
+        Route::patch('/{employee}/toggle-active', ToggleEmployeeActiveController::class)->name('employees.toggle-active')->middleware('permission:employees.update');
     });
 
     // Cash Adjustments Module (All Protected)
