@@ -21,6 +21,16 @@ Como Admin, quiero crear, listar, ver, actualizar y desactivar empleados vía AP
 - [ ] 📝 Add OpenAPI/Swagger annotations to controllers and requests
 - [ ] 🧪 Feature tests: CRUD happy paths, validation errors (duplicate code, invalid role), toggle active, unauthorized access
 
+### 🖥️ Frontend Tasks (webapp)
+
+- [ ] 📱 **Employee List Page** — table with columns: code, name, role, active status; filters by role and active; pagination; search by name
+- [ ] 📱 **Create Employee Page/Modal** — form: first_name, last_name, code, role (select), email, phone, password; validation errors display; success toast + redirect to list
+- [ ] 📱 **Employee Detail Page** — header (name, code, role badge, active status), tabs: General, Employment Periods (#020), Wages (#021), Schedules (#023), Overtime Config (#048)
+- [ ] 📱 **Edit Employee Modal** — pre-filled form for updatable fields (first_name, last_name, role, meta)
+- [ ] 📱 **Toggle Active Button** — confirm dialog, optimistic update, success toast
+- [ ] 📱 **Employee search/filter hooks** — `useEmployees(filters)`, `useEmployee(hashid)`, `useCreateEmployee()`, `useUpdateEmployee()`, `useToggleEmployee()`
+- [ ] 🧪 E2E test: create employee, verify in list, view detail, edit, toggle active
+
 ---
 
 ## 🎯 Acceptance Criteria
@@ -29,6 +39,9 @@ Como Admin, quiero crear, listar, ver, actualizar y desactivar empleados vía AP
 - [ ] Hashids used for external IDs
 - [ ] Pagination works
 - [ ] Validation rejects invalid data
+- [ ] 🖥️ Employee list renders with pagination and filters
+- [ ] 🖥️ Create form validates and shows API errors
+- [ ] 🖥️ Detail page loads with tabs
 
 ---
 
@@ -43,11 +56,13 @@ Como Admin, quiero crear, listar, ver, actualizar y desactivar empleados vía AP
 ## ⏱️ Time
 
 ### 📊 Estimates
+
 - **Optimistic:** `4h`
 - **Pessimistic:** `6h`
 - **Tracked:** ``
 
 ### 📅 Sessions
+
 ```json
 []
 ```
