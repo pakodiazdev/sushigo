@@ -12,22 +12,22 @@ Como desarrollador, necesito crear la migración y modelo `Employee` con campos 
 
 ## ✅ Technical Tasks
 
-- [ ] 📂 Create migration `create_employees_table` — id, user_id (FK nullable → users), code (varchar 20, unique), first_name (varchar 100), last_name (varchar 100), role (enum: MANAGER|COOK|KITCHEN_ASSISTANT|DELIVERY_DRIVER), is_active (bool default true), meta (json nullable), timestamps, soft_deletes
-- [ ] 🔧 Create `EmployeeRole` enum class with values: MANAGER, COOK, KITCHEN_ASSISTANT, DELIVERY_DRIVER
-- [ ] 🔧 Create `Employee` model — $fillable, $casts (role → enum, is_active → bool, meta → array), traits: HasFactory, SoftDeletes
-- [ ] 🔧 Add relationships: belongsTo(User), hasMany(EmploymentPeriod), hasMany(WageHistory), hasMany(Attendance)
-- [ ] 🔧 Add scopes: active(), byRole(role)
-- [ ] 🏭 Create EmployeeFactory with valid fake data
-- [ ] 🧪 Feature test: create employee, soft delete, unique code constraint, user relationship
+- [x] 📂 Create migration `create_employees_table` — id, user_id (FK nullable → users), code (varchar 20, unique), first_name (varchar 100), last_name (varchar 100), role (enum: MANAGER|COOK|KITCHEN_ASSISTANT|DELIVERY_DRIVER), is_active (bool default true), meta (json nullable), timestamps, soft_deletes
+- [x] 🔧 Create `EmployeeRole` enum class with values: MANAGER, COOK, KITCHEN_ASSISTANT, DELIVERY_DRIVER
+- [x] 🔧 Create `Employee` model — $fillable, $casts (role → enum, is_active → bool, meta → array), traits: HasFactory, SoftDeletes
+- [x] 🔧 Add relationships: belongsTo(User) _(hasMany for EmploymentPeriod, WageHistory, Attendance deferred to tasks #017, #018, #025)_
+- [x] 🔧 Add scopes: active(), byRole(role)
+- [x] 🏭 Create EmployeeFactory with valid fake data
+- [x] 🧪 Feature test: create employee, soft delete, unique code constraint, user relationship
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Migration runs without errors
-- [ ] Model creates/reads/deletes correctly
-- [ ] Factory generates valid data
-- [ ] Enum restricts to valid roles
+- [x] Migration runs without errors
+- [x] Model creates/reads/deletes correctly
+- [x] Factory generates valid data
+- [x] Enum restricts to valid roles
 
 ---
 
