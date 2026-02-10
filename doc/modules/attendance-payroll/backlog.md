@@ -20,37 +20,38 @@
 
 ## Épicas
 
-| Épica | Nombre | Historias |
-|-------|--------|-----------|
-| E1 | Empleados | AP-001 → AP-006 |
-| E2 | Horarios | AP-007 → AP-011 |
-| E3 | Asistencia diaria | AP-012 → AP-019 |
-| E4 | Permisos parciales | AP-020 → AP-023 |
-| E5 | Puntualidad y bonos | AP-024 → AP-030 |
-| E6 | Días extra negociados | AP-031 → AP-033 |
-| E7 | Banco de horas extra | AP-034 → AP-039 |
-| E8 | Cierre semanal (nómina) | AP-040 → AP-047 |
-| E9 | Permisos (día completo) | AP-048 → AP-051 |
-| E10 | Vacaciones | AP-052 → AP-055 |
-| E11 | Festivos | AP-056 → AP-058 |
-| E12 | Reportes y exportaciones | AP-059 → AP-063 |
-| E13 | Auditoría y permisos | AP-064 → AP-068 |
+| Épica | Nombre                   | Historias       |
+| ----- | ------------------------ | --------------- |
+| E1    | Empleados                | AP-001 → AP-006 |
+| E2    | Horarios                 | AP-007 → AP-011 |
+| E3    | Asistencia diaria        | AP-012 → AP-019 |
+| E4    | Permisos parciales       | AP-020 → AP-023 |
+| E5    | Puntualidad y bonos      | AP-024 → AP-030 |
+| E6    | Días extra negociados    | AP-031 → AP-033 |
+| E7    | Banco de horas extra     | AP-034 → AP-039 |
+| E8    | Cierre semanal (nómina)  | AP-040 → AP-047 |
+| E9    | Permisos (día completo)  | AP-048 → AP-051 |
+| E10   | Vacaciones               | AP-052 → AP-055 |
+| E11   | Festivos                 | AP-056 → AP-058 |
+| E12   | Reportes y exportaciones | AP-059 → AP-063 |
+| E13   | Auditoría y permisos     | AP-064 → AP-068 |
 
 ---
 
 ## E1 — Empleados
 
-### AP-001 · Migración y modelo Employee
+### AP-001 · Migración y modelo Employee ✅
 **Talla:** M · **Prioridad:** P0 · **RF:** RF-01, RF-02
+**Commit:** `3eb59c8` · **Task:** #015
 
 > Como desarrollador, quiero crear la migración y modelo `Employee` con sus campos base, para tener la entidad fundacional del módulo.
 
 **CA:**
-- [ ] Migración crea tabla `employees` con: id, user_id (FK nullable), code (unique), first_name, last_name, role (enum), is_active, meta (json), timestamps, soft_delete
-- [ ] Modelo `Employee` con `$fillable`, `$casts`, trait `HasFactory`, `SoftDeletes`
-- [ ] Enum `EmployeeRole` con valores: MANAGER, COOK, KITCHEN_ASSISTANT, DELIVERY_DRIVER
-- [ ] Factory genera datos válidos
-- [ ] Test unitario: creación, soft delete, relación con User
+- [x] Migración crea tabla `employees` con: id, user_id (FK nullable), code (unique), first_name, last_name, role (enum), is_active, meta (json), timestamps, soft_delete
+- [x] Modelo `Employee` con `$fillable`, `$casts`, trait `HasFactory`, `SoftDeletes`
+- [x] Enum `EmployeeRole` con valores: MANAGER, COOK, KITCHEN_ASSISTANT, DELIVERY_DRIVER
+- [x] Factory genera datos válidos
+- [x] Test unitario: creación, soft delete, relación con User
 
 ---
 
@@ -1046,148 +1047,148 @@ AP-001 ──→ AP-002
 ## Sugerencia de sprints (2 semanas cada uno)
 
 ### Sprint 1 — Fundaciones (modelos + CRUD empleados)
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-001 | Migración y modelo Employee | M | P0 |
-| AP-002 | API CRUD de empleados | M | P0 |
-| AP-003 | Migración y modelo EmploymentPeriod | S | P0 |
-| AP-004 | API de periodos laborales | M | P1 |
-| AP-005 | Migración y modelo WageHistory | S | P0 |
-| AP-006 | API historial de sueldo | S | P1 |
-| AP-064 | Migración y modelo AttendanceAuditLog | S | P0 |
+| ID     | Historia                              | Talla | Prio |
+| ------ | ------------------------------------- | ----- | ---- |
+| AP-001 | Migración y modelo Employee           | M     | P0   |
+| AP-002 | API CRUD de empleados                 | M     | P0   |
+| AP-003 | Migración y modelo EmploymentPeriod   | S     | P0   |
+| AP-004 | API de periodos laborales             | M     | P1   |
+| AP-005 | Migración y modelo WageHistory        | S     | P0   |
+| AP-006 | API historial de sueldo               | S     | P1   |
+| AP-064 | Migración y modelo AttendanceAuditLog | S     | P0   |
 
 ### Sprint 2 — Horarios + Asistencia básica
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-007 | Migración y modelos Schedule | M | P0 |
-| AP-008 | API crear horario con días | M | P1 |
-| AP-009 | API consultar horario vigente | S | P1 |
-| AP-012 | Migración y modelo Attendance | M | P0 |
-| AP-013 | API registrar check-in | M | P0 |
-| AP-014 | API registrar regreso de comida | S | P1 |
-| AP-015 | API registrar check-out | M | P0 |
+| ID     | Historia                        | Talla | Prio |
+| ------ | ------------------------------- | ----- | ---- |
+| AP-007 | Migración y modelos Schedule    | M     | P0   |
+| AP-008 | API crear horario con días      | M     | P1   |
+| AP-009 | API consultar horario vigente   | S     | P1   |
+| AP-012 | Migración y modelo Attendance   | M     | P0   |
+| AP-013 | API registrar check-in          | M     | P0   |
+| AP-014 | API registrar regreso de comida | S     | P1   |
+| AP-015 | API registrar check-out         | M     | P0   |
 
 ### Sprint 3 — Decisiones de overtime + Permisos parciales
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-016 | API autorizar/rechazar pago HE | M | P1 |
-| AP-017 | Cálculo automático tardanza deducible | S | P1 |
-| AP-018 | API consultar asistencia del día | M | P1 |
-| AP-019 | API marcar día sin asistencia | S | P1 |
-| AP-020 | Migración y modelo PartialLeave | S | P0 |
-| AP-021 | API registrar permiso parcial | M | P1 |
-| AP-022 | API listar permisos parciales | S | P1 |
-| AP-023 | Cálculo de deducción por permiso sin goce | S | P1 |
+| ID     | Historia                                  | Talla | Prio |
+| ------ | ----------------------------------------- | ----- | ---- |
+| AP-016 | API autorizar/rechazar pago HE            | M     | P1   |
+| AP-017 | Cálculo automático tardanza deducible     | S     | P1   |
+| AP-018 | API consultar asistencia del día          | M     | P1   |
+| AP-019 | API marcar día sin asistencia             | S     | P1   |
+| AP-020 | Migración y modelo PartialLeave           | S     | P0   |
+| AP-021 | API registrar permiso parcial             | M     | P1   |
+| AP-022 | API listar permisos parciales             | S     | P1   |
+| AP-023 | Cálculo de deducción por permiso sin goce | S     | P1   |
 
 ### Sprint 4 — Puntualidad + Días extra
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-024 | Migración y modelo PunctualityRange | S | P0 |
-| AP-025 | Migración y modelo BonusGroup + Config | S | P0 |
-| AP-026 | Migración y modelo PunctualityException | S | P1 |
-| AP-027 | Servicio cálculo bono diario | M | P1 |
-| AP-028 | Servicio cálculo bono semanal | S | P1 |
-| AP-031 | Migración y modelo NegotiatedExtraDay | S | P0 |
-| AP-032 | API registrar día extra negociado | S | P1 |
-| AP-065 | Trait de auditoría automática | M | P1 |
+| ID     | Historia                                | Talla | Prio |
+| ------ | --------------------------------------- | ----- | ---- |
+| AP-024 | Migración y modelo PunctualityRange     | S     | P0   |
+| AP-025 | Migración y modelo BonusGroup + Config  | S     | P0   |
+| AP-026 | Migración y modelo PunctualityException | S     | P1   |
+| AP-027 | Servicio cálculo bono diario            | M     | P1   |
+| AP-028 | Servicio cálculo bono semanal           | S     | P1   |
+| AP-031 | Migración y modelo NegotiatedExtraDay   | S     | P0   |
+| AP-032 | API registrar día extra negociado       | S     | P1   |
+| AP-065 | Trait de auditoría automática           | M     | P1   |
 
 ### Sprint 5 — Banco de overtime + Cierre semanal
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-034 | Migración y modelo OvertimeBankMovement | S | P0 |
-| AP-035 | Migración y modelo OvertimePayConfig | S | P0 |
-| AP-036 | Servicio generación automática overtime | M | P1 |
-| AP-037 | API configurar pago overtime | S | P1 |
-| AP-040 | Migraciones modelos PayPeriod | M | P0 |
-| AP-041 | Servicio cálculo sueldo base | S | P1 |
-| AP-042 | Servicio cálculo deducciones tardanza | S | P1 |
-| AP-043 | Servicio cálculo deducciones permisos sin goce | S | P1 |
+| ID     | Historia                                       | Talla | Prio |
+| ------ | ---------------------------------------------- | ----- | ---- |
+| AP-034 | Migración y modelo OvertimeBankMovement        | S     | P0   |
+| AP-035 | Migración y modelo OvertimePayConfig           | S     | P0   |
+| AP-036 | Servicio generación automática overtime        | M     | P1   |
+| AP-037 | API configurar pago overtime                   | S     | P1   |
+| AP-040 | Migraciones modelos PayPeriod                  | M     | P0   |
+| AP-041 | Servicio cálculo sueldo base                   | S     | P1   |
+| AP-042 | Servicio cálculo deducciones tardanza          | S     | P1   |
+| AP-043 | Servicio cálculo deducciones permisos sin goce | S     | P1   |
 
 ### Sprint 6 — Motor de cierre completo
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-044 | Servicio cálculo completo (PayrollCalculator) | L | P1 |
-| AP-045 | API preview cierre semanal | M | P1 |
-| AP-046 | API confirmar cierre (freeze) | M | P1 |
-| AP-059 | API reporte "Hoy" | M | P1 |
-| AP-060 | API reporte resumen semanal | M | P1 |
-| AP-061 | API consultar periodo cerrado | S | P1 |
-| AP-066 | Restricción edición Manager solo hoy | S | P1 |
-| AP-067 | Edición histórica Admin con razón | S | P1 |
+| ID     | Historia                                      | Talla | Prio |
+| ------ | --------------------------------------------- | ----- | ---- |
+| AP-044 | Servicio cálculo completo (PayrollCalculator) | L     | P1   |
+| AP-045 | API preview cierre semanal                    | M     | P1   |
+| AP-046 | API confirmar cierre (freeze)                 | M     | P1   |
+| AP-059 | API reporte "Hoy"                             | M     | P1   |
+| AP-060 | API reporte resumen semanal                   | M     | P1   |
+| AP-061 | API consultar periodo cerrado                 | S     | P1   |
+| AP-066 | Restricción edición Manager solo hoy          | S     | P1   |
+| AP-067 | Edición histórica Admin con razón             | S     | P1   |
 
 ### Sprint 7 — Completar MVP + Post-MVP
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-029 | Servicio cálculo horas libres | S | P2 |
-| AP-030 | API config puntualidad | M | P2 |
-| AP-033 | API listar días extra | S | P2 |
-| AP-038 | API balance overtime bank | S | P2 |
-| AP-039 | API movimiento manual banco | S | P2 |
-| AP-047 | API reabrir periodo | S | P2 |
-| AP-048 | Migración y modelo LeaveType | S | P1 |
-| AP-049 | Migración y modelo Leave | S | P1 |
-| AP-050 | API registrar y aprobar permiso | M | P2 |
-| AP-056 | Migración y modelo Holiday | S | P1 |
+| ID     | Historia                        | Talla | Prio |
+| ------ | ------------------------------- | ----- | ---- |
+| AP-029 | Servicio cálculo horas libres   | S     | P2   |
+| AP-030 | API config puntualidad          | M     | P2   |
+| AP-033 | API listar días extra           | S     | P2   |
+| AP-038 | API balance overtime bank       | S     | P2   |
+| AP-039 | API movimiento manual banco     | S     | P2   |
+| AP-047 | API reabrir periodo             | S     | P2   |
+| AP-048 | Migración y modelo LeaveType    | S     | P1   |
+| AP-049 | Migración y modelo Leave        | S     | P1   |
+| AP-050 | API registrar y aprobar permiso | M     | P2   |
+| AP-056 | Migración y modelo Holiday      | S     | P1   |
 
 ### Sprint 8 — Vacaciones, festivos, exports
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-010 | API historial horarios | S | P2 |
-| AP-011 | API actualizar horario | S | P2 |
-| AP-051 | API listar permisos | S | P2 |
-| AP-052 | Migraciones vacaciones | S | P1 |
-| AP-053 | API derecho vacacional | S | P2 |
-| AP-054 | API solicitar y aprobar vacaciones | M | P2 |
-| AP-055 | API listar solicitudes vacaciones | S | P2 |
-| AP-057 | API CRUD festivos | S | P2 |
-| AP-058 | Cálculo pago festivo laborado | S | P2 |
-| AP-062 | Exportar cierre a CSV | M | P2 |
-| AP-068 | API consultar audit log | S | P2 |
+| ID     | Historia                           | Talla | Prio |
+| ------ | ---------------------------------- | ----- | ---- |
+| AP-010 | API historial horarios             | S     | P2   |
+| AP-011 | API actualizar horario             | S     | P2   |
+| AP-051 | API listar permisos                | S     | P2   |
+| AP-052 | Migraciones vacaciones             | S     | P1   |
+| AP-053 | API derecho vacacional             | S     | P2   |
+| AP-054 | API solicitar y aprobar vacaciones | M     | P2   |
+| AP-055 | API listar solicitudes vacaciones  | S     | P2   |
+| AP-057 | API CRUD festivos                  | S     | P2   |
+| AP-058 | Cálculo pago festivo laborado      | S     | P2   |
+| AP-062 | Exportar cierre a CSV              | M     | P2   |
+| AP-068 | API consultar audit log            | S     | P2   |
 
 ### Sprint 9 (Post-MVP)
-| ID | Historia | Talla | Prio |
-|----|----------|-------|------|
-| AP-063 | Exportar cierre a PDF | M | P3 |
+| ID     | Historia              | Talla | Prio |
+| ------ | --------------------- | ----- | ---- |
+| AP-063 | Exportar cierre a PDF | M     | P3   |
 
 ---
 
 ## Trazabilidad RF → Historias
 
-| RF | Historias |
-|----|-----------|
-| RF-01, RF-02 | AP-001, AP-002 |
-| RF-03 | AP-003, AP-004 |
-| RF-04 | AP-060 |
-| RF-05, RF-06, RF-07 | AP-003, AP-004 |
-| RF-08, RF-09, RF-10 | AP-007, AP-008, AP-009, AP-010, AP-011 |
-| RF-11 | AP-012, AP-013 |
-| RF-12 | AP-012, AP-015 |
-| RF-13 | AP-013, AP-017 |
-| RF-14 | AP-014, AP-015 |
-| RF-15, RF-15a, RF-15b | AP-013, AP-014, AP-017 |
-| RF-16 | AP-012, AP-019 |
-| RF-17 | AP-066 |
-| RF-18 | AP-067 |
-| RF-19 | AP-064, AP-065, AP-067, AP-068 |
-| RF-20 | AP-040, AP-046, AP-061 |
-| RF-21 | AP-047 |
-| RF-22, RF-23 | AP-005, AP-006, AP-041 |
-| RF-24 | AP-048 |
-| RF-25, RF-25a, RF-25b, RF-25c | AP-020, AP-021, AP-022, AP-023, AP-049, AP-050, AP-051 |
-| RF-26 | AP-052, AP-053 |
-| RF-27, RF-28 | AP-054, AP-055 |
-| RF-29, RF-30, RF-31 | AP-056, AP-057, AP-058 |
-| RF-32 | AP-024, AP-030 |
-| RF-33, RF-34 | AP-025, AP-030 |
-| RF-35 | AP-027 |
-| RF-36 | AP-029 |
-| RF-37 | AP-026, AP-030 |
-| RF-38, RF-39, RF-40, RF-41 | AP-031, AP-032, AP-033 |
-| RF-42, RF-43, RF-44, RF-45, RF-46 | AP-034, AP-036, AP-038, AP-039 |
-| RF-47, RF-47a, RF-47b, RF-47c | AP-016, AP-035, AP-036, AP-037 |
-| RF-48 | AP-018, AP-059 |
-| RF-49 | AP-044, AP-045, AP-060 |
-| RF-50 | AP-062, AP-063, AP-068 |
+| RF                                | Historias                                              |
+| --------------------------------- | ------------------------------------------------------ |
+| RF-01, RF-02                      | AP-001, AP-002                                         |
+| RF-03                             | AP-003, AP-004                                         |
+| RF-04                             | AP-060                                                 |
+| RF-05, RF-06, RF-07               | AP-003, AP-004                                         |
+| RF-08, RF-09, RF-10               | AP-007, AP-008, AP-009, AP-010, AP-011                 |
+| RF-11                             | AP-012, AP-013                                         |
+| RF-12                             | AP-012, AP-015                                         |
+| RF-13                             | AP-013, AP-017                                         |
+| RF-14                             | AP-014, AP-015                                         |
+| RF-15, RF-15a, RF-15b             | AP-013, AP-014, AP-017                                 |
+| RF-16                             | AP-012, AP-019                                         |
+| RF-17                             | AP-066                                                 |
+| RF-18                             | AP-067                                                 |
+| RF-19                             | AP-064, AP-065, AP-067, AP-068                         |
+| RF-20                             | AP-040, AP-046, AP-061                                 |
+| RF-21                             | AP-047                                                 |
+| RF-22, RF-23                      | AP-005, AP-006, AP-041                                 |
+| RF-24                             | AP-048                                                 |
+| RF-25, RF-25a, RF-25b, RF-25c     | AP-020, AP-021, AP-022, AP-023, AP-049, AP-050, AP-051 |
+| RF-26                             | AP-052, AP-053                                         |
+| RF-27, RF-28                      | AP-054, AP-055                                         |
+| RF-29, RF-30, RF-31               | AP-056, AP-057, AP-058                                 |
+| RF-32                             | AP-024, AP-030                                         |
+| RF-33, RF-34                      | AP-025, AP-030                                         |
+| RF-35                             | AP-027                                                 |
+| RF-36                             | AP-029                                                 |
+| RF-37                             | AP-026, AP-030                                         |
+| RF-38, RF-39, RF-40, RF-41        | AP-031, AP-032, AP-033                                 |
+| RF-42, RF-43, RF-44, RF-45, RF-46 | AP-034, AP-036, AP-038, AP-039                         |
+| RF-47, RF-47a, RF-47b, RF-47c     | AP-016, AP-035, AP-036, AP-037                         |
+| RF-48                             | AP-018, AP-059                                         |
+| RF-49                             | AP-044, AP-045, AP-060                                 |
+| RF-50                             | AP-062, AP-063, AP-068                                 |
 
 ---
 
