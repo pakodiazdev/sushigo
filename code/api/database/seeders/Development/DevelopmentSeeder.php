@@ -23,6 +23,7 @@ class DevelopmentSeeder extends Seeder
             \Database\Seeders\CashRegisterSeeder::class,
             UserSeeder::class,
             UserRoleSeeder::class,
+            EmployeeSeeder::class,
             \Database\Seeders\UnitOfMeasureSeeder::class,
             \Database\Seeders\UomConversionSeeder::class,
         ];

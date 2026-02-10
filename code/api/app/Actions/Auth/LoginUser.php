@@ -8,11 +8,21 @@ use Illuminate\Validation\ValidationException;
 
 class LoginUser
 {
+    /**
+     * Authenticate a user by email or phone number.
+     */
     public function __invoke(array $credentials): array
     {
-        if (!Auth::attempt($credentials)) {
+        $loginField = isset($credentials['email']) ? 'email' : 'phone';
+
+        $attemptCredentials = [
+            $loginField => $credentials[$loginField],
+            'password'  => $credentials['password'],
+        ];
+
+        if (!Auth::attempt($attemptCredentials)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                $loginField => ['The provided credentials are incorrect.'],
             ]);
         }
 

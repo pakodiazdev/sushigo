@@ -83,6 +83,35 @@ class PermissionSeeder extends LockedSeeder
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
 
+        // Employee-manager: can view employees + basic user access
+        $employeeManagerRole = Role::where('name', 'employee-manager')
+            ->where('guard_name', 'api')
+            ->first();
+
+        if ($employeeManagerRole) {
+            $employeeManagerRole->syncPermissions(
+                Permission::where('guard_name', 'api')
+                    ->where(function ($q) {
+                        $q->whereIn('name', ['users.show', 'users.index'])
+                            ->orWhere('name', 'like', 'employees.%');
+                    })
+                    ->get()
+            );
+        }
+
+        // Employee: basic user access only
+        $employeeRole = Role::where('name', 'employee')
+            ->where('guard_name', 'api')
+            ->first();
+
+        if ($employeeRole) {
+            $employeeRole->syncPermissions(
+                Permission::where('guard_name', 'api')
+                    ->whereIn('name', ['users.show', 'users.index'])
+                    ->get()
+            );
+        }
+
         $this->command->info('✓ Production permissions seeded successfully');
     }
 }

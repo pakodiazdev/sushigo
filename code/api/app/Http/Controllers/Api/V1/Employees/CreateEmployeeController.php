@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1\Employees;
 
+use App\Actions\Employee\CreateEmployeeAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\StoreEmployeeRequest;
 use App\Http\Responses\Common\ResponseEntity;
-use App\Models\Employee;
 
 /**
  * @OA\Post(
@@ -29,12 +29,11 @@ use App\Models\Employee;
  */
 class CreateEmployeeController extends Controller
 {
-    public function __invoke(StoreEmployeeRequest $request): ResponseEntity
-    {
-        $employee = Employee::create([
-            ...$request->validated(),
-            'is_active' => true,
-        ]);
+    public function __invoke(
+        StoreEmployeeRequest $request,
+        CreateEmployeeAction $action
+    ): ResponseEntity {
+        $employee = $action($request->validated());
 
         return new ResponseEntity(
             data: [

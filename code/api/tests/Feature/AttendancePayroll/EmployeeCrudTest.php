@@ -27,9 +27,18 @@ class EmployeeCrudTest extends TestCase
         Permission::create(['name' => 'employees.view', 'guard_name' => 'api']);
         Permission::create(['name' => 'employees.create', 'guard_name' => 'api']);
         Permission::create(['name' => 'employees.update', 'guard_name' => 'api']);
+        Permission::create(['name' => 'users.show', 'guard_name' => 'api']);
+        Permission::create(['name' => 'users.index', 'guard_name' => 'api']);
 
         $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $role->givePermissionTo(['employees.view', 'employees.create', 'employees.update']);
+
+        // Create employee operational roles
+        $employeeRole = Role::create(['name' => 'employee', 'guard_name' => 'api']);
+        $employeeRole->givePermissionTo(['users.show', 'users.index']);
+
+        $employeeManagerRole = Role::create(['name' => 'employee-manager', 'guard_name' => 'api']);
+        $employeeManagerRole->givePermissionTo(['users.show', 'users.index', 'employees.view']);
 
         $this->user = User::factory()->create();
         $this->user->assignRole('admin');
@@ -38,13 +47,15 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function it_can_create_an_employee(): void
+    public function it_can_create_an_employee_with_email(): void
     {
         $response = $this->postJson('/api/v1/employees', [
             'code' => 'EMP-001',
             'first_name' => 'Juan',
             'last_name' => 'Perez',
             'role' => 'COOK',
+            'email' => 'juan.perez@sushigo.com',
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(201)
@@ -59,8 +70,56 @@ class EmployeeCrudTest extends TestCase
         $this->assertDatabaseHas('employees', [
             'code' => 'EMP-001',
             'first_name' => 'Juan',
-            'last_name' => 'Perez',
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'juan.perez@sushigo.com',
+            'name' => 'Juan Perez',
+        ]);
+    }
+
+    #[Test]
+    public function it_can_create_an_employee_with_phone(): void
+    {
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-PHONE',
+            'first_name' => 'Maria',
+            'last_name' => 'Lopez',
             'role' => 'COOK',
+            'phone' => '+525512345678',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonFragment([
+                'code' => 'EMP-PHONE',
+                'first_name' => 'Maria',
+            ]);
+
+        $this->assertDatabaseHas('users', [
+            'phone' => '+525512345678',
+            'name' => 'Maria Lopez',
+        ]);
+    }
+
+    #[Test]
+    public function it_can_create_an_employee_with_email_and_phone(): void
+    {
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-BOTH',
+            'first_name' => 'Carlos',
+            'last_name' => 'Garcia',
+            'role' => 'MANAGER',
+            'email' => 'carlos@sushigo.com',
+            'phone' => '+525500001111',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'carlos@sushigo.com',
+            'phone' => '+525500001111',
         ]);
     }
 
@@ -72,6 +131,8 @@ class EmployeeCrudTest extends TestCase
             'first_name' => 'Maria',
             'last_name' => 'Garcia',
             'role' => 'manager',
+            'email' => 'maria.garcia@sushigo.com',
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(201);
@@ -88,7 +149,22 @@ class EmployeeCrudTest extends TestCase
         $response = $this->postJson('/api/v1/employees', []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['code', 'first_name', 'last_name', 'role']);
+            ->assertJsonValidationErrors(['code', 'first_name', 'last_name', 'role', 'password']);
+    }
+
+    #[Test]
+    public function it_requires_email_or_phone(): void
+    {
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-NOID',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'role' => 'COOK',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email', 'phone']);
     }
 
     #[Test]
@@ -101,6 +177,8 @@ class EmployeeCrudTest extends TestCase
             'first_name' => 'Another',
             'last_name' => 'Employee',
             'role' => 'COOK',
+            'email' => 'another@sushigo.com',
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(422)
@@ -115,6 +193,8 @@ class EmployeeCrudTest extends TestCase
             'first_name' => 'Juan',
             'last_name' => 'Perez',
             'role' => 'INVALID_ROLE',
+            'email' => 'juan@sushigo.com',
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(422)
@@ -295,25 +375,6 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function it_can_create_employee_with_optional_user(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this->postJson('/api/v1/employees', [
-            'code' => 'EMP-003',
-            'first_name' => 'Carlos',
-            'last_name' => 'Lopez',
-            'role' => 'MANAGER',
-            'user_id' => $user->id,
-        ]);
-
-        $response->assertStatus(201)
-            ->assertJsonFragment([
-                'user_id' => $user->id,
-            ]);
-    }
-
-    #[Test]
     public function it_can_create_employee_with_meta(): void
     {
         $response = $this->postJson('/api/v1/employees', [
@@ -321,7 +382,9 @@ class EmployeeCrudTest extends TestCase
             'first_name' => 'Ana',
             'last_name' => 'Martinez',
             'role' => 'KITCHEN_ASSISTANT',
-            'meta' => ['phone' => '555-1234'],
+            'email' => 'ana.martinez@sushigo.com',
+            'password' => 'password123',
+            'meta' => ['notes' => 'Part-time'],
         ]);
 
         $response->assertStatus(201);
@@ -339,6 +402,8 @@ class EmployeeCrudTest extends TestCase
             'first_name' => 'Hash',
             'last_name' => 'Test',
             'role' => 'COOK',
+            'email' => 'hash@sushigo.com',
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(201);
@@ -378,6 +443,8 @@ class EmployeeCrudTest extends TestCase
             'first_name' => 'No',
             'last_name' => 'Permission',
             'role' => 'COOK',
+            'email' => 'noperm@sushigo.com',
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(403);
@@ -396,5 +463,105 @@ class EmployeeCrudTest extends TestCase
         ]);
 
         $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function it_creates_cook_with_employee_spatie_role(): void
+    {
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-USR-001',
+            'first_name' => 'Carlos',
+            'last_name' => 'Mendoza',
+            'role' => 'COOK',
+            'email' => 'carlos@sushigo.com',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(201);
+
+        $employee = Employee::where('code', 'EMP-USR-001')->first();
+        $this->assertNotNull($employee->user_id);
+
+        $user = User::find($employee->user_id);
+        $this->assertTrue($user->hasRole('employee'));
+    }
+
+    #[Test]
+    public function it_creates_manager_with_employee_manager_spatie_role(): void
+    {
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-MGR-001',
+            'first_name' => 'Ana',
+            'last_name' => 'Garcia',
+            'role' => 'MANAGER',
+            'email' => 'ana.garcia@sushigo.com',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(201);
+
+        $employee = Employee::where('code', 'EMP-MGR-001')->first();
+        $user = User::find($employee->user_id);
+        $this->assertTrue($user->hasRole('employee-manager'));
+    }
+
+    #[Test]
+    public function it_rejects_duplicate_email_when_creating_employee(): void
+    {
+        User::factory()->create(['email' => 'taken@sushigo.com']);
+
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-DUP',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'role' => 'COOK',
+            'email' => 'taken@sushigo.com',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
+    }
+
+    #[Test]
+    public function it_rejects_duplicate_phone_when_creating_employee(): void
+    {
+        User::factory()->create(['phone' => '+525599990000']);
+
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-DUP-P',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'role' => 'COOK',
+            'phone' => '+525599990000',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['phone']);
+    }
+
+    #[Test]
+    public function it_rolls_back_user_creation_on_employee_failure(): void
+    {
+        // Create an employee with the same code first
+        Employee::factory()->create(['code' => 'EMP-ROLLBACK']);
+
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-ROLLBACK',
+            'first_name' => 'Rollback',
+            'last_name' => 'Test',
+            'role' => 'COOK',
+            'email' => 'rollback@sushigo.com',
+            'password' => 'password123',
+        ]);
+
+        // Should fail on duplicate code validation
+        $response->assertStatus(422);
+
+        // User should NOT have been created
+        $this->assertDatabaseMissing('users', [
+            'email' => 'rollback@sushigo.com',
+        ]);
     }
 }

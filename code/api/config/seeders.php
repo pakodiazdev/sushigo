@@ -53,6 +53,62 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Development Employees
+    |--------------------------------------------------------------------------
+    |
+    | Default employees created in development environment.
+    | Every employee gets a system user created automatically.
+    | User can be identified by email or phone number.
+    |
+    */
+
+    'development_employees' => [
+        [
+            'code' => 'EMP-001',
+            'first_name' => 'Carlos',
+            'last_name' => 'Mendoza',
+            'role' => 'MANAGER',
+            'email' => 'carlos.mendoza@sushigo.com',
+            'password' => 'employee123456',
+        ],
+        [
+            'code' => 'EMP-002',
+            'first_name' => 'María',
+            'last_name' => 'García',
+            'role' => 'COOK',
+            'email' => 'maria.garcia@sushigo.com',
+            'password' => 'employee123456',
+        ],
+        [
+            'code' => 'EMP-003',
+            'first_name' => 'Pedro',
+            'last_name' => 'López',
+            'role' => 'KITCHEN_ASSISTANT',
+            'phone' => '+525512340003',
+            'password' => 'employee123456',
+        ],
+        [
+            'code' => 'EMP-004',
+            'first_name' => 'Ana',
+            'last_name' => 'Ramírez',
+            'role' => 'DELIVERY_DRIVER',
+            'phone' => '+525512340004',
+            'password' => 'employee123456',
+        ],
+        [
+            'code' => 'EMP-005',
+            'first_name' => 'Roberto',
+            'last_name' => 'Sánchez',
+            'role' => 'COOK',
+            'email' => 'roberto.sanchez@sushigo.com',
+            'phone' => '+525512340005',
+            'password' => 'employee123456',
+            'meta' => ['notes' => 'Part-time employee'],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Factory Count
     |--------------------------------------------------------------------------
     |
@@ -62,6 +118,7 @@ return [
 
     'factory_counts' => [
         'users' => 10,
+        'employees' => 5,
     ],
 
 ];
