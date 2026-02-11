@@ -13,10 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // First, update any existing DISPLAY or WASTE records to TEMP
         DB::statement("UPDATE inventory_locations SET type = 'TEMP' WHERE type IN ('DISPLAY', 'WASTE')");
-
-        // Then remove DISPLAY and WASTE from the constraint - back to original types
         DB::statement("ALTER TABLE inventory_locations DROP CONSTRAINT IF EXISTS inventory_locations_type_check");
         DB::statement("ALTER TABLE inventory_locations ADD CONSTRAINT inventory_locations_type_check CHECK (type IN ('MAIN', 'TEMP', 'KITCHEN', 'BAR', 'RETURN'))");
     }
@@ -26,7 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Re-add DISPLAY and WASTE to the constraint
         DB::statement("ALTER TABLE inventory_locations DROP CONSTRAINT IF EXISTS inventory_locations_type_check");
         DB::statement("ALTER TABLE inventory_locations ADD CONSTRAINT inventory_locations_type_check CHECK (type IN ('MAIN', 'TEMP', 'KITCHEN', 'BAR', 'RETURN', 'WASTE', 'DISPLAY'))");
     }

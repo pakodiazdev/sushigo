@@ -22,7 +22,6 @@ return new class extends Migration
             $table->json('meta')->nullable()->comment('Additional account metadata');
             $table->timestamps();
 
-            // Indexes
             $table->index('branch_id');
             $table->index('is_active');
             $table->index(['branch_id', 'is_active']);

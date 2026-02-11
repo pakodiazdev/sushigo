@@ -171,7 +171,7 @@ export function BankAccountForm({
                         type="text"
                         value={formData.alias}
                         onChange={(e) => handleChange('alias', e.target.value)}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md"
                         placeholder="Cuenta Principal"
                     />
                 </FormField>
@@ -204,7 +204,7 @@ export function BankAccountForm({
                         type="text"
                         value={formData.account_number_masked}
                         onChange={(e) => handleChange('account_number_masked', e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        className="w-full px-3 py-2 border rounded-md font-mono"
+                        className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md font-mono"
                         placeholder="1234"
                         maxLength={4}
                     />
@@ -219,7 +219,7 @@ export function BankAccountForm({
                         type="text"
                         value={formData.clabe_masked}
                         onChange={(e) => handleClabeChange(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-md font-mono"
+                        className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md font-mono"
                         placeholder="012-3456"
                         maxLength={8}
                     />

@@ -22,7 +22,6 @@ return new class extends Migration
             $table->json('meta')->nullable()->comment('Additional terminal metadata');
             $table->timestamps();
 
-            // Indexes
             $table->index('branch_id');
             $table->index('provider');
             $table->index('is_active');

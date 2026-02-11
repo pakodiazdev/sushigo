@@ -1,9 +1,17 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
+use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
+use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
+use App\Http\Controllers\Api\V1\Employees\ShowEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
+use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
 use App\Http\Controllers\Api\V1\Items\CreateItemController;
 use App\Http\Controllers\Api\V1\Items\CreateItemVariantController;
 use App\Http\Controllers\Api\V1\Items\DeleteItemController;
@@ -71,6 +79,8 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('register', RegisterController::class)->name('auth.register');
         Route::post('login', LoginController::class)->name('auth.login');
+        Route::post('forgot-password', ForgotPasswordController::class)->name('auth.forgot-password');
+        Route::post('reset-password', ResetPasswordController::class)->name('auth.reset-password');
     });
 
     // Protected auth routes
@@ -170,6 +180,16 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('inventory')->group(function () {
         Route::post('opening-balance', RegisterOpeningBalanceController::class)->name('inventory.opening-balance');
         Route::post('stock-out', RegisterStockOutController::class)->name('inventory.stock-out');
+    });
+
+    // Employees (All Protected)
+    Route::middleware('auth:api')->prefix('employees')->group(function () {
+        Route::get('/', ListEmployeesController::class)->name('employees.list')->middleware('permission:employees.view');
+        Route::get('/next-code', SuggestEmployeeCodeController::class)->name('employees.next-code')->middleware('permission:employees.create');
+        Route::post('/', CreateEmployeeController::class)->name('employees.create')->middleware('permission:employees.create');
+        Route::get('/{employee}', ShowEmployeeController::class)->name('employees.show')->middleware('permission:employees.view');
+        Route::put('/{employee}', UpdateEmployeeController::class)->name('employees.update')->middleware('permission:employees.update');
+        Route::patch('/{employee}/toggle-active', ToggleEmployeeActiveController::class)->name('employees.toggle-active')->middleware('permission:employees.update');
     });
 
     // Cash Adjustments Module (All Protected)

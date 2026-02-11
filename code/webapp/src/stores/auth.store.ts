@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { authService, LoginCredentials } from '@/services/auth.service';
-import type { User, Branch } from '@/types/auth';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { authService, LoginCredentials } from "@/services/auth.service";
+import type { User, Branch } from "@/types/auth";
 
 interface AuthState {
   // State
@@ -27,6 +27,7 @@ interface AuthState {
   refreshUser: () => Promise<void>;
   clearError: () => void;
   setHasHydrated: (state: boolean) => void;
+  initializeAfterReset: (user: User, token: string) => void;
 }
 
 // Helper to extract branches from user's operating units
@@ -34,7 +35,7 @@ function extractBranchesFromUser(user: User | null): Branch[] {
   if (!user?.operating_units) return [];
 
   const branches = new Map<number, Branch>();
-  user.operating_units.forEach(assignment => {
+  user.operating_units.forEach((assignment) => {
     if (assignment.operating_unit?.branch && assignment.is_active) {
       const branch = assignment.operating_unit.branch;
       if (!branches.has(branch.id)) {
@@ -48,16 +49,18 @@ function extractBranchesFromUser(user: User | null): Branch[] {
 
 // Helper to check if user is admin
 function checkIsAdmin(user: User | null): boolean {
-  return user?.roles?.some(role =>
-    role.name === 'admin' || role.name === 'super-admin'
-  ) ?? false;
+  return (
+    user?.roles?.some(
+      (role) => role.name === "admin" || role.name === "super-admin",
+    ) ?? false
+  );
 }
 
 // Helper to check permission
 function checkPermission(user: User | null, permission: string): boolean {
   if (!user) return false;
   if (checkIsAdmin(user)) return true;
-  return user.permissions?.some(p => p.name === permission) ?? false;
+  return user.permissions?.some((p) => p.name === permission) ?? false;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -114,8 +117,9 @@ export const useAuthStore = create<AuthState>()(
             _hasInitialized: true,
           });
         } catch (err: unknown) {
-          const errorMessage = (err as { response?: { data?: { message?: string } } })
-            ?.response?.data?.message || 'Error al iniciar sesión';
+          const errorMessage =
+            (err as { response?: { data?: { message?: string } } })?.response
+              ?.data?.message || "Error al iniciar sesión";
           set({
             user: null,
             token: null,
@@ -179,11 +183,16 @@ export const useAuthStore = create<AuthState>()(
           let restoredBranch: Branch | null = null;
 
           if (savedBranchId) {
-            restoredBranch = branches.find(b => b.id === savedBranchId) ?? null;
+            restoredBranch =
+              branches.find((b) => b.id === savedBranchId) ?? null;
           }
 
           // Auto-select for non-admin with single branch
-          if (!restoredBranch && !checkIsAdmin(userData) && branches.length === 1) {
+          if (
+            !restoredBranch &&
+            !checkIsAdmin(userData) &&
+            branches.length === 1
+          ) {
             restoredBranch = branches[0] ?? null;
           }
 
@@ -210,10 +219,10 @@ export const useAuthStore = create<AuthState>()(
 
       switchBranch: async (branchId: number) => {
         const { availableBranches } = get();
-        const branch = availableBranches.find(b => b.id === branchId);
+        const branch = availableBranches.find((b) => b.id === branchId);
 
         if (!branch) {
-          throw new Error('Branch not available for this user');
+          throw new Error("Branch not available for this user");
         }
 
         set({ currentBranch: branch });
@@ -228,7 +237,7 @@ export const useAuthStore = create<AuthState>()(
           // Keep current branch if still valid
           const { currentBranch } = get();
           const validatedBranch = currentBranch
-            ? branches.find(b => b.id === currentBranch.id) ?? null
+            ? (branches.find((b) => b.id === currentBranch.id) ?? null)
             : null;
 
           set({
@@ -242,9 +251,31 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearError: () => set({ error: null }),
+
+      initializeAfterReset: (user: User, token: string) => {
+        const branches = extractBranchesFromUser(user);
+        const isUserAdmin = checkIsAdmin(user);
+
+        let selectedBranch: Branch | null = null;
+        if (!isUserAdmin && branches.length === 1) {
+          selectedBranch = branches[0] ?? null;
+        }
+
+        set({
+          user,
+          token,
+          availableBranches: branches,
+          currentBranch: selectedBranch,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+          _hasInitialized: true,
+          _hasHydrated: true,
+        });
+      },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       version: 2,
       partialize: (state) => ({
         token: state.token,
@@ -256,7 +287,7 @@ export const useAuthStore = create<AuthState>()(
         // This runs BEFORE hydration - we can return a callback for AFTER
         return (__state, error) => {
           if (error) {
-            console.error('Error rehydrating auth storage:', error);
+            console.error("Error rehydrating auth storage:", error);
           }
           // Mark hydration as complete using queueMicrotask to ensure store exists
           queueMicrotask(() => {
@@ -264,6 +295,6 @@ export const useAuthStore = create<AuthState>()(
           });
         };
       },
-    }
-  )
+    },
+  ),
 );

@@ -3,127 +3,227 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* shadcn/ui Base Colors - SushiGo Theme */
-    --background: 40 30% 96%;
-    /* #f5f2ee - Blanco hueso muy claro */
-    --foreground: 243 17% 40%;
+    :root {
+        /* shadcn/ui Base Colors - SushiGo Theme */
+        --background: 40 30% 96%;
+        /* #f5f2ee - Blanco hueso muy claro */
+        --foreground: 243 17% 40%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 243 17% 40%;
+        --card: 0 0% 100%;
+        --card-foreground: 243 17% 40%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 243 17% 40%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 243 17% 40%;
 
-    /* Primary: Rojo coral del logo */
-    --primary: 354 74% 57%;
-    --primary-foreground: 0 0% 100%;
+        /* Primary: Rojo coral del logo */
+        --primary: 354 74% 57%;
+        --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Azul morado del logo */
-    --secondary: 243 17% 40%;
-    --secondary-foreground: 42 50% 96%;
+        /* Secondary: Azul morado del logo */
+        --secondary: 243 17% 40%;
+        --secondary-foreground: 42 50% 96%;
 
-    --muted: 40 20% 91%;
-    /* Ligeramente más oscuro que el background */
-    --muted-foreground: 40 5% 52%;
+        --muted: 40 20% 91%;
+        /* Ligeramente más oscuro que el background */
+        --muted-foreground: 40 5% 52%;
 
-    /* Accent: Beige crema del logo */
-    --accent: 42 50% 96%;
-    --accent-foreground: 243 17% 40%;
+        /* Accent: Beige crema del logo */
+        --accent: 42 50% 96%;
+        --accent-foreground: 243 17% 40%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
 
-    --border: 40 20% 88%;
-    --input: 40 20% 88%;
-    --ring: 354 74% 57%;
+        --border: 40 20% 88%;
+        --input: 40 20% 88%;
+        --ring: 354 74% 57%;
 
-    --radius: 0.5rem;
+        --radius: 0.5rem;
 
-    /* SushiGo Brand Colors */
-    --sushigo-navy: 243 17% 40%;
-    /* #474687 - Azul morado del logo */
-    --sushigo-coral: 354 74% 57%;
-    /* #E63946 - Rojo coral */
-    --sushigo-cream: 42 50% 96%;
-    /* #f8f0e2 - Beige crema */
-    --sushigo-gray: 40 5% 52%;
-    /* #84807c - Gris cálido */
-    --sushigo-salmon: 28 89% 65%;
-    /* Complementario */
-    --sushigo-wasabi: 164 94% 43%;
-    /* Complementario */
-    --sushigo-ginger: 44 100% 60%;
-    /* Complementario */
-  }
+        /* SushiGo Brand Colors */
+        --sushigo-navy: 243 17% 40%;
+        /* #474687 - Azul morado del logo */
+        --sushigo-coral: 354 74% 57%;
+        /* #E63946 - Rojo coral */
+        --sushigo-cream: 42 50% 96%;
+        /* #f8f0e2 - Beige crema */
+        --sushigo-gray: 40 5% 52%;
+        /* #84807c - Gris cálido */
+        --sushigo-salmon: 28 89% 65%;
+        /* Complementario */
+        --sushigo-wasabi: 164 94% 43%;
+        /* Complementario */
+        --sushigo-ginger: 44 100% 60%;
+        /* Complementario */
+    }
 
-  .dark {
-    --background: 243 20% 10%;
-    --foreground: 42 50% 96%;
+    .dark {
+        --background: 243 20% 10%;
+        --foreground: 42 50% 96%;
 
-    --card: 243 17% 15%;
-    --card-foreground: 42 50% 96%;
+        --card: 243 17% 15%;
+        --card-foreground: 42 50% 96%;
 
-    --popover: 243 17% 15%;
-    --popover-foreground: 42 50% 96%;
+        --popover: 243 17% 15%;
+        --popover-foreground: 42 50% 96%;
 
-    /* Primary: Rojo más brillante en dark mode */
-    --primary: 354 90% 65%;
-    --primary-foreground: 0 0% 100%;
+        /* Primary: Rojo más brillante en dark mode */
+        --primary: 354 90% 65%;
+        --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Azul morado más oscuro */
-    --secondary: 243 25% 25%;
-    --secondary-foreground: 42 50% 96%;
+        /* Secondary: Azul morado más oscuro */
+        --secondary: 243 25% 25%;
+        --secondary-foreground: 42 50% 96%;
 
-    --muted: 243 15% 20%;
-    --muted-foreground: 40 10% 65%;
+        --muted: 243 15% 20%;
+        --muted-foreground: 40 10% 65%;
 
-    /* Accent: Crema más oscuro */
-    --accent: 42 30% 25%;
-    --accent-foreground: 42 50% 96%;
+        /* Accent: Crema más oscuro */
+        --accent: 42 30% 25%;
+        --accent-foreground: 42 50% 96%;
 
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 100%;
+        --destructive: 0 62% 50%;
+        --destructive-foreground: 0 0% 100%;
 
-    --border: 243 15% 25%;
-    --input: 243 15% 25%;
-    --ring: 354 90% 65%;
+        --border: 243 15% 25%;
+        --input: 243 15% 25%;
+        --ring: 354 90% 65%;
 
-    /* SushiGo Dark Mode */
-    --sushigo-navy: 243 17% 30%;
-    --sushigo-coral: 354 90% 65%;
-    --sushigo-cream: 42 40% 85%;
-    --sushigo-gray: 40 10% 65%;
-    --sushigo-salmon: 28 89% 70%;
-    --sushigo-wasabi: 164 94% 50%;
-    --sushigo-ginger: 44 100% 65%;
-  }
+        /* SushiGo Dark Mode */
+        --sushigo-navy: 243 17% 30%;
+        --sushigo-coral: 354 90% 65%;
+        --sushigo-cream: 42 40% 85%;
+        --sushigo-gray: 40 10% 65%;
+        --sushigo-salmon: 28 89% 70%;
+        --sushigo-wasabi: 164 94% 50%;
+        --sushigo-ginger: 44 100% 65%;
+    }
 
-  * {
-    @apply border-border;
-  }
+    * {
+        @apply border-border;
+    }
 
-  body {
-    @apply bg-background text-foreground;
-  }
+    body {
+        @apply bg-background text-foreground;
+    }
 }
 
 /* Custom scrollbar */
 @layer utilities {
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
 
-  .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-muted;
-  }
+    .scrollbar-thin::-webkit-scrollbar-track {
+        @apply bg-muted;
+    }
 
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-border rounded;
-  }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        @apply bg-border rounded;
+    }
 
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
-  }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        @apply bg-muted-foreground/50;
+    }
+}
+
+/* ── Dark-mode input overrides ─────────────────────────────────── */
+@layer base {
+    .dark input:not([type="checkbox"]):not([type="radio"]),
+    .dark select,
+    .dark textarea {
+        background-color: hsl(243 20% 14%);
+        color: hsl(42 50% 96%);
+        border-color: hsl(243 15% 28%);
+    }
+
+    .dark input:not([type="checkbox"]):not([type="radio"]):focus,
+    .dark select:focus,
+    .dark textarea:focus {
+        border-color: hsl(354 90% 65%);
+        background-color: hsl(243 20% 16%);
+    }
+
+    .dark input:disabled,
+    .dark select:disabled,
+    .dark textarea:disabled {
+        background-color: hsl(243 15% 11%);
+        color: hsl(40 10% 50%);
+    }
+
+    /* Prevent browser autofill from overriding dark backgrounds */
+    .dark input:-webkit-autofill,
+    .dark input:-webkit-autofill:hover,
+    .dark input:-webkit-autofill:focus,
+    .dark select:-webkit-autofill,
+    .dark textarea:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 30px hsl(243 20% 14%) inset !important;
+        -webkit-text-fill-color: hsl(42 50% 96%) !important;
+        caret-color: hsl(42 50% 96%);
+        transition: background-color 5000s ease-in-out 0s;
+    }
+
+    .dark input::placeholder,
+    .dark textarea::placeholder {
+        color: hsl(40 10% 45%);
+    }
+}
+
+/* ── SlidePanel Animations ─────────────────────────────────────── */
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+        opacity: 0.5;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+@keyframes slide-out-right {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0.5;
+    }
+}
+@keyframes slide-in-left {
+    from {
+        transform: translateX(-100%);
+        opacity: 0.5;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+@keyframes slide-out-left {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(-100%);
+        opacity: 0.5;
+    }
+}
+@keyframes backdrop-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes backdrop-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
 }

@@ -26,6 +26,7 @@ export default defineConfig({
     strictPort: true,
     watch: {
       usePolling: true,
+      ignored: ['**/routeTree.gen.ts'],
     },
     hmr: {
       // Usar el protocolo del cliente (wss:// cuando se accede por HTTPS)

@@ -56,6 +56,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | The URL of the frontend application, used for generating links
+    | in emails and notifications (e.g., password reset links).
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'https://sushigo.local'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

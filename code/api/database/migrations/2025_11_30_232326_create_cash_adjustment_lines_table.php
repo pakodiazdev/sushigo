@@ -23,7 +23,6 @@ return new class extends Migration
             $table->json('meta')->nullable()->comment('Tips, fees, additional charges');
             $table->timestamp('created_at');
 
-            // Indexes
             $table->index('cash_adjustment_id');
             $table->index('tender_type');
             $table->index('card_terminal_id');

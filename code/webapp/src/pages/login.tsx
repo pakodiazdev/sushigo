@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState, FormEvent } from 'react';
 import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
@@ -90,9 +90,17 @@ export function LoginPage() {
                             )}
                         </Button>
 
-                        <p className="text-center text-sm text-muted-foreground mt-4">
-                            Demo: <strong>admin@sushigo.com</strong> / <strong>admin123456</strong>
-                        </p>
+                        <div className="text-center mt-4 space-y-2">
+                            <Link
+                                to="/forgot-password"
+                                className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                            >
+                                ¿Olvidaste tu contraseña?
+                            </Link>
+                            <p className="text-sm text-muted-foreground">
+                                Demo: <strong>admin@sushigo.com</strong> / <strong>admin123456</strong>
+                            </p>
+                        </div>
                     </form>
                 </CardContent>
             </Card>
