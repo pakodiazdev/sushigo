@@ -12,6 +12,7 @@ import {
     ChevronDown,
     ChevronUp,
     DollarSign,
+    UserCog,
     type LucideIcon
 } from 'lucide-react';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -39,6 +40,7 @@ const menuItems: MenuItem[] = [
     { icon: Package, label: 'Productos', path: '/productos' },
     { icon: ShoppingCart, label: 'Órdenes', path: '/ordenes' },
     { icon: Users, label: 'Clientes', path: '/clientes' },
+    { icon: UserCog, label: 'Empleados', path: '/employees' },
     {
         icon: Warehouse,
         label: 'Inventario',

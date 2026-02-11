@@ -29,7 +29,6 @@ return new class extends Migration
             $table->json('meta')->nullable()->comment('Additional expense metadata');
             $table->timestamps();
 
-            // Indexes
             $table->index('cash_session_id');
             $table->index('tender_type');
             $table->index('category');

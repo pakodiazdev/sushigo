@@ -1,0 +1,229 @@
+import { createFileRoute, useSearch, Link, useRouter } from '@tanstack/react-router'
+import { useState, FormEvent } from 'react'
+import { apiClient } from '@/lib/api-client'
+import { useAuthStore } from '@/stores/auth.store'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Logo } from '@/components/ui/logo'
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+
+type ResetPasswordSearch = {
+    token?: string
+    identifier?: string
+}
+
+export const Route = createFileRoute('/reset-password')({
+    component: ResetPasswordPage,
+    validateSearch: (search: Record<string, unknown>): ResetPasswordSearch => ({
+        token: (search.token as string) || undefined,
+        identifier: (search.identifier as string) || undefined,
+    }),
+})
+
+function ResetPasswordPage() {
+    const { token, identifier } = useSearch({ from: '/reset-password' })
+
+    const [password, setPassword] = useState('')
+    const [passwordConfirmation, setPasswordConfirmation] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState(false)
+
+    const router = useRouter()
+    const isEmail = identifier?.includes('@')
+
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault()
+        setError(null)
+
+        if (password.length < 8) {
+            setError('La contraseña debe tener al menos 8 caracteres')
+            return
+        }
+
+        if (password !== passwordConfirmation) {
+            setError('Las contraseñas no coinciden')
+            return
+        }
+
+        if (!token || !identifier) {
+            setError('Enlace inválido. Solicita un nuevo enlace de restablecimiento.')
+            return
+        }
+
+        setIsLoading(true)
+
+        try {
+            const payload: Record<string, string> = {
+                token,
+                password,
+                password_confirmation: passwordConfirmation,
+            }
+
+            if (isEmail) {
+                payload.email = identifier
+            } else {
+                payload.phone = identifier
+            }
+
+            const response = await apiClient.post('/auth/reset-password', payload)
+
+            // Auto-login: the API returns user + token after successful reset
+            if (response.data.token && response.data.user) {
+                const { initializeAfterReset } = useAuthStore.getState()
+                initializeAfterReset(response.data.user, response.data.token)
+                // Small delay for state to propagate, then navigate
+                setTimeout(() => {
+                    router.navigate({ to: '/' })
+                }, 100)
+                return
+            }
+
+            setSuccess(true)
+        } catch (err: any) {
+            const message =
+                err.response?.data?.errors?.token?.[0] ||
+                err.response?.data?.message ||
+                'No se pudo restablecer la contraseña. El enlace puede haber expirado.'
+            setError(message)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    if (!token || !identifier) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/30 p-4">
+                <Card className="w-full max-w-md shadow-xl">
+                    <CardHeader className="space-y-4 flex flex-col items-center">
+                        <Logo collapsed={false} />
+                        <div className="text-center">
+                            <CardTitle className="text-2xl">Enlace inválido</CardTitle>
+                            <CardDescription>
+                                Este enlace de restablecimiento es inválido o ha expirado.
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center gap-4">
+                        <AlertCircle className="h-12 w-12 text-red-500" />
+                        <p className="text-sm text-muted-foreground text-center">
+                            Por favor, solicita un nuevo enlace de restablecimiento desde la pantalla de inicio de sesión.
+                        </p>
+                        <Link to="/login" className="w-full">
+                            <Button className="w-full">
+                                Ir a Inicio de Sesión
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    if (success) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/30 p-4">
+                <Card className="w-full max-w-md shadow-xl">
+                    <CardHeader className="space-y-4 flex flex-col items-center">
+                        <Logo collapsed={false} />
+                        <div className="text-center">
+                            <CardTitle className="text-2xl">¡Contraseña actualizada!</CardTitle>
+                            <CardDescription>
+                                Tu contraseña ha sido configurada exitosamente.
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center gap-4">
+                        <CheckCircle className="h-12 w-12 text-green-500" />
+                        <p className="text-sm text-muted-foreground text-center">
+                            Ya puedes iniciar sesión con tu nueva contraseña.
+                        </p>
+                        <Link to="/login" className="w-full">
+                            <Button className="w-full">
+                                Ir a Inicio de Sesión
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/30 p-4">
+            <Card className="w-full max-w-md shadow-xl">
+                <CardHeader className="space-y-4 flex flex-col items-center">
+                    <Logo collapsed={false} />
+                    <div className="text-center">
+                        <CardTitle className="text-2xl">Configurar contraseña</CardTitle>
+                        <CardDescription>
+                            Ingresa tu nueva contraseña para acceder a tu cuenta.
+                        </CardDescription>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {error && (
+                            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md dark:bg-red-950 dark:border-red-800 dark:text-red-400">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="p-3 text-sm text-muted-foreground bg-muted rounded-md">
+                            Cuenta: <strong>{identifier}</strong>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="password" className="text-sm font-medium">
+                                Nueva contraseña
+                            </label>
+                            <Input
+                                id="password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                disabled={isLoading}
+                                minLength={8}
+                            />
+                            <p className="text-xs text-muted-foreground">Mínimo 8 caracteres</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="password_confirmation" className="text-sm font-medium">
+                                Confirmar contraseña
+                            </label>
+                            <Input
+                                id="password_confirmation"
+                                type="password"
+                                placeholder="••••••••"
+                                value={passwordConfirmation}
+                                onChange={(e) => setPasswordConfirmation(e.target.value)}
+                                required
+                                disabled={isLoading}
+                                minLength={8}
+                            />
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Guardando...
+                                </>
+                            ) : (
+                                'Guardar contraseña'
+                            )}
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}

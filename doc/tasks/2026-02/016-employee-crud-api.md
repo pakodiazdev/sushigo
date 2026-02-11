@@ -12,14 +12,14 @@ Como Admin, quiero crear, listar, ver, actualizar y desactivar empleados vía AP
 
 ## ✅ Technical Tasks
 
-- [ ] 🌐 `POST /api/v1/employees` — CreateEmployeeController + StoreEmployeeRequest (validate code unique, role in enum, first_name/last_name required)
-- [ ] 🌐 `GET /api/v1/employees` — ListEmployeesController (filters: is_active, role; pagination)
-- [ ] 🌐 `GET /api/v1/employees/{id}` — ShowEmployeeController (Hashid binding, eager load active period + current wage)
-- [ ] 🌐 `PUT /api/v1/employees/{id}` — UpdateEmployeeController + UpdateEmployeeRequest
-- [ ] 🌐 `PATCH /api/v1/employees/{id}/toggle-active` — ToggleEmployeeActiveController
-- [ ] 🔐 Add permission: employees.view, employees.create, employees.update
-- [ ] 📝 Add OpenAPI/Swagger annotations to controllers and requests
-- [ ] 🧪 Feature tests: CRUD happy paths, validation errors (duplicate code, invalid role), toggle active, unauthorized access
+- [x] 🌐 `POST /api/v1/employees` — CreateEmployeeController + StoreEmployeeRequest (validate code unique, role in enum, first_name/last_name required)
+- [x] 🌐 `GET /api/v1/employees` — ListEmployeesController (filters: is_active, role; pagination)
+- [x] 🌐 `GET /api/v1/employees/{id}` — ShowEmployeeController (Hashid binding, eager load active period + current wage)
+- [x] 🌐 `PUT /api/v1/employees/{id}` — UpdateEmployeeController + UpdateEmployeeRequest
+- [x] 🌐 `PATCH /api/v1/employees/{id}/toggle-active` — ToggleEmployeeActiveController
+- [x] 🔐 Add permission: employees.view, employees.create, employees.update
+- [x] 📝 Add OpenAPI/Swagger annotations to controllers and requests
+- [x] 🧪 Feature tests: CRUD happy paths, validation errors (duplicate code, invalid role), toggle active, unauthorized access
 
 ### 🖥️ Frontend Tasks (webapp)
 

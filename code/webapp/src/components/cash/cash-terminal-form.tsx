@@ -158,7 +158,7 @@ export function CashTerminalForm({
                         type="text"
                         value={formData.name}
                         onChange={(e) => handleChange('name', e.target.value)}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md"
                         placeholder="Terminal Principal"
                     />
                 </FormField>
@@ -191,7 +191,7 @@ export function CashTerminalForm({
                         type="text"
                         value={formData.account_ref}
                         onChange={(e) => handleChange('account_ref', e.target.value)}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md"
                         placeholder="12345678"
                     />
                 </FormField>
@@ -206,7 +206,7 @@ export function CashTerminalForm({
                         type="text"
                         value={formData.last_four}
                         onChange={(e) => handleChange('last_four', e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        className="w-full px-3 py-2 border rounded-md font-mono"
+                        className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md font-mono"
                         placeholder="1234"
                         maxLength={4}
                     />

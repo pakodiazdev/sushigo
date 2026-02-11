@@ -19,6 +19,10 @@ export default function Layout() {
         }
     }, [_hasHydrated, initializeAuth]);
 
+    // Public routes that don't require authentication
+    const publicRoutes = ['/login', '/logout', '/reset-password', '/forgot-password'];
+    const isPublicRoute = publicRoutes.includes(currentPath);
+
     // Handle redirections - only after loading is complete
     useEffect(() => {
         // Don't redirect while loading
@@ -28,7 +32,7 @@ export default function Layout() {
 
         // Only redirect if we need to change pages
         const shouldRedirectToHome = isAuthenticated && user && currentPath === '/login';
-        const shouldRedirectToLogin = !isAuthenticated && currentPath !== '/login' && currentPath !== '/logout';
+        const shouldRedirectToLogin = !isAuthenticated && !isPublicRoute;
 
         if (shouldRedirectToHome) {
             router.navigate({ to: '/' });
@@ -43,7 +47,7 @@ export default function Layout() {
 
     // Show loading spinner while checking auth (but not on login/logout pages)
     // Login page handles its own loading state to preserve form data
-    if (isLoading && currentPath !== '/login' && currentPath !== '/logout') {
+    if (isLoading && !isPublicRoute) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/30">
                 <Loader2 className="h-12 w-12 animate-spin text-sushigo-navy" />
@@ -52,7 +56,7 @@ export default function Layout() {
     }
 
     // Don't show sidebar/header on login and logout pages
-    if (currentPath === '/login' || currentPath === '/logout') {
+    if (isPublicRoute) {
         return <Outlet />;
     }
 

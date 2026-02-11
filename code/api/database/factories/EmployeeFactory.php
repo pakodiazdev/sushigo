@@ -6,6 +6,7 @@ use App\Enums\EmployeeRole;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /** @extends Factory<Employee> */
 class EmployeeFactory extends Factory
@@ -15,6 +16,7 @@ class EmployeeFactory extends Factory
     public function definition(): array
     {
         return [
+            'public_id' => (string) Str::ulid(),
             'user_id' => null,
             'code' => strtoupper(fake()->unique()->bothify('EMP-###')),
             'first_name' => fake()->firstName(),

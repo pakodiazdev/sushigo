@@ -23,7 +23,6 @@ return new class extends Migration
             $table->json('meta')->nullable()->comment('Additional adjustment metadata');
             $table->timestamps();
 
-            // Indexes
             $table->index('cash_session_id');
             $table->index('type');
             $table->index('direction');

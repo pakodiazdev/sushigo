@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     lsb-release \
-    && docker-php-ext-install zip pdo pdo_pgsql pgsql \
+    && docker-php-ext-install zip pdo pdo_pgsql pgsql bcmath \
     && rm -rf /var/lib/apt/lists/*
 
 

@@ -55,19 +55,20 @@
 
 ---
 
-### AP-002 · API CRUD de empleados
+### AP-002 · API CRUD de empleados ✅
 **Talla:** M · **Prioridad:** P0 · **RF:** RF-01, RF-02
+**Commits:** `a234744`, `6f95e7f` · **Task:** #016
 
 > Como Admin, quiero crear, listar, ver, actualizar y desactivar empleados vía API, para gestionar la plantilla.
 
 **CA:**
-- [ ] `POST /api/v1/employees` — crea empleado (validación de campos requeridos + code unique)
-- [ ] `GET /api/v1/employees` — lista empleados (filtro `?is_active=`, paginación)
-- [ ] `GET /api/v1/employees/{id}` — detalle de empleado
-- [ ] `PUT /api/v1/employees/{id}` — actualiza datos
-- [ ] `PATCH /api/v1/employees/{id}/toggle-active` — activa/desactiva
-- [ ] IDs externos con Hashids (nunca exponer incremental)
-- [ ] Tests feature para cada endpoint (happy path + validaciones)
+- [x] `POST /api/v1/employees` — crea empleado (validación de campos requeridos + code unique)
+- [x] `GET /api/v1/employees` — lista empleados (filtro `?is_active=`, paginación)
+- [x] `GET /api/v1/employees/{id}` — detalle de empleado
+- [x] `PUT /api/v1/employees/{id}` — actualiza datos
+- [x] `PATCH /api/v1/employees/{id}/toggle-active` — activa/desactiva
+- [x] IDs externos con Hashids (nunca exponer incremental)
+- [x] Tests feature para cada endpoint (happy path + validaciones)
 
 ---
 

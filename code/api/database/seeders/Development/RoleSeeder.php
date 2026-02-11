@@ -14,6 +14,8 @@ class RoleSeeder extends LockedSeeder
             ['name' => 'admin', 'guard_name' => 'api'],
             ['name' => 'manager', 'guard_name' => 'api'],
             ['name' => 'user', 'guard_name' => 'api'],
+            ['name' => 'employee', 'guard_name' => 'api'],
+            ['name' => 'employee-manager', 'guard_name' => 'api'],
         ];
 
         foreach ($roles as $roleData) {

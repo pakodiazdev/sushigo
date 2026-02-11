@@ -22,7 +22,6 @@ return new class extends Migration
             $table->json('meta')->nullable()->comment('Additional metadata like external system aliases');
             $table->timestamps();
 
-            // Indexes
             $table->index('branch_id');
             $table->index('operating_unit_id');
             $table->index('type');

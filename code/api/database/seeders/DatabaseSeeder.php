@@ -4,12 +4,10 @@ namespace Database\Seeders;
 
 use Database\Seeders\Development\DevelopmentSeeder;
 use Database\Seeders\Production\ProductionSeeder;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
 
     public function run(): void
     {

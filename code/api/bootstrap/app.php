@@ -25,6 +25,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 Illuminate\Http\Request::HEADER_X_FORWARDED_PORT |
                 Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO
         );
+
+        $middleware->alias([
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
