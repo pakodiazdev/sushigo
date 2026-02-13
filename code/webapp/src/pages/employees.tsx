@@ -8,25 +8,19 @@ import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { Select } from '@/components/ui/form-fields'
 import { EmployeeForm } from '@/components/employees'
 import { useEmployees } from '@/services/employee-hooks'
-import { EmployeeRole } from '@/types/employee'
-import type { Employee, EmployeeFilters } from '@/types/employee'
+import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
+import type { Employee, EmployeeFilters, EmployeePositionRole } from '@/types/employee'
 
 export const Route = createFileRoute('/employees')({
     component: EmployeesPage,
 })
 
-const ROLE_LABELS: Record<EmployeeRole, string> = {
-    [EmployeeRole.MANAGER]: 'Gerente',
-    [EmployeeRole.COOK]: 'Cocinero',
-    [EmployeeRole.KITCHEN_ASSISTANT]: 'Asistente de Cocina',
-    [EmployeeRole.DELIVERY_DRIVER]: 'Repartidor',
-}
-
-const ROLE_COLORS: Record<EmployeeRole, string> = {
-    [EmployeeRole.MANAGER]: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-    [EmployeeRole.COOK]: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    [EmployeeRole.KITCHEN_ASSISTANT]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    [EmployeeRole.DELIVERY_DRIVER]: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+const ROLE_COLORS: Record<string, string> = {
+    'employee-manager': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'employee-cook': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'employee-kitchen-assistant': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'employee-delivery-driver': 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+    'employee-acting-manager': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
 }
 
 function formatDate(dateString: string): string {
@@ -74,15 +68,19 @@ export function EmployeesPage() {
             ),
         },
         {
-            key: 'role',
-            header: 'Puesto',
-            width: '180px',
+            key: 'roles',
+            header: 'Puestos',
+            width: '220px',
             render: (item) => (
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    ROLE_COLORS[item.role] || 'bg-gray-100 text-gray-800'
-                }`}>
-                    {ROLE_LABELS[item.role] || item.role}
-                </span>
+                <div className="flex flex-wrap gap-1">
+                    {(item.roles || []).map(role => (
+                        <span key={role} className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                            ROLE_COLORS[role] || 'bg-gray-100 text-gray-800'
+                        }`}>
+                            {EMPLOYEE_POSITION_ROLES[role as EmployeePositionRole] || role}
+                        </span>
+                    ))}
+                </div>
             ),
         },
         {
@@ -161,7 +159,7 @@ export function EmployeesPage() {
                         className="w-48"
                     >
                         <option value="">Todos los puestos</option>
-                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                        {Object.entries(EMPLOYEE_POSITION_ROLES).map(([value, label]) => (
                             <option key={value} value={value}>
                                 {label}
                             </option>

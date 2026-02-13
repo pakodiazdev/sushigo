@@ -3,7 +3,6 @@
 namespace App\Actions\Employee;
 
 use App\Actions\Auth\SendWelcomeNotificationAction;
-use App\Enums\EmployeeRole;
 use App\Models\Employee;
 use App\Models\User;
 use App\Repositories\Contracts\EmployeeRepositoryInterface;
@@ -36,29 +35,28 @@ class CreateEmployeeAction
                 'code' => $data['code'],
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
-                'role' => $data['role'],
                 'is_active' => $data['is_active'] ?? true,
                 'meta' => $data['meta'] ?? null,
             ]);
+
+            // Assign position roles via Spatie on the Employee model
+            $roles = $data['roles'] ?? [];
+            $employee->syncPositionRoles($roles);
 
             // Send welcome notification with password reset link
             // (outside transaction concern: notification is fire-and-forget)
             ($this->sendWelcomeNotification)($user);
 
-            return $employee->load('user');
+            return $employee->load(['user', 'roles']);
         });
     }
 
     /**
-     * Create a system User linked to the employee with the appropriate Spatie role.
+     * Create a system User linked to the employee.
      * User is created with a random password — must be reset via the welcome link.
      */
     private function createUserForEmployee(array $data): User
     {
-        $employeeRole = EmployeeRole::from(
-            is_string($data['role']) ? $data['role'] : $data['role']->value
-        );
-
         // Get default phone country from config (hardcoded +52 for Mexico in v1)
         $phoneCountry = config('employees.default_phone_country');
 
@@ -69,9 +67,6 @@ class CreateEmployeeAction
             'phone_country' => isset($data['phone']) ? $phoneCountry : null,
             'password' => Str::random(32),
         ]);
-
-        $spatieRole = $employeeRole->spatieRole();
-        $user->assignRole($spatieRole);
 
         return $user;
     }

@@ -33,20 +33,27 @@ class UpdateEmployeeController extends Controller
 {
     public function __invoke(UpdateEmployeeRequest $request, Employee $employee): ResponseEntity
     {
-        $employee->update($request->validated());
+        $validated = $request->validated();
+
+        // Extract non-employee fields
+        $roles = $validated['roles'] ?? null;
+        $userFields = array_intersect_key($validated, array_flip(['email', 'phone']));
+        $employeeFields = array_diff_key($validated, array_flip(['email', 'phone', 'roles']));
+
+        $employee->update($employeeFields);
+
+        if ($roles !== null) {
+            $employee->syncPositionRoles($roles);
+        }
+
+        if (!empty($userFields) && $employee->user) {
+            $employee->user->update($userFields);
+        }
+
+        $employee->load(['user', 'roles']);
 
         return new ResponseEntity(
-            data: [
-                'id' => $employee->public_id,
-                'code' => $employee->code,
-                'first_name' => $employee->first_name,
-                'last_name' => $employee->last_name,
-                'role' => $employee->role->value,
-                'is_active' => $employee->is_active,
-                'meta' => $employee->meta,
-                'created_at' => $employee->created_at,
-                'updated_at' => $employee->updated_at,
-            ]
+            data: $employee->toApiArray()
         );
     }
 }

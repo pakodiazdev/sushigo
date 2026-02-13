@@ -14,7 +14,7 @@ use App\Models\Employee;
  *   tags={"Employees"},
  *   security={{"passport": {}}},
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean")),
- *   @OA\Parameter(name="role", in="query", @OA\Schema(type="string", enum={"MANAGER", "COOK", "KITCHEN_ASSISTANT", "DELIVERY_DRIVER"})),
+ *   @OA\Parameter(name="role", in="query", @OA\Schema(type="string", enum={"employee-manager", "employee-cook", "employee-kitchen-assistant", "employee-delivery-driver", "employee-acting-manager"})),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15)),
  *   @OA\Response(
@@ -33,14 +33,14 @@ class ListEmployeesController extends Controller
 {
     public function __invoke(ListEmployeesRequest $request): ResponsePaginated
     {
-        $query = Employee::query();
+        $query = Employee::with(['user', 'roles']);
 
         if ($request->filled('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
         }
 
         if ($request->filled('role')) {
-            $query->where('role', strtoupper($request->role));
+            $query->role($request->role);
         }
 
         if ($request->filled('search')) {
@@ -53,22 +53,9 @@ class ListEmployeesController extends Controller
         }
 
         $perPage = $request->input('per_page', 15);
-        $employees = $query->with('user')->orderBy('code')->paginate($perPage);
+        $employees = $query->orderBy('code')->paginate($perPage);
 
-        $employees->getCollection()->transform(fn ($employee) => [
-            'id' => $employee->public_id,
-            'code' => $employee->code,
-            'first_name' => $employee->first_name,
-            'last_name' => $employee->last_name,
-            'role' => $employee->role->value,
-            'is_active' => $employee->is_active,
-            'email' => $employee->user?->email,
-            'phone' => $employee->user?->phone,
-            'phone_country' => $employee->user?->phone_country,
-            'meta' => $employee->meta,
-            'created_at' => $employee->created_at,
-            'updated_at' => $employee->updated_at,
-        ]);
+        $employees->getCollection()->transform(fn ($employee) => $employee->toApiArray());
 
         return new ResponsePaginated(paginator: $employees);
     }

@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\EmployeeRole;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -21,10 +20,19 @@ class EmployeeFactory extends Factory
             'code' => strtoupper(fake()->unique()->bothify('EMP-###')),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
-            'role' => fake()->randomElement(EmployeeRole::cases()),
             'is_active' => true,
             'meta' => null,
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Employee $employee) {
+            // Assign default role if none set yet
+            if ($employee->roles->isEmpty()) {
+                $employee->assignRole(Employee::ROLE_COOK);
+            }
+        });
     }
 
     public function withUser(?User $user = null): static
@@ -43,29 +51,43 @@ class EmployeeFactory extends Factory
 
     public function manager(): static
     {
-        return $this->state(fn(array $attributes) => [
-            'role' => EmployeeRole::MANAGER,
-        ]);
+        return $this->afterCreating(function (Employee $employee) {
+            $employee->syncRoles([Employee::ROLE_MANAGER]);
+        });
     }
 
     public function cook(): static
     {
-        return $this->state(fn(array $attributes) => [
-            'role' => EmployeeRole::COOK,
-        ]);
+        return $this->afterCreating(function (Employee $employee) {
+            $employee->syncRoles([Employee::ROLE_COOK]);
+        });
     }
 
     public function kitchenAssistant(): static
     {
-        return $this->state(fn(array $attributes) => [
-            'role' => EmployeeRole::KITCHEN_ASSISTANT,
-        ]);
+        return $this->afterCreating(function (Employee $employee) {
+            $employee->syncRoles([Employee::ROLE_KITCHEN_ASSISTANT]);
+        });
     }
 
     public function deliveryDriver(): static
     {
-        return $this->state(fn(array $attributes) => [
-            'role' => EmployeeRole::DELIVERY_DRIVER,
-        ]);
+        return $this->afterCreating(function (Employee $employee) {
+            $employee->syncRoles([Employee::ROLE_DELIVERY_DRIVER]);
+        });
+    }
+
+    public function actingManager(): static
+    {
+        return $this->afterCreating(function (Employee $employee) {
+            $employee->syncRoles([Employee::ROLE_ACTING_MANAGER]);
+        });
+    }
+
+    public function withRoles(array $roles): static
+    {
+        return $this->afterCreating(function (Employee $employee) use ($roles) {
+            $employee->syncRoles($roles);
+        });
     }
 }
