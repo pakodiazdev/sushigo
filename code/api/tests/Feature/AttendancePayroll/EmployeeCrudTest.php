@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\AttendancePayroll;
 
-use App\Enums\EmployeeRole;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,6 +40,11 @@ class EmployeeCrudTest extends TestCase
         $employeeManagerRole = Role::create(['name' => 'employee-manager', 'guard_name' => 'api']);
         $employeeManagerRole->givePermissionTo(['users.show', 'users.index', 'employees.view']);
 
+        // Create position roles
+        foreach (Employee::POSITION_ROLES as $roleName) {
+            Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
+        }
+
         $this->user = User::factory()->create();
         $this->user->assignRole('admin');
 
@@ -56,7 +60,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-001',
             'first_name' => 'Juan',
             'last_name' => 'Perez',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'email' => 'juan.perez@sushigo.com',
         ]);
 
@@ -65,9 +69,13 @@ class EmployeeCrudTest extends TestCase
                 'code' => 'EMP-001',
                 'first_name' => 'Juan',
                 'last_name' => 'Perez',
-                'role' => 'COOK',
                 'is_active' => true,
             ]);
+
+        // Should return roles as array
+        $roles = $response->json('data.roles');
+        $this->assertIsArray($roles);
+        $this->assertContains('employee-cook', $roles);
 
         $this->assertDatabaseHas('employees', [
             'code' => 'EMP-001',
@@ -87,7 +95,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-PHONE',
             'first_name' => 'Maria',
             'last_name' => 'Lopez',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'phone' => '5512345678',
         ]);
 
@@ -111,7 +119,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-BOTH',
             'first_name' => 'Carlos',
             'last_name' => 'Garcia',
-            'role' => 'MANAGER',
+            'roles' => ['employee-manager'],
             'email' => 'carlos@sushigo.com',
             'phone' => '5500001111',
         ]);
@@ -126,6 +134,26 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
+    public function it_can_create_employee_with_multiple_roles(): void
+    {
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-MULTI',
+            'first_name' => 'Multi',
+            'last_name' => 'Role',
+            'roles' => ['employee-cook', 'employee-delivery-driver'],
+            'email' => 'multi@sushigo.com',
+        ]);
+
+        $response->assertStatus(201);
+
+        $roles = $response->json('data.roles');
+        $this->assertIsArray($roles);
+        $this->assertContains('employee-cook', $roles);
+        $this->assertContains('employee-delivery-driver', $roles);
+        $this->assertCount(2, $roles);
+    }
+
+    #[Test]
     public function it_returns_email_and_phone_when_showing_employee(): void
     {
         // Create employee via API to get proper user association
@@ -133,7 +161,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-SHOW',
             'first_name' => 'Test',
             'last_name' => 'User',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'email' => 'test.show@sushigo.com',
             'phone' => '5599887766',
         ]);
@@ -151,31 +179,12 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function it_auto_uppercases_code_and_role(): void
-    {
-        $response = $this->postJson('/api/v1/employees', [
-            'code' => 'emp-002',
-            'first_name' => 'Maria',
-            'last_name' => 'Garcia',
-            'role' => 'manager',
-            'email' => 'maria.garcia@sushigo.com',
-        ]);
-
-        $response->assertStatus(201);
-
-        $this->assertDatabaseHas('employees', [
-            'code' => 'EMP-002',
-            'role' => 'MANAGER',
-        ]);
-    }
-
-    #[Test]
     public function it_validates_required_fields_on_create(): void
     {
         $response = $this->postJson('/api/v1/employees', []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['code', 'first_name', 'last_name', 'role']);
+            ->assertJsonValidationErrors(['code', 'first_name', 'last_name', 'roles']);
     }
 
     #[Test]
@@ -185,7 +194,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-NOID',
             'first_name' => 'Test',
             'last_name' => 'User',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
         ]);
 
         $response->assertStatus(422)
@@ -201,7 +210,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-001',
             'first_name' => 'Another',
             'last_name' => 'Employee',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'email' => 'another@sushigo.com',
         ]);
 
@@ -210,18 +219,48 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function it_validates_role_enum_on_create(): void
+    public function it_validates_roles_on_create(): void
     {
         $response = $this->postJson('/api/v1/employees', [
             'code' => 'EMP-001',
             'first_name' => 'Juan',
             'last_name' => 'Perez',
-            'role' => 'INVALID_ROLE',
+            'roles' => ['INVALID_ROLE'],
             'email' => 'juan@sushigo.com',
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['role']);
+            ->assertJsonValidationErrors(['roles.0']);
+    }
+
+    #[Test]
+    public function it_validates_roles_must_be_array(): void
+    {
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-001',
+            'first_name' => 'Juan',
+            'last_name' => 'Perez',
+            'roles' => 'employee-cook',
+            'email' => 'juan@sushigo.com',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['roles']);
+    }
+
+    #[Test]
+    public function it_validates_roles_min_one(): void
+    {
+        $response = $this->postJson('/api/v1/employees', [
+            'code' => 'EMP-001',
+            'first_name' => 'Juan',
+            'last_name' => 'Perez',
+            'roles' => [],
+            'email' => 'juan@sushigo.com',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['roles']);
     }
 
     #[Test]
@@ -235,12 +274,14 @@ class EmployeeCrudTest extends TestCase
             ->assertJsonStructure([
                 'status',
                 'data' => [
-                    '*' => ['id', 'code', 'first_name', 'last_name', 'role', 'is_active'],
+                    '*' => ['id', 'code', 'first_name', 'last_name', 'roles', 'is_active'],
                 ],
                 'meta' => ['current_page', 'total'],
             ]);
 
         $this->assertCount(3, $response->json('data'));
+        // Verify roles is an array
+        $this->assertIsArray($response->json('data.0.roles'));
     }
 
     #[Test]
@@ -261,7 +302,7 @@ class EmployeeCrudTest extends TestCase
         Employee::factory()->cook()->count(2)->create();
         Employee::factory()->manager()->create();
 
-        $response = $this->getJson('/api/v1/employees?role=COOK');
+        $response = $this->getJson('/api/v1/employees?role=employee-cook');
 
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
@@ -290,7 +331,7 @@ class EmployeeCrudTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'status',
-                'data' => ['id', 'code', 'first_name', 'last_name', 'role', 'is_active', 'email', 'phone', 'phone_country'],
+                'data' => ['id', 'code', 'first_name', 'last_name', 'roles', 'is_active', 'email', 'phone', 'phone_country'],
             ])
             ->assertJsonFragment([
                 'id' => $employee->public_id,
@@ -313,33 +354,51 @@ class EmployeeCrudTest extends TestCase
 
         $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
             'first_name' => 'Updated Name',
-            'role' => 'MANAGER',
+            'roles' => ['employee-manager'],
         ]);
 
         $response->assertStatus(200)
             ->assertJsonFragment([
                 'first_name' => 'Updated Name',
-                'role' => 'MANAGER',
             ]);
+
+        $roles = $response->json('data.roles');
+        $this->assertContains('employee-manager', $roles);
 
         $this->assertDatabaseHas('employees', [
             'id' => $employee->id,
             'first_name' => 'Updated Name',
-            'role' => 'MANAGER',
         ]);
     }
 
     #[Test]
-    public function it_validates_role_enum_on_update(): void
+    public function it_can_update_employee_with_multiple_roles(): void
+    {
+        $employee = Employee::factory()->cook()->create();
+
+        $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
+            'roles' => ['employee-cook', 'employee-delivery-driver'],
+        ]);
+
+        $response->assertStatus(200);
+
+        $roles = $response->json('data.roles');
+        $this->assertContains('employee-cook', $roles);
+        $this->assertContains('employee-delivery-driver', $roles);
+        $this->assertCount(2, $roles);
+    }
+
+    #[Test]
+    public function it_validates_roles_on_update(): void
     {
         $employee = Employee::factory()->create();
 
         $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
-            'role' => 'INVALID_ROLE',
+            'roles' => ['INVALID_ROLE'],
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['role']);
+            ->assertJsonValidationErrors(['roles.0']);
     }
 
     #[Test]
@@ -404,7 +463,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-004',
             'first_name' => 'Ana',
             'last_name' => 'Martinez',
-            'role' => 'KITCHEN_ASSISTANT',
+            'roles' => ['employee-kitchen-assistant'],
             'email' => 'ana.martinez@sushigo.com',
             'meta' => ['notes' => 'Part-time'],
         ]);
@@ -423,7 +482,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-ULID',
             'first_name' => 'Ulid',
             'last_name' => 'Test',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'email' => 'ulid@sushigo.com',
         ]);
 
@@ -464,7 +523,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-NOPERM',
             'first_name' => 'No',
             'last_name' => 'Permission',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'email' => 'noperm@sushigo.com',
         ]);
 
@@ -493,7 +552,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-USR-001',
             'first_name' => 'Carlos',
             'last_name' => 'Mendoza',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'email' => 'carlos@sushigo.com',
         ]);
 
@@ -513,7 +572,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-MGR-001',
             'first_name' => 'Ana',
             'last_name' => 'Garcia',
-            'role' => 'MANAGER',
+            'roles' => ['employee-manager'],
             'email' => 'ana.garcia@sushigo.com',
         ]);
 
@@ -533,7 +592,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-DUP',
             'first_name' => 'Test',
             'last_name' => 'User',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'email' => 'taken@sushigo.com',
         ]);
 
@@ -550,7 +609,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-DUP-P',
             'first_name' => 'Test',
             'last_name' => 'User',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'phone' => '5599990000',
         ]);
 
@@ -568,7 +627,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-ROLLBACK',
             'first_name' => 'Rollback',
             'last_name' => 'Test',
-            'role' => 'COOK',
+            'roles' => ['employee-cook'],
             'email' => 'rollback@sushigo.com',
         ]);
 
@@ -579,5 +638,16 @@ class EmployeeCrudTest extends TestCase
         $this->assertDatabaseMissing('users', [
             'email' => 'rollback@sushigo.com',
         ]);
+    }
+
+    #[Test]
+    public function toggle_returns_roles_array(): void
+    {
+        $employee = Employee::factory()->cook()->create();
+
+        $response = $this->patchJson("/api/v1/employees/{$employee->public_id}/toggle-active");
+
+        $response->assertStatus(200);
+        $this->assertIsArray($response->json('data.roles'));
     }
 }

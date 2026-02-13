@@ -77,11 +77,8 @@ export const useAuthStore = create<AuthState>()(
       _hasInitialized: false,
       _hasHydrated: false,
 
-      // Computed - these are evaluated on each access
-      get isAdmin() {
-        const state = get();
-        return state ? checkIsAdmin(state.user) : false;
-      },
+      // Derived state - recalculated on every set() that changes user
+      isAdmin: false,
 
       can: (permission: string) => {
         const state = get();
@@ -112,6 +109,7 @@ export const useAuthStore = create<AuthState>()(
             availableBranches: branches,
             currentBranch: selectedBranch,
             isAuthenticated: true,
+            isAdmin: isUserAdmin,
             isLoading: false,
             error: null,
             _hasInitialized: true,
@@ -126,6 +124,7 @@ export const useAuthStore = create<AuthState>()(
             currentBranch: null,
             availableBranches: [],
             isAuthenticated: false,
+            isAdmin: false,
             isLoading: false,
             error: errorMessage,
           });
@@ -145,6 +144,7 @@ export const useAuthStore = create<AuthState>()(
             currentBranch: null,
             availableBranches: [],
             isAuthenticated: false,
+            isAdmin: false,
             isLoading: false,
             error: null,
             _hasInitialized: false,
@@ -169,7 +169,7 @@ export const useAuthStore = create<AuthState>()(
         const { token } = get(); // Get fresh state after hydration
 
         if (!token) {
-          set({ isLoading: false, isAuthenticated: false, user: null });
+          set({ isLoading: false, isAuthenticated: false, isAdmin: false, user: null });
           return;
         }
 
@@ -201,6 +201,7 @@ export const useAuthStore = create<AuthState>()(
             availableBranches: branches,
             currentBranch: restoredBranch,
             isAuthenticated: true,
+            isAdmin: checkIsAdmin(userData),
             isLoading: false,
             error: null,
           });
@@ -211,6 +212,7 @@ export const useAuthStore = create<AuthState>()(
             currentBranch: null,
             availableBranches: [],
             isAuthenticated: false,
+            isAdmin: false,
             isLoading: false,
             error: null,
           });
@@ -242,6 +244,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({
             user: userData,
+            isAdmin: checkIsAdmin(userData),
             availableBranches: branches,
             currentBranch: validatedBranch,
           });
@@ -267,6 +270,7 @@ export const useAuthStore = create<AuthState>()(
           availableBranches: branches,
           currentBranch: selectedBranch,
           isAuthenticated: true,
+          isAdmin: isUserAdmin,
           isLoading: false,
           error: null,
           _hasInitialized: true,

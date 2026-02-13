@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { FormField, Select } from '@/components/ui/form-fields'
+import { FormField } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
+import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { useCreateEmployee, useUpdateEmployee, useToggleEmployeeActive, useNextEmployeeCode, useEmployee } from '@/services/employee-hooks'
-import { EmployeeRole } from '@/types/employee'
-import type { Employee, EmployeeFormData, EmployeeUpdateData } from '@/types/employee'
+import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
+import type { Employee, EmployeeFormData, EmployeeUpdateData, EmployeePositionRole } from '@/types/employee'
+import { useAuthStore } from '@/stores/auth.store'
 import { Loader2, Power, RefreshCw } from 'lucide-react'
 
 interface EmployeeFormProps {
@@ -14,13 +16,6 @@ interface EmployeeFormProps {
     onSuccess: () => void
 }
 
-const EMPLOYEE_ROLES = [
-    { value: EmployeeRole.MANAGER, label: 'Gerente' },
-    { value: EmployeeRole.COOK, label: 'Cocinero' },
-    { value: EmployeeRole.KITCHEN_ASSISTANT, label: 'Asistente de Cocina' },
-    { value: EmployeeRole.DELIVERY_DRIVER, label: 'Repartidor' },
-]
-
 export function EmployeeForm({
     employee,
     isOpen,
@@ -28,6 +23,8 @@ export function EmployeeForm({
     onSuccess,
 }: EmployeeFormProps) {
     const isEditing = !!employee
+    const isAdmin = useAuthStore((s) => s.isAdmin)
+    const canEditContact = !isEditing || isAdmin
 
     // Fetch full employee data when editing to get email/phone from user
     const employeeQuery = useEmployee(isOpen && isEditing && employee?.id ? employee.id : '')
@@ -37,7 +34,7 @@ export function EmployeeForm({
         code: '',
         first_name: '',
         last_name: '',
-        role: EmployeeRole.COOK,
+        roles: [],
         email: '',
         phone: '',
     })
@@ -53,7 +50,7 @@ export function EmployeeForm({
                 code: fullEmployee.code,
                 first_name: fullEmployee.first_name,
                 last_name: fullEmployee.last_name,
-                role: fullEmployee.role,
+                roles: fullEmployee.roles || [],
                 email: fullEmployee.email || '',
                 phone: fullEmployee.phone || '',
             })
@@ -62,7 +59,7 @@ export function EmployeeForm({
                 code: '',
                 first_name: '',
                 last_name: '',
-                role: EmployeeRole.COOK,
+                roles: [],
                 email: '',
                 phone: '',
             })
@@ -97,11 +94,11 @@ export function EmployeeForm({
         if (!formData.last_name.trim()) {
             newErrors.last_name = 'El apellido es requerido'
         }
-        if (!formData.role) {
-            newErrors.role = 'El puesto es requerido'
+        if (formData.roles.length === 0) {
+            newErrors.roles = 'Selecciona al menos un puesto'
         }
 
-        if (!isEditing) {
+        if (!isEditing || isAdmin) {
             const hasEmail = formData.email?.trim()
             const hasPhone = formData.phone?.trim()
             if (!hasEmail && !hasPhone) {
@@ -119,7 +116,11 @@ export function EmployeeForm({
                 const updateData: EmployeeUpdateData = {
                     first_name: formData.first_name,
                     last_name: formData.last_name,
-                    role: formData.role,
+                    roles: formData.roles,
+                }
+                if (isAdmin) {
+                    updateData.email = formData.email || ''
+                    updateData.phone = formData.phone || ''
                 }
                 await updateMutation.mutateAsync({
                     id: employee.id,
@@ -156,6 +157,13 @@ export function EmployeeForm({
                 return newErrors
             })
         }
+    }
+
+    const handleRoleToggle = (role: EmployeePositionRole, checked: boolean) => {
+        const newRoles = checked
+            ? [...formData.roles, role]
+            : formData.roles.filter(r => r !== role)
+        handleChange('roles', newRoles)
     }
 
     const isLoading = createMutation.isPending || updateMutation.isPending || toggleMutation.isPending || employeeQuery.isLoading
@@ -290,43 +298,44 @@ export function EmployeeForm({
                 </div>
 
                 <FormField
-                    label="Puesto"
-                    error={errors.role}
+                    label="Puestos"
+                    error={errors.roles}
                     required
+                    hint="Selecciona uno o mas puestos para el empleado"
                 >
-                    <Select
-                        value={formData.role}
-                        onChange={(e) => handleChange('role', e.target.value)}
-                    >
-                        {EMPLOYEE_ROLES.map(role => (
-                            <option key={role.value} value={role.value}>
-                                {role.label}
-                            </option>
+                    <div className="grid grid-cols-2 gap-3 rounded-md border border-input p-3">
+                        {(Object.entries(EMPLOYEE_POSITION_ROLES) as [EmployeePositionRole, string][]).map(([role, label]) => (
+                            <ToggleSwitch
+                                key={role}
+                                label={label}
+                                checked={formData.roles.includes(role)}
+                                onChange={(checked) => handleRoleToggle(role, checked)}
+                            />
                         ))}
-                    </Select>
+                    </div>
                 </FormField>
 
-                {/* Email field - editable only on create, read-only on edit */}
+                {/* Email field - editable on create and for admins on edit */}
                 <FormField
                     label="Email"
                     error={errors.email}
-                    hint={!isEditing ? "Requerido si no proporciona telefono" : undefined}
+                    hint={canEditContact ? "Requerido si no proporciona telefono" : undefined}
                 >
                     <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => handleChange('email', e.target.value)}
-                        disabled={isEditing}
+                        disabled={!canEditContact}
                         className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-muted"
-                        placeholder={isEditing ? "Sin email registrado" : "juan@example.com"}
+                        placeholder={!canEditContact ? "Sin email registrado" : "juan@example.com"}
                         maxLength={255}
                     />
                 </FormField>
 
-                {/* Phone field - editable only on create, read-only on edit */}
+                {/* Phone field - editable on create and for admins on edit */}
                 <FormField
                     label="Telefono"
-                    hint={!isEditing ? "Requerido si no proporciona email. Solo el numero nacional (10 digitos)." : undefined}
+                    hint={canEditContact ? "Requerido si no proporciona email. Solo el numero nacional (10 digitos)." : undefined}
                 >
                     <div className="flex">
                         <span className="inline-flex items-center px-3 py-2 border border-r-0 border-input bg-muted text-muted-foreground rounded-l-md text-sm">
@@ -340,9 +349,9 @@ export function EmployeeForm({
                                 const value = e.target.value.replace(/\D/g, '')
                                 handleChange('phone', value)
                             }}
-                            disabled={isEditing}
+                            disabled={!canEditContact}
                             className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-r-md rounded-l-none disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-muted"
-                            placeholder={isEditing ? "Sin telefono registrado" : "5512345678"}
+                            placeholder={!canEditContact ? "Sin telefono registrado" : "5512345678"}
                             maxLength={10}
                         />
                     </div>
@@ -350,7 +359,7 @@ export function EmployeeForm({
 
                 {!isEditing && (
                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-                        <p>El empleado recibirá un enlace para configurar su contraseña por {formData.email?.trim() ? 'correo electrónico' : 'WhatsApp'}.</p>
+                        <p>El empleado recibira un enlace para configurar su contrasena por {formData.email?.trim() ? 'correo electronico' : 'WhatsApp'}.</p>
                     </div>
                 )}
 

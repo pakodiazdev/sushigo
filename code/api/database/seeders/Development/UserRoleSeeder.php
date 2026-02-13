@@ -10,36 +10,33 @@ class UserRoleSeeder extends OnceSeeder
 {
     public function run(): void
     {
-        $adminUser = User::where('email', 'admin@sushigo.com')->first();
-        if ($adminUser) {
-            $superAdminRole = Role::where('name', 'super-admin')
-                ->where('guard_name', 'api')
-                ->first();
-            if ($superAdminRole) {
-                $adminUser->assignRole($superAdminRole);
-                $this->command->info("✓ Assigned 'super-admin' role to admin@sushigo.com");
+        // Assign roles from config-driven development users
+        $users = config('seeders.development_users', []);
+
+        foreach ($users as $userData) {
+            $user = User::where('email', $userData['email'])->first();
+            if ($user) {
+                $role = Role::where('name', $userData['role'])
+                    ->where('guard_name', 'api')
+                    ->first();
+                if ($role && !$user->hasRole($role)) {
+                    $user->assignRole($role);
+                    $this->command->info("✓ Assigned '{$userData['role']}' role to {$userData['email']}");
+                }
             }
         }
 
-        $demoUser = User::where('email', 'demo@sushigo.com')->first();
-        if ($demoUser) {
-            $userRole = Role::where('name', 'user')
-                ->where('guard_name', 'api')
-                ->first();
-            if ($userRole) {
-                $demoUser->assignRole($userRole);
-                $this->command->info("✓ Assigned 'user' role to demo@sushigo.com");
-            }
-        }
+        // Assign default 'user' role to demo and test users
+        $defaultRoleUsers = ['demo@sushigo.com', 'test@example.com'];
+        $userRole = Role::where('name', 'user')->where('guard_name', 'api')->first();
 
-        $testUser = User::where('email', 'test@example.com')->first();
-        if ($testUser) {
-            $userRole = Role::where('name', 'user')
-                ->where('guard_name', 'api')
-                ->first();
-            if ($userRole) {
-                $testUser->assignRole($userRole);
-                $this->command->info("✓ Assigned 'user' role to test@example.com");
+        if ($userRole) {
+            foreach ($defaultRoleUsers as $email) {
+                $user = User::where('email', $email)->first();
+                if ($user && !$user->hasRole($userRole)) {
+                    $user->assignRole($userRole);
+                    $this->command->info("✓ Assigned 'user' role to {$email}");
+                }
             }
         }
 

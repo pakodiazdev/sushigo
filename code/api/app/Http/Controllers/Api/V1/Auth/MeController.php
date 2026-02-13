@@ -36,12 +36,21 @@ class MeController extends Controller
     public function __invoke(Request $request)
     {
         $user = $request->user();
+        $user->load('roles', 'permissions');
 
         return new ResponseEntity(
             data: [
                 'id'    => $user->id,
                 'name'  => $user->name,
                 'email' => $user->email,
+                'roles' => $user->roles->map(fn ($role) => [
+                    'id'   => $role->id,
+                    'name' => $role->name,
+                ]),
+                'permissions' => $user->permissions->map(fn ($perm) => [
+                    'id'   => $perm->id,
+                    'name' => $perm->name,
+                ]),
             ],
             status: 200
         );

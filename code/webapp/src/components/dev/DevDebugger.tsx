@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
     Bug,
     User,
+    Shield,
     MinusCircle,
     PlusCircle,
     ChevronDown,
@@ -16,6 +17,7 @@ interface DebuggerState {
     position: { x: number; y: number }
     expandedSections: {
         user: boolean
+        roles: boolean
         queries: boolean
     }
 }
@@ -23,7 +25,7 @@ interface DebuggerState {
 const STORAGE_KEY = 'dev_debugger_state'
 
 export function DevDebugger() {
-    const { user, isAuthenticated, token } = useAuthStore()
+    const { user, isAuthenticated, isAdmin, token } = useAuthStore()
     const queryClient = useQueryClient()
     const dragRef = useRef<HTMLDivElement>(null)
     const [isDragging, setIsDragging] = useState(false)
@@ -37,6 +39,7 @@ export function DevDebugger() {
             position: { x: window.innerWidth - 420, y: 100 },
             expandedSections: {
                 user: true,
+                roles: false,
                 queries: false,
             }
         }
@@ -206,6 +209,61 @@ export function DevDebugger() {
                                 value={token ? token.substring(0, 20) + '...' : 'No'}
                                 highlight={!!token}
                             />
+                        </div>
+                    ) : (
+                        <p className="text-xs text-gray-400">No autenticado</p>
+                    )}
+                </Section>
+
+                {/* Roles & Permissions Section */}
+                <Section
+                    icon={Shield}
+                    title="Roles y Permisos"
+                    isExpanded={state.expandedSections.roles}
+                    onToggle={() => toggleSection('roles')}
+                    badge={user?.roles?.length}
+                >
+                    {user ? (
+                        <div className="space-y-2 text-xs font-mono">
+                            <InfoRow
+                                label="isAdmin (store)"
+                                value={isAdmin ? 'true' : 'false'}
+                                highlight={isAdmin}
+                            />
+                            <div>
+                                <span className="text-gray-400">Roles:</span>
+                                {user.roles && user.roles.length > 0 ? (
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {user.roles.map((role) => (
+                                            <span
+                                                key={role.id}
+                                                className="inline-block bg-purple-600 text-white px-2 py-0.5 rounded text-xs"
+                                            >
+                                                {role.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <span className="ml-2 text-yellow-400">Sin roles</span>
+                                )}
+                            </div>
+                            <div>
+                                <span className="text-gray-400">Permisos:</span>
+                                {user.permissions && user.permissions.length > 0 ? (
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {user.permissions.map((perm) => (
+                                            <span
+                                                key={perm.id}
+                                                className="inline-block bg-teal-600 text-white px-2 py-0.5 rounded text-xs"
+                                            >
+                                                {perm.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <span className="ml-2 text-gray-500">Sin permisos directos</span>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <p className="text-xs text-gray-400">No autenticado</p>
