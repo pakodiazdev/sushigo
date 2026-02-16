@@ -6,9 +6,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/**
- * Notification sent when a user requests a password reset.
- */
 class ResetPasswordNotification extends Notification
 {
     use Queueable;
@@ -17,9 +14,7 @@ class ResetPasswordNotification extends Notification
         private readonly string $resetUrl,
     ) {}
 
-    /**
-     * @return array<string>
-     */
+    /** @return array<string> */
     public function via(object $notifiable): array
     {
         return ['mail'];

@@ -29,7 +29,7 @@ class StoreEmployeeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:20', 'unique:employees,code'],
+            'code' => ['required', 'string', 'max:20', Rule::unique('employees', 'code')->whereNull('deleted_at')],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'roles' => ['required', 'array', 'min:1'],

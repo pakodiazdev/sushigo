@@ -8,6 +8,7 @@ import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
 import type { Employee, EmployeeFormData, EmployeeUpdateData, EmployeePositionRole } from '@/types/employee'
 import { useAuthStore } from '@/stores/auth.store'
 import { Loader2, Power, RefreshCw } from 'lucide-react'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 
 interface EmployeeFormProps {
     employee?: Employee | null
@@ -30,23 +31,24 @@ export function EmployeeForm({
     const employeeQuery = useEmployee(isOpen && isEditing && employee?.id ? employee.id : '')
     const fullEmployee = employeeQuery.data || employee
 
-    const [formData, setFormData] = useState<EmployeeFormData>({
-        code: '',
-        first_name: '',
-        last_name: '',
-        roles: [],
-        email: '',
-        phone: '',
+    const { register, handleSubmit, control, reset, setError, clearErrors, setValue, getValues, formState } = useForm<EmployeeFormData>({
+        defaultValues: {
+            code: '',
+            first_name: '',
+            last_name: '',
+            roles: [],
+            email: '',
+            phone: '',
+        },
     })
-
-    const [errors, setErrors] = useState<Record<string, string>>({})
+    const errors = formState.errors as Record<string, any>
     const [showToggleConfirm, setShowToggleConfirm] = useState(false)
 
     const nextCodeQuery = useNextEmployeeCode(isOpen && !isEditing)
 
     useEffect(() => {
         if (fullEmployee && isEditing) {
-            setFormData({
+            reset({
                 code: fullEmployee.code,
                 first_name: fullEmployee.first_name,
                 last_name: fullEmployee.last_name,
@@ -55,82 +57,68 @@ export function EmployeeForm({
                 phone: fullEmployee.phone || '',
             })
         } else if (!isEditing) {
-            setFormData({
-                code: '',
-                first_name: '',
-                last_name: '',
-                roles: [],
-                email: '',
-                phone: '',
-            })
+            reset({ code: '', first_name: '', last_name: '', roles: [], email: '', phone: '' })
             if (isOpen) {
                 nextCodeQuery.refetch().then(result => {
                     if (result.data?.code) {
-                        setFormData(prev => ({ ...prev, code: result.data.code }))
+                        setValue('code', result.data.code)
                     }
                 })
             }
         }
-        setErrors({})
         setShowToggleConfirm(false)
-    }, [fullEmployee, isEditing, isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [fullEmployee, isEditing, isOpen, reset, setValue]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const createMutation = useCreateEmployee()
     const updateMutation = useUpdateEmployee()
     const toggleMutation = useToggleEmployeeActive()
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setErrors({})
+    const onSubmit = async () => {
+        clearErrors()
+
+        const values = getValues()
 
         const newErrors: Record<string, string> = {}
 
-        if (!formData.code.trim()) {
-            newErrors.code = 'El codigo es requerido'
-        }
-        if (!formData.first_name.trim()) {
-            newErrors.first_name = 'El nombre es requerido'
-        }
-        if (!formData.last_name.trim()) {
-            newErrors.last_name = 'El apellido es requerido'
-        }
-        if (formData.roles.length === 0) {
-            newErrors.roles = 'Selecciona al menos un puesto'
-        }
+        if (!values.code?.trim()) newErrors.code = 'El código es requerido'
+        if (!values.first_name?.trim()) newErrors.first_name = 'El nombre es requerido'
+        if (!values.last_name?.trim()) newErrors.last_name = 'El apellido es requerido'
+        if (!values.roles || values.roles.length === 0) newErrors.roles = 'Selecciona al menos un puesto'
 
         if (!isEditing || isAdmin) {
-            const hasEmail = formData.email?.trim()
-            const hasPhone = formData.phone?.trim()
-            if (!hasEmail && !hasPhone) {
-                newErrors.email = 'Email o telefono es requerido'
-            }
+            const hasEmail = values.email?.trim()
+            const hasPhone = values.phone?.trim()
+            if (!hasEmail && !hasPhone) newErrors.email = 'Email o teléfono es requerido'
         }
 
         if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors)
+            Object.entries(newErrors).forEach(([k, v]) => setError(k as any, { type: 'manual', message: v }))
             return
         }
 
         try {
             if (isEditing && employee) {
                 const updateData: EmployeeUpdateData = {
-                    first_name: formData.first_name,
-                    last_name: formData.last_name,
-                    roles: formData.roles,
+                    first_name: values.first_name,
+                    last_name: values.last_name,
+                    roles: values.roles,
                 }
-                if (isAdmin) {
-                    updateData.email = formData.email || ''
-                    updateData.phone = formData.phone || ''
+                // Only send contact fields if they actually changed to avoid unnecessary writes
+                if (isAdmin && fullEmployee) {
+                    const originalEmail = fullEmployee.email || ''
+                    const originalPhone = fullEmployee.phone || ''
+                    if ((values.email || '') !== originalEmail) {
+                        updateData.email = values.email || ''
+                    }
+                    if ((values.phone || '') !== originalPhone) {
+                        updateData.phone = values.phone || ''
+                    }
                 }
-                await updateMutation.mutateAsync({
-                    id: employee.id,
-                    data: updateData,
-                })
+                await updateMutation.mutateAsync({ id: employee.id, data: updateData })
             } else {
-                await createMutation.mutateAsync(formData)
+                await createMutation.mutateAsync(values)
             }
             onSuccess()
-            onClose()
         } catch (error) {
             console.error('Error submitting form:', error)
         }
@@ -142,30 +130,19 @@ export function EmployeeForm({
             await toggleMutation.mutateAsync(employee.id)
             setShowToggleConfirm(false)
             onSuccess()
-            onClose()
         } catch (error) {
             console.error('Error toggling active:', error)
         }
     }
 
-    const handleChange = (field: keyof EmployeeFormData, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
-        if (errors[field]) {
-            setErrors(prev => {
-                const newErrors = { ...prev }
-                delete newErrors[field]
-                return newErrors
-            })
-        }
+    const handleRoleToggle = (currentRoles: EmployeePositionRole[], role: EmployeePositionRole, checked: boolean) => {
+        const newRoles = checked ? [...currentRoles, role] : currentRoles.filter((r) => r !== role)
+        setValue('roles', newRoles)
+        // clear role error if present
+        if (errors.roles) clearErrors('roles')
     }
 
-    const handleRoleToggle = (role: EmployeePositionRole, checked: boolean) => {
-        const newRoles = checked
-            ? [...formData.roles, role]
-            : formData.roles.filter(r => r !== role)
-        handleChange('roles', newRoles)
-    }
-
+    const watchedEmail = useWatch({ control, name: 'email' })
     const isLoading = createMutation.isPending || updateMutation.isPending || toggleMutation.isPending || employeeQuery.isLoading
 
     return (
@@ -175,20 +152,18 @@ export function EmployeeForm({
             title={isEditing ? 'Editar Empleado' : 'Nuevo Empleado'}
             description={isEditing ? 'Actualiza los datos del empleado' : 'Registra un nuevo empleado en el sistema'}
         >
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Toggle active section for editing */}
                 {isEditing && fullEmployee && (
-                    <div className={`flex items-center justify-between rounded-lg border p-3 ${
-                        fullEmployee.is_active
-                            ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
-                            : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900'
-                    }`}>
+                    <div className={`flex items-center justify-between rounded-lg border p-3 ${fullEmployee.is_active
+                        ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+                        : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900'
+                        }`}>
                         <div>
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                fullEmployee.is_active
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                            }`}>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${fullEmployee.is_active
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                                }`}>
                                 {fullEmployee.is_active ? 'Activo' : 'Inactivo'}
                             </span>
                         </div>
@@ -236,20 +211,26 @@ export function EmployeeForm({
                 )}
 
                 <FormField
-                    label="Codigo"
-                    error={errors.code}
+                    label="Código"
+                    error={errors.code?.message}
                     required
-                    hint={isEditing ? undefined : 'Codigo sugerido automaticamente. Puedes modificarlo.'}
+                    hint={isEditing ? undefined : 'Código sugerido automáticamente. Puedes modificarlo.'}
                 >
                     <div className="relative">
-                        <input
-                            type="text"
-                            value={formData.code}
-                            onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
-                            disabled={isEditing}
-                            className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md font-mono disabled:opacity-50 disabled:cursor-not-allowed pr-10"
-                            placeholder={nextCodeQuery.isLoading ? 'Cargando...' : 'EMP-001'}
-                            maxLength={20}
+                        <Controller
+                            control={control}
+                            name="code"
+                            render={({ field }) => (
+                                <input
+                                    type="text"
+                                    {...field}
+                                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                                    disabled={isEditing}
+                                    className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md font-mono disabled:opacity-50 disabled:cursor-not-allowed pr-10"
+                                    placeholder={nextCodeQuery.isLoading ? 'Cargando...' : 'EMP-001'}
+                                    maxLength={20}
+                                />
+                            )}
                         />
                         {!isEditing && (
                             <button
@@ -268,13 +249,12 @@ export function EmployeeForm({
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
                         label="Nombre"
-                        error={errors.first_name}
+                        error={errors.first_name?.message}
                         required
                     >
                         <input
                             type="text"
-                            value={formData.first_name}
-                            onChange={(e) => handleChange('first_name', e.target.value)}
+                            {...register('first_name')}
                             className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md"
                             placeholder="Juan"
                             maxLength={100}
@@ -283,13 +263,12 @@ export function EmployeeForm({
 
                     <FormField
                         label="Apellido"
-                        error={errors.last_name}
+                        error={errors.last_name?.message}
                         required
                     >
                         <input
                             type="text"
-                            value={formData.last_name}
-                            onChange={(e) => handleChange('last_name', e.target.value)}
+                            {...register('last_name')}
                             className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md"
                             placeholder="Perez"
                             maxLength={100}
@@ -299,17 +278,23 @@ export function EmployeeForm({
 
                 <FormField
                     label="Puestos"
-                    error={errors.roles}
+                    error={errors.roles?.message}
                     required
-                    hint="Selecciona uno o mas puestos para el empleado"
+                    hint="Selecciona uno o más puestos para el empleado"
                 >
                     <div className="grid grid-cols-2 gap-3 rounded-md border border-input p-3">
                         {(Object.entries(EMPLOYEE_POSITION_ROLES) as [EmployeePositionRole, string][]).map(([role, label]) => (
-                            <ToggleSwitch
+                            <Controller
                                 key={role}
-                                label={label}
-                                checked={formData.roles.includes(role)}
-                                onChange={(checked) => handleRoleToggle(role, checked)}
+                                control={control}
+                                name="roles"
+                                render={({ field }) => (
+                                    <ToggleSwitch
+                                        label={label}
+                                        checked={(field.value || []).includes(role)}
+                                        onChange={(checked) => handleRoleToggle(field.value || [], role, checked)}
+                                    />
+                                )}
                             />
                         ))}
                     </div>
@@ -318,13 +303,12 @@ export function EmployeeForm({
                 {/* Email field - editable on create and for admins on edit */}
                 <FormField
                     label="Email"
-                    error={errors.email}
-                    hint={canEditContact ? "Requerido si no proporciona telefono" : undefined}
+                    error={errors.email?.message}
+                    hint={canEditContact ? "Requerido si no proporciona teléfono" : undefined}
                 >
                     <input
                         type="email"
-                        value={formData.email}
-                        onChange={(e) => handleChange('email', e.target.value)}
+                        {...register('email')}
                         disabled={!canEditContact}
                         className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-muted"
                         placeholder={!canEditContact ? "Sin email registrado" : "juan@example.com"}
@@ -334,32 +318,37 @@ export function EmployeeForm({
 
                 {/* Phone field - editable on create and for admins on edit */}
                 <FormField
-                    label="Telefono"
-                    hint={canEditContact ? "Requerido si no proporciona email. Solo el numero nacional (10 digitos)." : undefined}
+                    label="Teléfono"
+                    hint={canEditContact ? "Requerido si no proporciona email. Solo el número nacional (10 dígitos)." : undefined}
                 >
                     <div className="flex">
                         <span className="inline-flex items-center px-3 py-2 border border-r-0 border-input bg-muted text-muted-foreground rounded-l-md text-sm">
                             +52
                         </span>
-                        <input
-                            type="tel"
-                            value={formData.phone}
-                            onChange={(e) => {
-                                // Only allow digits
-                                const value = e.target.value.replace(/\D/g, '')
-                                handleChange('phone', value)
-                            }}
-                            disabled={!canEditContact}
-                            className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-r-md rounded-l-none disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-muted"
-                            placeholder={!canEditContact ? "Sin telefono registrado" : "5512345678"}
-                            maxLength={10}
+                        <Controller
+                            control={control}
+                            name="phone"
+                            render={({ field }) => (
+                                <input
+                                    type="tel"
+                                    {...field}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '')
+                                        field.onChange(value)
+                                    }}
+                                    disabled={!canEditContact}
+                                    className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-r-md rounded-l-none disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-muted"
+                                    placeholder={!canEditContact ? "Sin telefono registrado" : "5512345678"}
+                                    maxLength={10}
+                                />
+                            )}
                         />
                     </div>
                 </FormField>
 
                 {!isEditing && (
                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-                        <p>El empleado recibira un enlace para configurar su contrasena por {formData.email?.trim() ? 'correo electronico' : 'WhatsApp'}.</p>
+                        <p>El empleado recibirá un enlace para configurar su contraseña por {watchedEmail?.trim() ? 'correo electrónico' : 'WhatsApp'}.</p>
                     </div>
                 )}
 

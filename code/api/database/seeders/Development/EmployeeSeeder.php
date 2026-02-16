@@ -5,21 +5,27 @@ namespace Database\Seeders\Development;
 use App\Actions\Employee\CreateEmployeeAction;
 use App\Models\Employee;
 use Database\Seeders\Base\OnceSeeder;
+use Illuminate\Support\Facades\Notification;
 
 class EmployeeSeeder extends OnceSeeder
 {
     /**
-     * Legacy role mapping for backward compatibility with old config format.
+     * Seed development employees with users and roles.
+     *
+     * WithoutModelEvents is NOT used in DatabaseSeeder because HasPublicId
+     * relies on the Eloquent 'creating' event to auto-generate ULIDs.
+     *
+     * Instead, Notification::fake() suppresses email/WhatsApp welcome
+     * notifications during seeding. The WhatsApp service call (not a
+     * Laravel Notification) is already wrapped in a try/catch inside
+     * CreateEmployeeAction, so it fails gracefully regardless.
      */
-    private const LEGACY_ROLE_MAP = [
-        'MANAGER' => 'employee-manager',
-        'COOK' => 'employee-cook',
-        'KITCHEN_ASSISTANT' => 'employee-kitchen-assistant',
-        'DELIVERY_DRIVER' => 'employee-delivery-driver',
-    ];
-
     public function run(): void
     {
+        // Suppress Laravel notifications during seeding to avoid sending
+        // real emails. CreateEmployeeAction dispatches welcome notifications.
+        Notification::fake();
+
         $action = app(CreateEmployeeAction::class);
 
         $employees = config('seeders.development_employees', []);
@@ -31,13 +37,6 @@ class EmployeeSeeder extends OnceSeeder
                 continue;
             }
 
-            // Backward compatibility: convert legacy 'role' to 'roles' array
-            if (isset($employeeData['role']) && !isset($employeeData['roles'])) {
-                $legacyRole = strtoupper($employeeData['role']);
-                $employeeData['roles'] = [self::LEGACY_ROLE_MAP[$legacyRole] ?? 'employee-cook'];
-                unset($employeeData['role']);
-            }
-
             $employee = $action($employeeData);
 
             $credential = $employee->user->email ?? $employee->user->phone ?? 'N/A';
@@ -46,10 +45,10 @@ class EmployeeSeeder extends OnceSeeder
             $this->command->info("✓ Employee created: {$employee->code} - {$employee->first_name} {$employee->last_name} (user: {$credential}, roles: {$roles})");
         }
 
-        // Create random employees without system users via factory
+        // Create random employees with linked user accounts via factory
         $factoryCount = config('seeders.factory_counts.employees', 5);
-        Employee::factory($factoryCount)->create();
-        $this->command->info("✓ Created {$factoryCount} random employees (factory)");
+        Employee::factory($factoryCount)->withUser()->create();
+        $this->command->info("✓ Created {$factoryCount} random employees with users (factory)");
 
         $this->command->info('✓ Development employees seeded successfully');
     }

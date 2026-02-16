@@ -53,11 +53,16 @@ class Employee extends Model
         return $query->where('is_active', true);
     }
 
+    /** System roles that are managed by employee position sync. */
+    const EMPLOYEE_SYSTEM_ROLES = ['employee', 'employee-manager'];
+
     /**
      * Sync employee position roles and update the linked User's system role accordingly.
      *
      * If the employee holds employee-manager → User gets 'employee-manager'.
      * Otherwise → User gets 'employee'.
+     *
+     * Preserves any non-employee system roles (admin, super-admin, etc.) on the User.
      */
     public function syncPositionRoles(array $roleNames): void
     {
@@ -66,19 +71,22 @@ class Employee extends Model
 
         $this->syncRoles($roleNames);
 
-        // Update the linked User's system role
+        // Update the linked User's system role (preserving non-employee roles)
         if ($this->user) {
-            $systemRole = in_array(self::ROLE_MANAGER, $roleNames)
+            $newSystemRole = in_array(self::ROLE_MANAGER, $roleNames)
                 ? 'employee-manager'
                 : 'employee';
 
-            $this->user->syncRoles([$systemRole]);
+            // Keep existing roles that aren't employee-domain, then add the new one
+            $currentRoles = $this->user->getRoleNames()->toArray();
+            $preservedRoles = array_diff($currentRoles, self::EMPLOYEE_SYSTEM_ROLES);
+            $preservedRoles[] = $newSystemRole;
+
+            $this->user->syncRoles(array_unique($preservedRoles));
         }
     }
 
-    /**
-     * Standard API response array for this employee.
-     */
+    /** @return array<string, mixed> */
     public function toApiArray(): array
     {
         return [

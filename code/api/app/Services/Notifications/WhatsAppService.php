@@ -13,22 +13,15 @@ use Illuminate\Support\Facades\Log;
  */
 class WhatsAppService
 {
-    /**
-     * Send a WhatsApp message to a phone number.
-     */
     public function sendMessage(string $phone, string $message): void
     {
         // TODO: Replace with real WhatsApp provider integration
         // Example providers: Twilio WhatsApp API, 360dialog, Meta Cloud API
         Log::channel('single')->info('[WhatsApp Service] Message to be sent', [
-            'phone' => $phone,
-            'message' => $message,
+            'phone' => $this->maskPhone($phone),
         ]);
     }
 
-    /**
-     * Send a password reset link via WhatsApp.
-     */
     public function sendPasswordResetLink(string $phone, string $resetUrl): void
     {
         $message = "🔐 *SushiGo - Configurar contraseña*\n\n"
@@ -39,9 +32,15 @@ class WhatsAppService
 
         $this->sendMessage($phone, $message);
 
-        Log::channel('single')->info('[WhatsApp Service] Password reset URL for development', [
-            'phone' => $phone,
-            'reset_url' => $resetUrl,
+        Log::channel('single')->info('[WhatsApp Service] Password reset link sent', [
+            'phone' => $this->maskPhone($phone),
         ]);
+    }
+
+    private function maskPhone(string $phone): string
+    {
+        $visible = substr($phone, -4);
+
+        return str_repeat('*', max(0, strlen($phone) - 4)) . $visible;
     }
 }

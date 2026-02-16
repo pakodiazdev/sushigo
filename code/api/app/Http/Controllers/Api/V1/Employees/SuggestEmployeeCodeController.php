@@ -41,20 +41,18 @@ class SuggestEmployeeCodeController extends Controller
 
     private function findNextAvailableNumber(string $prefix): int
     {
-        // Find the highest numeric suffix among codes that start with the prefix
+        $prefixLength = strlen($prefix);
+
+        // Compute maximum numeric suffix in SQL to avoid loading all rows into memory.
+        // Consider only codes where the substring after the prefix is numeric.
         $maxNumber = Employee::withTrashed()
             ->where('code', 'LIKE', $prefix . '%')
-            ->get()
-            ->map(function (Employee $employee) use ($prefix) {
-                $suffix = substr($employee->code, strlen($prefix));
+            ->whereRaw("SUBSTRING(code, ?) ~ '^[0-9]+$'", [$prefixLength + 1])
+            ->selectRaw('MAX(CAST(SUBSTRING(code, ?) AS INTEGER)) AS max_number', [$prefixLength + 1])
+            ->value('max_number');
 
-                return is_numeric($suffix) ? (int) $suffix : 0;
-            })
-            ->max();
+        $candidate = ((int) ($maxNumber ?? 0)) + 1;
 
-        $candidate = ($maxNumber ?? 0) + 1;
-
-        // Verify the candidate is not taken (handles edge cases with mixed formats)
         while ($this->codeExists($prefix, $candidate)) {
             $candidate++;
         }
