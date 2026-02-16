@@ -9,11 +9,6 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Reset user password using a valid token.
- * Used both for "forgot password" and "welcome employee set password" flows.
- * After a successful reset, automatically logs in the user and returns an access token.
- */
 class ResetPasswordAction
 {
     public function __invoke(array $data): array
@@ -33,6 +28,9 @@ class ResetPasswordAction
         /** @var User|null $resetUser */
         $resetUser = null;
 
+        // Phone-only reset works because User::getEmailForPasswordReset()
+        // falls back to phone. Token creation/validation both use that override,
+        // keeping the flow consistent. See User.php:42-45.
         $status = Password::reset(
             $credentials,
             function (User $user, string $password) use (&$resetUser) {
@@ -53,7 +51,6 @@ class ResetPasswordAction
             ]);
         }
 
-        // Auto-login: issue a Passport personal access token
         $token = $resetUser->createToken('auth_token')->accessToken;
 
         return [

@@ -8,9 +8,6 @@ use Illuminate\Validation\ValidationException;
 
 class LoginUser
 {
-    /**
-     * Authenticate a user by email or phone number.
-     */
     public function __invoke(array $credentials): array
     {
         $loginField = isset($credentials['email']) ? 'email' : 'phone';

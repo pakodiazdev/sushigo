@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Development;
 
+use App\Models\Employee;
 use Database\Seeders\Base\LockedSeeder;
 use Spatie\Permission\Models\Role;
 
@@ -9,18 +10,19 @@ class RoleSeeder extends LockedSeeder
 {
     public function run(): void
     {
+        // System roles
         $roles = [
             ['name' => 'super-admin', 'guard_name' => 'api'],
             ['name' => 'admin', 'guard_name' => 'api'],
             ['name' => 'manager', 'guard_name' => 'api'],
             ['name' => 'user', 'guard_name' => 'api'],
             ['name' => 'employee', 'guard_name' => 'api'],
-            ['name' => 'employee-manager', 'guard_name' => 'api'],
-            ['name' => 'employee-cook', 'guard_name' => 'api'],
-            ['name' => 'employee-kitchen-assistant', 'guard_name' => 'api'],
-            ['name' => 'employee-delivery-driver', 'guard_name' => 'api'],
-            ['name' => 'employee-acting-manager', 'guard_name' => 'api'],
         ];
+
+        // Position roles from Employee model (single source of truth)
+        foreach (Employee::POSITION_ROLES as $positionRole) {
+            $roles[] = ['name' => $positionRole, 'guard_name' => 'api'];
+        }
 
         foreach ($roles as $roleData) {
             Role::updateOrCreate(

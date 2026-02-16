@@ -197,25 +197,20 @@ export interface User {
 // ============================================================================
 
 export interface PaginatedResponse<T> {
+  status: number
   data: T[]
   meta: {
     current_page: number
-    from: number
     last_page: number
     per_page: number
-    to: number
     total: number
-  }
-  links: {
-    first: string
-    last: string
-    prev: string | null
-    next: string | null
-  }
+  } | null
 }
 
 export interface EntityResponse<T> {
+  status: number
   data: T
+  meta?: Record<string, any> | null
 }
 
 export interface MessageResponse {

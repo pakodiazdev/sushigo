@@ -23,7 +23,7 @@ export interface Employee {
   code: string
   first_name: string
   last_name: string
-  roles: string[]
+  roles: EmployeePositionRole[]
   is_active: boolean
   email?: string | null
   phone?: string | null
@@ -38,25 +38,20 @@ export interface Employee {
 // ============================================================================
 
 export interface PaginatedResponse<T> {
+  status: number
   data: T[]
   meta: {
     current_page: number
-    from: number
     last_page: number
     per_page: number
-    to: number
     total: number
-  }
-  links: {
-    first: string
-    last: string
-    prev: string | null
-    next: string | null
-  }
+  } | null
 }
 
 export interface EntityResponse<T> {
+  status: number
   data: T
+  meta?: Record<string, any> | null
 }
 
 // ============================================================================
@@ -67,7 +62,7 @@ export interface EmployeeFormData {
   code: string
   first_name: string
   last_name: string
-  roles: string[]
+  roles: EmployeePositionRole[]
   email?: string
   phone?: string
   meta?: Record<string, any>
@@ -76,7 +71,7 @@ export interface EmployeeFormData {
 export interface EmployeeUpdateData {
   first_name?: string
   last_name?: string
-  roles?: string[]
+  roles?: EmployeePositionRole[]
   email?: string
   phone?: string
   meta?: Record<string, any>
@@ -88,8 +83,9 @@ export interface EmployeeUpdateData {
 
 export interface EmployeeFilters {
   is_active?: boolean
-  role?: string
+  role?: EmployeePositionRole
   search?: string
   per_page?: number
   page?: number
+  sort?: string[]
 }

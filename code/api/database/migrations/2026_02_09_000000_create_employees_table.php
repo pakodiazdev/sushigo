@@ -17,14 +17,12 @@ return new class extends Migration
             $table->string('code', 20)->unique()->comment('Código único (EMP-001)');
             $table->string('first_name', 100);
             $table->string('last_name', 100);
-            $table->enum('role', ['MANAGER', 'COOK', 'KITCHEN_ASSISTANT', 'DELIVERY_DRIVER']);
             $table->boolean('is_active')->default(true);
             $table->json('meta')->nullable()->comment('Additional employee metadata');
             $table->timestamps();
             $table->softDeletes();
 
             $table->index('is_active');
-            $table->index('role');
         });
     }
 

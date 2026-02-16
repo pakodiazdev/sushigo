@@ -289,13 +289,19 @@ export const useAuthStore = create<AuthState>()(
       }),
       onRehydrateStorage: (_state) => {
         // This runs BEFORE hydration - we can return a callback for AFTER
-        return (__state, error) => {
+        return (state, error) => {
           if (error) {
             console.error("Error rehydrating auth storage:", error);
           }
+          // Recompute isAdmin from persisted user so it's available immediately
+          // after hydration, avoiding a brief flash of unauthorized content.
+          const rehydratedIsAdmin = state ? checkIsAdmin(state.user) : false;
           // Mark hydration as complete using queueMicrotask to ensure store exists
           queueMicrotask(() => {
-            useAuthStore.setState({ _hasHydrated: true });
+            useAuthStore.setState({
+              _hasHydrated: true,
+              isAdmin: rehydratedIsAdmin,
+            });
           });
         };
       },

@@ -7,12 +7,6 @@ use App\Notifications\WelcomeEmployeeNotification;
 use App\Services\Notifications\WhatsAppService;
 use Illuminate\Support\Facades\Password;
 
-/**
- * Send a welcome notification to a newly created employee user
- * with a password reset link so they can set their own password.
- *
- * Sends via email if available, via WhatsApp if phone is available.
- */
 class SendWelcomeNotificationAction
 {
     public function __construct(

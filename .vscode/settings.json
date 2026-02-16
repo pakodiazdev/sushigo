@@ -18,7 +18,5 @@
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit"
-  },
-
-  "editor.formatOnSave": false
+  }
 }

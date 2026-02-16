@@ -25,10 +25,16 @@ class EmployeeFactory extends Factory
         ];
     }
 
+    /**
+     * Default: assign cook role if no role method was chained.
+     *
+     * When a role method (e.g. manager()) is chained, its afterCreating
+     * callback runs AFTER this one and uses syncRoles() to replace roles,
+     * so the default cook assignment is harmless — it gets overwritten.
+     */
     public function configure(): static
     {
         return $this->afterCreating(function (Employee $employee) {
-            // Assign default role if none set yet
             if ($employee->roles->isEmpty()) {
                 $employee->assignRole(Employee::ROLE_COOK);
             }

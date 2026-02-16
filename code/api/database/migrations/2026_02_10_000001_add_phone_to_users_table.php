@@ -11,13 +11,15 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->string('email')->nullable()->change();
             $table->string('phone', 20)->nullable()->unique()->after('email');
+            $table->string('phone_country', 5)->nullable()->after('phone')
+                ->comment('Phone country code (e.g., +52 for Mexico)');
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('phone');
+            $table->dropColumn(['phone', 'phone_country']);
             $table->string('email')->nullable(false)->change();
         });
     }
