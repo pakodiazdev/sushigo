@@ -28,14 +28,11 @@ class UpdateEmployeeContactTest extends TestCase
         $admin = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $admin->givePermissionTo(['employees.view', 'employees.create', 'employees.update']);
 
-        $manager = Role::create(['name' => 'employee-manager', 'guard_name' => 'api']);
+        // manager is a position role — can view/update employees
+        $manager = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
         $manager->givePermissionTo(['employees.view', 'employees.update']);
-        
-        // System roles needed for Employee.syncPositionRoles()
-        Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
-        Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
 
-        // Position roles (job titles) needed by factories
+        // All position roles (manager, cook, kitchen-assistant, delivery-driver, acting-manager)
         foreach (Employee::POSITION_ROLES as $positionRole) {
             Role::firstOrCreate(['name' => $positionRole, 'guard_name' => 'api']);
         }
@@ -81,7 +78,7 @@ class UpdateEmployeeContactTest extends TestCase
     public function manager_cannot_change_email_or_user_id(): void
     {
         $manager = User::factory()->create();
-        $manager->assignRole('employee-manager');
+        $manager->assignRole('manager');
         Passport::actingAs($manager);
 
         $user = User::factory()->create(['email' => 'u@x.com', 'phone' => '5512345678']);

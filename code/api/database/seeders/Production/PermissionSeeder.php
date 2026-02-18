@@ -75,21 +75,16 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        $superAdminRole = Role::where('name', 'super-admin')
-            ->where('guard_name', 'api')
-            ->first();
-
+        // super-admin: all permissions
+        $superAdminRole = Role::where('name', 'super-admin')->where('guard_name', 'api')->first();
         if ($superAdminRole) {
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
 
-        // Employee-manager: can view employees + basic user access
-        $employeeManagerRole = Role::where('name', 'employee-manager')
-            ->where('guard_name', 'api')
-            ->first();
-
-        if ($employeeManagerRole) {
-            $employeeManagerRole->syncPermissions(
+        // manager (position role): jefe de piso — can view/manage employees
+        $managerRole = Role::where('name', 'manager')->where('guard_name', 'api')->first();
+        if ($managerRole) {
+            $managerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
                         $q->whereIn('name', ['users.show', 'users.index'])
@@ -99,17 +94,16 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        // Employee: basic user access only
-        $employeeRole = Role::where('name', 'employee')
-            ->where('guard_name', 'api')
-            ->first();
-
-        if ($employeeRole) {
-            $employeeRole->syncPermissions(
-                Permission::where('guard_name', 'api')
-                    ->whereIn('name', ['users.show', 'users.index'])
-                    ->get()
-            );
+        // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
+        foreach (['cook', 'kitchen-assistant', 'delivery-driver', 'acting-manager'] as $roleName) {
+            $role = Role::where('name', $roleName)->where('guard_name', 'api')->first();
+            if ($role) {
+                $role->syncPermissions(
+                    Permission::where('guard_name', 'api')
+                        ->whereIn('name', ['users.show', 'users.index'])
+                        ->get()
+                );
+            }
         }
 
         $this->command->info('✓ Production permissions seeded successfully');

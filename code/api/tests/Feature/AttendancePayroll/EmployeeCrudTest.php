@@ -33,14 +33,7 @@ class EmployeeCrudTest extends TestCase
         $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $role->givePermissionTo(['employees.view', 'employees.create', 'employees.update']);
 
-        // Create employee operational roles
-        $employeeRole = Role::create(['name' => 'employee', 'guard_name' => 'api']);
-        $employeeRole->givePermissionTo(['users.show', 'users.index']);
-
-        $employeeManagerRole = Role::create(['name' => 'employee-manager', 'guard_name' => 'api']);
-        $employeeManagerRole->givePermissionTo(['users.show', 'users.index', 'employees.view']);
-
-        // Create position roles
+        // Position roles (manager, cook, kitchen-assistant, delivery-driver, acting-manager)
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
@@ -60,7 +53,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-001',
             'first_name' => 'Juan',
             'last_name' => 'Perez',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'juan.perez@sushigo.com',
         ]);
 
@@ -75,7 +68,7 @@ class EmployeeCrudTest extends TestCase
         // Should return roles as array
         $roles = $response->json('data.roles');
         $this->assertIsArray($roles);
-        $this->assertContains('employee-cook', $roles);
+        $this->assertContains('cook', $roles);
 
         $this->assertDatabaseHas('employees', [
             'code' => 'EMP-001',
@@ -95,7 +88,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-PHONE',
             'first_name' => 'Maria',
             'last_name' => 'Lopez',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'phone' => '5512345678',
         ]);
 
@@ -119,7 +112,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-BOTH',
             'first_name' => 'Carlos',
             'last_name' => 'Garcia',
-            'roles' => ['employee-manager'],
+            'roles' => ['manager'],
             'email' => 'carlos@sushigo.com',
             'phone' => '5500001111',
         ]);
@@ -140,7 +133,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-MULTI',
             'first_name' => 'Multi',
             'last_name' => 'Role',
-            'roles' => ['employee-cook', 'employee-delivery-driver'],
+            'roles' => ['cook', 'delivery-driver'],
             'email' => 'multi@sushigo.com',
         ]);
 
@@ -148,8 +141,8 @@ class EmployeeCrudTest extends TestCase
 
         $roles = $response->json('data.roles');
         $this->assertIsArray($roles);
-        $this->assertContains('employee-cook', $roles);
-        $this->assertContains('employee-delivery-driver', $roles);
+        $this->assertContains('cook', $roles);
+        $this->assertContains('delivery-driver', $roles);
         $this->assertCount(2, $roles);
     }
 
@@ -161,7 +154,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-SHOW',
             'first_name' => 'Test',
             'last_name' => 'User',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'test.show@sushigo.com',
             'phone' => '5599887766',
         ]);
@@ -194,7 +187,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-NOID',
             'first_name' => 'Test',
             'last_name' => 'User',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
         ]);
 
         $response->assertStatus(422)
@@ -210,7 +203,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-001',
             'first_name' => 'Another',
             'last_name' => 'Employee',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'another@sushigo.com',
         ]);
 
@@ -240,7 +233,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-001',
             'first_name' => 'Juan',
             'last_name' => 'Perez',
-            'roles' => 'employee-cook',
+            'roles' => 'cook',
             'email' => 'juan@sushigo.com',
         ]);
 
@@ -302,7 +295,7 @@ class EmployeeCrudTest extends TestCase
         Employee::factory()->cook()->count(2)->create();
         Employee::factory()->manager()->create();
 
-        $response = $this->getJson('/api/v1/employees?role=employee-cook');
+        $response = $this->getJson('/api/v1/employees?role=cook');
 
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
@@ -354,7 +347,7 @@ class EmployeeCrudTest extends TestCase
 
         $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
             'first_name' => 'Updated Name',
-            'roles' => ['employee-manager'],
+            'roles' => ['manager'],
         ]);
 
         $response->assertStatus(200)
@@ -363,7 +356,7 @@ class EmployeeCrudTest extends TestCase
             ]);
 
         $roles = $response->json('data.roles');
-        $this->assertContains('employee-manager', $roles);
+        $this->assertContains('manager', $roles);
 
         $this->assertDatabaseHas('employees', [
             'id' => $employee->id,
@@ -377,14 +370,14 @@ class EmployeeCrudTest extends TestCase
         $employee = Employee::factory()->cook()->create();
 
         $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
-            'roles' => ['employee-cook', 'employee-delivery-driver'],
+            'roles' => ['cook', 'delivery-driver'],
         ]);
 
         $response->assertStatus(200);
 
         $roles = $response->json('data.roles');
-        $this->assertContains('employee-cook', $roles);
-        $this->assertContains('employee-delivery-driver', $roles);
+        $this->assertContains('cook', $roles);
+        $this->assertContains('delivery-driver', $roles);
         $this->assertCount(2, $roles);
     }
 
@@ -463,7 +456,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-004',
             'first_name' => 'Ana',
             'last_name' => 'Martinez',
-            'roles' => ['employee-kitchen-assistant'],
+            'roles' => ['kitchen-assistant'],
             'email' => 'ana.martinez@sushigo.com',
             'meta' => ['notes' => 'Part-time'],
         ]);
@@ -482,7 +475,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-ULID',
             'first_name' => 'Ulid',
             'last_name' => 'Test',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'ulid@sushigo.com',
         ]);
 
@@ -523,7 +516,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-NOPERM',
             'first_name' => 'No',
             'last_name' => 'Permission',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'noperm@sushigo.com',
         ]);
 
@@ -546,13 +539,13 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function it_creates_cook_with_employee_spatie_role(): void
+    public function it_creates_cook_with_cook_position_role(): void
     {
         $response = $this->postJson('/api/v1/employees', [
             'code' => 'EMP-USR-001',
             'first_name' => 'Carlos',
             'last_name' => 'Mendoza',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'carlos@sushigo.com',
         ]);
 
@@ -562,17 +555,18 @@ class EmployeeCrudTest extends TestCase
         $this->assertNotNull($employee->user_id);
 
         $user = User::find($employee->user_id);
-        $this->assertTrue($user->hasRole('employee'));
+        $this->assertTrue($user->hasRole('cook'));
+        $this->assertFalse($user->hasRole('manager'));
     }
 
     #[Test]
-    public function it_creates_manager_with_employee_manager_spatie_role(): void
+    public function it_creates_manager_with_manager_position_role(): void
     {
         $response = $this->postJson('/api/v1/employees', [
             'code' => 'EMP-MGR-001',
             'first_name' => 'Ana',
             'last_name' => 'Garcia',
-            'roles' => ['employee-manager'],
+            'roles' => ['manager'],
             'email' => 'ana.garcia@sushigo.com',
         ]);
 
@@ -580,7 +574,8 @@ class EmployeeCrudTest extends TestCase
 
         $employee = Employee::where('code', 'EMP-MGR-001')->first();
         $user = User::find($employee->user_id);
-        $this->assertTrue($user->hasRole('employee-manager'));
+        $this->assertTrue($user->hasRole('manager'));
+        $this->assertFalse($user->hasRole('cook'));
     }
 
     #[Test]
@@ -592,7 +587,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-DUP',
             'first_name' => 'Test',
             'last_name' => 'User',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'taken@sushigo.com',
         ]);
 
@@ -609,7 +604,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-DUP-P',
             'first_name' => 'Test',
             'last_name' => 'User',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'phone' => '5599990000',
         ]);
 
@@ -627,7 +622,7 @@ class EmployeeCrudTest extends TestCase
             'code' => 'EMP-ROLLBACK',
             'first_name' => 'Rollback',
             'last_name' => 'Test',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'rollback@sushigo.com',
         ]);
 

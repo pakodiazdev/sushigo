@@ -23,8 +23,7 @@ class EmployeeModelTest extends TestCase
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
-        Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
-        Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
+        // 'manager' is included in POSITION_ROLES below — no separate system roles needed
     }
 
     #[Test]
@@ -188,33 +187,32 @@ class EmployeeModelTest extends TestCase
     }
 
     #[Test]
-    public function sync_position_roles_updates_user_system_role(): void
+    public function sync_position_roles_assigns_position_roles_to_user(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('employee');
         $employee = Employee::factory()->withUser($user)->create();
 
-        // Sync to manager — should update user to employee-manager
+        // Sync to manager+cook — both position roles should be assigned
         $employee->syncPositionRoles([Employee::ROLE_MANAGER, Employee::ROLE_COOK]);
 
         $user->refresh();
-        $this->assertTrue($user->hasRole('employee-manager'));
-        $this->assertFalse($user->hasRole('employee'));
+        $this->assertTrue($user->hasRole('manager'));
+        $this->assertTrue($user->hasRole('cook'));
     }
 
     #[Test]
-    public function sync_position_roles_gives_employee_role_when_no_manager(): void
+    public function sync_position_roles_replaces_old_position_roles(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('employee-manager');
+        $user->assignRole('manager');
         $employee = Employee::factory()->withUser($user)->create();
 
-        // Sync to non-manager roles — user should become 'employee'
+        // Sync to cook only — manager role should be replaced
         $employee->syncPositionRoles([Employee::ROLE_COOK]);
 
         $user->refresh();
-        $this->assertTrue($user->hasRole('employee'));
-        $this->assertFalse($user->hasRole('employee-manager'));
+        $this->assertTrue($user->hasRole('cook'));
+        $this->assertFalse($user->hasRole('manager'));
     }
 
     #[Test]

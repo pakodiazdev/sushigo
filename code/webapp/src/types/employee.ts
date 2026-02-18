@@ -5,11 +5,11 @@
 // ============================================================================
 
 export const EMPLOYEE_POSITION_ROLES = {
-  'employee-manager': 'Gerente',
-  'employee-cook': 'Cocinero',
-  'employee-kitchen-assistant': 'Asistente de Cocina',
-  'employee-delivery-driver': 'Repartidor',
-  'employee-acting-manager': 'Gerente Interino',
+  'manager': 'Gerente',
+  'cook': 'Cocinero',
+  'kitchen-assistant': 'Asistente de Cocina',
+  'delivery-driver': 'Repartidor',
+  'acting-manager': 'Gerente Interino',
 } as const
 
 export type EmployeePositionRole = keyof typeof EMPLOYEE_POSITION_ROLES

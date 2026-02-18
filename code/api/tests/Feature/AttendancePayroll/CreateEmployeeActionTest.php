@@ -28,12 +28,7 @@ class CreateEmployeeActionTest extends TestCase
         Permission::create(['name' => 'users.index', 'guard_name' => 'api']);
         Permission::create(['name' => 'employees.view', 'guard_name' => 'api']);
 
-        $employeeRole = Role::create(['name' => 'employee', 'guard_name' => 'api']);
-        $employeeRole->givePermissionTo(['users.show', 'users.index']);
-
-        $employeeManagerRole = Role::create(['name' => 'employee-manager', 'guard_name' => 'api']);
-        $employeeManagerRole->givePermissionTo(['users.show', 'users.index', 'employees.view']);
-
+        // Position roles (manager, cook, kitchen-assistant, delivery-driver, acting-manager)
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
@@ -50,7 +45,7 @@ class CreateEmployeeActionTest extends TestCase
             'code' => 'EMP-001',
             'first_name' => 'Juan',
             'last_name' => 'Perez',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'juan@sushigo.com',
         ]);
 
@@ -69,7 +64,7 @@ class CreateEmployeeActionTest extends TestCase
             'code' => 'EMP-002',
             'first_name' => 'Maria',
             'last_name' => 'Lopez',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'phone' => '+525512345678',
         ]);
 
@@ -87,7 +82,7 @@ class CreateEmployeeActionTest extends TestCase
             'code' => 'EMP-BOTH',
             'first_name' => 'Carlos',
             'last_name' => 'Garcia',
-            'roles' => ['employee-manager'],
+            'roles' => ['manager'],
             'email' => 'carlos@sushigo.com',
             'phone' => '+525500001111',
         ]);
@@ -106,7 +101,7 @@ class CreateEmployeeActionTest extends TestCase
             'code' => 'EMP-ALWAYS',
             'first_name' => 'Always',
             'last_name' => 'User',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'always@sushigo.com',
         ]);
 
@@ -114,66 +109,64 @@ class CreateEmployeeActionTest extends TestCase
     }
 
     #[Test]
-    public function it_assigns_employee_system_role_to_cook(): void
+    public function it_assigns_position_role_to_cook(): void
     {
         $employee = ($this->action)([
             'code' => 'EMP-COOK',
             'first_name' => 'Pedro',
             'last_name' => 'Garcia',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'pedro@sushigo.com',
         ]);
 
-        // Roles live on User
-        $this->assertTrue($employee->user->hasRole('employee'));
-        $this->assertFalse($employee->user->hasRole('employee-manager'));
-        $this->assertTrue($employee->user->hasRole('employee-cook'));
+        // Roles live on User — position roles reflect org role, no base 'employee' role
+        $this->assertTrue($employee->user->hasRole('cook'));
+        $this->assertFalse($employee->user->hasRole('manager'));
     }
 
     #[Test]
-    public function it_assigns_employee_system_role_to_kitchen_assistant(): void
+    public function it_assigns_position_role_to_kitchen_assistant(): void
     {
         $employee = ($this->action)([
             'code' => 'EMP-KA',
             'first_name' => 'Ana',
             'last_name' => 'Martinez',
-            'roles' => ['employee-kitchen-assistant'],
+            'roles' => ['kitchen-assistant'],
             'phone' => '+525500001112',
         ]);
 
-        $this->assertTrue($employee->user->hasRole('employee'));
-        $this->assertTrue($employee->user->hasRole('employee-kitchen-assistant'));
+        $this->assertTrue($employee->user->hasRole('kitchen-assistant'));
+        $this->assertFalse($employee->user->hasRole('manager'));
     }
 
     #[Test]
-    public function it_assigns_employee_system_role_to_delivery_driver(): void
+    public function it_assigns_position_role_to_delivery_driver(): void
     {
         $employee = ($this->action)([
             'code' => 'EMP-DD',
             'first_name' => 'Luis',
             'last_name' => 'Ramirez',
-            'roles' => ['employee-delivery-driver'],
+            'roles' => ['delivery-driver'],
             'phone' => '+525500001113',
         ]);
 
-        $this->assertTrue($employee->user->hasRole('employee'));
-        $this->assertTrue($employee->user->hasRole('employee-delivery-driver'));
+        $this->assertTrue($employee->user->hasRole('delivery-driver'));
+        $this->assertFalse($employee->user->hasRole('manager'));
     }
 
     #[Test]
-    public function it_assigns_employee_manager_system_role_to_manager(): void
+    public function it_assigns_manager_position_role(): void
     {
         $employee = ($this->action)([
             'code' => 'EMP-MGR',
             'first_name' => 'Carlos',
             'last_name' => 'Mendoza',
-            'roles' => ['employee-manager'],
+            'roles' => ['manager'],
             'email' => 'carlos@sushigo.com',
         ]);
 
-        $this->assertTrue($employee->user->hasRole('employee-manager'));
-        $this->assertFalse($employee->user->hasRole('employee'));
-        $this->assertTrue($employee->user->hasRole('employee-manager'));
+        $this->assertTrue($employee->user->hasRole('manager'));
+        $this->assertFalse($employee->user->hasRole('cook'));
     }
 
     #[Test]
@@ -183,30 +176,30 @@ class CreateEmployeeActionTest extends TestCase
             'code' => 'EMP-MULTI',
             'first_name' => 'Multi',
             'last_name' => 'Role',
-            'roles' => ['employee-cook', 'employee-delivery-driver'],
+            'roles' => ['cook', 'delivery-driver'],
             'email' => 'multi@sushigo.com',
         ]);
 
-        $this->assertTrue($employee->user->hasRole('employee-cook'));
-        $this->assertTrue($employee->user->hasRole('employee-delivery-driver'));
+        $this->assertTrue($employee->user->hasRole('cook'));
+        $this->assertTrue($employee->user->hasRole('delivery-driver'));
         $positionRoles = $employee->getPositionRoles();
         $this->assertCount(2, $positionRoles);
-        // Non-manager combo -> User gets 'employee'
-        $this->assertTrue($employee->user->hasRole('employee'));
+        // Position roles are assigned directly — no derived 'employee' base role
+        $this->assertFalse($employee->user->hasRole('manager'));
     }
 
     #[Test]
-    public function it_manager_plus_cook_gives_user_employee_manager_role(): void
+    public function it_manager_plus_cook_gives_user_both_position_roles(): void
     {
         $employee = ($this->action)([
             'code' => 'EMP-MC',
             'first_name' => 'Manager',
             'last_name' => 'Cook',
-            'roles' => ['employee-manager', 'employee-cook'],
+            'roles' => ['manager', 'cook'],
             'email' => 'mgr-cook@sushigo.com',
         ]);
 
-        $this->assertTrue($employee->user->hasRole('employee-manager'));
+        $this->assertTrue($employee->user->hasRole('manager'));
     }
 
     #[Test]
@@ -216,7 +209,7 @@ class CreateEmployeeActionTest extends TestCase
             'code' => 'EMP-HASH',
             'first_name' => 'Hash',
             'last_name' => 'Test',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'hash@sushigo.com',
         ]);
 
@@ -229,20 +222,31 @@ class CreateEmployeeActionTest extends TestCase
     {
         $initialUserCount = User::count();
 
+        // First creation — succeeds, reserving code 'EMP-TX'
+        ($this->action)([
+            'code'       => 'EMP-TX',
+            'first_name' => 'First',
+            'last_name'  => 'Employee',
+            'roles'      => ['cook'],
+            'email'      => 'first@sushigo.com',
+        ]);
+
+        $countAfterFirst = User::count();
+
+        // Second creation with duplicate code — unique constraint should trigger rollback
         try {
             ($this->action)([
-                'code' => 'EMP-TX',
-                'first_name' => 'Transaction',
-                'last_name' => 'Test',
-                'roles' => ['employee-cook'],
-                'email' => null,
-                'phone' => null,
+                'code'       => 'EMP-TX', // duplicate — will fail on employees.code unique
+                'first_name' => 'Second',
+                'last_name'  => 'Employee',
+                'roles'      => ['cook'],
+                'email'      => 'second@sushigo.com',
             ]);
         } catch (\Throwable) {
-            // Expected to fail - no email/phone
+            // Expected: unique constraint violation on employees.code
         }
 
-        $this->assertEquals($initialUserCount, User::count(), 'User should not have been created due to transaction rollback');
+        $this->assertEquals($countAfterFirst, User::count(), 'User should not have been created due to transaction rollback');
     }
 
     #[Test]
@@ -252,7 +256,7 @@ class CreateEmployeeActionTest extends TestCase
             'code' => 'EMP-META',
             'first_name' => 'Meta',
             'last_name' => 'Test',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'meta@sushigo.com',
             'meta' => ['emergency_contact' => 'Mom', 'notes' => 'Part-time'],
         ]);
@@ -267,7 +271,7 @@ class CreateEmployeeActionTest extends TestCase
             'code' => 'EMP-EAGER',
             'first_name' => 'Eager',
             'last_name' => 'Load',
-            'roles' => ['employee-cook'],
+            'roles' => ['cook'],
             'email' => 'eager@sushigo.com',
         ]);
 
