@@ -28,7 +28,9 @@ class ForgotPasswordAction
             }
 
             if ($user->phone) {
-                $this->whatsAppService->sendPasswordResetLink($user->phone, $resetUrl);
+                // Use full_phone (country code + national number, e.g. +525512345678)
+                // so the WhatsApp provider receives an internationally-formatted number.
+                $this->whatsAppService->sendPasswordResetLink($user->full_phone, $resetUrl);
             }
         }
 
