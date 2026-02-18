@@ -35,18 +35,37 @@ class ListEmployeesController extends Controller
 {
     public function __invoke(ListEmployeesRequest $request, EmployeeRepository $employeesRepo): ResponsePaginated
     {
-        $filters = [
-            'is_active' => $request->filled('is_active') ? $request->boolean('is_active') : null,
-            'role' => $request->filled('role') ? $request->role : null,
-            'search' => $request->filled('search') ? $request->search : null,
-        ];
+        $query = Employee::with(['user.roles'])
+            ->withCount(['employmentPeriods as active_employment_periods_count' => function ($q) {
+                $q->where('is_active', true);
+            }]);
+
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        if ($request->input('status') === 'baja') {
+            $query->whereDoesntHave('employmentPeriods', fn ($q) => $q->where('is_active', true));
+        }
+
+        if ($request->filled('role')) {
+            $query->whereHas('user', fn($q) => $q->role($request->role));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'ILIKE', "%{$search}%")
+                    ->orWhere('first_name', 'ILIKE', "%{$search}%")
+                    ->orWhere('last_name', 'ILIKE', "%{$search}%");
+            });
+        }
+
+        $request->applySorts($query);
 
         $perPage = $request->input('per_page', 15);
 
-        // Parse sorts using request helper and pass to repository
-        $sorts = $request->parseSorts();
-
-        $employees = $employeesRepo->paginateIndex($filters, $sorts, $perPage);
+        $employees = $query->paginate($perPage);
 
         $employees->getCollection()->transform(fn($employee) => $employee->toApiArray());
 

@@ -1,4 +1,4 @@
-import { Edit } from 'lucide-react'
+import { Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Column } from '@/components/ui/data-grid'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
@@ -10,6 +10,8 @@ const ROLE_COLORS: Record<string, string> = {
   'kitchen-assistant': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   'delivery-driver': 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
   'acting-manager': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  'admin': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+  'super-admin': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 }
 
 function formatDate(dateString: string): string {
@@ -71,15 +73,27 @@ export function getEmployeeColumns(onEdit: (item: Employee) => void): Column<Emp
       width: '100px',
       align: 'center',
       hideBelow: 'md',
-      render: (item) => (
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          item.is_active
-            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-        }`}>
-          {item.is_active ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      render: (item) => {
+        const hasActivePeriod = item.has_active_period ?? item.employment_periods?.some(p => p.is_active) ?? true
+
+        if (!hasActivePeriod) {
+          return (
+            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+              Baja
+            </span>
+          )
+        }
+
+        return (
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            item.is_active
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+          }`}>
+            {item.is_active ? 'Activo' : 'Inactivo'}
+          </span>
+        )
+      },
       skeleton: () => <div className="mx-auto h-5 w-14 rounded-full bg-muted animate-pulse" />,
     },
     {
@@ -108,9 +122,9 @@ export function getEmployeeColumns(onEdit: (item: Employee) => void): Column<Emp
             onEdit(item)
           }}
           className="h-8 w-8 p-0"
-          title="Editar"
+          title="Ver detalle"
         >
-          <Edit className="h-4 w-4" />
+          <Eye className="h-4 w-4" />
         </Button>
       ),
       skeleton: () => <div className="mx-auto h-8 w-8 rounded bg-muted animate-pulse" />,

@@ -49,7 +49,7 @@ class UpdateEmployeeController extends Controller
             $employee->update($employeeFields);
 
             if ($roles !== null) {
-                $employee->syncPositionRoles($roles);
+                $employee->syncPositionRoles($roles, $request->user());
             }
 
             // Prepare user updates: keep name in sync when employee names change

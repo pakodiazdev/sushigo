@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authService, LoginCredentials } from "@/services/auth.service";
+import { apiClient } from "@/lib/api-client";
 import type { User, Branch } from "@/types/auth";
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthState {
 
   // Computed getters
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   can: (permission: string) => boolean;
 
   // Actions
@@ -47,12 +49,37 @@ function extractBranchesFromUser(user: User | null): Branch[] {
   return Array.from(branches.values());
 }
 
+// Fetch branches from operating-units API (fallback for admins without assignments)
+async function fetchBranchesFromApi(): Promise<Branch[]> {
+  try {
+    const response = await apiClient.get('/operating-units', {
+      params: { per_page: 100, is_active: true },
+    });
+    const branches = new Map<number, Branch>();
+    (response.data?.data || []).forEach((ou: any) => {
+      if (ou.branch && !branches.has(ou.branch.id)) {
+        branches.set(ou.branch.id, ou.branch);
+      }
+    });
+    return Array.from(branches.values());
+  } catch {
+    return [];
+  }
+}
+
 // Helper to check if user is admin
 function checkIsAdmin(user: User | null): boolean {
   return (
     user?.roles?.some(
       (role) => role.name === "admin" || role.name === "super-admin",
     ) ?? false
+  );
+}
+
+// Helper to check if user is super-admin
+function checkIsSuperAdmin(user: User | null): boolean {
+  return (
+    user?.roles?.some((role) => role.name === "super-admin") ?? false
   );
 }
 
@@ -79,6 +106,7 @@ export const useAuthStore = create<AuthState>()(
 
       // Derived state - recalculated on every set() that changes user
       isAdmin: false,
+      isSuperAdmin: false,
 
       can: (permission: string) => {
         const state = get();
@@ -94,14 +122,16 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authService.login(credentials);
           const userData = response.data.user as User;
-          const branches = extractBranchesFromUser(userData);
+          let branches = extractBranchesFromUser(userData);
           const isUserAdmin = checkIsAdmin(userData);
 
-          // Auto-select branch for non-admin users with single branch
-          let selectedBranch: Branch | null = null;
-          if (!isUserAdmin && branches.length === 1) {
-            selectedBranch = branches[0] ?? null;
+          // Admins may not have operating_unit assignments — fetch from API
+          if (isUserAdmin && branches.length === 0) {
+            branches = await fetchBranchesFromApi();
           }
+
+          // Auto-select when there's only one branch
+          const selectedBranch = branches.length === 1 ? branches[0]! : null;
 
           set({
             user: userData,
@@ -110,6 +140,7 @@ export const useAuthStore = create<AuthState>()(
             currentBranch: selectedBranch,
             isAuthenticated: true,
             isAdmin: isUserAdmin,
+            isSuperAdmin: checkIsSuperAdmin(userData),
             isLoading: false,
             error: null,
             _hasInitialized: true,
@@ -125,6 +156,7 @@ export const useAuthStore = create<AuthState>()(
             availableBranches: [],
             isAuthenticated: false,
             isAdmin: false,
+            isSuperAdmin: false,
             isLoading: false,
             error: errorMessage,
           });
@@ -145,6 +177,7 @@ export const useAuthStore = create<AuthState>()(
             availableBranches: [],
             isAuthenticated: false,
             isAdmin: false,
+            isSuperAdmin: false,
             isLoading: false,
             error: null,
             _hasInitialized: false,
@@ -169,14 +202,19 @@ export const useAuthStore = create<AuthState>()(
         const { token } = get(); // Get fresh state after hydration
 
         if (!token) {
-          set({ isLoading: false, isAuthenticated: false, isAdmin: false, user: null });
+          set({ isLoading: false, isAuthenticated: false, isAdmin: false, isSuperAdmin: false, user: null });
           return;
         }
 
         try {
           const response = await authService.getMe();
           const userData = response.data as User;
-          const branches = extractBranchesFromUser(userData);
+          let branches = extractBranchesFromUser(userData);
+
+          // Admins may not have operating_unit assignments — fetch from API
+          if (checkIsAdmin(userData) && branches.length === 0) {
+            branches = await fetchBranchesFromApi();
+          }
 
           // Restore saved branch if valid
           const savedBranchId = get().currentBranch?.id;
@@ -187,13 +225,9 @@ export const useAuthStore = create<AuthState>()(
               branches.find((b) => b.id === savedBranchId) ?? null;
           }
 
-          // Auto-select for non-admin with single branch
-          if (
-            !restoredBranch &&
-            !checkIsAdmin(userData) &&
-            branches.length === 1
-          ) {
-            restoredBranch = branches[0] ?? null;
+          // Auto-select when there's only one branch
+          if (!restoredBranch && branches.length === 1) {
+            restoredBranch = branches[0]!;
           }
 
           set({
@@ -202,6 +236,7 @@ export const useAuthStore = create<AuthState>()(
             currentBranch: restoredBranch,
             isAuthenticated: true,
             isAdmin: checkIsAdmin(userData),
+            isSuperAdmin: checkIsSuperAdmin(userData),
             isLoading: false,
             error: null,
           });
@@ -213,6 +248,7 @@ export const useAuthStore = create<AuthState>()(
             availableBranches: [],
             isAuthenticated: false,
             isAdmin: false,
+            isSuperAdmin: false,
             isLoading: false,
             error: null,
           });
@@ -234,17 +270,27 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authService.getMe();
           const userData = response.data as User;
-          const branches = extractBranchesFromUser(userData);
+          let branches = extractBranchesFromUser(userData);
 
-          // Keep current branch if still valid
+          // Admins may not have operating_unit assignments — fetch from API
+          if (checkIsAdmin(userData) && branches.length === 0) {
+            branches = await fetchBranchesFromApi();
+          }
+
+          // Keep current branch if still valid, otherwise auto-select single branch
           const { currentBranch } = get();
-          const validatedBranch = currentBranch
+          let validatedBranch = currentBranch
             ? (branches.find((b) => b.id === currentBranch.id) ?? null)
             : null;
+
+          if (!validatedBranch && branches.length === 1) {
+            validatedBranch = branches[0]!;
+          }
 
           set({
             user: userData,
             isAdmin: checkIsAdmin(userData),
+            isSuperAdmin: checkIsSuperAdmin(userData),
             availableBranches: branches,
             currentBranch: validatedBranch,
           });
@@ -259,10 +305,8 @@ export const useAuthStore = create<AuthState>()(
         const branches = extractBranchesFromUser(user);
         const isUserAdmin = checkIsAdmin(user);
 
-        let selectedBranch: Branch | null = null;
-        if (!isUserAdmin && branches.length === 1) {
-          selectedBranch = branches[0] ?? null;
-        }
+        // Auto-select when there's only one branch
+        const selectedBranch = branches.length === 1 ? branches[0]! : null;
 
         set({
           user,
@@ -271,6 +315,7 @@ export const useAuthStore = create<AuthState>()(
           currentBranch: selectedBranch,
           isAuthenticated: true,
           isAdmin: isUserAdmin,
+          isSuperAdmin: checkIsSuperAdmin(user),
           isLoading: false,
           error: null,
           _hasInitialized: true,
@@ -296,11 +341,13 @@ export const useAuthStore = create<AuthState>()(
           // Recompute isAdmin from persisted user so it's available immediately
           // after hydration, avoiding a brief flash of unauthorized content.
           const rehydratedIsAdmin = state ? checkIsAdmin(state.user) : false;
+          const rehydratedIsSuperAdmin = state ? checkIsSuperAdmin(state.user) : false;
           // Mark hydration as complete using queueMicrotask to ensure store exists
           queueMicrotask(() => {
             useAuthStore.setState({
               _hasHydrated: true,
               isAdmin: rehydratedIsAdmin,
+              isSuperAdmin: rehydratedIsSuperAdmin,
             });
           });
         };

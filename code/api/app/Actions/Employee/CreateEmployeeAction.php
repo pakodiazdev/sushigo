@@ -43,9 +43,15 @@ class CreateEmployeeAction
             ]);
 
             $roles = $data['roles'] ?? [];
-            $employee->syncPositionRoles($roles);
+            $employee->syncPositionRoles($roles, auth()->user());
 
-            return $employee->load(['user']);
+            $employee->employmentPeriods()->create([
+                'branch_id' => $data['branch_id'],
+                'start_date' => $data['start_date'],
+                'is_active' => true,
+            ]);
+
+            return $employee->load(['user.roles', 'employmentPeriods.branch']);
         });
 
         try {

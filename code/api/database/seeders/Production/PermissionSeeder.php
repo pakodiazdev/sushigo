@@ -94,6 +94,19 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
+        // admin (position role): full user + employee management
+        $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
+        if ($adminRole) {
+            $adminRole->syncPermissions(
+                Permission::where('guard_name', 'api')
+                    ->where(function ($q) {
+                        $q->where('name', 'like', 'users.%')
+                            ->orWhere('name', 'like', 'employees.%');
+                    })
+                    ->get()
+            );
+        }
+
         // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
         foreach (['cook', 'kitchen-assistant', 'delivery-driver', 'acting-manager'] as $roleName) {
             $role = Role::where('name', $roleName)->where('guard_name', 'api')->first();

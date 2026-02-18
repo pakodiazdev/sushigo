@@ -114,6 +114,28 @@
 
 ---
 
+### AP-005a · Role-Based Assignment Control & Privilege Management ✅
+**Size:** M · **Priority:** P0 · **FR:** RF-02, RF-17, RF-18
+**Commit:** [pending] · **Task:** [pending]
+
+> As an Admin, I want to restrict role assignment based on the authenticated user's privileges, so that only super-admins can assign super-admin roles and maintain proper authorization hierarchy.
+
+**AC:**
+- [x] Added `admin` and `super-admin` as position roles in `Employee::POSITION_ROLES`
+- [x] Implemented `Employee::getAssignableRolesFor(?User)` method that returns allowed roles based on user privileges
+- [x] Super-admins can assign all roles (including super-admin)
+- [x] Non-super-admins can assign all roles except super-admin
+- [x] Updated `syncPositionRoles($roles, $actingUser)` to accept acting user and enforce assignment restrictions
+- [x] Created `GET /api/v1/employees/assignable-roles` endpoint returning dynamic role list
+- [x] Updated all request validations to use `getAssignableRolesFor()` instead of static role lists
+- [x] Frontend fetches and displays only assignable roles per authenticated user
+- [x] Updated seeders with realistic scenarios (re-hires, terminations, random hire dates)
+- [x] Configured admin role permissions for user and employee management
+- [x] All tests updated to reflect 7 position roles (manager, cook, kitchen-assistant, delivery-driver, acting-manager, admin, super-admin)
+- [x] UI visual indicators for admin/super-admin roles
+
+---
+
 ### AP-006 · Wage History API
 **Size:** S · **Priority:** P1 · **FR:** RF-22, RF-23
 
