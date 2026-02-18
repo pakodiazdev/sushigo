@@ -10,14 +10,15 @@ const roleOptions = Object.entries(EMPLOYEE_POSITION_ROLES).map(([value, label])
 }))
 
 const statusOptions = [
-  { value: 'true', label: 'Activos' },
-  { value: 'false', label: 'Inactivos' },
+  { value: 'active', label: 'Activos' },
+  { value: 'inactive', label: 'Inactivos' },
+  { value: 'baja', label: 'Baja' },
 ]
 
 interface EmployeeFiltersProps {
   search: string
   role: string
-  isActive?: boolean
+  status?: string
   onFilterChange: (key: string, value: any) => void
   onNew: () => void
 }
@@ -25,7 +26,7 @@ interface EmployeeFiltersProps {
 export function EmployeeFilters({
   search,
   role,
-  isActive,
+  status,
   onFilterChange,
   onNew,
 }: EmployeeFiltersProps) {
@@ -49,9 +50,9 @@ export function EmployeeFilters({
 
       <FilterSelect
         label="Estado"
-        value={isActive === undefined ? '' : String(isActive)}
+        value={status || ''}
         onChange={(value) => {
-          onFilterChange('is_active', value === '' ? undefined : value === 'true')
+          onFilterChange('status', value || undefined)
         }}
         options={statusOptions}
         placeholder="Todos"

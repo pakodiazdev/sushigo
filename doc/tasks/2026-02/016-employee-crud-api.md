@@ -50,6 +50,7 @@ Como Admin, quiero crear, listar, ver, actualizar y desactivar empleados vía AP
 - `1b836fe` ✨ [#016] - Employee CRUD API, frontend, and ULID public identifiers 👷
 - `23b05c8` 🔨 [#016] ! - Migrate employee roles from enum to Spatie multi-role system 👥
 - `b11bc5d` 🔨 [#016] - Refactor repositories, employee form (react-hook-form), and code review fixes 🧹
+- `c22f331` ✨ [#016-ext] - Implement role-based assignment control and privilege management 🔐
 
 ---
 
@@ -67,7 +68,7 @@ Como Admin, quiero crear, listar, ver, actualizar y desactivar empleados vía AP
 
 - **Optimistic:** `4h`
 - **Pessimistic:** `6h`
-- **Tracked:** `~11h`
+- **Tracked:** `~13.5h`
 
 ### 📅 Sessions
 
@@ -96,6 +97,12 @@ Como Admin, quiero crear, listar, ver, actualizar y desactivar empleados vía AP
     "duration": "~0.5h",
     "commit": null,
     "summary": "Code review verification: confirm putJson/public_id usage in tests, fix duplicate onClose() in EmployeeForm, typecheck pass"
+  },
+  {
+    "date": "2026-02-18",
+    "duration": "~2.5h",
+    "commit": "c22f331",
+    "summary": "Role-based assignment control: add admin/super-admin as position roles, implement getAssignableRolesFor() with privilege control, update syncPositionRoles() to enforce permissions, create AssignableRolesController endpoint, update all tests (7 position roles), frontend dynamic role fetching, enhanced seeders with realistic scenarios (re-hires, terminations, random dates), configure admin role permissions, update backlog (AP-005a)"
   }
 ]
 ```

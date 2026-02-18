@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
  *   schema="UpdateEmployeeRequest",
  *   @OA\Property(property="first_name", type="string", maxLength=100, example="Juan"),
  *   @OA\Property(property="last_name", type="string", maxLength=100, example="Perez"),
- *   @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}), example={"cook"}, description="Position roles"),
+ *   @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager", "admin", "super-admin"}), example={"cook"}, description="Position roles (super-admin only visible to super-admins)"),
  *   @OA\Property(property="email", type="string", format="email", example="juan.perez@sushigo.com", description="User email (admin only)"),
  *   @OA\Property(property="phone", type="string", example="5512345678", description="National phone number (admin only)"),
  *   @OA\Property(property="meta", type="object", nullable=true),
@@ -30,7 +30,7 @@ class UpdateEmployeeRequest extends FormRequest
             'first_name' => ['sometimes', 'string', 'max:100'],
             'last_name' => ['sometimes', 'string', 'max:100'],
             'roles' => ['sometimes', 'array', 'min:1'],
-            'roles.*' => ['string', Rule::in(Employee::POSITION_ROLES)],
+            'roles.*' => ['string', Rule::in(Employee::getAssignableRolesFor($this->user()))],
             'meta' => ['nullable', 'array'],
         ];
 

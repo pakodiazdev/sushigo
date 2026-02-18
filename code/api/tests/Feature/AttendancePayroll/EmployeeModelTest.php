@@ -170,7 +170,9 @@ class EmployeeModelTest extends TestCase
         $this->assertContains(Employee::ROLE_KITCHEN_ASSISTANT, Employee::POSITION_ROLES);
         $this->assertContains(Employee::ROLE_DELIVERY_DRIVER, Employee::POSITION_ROLES);
         $this->assertContains(Employee::ROLE_ACTING_MANAGER, Employee::POSITION_ROLES);
-        $this->assertCount(5, Employee::POSITION_ROLES);
+        $this->assertContains(Employee::ROLE_ADMIN, Employee::POSITION_ROLES);
+        $this->assertContains(Employee::ROLE_SUPER_ADMIN, Employee::POSITION_ROLES);
+        $this->assertCount(7, Employee::POSITION_ROLES);
     }
 
     #[Test]

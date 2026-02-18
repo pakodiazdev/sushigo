@@ -58,18 +58,29 @@ Como desarrollador, necesito crear la migración y modelo `EmploymentPeriod`, pa
 
 ---
 
+## 🎯 Commits
+
+- `a54ca8e` ✨ [#017] - Create EmploymentPeriod migration, model, factory & tests 🗄️
+
+---
+
 ## ⏱️ Time
 
 ### 📊 Estimates
 
 - **Optimistic:** `2h`
 - **Pessimistic:** `4h`
-- **Tracked:** ``
+- **Tracked:** `~3h`
 
 ### 📅 Sessions
 
 ```json
 [
-  { "date": "2026-02-15", "start": "00:00", "end": "" }
+  {
+    "date": "2026-02-15 to 2026-02-17",
+    "duration": "~3h",
+    "commit": "a54ca8e",
+    "summary": "EmploymentPeriod model with relationships (Employee, Branch), migration, factory with states (inactive, terminated), comprehensive unit tests (259 lines covering ULID, relationships, scopes, soft deletes, duration calculation), TypeScript types, employment periods tab component, period card component"
+  }
 ]
 ```

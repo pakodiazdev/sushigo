@@ -3,6 +3,7 @@
 namespace Tests\Feature\AttendancePayroll;
 
 use App\Actions\Employee\CreateEmployeeAction;
+use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +18,8 @@ class CreateEmployeeActionTest extends TestCase
     use RefreshDatabase;
 
     private CreateEmployeeAction $action;
+
+    protected Branch $branch;
 
     protected function setUp(): void
     {
@@ -34,6 +37,7 @@ class CreateEmployeeActionTest extends TestCase
         }
 
         $this->action = app(CreateEmployeeAction::class);
+        $this->branch = Branch::factory()->create();
 
         Notification::fake();
     }
@@ -47,6 +51,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Perez',
             'roles' => ['cook'],
             'email' => 'juan@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertInstanceOf(Employee::class, $employee);
@@ -66,6 +72,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Lopez',
             'roles' => ['cook'],
             'phone' => '+525512345678',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertNotNull($employee->user_id);
@@ -85,6 +93,8 @@ class CreateEmployeeActionTest extends TestCase
             'roles' => ['manager'],
             'email' => 'carlos@sushigo.com',
             'phone' => '+525500001111',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertNotNull($employee->user_id);
@@ -103,6 +113,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'User',
             'roles' => ['cook'],
             'email' => 'always@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertEquals($initialUserCount + 1, User::count());
@@ -117,6 +129,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Garcia',
             'roles' => ['cook'],
             'email' => 'pedro@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         // Roles live on User — position roles reflect org role, no base 'employee' role
@@ -133,6 +147,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Martinez',
             'roles' => ['kitchen-assistant'],
             'phone' => '+525500001112',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertTrue($employee->user->hasRole('kitchen-assistant'));
@@ -148,6 +164,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Ramirez',
             'roles' => ['delivery-driver'],
             'phone' => '+525500001113',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertTrue($employee->user->hasRole('delivery-driver'));
@@ -163,6 +181,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Mendoza',
             'roles' => ['manager'],
             'email' => 'carlos@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertTrue($employee->user->hasRole('manager'));
@@ -178,6 +198,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Role',
             'roles' => ['cook', 'delivery-driver'],
             'email' => 'multi@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertTrue($employee->user->hasRole('cook'));
@@ -197,6 +219,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Cook',
             'roles' => ['manager', 'cook'],
             'email' => 'mgr-cook@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertTrue($employee->user->hasRole('manager'));
@@ -211,6 +235,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Test',
             'roles' => ['cook'],
             'email' => 'hash@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertNotNull($employee->user->password);
@@ -222,28 +248,33 @@ class CreateEmployeeActionTest extends TestCase
     {
         $initialUserCount = User::count();
 
-        // First creation — succeeds, reserving code 'EMP-TX'
+        // First creation — succeeds
         ($this->action)([
             'code'       => 'EMP-TX',
             'first_name' => 'First',
             'last_name'  => 'Employee',
             'roles'      => ['cook'],
             'email'      => 'first@sushigo.com',
+            'branch_id'  => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $countAfterFirst = User::count();
 
-        // Second creation with duplicate code — unique constraint should trigger rollback
+        // Second creation with non-existent branch_id — FK constraint inside the
+        // transaction should trigger a rollback, preventing the user from being persisted.
         try {
             ($this->action)([
-                'code'       => 'EMP-TX', // duplicate — will fail on employees.code unique
+                'code'       => 'EMP-TX2',
                 'first_name' => 'Second',
                 'last_name'  => 'Employee',
                 'roles'      => ['cook'],
                 'email'      => 'second@sushigo.com',
+                'branch_id'  => 999999, // non-existent — FK violation triggers rollback
+                'start_date' => '2026-01-15',
             ]);
         } catch (\Throwable) {
-            // Expected: unique constraint violation on employees.code
+            // Expected: FK constraint violation on employment_periods.branch_id
         }
 
         $this->assertEquals($countAfterFirst, User::count(), 'User should not have been created due to transaction rollback');
@@ -259,6 +290,8 @@ class CreateEmployeeActionTest extends TestCase
             'roles' => ['cook'],
             'email' => 'meta@sushigo.com',
             'meta' => ['emergency_contact' => 'Mom', 'notes' => 'Part-time'],
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $this->assertEquals(['emergency_contact' => 'Mom', 'notes' => 'Part-time'], $employee->meta);
@@ -273,6 +306,8 @@ class CreateEmployeeActionTest extends TestCase
             'last_name' => 'Load',
             'roles' => ['cook'],
             'email' => 'eager@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         // Roles are on User - only 'user' relation is eager-loaded on Employee

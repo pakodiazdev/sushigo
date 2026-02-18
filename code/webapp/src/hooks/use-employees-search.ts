@@ -10,7 +10,7 @@ export interface EmployeesSearch {
   sort?: string
   search?: string
   role?: string
-  is_active?: boolean
+  status?: string
   form?: 'new' | string
 }
 
@@ -29,7 +29,10 @@ export function useEmployeesSearch() {
     per_page: perPage,
     search: search.search,
     role: (search.role as EmployeePositionRole) ?? undefined,
-    is_active: search.is_active,
+    is_active: search.status === 'active' ? true
+             : search.status === 'inactive' ? false
+             : undefined,
+    status: search.status === 'baja' ? 'baja' : undefined,
     ...sortSpecsToParams(sorting),
   }
 
@@ -99,7 +102,7 @@ export function useEmployeesSearch() {
     // Search param values (for inputs)
     searchText: search.search || '',
     roleFilter: search.role || '',
-    isActiveFilter: search.is_active,
+    statusFilter: search.status,
     // Handlers
     handleFilterChange,
     handleSortChange,
