@@ -1,6 +1,13 @@
 import { X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+
+/**
+ * Context that provides a portal target for overlay components (e.g. ConfirmDialog)
+ * rendered inside a SlidePanel.  This lets them escape the content area's
+ * `overflow-y-auto` clipping while staying visually contained to the panel.
+ */
+export const SlidePanelOverlayContext = createContext<React.RefObject<HTMLDivElement | null> | null>(null)
 
 /** Default animation duration in ms — shared across all SlidePanels. */
 export const SLIDE_PANEL_DEFAULT_DURATION_MS = 350
@@ -56,6 +63,7 @@ export function SlidePanel({
 }: SlidePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   // ── Visibility state (keeps DOM alive during exit animation) ──
   const [visible, setVisible] = useState(false)
@@ -207,7 +215,8 @@ export function SlidePanel({
             animationTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)',
           }}
         >
-          <div className="flex h-full flex-col bg-background shadow-xl">
+          <SlidePanelOverlayContext.Provider value={overlayRef}>
+          <div ref={overlayRef} className="relative flex h-full flex-col bg-background shadow-xl">
             {/* Header */}
             {(title || description) && (
               <div className="border-b border-border px-6 py-4">
@@ -247,6 +256,7 @@ export function SlidePanel({
               {children}
             </div>
           </div>
+          </SlidePanelOverlayContext.Provider>
         </div>
       </div>
     </div>

@@ -5,6 +5,8 @@ import type {
   EmployeeFilters,
   EmployeeFormData,
   EmployeeUpdateData,
+  DeactivateEmployeeData,
+  RehireEmployeeData,
 } from "@/types/employee";
 
 // ============================================================================
@@ -41,6 +43,17 @@ export function useNextEmployeeCode(enabled: boolean) {
     },
     enabled,
     staleTime: 0,
+  });
+}
+
+export function useAssignableRoles() {
+  return useQuery({
+    queryKey: ["employees", "assignable-roles"],
+    queryFn: async () => {
+      const response = await employeeApi.assignableRoles();
+      return response.data.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -107,6 +120,55 @@ export function useToggleEmployeeActive() {
     onError: (error: any) => {
       showError(
         error.response?.data?.message || "No se pudo actualizar el estado.",
+        "Error",
+      );
+    },
+  });
+}
+
+export function useDeactivateEmployee() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: DeactivateEmployeeData }) =>
+      employeeApi.deactivate(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["employees", variables.id] });
+      showSuccess(
+        "El empleado ha sido dado de baja exitosamente.",
+        "Baja registrada",
+      );
+    },
+    onError: (error: any) => {
+      showError(
+        error.response?.data?.message || "No se pudo dar de baja al empleado.",
+        "Error",
+      );
+    },
+  });
+}
+
+export function useRehireEmployee() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: RehireEmployeeData }) =>
+      employeeApi.rehire(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["employees", variables.id] });
+      showSuccess(
+        "El reingreso del empleado ha sido registrado exitosamente.",
+        "Reingreso registrado",
+      );
+    },
+    onError: (error: any) => {
+      showError(
+        error.response?.data?.message ||
+          "No se pudo registrar el reingreso del empleado.",
         "Error",
       );
     },

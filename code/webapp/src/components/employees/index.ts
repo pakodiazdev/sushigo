@@ -1,3 +1,6 @@
 export { EmployeeForm } from './employee-form'
 export { EmployeeFilters } from './employee-filters'
 export { getEmployeeColumns } from './employee-columns'
+export { EmployeeDetailView } from './employee-detail-view'
+export { EmploymentPeriodCard } from './employment-period-card'
+export { EmploymentPeriodsSection } from './employment-periods-section'

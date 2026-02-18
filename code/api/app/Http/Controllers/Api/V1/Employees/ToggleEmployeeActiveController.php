@@ -28,10 +28,21 @@ use App\Models\Employee;
  */
 class ToggleEmployeeActiveController extends Controller
 {
+    /**
+     * Toggle employee is_active flag.
+     *
+     * This is NOT a "baja". It simply enables/disables the employee
+     * while keeping their employment period active.
+     * Requires an active employment period to operate.
+     */
     public function __invoke(Employee $employee): ResponseEntity
     {
-        $employee->update(['is_active' => !$employee->is_active]);
-        $employee->load(['user.roles']);
+        if (! $employee->employmentPeriods()->active()->exists()) {
+            abort(422, 'El empleado no tiene un periodo de empleo activo. Use el reingreso para reactivar.');
+        }
+
+        $employee->update(['is_active' => ! $employee->is_active]);
+        $employee->load(['user.roles', 'employmentPeriods.branch']);
 
         return new ResponseEntity(
             data: $employee->toApiArray()
