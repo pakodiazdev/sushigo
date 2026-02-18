@@ -10,7 +10,7 @@ namespace App\Http\Responses\Entities;
  *     @OA\Property(property="code", type="string", example="EMP-001"),
  *     @OA\Property(property="first_name", type="string", example="Juan"),
  *     @OA\Property(property="last_name", type="string", example="Perez"),
- *     @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"employee-manager", "employee-cook", "employee-kitchen-assistant", "employee-delivery-driver", "employee-acting-manager"}), example={"employee-cook"}, description="Position roles"),
+ *     @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}), example={"cook"}, description="Position roles"),
  *     @OA\Property(property="is_active", type="boolean", example=true),
  *     @OA\Property(property="email", type="string", format="email", nullable=true, example="juan@sushigo.com"),
  *     @OA\Property(property="phone", type="string", nullable=true, example="5512345678"),

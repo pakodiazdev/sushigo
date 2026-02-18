@@ -28,9 +28,10 @@ class ResetPasswordAction
             ]);
         }
 
-        $user = User::where('email', $record->email)
-            ->orWhere('phone', $record->email)
-            ->first();
+        $user = User::where(function ($q) use ($record) {
+            $q->where('email', $record->email)
+              ->orWhere('phone', $record->email);
+        })->first();
 
         if (! $user) {
             throw ValidationException::withMessages([

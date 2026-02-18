@@ -77,7 +77,7 @@ class UpdateEmployeeController extends Controller
             }
         });
 
-        $employee->load(['user']);
+        $employee->load(['user.roles']);
 
         return new ResponseEntity(
             data: $employee->toApiArray()

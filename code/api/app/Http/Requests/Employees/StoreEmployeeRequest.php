@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="code", type="string", maxLength=20, example="EMP-001", description="Unique employee code"),
  *   @OA\Property(property="first_name", type="string", maxLength=100, example="Juan", description="Employee first name"),
  *   @OA\Property(property="last_name", type="string", maxLength=100, example="Perez", description="Employee last name"),
- *   @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"employee-manager", "employee-cook", "employee-kitchen-assistant", "employee-delivery-driver", "employee-acting-manager"}), example={"employee-cook"}, description="Position roles"),
+ *   @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}), example={"cook"}, description="Position roles"),
  *   @OA\Property(property="email", type="string", format="email", example="juan.perez@sushigo.com", description="Email for the system user (required if phone not provided). A welcome email with password setup link will be sent."),
  *   @OA\Property(property="phone", type="string", example="5512345678", description="National phone number without country code (required if email not provided). Country code (+52 for Mexico) is added automatically. A WhatsApp message with password setup link will be sent."),
  *   @OA\Property(property="meta", type="object", nullable=true, description="Additional metadata"),

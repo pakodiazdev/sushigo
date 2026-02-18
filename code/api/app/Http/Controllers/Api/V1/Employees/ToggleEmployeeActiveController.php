@@ -31,7 +31,7 @@ class ToggleEmployeeActiveController extends Controller
     public function __invoke(Employee $employee): ResponseEntity
     {
         $employee->update(['is_active' => !$employee->is_active]);
-        $employee->load(['user']);
+        $employee->load(['user.roles']);
 
         return new ResponseEntity(
             data: $employee->toApiArray()
