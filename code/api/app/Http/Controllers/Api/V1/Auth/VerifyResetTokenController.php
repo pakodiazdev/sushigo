@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
  * @OA\Post(
  *   path="/api/v1/auth/verify-reset-token",
  *   summary="Verify password reset token",
- *   description="Checks if a reset token is valid and not expired. Returns a masked version of the account identifier (email or phone).",
+ *   description="Checks if the combined t param (token.selector) is valid and not expired. Returns a masked version of the account identifier (email or phone).",
  *   tags={"Auth"},
  *   @OA\RequestBody(
  *     required=true,
@@ -37,7 +37,7 @@ class VerifyResetTokenController extends Controller
         VerifyResetTokenRequest $request,
         VerifyResetTokenAction $action,
     ): JsonResponse {
-        $result = $action($request->validated()['token']);
+        $result = $action($request->validated()['t']);
 
         return response()->json($result);
     }

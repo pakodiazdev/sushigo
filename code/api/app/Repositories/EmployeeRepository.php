@@ -26,7 +26,7 @@ class EmployeeRepository extends BaseRepository
     public function paginateIndex(array $filters = [], array $sorts = [], int $perPage = 15): LengthAwarePaginator
     {
         // Roles live on User — only 'user' relation needed on Employee
-        $query = $this->newQuery()->with(['user']);
+        $query = $this->newQuery()->with(['user.roles']);
 
         if (array_key_exists('is_active', $filters) && $filters['is_active'] !== null) {
             $query->where('is_active', (bool) $filters['is_active']);
@@ -35,7 +35,7 @@ class EmployeeRepository extends BaseRepository
         if (!empty($filters['role'])) {
             // Filter employees whose linked User holds the given position role
             $role = $filters['role'];
-            $query->whereHas('user', fn ($q) => $q->role($role));
+            $query->whereHas('user', fn($q) => $q->role($role));
         }
 
         if (!empty($filters['search'])) {

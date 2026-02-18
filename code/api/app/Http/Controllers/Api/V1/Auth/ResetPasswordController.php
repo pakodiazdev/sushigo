@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Actions\Auth\ResetPasswordAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ResetPasswordRequest;
-use Illuminate\Http\JsonResponse;
+use App\Http\Responses\Auth\AuthTokenResponse;
 
 /**
  * @OA\Post(
@@ -19,11 +19,8 @@ use Illuminate\Http\JsonResponse;
  *   ),
  *   @OA\Response(
  *     response=200,
- *     description="Password reset successfully",
- *     @OA\JsonContent(
- *       @OA\Property(property="status", type="string", example="success"),
- *       @OA\Property(property="message", type="string")
- *     )
+ *     description="Password reset successfully — returns auth token and user (same shape as login)",
+ *     @OA\JsonContent(ref="#/components/schemas/AuthTokenResponseSchema")
  *   ),
  *   @OA\Response(
  *     response=422,
@@ -36,9 +33,12 @@ class ResetPasswordController extends Controller
     public function __invoke(
         ResetPasswordRequest $request,
         ResetPasswordAction $action,
-    ): JsonResponse {
+    ): AuthTokenResponse {
         $result = $action($request->validated());
 
-        return response()->json($result);
+        return new AuthTokenResponse(
+            token: $result['token'],
+            user: $result['user'],
+        );
     }
 }

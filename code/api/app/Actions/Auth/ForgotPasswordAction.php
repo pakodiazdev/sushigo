@@ -4,46 +4,63 @@ namespace App\Actions\Auth;
 
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
+use App\Repositories\UserRepository;
 use App\Services\Notifications\WhatsAppService;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class ForgotPasswordAction
 {
     public function __construct(
         private readonly WhatsAppService $whatsAppService,
+        private readonly UserRepository $userRepository,
     ) {}
 
     public function __invoke(array $data): array
     {
-        $field = !empty($data['email']) ? 'email' : 'phone';
-
-        $user = User::where($field, $data[$field])->first();
+        $field = ! empty($data['email']) ? 'email' : 'phone';
+        $user  = User::where($field, $data[$field])->first();
 
         if ($user) {
-            $token = Password::broker()->createToken($user);
-            $resetUrl = $this->buildResetUrl($token);
+            [$resetUrl] = $this->generateResetLink($user);
 
             if ($user->email) {
                 $user->notify(new ResetPasswordNotification($resetUrl));
             }
 
             if ($user->phone) {
-                // Use full_phone (country code + national number, e.g. +525512345678)
-                // so the WhatsApp provider receives an internationally-formatted number.
+                // full_phone includes country code (e.g. +525512345678) for international delivery
                 $this->whatsAppService->sendPasswordResetLink($user->full_phone, $resetUrl);
             }
         }
 
         return [
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Si existe una cuenta, se ha enviado el enlace para restablecer la contraseña.',
         ];
     }
 
-    private function buildResetUrl(string $token): string
+    /**
+     * Generate a selector+token pair, persist it, and return [resetUrl, plainToken, selector].
+     *
+     * Extracted as a protected method so SendWelcomeNotificationAction can reuse
+     * exactly the same logic without duplication.
+     */
+    public function generateResetLink(User $user): array
     {
-        $frontendUrl = config('app.frontend_url', 'https://sushigo.local');
+        $selector   = Str::random(24);
+        $plainToken = Str::random(40);
+        $identifier = $user->getEmailForPasswordReset();
 
-        return "{$frontendUrl}/reset-password?token={$token}";
+        $this->userRepository->createResetToken(
+            $identifier,
+            $selector,
+            Hash::make($plainToken)
+        );
+
+        $frontendUrl = config('app.frontend_url', 'https://sushigo.local');
+        $resetUrl    = "{$frontendUrl}/reset-password?t={$plainToken}.{$selector}";
+
+        return [$resetUrl, $plainToken, $selector];
     }
 }

@@ -3,49 +3,61 @@
 namespace App\Actions\Auth;
 
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class VerifyResetTokenAction
 {
-    public function __invoke(string $token): array
+    public function __construct(
+        private readonly UserRepository $userRepository,
+    ) {}
+
+    public function __invoke(string $t): array
     {
-        $expireMinutes = config('auth.passwords.users.expire', 60);
-        $table = config('auth.passwords.users.table', 'password_reset_tokens');
+        [$plainToken, $selector] = $this->parseT($t);
 
-        $records = DB::table($table)
-            ->where('created_at', '>=', now()->subMinutes($expireMinutes))
-            ->get();
+        $record = $this->userRepository->findByResetSelector($selector);
 
-        $matched = null;
-        foreach ($records as $record) {
-            if (Hash::check($token, $record->token)) {
-                $matched = $record;
-                break;
-            }
+        if (! $record || ! Hash::check($plainToken, $record->token)) {
+            $this->throwInvalid();
         }
 
-        if (! $matched) {
-            throw ValidationException::withMessages([
-                'token' => ['El token de restablecimiento es inválido o ha expirado.'],
-            ]);
-        }
-
-        $user = User::where('email', $matched->email)
-            ->orWhere('phone', $matched->email)
+        $user = User::where('email', $record->email)
+            ->orWhere('phone', $record->email)
             ->first();
 
         if (! $user) {
-            throw ValidationException::withMessages([
-                'token' => ['El token de restablecimiento es inválido o ha expirado.'],
-            ]);
+            $this->throwInvalid();
         }
 
         return [
-            'status' => 'success',
+            'status'            => 'success',
             'masked_identifier' => $this->maskIdentifier($user),
         ];
+    }
+
+    /**
+     * Split the combined "t" param into [plainToken, selector].
+     * Format: {40-char plainToken}.{24-char selector}
+     * Extracted as public so ResetPasswordAction can reuse it.
+     */
+    public function parseT(string $t): array
+    {
+        $parts = explode('.', $t, 2);
+
+        if (count($parts) !== 2 || empty($parts[0]) || empty($parts[1])) {
+            $this->throwInvalid();
+        }
+
+        return [$parts[0], $parts[1]];
+    }
+
+    private function throwInvalid(): never
+    {
+        throw ValidationException::withMessages([
+            't' => ['El token de restablecimiento es inválido o ha expirado.'],
+        ]);
     }
 
     private function maskIdentifier(User $user): string
@@ -58,7 +70,7 @@ class VerifyResetTokenAction
             return $masked . '@' . $domain;
         }
 
-        $phone = $user->phone;
+        $phone   = $user->phone;
         $visible = substr($phone, -4);
 
         return str_repeat('*', max(1, strlen($phone) - 4)) . $visible;

@@ -7,8 +7,8 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="VerifyResetTokenRequest",
- *   required={"token"},
- *   @OA\Property(property="token", type="string", description="Password reset token to verify"),
+ *   required={"t"},
+ *   @OA\Property(property="t", type="string", description="Combined reset param: {40-char token}.{24-char selector}"),
  * )
  */
 class VerifyResetTokenRequest extends FormRequest
@@ -21,14 +21,14 @@ class VerifyResetTokenRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'token' => ['required', 'string'],
+            't' => ['required', 'string'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'token.required' => 'El token de restablecimiento es requerido.',
+            't.required' => 'El token de restablecimiento es requerido.',
         ];
     }
 }
