@@ -7,8 +7,11 @@ use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\V1\Auth\VerifyResetTokenController;
+use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\DeactivateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
+use App\Http\Controllers\Api\V1\Employees\RehireEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ShowEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
 use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
@@ -188,10 +191,13 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('employees')->group(function () {
         Route::get('/', ListEmployeesController::class)->name('employees.list')->middleware('permission:employees.view');
         Route::get('/next-code', SuggestEmployeeCodeController::class)->name('employees.next-code')->middleware('permission:employees.create');
+        Route::get('/assignable-roles', AssignableRolesController::class)->name('employees.assignable-roles')->middleware('permission:employees.view');
         Route::post('/', CreateEmployeeController::class)->name('employees.create')->middleware('permission:employees.create');
         Route::get('/{employee}', ShowEmployeeController::class)->name('employees.show')->middleware('permission:employees.view');
         Route::put('/{employee}', UpdateEmployeeController::class)->name('employees.update')->middleware('permission:employees.update');
         Route::patch('/{employee}/toggle-active', ToggleEmployeeActiveController::class)->name('employees.toggle-active')->middleware('permission:employees.update');
+        Route::patch('/{employee}/deactivate', DeactivateEmployeeController::class)->name('employees.deactivate')->middleware('permission:employees.update');
+        Route::patch('/{employee}/rehire', RehireEmployeeController::class)->name('employees.rehire')->middleware('permission:employees.update');
     });
 
     // Cash Adjustments Module (All Protected)

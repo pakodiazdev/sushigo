@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\AttendancePayroll;
 
+use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +18,7 @@ class EmployeeCrudTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+    protected Branch $branch;
 
     protected function setUp(): void
     {
@@ -41,6 +43,8 @@ class EmployeeCrudTest extends TestCase
         $this->user = User::factory()->create();
         $this->user->assignRole('admin');
 
+        $this->branch = Branch::factory()->create();
+
         Passport::actingAs($this->user);
 
         Notification::fake();
@@ -55,6 +59,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Perez',
             'roles' => ['cook'],
             'email' => 'juan.perez@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(201)
@@ -79,6 +85,13 @@ class EmployeeCrudTest extends TestCase
             'email' => 'juan.perez@sushigo.com',
             'name' => 'Juan Perez',
         ]);
+
+        // Should auto-create employment period
+        $periods = $response->json('data.employment_periods');
+        $this->assertCount(1, $periods);
+        $this->assertEquals($this->branch->id, $periods[0]['branch_id']);
+        $this->assertEquals('2026-01-15', $periods[0]['start_date']);
+        $this->assertTrue($periods[0]['is_active']);
     }
 
     #[Test]
@@ -90,6 +103,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Lopez',
             'roles' => ['cook'],
             'phone' => '5512345678',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(201)
@@ -115,6 +130,8 @@ class EmployeeCrudTest extends TestCase
             'roles' => ['manager'],
             'email' => 'carlos@sushigo.com',
             'phone' => '5500001111',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(201);
@@ -135,6 +152,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Role',
             'roles' => ['cook', 'delivery-driver'],
             'email' => 'multi@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(201);
@@ -157,6 +176,8 @@ class EmployeeCrudTest extends TestCase
             'roles' => ['cook'],
             'email' => 'test.show@sushigo.com',
             'phone' => '5599887766',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $employeeId = $createResponse->json('data.id');
@@ -177,7 +198,7 @@ class EmployeeCrudTest extends TestCase
         $response = $this->postJson('/api/v1/employees', []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['code', 'first_name', 'last_name', 'roles']);
+            ->assertJsonValidationErrors(['code', 'first_name', 'last_name', 'roles', 'branch_id', 'start_date']);
     }
 
     #[Test]
@@ -188,6 +209,8 @@ class EmployeeCrudTest extends TestCase
             'first_name' => 'Test',
             'last_name' => 'User',
             'roles' => ['cook'],
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(422)
@@ -205,6 +228,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Employee',
             'roles' => ['cook'],
             'email' => 'another@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(422)
@@ -220,6 +245,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Perez',
             'roles' => ['INVALID_ROLE'],
             'email' => 'juan@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(422)
@@ -235,6 +262,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Perez',
             'roles' => 'cook',
             'email' => 'juan@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(422)
@@ -250,6 +279,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Perez',
             'roles' => [],
             'email' => 'juan@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(422)
@@ -395,35 +426,23 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function it_can_toggle_employee_active_status(): void
+    public function toggle_active_rejects_active_employee_with_422(): void
     {
         $employee = Employee::factory()->create(['is_active' => true]);
 
         $response = $this->patchJson("/api/v1/employees/{$employee->public_id}/toggle-active");
 
-        $response->assertStatus(200)
-            ->assertJsonFragment(['is_active' => false]);
-
-        $this->assertDatabaseHas('employees', [
-            'id' => $employee->id,
-            'is_active' => false,
-        ]);
+        $response->assertStatus(422);
     }
 
     #[Test]
-    public function it_can_toggle_inactive_to_active(): void
+    public function toggle_active_rejects_inactive_employee_with_422(): void
     {
         $employee = Employee::factory()->inactive()->create();
 
         $response = $this->patchJson("/api/v1/employees/{$employee->public_id}/toggle-active");
 
-        $response->assertStatus(200)
-            ->assertJsonFragment(['is_active' => true]);
-
-        $this->assertDatabaseHas('employees', [
-            'id' => $employee->id,
-            'is_active' => true,
-        ]);
+        $response->assertStatus(422);
     }
 
     #[Test]
@@ -459,6 +478,8 @@ class EmployeeCrudTest extends TestCase
             'roles' => ['kitchen-assistant'],
             'email' => 'ana.martinez@sushigo.com',
             'meta' => ['notes' => 'Part-time'],
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(201);
@@ -477,6 +498,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Test',
             'roles' => ['cook'],
             'email' => 'ulid@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(201);
@@ -518,6 +541,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Permission',
             'roles' => ['cook'],
             'email' => 'noperm@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(403);
@@ -547,6 +572,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Mendoza',
             'roles' => ['cook'],
             'email' => 'carlos@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(201);
@@ -568,6 +595,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Garcia',
             'roles' => ['manager'],
             'email' => 'ana.garcia@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         $response->assertStatus(201);
@@ -624,6 +653,8 @@ class EmployeeCrudTest extends TestCase
             'last_name' => 'Test',
             'roles' => ['cook'],
             'email' => 'rollback@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
         ]);
 
         // Should fail on duplicate code validation
@@ -636,13 +667,13 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function toggle_returns_roles_array(): void
+    public function toggle_returns_422_message(): void
     {
         $employee = Employee::factory()->cook()->create();
 
         $response = $this->patchJson("/api/v1/employees/{$employee->public_id}/toggle-active");
 
-        $response->assertStatus(200);
-        $this->assertIsArray($response->json('data.roles'));
+        $response->assertStatus(422)
+            ->assertJsonStructure(['message']);
     }
 }

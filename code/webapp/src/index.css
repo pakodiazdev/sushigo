@@ -170,6 +170,64 @@
     }
 }
 
+/* ── FadeIn Animation ───────────────────────────────────────────── */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+}
+
+/* ── ConfirmDialog Animations ───────────────────────────────────── */
+@keyframes dialog-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes dialog-backdrop-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+@keyframes dialog-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+@keyframes dialog-out {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95) translateY(8px);
+    }
+}
+.animate-dialog-backdrop-in {
+    animation: dialog-backdrop-in 0.2s ease-out forwards;
+}
+.animate-dialog-backdrop-out {
+    animation: dialog-backdrop-out 0.15s ease-in forwards;
+}
+.animate-dialog-in {
+    animation: dialog-in 0.2s ease-out forwards;
+}
+.animate-dialog-out {
+    animation: dialog-out 0.15s ease-in forwards;
+}
+
 /* ── SlidePanel Animations ─────────────────────────────────────── */
 @keyframes slide-in-right {
     from {

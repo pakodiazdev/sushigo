@@ -13,9 +13,7 @@ export const Route = createFileRoute('/employees')({
     sort: typeof search.sort === 'string' ? search.sort : undefined,
     search: typeof search.search === 'string' ? search.search : undefined,
     role: typeof search.role === 'string' ? search.role : undefined,
-    is_active: search.is_active === true || search.is_active === 'true' ? true
-             : search.is_active === false || search.is_active === 'false' ? false
-             : undefined,
+    status: typeof search.status === 'string' ? search.status : undefined,
     form: typeof search.form === 'string' ? search.form : undefined,
   }),
 })
@@ -24,7 +22,7 @@ export function EmployeesPage() {
   const {
     data, isLoading, selectedEmployee,
     sorting, perPage, isFormOpen,
-    searchText, roleFilter, isActiveFilter,
+    searchText, roleFilter, statusFilter,
     handleFilterChange, handleSortChange, handlePerPageChange,
     handlePageChange, handleNewEmployee, handleEditEmployee, handleCloseForm,
   } = useEmployeesSearch()
@@ -42,7 +40,7 @@ export function EmployeesPage() {
         <EmployeeFilters
           search={searchText}
           role={roleFilter}
-          isActive={isActiveFilter}
+          status={statusFilter}
           onFilterChange={handleFilterChange}
           onNew={handleNewEmployee}
         />

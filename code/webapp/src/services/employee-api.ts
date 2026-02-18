@@ -4,6 +4,8 @@ import type {
   EmployeeFormData,
   EmployeeUpdateData,
   EmployeeFilters,
+  DeactivateEmployeeData,
+  RehireEmployeeData,
   PaginatedResponse,
   EntityResponse,
 } from '@/types/employee'
@@ -30,6 +32,15 @@ export const employeeApi = {
   toggleActive: (id: string) =>
     api.patch<EntityResponse<Employee>>(`/employees/${id}/toggle-active`),
 
+  deactivate: (id: string, data: DeactivateEmployeeData) =>
+    api.patch<EntityResponse<Employee>>(`/employees/${id}/deactivate`, data),
+
+  rehire: (id: string, data: RehireEmployeeData) =>
+    api.patch<EntityResponse<Employee>>(`/employees/${id}/rehire`, data),
+
   nextCode: () =>
     api.get<{ code: string; prefix: string }>('/employees/next-code'),
+
+  assignableRoles: () =>
+    api.get<{ status: number; data: string[] }>('/employees/assignable-roles'),
 }
