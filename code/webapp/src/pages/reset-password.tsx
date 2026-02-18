@@ -8,14 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Logo } from '@/components/ui/logo'
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
+// The URL param is `t` (not `token`) — format: {40-char plainToken}.{24-char selector}
 type ResetPasswordSearch = {
-    token?: string
+    t?: string
 }
 
 export const Route = createFileRoute('/reset-password')({
     component: ResetPasswordPage,
     validateSearch: (search: Record<string, unknown>): ResetPasswordSearch => ({
-        token: (search.token as string) || undefined,
+        t: (search.t as string) || undefined,
     }),
 })
 
@@ -26,7 +27,7 @@ type VerifyState =
     | { status: 'invalid' }
 
 function ResetPasswordPage() {
-    const { token } = useSearch({ from: '/reset-password' })
+    const { t } = useSearch({ from: '/reset-password' })
 
     const [verifyState, setVerifyState] = useState<VerifyState>({ status: 'idle' })
     const [password, setPassword] = useState('')
@@ -38,7 +39,7 @@ function ResetPasswordPage() {
     const router = useRouter()
 
     useEffect(() => {
-        if (!token) {
+        if (!t) {
             setVerifyState({ status: 'invalid' })
             return
         }
@@ -46,14 +47,14 @@ function ResetPasswordPage() {
         setVerifyState({ status: 'loading' })
 
         apiClient
-            .post('/auth/verify-reset-token', { token })
+            .post('/auth/verify-reset-token', { t })
             .then((res) => {
                 setVerifyState({ status: 'valid', maskedIdentifier: res.data.masked_identifier })
             })
             .catch(() => {
                 setVerifyState({ status: 'invalid' })
             })
-    }, [token])
+    }, [t])
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
@@ -69,20 +70,23 @@ function ResetPasswordPage() {
             return
         }
 
-        if (!token) return
+        if (!t) return
 
         setIsLoading(true)
 
         try {
             const response = await apiClient.post('/auth/reset-password', {
-                token,
+                t,
                 password,
                 password_confirmation: passwordConfirmation,
             })
 
-            if (response.data.token && response.data.user) {
+            // ResetPasswordController returns AuthTokenResponse — same shape as login:
+            // { status, data: { token, token_type, user: { id, name, email, roles, permissions } } }
+            const payload = response.data?.data
+            if (payload?.token && payload?.user) {
                 const { initializeAfterReset } = useAuthStore.getState()
-                initializeAfterReset(response.data.user, response.data.token)
+                initializeAfterReset(payload.user, payload.token)
                 setTimeout(() => {
                     router.navigate({ to: '/' })
                 }, 100)
@@ -92,7 +96,7 @@ function ResetPasswordPage() {
             setSuccess(true)
         } catch (err: any) {
             const message =
-                err.response?.data?.errors?.token?.[0] ||
+                err.response?.data?.errors?.t?.[0] ||
                 err.response?.data?.message ||
                 'No se pudo restablecer la contraseña. El enlace puede haber expirado.'
             setError(message)
