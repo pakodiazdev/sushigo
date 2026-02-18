@@ -1,0 +1,60 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Branch;
+use App\Models\Employee;
+use App\Models\EmploymentPeriod;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+
+/** @extends Factory<EmploymentPeriod> */
+class EmploymentPeriodFactory extends Factory
+{
+    protected $model = EmploymentPeriod::class;
+
+    public function definition(): array
+    {
+        return [
+            'public_id' => (string) Str::ulid(),
+            'employee_id' => Employee::factory(),
+            'branch_id' => Branch::factory(),
+            'start_date' => fake()->dateTimeBetween('-2 years', '-1 month'),
+            'end_date' => null,
+            'termination_reason' => null,
+            'is_active' => true,
+            'meta' => null,
+        ];
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+            'end_date' => fake()->dateTimeBetween('-6 months', 'now'),
+        ]);
+    }
+
+    public function terminated(string $reason = 'Renuncia voluntaria'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+            'end_date' => fake()->dateTimeBetween('-6 months', 'now'),
+            'termination_reason' => $reason,
+        ]);
+    }
+
+    public function forEmployee(Employee $employee): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'employee_id' => $employee->id,
+        ]);
+    }
+
+    public function forBranch(Branch $branch): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'branch_id' => $branch->id,
+        ]);
+    }
+}
