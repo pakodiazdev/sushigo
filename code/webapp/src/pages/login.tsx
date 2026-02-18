@@ -13,14 +13,19 @@ export const Route = createFileRoute('/login')({
 
 export function LoginPage() {
     const { login, error, isLoading } = useAuthStore();
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
+
+    const isEmail = identifier.includes('@');
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        const credentials = isEmail
+            ? { email: identifier, password }
+            : { phone: identifier, password };
         try {
-            await login({ email, password });
-        } catch (err) {
+            await login(credentials);
+        } catch {
             // Error is handled by auth store
         }
     };
@@ -46,17 +51,18 @@ export function LoginPage() {
                         )}
 
                         <div className="space-y-2">
-                            <label htmlFor="email" className="text-sm font-medium">
-                                Correo electrónico
+                            <label htmlFor="identifier" className="text-sm font-medium">
+                                Correo electrónico o teléfono
                             </label>
                             <Input
-                                id="email"
-                                type="email"
-                                placeholder="tu@email.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                id="identifier"
+                                type={isEmail ? 'email' : 'text'}
+                                placeholder="tu@email.com o teléfono 551234567"
+                                value={identifier}
+                                onChange={(e) => setIdentifier(e.target.value)}
                                 required
                                 disabled={isLoading}
+                                autoComplete="username"
                             />
                         </div>
 
@@ -72,6 +78,7 @@ export function LoginPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 disabled={isLoading}
+                                autoComplete="current-password"
                             />
                         </div>
 

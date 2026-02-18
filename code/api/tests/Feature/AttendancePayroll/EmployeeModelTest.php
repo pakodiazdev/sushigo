@@ -45,7 +45,8 @@ class EmployeeModelTest extends TestCase
         ]);
 
         $this->assertInstanceOf(Employee::class, $employee);
-        $this->assertTrue($employee->hasRole(Employee::ROLE_COOK));
+        // Roles live on User, not Employee
+        $this->assertTrue($employee->user->hasRole(Employee::ROLE_COOK));
         $this->assertTrue($employee->is_active);
     }
 
@@ -85,37 +86,45 @@ class EmployeeModelTest extends TestCase
     #[Test]
     public function it_allows_null_user(): void
     {
-        $employee = Employee::factory()->create(['user_id' => null]);
+        // Note: factory always creates a user, so we manually unset it here
+        $employee = Employee::factory()->create();
+        $employee->user_id = null;
+        $employee->save();
+        $employee->unsetRelation('user');
 
-        $this->assertNull($employee->user_id);
         $this->assertNull($employee->user);
     }
 
     #[Test]
-    public function it_can_assign_spatie_roles(): void
+    public function it_can_assign_position_roles_to_user(): void
     {
         $employee = Employee::factory()->manager()->create();
 
-        $fresh = Employee::find($employee->id);
-        $fresh->load('roles');
+        $fresh = Employee::with('user')->find($employee->id);
 
-        $this->assertTrue($fresh->hasRole(Employee::ROLE_MANAGER));
+        // Roles live on User
+        $this->assertTrue($fresh->user->hasRole(Employee::ROLE_MANAGER));
+        $this->assertContains(Employee::ROLE_MANAGER, $fresh->getPositionRoles());
     }
 
     #[Test]
-    public function it_can_have_multiple_roles(): void
+    public function it_can_have_multiple_position_roles_on_user(): void
     {
         $employee = Employee::factory()->withRoles([
             Employee::ROLE_COOK,
             Employee::ROLE_DELIVERY_DRIVER,
         ])->create();
 
-        $employee->load('roles');
+        $employee->load('user');
 
-        $this->assertTrue($employee->hasRole(Employee::ROLE_COOK));
-        $this->assertTrue($employee->hasRole(Employee::ROLE_DELIVERY_DRIVER));
-        $this->assertFalse($employee->hasRole(Employee::ROLE_MANAGER));
-        $this->assertCount(2, $employee->roles);
+        $this->assertTrue($employee->user->hasRole(Employee::ROLE_COOK));
+        $this->assertTrue($employee->user->hasRole(Employee::ROLE_DELIVERY_DRIVER));
+        $this->assertFalse($employee->user->hasRole(Employee::ROLE_MANAGER));
+
+        $positionRoles = $employee->getPositionRoles();
+        $this->assertCount(2, $positionRoles);
+        $this->assertContains(Employee::ROLE_COOK, $positionRoles);
+        $this->assertContains(Employee::ROLE_DELIVERY_DRIVER, $positionRoles);
     }
 
     #[Test]
@@ -142,13 +151,14 @@ class EmployeeModelTest extends TestCase
     }
 
     #[Test]
-    public function it_filters_by_role_with_spatie_scope(): void
+    public function it_filters_users_by_position_role(): void
     {
         Employee::factory()->cook()->count(2)->create();
         Employee::factory()->manager()->create();
         Employee::factory()->deliveryDriver()->create();
 
-        $cooks = Employee::role(Employee::ROLE_COOK)->get();
+        // Roles are on User — query via User::role() scoped to position roles
+        $cooks = User::role(Employee::ROLE_COOK)->get();
 
         $this->assertCount(2, $cooks);
     }
@@ -173,8 +183,8 @@ class EmployeeModelTest extends TestCase
         $this->assertNotEmpty($employee->first_name);
         $this->assertNotEmpty($employee->last_name);
         $this->assertTrue($employee->is_active);
-        // Factory default assigns employee-cook
-        $this->assertTrue($employee->hasRole(Employee::ROLE_COOK));
+        // Factory default assigns employee-cook to the linked User
+        $this->assertTrue($employee->user->hasRole(Employee::ROLE_COOK));
     }
 
     #[Test]
@@ -208,14 +218,14 @@ class EmployeeModelTest extends TestCase
     }
 
     #[Test]
-    public function to_api_array_returns_roles_array(): void
+    public function to_api_array_returns_position_roles_array(): void
     {
         $employee = Employee::factory()->withRoles([
             Employee::ROLE_COOK,
             Employee::ROLE_DELIVERY_DRIVER,
         ])->withUser()->create();
 
-        $employee->load(['user', 'roles']);
+        $employee->load('user');
         $apiArray = $employee->toApiArray();
 
         $this->assertArrayHasKey('roles', $apiArray);

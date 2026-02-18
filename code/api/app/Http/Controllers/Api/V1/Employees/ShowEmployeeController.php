@@ -30,7 +30,7 @@ class ShowEmployeeController extends Controller
 {
     public function __invoke(Employee $employee): ResponseEntity
     {
-        $employee->load(['user', 'roles']);
+        $employee->load(['user']);
 
         return new ResponseEntity(
             data: $employee->toApiArray()

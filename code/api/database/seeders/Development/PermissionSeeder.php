@@ -98,31 +98,23 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        $managerRole = Role::where('name', 'manager')
+        // inventory-manager: inventory + employee management
+        $inventoryManagerRole = Role::where('name', 'inventory-manager')
             ->where('guard_name', 'api')
             ->first();
 
-        if ($managerRole) {
-            $managerRole->syncPermissions(
+        if ($inventoryManagerRole) {
+            $inventoryManagerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
-                    ->where('name', 'like', 'employees.%')
+                    ->where(function ($q) {
+                        $q->where('name', 'like', 'employees.%')
+                            ->orWhere('name', 'like', 'users.%');
+                    })
                     ->get()
             );
         }
 
-        $userRole = Role::where('name', 'user')
-            ->where('guard_name', 'api')
-            ->first();
-
-        if ($userRole) {
-            $userRole->syncPermissions(
-                Permission::where('guard_name', 'api')
-                    ->whereIn('name', ['users.show', 'users.index'])
-                    ->get()
-            );
-        }
-
-        // Employee-manager: can view employees + basic user access
+        // employee-manager: team-lead — view/manage employees
         $employeeManagerRole = Role::where('name', 'employee-manager')
             ->where('guard_name', 'api')
             ->first();
@@ -138,13 +130,26 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        // Employee: basic user access only
+        // employee: base access
         $employeeRole = Role::where('name', 'employee')
             ->where('guard_name', 'api')
             ->first();
 
         if ($employeeRole) {
             $employeeRole->syncPermissions(
+                Permission::where('guard_name', 'api')
+                    ->whereIn('name', ['users.show', 'users.index'])
+                    ->get()
+            );
+        }
+
+        // user: generic fallback
+        $userRole = Role::where('name', 'user')
+            ->where('guard_name', 'api')
+            ->first();
+
+        if ($userRole) {
+            $userRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->whereIn('name', ['users.show', 'users.index'])
                     ->get()

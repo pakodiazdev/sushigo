@@ -16,13 +16,12 @@ class ForgotPasswordAction
     public function __invoke(array $data): array
     {
         $field = !empty($data['email']) ? 'email' : 'phone';
-        $credentials = [$field => $data[$field]];
 
         $user = User::where($field, $data[$field])->first();
 
         if ($user) {
             $token = Password::broker()->createToken($user);
-            $resetUrl = $this->buildResetUrl($token, $user);
+            $resetUrl = $this->buildResetUrl($token);
 
             if ($user->email) {
                 $user->notify(new ResetPasswordNotification($resetUrl));
@@ -39,11 +38,10 @@ class ForgotPasswordAction
         ];
     }
 
-    private function buildResetUrl(string $token, User $user): string
+    private function buildResetUrl(string $token): string
     {
         $frontendUrl = config('app.frontend_url', 'https://sushigo.local');
-        $identifier = $user->email ?? $user->phone;
 
-        return "{$frontendUrl}/reset-password?token={$token}&identifier=" . urlencode($identifier);
+        return "{$frontendUrl}/reset-password?token={$token}";
     }
 }

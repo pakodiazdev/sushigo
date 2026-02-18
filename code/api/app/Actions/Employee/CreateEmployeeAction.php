@@ -45,7 +45,7 @@ class CreateEmployeeAction
             $roles = $data['roles'] ?? [];
             $employee->syncPositionRoles($roles);
 
-            return $employee->load(['user', 'roles']);
+            return $employee->load(['user']);
         });
 
         try {

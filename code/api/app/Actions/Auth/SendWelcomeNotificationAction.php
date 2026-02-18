@@ -5,6 +5,7 @@ namespace App\Actions\Auth;
 use App\Models\User;
 use App\Notifications\WelcomeEmployeeNotification;
 use App\Services\Notifications\WhatsAppService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 
 class SendWelcomeNotificationAction
@@ -16,7 +17,14 @@ class SendWelcomeNotificationAction
     public function __invoke(User $user): void
     {
         $token = Password::broker()->createToken($user);
-        $resetUrl = $this->buildResetUrl($token, $user);
+        $resetUrl = $this->buildResetUrl($token);
+
+        // Log the reset URL so developers can test password setup
+        // without needing to open Mailhog or check WhatsApp.
+        Log::info('Welcome notification reset URL', [
+            'user' => $user->email ?? $user->phone,
+            'reset_url' => $resetUrl,
+        ]);
 
         if ($user->email) {
             $user->notify(new WelcomeEmployeeNotification($resetUrl));
@@ -27,11 +35,10 @@ class SendWelcomeNotificationAction
         }
     }
 
-    private function buildResetUrl(string $token, User $user): string
+    private function buildResetUrl(string $token): string
     {
         $frontendUrl = config('app.frontend_url', 'https://sushigo.local');
-        $identifier = $user->email ?? $user->phone;
 
-        return "{$frontendUrl}/reset-password?token={$token}&identifier=" . urlencode($identifier);
+        return "{$frontendUrl}/reset-password?token={$token}";
     }
 }

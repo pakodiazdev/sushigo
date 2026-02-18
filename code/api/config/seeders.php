@@ -36,18 +36,31 @@ return [
             'email' => 'superadmin@sushigo.com',
             'password' => 'admin123456',
             'role' => 'super-admin',
+            // super-admin is not an employee — system-level account only
         ],
         [
             'name' => 'Admin User',
             'email' => 'admin@sushigo.com',
             'password' => 'admin123456',
             'role' => 'admin',
+            'employee' => [
+                'code' => 'ADM-001',
+                'first_name' => 'Admin',
+                'last_name' => 'User',
+                'position_roles' => ['employee-manager'],
+            ],
         ],
         [
             'name' => 'Inventory Manager',
             'email' => 'inventory@sushigo.com',
             'password' => 'inventory123456',
             'role' => 'inventory-manager',
+            'employee' => [
+                'code' => 'ADM-002',
+                'first_name' => 'Inventory',
+                'last_name' => 'Manager',
+                'position_roles' => ['employee-manager'],
+            ],
         ],
     ],
 

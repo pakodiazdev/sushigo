@@ -5,7 +5,6 @@ namespace Database\Seeders\Development;
 use App\Actions\Employee\CreateEmployeeAction;
 use App\Models\Employee;
 use Database\Seeders\Base\OnceSeeder;
-use Illuminate\Support\Facades\Notification;
 
 class EmployeeSeeder extends OnceSeeder
 {
@@ -15,17 +14,13 @@ class EmployeeSeeder extends OnceSeeder
      * WithoutModelEvents is NOT used in DatabaseSeeder because HasPublicId
      * relies on the Eloquent 'creating' event to auto-generate ULIDs.
      *
-     * Instead, Notification::fake() suppresses email/WhatsApp welcome
-     * notifications during seeding. The WhatsApp service call (not a
-     * Laravel Notification) is already wrapped in a try/catch inside
-     * CreateEmployeeAction, so it fails gracefully regardless.
+     * CreateEmployeeAction triggers SendWelcomeNotificationAction which:
+     * - Sends email via $user->notify() → caught by Mailhog in dev
+     * - Logs the reset URL for easy testing without opening Mailhog
+     * - Calls WhatsAppService → wrapped in try/catch, fails gracefully
      */
     public function run(): void
     {
-        // Suppress Laravel notifications during seeding to avoid sending
-        // real emails. CreateEmployeeAction dispatches welcome notifications.
-        Notification::fake();
-
         $action = app(CreateEmployeeAction::class);
 
         $employees = config('seeders.development_employees', []);
@@ -40,7 +35,7 @@ class EmployeeSeeder extends OnceSeeder
             $employee = $action($employeeData);
 
             $credential = $employee->user->email ?? $employee->user->phone ?? 'N/A';
-            $roles = $employee->getRoleNames()->implode(', ');
+            $roles = implode(', ', $employee->getPositionRoles());
 
             $this->command->info("✓ Employee created: {$employee->code} - {$employee->first_name} {$employee->last_name} (user: {$credential}, roles: {$roles})");
         }

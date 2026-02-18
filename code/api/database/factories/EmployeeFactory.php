@@ -15,28 +15,37 @@ class EmployeeFactory extends Factory
     public function definition(): array
     {
         return [
-            'public_id' => (string) Str::ulid(),
-            'user_id' => null,
-            'code' => strtoupper(fake()->unique()->bothify('EMP-###')),
+            'public_id'  => (string) Str::ulid(),
+            'user_id'    => null,
+            'code'       => strtoupper(fake()->unique()->bothify('EMP-###')),
             'first_name' => fake()->firstName(),
-            'last_name' => fake()->lastName(),
-            'is_active' => true,
-            'meta' => null,
+            'last_name'  => fake()->lastName(),
+            'is_active'  => true,
+            'meta'       => null,
         ];
     }
 
     /**
-     * Default: assign cook role if no role method was chained.
+     * Default: assign cook position role to the linked User.
+     * Roles live on User — Employee.syncPositionRoles() handles the sync.
      *
-     * When a role method (e.g. manager()) is chained, its afterCreating
-     * callback runs AFTER this one and uses syncRoles() to replace roles,
-     * so the default cook assignment is harmless — it gets overwritten.
+     * If no user was set, we create one so there's always an authenticated
+     * identity to attach roles to.
      */
     public function configure(): static
     {
         return $this->afterCreating(function (Employee $employee) {
-            if ($employee->roles->isEmpty()) {
-                $employee->assignRole(Employee::ROLE_COOK);
+            // Ensure a User exists — roles cannot be assigned without one
+            if (! $employee->user_id) {
+                $user = User::factory()->create();
+                $employee->user_id = $user->id;
+                $employee->save();
+                $employee->setRelation('user', $user);
+            }
+
+            // Default to cook if no position role was set yet
+            if ($employee->getPositionRoles() === []) {
+                $employee->syncPositionRoles([Employee::ROLE_COOK]);
             }
         });
     }
@@ -58,42 +67,42 @@ class EmployeeFactory extends Factory
     public function manager(): static
     {
         return $this->afterCreating(function (Employee $employee) {
-            $employee->syncRoles([Employee::ROLE_MANAGER]);
+            $employee->syncPositionRoles([Employee::ROLE_MANAGER]);
         });
     }
 
     public function cook(): static
     {
         return $this->afterCreating(function (Employee $employee) {
-            $employee->syncRoles([Employee::ROLE_COOK]);
+            $employee->syncPositionRoles([Employee::ROLE_COOK]);
         });
     }
 
     public function kitchenAssistant(): static
     {
         return $this->afterCreating(function (Employee $employee) {
-            $employee->syncRoles([Employee::ROLE_KITCHEN_ASSISTANT]);
+            $employee->syncPositionRoles([Employee::ROLE_KITCHEN_ASSISTANT]);
         });
     }
 
     public function deliveryDriver(): static
     {
         return $this->afterCreating(function (Employee $employee) {
-            $employee->syncRoles([Employee::ROLE_DELIVERY_DRIVER]);
+            $employee->syncPositionRoles([Employee::ROLE_DELIVERY_DRIVER]);
         });
     }
 
     public function actingManager(): static
     {
         return $this->afterCreating(function (Employee $employee) {
-            $employee->syncRoles([Employee::ROLE_ACTING_MANAGER]);
+            $employee->syncPositionRoles([Employee::ROLE_ACTING_MANAGER]);
         });
     }
 
     public function withRoles(array $roles): static
     {
         return $this->afterCreating(function (Employee $employee) use ($roles) {
-            $employee->syncRoles($roles);
+            $employee->syncPositionRoles($roles);
         });
     }
 }
