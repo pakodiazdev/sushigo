@@ -12,13 +12,14 @@ class Employee extends Model
 {
     use HasFactory, HasPublicId, SoftDeletes;
 
-    // Position roles: the job title the employee holds within the company.
-    // These are assigned to the linked User, not to Employee directly.
-    const ROLE_MANAGER = 'employee-manager';
-    const ROLE_COOK = 'employee-cook';
-    const ROLE_KITCHEN_ASSISTANT = 'employee-kitchen-assistant';
-    const ROLE_DELIVERY_DRIVER = 'employee-delivery-driver';
-    const ROLE_ACTING_MANAGER = 'employee-acting-manager';
+    // Position roles: reflect the person's role in the organization.
+    // Assigned to the linked User (the authenticated identity), not to Employee directly.
+    // The fact of being an employee is determined by having an Employee record, not by a role.
+    const ROLE_MANAGER          = 'manager';
+    const ROLE_COOK             = 'cook';
+    const ROLE_KITCHEN_ASSISTANT= 'kitchen-assistant';
+    const ROLE_DELIVERY_DRIVER  = 'delivery-driver';
+    const ROLE_ACTING_MANAGER   = 'acting-manager';
 
     const POSITION_ROLES = [
         self::ROLE_MANAGER,
@@ -27,12 +28,6 @@ class Employee extends Model
         self::ROLE_DELIVERY_DRIVER,
         self::ROLE_ACTING_MANAGER,
     ];
-
-    /**
-     * System roles that belong to the employee domain.
-     * Used to preserve non-employee roles on the User when syncing.
-     */
-    const EMPLOYEE_SYSTEM_ROLES = ['employee', 'employee-manager'];
 
     protected $fillable = [
         'user_id',
@@ -59,46 +54,28 @@ class Employee extends Model
     }
 
     /**
-     * Sync employee position roles onto the linked User.
+     * Sync the employee's position roles onto the linked User.
      *
-     * Roles live on User (the authenticated entity), never on Employee.
-     * Employee is a profile — User is the identity that carries permissions.
+     * Roles live on User (the authenticated identity), never on Employee directly.
+     * Employee is the profile entity — User carries the permissions.
      *
-     * Position roles (employee-cook, employee-manager, etc.) describe the
-     * job title. The system role (employee / employee-manager) reflects
-     * the access level inside the app.
-     *
-     * Logic:
-     *   - employee-manager position  → User gets 'employee-manager' system role
-     *   - any other position         → User gets 'employee' system role
-     *   - Non-employee roles (admin, super-admin, inventory-manager, etc.)
-     *     are preserved unchanged.
+     * Roles reflect the person's role in the organization (manager, cook, etc.).
+     * The fact of being an employee is determined by having an Employee record,
+     * not by a role. Non-employee-domain roles (admin, super-admin, etc.) are preserved.
      */
     public function syncPositionRoles(array $roleNames): void
     {
-        // Keep only valid position roles
         $positionRoles = array_intersect($roleNames, self::POSITION_ROLES);
 
         if (! $this->user) {
             return;
         }
 
-        $newSystemRole = in_array(self::ROLE_MANAGER, $positionRoles)
-            ? 'employee-manager'
-            : 'employee';
+        // Preserve only roles outside the employee position domain
+        $currentRoles = $this->user->getRoleNames()->toArray();
+        $preserved    = array_diff($currentRoles, self::POSITION_ROLES);
 
-        // Preserve only truly non-employee-domain roles (admin, super-admin, etc.)
-        // We must exclude BOTH system roles AND all position roles so that a previous
-        // syncPositionRoles call (e.g. cook) does not bleed into a later one (e.g. manager).
-        $employeeDomainRoles = array_merge(self::EMPLOYEE_SYSTEM_ROLES, self::POSITION_ROLES);
-        $currentRoles        = $this->user->getRoleNames()->toArray();
-        $preserved           = array_diff($currentRoles, $employeeDomainRoles);
-        $preserved[]         = $newSystemRole;
-
-        // Add position roles (job titles) alongside system roles
-        $allRoles = array_unique(array_merge($preserved, $positionRoles));
-
-        $this->user->syncRoles($allRoles);
+        $this->user->syncRoles(array_unique(array_merge($preserved, $positionRoles)));
     }
 
     /**

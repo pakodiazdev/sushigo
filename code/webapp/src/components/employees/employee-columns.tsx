@@ -5,11 +5,11 @@ import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
 import type { Employee, EmployeePositionRole } from '@/types/employee'
 
 const ROLE_COLORS: Record<string, string> = {
-  'employee-manager': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-  'employee-cook': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  'employee-kitchen-assistant': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  'employee-delivery-driver': 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
-  'employee-acting-manager': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  'manager': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  'cook': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  'kitchen-assistant': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  'delivery-driver': 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+  'acting-manager': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
 }
 
 function formatDate(dateString: string): string {

@@ -75,18 +75,14 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        $superAdminRole = Role::where('name', 'super-admin')
-            ->where('guard_name', 'api')
-            ->first();
-
+        // super-admin: all permissions
+        $superAdminRole = Role::where('name', 'super-admin')->where('guard_name', 'api')->first();
         if ($superAdminRole) {
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
 
-        $adminRole = Role::where('name', 'admin')
-            ->where('guard_name', 'api')
-            ->first();
-
+        // admin: user + employee management
+        $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
         if ($adminRole) {
             $adminRole->syncPermissions(
                 Permission::where('guard_name', 'api')
@@ -99,10 +95,7 @@ class PermissionSeeder extends LockedSeeder
         }
 
         // inventory-manager: inventory + employee management
-        $inventoryManagerRole = Role::where('name', 'inventory-manager')
-            ->where('guard_name', 'api')
-            ->first();
-
+        $inventoryManagerRole = Role::where('name', 'inventory-manager')->where('guard_name', 'api')->first();
         if ($inventoryManagerRole) {
             $inventoryManagerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
@@ -114,13 +107,10 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        // employee-manager: team-lead — view/manage employees
-        $employeeManagerRole = Role::where('name', 'employee-manager')
-            ->where('guard_name', 'api')
-            ->first();
-
-        if ($employeeManagerRole) {
-            $employeeManagerRole->syncPermissions(
+        // manager (position role): jefe de piso — can view/manage employees
+        $managerRole = Role::where('name', 'manager')->where('guard_name', 'api')->first();
+        if ($managerRole) {
+            $managerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
                         $q->whereIn('name', ['users.show', 'users.index'])
@@ -130,30 +120,16 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        // employee: base access
-        $employeeRole = Role::where('name', 'employee')
-            ->where('guard_name', 'api')
-            ->first();
-
-        if ($employeeRole) {
-            $employeeRole->syncPermissions(
-                Permission::where('guard_name', 'api')
-                    ->whereIn('name', ['users.show', 'users.index'])
-                    ->get()
-            );
-        }
-
-        // user: generic fallback
-        $userRole = Role::where('name', 'user')
-            ->where('guard_name', 'api')
-            ->first();
-
-        if ($userRole) {
-            $userRole->syncPermissions(
-                Permission::where('guard_name', 'api')
-                    ->whereIn('name', ['users.show', 'users.index'])
-                    ->get()
-            );
+        // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
+        foreach (['cook', 'kitchen-assistant', 'delivery-driver', 'acting-manager'] as $roleName) {
+            $role = Role::where('name', $roleName)->where('guard_name', 'api')->first();
+            if ($role) {
+                $role->syncPermissions(
+                    Permission::where('guard_name', 'api')
+                        ->whereIn('name', ['users.show', 'users.index'])
+                        ->get()
+                );
+            }
         }
 
         $this->command->info('✓ Development permissions seeded successfully');
