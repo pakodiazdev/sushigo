@@ -15,7 +15,7 @@ use App\Repositories\EmployeeRepository;
  *   tags={"Employees"},
  *   security={{"passport": {}}},
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean")),
- *   @OA\Parameter(name="role", in="query", @OA\Schema(type="string", enum={"employee-manager", "employee-cook", "employee-kitchen-assistant", "employee-delivery-driver", "employee-acting-manager"})),
+ *   @OA\Parameter(name="role", in="query", @OA\Schema(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"})),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15)),
  *   @OA\Parameter(name="sort[]", in="query", @OA\Schema(type="array", @OA\Items(type="string", example="code:asc")), description="Sort fields (field:direction)"),

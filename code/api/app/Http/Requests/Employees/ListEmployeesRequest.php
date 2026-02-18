@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
  * @OA\Schema(
  *   schema="ListEmployeesRequest",
  *   @OA\Property(property="is_active", type="boolean", description="Filter by active status"),
- *   @OA\Property(property="role", type="string", enum={"employee-manager", "employee-cook", "employee-kitchen-assistant", "employee-delivery-driver", "employee-acting-manager"}, description="Filter by position role"),
+ *   @OA\Property(property="role", type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}, description="Filter by position role"),
  *   @OA\Property(property="search", type="string", description="Search in code, first_name, last_name"),
  *   @OA\Property(property="per_page", type="integer", example=15, description="Items per page"),
  *   @OA\Property(property="sort", type="array", @OA\Items(type="string", example="code:asc"), description="Sort fields (field:direction)"),
