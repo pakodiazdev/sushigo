@@ -1,6 +1,7 @@
 import { defineConfig } from 'cypress'
 
 export default defineConfig({
+  projectId: 'phbcj4',
   e2e: {
     baseUrl: process.env.CYPRESS_baseUrl || 'https://sushigonores.local',
     supportFile: 'cypress/support/e2e.ts',
