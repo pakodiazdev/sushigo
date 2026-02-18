@@ -9,10 +9,9 @@ export interface User {
     updated_at: string;
 }
 
-export interface LoginCredentials {
-    email: string;
-    password: string;
-}
+export type LoginCredentials =
+    | { email: string; phone?: never; password: string }
+    | { phone: string; email?: never; password: string };
 
 export interface RegisterData {
     name: string;

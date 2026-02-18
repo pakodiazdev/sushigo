@@ -1,5 +1,5 @@
 import { createFileRoute, useSearch, Link, useRouter } from '@tanstack/react-router'
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { apiClient } from '@/lib/api-client'
 import { useAuthStore } from '@/stores/auth.store'
 import { Button } from '@/components/ui/button'
@@ -10,20 +10,25 @@ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 type ResetPasswordSearch = {
     token?: string
-    identifier?: string
 }
 
 export const Route = createFileRoute('/reset-password')({
     component: ResetPasswordPage,
     validateSearch: (search: Record<string, unknown>): ResetPasswordSearch => ({
         token: (search.token as string) || undefined,
-        identifier: (search.identifier as string) || undefined,
     }),
 })
 
-function ResetPasswordPage() {
-    const { token, identifier } = useSearch({ from: '/reset-password' })
+type VerifyState =
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'valid'; maskedIdentifier: string }
+    | { status: 'invalid' }
 
+function ResetPasswordPage() {
+    const { token } = useSearch({ from: '/reset-password' })
+
+    const [verifyState, setVerifyState] = useState<VerifyState>({ status: 'idle' })
     const [password, setPassword] = useState('')
     const [passwordConfirmation, setPasswordConfirmation] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -31,7 +36,24 @@ function ResetPasswordPage() {
     const [success, setSuccess] = useState(false)
 
     const router = useRouter()
-    const isEmail = identifier?.includes('@')
+
+    useEffect(() => {
+        if (!token) {
+            setVerifyState({ status: 'invalid' })
+            return
+        }
+
+        setVerifyState({ status: 'loading' })
+
+        apiClient
+            .post('/auth/verify-reset-token', { token })
+            .then((res) => {
+                setVerifyState({ status: 'valid', maskedIdentifier: res.data.masked_identifier })
+            })
+            .catch(() => {
+                setVerifyState({ status: 'invalid' })
+            })
+    }, [token])
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
@@ -47,33 +69,20 @@ function ResetPasswordPage() {
             return
         }
 
-        if (!token || !identifier) {
-            setError('Enlace inválido. Solicita un nuevo enlace de restablecimiento.')
-            return
-        }
+        if (!token) return
 
         setIsLoading(true)
 
         try {
-            const payload: Record<string, string> = {
+            const response = await apiClient.post('/auth/reset-password', {
                 token,
                 password,
                 password_confirmation: passwordConfirmation,
-            }
+            })
 
-            if (isEmail) {
-                payload.email = identifier
-            } else {
-                payload.phone = identifier
-            }
-
-            const response = await apiClient.post('/auth/reset-password', payload)
-
-            // Auto-login: the API returns user + token after successful reset
             if (response.data.token && response.data.user) {
                 const { initializeAfterReset } = useAuthStore.getState()
                 initializeAfterReset(response.data.user, response.data.token)
-                // Small delay for state to propagate, then navigate
                 setTimeout(() => {
                     router.navigate({ to: '/' })
                 }, 100)
@@ -92,7 +101,23 @@ function ResetPasswordPage() {
         }
     }
 
-    if (!token || !identifier) {
+    if (verifyState.status === 'loading' || verifyState.status === 'idle') {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/30 p-4">
+                <Card className="w-full max-w-md shadow-xl">
+                    <CardHeader className="space-y-4 flex flex-col items-center">
+                        <Logo collapsed={false} />
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center gap-4 py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Verificando enlace...</p>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    if (verifyState.status === 'invalid') {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/30 p-4">
                 <Card className="w-full max-w-md shadow-xl">
@@ -150,6 +175,7 @@ function ResetPasswordPage() {
         )
     }
 
+    // verifyState.status === 'valid'
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sushigo-navy/5 via-sushigo-coral/5 to-sushigo-cream/30 p-4">
             <Card className="w-full max-w-md shadow-xl">
@@ -171,7 +197,7 @@ function ResetPasswordPage() {
                         )}
 
                         <div className="p-3 text-sm text-muted-foreground bg-muted rounded-md">
-                            Cuenta: <strong>{identifier}</strong>
+                            Cuenta: <strong>{verifyState.maskedIdentifier}</strong>
                         </div>
 
                         <div className="space-y-2">

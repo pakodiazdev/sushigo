@@ -31,7 +31,11 @@ class UpdateEmployeeContactTest extends TestCase
         $manager = Role::create(['name' => 'employee-manager', 'guard_name' => 'api']);
         $manager->givePermissionTo(['employees.view', 'employees.update']);
         
-        // Ensure position roles exist before factories run (factories assign these roles in afterCreating)
+        // System roles needed for Employee.syncPositionRoles()
+        Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
+
+        // Position roles (job titles) needed by factories
         foreach (Employee::POSITION_ROLES as $positionRole) {
             Role::firstOrCreate(['name' => $positionRole, 'guard_name' => 'api']);
         }

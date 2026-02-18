@@ -4,6 +4,7 @@ namespace App\Actions\Auth;
 
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -13,24 +14,21 @@ class ResetPasswordAction
 {
     public function __invoke(array $data): array
     {
+        $user = $this->findUserByToken($data['token']);
+
+        $identifier = $user->getEmailForPasswordReset();
+        $identifierField = $user->email ? 'email' : 'phone';
+
         $credentials = [
             'password' => $data['password'],
             'password_confirmation' => $data['password_confirmation'],
             'token' => $data['token'],
+            $identifierField => $identifier,
         ];
-
-        if (isset($data['email'])) {
-            $credentials['email'] = $data['email'];
-        } elseif (isset($data['phone'])) {
-            $credentials['phone'] = $data['phone'];
-        }
 
         /** @var User|null $resetUser */
         $resetUser = null;
 
-        // Phone-only reset works because User::getEmailForPasswordReset()
-        // falls back to phone. Token creation/validation both use that override,
-        // keeping the flow consistent. See User.php:42-45.
         $status = Password::reset(
             $credentials,
             function (User $user, string $password) use (&$resetUser) {
@@ -59,5 +57,31 @@ class ResetPasswordAction
             'user' => $resetUser,
             'token' => $token,
         ];
+    }
+
+    private function findUserByToken(string $plainToken): User
+    {
+        $expireMinutes = config('auth.passwords.users.expire', 60);
+        $table = config('auth.passwords.users.table', 'password_reset_tokens');
+
+        $records = DB::table($table)
+            ->where('created_at', '>=', now()->subMinutes($expireMinutes))
+            ->get();
+
+        foreach ($records as $record) {
+            if (Hash::check($plainToken, $record->token)) {
+                $user = User::where('email', $record->email)
+                    ->orWhere('phone', $record->email)
+                    ->first();
+
+                if ($user) {
+                    return $user;
+                }
+            }
+        }
+
+        throw ValidationException::withMessages([
+            'token' => ['El token de restablecimiento es inválido o ha expirado.'],
+        ]);
     }
 }

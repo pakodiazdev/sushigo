@@ -5,22 +5,36 @@ Design of authentication, authorization, and permission assignment for the Sushi
 
 ---
 
-## 1. Main Components
+## 1. Core Principle: User is the Identity, Employee is the Profile
 
--   **User**: authenticated account (Laravel Passport) with basic data (`name`, `email`, `password`).
--   **Role**: contextual grouper of permissions. Used to assign common profiles to a user.
--   **Permission**: granular action (e.g., `users.index`, `roles.store`).
--   **OperatingUnitUser**: pivot table that links users with operating units (branches/inventories) and grants them an operating role (`OWNER`, `MANAGER`, `INVENTORY`, etc.).
--   **SeederLog**: seeder tracking to control role/permission initialization in different environments.
+```
+A User has roles → reflects their access level within the application.
+An Employee has a User → that User has a role within the company.
+```
 
-> Implemented using [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission), which allows assigning roles and permissions directly (`User->assignRole()`, `User->givePermissionTo()`).
+- **`User`** is the authenticated entity. It holds credentials (`email`, `phone`, `password`), Passport tokens, and **all roles and permissions live here**.
+- **`Employee`** is the work profile. It has no roles of its own. When position roles are synced, they are assigned to the linked `User`, not to `Employee`.
+- `super-admin` is the only exception: a system-level account with no employee profile.
 
 ---
 
-## 2. Relational Model
+## 2. Main Components
+
+- **User**: authenticated account (Laravel Passport). All roles and permissions are assigned here via Spatie Permission (`guard: api`).
+- **Employee**: work profile linked to a `User` (`user_id FK`). Describes the person: name, code, position. **Does not implement `HasRoles`**.
+- **Role**: contextual grouper of permissions assigned to the `User`.
+- **Permission**: granular action (e.g., `employees.create`, `users.index`).
+- **OperatingUnitUser**: pivot table linking `User` with operating units, granting an operating role (`OWNER`, `MANAGER`, `INVENTORY`, etc.).
+
+> Implemented using [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission). All roles/permissions operate on `User` with `guard_name = 'api'`.
+
+---
+
+## 3. Relational Model
 
 ```mermaid
 erDiagram
+  USER ||--o| EMPLOYEE : "work profile"
   USER ||--o{ OPERATING_UNIT_USER : assigned
   OPERATING_UNIT ||--o{ OPERATING_UNIT_USER : staff
   USER ||--o{ MODEL_HAS_ROLES : roleBinding
@@ -33,7 +47,19 @@ erDiagram
     bigint id PK
     string name
     string email
+    string phone
     string password
+  }
+
+  EMPLOYEE {
+    bigint id PK
+    string public_id UK
+    bigint user_id FK
+    string code UK
+    string first_name
+    string last_name
+    boolean is_active
+    json meta
   }
 
   OPERATING_UNIT_USER {
@@ -47,59 +73,75 @@ erDiagram
     bigint id PK
     string name
     string guard_name
-    json meta
   }
 
   PERMISSION {
     bigint id PK
     string name
     string guard_name
-    json meta
   }
 ```
 
 ---
 
-## 3. Default Roles
+## 4. System Roles
 
-| Role          | Description                                                                 | Initial Permissions                                                                                                               |
-| ------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `super-admin` | Full tenant control. Can manage users, roles, permissions, and inventories. | All permissions (`*`).                                                                                                            |
-| `admin`       | Operational management: standard users, inventories, and reports.           | `users.index`, `users.show`, `users.store`, `users.update`, `roles.index`, `roles.show`, `permissions.index`, `permissions.show`. |
-| `user`        | Limited access to dashboards and basic functionalities assigned manually.   | No default permissions (added as needed).                                                                                         |
+All roles are assigned to the **User**. `Employee` never holds roles directly.
 
-These roles are generated through production and development seeders (`RoleSeeder`, `PermissionSeeder`, `UserRoleSeeder`) and can be extended with domain-specific roles (e.g., `inventory-manager`, `event-manager`) as the system evolves.
+### System roles (application access)
+
+| Role | Employee profile | Description | Base permissions |
+|------|------------------|-------------|-----------------|
+| `super-admin` | ❌ No | Full system access. Technical account, no work profile. | All (`*`) |
+| `admin` | ✅ Yes | Full operational management. | `users.*`, `employees.*` |
+| `inventory-manager` | ✅ Yes | Inventory and employee management. | `users.*`, `employees.*` |
+| `employee-manager` | ✅ Yes | Team lead. Assigned automatically via position sync. | `users.index/show`, `employees.*` |
+| `employee` | ✅ Yes | Base access for any active employee. | `users.index/show` |
+| `user` | ⚪ Optional | Generic fallback for non-employee accounts. | `users.index/show` |
+
+### Position roles (job title)
+
+Describe the employee's job within operations. Assigned to `User` via `Employee::syncPositionRoles()`.
+
+| Position role | Resulting system role |
+|---------------|-----------------------|
+| `employee-manager` | `employee-manager` |
+| `employee-cook` | `employee` |
+| `employee-kitchen-assistant` | `employee` |
+| `employee-delivery-driver` | `employee` |
+| `employee-acting-manager` | `employee` |
+
+A user can hold **multiple roles simultaneously**: e.g. `admin` + `employee-manager` (position).
 
 ---
 
-## 4. Permission Strategy
+## 5. Employee Creation Flow
 
-1. **Direct permission evaluation**
-   Policies and middleware first verify `User::hasPermissionTo($permission)` to allow mixed compositions. This enables specific assignments (e.g., a user with `user` role but direct `orders.approve` permission).
+```mermaid
+flowchart TD
+    A[CreateEmployeeAction] --> B[Create User with email/phone]
+    B --> C[Create Employee with user_id]
+    C --> D["Employee.syncPositionRoles(roleNames)"]
+    D --> E{Has employee-manager?}
+    E -- Yes --> F[User.syncRoles: preserve + employee-manager + positions]
+    E -- No  --> G[User.syncRoles: preserve + employee + positions]
+    F --> H[SendWelcomeNotification → link with token only]
+    G --> H
+```
 
-2. **Roles as wrappers**
-   Roles group a predefined set of permissions to accelerate initial assignment. A user can have multiple roles and, additionally, direct permissions when required.
-
-3. **Spatie compatibility**
-
-    - `hasPermissionTo()` already evaluates both direct permissions and those inherited via roles.
-    - `hasRole()` is used in specific rules when we want clear semantics (e.g., differentiating a global `super-admin`).
-    - Commands `syncRoles()` and `syncPermissions()` help maintain consistency when updating permission templates.
-
-4. **Policies and guards**
-    - Policies (`Policy`) rely on permissions (`viewAny`, `update`, `transfer`, etc.) and verify belonging to the operating unit through `OperatingUnitUser`.
-    - The active guard is `api`, aligned with seeders and Passport.
+**Key rule**: `syncPositionRoles()` preserves roles outside the employee domain (`admin`, `inventory-manager`, `super-admin`, etc.) and only replaces `employee` / `employee-manager`.
 
 ---
 
-## 5. Assignment Flow
+## 6. General Assignment Flow
 
 ```mermaid
 flowchart LR
     A[Seeders] -->|create| R(Role)
     A -->|create| P(Permission)
-    U[User] -->|assignRole()| R
-    U -->|givePermissionTo()| P
+    U[User] -->|assignRole| R
+    U -->|givePermissionTo| P
+    E[Employee] -->|syncPositionRoles → User| R
     subgraph Operating Unit Context
       U -->|assigns operating role| OU_USER[OperatingUnitUser]
       OU_USER --> OU[OperatingUnit]
@@ -110,17 +152,42 @@ flowchart LR
 
 ---
 
-## 6. Practical Guidelines
+## 7. Development Seeders
 
--   **Initial assignment**: use roles (`super-admin`, `admin`, `user`) for bootstrap; add direct permissions when extra granularity is needed.
--   **Unit-specific roles**: if a branch requires its own roles (e.g., `inventory-manager`), create the role and associate corresponding permissions; branch membership is managed via `OperatingUnitUser`.
--   **Auditing**: log critical role/permission changes for traceability (can be extended with events `RoleAssigned`, `PermissionRevoked`).
--   **Testing**: include policy tests that cover role + direct permission combinations to avoid regressions.
--   **Future integrations**: when adding modules (e.g., purchases, production), define new permissions following the `context.action` schema (`purchases.create`, `production.schedule`).
+| Seeder | Type | Description |
+|--------|------|-------------|
+| `RoleSeeder` | `LockedSeeder` | Creates all system and position roles. |
+| `PermissionSeeder` | `LockedSeeder` | Creates permissions and assigns them to roles. |
+| `UserSeeder` | `OnceSeeder` | Creates admin/superadmin users with dev credentials. |
+| `UserRoleSeeder` | `OnceSeeder` | Assigns the system role to each admin user. |
+| `AdminEmployeeSeeder` | `OnceSeeder` | Links `admin` and `inventory-manager` users with an `Employee` profile. |
+| `EmployeeSeeder` | `OnceSeeder` | Creates sample employees with linked `User` accounts. |
+
+**Order**: `RoleSeeder` → `PermissionSeeder` → `UserSeeder` → `UserRoleSeeder` → `AdminEmployeeSeeder` → `EmployeeSeeder`.
 
 ---
 
-## 7. References
+## 8. Permission Strategy
+
+1. **Direct permission evaluation**: policies verify `User::hasPermissionTo($permission)`, enabling mixed compositions with direct permissions.
+2. **Roles as wrappers**: group predefined permissions. A user can have multiple roles and additional direct permissions.
+3. **Spatie compatibility**: `hasPermissionTo()` evaluates both direct and inherited permissions. `syncRoles()` / `syncPermissions()` maintain consistency.
+4. **Guard**: active `api`, aligned with seeders and Passport.
+
+---
+
+## 9. Practical Guidelines
+
+- **Roles always on User**: never assign roles or permissions directly to `Employee`.
+- **`syncPositionRoles()`**: the single entry point for changing an employee's position.
+- **`super-admin`**: excluded from employee profiles. Technical system account.
+- **Auditing**: log role/permission changes (events `RoleAssigned`, `PermissionRevoked`).
+- **Testing**: cover role + direct permission combinations in policy tests.
+- **New modules**: define permissions with the `context.action` schema (`sales.create`, `production.schedule`) and assign them in `PermissionSeeder`.
+
+---
+
+## 10. References
 
 -   [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission)
 -   [Laravel Authorization](https://laravel.com/docs/authorization)
