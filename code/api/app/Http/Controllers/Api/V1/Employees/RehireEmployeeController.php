@@ -13,6 +13,12 @@ class RehireEmployeeController extends Controller
     public function __invoke(RehireEmployeeRequest $request, Employee $employee): ResponseEntity
     {
         DB::transaction(function () use ($request, $employee) {
+            // Lock existing active periods to prevent race conditions
+            $hasActive = $employee->employmentPeriods()->active()->lockForUpdate()->exists();
+            if ($hasActive) {
+                abort(422, 'Employee already has an active employment period.');
+            }
+
             $employee->employmentPeriods()->create([
                 'branch_id' => $request->branch_id,
                 'start_date' => $request->start_date,
@@ -22,7 +28,7 @@ class RehireEmployeeController extends Controller
             $employee->update(['is_active' => true]);
         });
 
-        $employee->load(['user', 'employmentPeriods.branch']);
+        $employee->load(['user.roles', 'employmentPeriods.branch']);
 
         return new ResponseEntity(
             data: $employee->toApiArray()
