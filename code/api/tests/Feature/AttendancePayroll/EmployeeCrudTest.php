@@ -676,4 +676,100 @@ class EmployeeCrudTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonStructure(['message']);
     }
+
+    // --- AP-005a: Role-based assignment control ---
+
+    #[Test]
+    public function super_admin_can_assign_super_admin_role(): void
+    {
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'api']);
+        $superAdminRole->givePermissionTo(['employees.view', 'employees.create', 'employees.update']);
+
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole('super-admin');
+        Passport::actingAs($superAdmin);
+
+        $response = $this->postJson('/api/v1/employees', [
+            'code'       => 'EMP-SA-ASSIGN',
+            'first_name' => 'Super',
+            'last_name'  => 'Test',
+            'roles'      => ['super-admin'],
+            'email'      => 'sa-assign@sushigo.com',
+            'branch_id'  => $this->branch->id,
+            'start_date' => '2026-01-15',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertContains('super-admin', $response->json('data.roles'));
+    }
+
+    #[Test]
+    public function non_super_admin_cannot_assign_super_admin_role(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'api']);
+
+        // $this->user is an admin (not super-admin) — super-admin is not in their assignable roles
+        // The FormRequest rejects it as an invalid role value → 422
+        $response = $this->postJson('/api/v1/employees', [
+            'code'       => 'EMP-SA-BLOCK',
+            'first_name' => 'Regular',
+            'last_name'  => 'Admin',
+            'roles'      => ['super-admin'],
+            'email'      => 'sa-block@sushigo.com',
+            'branch_id'  => $this->branch->id,
+            'start_date' => '2026-01-15',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['roles.0']);
+    }
+
+    #[Test]
+    public function get_assignable_roles_returns_all_roles_for_super_admin(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'api']);
+
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole('super-admin');
+
+        $assignable = Employee::getAssignableRolesFor($superAdmin);
+
+        $this->assertContains(Employee::ROLE_SUPER_ADMIN, $assignable);
+        $this->assertCount(count(Employee::POSITION_ROLES), $assignable);
+    }
+
+    #[Test]
+    public function get_assignable_roles_excludes_super_admin_for_regular_user(): void
+    {
+        $regularUser = User::factory()->create();
+        $regularUser->assignRole('admin');
+
+        $assignable = Employee::getAssignableRolesFor($regularUser);
+
+        $this->assertNotContains(Employee::ROLE_SUPER_ADMIN, $assignable);
+        $this->assertContains(Employee::ROLE_MANAGER, $assignable);
+        $this->assertContains(Employee::ROLE_COOK, $assignable);
+    }
+
+    #[Test]
+    public function sync_position_roles_preserves_super_admin_role_when_updated_by_non_super_admin(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'api']);
+
+        // Create an employee who has super-admin role
+        $employee = Employee::factory()->create();
+        $employee->user->assignRole('super-admin');
+
+        // A regular admin tries to update the employee with only cook — no super-admin in payload
+        // syncPositionRoles must preserve super-admin since the acting user cannot manage it
+        $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
+            'first_name' => $employee->first_name,
+            'last_name'  => $employee->last_name,
+            'roles'      => ['cook'],
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertContains('super-admin', $response->json('data.roles'));
+        $this->assertContains('cook', $response->json('data.roles'));
+    }
 }

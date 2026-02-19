@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\ListEmployeesRequest;
 use App\Http\Responses\Common\ResponsePaginated;
 use App\Models\Employee;
-use App\Repositories\EmployeeRepository;
 
 /**
  * @OA\Get(
@@ -33,7 +32,7 @@ use App\Repositories\EmployeeRepository;
  */
 class ListEmployeesController extends Controller
 {
-    public function __invoke(ListEmployeesRequest $request, EmployeeRepository $employeesRepo): ResponsePaginated
+    public function __invoke(ListEmployeesRequest $request): ResponsePaginated
     {
         $query = Employee::with(['user.roles'])
             ->withCount(['employmentPeriods as active_employment_periods_count' => function ($q) {
@@ -45,7 +44,7 @@ class ListEmployeesController extends Controller
         }
 
         if ($request->input('status') === 'baja') {
-            $query->whereDoesntHave('employmentPeriods', fn ($q) => $q->where('is_active', true));
+            $query->whereDoesntHave('employmentPeriods', fn($q) => $q->where('is_active', true));
         }
 
         if ($request->filled('role')) {
@@ -53,7 +52,7 @@ class ListEmployeesController extends Controller
         }
 
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $request->search);
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'ILIKE', "%{$search}%")
                     ->orWhere('first_name', 'ILIKE', "%{$search}%")

@@ -102,7 +102,7 @@ export function EmployeeDetailView({
           <p className="font-medium">{employee.email || 'No registrado'}</p>
         </div>
         <div>
-          <span className="text-muted-foreground">Telefono</span>
+          <span className="text-muted-foreground">Teléfono</span>
           <p className="font-medium">
             {employee.phone
               ? `${employee.phone_country || ''} ${employee.phone}`
@@ -118,9 +118,8 @@ export function EmployeeDetailView({
           {(employee.roles || []).map((role) => (
             <span
               key={role}
-              className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
-                ROLE_COLORS[role] || 'bg-gray-100 text-gray-800'
-              }`}
+              className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${ROLE_COLORS[role] || 'bg-gray-100 text-gray-800'
+                }`}
             >
               {EMPLOYEE_POSITION_ROLES[role as EmployeePositionRole] || role}
             </span>
@@ -201,7 +200,7 @@ export function EmployeeDetailView({
           </div>
           {effectiveBranch && (
             <p className="text-xs text-muted-foreground">
-              Sucursal asignada automaticamente: <span className="font-medium text-foreground">{effectiveBranch.name}</span>
+              Sucursal asignada automáticamente: <span className="font-medium text-foreground">{effectiveBranch.name}</span>
             </p>
           )}
           <div className="flex justify-end gap-2">
@@ -303,8 +302,8 @@ export function EmployeeDetailView({
         title={employee.is_active ? 'Deshabilitar empleado' : 'Habilitar empleado'}
         description={
           employee.is_active
-            ? `¿Estas seguro de deshabilitar a ${employee.first_name} ${employee.last_name}? El empleado no podra acceder al sistema mientras este deshabilitado.`
-            : `¿Estas seguro de habilitar a ${employee.first_name} ${employee.last_name}? El empleado podra acceder al sistema nuevamente.`
+            ? `¿Estás seguro de deshabilitar a ${employee.first_name} ${employee.last_name}? El empleado no podrá acceder al sistema mientras esté deshabilitado.`
+            : `¿Estás seguro de habilitar a ${employee.first_name} ${employee.last_name}? El empleado podrá acceder al sistema nuevamente.`
         }
         confirmLabel={employee.is_active ? 'Deshabilitar' : 'Habilitar'}
         variant={employee.is_active ? 'warning' : 'info'}

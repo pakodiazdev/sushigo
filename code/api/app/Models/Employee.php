@@ -47,12 +47,12 @@ class Employee extends Model
 
     /**
      * Get the list of position roles assignable by a given user.
-     * Super-admins can assign all roles including super-admin.
+     * null = unrestricted (seeders, CLI). Super-admins also get all roles.
      * Everyone else can assign all roles except super-admin.
      */
     public static function getAssignableRolesFor(?User $user = null): array
     {
-        if ($user && $user->hasRole(self::ROLE_SUPER_ADMIN)) {
+        if ($user === null || $user->hasRole(self::ROLE_SUPER_ADMIN)) {
             return self::POSITION_ROLES;
         }
 
