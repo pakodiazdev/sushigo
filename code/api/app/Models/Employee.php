@@ -47,12 +47,12 @@ class Employee extends Model
 
     /**
      * Get the list of position roles assignable by a given user.
-     * Super-admins can assign all roles including super-admin.
+     * null = unrestricted (seeders, CLI). Super-admins also get all roles.
      * Everyone else can assign all roles except super-admin.
      */
     public static function getAssignableRolesFor(?User $user = null): array
     {
-        if ($user && $user->hasRole(self::ROLE_SUPER_ADMIN)) {
+        if ($user === null || $user->hasRole(self::ROLE_SUPER_ADMIN)) {
             return self::POSITION_ROLES;
         }
 
@@ -80,7 +80,7 @@ class Employee extends Model
 
     public function employmentPeriods(): HasMany
     {
-        return $this->hasMany(EmploymentPeriod::class);
+        return $this->hasMany(EmploymentPeriod::class)->orderBy('start_date', 'desc');
     }
 
     public function scopeActive($query)
@@ -162,7 +162,7 @@ class Employee extends Model
             'created_at'   => $this->created_at,
             'updated_at'   => $this->updated_at,
             'employment_periods' => $this->relationLoaded('employmentPeriods')
-                ? $this->employmentPeriods->map(fn($p) => [
+                ? $this->employmentPeriods->loadMissing('branch')->map(fn($p) => [
                     'id' => $p->public_id,
                     'branch_id' => $p->branch_id,
                     'branch_name' => $p->branch?->name,

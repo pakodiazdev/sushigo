@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Employees;
 
-use App\Models\EmploymentPeriod;
 use Illuminate\Foundation\Http\FormRequest;
 
 class DeactivateEmployeeRequest extends FormRequest
@@ -32,7 +31,7 @@ class DeactivateEmployeeRequest extends FormRequest
                 return;
             }
 
-            if ($this->end_date && $activePeriod->start_date && $this->end_date < $activePeriod->start_date->toDateString()) {
+            if ($this->end_date && $activePeriod->start_date && \Carbon\Carbon::parse($this->end_date)->lt($activePeriod->start_date)) {
                 $validator->errors()->add('end_date', 'The end date must be after or equal to the active period start date.');
             }
         });

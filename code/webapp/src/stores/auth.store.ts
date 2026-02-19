@@ -29,7 +29,7 @@ interface AuthState {
   refreshUser: () => Promise<void>;
   clearError: () => void;
   setHasHydrated: (state: boolean) => void;
-  initializeAfterReset: (user: User, token: string) => void;
+  initializeAfterReset: (user: User, token: string) => Promise<void>;
 }
 
 // Helper to extract branches from user's operating units
@@ -62,7 +62,8 @@ async function fetchBranchesFromApi(): Promise<Branch[]> {
       }
     });
     return Array.from(branches.values());
-  } catch {
+  } catch (error) {
+    console.error('[auth.store] Failed to fetch branches from API:', error);
     return [];
   }
 }
@@ -301,9 +302,14 @@ export const useAuthStore = create<AuthState>()(
 
       clearError: () => set({ error: null }),
 
-      initializeAfterReset: (user: User, token: string) => {
-        const branches = extractBranchesFromUser(user);
+      initializeAfterReset: async (user: User, token: string) => {
+        let branches = extractBranchesFromUser(user);
         const isUserAdmin = checkIsAdmin(user);
+
+        // Admins may not have operating_unit assignments — fetch from API
+        if (isUserAdmin && branches.length === 0) {
+          branches = await fetchBranchesFromApi();
+        }
 
         // Auto-select when there's only one branch
         const selectedBranch = branches.length === 1 ? branches[0]! : null;

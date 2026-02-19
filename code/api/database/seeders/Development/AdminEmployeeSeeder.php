@@ -56,7 +56,7 @@ class AdminEmployeeSeeder extends OnceSeeder
             ]);
 
             // Sync position roles onto the User (preserves admin/inventory-manager roles)
-            $employee->syncPositionRoles($employeeData['position_roles'] ?? []);
+            $employee->syncPositionRoles($employeeData['position_roles'] ?? [], null); // null = unrestricted (seeder context)
 
             $roles = $user->fresh()->getRoleNames()->implode(', ');
             $this->command->info("✓ Employee profile linked: {$employeeData['code']} → {$userData['email']} (user roles: {$roles})");

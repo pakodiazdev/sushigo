@@ -31,7 +31,7 @@ class EmploymentPeriodFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'is_active' => false,
-            'end_date' => fake()->dateTimeBetween('-6 months', 'now'),
+            'end_date' => fake()->dateTimeBetween($attributes['start_date'], 'now'),
         ]);
     }
 
@@ -39,7 +39,7 @@ class EmploymentPeriodFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'is_active' => false,
-            'end_date' => fake()->dateTimeBetween('-6 months', 'now'),
+            'end_date' => fake()->dateTimeBetween($attributes['start_date'], 'now'),
             'termination_reason' => $reason,
         ]);
     }

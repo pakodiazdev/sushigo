@@ -38,7 +38,7 @@ class ToggleEmployeeActiveController extends Controller
     public function __invoke(Employee $employee): ResponseEntity
     {
         if (! $employee->employmentPeriods()->active()->exists()) {
-            abort(422, 'El empleado no tiene un periodo de empleo activo. Use el reingreso para reactivar.');
+            abort(422, 'Employee does not have an active employment period. Use rehire to reactivate.');
         }
 
         $employee->update(['is_active' => ! $employee->is_active]);

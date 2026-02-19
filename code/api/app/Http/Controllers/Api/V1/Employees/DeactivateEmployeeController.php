@@ -13,7 +13,10 @@ class DeactivateEmployeeController extends Controller
     public function __invoke(DeactivateEmployeeRequest $request, Employee $employee): ResponseEntity
     {
         DB::transaction(function () use ($request, $employee) {
-            $activePeriod = $employee->employmentPeriods()->active()->first();
+            $activePeriod = $employee->employmentPeriods()->active()->lockForUpdate()->first();
+            if (! $activePeriod) {
+                abort(422, 'Employee has no active employment period.');
+            }
 
             $activePeriod->update([
                 'is_active' => false,
@@ -24,7 +27,7 @@ class DeactivateEmployeeController extends Controller
             $employee->update(['is_active' => false]);
         });
 
-        $employee->load(['user', 'employmentPeriods.branch']);
+        $employee->load(['user.roles', 'employmentPeriods.branch']);
 
         return new ResponseEntity(
             data: $employee->toApiArray()
