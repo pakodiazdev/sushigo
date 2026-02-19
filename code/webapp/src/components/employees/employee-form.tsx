@@ -391,9 +391,9 @@ export function EmployeeForm({
                     {mode === 'create' && (
                         <FormField
                             label="Fecha de ingreso"
-                            error={errors.start_date}
+                            error={errors.branch || errors.start_date}
                             required
-                            hint={currentBranch ? `Sucursal: ${currentBranch.name}` : 'No hay sucursal seleccionada'}
+                            hint={currentBranch ? `Sucursal: ${currentBranch.name}` : undefined}
                         >
                             <input
                                 type="date"
