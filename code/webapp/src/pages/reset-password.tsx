@@ -86,7 +86,7 @@ function ResetPasswordPage() {
             const payload = response.data?.data
             if (payload?.token && payload?.user) {
                 const { initializeAfterReset } = useAuthStore.getState()
-                initializeAfterReset(payload.user, payload.token)
+                await initializeAfterReset(payload.user, payload.token)
                 setTimeout(() => {
                     router.navigate({ to: '/' })
                 }, 100)

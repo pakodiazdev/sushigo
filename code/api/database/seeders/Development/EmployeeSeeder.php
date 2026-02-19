@@ -68,7 +68,7 @@ class EmployeeSeeder extends OnceSeeder
             // Backward compatibility: convert legacy 'role' to 'roles' array
             if (isset($employeeData['role']) && !isset($employeeData['roles'])) {
                 $legacyRole = strtoupper($employeeData['role']);
-                $employeeData['roles'] = [self::LEGACY_ROLE_MAP[$legacyRole] ?? 'employee-cook'];
+                $employeeData['roles'] = [self::LEGACY_ROLE_MAP[$legacyRole] ?? 'cook'];
                 unset($employeeData['role']);
             }
 
@@ -308,8 +308,12 @@ class EmployeeSeeder extends OnceSeeder
      */
     private function randomDateBetween(Carbon $from, Carbon $to): Carbon
     {
+        if ($from->greaterThan($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
         $days = $from->diffInDays($to);
 
-        return $from->copy()->addDays(rand(0, (int) $days));
+        return $from->copy()->addDays(rand(0, $days));
     }
 }

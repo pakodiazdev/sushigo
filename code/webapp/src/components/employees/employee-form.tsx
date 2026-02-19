@@ -82,8 +82,9 @@ export function EmployeeForm({
             })
             if (isOpen) {
                 nextCodeQuery.refetch().then(result => {
-                    if (result.data?.code) {
-                        setFormData(prev => ({ ...prev, code: result.data!.code }))
+                    const code = result.data?.code
+                    if (code) {
+                        setFormData(prev => ({ ...prev, code }))
                     }
                 })
             }
@@ -130,7 +131,14 @@ export function EmployeeForm({
         if (!formData.code?.trim()) newErrors.code = 'El código es requerido'
         if (!formData.first_name?.trim()) newErrors.first_name = 'El nombre es requerido'
         if (!formData.last_name?.trim()) newErrors.last_name = 'El apellido es requerido'
-        if (!formData.roles || formData.roles.length === 0) newErrors.roles = 'Selecciona al menos un puesto'
+        // On edit, validate against the filtered (assignable) roles that will actually be sent.
+        // A non-super-admin editing an employee with 'super-admin' would have formData.roles = ['super-admin'],
+        // but the payload will filter it out to [], causing a backend min:1 rejection.
+        const assignableRoles = assignableRolesQuery.data || []
+        const effectiveRoles = mode === 'edit'
+            ? formData.roles.filter(r => assignableRoles.includes(r as EmployeePositionRole))
+            : formData.roles
+        if (!effectiveRoles || effectiveRoles.length === 0) newErrors.roles = 'Selecciona al menos un puesto'
 
         if (mode === 'create') {
             if (!formData.start_date) {
@@ -154,14 +162,26 @@ export function EmployeeForm({
 
         try {
             if (mode === 'edit' && employee) {
+                // Only send roles the current user is allowed to assign.
+                // Roles outside the assignable set (e.g. 'super-admin' for non-super-admins)
+                // are filtered out here — syncPositionRoles() on the backend preserves them.
+                const assignableRoles = assignableRolesQuery.data || []
                 const updateData: EmployeeUpdateData = {
                     first_name: formData.first_name,
                     last_name: formData.last_name,
-                    roles: formData.roles,
+                    roles: formData.roles.filter(r => assignableRoles.includes(r as EmployeePositionRole)),
                 }
                 if (isAdmin) {
-                    updateData.email = formData.email || ''
-                    updateData.phone = formData.phone || ''
+                    const originalEmail = fullEmployee?.email || ''
+                    const originalPhone = fullEmployee?.phone || ''
+                    const newEmail = formData.email?.trim() || ''
+                    const newPhone = formData.phone?.trim() || ''
+                    // Solo enviar el campo si cambió respecto al valor original.
+                    // Esto preserva el comportamiento `sometimes` del backend:
+                    // los campos ausentes se ignoran, y `required_without` solo
+                    // se aplica cuando ambos están presentes en el request.
+                    if (newEmail !== originalEmail) updateData.email = newEmail
+                    if (newPhone !== originalPhone) updateData.phone = newPhone
                 }
                 await updateMutation.mutateAsync({
                     id: employee.id,
@@ -174,7 +194,6 @@ export function EmployeeForm({
                     branch_id: currentBranch!.id,
                 })
                 onSuccess()
-                onClose()
             }
         } catch (error) {
             console.error('Error submitting form:', error)
@@ -218,7 +237,7 @@ export function EmployeeForm({
         }
     }
 
-    const isLoading = createMutation.isPending || updateMutation.isPending || deactivateMutation.isPending || rehireMutation.isPending || toggleActiveMutation.isPending || employeeQuery.isLoading
+    const isLoading = createMutation.isPending || updateMutation.isPending || deactivateMutation.isPending || rehireMutation.isPending || toggleActiveMutation.isPending || employeeQuery.isLoading || assignableRolesQuery.isLoading
 
     const panelTitle = mode === 'create'
         ? 'Nuevo Empleado'
@@ -266,10 +285,10 @@ export function EmployeeForm({
             {(mode === 'edit' || mode === 'create') && (
                 <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in" key={mode}>
                     <FormField
-                        label="Codigo"
+                        label="Código"
                         error={errors.code}
                         required
-                        hint={mode === 'create' ? 'Codigo sugerido automaticamente. Puedes modificarlo.' : undefined}
+                        hint={mode === 'create' ? 'Código sugerido automáticamente. Puedes modificarlo.' : undefined}
                     >
                         <div className="relative">
                             <input
@@ -287,7 +306,7 @@ export function EmployeeForm({
                                     onClick={() => nextCodeQuery.refetch()}
                                     disabled={nextCodeQuery.isFetching}
                                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50"
-                                    title="Obtener siguiente codigo disponible"
+                                    title="Obtener siguiente código disponible"
                                 >
                                     <RefreshCw className={`h-4 w-4 ${nextCodeQuery.isFetching ? 'animate-spin' : ''}`} />
                                 </button>
@@ -331,17 +350,28 @@ export function EmployeeForm({
                         label="Puestos"
                         error={errors.roles}
                         required
-                        hint="Selecciona uno o mas puestos para el empleado"
+                        hint="Selecciona uno o más puestos para el empleado"
                     >
                         <div className="grid grid-cols-2 gap-3 rounded-md border border-input p-3">
-                            {(assignableRolesQuery.data || []).map((role) => (
-                                <ToggleSwitch
-                                    key={role}
-                                    label={EMPLOYEE_POSITION_ROLES[role as EmployeePositionRole] || role}
-                                    checked={formData.roles.includes(role as EmployeePositionRole)}
-                                    onChange={(checked) => handleRoleToggle(role as EmployeePositionRole, checked)}
-                                />
-                            ))}
+                            {assignableRolesQuery.isLoading ? (
+                                <div className="col-span-2 flex items-center justify-center py-4 text-sm text-muted-foreground">
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Cargando puestos...
+                                </div>
+                            ) : assignableRolesQuery.isError ? (
+                                <p className="col-span-2 text-sm text-destructive">
+                                    Error al cargar puestos. Recarga la página.
+                                </p>
+                            ) : (
+                                (assignableRolesQuery.data || []).map((role) => (
+                                    <ToggleSwitch
+                                        key={role}
+                                        label={EMPLOYEE_POSITION_ROLES[role as EmployeePositionRole] || role}
+                                        checked={formData.roles.includes(role as EmployeePositionRole)}
+                                        onChange={(checked) => handleRoleToggle(role as EmployeePositionRole, checked)}
+                                    />
+                                ))
+                            )}
                         </div>
                     </FormField>
 
@@ -349,7 +379,7 @@ export function EmployeeForm({
                     <FormField
                         label="Email"
                         error={errors.email}
-                        hint={canEditContact ? "Requerido si no proporciona telefono" : undefined}
+                        hint={canEditContact ? "Requerido si no proporciona teléfono" : undefined}
                     >
                         <input
                             type="email"
@@ -364,8 +394,8 @@ export function EmployeeForm({
 
                     {/* Phone field */}
                     <FormField
-                        label="Telefono"
-                        hint={canEditContact ? "Requerido si no proporciona email. Solo el numero nacional (10 digitos)." : undefined}
+                        label="Teléfono"
+                        hint={canEditContact ? "Requerido si no proporciona email. Solo el número nacional (10 dígitos)." : undefined}
                     >
                         <div className="flex">
                             <span className="inline-flex items-center px-3 py-2 border border-r-0 border-input bg-muted text-muted-foreground rounded-l-md text-sm">
@@ -380,7 +410,7 @@ export function EmployeeForm({
                                 }}
                                 disabled={!canEditContact}
                                 className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-r-md rounded-l-none disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-muted"
-                                placeholder={!canEditContact ? "Sin telefono registrado" : "5512345678"}
+                                placeholder={!canEditContact ? "Sin teléfono registrado" : "5512345678"}
                                 maxLength={10}
                             />
                         </div>
@@ -390,9 +420,9 @@ export function EmployeeForm({
                     {mode === 'create' && (
                         <FormField
                             label="Fecha de ingreso"
-                            error={errors.start_date}
+                            error={errors.start_date || errors.branch}
                             required
-                            hint={currentBranch ? `Sucursal: ${currentBranch.name}` : 'No hay sucursal seleccionada'}
+                            hint={currentBranch ? `Sucursal: ${currentBranch.name}` : undefined}
                         >
                             <input
                                 type="date"
@@ -405,7 +435,7 @@ export function EmployeeForm({
 
                     {mode === 'create' && (
                         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-                            <p>El empleado recibira un enlace para configurar su contrasena por {formData.email?.trim() ? 'correo electronico' : 'WhatsApp'}.</p>
+                            <p>El empleado recibirá un enlace para configurar su contraseña por {formData.email?.trim() ? 'correo electrónico' : 'WhatsApp'}.</p>
                         </div>
                     )}
 

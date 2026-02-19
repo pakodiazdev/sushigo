@@ -75,7 +75,7 @@ export function ConfirmDialog({
       }, 200)
       return () => clearTimeout(timer)
     }
-  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, visible])
 
   // Close on Escape
   useEffect(() => {

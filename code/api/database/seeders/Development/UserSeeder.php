@@ -62,7 +62,7 @@ class UserSeeder extends OnceSeeder
 
                     // Assign position roles to the linked user
                     $positionRoles = $empData['position_roles'] ?? ['manager'];
-                    $employee->syncPositionRoles($positionRoles);
+                    $employee->syncPositionRoles($positionRoles, null); // null = unrestricted (seeder context)
 
                     // Create active employment period from hire date
                     EmploymentPeriod::create([

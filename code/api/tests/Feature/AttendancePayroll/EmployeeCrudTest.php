@@ -426,8 +426,9 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function toggle_active_rejects_active_employee_with_422(): void
+    public function toggle_active_rejects_employee_without_employment_period_with_422(): void
     {
+        // No employment period — toggle must reject
         $employee = Employee::factory()->create(['is_active' => true]);
 
         $response = $this->patchJson("/api/v1/employees/{$employee->public_id}/toggle-active");
@@ -438,11 +439,39 @@ class EmployeeCrudTest extends TestCase
     #[Test]
     public function toggle_active_rejects_inactive_employee_with_422(): void
     {
+        // No employment period — toggle must reject
         $employee = Employee::factory()->inactive()->create();
 
         $response = $this->patchJson("/api/v1/employees/{$employee->public_id}/toggle-active");
 
         $response->assertStatus(422);
+    }
+
+    #[Test]
+    public function toggle_active_deactivates_employee_with_active_period(): void
+    {
+        $employee = Employee::factory()->create(['is_active' => true]);
+        \App\Models\EmploymentPeriod::factory()->forEmployee($employee)->create(['is_active' => true]);
+
+        $response = $this->patchJson("/api/v1/employees/{$employee->public_id}/toggle-active");
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['is_active' => false]);
+        $this->assertDatabaseHas('employees', ['id' => $employee->id, 'is_active' => false]);
+    }
+
+    #[Test]
+    public function toggle_active_activates_employee_with_active_period(): void
+    {
+        // Employee is_active=false but still has an active employment period (was toggled off, not given baja)
+        $employee = Employee::factory()->create(['is_active' => false]);
+        \App\Models\EmploymentPeriod::factory()->forEmployee($employee)->create(['is_active' => true]);
+
+        $response = $this->patchJson("/api/v1/employees/{$employee->public_id}/toggle-active");
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['is_active' => true]);
+        $this->assertDatabaseHas('employees', ['id' => $employee->id, 'is_active' => true]);
     }
 
     #[Test]
@@ -675,5 +704,152 @@ class EmployeeCrudTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonStructure(['message']);
+    }
+
+    // --- status=baja filter ---
+
+    #[Test]
+    public function it_can_filter_employees_by_baja_status(): void
+    {
+        // Active employee — has an active employment period
+        $active = Employee::factory()->create(['is_active' => true]);
+        \App\Models\EmploymentPeriod::factory()->forEmployee($active)->create(['is_active' => true]);
+
+        // Baja employee — has only a terminated period
+        $baja = Employee::factory()->create(['is_active' => false]);
+        \App\Models\EmploymentPeriod::factory()->forEmployee($baja)->terminated()->create();
+
+        $response = $this->getJson('/api/v1/employees?status=baja');
+
+        $response->assertStatus(200);
+        $ids = collect($response->json('data'))->pluck('id');
+        $this->assertContains($baja->public_id, $ids);
+        $this->assertNotContains($active->public_id, $ids);
+    }
+
+    #[Test]
+    public function it_excludes_active_employees_from_baja_filter(): void
+    {
+        Employee::factory()->count(3)->create(['is_active' => true])->each(function ($emp) {
+            \App\Models\EmploymentPeriod::factory()->forEmployee($emp)->create(['is_active' => true]);
+        });
+
+        $response = $this->getJson('/api/v1/employees?status=baja');
+
+        $response->assertStatus(200);
+        $this->assertCount(0, $response->json('data'));
+    }
+
+    #[Test]
+    public function it_can_combine_baja_filter_with_search(): void
+    {
+        $bajaJuan = Employee::factory()->create(['first_name' => 'Juan', 'last_name' => 'Perez', 'is_active' => false]);
+        \App\Models\EmploymentPeriod::factory()->forEmployee($bajaJuan)->terminated()->create();
+
+        $bajaMaria = Employee::factory()->create(['first_name' => 'Maria', 'last_name' => 'Lopez', 'is_active' => false]);
+        \App\Models\EmploymentPeriod::factory()->forEmployee($bajaMaria)->terminated()->create();
+
+        $response = $this->getJson('/api/v1/employees?status=baja&search=Juan');
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals($bajaJuan->public_id, $response->json('data.0.id'));
+    }
+
+    // --- AP-005a: Role-based assignment control ---
+
+    #[Test]
+    public function super_admin_can_assign_super_admin_role(): void
+    {
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'api']);
+        $superAdminRole->givePermissionTo(['employees.view', 'employees.create', 'employees.update']);
+
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole('super-admin');
+        Passport::actingAs($superAdmin);
+
+        $response = $this->postJson('/api/v1/employees', [
+            'code'       => 'EMP-SA-ASSIGN',
+            'first_name' => 'Super',
+            'last_name'  => 'Test',
+            'roles'      => ['super-admin'],
+            'email'      => 'sa-assign@sushigo.com',
+            'branch_id'  => $this->branch->id,
+            'start_date' => '2026-01-15',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertContains('super-admin', $response->json('data.roles'));
+    }
+
+    #[Test]
+    public function non_super_admin_cannot_assign_super_admin_role(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'api']);
+
+        // $this->user is an admin (not super-admin) — super-admin is not in their assignable roles
+        // The FormRequest rejects it as an invalid role value → 422
+        $response = $this->postJson('/api/v1/employees', [
+            'code'       => 'EMP-SA-BLOCK',
+            'first_name' => 'Regular',
+            'last_name'  => 'Admin',
+            'roles'      => ['super-admin'],
+            'email'      => 'sa-block@sushigo.com',
+            'branch_id'  => $this->branch->id,
+            'start_date' => '2026-01-15',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['roles.0']);
+    }
+
+    #[Test]
+    public function get_assignable_roles_returns_all_roles_for_super_admin(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'api']);
+
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole('super-admin');
+
+        $assignable = Employee::getAssignableRolesFor($superAdmin);
+
+        $this->assertContains(Employee::ROLE_SUPER_ADMIN, $assignable);
+        $this->assertCount(count(Employee::POSITION_ROLES), $assignable);
+    }
+
+    #[Test]
+    public function get_assignable_roles_excludes_super_admin_for_regular_user(): void
+    {
+        $regularUser = User::factory()->create();
+        $regularUser->assignRole('admin');
+
+        $assignable = Employee::getAssignableRolesFor($regularUser);
+
+        $this->assertNotContains(Employee::ROLE_SUPER_ADMIN, $assignable);
+        $this->assertContains(Employee::ROLE_MANAGER, $assignable);
+        $this->assertContains(Employee::ROLE_COOK, $assignable);
+    }
+
+    #[Test]
+    public function sync_position_roles_preserves_super_admin_role_when_updated_by_non_super_admin(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'api']);
+
+        // Create an employee who has super-admin role
+        $employee = Employee::factory()->create();
+        $employee->user->assignRole('super-admin');
+        $this->assertTrue($employee->user->hasRole('super-admin'));
+
+        // A regular admin tries to update the employee with only cook — no super-admin in payload
+        // syncPositionRoles must preserve super-admin since the acting user cannot manage it
+        $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
+            'first_name' => $employee->first_name,
+            'last_name'  => $employee->last_name,
+            'roles'      => ['cook'],
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertContains('super-admin', $response->json('data.roles'));
+        $this->assertContains('cook', $response->json('data.roles'));
     }
 }

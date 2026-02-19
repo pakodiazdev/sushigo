@@ -57,7 +57,7 @@ export function EmployeeDetailView({
   // Use currentBranch or fall back to the first (and only) available branch
   const effectiveBranch = currentBranch ?? availableBranches[0] ?? null
 
-  const hasActivePeriod = employee.employment_periods?.some(p => p.is_active) ?? false
+  const hasActivePeriod = employee.has_active_period ?? employee.employment_periods?.some(p => p.is_active) ?? false
 
   const handleDeactivate = () => {
     onDeactivate(endDate, reason || undefined)
@@ -102,7 +102,7 @@ export function EmployeeDetailView({
           <p className="font-medium">{employee.email || 'No registrado'}</p>
         </div>
         <div>
-          <span className="text-muted-foreground">Telefono</span>
+          <span className="text-muted-foreground">Teléfono</span>
           <p className="font-medium">
             {employee.phone
               ? `${employee.phone_country || ''} ${employee.phone}`
@@ -118,9 +118,8 @@ export function EmployeeDetailView({
           {(employee.roles || []).map((role) => (
             <span
               key={role}
-              className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
-                ROLE_COLORS[role] || 'bg-gray-100 text-gray-800'
-              }`}
+              className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${ROLE_COLORS[role] || 'bg-gray-100 text-gray-800'
+                }`}
             >
               {EMPLOYEE_POSITION_ROLES[role as EmployeePositionRole] || role}
             </span>
@@ -148,6 +147,7 @@ export function EmployeeDetailView({
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
             />
           </div>
@@ -196,12 +196,17 @@ export function EmployeeDetailView({
               type="date"
               value={rehireDate}
               onChange={(e) => setRehireDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
             />
           </div>
-          {effectiveBranch && (
+          {effectiveBranch ? (
             <p className="text-xs text-muted-foreground">
-              Sucursal asignada automaticamente: <span className="font-medium text-foreground">{effectiveBranch.name}</span>
+              Sucursal asignada automáticamente: <span className="font-medium text-foreground">{effectiveBranch.name}</span>
+            </p>
+          ) : (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              No hay sucursal disponible. Contacta a un administrador para realizar el reingreso.
             </p>
           )}
           <div className="flex justify-end gap-2">
@@ -303,8 +308,8 @@ export function EmployeeDetailView({
         title={employee.is_active ? 'Deshabilitar empleado' : 'Habilitar empleado'}
         description={
           employee.is_active
-            ? `¿Estas seguro de deshabilitar a ${employee.first_name} ${employee.last_name}? El empleado no podra acceder al sistema mientras este deshabilitado.`
-            : `¿Estas seguro de habilitar a ${employee.first_name} ${employee.last_name}? El empleado podra acceder al sistema nuevamente.`
+            ? `¿Estás seguro de deshabilitar a ${employee.first_name} ${employee.last_name}? El empleado no podrá acceder al sistema mientras esté deshabilitado.`
+            : `¿Estás seguro de habilitar a ${employee.first_name} ${employee.last_name}? El empleado podrá acceder al sistema nuevamente.`
         }
         confirmLabel={employee.is_active ? 'Deshabilitar' : 'Habilitar'}
         variant={employee.is_active ? 'warning' : 'info'}

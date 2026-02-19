@@ -74,9 +74,9 @@ export function getEmployeeColumns(onEdit: (item: Employee) => void): Column<Emp
       align: 'center',
       hideBelow: 'md',
       render: (item) => {
-        const hasActivePeriod = item.has_active_period ?? item.employment_periods?.some(p => p.is_active) ?? true
+        const hasActivePeriod = item.has_active_period ?? item.employment_periods?.some(p => p.is_active) ?? null
 
-        if (!hasActivePeriod) {
+        if (hasActivePeriod === false) {
           return (
             <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
               Baja
