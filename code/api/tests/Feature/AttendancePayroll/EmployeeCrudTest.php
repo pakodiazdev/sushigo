@@ -426,7 +426,7 @@ class EmployeeCrudTest extends TestCase
     }
 
     #[Test]
-    public function toggle_active_rejects_active_employee_with_422(): void
+    public function toggle_active_rejects_employee_without_employment_period_with_422(): void
     {
         // No employment period — toggle must reject
         $employee = Employee::factory()->create(['is_active' => true]);
@@ -838,6 +838,7 @@ class EmployeeCrudTest extends TestCase
         // Create an employee who has super-admin role
         $employee = Employee::factory()->create();
         $employee->user->assignRole('super-admin');
+        $this->assertTrue($employee->user->hasRole('super-admin'));
 
         // A regular admin tries to update the employee with only cook — no super-admin in payload
         // syncPositionRoles must preserve super-admin since the acting user cannot manage it

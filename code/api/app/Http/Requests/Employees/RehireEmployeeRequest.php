@@ -25,12 +25,14 @@ class RehireEmployeeRequest extends FormRequest
         $validator->after(function ($validator) {
             $employee = $this->route('employee');
 
-            if ($employee->is_active) {
+            $hasActiveEmploymentPeriod = $employee->employmentPeriods()->active()->exists();
+
+            if ($employee->is_active && $hasActiveEmploymentPeriod) {
                 $validator->errors()->add('employee', 'Employee is already active.');
                 return;
             }
 
-            if ($employee->employmentPeriods()->active()->exists()) {
+            if ($hasActiveEmploymentPeriod) {
                 $validator->errors()->add('employee', 'Employee already has an active employment period.');
             }
         });

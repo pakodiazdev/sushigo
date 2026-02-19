@@ -132,7 +132,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // Auto-select when there's only one branch
-          const selectedBranch = branches.length === 1 ? branches[0]! : null;
+          const selectedBranch = branches.length === 1 ? branches[0] ?? null : null;
 
           set({
             user: userData,
@@ -228,7 +228,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Auto-select when there's only one branch
           if (!restoredBranch && branches.length === 1) {
-            restoredBranch = branches[0]!;
+            restoredBranch = branches[0] ?? null;
           }
 
           set({

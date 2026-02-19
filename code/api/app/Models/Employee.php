@@ -135,7 +135,7 @@ class Employee extends Model
 
         return $this->user
             ->getRoleNames()
-            ->filter(fn($r) => in_array($r, self::POSITION_ROLES))
+            ->filter(fn ($r) => in_array($r, self::POSITION_ROLES))
             ->values()
             ->toArray();
     }
