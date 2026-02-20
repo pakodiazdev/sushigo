@@ -83,6 +83,11 @@ class Employee extends Model
         return $this->hasMany(EmploymentPeriod::class)->orderBy('start_date', 'desc');
     }
 
+    public function wageHistories(): HasMany
+    {
+        return $this->hasMany(WageHistory::class)->orderBy('effective_from', 'desc');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
