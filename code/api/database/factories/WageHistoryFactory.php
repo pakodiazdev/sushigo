@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Employee;
 use App\Models\WageHistory;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /** @extends Factory<WageHistory> */
 class WageHistoryFactory extends Factory
@@ -16,6 +17,7 @@ class WageHistoryFactory extends Factory
         $effectiveFrom = fake()->dateTimeBetween('-2 years', '-1 month');
 
         return [
+            'public_id'      => (string) Str::ulid(),
             'employee_id'    => Employee::factory(),
             'daily_wage'     => fake()->randomFloat(2, 200, 3000),
             'effective_from' => $effectiveFrom,
@@ -30,7 +32,11 @@ class WageHistoryFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             $from = $attributes['effective_from'];
-            $to   = fake()->dateTimeBetween($from, 'now');
+
+            // Use '-1 day' as upper bound so effective_to is always at least
+            // one day before today, guaranteeing a non-zero range even when
+            // effective_from was provided as a recent date via effectiveBetween().
+            $to = fake()->dateTimeBetween($from, '-1 day');
 
             return ['effective_to' => $to];
         });
