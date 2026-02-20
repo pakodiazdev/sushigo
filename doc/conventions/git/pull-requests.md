@@ -217,6 +217,60 @@ Complete implementation of Employee management module including full CRUD API en
 
 ---
 
+## Frontend Review Checklist
+
+When reviewing PRs that include frontend changes, verify the following rules in addition to the standard checklist:
+
+### 📋 Forms — react-hook-form + zod (mandatory)
+
+Every form must use `react-hook-form` + `@hookform/resolvers/zod` + `zod`. **Reject any PR that uses raw `useState` for field management or manual validation state.**
+
+✅ Required:
+- [ ] Schema defined with `zod` (at the top of the file or in a `*.schema.ts`)
+- [ ] Type derived via `z.infer<typeof schema>` — never hand-written
+- [ ] `useForm` configured with `zodResolver(schema)`
+- [ ] No `useState` for form field values or validation errors
+- [ ] Inline error messages shown below each field (`{errors.field && <p>{errors.field.message}</p>}`)
+- [ ] `onSubmit` callback receives already-validated `FormValues`
+- [ ] Forms with 3+ fields extracted as standalone components
+
+❌ Reject if:
+- Form fields managed with `useState` instead of `register`
+- Validation logic written manually instead of using zod schema
+- Error state managed with `useState<Record<string, string>>`
+- Form values not typed via `z.infer`
+
+### 🛡️ Contact fields on update (`email` / `phone`)
+
+When a form updates employee contact fields, verify the frontend **only sends a field if its value changed** from the original — never sends both as empty strings simultaneously. This preserves the backend `required_without` cross-validation.
+
+### 🔐 Role filtering on update
+
+When submitting an employee update, verify the `roles` payload is **filtered to assignable roles only** (`assignableRolesQuery.data`). Non-super-admins must not send `super-admin` in the roles array even if the employee holds it.
+
+### 🪝 Custom hooks — logic / view separation (mandatory)
+
+Every component with **3+ `useState` calls or API mutations** must extract its logic into a `use<ComponentName>` hook. The component file must contain only JSX.
+
+**Hook file convention:** `use-<component-name>.ts` (kebab-case, no JSX, same directory as the component).
+
+✅ Required:
+- [ ] Hook owns all `useState`, queries (`useQuery`), mutations (`useMutation`), and derived booleans
+- [ ] Component only contains JSX — no business logic, no inline handlers with async operations
+- [ ] Auth store values (branch, isAdmin, etc.) resolved inside the hook, not threaded through props
+- [ ] Hook file exports types consumed by the component (`FormValues`, `PanelMode`, etc.)
+- [ ] Component re-exports types it receives from the hook if downstream consumers need them
+
+❌ Reject if:
+- Component has 3+ `useState` calls and no corresponding hook
+- API mutations (`mutateAsync`) are called directly inside a component function
+- Auth store selectors are threaded through 2+ levels of props instead of being read in the hook
+- Logic and JSX are mixed in the same file for non-trivial components
+
+**Reference implementation:** `use-employee-form.ts` + `employee-form.tsx`, `use-employee-detail-actions.ts` + `employee-detail-view.tsx`, `use-deactivate-form.ts` + `deactivate-form.tsx`, `use-rehire-form.ts` + `rehire-form.tsx`.
+
+---
+
 ## Quick Reference
 
 | Element          | Format                               |

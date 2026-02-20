@@ -148,6 +148,81 @@ Emojis: ✨ (feat), 🐛 (fix), 📚 (docs), 🔨 (refactor), 🔧 (chore), ✅ 
 - Components use PascalCase, files match component names
 - Path aliases via `@/` for absolute imports
 
+### Form Convention (mandatory for all forms)
+
+**Every form in the webapp MUST use `react-hook-form` + `@hookform/resolvers` + `zod`.**
+
+```tsx
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+
+const mySchema = z.object({
+  name: z.string().min(1, 'El nombre es requerido'),
+  date: z.string().min(1, 'La fecha es requerida'),
+})
+
+type MyFormValues = z.infer<typeof mySchema>
+
+function MyForm({ onSubmit }: { onSubmit: (v: MyFormValues) => void }) {
+  const { register, handleSubmit, formState: { errors } } = useForm<MyFormValues>({
+    resolver: zodResolver(mySchema),
+    defaultValues: { name: '', date: '' },
+  })
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('name')} />
+      {errors.name && <p>{errors.name.message}</p>}
+    </form>
+  )
+}
+```
+
+**Rules:**
+- Schema defined with `zod` at the top of the file (or in a separate `*.schema.ts`)
+- Type inferred via `z.infer<typeof schema>` — never hand-write form value types
+- No manual `useState` for form fields or validation errors in forms
+- Validation errors displayed inline below each field
+- `onSubmit` callback receives typed `FormValues` (already validated by zod)
+- Forms extracted as standalone components when they have 3+ fields or independent state
+
+**PR requirement:** Any PR that adds or modifies a form must comply with this pattern. Reviewers should reject form PRs that use raw `useState` for field management instead of `react-hook-form`.
+
+### Custom Hook Convention (mandatory for components with logic)
+
+**Any component with 3+ `useState` calls, API mutations, or non-trivial handlers MUST extract its logic into a custom `use<ComponentName>` hook.**
+
+```tsx
+// use-my-form.ts — logic only, no JSX
+export function useMyForm() {
+  const [showConfirm, setShowConfirm] = useState(false)
+  const mutation = useCreateSomething()
+
+  const handleSubmit = async (values: FormValues) => {
+    await mutation.mutateAsync(values)
+  }
+
+  return { showConfirm, setShowConfirm, handleSubmit, isPending: mutation.isPending }
+}
+
+// my-form.tsx — view only, no business logic
+export function MyForm() {
+  const { showConfirm, setShowConfirm, handleSubmit, isPending } = useMyForm()
+  return <form onSubmit={handleSubmit}>...</form>
+}
+```
+
+**Rules:**
+- Hook file: `use-<component-name>.ts` (kebab-case, no JSX)
+- Hook lives alongside the component it serves (same directory)
+- Hook owns: state, queries, mutations, submit handlers, derived booleans
+- Component owns: JSX structure, className, labels — pure presentation
+- Types exported from hook file; component re-exports them if consumers need them
+- Hooks that resolve auth-store values (branch, isAdmin) do so internally — don't thread them as props
+
+**PR requirement:** Any PR that adds a component with 3+ `useState` calls or API mutations must extract the logic into a custom hook. Reviewers should reject PRs where logic and JSX are mixed in the same component.
+
 ## Access URLs (Local Development)
 
 - **Webapp**: https://sushigo.local (via nginx) or http://localhost:5173 (direct Vite)
