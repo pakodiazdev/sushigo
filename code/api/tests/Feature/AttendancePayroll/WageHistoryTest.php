@@ -128,6 +128,32 @@ class WageHistoryTest extends TestCase
         $this->assertEquals('900.00', $result->first()->daily_wage);
     }
 
+    #[Test]
+    public function effective_scope_returns_all_matching_rows_when_closed_periods_overlap(): void
+    {
+        // The DB only prevents two *open-ended* wages (partial unique index).
+        // Overlapping closed periods are not blocked at the schema level — the
+        // application layer (FormRequest / Action) must enforce non-overlap.
+        // This test documents that scopeEffective() returns ALL matching rows
+        // and does not silently pick one; callers must handle the result set.
+        $employee = Employee::factory()->create();
+
+        WageHistory::factory()->effectiveBetween('2025-01-01', '2025-06-30')->create([
+            'employee_id' => $employee->id,
+            'daily_wage'  => 700.00,
+        ]);
+
+        WageHistory::factory()->effectiveBetween('2025-04-01', '2025-09-30')->create([
+            'employee_id' => $employee->id,
+            'daily_wage'  => 800.00,
+        ]);
+
+        // Both periods cover 2025-05-15, so the scope returns both rows
+        $result = WageHistory::effective('2025-05-15')->where('employee_id', $employee->id)->get();
+
+        $this->assertCount(2, $result);
+    }
+
     // ── minuteRate() ──────────────────────────────────────────────────────────
 
     #[Test]
@@ -175,12 +201,35 @@ class WageHistoryTest extends TestCase
     {
         $employee = Employee::factory()->create();
 
-        WageHistory::factory()->count(3)->create(['employee_id' => $employee->id]);
+        // Two closed periods + one open-ended: respects the partial unique index
+        // that allows only one active (effective_to IS NULL) wage per employee.
+        WageHistory::factory()->effectiveBetween('2024-01-01', '2024-06-30')->create(['employee_id' => $employee->id]);
+        WageHistory::factory()->effectiveBetween('2024-07-01', '2024-12-31')->create(['employee_id' => $employee->id]);
+        WageHistory::factory()->effectiveBetween('2025-01-01')->create(['employee_id' => $employee->id]);
 
         $this->assertCount(3, $employee->wageHistories);
     }
 
     // ── Casts & schema ────────────────────────────────────────────────────────
+
+    #[Test]
+    public function it_generates_ulid_public_id_on_create(): void
+    {
+        $wage = WageHistory::factory()->create();
+
+        $this->assertNotNull($wage->public_id);
+        $this->assertMatchesRegularExpression('/^[0-9A-HJKMNP-TV-Z]{26}$/', $wage->public_id);
+    }
+
+    #[Test]
+    public function public_id_is_unique_per_record(): void
+    {
+        $wages = WageHistory::factory()->count(3)->create();
+
+        $ids = $wages->pluck('public_id')->unique();
+
+        $this->assertCount(3, $ids);
+    }
 
     #[Test]
     public function daily_wage_is_cast_to_decimal_string(): void
@@ -249,17 +298,59 @@ class WageHistoryTest extends TestCase
         $this->assertContains('after_or_equal:effective_from', $rules['effective_to']);
     }
 
-    // ── Cascade delete ────────────────────────────────────────────────────────
+    // ── Soft-delete & unique index ────────────────────────────────────────────
 
     #[Test]
-    public function it_cascades_delete_when_employee_is_deleted(): void
+    public function new_active_wage_can_be_created_after_soft_deleting_the_current_one(): void
+    {
+        // Regression: the partial unique index must exclude soft-deleted rows
+        // (WHERE effective_to IS NULL AND deleted_at IS NULL), otherwise
+        // soft-deleting an active wage and inserting a replacement would
+        // violate the constraint even though Eloquent no longer sees the old row.
+        $employee = Employee::factory()->create();
+
+        $oldWage = WageHistory::factory()->effectiveBetween('2025-01-01')->create([
+            'employee_id' => $employee->id,
+        ]);
+
+        $oldWage->delete(); // soft-delete — effective_to stays NULL, deleted_at is set
+
+        // Must not throw a unique constraint violation
+        $newWage = WageHistory::factory()->effectiveBetween('2026-01-01')->create([
+            'employee_id' => $employee->id,
+        ]);
+
+        $this->assertDatabaseHas('wage_histories', ['id' => $newWage->id, 'deleted_at' => null]);
+    }
+
+    // ── Employee soft-delete ──────────────────────────────────────────────────
+
+    #[Test]
+    public function wage_records_survive_when_employee_is_soft_deleted(): void
     {
         $employee = Employee::factory()->create();
         $wage     = WageHistory::factory()->create(['employee_id' => $employee->id]);
-        $wageId   = $wage->id;
+
+        $employee->delete(); // soft-delete only
+
+        // Wage row is still physically present (audit trail preserved)
+        $this->assertDatabaseHas('wage_histories', ['id' => $wage->id]);
+
+        // And still reachable via withTrashed() on the employee side
+        $this->assertNotNull(
+            WageHistory::where('id', $wage->id)->first()
+        );
+    }
+
+    #[Test]
+    public function force_deleting_employee_with_wage_records_is_restricted(): void
+    {
+        $employee = Employee::factory()->create();
+        WageHistory::factory()->create(['employee_id' => $employee->id]);
+
+        // DB-level RESTRICT prevents physical deletion while wage rows exist
+        $this->expectException(\Illuminate\Database\QueryException::class);
 
         $employee->forceDelete();
-
-        $this->assertDatabaseMissing('wage_histories', ['id' => $wageId]);
     }
 }

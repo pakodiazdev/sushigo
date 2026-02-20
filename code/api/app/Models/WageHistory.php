@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
+use App\Support\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WageHistory extends Model
 {
-    use HasFactory;
+    use HasFactory, HasPublicId, SoftDeletes;
 
     /**
      * Validation rules shared between CreateWageRequest and UpdateWageRequest.
@@ -50,6 +52,11 @@ class WageHistory extends Model
      *   effective_from <= $date AND (effective_to IS NULL OR effective_to >= $date)
      *
      * NULL effective_to means the wage is currently active (open-ended).
+     *
+     * Note: this scope does not filter by employee or check whether the related
+     * employee has been soft-deleted. Callers must chain ->where('employee_id', …)
+     * (or equivalent) to avoid returning wage records for deleted employees.
+     * This mirrors the same pattern used by EmploymentPeriod::scopeEffective().
      */
     public function scopeEffective(Builder $query, \DateTimeInterface|string $date): Builder
     {
@@ -69,7 +76,7 @@ class WageHistory extends Model
      * Based on an 8-hour workday (8h × 60min = 480 minutes).
      * Example: $1 000/day → $2.0833.../min
      *
-     * @return \Illuminate\Support\Number|float
+     * @return float
      */
     public function minuteRate(): float
     {
