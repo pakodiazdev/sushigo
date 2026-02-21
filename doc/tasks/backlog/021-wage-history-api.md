@@ -14,13 +14,13 @@ Como Admin, quiero registrar y consultar el historial de sueldo de un empleado, 
 
 - [ ] 🌐 `POST /api/v1/employees/{id}/wages` — CreateWageController (auto-closes previous wage: effective_to = new.effective_from − 1 day)
 - [ ] 🌐 `GET /api/v1/employees/{id}/wages` — ListWagesController (ordered by effective_from desc)
-- [ ] 📝 StoreWageRequest — daily_wage required > 0, effective_from required
-- [ ] 🧪 Feature tests: create wage, auto-close previous, list history, negative wage rejected
+- [ ] 📝 StoreWageRequest — hourly_rate required > 0, weekly_scheduled_hours required > 0, effective_from required
+- [ ] 🧪 Feature tests: create wage, auto-close previous, list history, negative rate rejected
 
 ### 🖥️ Frontend Tasks (webapp)
 
-- [ ] 📱 **Wage History Tab** (in Employee Detail) — table: effective_from, effective_to, daily_wage, status (current/closed); sorted desc
-- [ ] 📱 **Register Wage Modal** — fields: daily_wage (currency input), effective_from (date picker); shows warning about auto-closing previous wage
+- [ ] 📱 **Wage History Tab** (in Employee Detail) — table: effective_from, effective_to, hourly_rate, weekly_scheduled_hours, status (current/closed); sorted desc
+- [ ] 📱 **Register Wage Modal** — fields: hourly_rate (currency input), weekly_scheduled_hours (number input), effective_from (date picker); shows warning about auto-closing previous wage
 - [ ] 📱 Hooks: `useWageHistory(employeeId)`, `useRegisterWage()`
 - [ ] 🧪 E2E test: register wage, verify auto-close of previous, list shows updated history
 
@@ -29,7 +29,7 @@ Como Admin, quiero registrar y consultar el historial de sueldo de un empleado, 
 ## 🎯 Acceptance Criteria
 
 - [ ] Previous wage auto-closed on new entry
-- [ ] daily_wage > 0 enforced
+- [ ] hourly_rate > 0 and weekly_scheduled_hours > 0 enforced
 
 ---
 

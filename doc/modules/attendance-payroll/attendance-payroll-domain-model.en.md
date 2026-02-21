@@ -82,7 +82,8 @@ erDiagram
     WageHistory {
         bigint id PK
         bigint employee_id FK
-        decimal daily_wage
+        decimal hourly_rate "10,2"
+        decimal weekly_scheduled_hours "5,2"
         date effective_from
         date effective_to "nullable"
     }
@@ -425,13 +426,14 @@ erDiagram
 
 | Field            | Type          | Null | Default | Description                                  | FR    |
 | ---------------- | ------------- | ---- | ------- | -------------------------------------------- | ----- |
-| `id`             | bigint        | NO   | auto    | PK                                           | —     |
-| `employee_id`    | bigint FK     | NO   | —       | Employee.                                    | RF-22 |
-| `daily_wage`     | decimal(10,2) | NO   | —       | Current daily wage.                          | RF-22 |
-| `effective_from` | date          | NO   | —       | Effective start date.                        | RF-22 |
-| `effective_to`   | date          | YES  | NULL    | Effective end date. NULL = currently active. | RF-22 |
-| `created_at`     | timestamp     | NO   | now     | —                                            | —     |
-| `updated_at`     | timestamp     | NO   | now     | —                                            | —     |
+| `id`                      | bigint        | NO   | auto    | PK                                                                  | —          |
+| `employee_id`             | bigint FK     | NO   | —       | Employee.                                                           | RF-22      |
+| `hourly_rate`             | decimal(10,2) | NO   | —       | Hourly rate (atomic unit of compensation).                          | RF-22      |
+| `weekly_scheduled_hours`  | decimal(5,2)  | NO   | —       | Contracted weekly hours (snapshot of active schedule).              | RF-22, RF-10 |
+| `effective_from`          | date          | NO   | —       | Effective start date.                                               | RF-22      |
+| `effective_to`            | date          | YES  | NULL    | Effective end date. NULL = currently active.                        | RF-22      |
+| `created_at`              | timestamp     | NO   | now     | —                                                                   | —          |
+| `updated_at`              | timestamp     | NO   | now     | —                                                                   | —          |
 
 ---
 
@@ -866,7 +868,8 @@ classDiagram
     class WageHistory {
         +int id
         +int employee_id
-        +decimal daily_wage
+        +decimal hourly_rate
+        +decimal weekly_scheduled_hours
         +date effective_from
         +date effective_to
         --
@@ -1418,7 +1421,8 @@ sequenceDiagram
 | Tardiness in seconds ≥ 0             | `entry_late_seconds >= 0` and `lunch_late_seconds >= 0`                               | RF-13         |
 | Leave duration > 0                   | `partial_leaves.duration_minutes > 0`                                                 | RF-25a        |
 | Agreed pay > 0                       | `negotiated_extra_days.agreed_pay > 0`                                                | RF-39         |
-| Daily wage > 0                       | `wage_histories.daily_wage > 0`                                                       | RF-22         |
+| Hourly rate > 0                      | `wage_histories.hourly_rate > 0`                                                      | RF-22         |
+| Weekly scheduled hours > 0           | `wage_histories.weekly_scheduled_hours > 0`                                           | RF-22, RF-10  |
 | Weekly bonus ≥ 0                     | `punctuality_bonus_groups.weekly_bonus_amount >= 0`                                   | RF-33         |
 | Bonus percentage 0–100               | `punctuality_ranges.bonus_percentage BETWEEN 0 AND 100`                               | RF-32         |
 | Forced percentage 0–100              | `punctuality_exceptions.forced_percentage BETWEEN 0 AND 100`                          | RF-37         |

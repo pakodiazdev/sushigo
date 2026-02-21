@@ -103,13 +103,13 @@
 ### AP-005 · WageHistory Migration & Model
 **Size:** S · **Priority:** P0 · **FR:** RF-22
 
-> As a developer, I want to create the migration and `WageHistory` model, to record daily wages with effective date history.
+> As a developer, I want to create the migration and `WageHistory` model, to record hourly compensation rates with effective date history.
 
 **AC:**
-- [ ] Migration creates `wage_histories` table: id, employee_id (FK), daily_wage (decimal 10,2), effective_from, effective_to (nullable), timestamps
+- [ ] Migration creates `wage_histories` table: id, employee_id (FK), hourly_rate (decimal 10,2), weekly_scheduled_hours (decimal 5,2), effective_from, effective_to (nullable), timestamps
 - [ ] Model with scope `effective(date)` filtering by effective date
-- [ ] Method `minuteRate()` calculating rate per minute
-- [ ] Validation: daily_wage > 0
+- [ ] Method `minuteRate()` → `hourly_rate / 60`
+- [ ] Validation: hourly_rate > 0, weekly_scheduled_hours > 0
 - [ ] Unit test
 
 ---
@@ -643,9 +643,9 @@
 
 **AC:**
 - [ ] `PayrollCalculator::calculateBasePay(employee, periodStart, periodEnd)` returns decimal
-- [ ] Gets the effective wage for the period
-- [ ] Counts worked days (status = WORKED) in the range
-- [ ] base_pay = daily_wage × worked days
+- [ ] Gets the effective wage (hourly_rate) for the period
+- [ ] Counts worked days (status = WORKED) in the range and their scheduled hours
+- [ ] base_pay = hourly_rate × total scheduled hours of worked days
 - [ ] Tests: full week (6 days), week with absences, week with days off
 
 ---

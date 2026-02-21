@@ -4,32 +4,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SushiGo is a full-stack tenant platform within the ComandaFlow ecosystem. It consists of:
+SushiGo is a full-stack tenant platform within the ComandaFlow ecosystem. **This is a monorepo** with the following structure:
 - **Laravel 12 API** (`code/api/`) - Backend with Passport OAuth, Spatie Permissions, L5 Swagger
 - **React 19 Webapp** (`code/webapp/`) - Admin dashboard with TanStack Router/Query, Zustand, Tailwind
+- **Documentation** (`doc/`) - Architecture, conventions, module specs, task tracking
 
 ## Development Commands
 
 ### Docker Development (Recommended)
+
+This monorepo runs inside `dev_container`. Each sub-project maps to a path inside the container:
+
+| Sub-project | Host path         | Container path      |
+|-------------|-------------------|---------------------|
+| API (Laravel)  | `code/api/`    | `/app/code/api`     |
+| Webapp (React) | `code/webapp/` | `/app/code/webapp`  |
+
+All `php artisan` commands must run from `/app/code/api` inside `dev_container`.
 
 ```bash
 # Start full stack (API, webapp, PostgreSQL, nginx, pgadmin, mailhog)
 docker compose up --build
 
 # Run API tests
-docker exec -it dev_container php artisan test
+docker exec -it dev_container bash -c "cd /app/code/api && php artisan test"
 
 # Run specific test
-docker exec -it dev_container php artisan test --filter=OpeningBalanceTest
+docker exec -it dev_container bash -c "cd /app/code/api && php artisan test --filter=WageHistoryTest"
 
 # Run database seeders
-docker exec -it dev_container php artisan db:seed
+docker exec -it dev_container bash -c "cd /app/code/api && php artisan db:seed"
 
 # View seeder status
-docker exec -it dev_container php artisan seeder:status
+docker exec -it dev_container bash -c "cd /app/code/api && php artisan seeder:status"
 
 # Regenerate Swagger docs
-docker exec -it dev_container php artisan l5-swagger:generate
+docker exec -it dev_container bash -c "cd /app/code/api && php artisan l5-swagger:generate"
 
 # Create test database (first time only)
 docker exec -it dev_container psql -h pgsql -U admin -d mydb -c "CREATE DATABASE mydb_test;"

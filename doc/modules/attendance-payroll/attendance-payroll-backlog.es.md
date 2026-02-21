@@ -103,13 +103,13 @@
 ### AP-005 · Migración y modelo WageHistory
 **Talla:** S · **Prioridad:** P0 · **RF:** RF-22
 
-> Como desarrollador, quiero crear la migración y modelo `WageHistory`, para registrar el sueldo diario con historial de vigencias.
+> Como desarrollador, quiero crear la migración y modelo `WageHistory`, para registrar la tarifa por hora con historial de vigencias.
 
 **CA:**
-- [ ] Migración crea tabla `wage_histories`: id, employee_id (FK), daily_wage (decimal 10,2), effective_from, effective_to (nullable), timestamps
+- [ ] Migración crea tabla `wage_histories`: id, employee_id (FK), hourly_rate (decimal 10,2), weekly_scheduled_hours (decimal 5,2), effective_from, effective_to (nullable), timestamps
 - [ ] Modelo con scope `effective(date)` que filtra por vigencia
-- [ ] Método `minuteRate()` que calcula tarifa por minuto
-- [ ] Validación: daily_wage > 0
+- [ ] Método `minuteRate()` → `hourly_rate / 60`
+- [ ] Validación: hourly_rate > 0, weekly_scheduled_hours > 0
 - [ ] Test unitario
 
 ---
@@ -643,9 +643,9 @@
 
 **CA:**
 - [ ] `PayrollCalculator::calculateBasePay(employee, periodStart, periodEnd)` retorna decimal
-- [ ] Obtiene el wage vigente en el periodo
-- [ ] Cuenta los días trabajados (status = WORKED) en el rango
-- [ ] base_pay = daily_wage × días trabajados
+- [ ] Obtiene el wage vigente (hourly_rate) en el periodo
+- [ ] Cuenta los días trabajados (status = WORKED) en el rango y sus horas programadas
+- [ ] base_pay = hourly_rate × total de horas programadas de días trabajados
 - [ ] Tests: semana completa (6 días), semana con faltas, semana con descansos
 
 ---
