@@ -17,11 +17,12 @@ class WageHistoryFactory extends Factory
         $effectiveFrom = fake()->dateTimeBetween('-2 years', '-1 month');
 
         return [
-            'public_id'      => (string) Str::ulid(),
-            'employee_id'    => Employee::factory(),
-            'daily_wage'     => fake()->randomFloat(2, 200, 3000),
-            'effective_from' => $effectiveFrom,
-            'effective_to'   => null, // open-ended (current)
+            'public_id'               => (string) Str::ulid(),
+            'employee_id'             => Employee::factory(),
+            'hourly_rate'             => fake()->randomFloat(2, 50, 500),
+            'weekly_scheduled_hours'  => fake()->randomElement([20.00, 24.00, 30.00, 38.00, 44.00, 48.00]),
+            'effective_from'          => $effectiveFrom,
+            'effective_to'            => null, // open-ended (current)
         ];
     }
 
@@ -51,11 +52,19 @@ class WageHistoryFactory extends Factory
     }
 
     /**
-     * Apply a specific daily wage amount.
+     * Apply a specific hourly rate.
      */
-    public function withDailyWage(float $amount): static
+    public function withHourlyRate(float $amount): static
     {
-        return $this->state(fn () => ['daily_wage' => $amount]);
+        return $this->state(fn () => ['hourly_rate' => $amount]);
+    }
+
+    /**
+     * Apply a specific weekly scheduled hours value.
+     */
+    public function withWeeklyScheduledHours(float $hours): static
+    {
+        return $this->state(fn () => ['weekly_scheduled_hours' => $hours]);
     }
 
     /**

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use DateTimeInterface;
 
 class WageHistory extends Model
 {
@@ -15,28 +16,30 @@ class WageHistory extends Model
 
     /**
      * Validation rules shared between CreateWageRequest and UpdateWageRequest.
-     * daily_wage must be strictly positive — zero or negative wages are invalid.
+     * hourly_rate must be strictly positive — zero or negative rates are invalid.
+     * weekly_scheduled_hours must be strictly positive.
      */
     const RULES = [
-        'daily_wage'     => ['required', 'numeric', 'gt:0'],
-        'effective_from' => ['required', 'date'],
-        'effective_to'   => ['nullable', 'date', 'after_or_equal:effective_from'],
+        'hourly_rate'              => ['required', 'numeric', 'gt:0'],
+        'weekly_scheduled_hours'   => ['required', 'numeric', 'gt:0'],
+        'effective_from'           => ['required', 'date'],
+        'effective_to'             => ['nullable', 'date', 'after_or_equal:effective_from'],
     ];
 
     protected $fillable = [
         'employee_id',
-        'daily_wage',
+        'hourly_rate',
+        'weekly_scheduled_hours',
         'effective_from',
         'effective_to',
     ];
 
     protected $casts = [
-        'daily_wage'     => 'decimal:2',
-        'effective_from' => 'date',
-        'effective_to'   => 'date',
+        'hourly_rate'              => 'decimal:2',
+        'weekly_scheduled_hours'   => 'decimal:2',
+        'effective_from'           => 'date',
+        'effective_to'             => 'date',
     ];
-
-    // ── Relationships ────────────────────────────────────────────────────────────
 
     public function employee(): BelongsTo
     {
@@ -58,7 +61,7 @@ class WageHistory extends Model
      * (or equivalent) to avoid returning wage records for deleted employees.
      * This mirrors the same pattern used by EmploymentPeriod::scopeEffective().
      */
-    public function scopeEffective(Builder $query, \DateTimeInterface|string $date): Builder
+    public function scopeEffective(Builder $query, DateTimeInterface|string $date): Builder
     {
         return $query
             ->where('effective_from', '<=', $date)
@@ -73,13 +76,11 @@ class WageHistory extends Model
     /**
      * Calculate the per-minute rate for this wage.
      *
-     * Based on an 8-hour workday (8h × 60min = 480 minutes).
-     * Example: $1 000/day → $2.0833.../min
-     *
-     * @return float
+     * Derived directly from the hourly rate: hourly_rate / 60.
+     * Example: $125/hr → $2.0833.../min
      */
     public function minuteRate(): float
     {
-        return (float) $this->daily_wage / 480;
+        return (float) $this->hourly_rate / 60;
     }
 }

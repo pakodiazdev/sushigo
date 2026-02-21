@@ -93,7 +93,8 @@ erDiagram
     WageHistory {
         bigint id PK
         bigint employee_id FK
-        decimal daily_wage "10,2"
+        decimal hourly_rate "10,2"
+        decimal weekly_scheduled_hours "5,2"
         date effective_from
         date effective_to "nullable = vigente"
         timestamp created_at
@@ -483,7 +484,8 @@ erDiagram
 |-------|------|------|---------|-------------|-----|
 | `id` | bigint | NO | auto | PK | — |
 | `employee_id` | bigint FK | NO | — | Empleado. | RF-22 |
-| `daily_wage` | decimal(10,2) | NO | — | Sueldo diario vigente. | RF-22 |
+| `hourly_rate` | decimal(10,2) | NO | — | Tarifa por hora (unidad atómica de compensación). | RF-22 |
+| `weekly_scheduled_hours` | decimal(5,2) | NO | — | Horas semanales contratadas (snapshot de la jornada vigente). | RF-22, RF-10 |
 | `effective_from` | date | NO | — | Inicio de vigencia. | RF-22 |
 | `effective_to` | date | SÍ | NULL | Fin de vigencia. NULL = vigente. | RF-22 |
 | `created_at` | timestamp | NO | now | — | — |
@@ -922,7 +924,8 @@ classDiagram
     class WageHistory {
         +int id
         +int employee_id
-        +decimal daily_wage
+        +decimal hourly_rate
+        +decimal weekly_scheduled_hours
         +date effective_from
         +date effective_to
         --
@@ -1474,7 +1477,8 @@ sequenceDiagram
 | Tardanza en segundos ≥ 0 | `entry_late_seconds >= 0` y `lunch_late_seconds >= 0` | RF-13 |
 | Duración de permiso > 0 | `partial_leaves.duration_minutes > 0` | RF-25a |
 | Pago acordado > 0 | `negotiated_extra_days.agreed_pay > 0` | RF-39 |
-| Sueldo diario > 0 | `wage_histories.daily_wage > 0` | RF-22 |
+| Tarifa por hora > 0 | `wage_histories.hourly_rate > 0` | RF-22 |
+| Horas semanales > 0 | `wage_histories.weekly_scheduled_hours > 0` | RF-22, RF-10 |
 | Bono semanal ≥ 0 | `punctuality_bonus_groups.weekly_bonus_amount >= 0` | RF-33 |
 | Porcentaje de bono 0–100 | `punctuality_ranges.bonus_percentage BETWEEN 0 AND 100` | RF-32 |
 | Porcentaje forzado 0–100 | `punctuality_exceptions.forced_percentage BETWEEN 0 AND 100` | RF-37 |

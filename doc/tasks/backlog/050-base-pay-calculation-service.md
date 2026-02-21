@@ -3,20 +3,20 @@
 ## 📖 Story
 
 **English:**
-As the system, I need to calculate an employee's base pay for a period (daily wage × days worked).
+As the system, I need to calculate an employee's base pay for a period (hourly_rate × scheduled hours of worked days).
 
 **Español:**
-Como sistema, necesito calcular el sueldo base de un empleado para un periodo (sueldo diario × días trabajados).
+Como sistema, necesito calcular el sueldo base de un empleado para un periodo (hourly_rate × horas programadas de días trabajados).
 
 ---
 
 ## ✅ Technical Tasks
 
 - [ ] 🔧 Create `PayrollCalculator::calculateBasePay(employee, periodStart, periodEnd)`: decimal
-- [ ] 🔧 Get effective wage for the period
-- [ ] 🔧 Count attendances with day_status = WORKED in the range
-- [ ] 🔧 base_pay = daily_wage × days_worked
-- [ ] 🧪 Tests: 6-day week ($1000 × 6 = $6000), week with 1 absence ($1000 × 5 = $5000), week with day offs
+- [ ] 🔧 Get effective wage (hourly_rate) for the period
+- [ ] 🔧 Count attendances with day_status = WORKED in the range and get their scheduled hours
+- [ ] 🔧 base_pay = hourly_rate × total_scheduled_hours_of_worked_days
+- [ ] 🧪 Tests: 6-day week (38h × $125 = $4,750), week with 1 absence, week with day offs
 
 ---
 

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -14,7 +15,8 @@ return new class extends Migration
             $table->foreignId('employee_id')
                 ->constrained('employees')
                 ->restrictOnDelete();
-            $table->decimal('daily_wage', 10, 2)->comment('Daily wage in MXN. Must be > 0.');
+            $table->decimal('hourly_rate', 10, 2)->comment('Hourly rate in MXN. Must be > 0. Atomic unit of compensation.');
+            $table->decimal('weekly_scheduled_hours', 5, 2)->comment('Contracted weekly hours (snapshot of schedule). Must be > 0.');
             $table->date('effective_from')->comment('Date from which this wage applies (inclusive).');
             $table->date('effective_to')->nullable()->comment('Last date this wage applies (inclusive). NULL = currently active.');
             $table->timestamps();
@@ -22,16 +24,14 @@ return new class extends Migration
 
             // Optimise effective() scope: most queries filter by employee + date range
             $table->index(['employee_id', 'effective_from', 'effective_to']);
-
-            // Ensure effective_to is never before effective_from at the DB level
-            $table->check('effective_to IS NULL OR effective_to >= effective_from');
-
-            // Prevent two open-ended (currently active) wages for the same employee.
-            // Uses a partial unique index (PostgreSQL/SQLite): only live rows where
-            // effective_to IS NULL are considered; soft-deleted rows (deleted_at IS NOT NULL)
-            // are excluded so a replacement active wage can be created after a soft-delete.
-            $table->unique(['employee_id'])->whereNull('effective_to')->whereNull('deleted_at');
         });
+
+        // Check constraint: effective_to must not be before effective_from
+        DB::statement('ALTER TABLE wage_histories ADD CONSTRAINT wage_histories_effective_range_check CHECK (effective_to IS NULL OR effective_to >= effective_from)');
+
+        // Partial unique index (PostgreSQL): only one active (open-ended) wage per employee.
+        // Soft-deleted rows (deleted_at IS NOT NULL) are excluded so a replacement can be created.
+        DB::statement('CREATE UNIQUE INDEX wage_histories_employee_active_unique ON wage_histories (employee_id) WHERE effective_to IS NULL AND deleted_at IS NULL');
     }
 
     public function down(): void

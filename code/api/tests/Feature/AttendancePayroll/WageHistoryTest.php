@@ -36,14 +36,14 @@ class WageHistoryTest extends TestCase
         $employee = Employee::factory()->create();
 
         WageHistory::factory()->effectiveBetween('2026-01-01', '2026-01-31')->create([
-            'employee_id' => $employee->id,
-            'daily_wage'  => 500.00,
+            'employee_id'  => $employee->id,
+            'hourly_rate'  => 62.50,
         ]);
 
         $result = WageHistory::effective('2026-01-15')->where('employee_id', $employee->id)->get();
 
         $this->assertCount(1, $result);
-        $this->assertEquals('500.00', $result->first()->daily_wage);
+        $this->assertEquals('62.50', $result->first()->hourly_rate);
     }
 
     #[Test]
@@ -52,8 +52,8 @@ class WageHistoryTest extends TestCase
         $employee = Employee::factory()->create();
 
         WageHistory::factory()->effectiveBetween('2026-01-01', null)->create([
-            'employee_id' => $employee->id,
-            'daily_wage'  => 800.00,
+            'employee_id'  => $employee->id,
+            'hourly_rate'  => 100.00,
         ]);
 
         // Still active today and in the future
@@ -96,8 +96,8 @@ class WageHistoryTest extends TestCase
         $employee = Employee::factory()->create();
 
         WageHistory::factory()->effectiveBetween('2026-01-01', '2026-01-31')->create([
-            'employee_id' => $employee->id,
-            'daily_wage'  => 1000.00,
+            'employee_id'  => $employee->id,
+            'hourly_rate'  => 125.00,
         ]);
 
         // Both boundary dates must be inclusive
@@ -112,20 +112,20 @@ class WageHistoryTest extends TestCase
 
         // Closed old wage
         WageHistory::factory()->effectiveBetween('2025-01-01', '2025-12-31')->create([
-            'employee_id' => $employee->id,
-            'daily_wage'  => 600.00,
+            'employee_id'  => $employee->id,
+            'hourly_rate'  => 75.00,
         ]);
 
         // Current active wage
         WageHistory::factory()->effectiveBetween('2026-01-01', null)->create([
-            'employee_id' => $employee->id,
-            'daily_wage'  => 900.00,
+            'employee_id'  => $employee->id,
+            'hourly_rate'  => 112.50,
         ]);
 
         $result = WageHistory::effective('2026-02-15')->where('employee_id', $employee->id)->get();
 
         $this->assertCount(1, $result);
-        $this->assertEquals('900.00', $result->first()->daily_wage);
+        $this->assertEquals('112.50', $result->first()->hourly_rate);
     }
 
     #[Test]
@@ -139,13 +139,13 @@ class WageHistoryTest extends TestCase
         $employee = Employee::factory()->create();
 
         WageHistory::factory()->effectiveBetween('2025-01-01', '2025-06-30')->create([
-            'employee_id' => $employee->id,
-            'daily_wage'  => 700.00,
+            'employee_id'  => $employee->id,
+            'hourly_rate'  => 87.50,
         ]);
 
         WageHistory::factory()->effectiveBetween('2025-04-01', '2025-09-30')->create([
-            'employee_id' => $employee->id,
-            'daily_wage'  => 800.00,
+            'employee_id'  => $employee->id,
+            'hourly_rate'  => 100.00,
         ]);
 
         // Both periods cover 2025-05-15, so the scope returns both rows
@@ -157,19 +157,19 @@ class WageHistoryTest extends TestCase
     // ── minuteRate() ──────────────────────────────────────────────────────────
 
     #[Test]
-    public function minute_rate_calculates_daily_wage_divided_by_480(): void
+    public function minute_rate_calculates_hourly_rate_divided_by_60(): void
     {
-        $wage = WageHistory::factory()->withDailyWage(1000.00)->make();
+        $wage = WageHistory::factory()->withHourlyRate(125.00)->make();
 
-        // 1000 / 480 ≈ 2.08333...
+        // 125 / 60 ≈ 2.08333...
         $this->assertEqualsWithDelta(2.08333, $wage->minuteRate(), 0.0001);
     }
 
     #[Test]
     public function minute_rate_matches_acceptance_criteria_example(): void
     {
-        // AC: $1 000/day → $2.083.../min
-        $wage = WageHistory::factory()->withDailyWage(1000.00)->make();
+        // AC: $125/hr → $2.083.../min
+        $wage = WageHistory::factory()->withHourlyRate(125.00)->make();
 
         $rate = $wage->minuteRate();
 
@@ -178,11 +178,11 @@ class WageHistoryTest extends TestCase
     }
 
     #[Test]
-    public function minute_rate_scales_correctly_with_different_wages(): void
+    public function minute_rate_scales_correctly_with_different_rates(): void
     {
-        $this->assertEqualsWithDelta(1000 / 480, WageHistory::factory()->withDailyWage(1000)->make()->minuteRate(), 0.000001);
-        $this->assertEqualsWithDelta(500 / 480,  WageHistory::factory()->withDailyWage(500)->make()->minuteRate(),  0.000001);
-        $this->assertEqualsWithDelta(2000 / 480, WageHistory::factory()->withDailyWage(2000)->make()->minuteRate(), 0.000001);
+        $this->assertEqualsWithDelta(125 / 60,  WageHistory::factory()->withHourlyRate(125)->make()->minuteRate(),  0.000001);
+        $this->assertEqualsWithDelta(62.5 / 60, WageHistory::factory()->withHourlyRate(62.5)->make()->minuteRate(), 0.000001);
+        $this->assertEqualsWithDelta(250 / 60,  WageHistory::factory()->withHourlyRate(250)->make()->minuteRate(),  0.000001);
     }
 
     // ── Relationships ─────────────────────────────────────────────────────────
@@ -232,14 +232,14 @@ class WageHistoryTest extends TestCase
     }
 
     #[Test]
-    public function daily_wage_is_cast_to_decimal_string(): void
+    public function hourly_rate_is_cast_to_decimal_string(): void
     {
-        $wage = WageHistory::factory()->withDailyWage(1250.50)->create();
+        $wage = WageHistory::factory()->withHourlyRate(156.31)->create();
 
         $wage->refresh();
 
         // decimal:2 cast returns a string representation of the decimal
-        $this->assertEquals('1250.50', $wage->daily_wage);
+        $this->assertEquals('156.31', $wage->hourly_rate);
     }
 
     #[Test]
@@ -268,14 +268,25 @@ class WageHistoryTest extends TestCase
     // ── Validation rules constant ─────────────────────────────────────────────
 
     #[Test]
-    public function rules_constant_requires_daily_wage_to_be_greater_than_zero(): void
+    public function rules_constant_requires_hourly_rate_to_be_greater_than_zero(): void
     {
         $rules = WageHistory::RULES;
 
-        $this->assertArrayHasKey('daily_wage', $rules);
-        $this->assertContains('gt:0', $rules['daily_wage']);
-        $this->assertContains('numeric', $rules['daily_wage']);
-        $this->assertContains('required', $rules['daily_wage']);
+        $this->assertArrayHasKey('hourly_rate', $rules);
+        $this->assertContains('gt:0', $rules['hourly_rate']);
+        $this->assertContains('numeric', $rules['hourly_rate']);
+        $this->assertContains('required', $rules['hourly_rate']);
+    }
+
+    #[Test]
+    public function rules_constant_requires_weekly_scheduled_hours_to_be_greater_than_zero(): void
+    {
+        $rules = WageHistory::RULES;
+
+        $this->assertArrayHasKey('weekly_scheduled_hours', $rules);
+        $this->assertContains('gt:0', $rules['weekly_scheduled_hours']);
+        $this->assertContains('numeric', $rules['weekly_scheduled_hours']);
+        $this->assertContains('required', $rules['weekly_scheduled_hours']);
     }
 
     #[Test]
