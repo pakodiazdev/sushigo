@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\V1\Employees\ShowEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
 use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
+use App\Http\Controllers\Api\V1\Employees\CreateWageController;
+use App\Http\Controllers\Api\V1\Employees\ListWagesController;
 use App\Http\Controllers\Api\V1\Items\CreateItemController;
 use App\Http\Controllers\Api\V1\Items\CreateItemVariantController;
 use App\Http\Controllers\Api\V1\Items\DeleteItemController;
@@ -198,6 +200,9 @@ Route::prefix('v1')->group(function () {
         Route::patch('/{employee}/toggle-active', ToggleEmployeeActiveController::class)->name('employees.toggle-active')->middleware('permission:employees.update');
         Route::patch('/{employee}/deactivate', DeactivateEmployeeController::class)->name('employees.deactivate')->middleware('permission:employees.update');
         Route::patch('/{employee}/rehire', RehireEmployeeController::class)->name('employees.rehire')->middleware('permission:employees.update');
+        // Wage history endpoints
+        Route::get('/{employee}/wages', ListWagesController::class)->name('employees.wages.list')->middleware('permission:employees.view');
+        Route::post('/{employee}/wages', CreateWageController::class)->name('employees.wages.create')->middleware('permission:employees.update');
     });
 
     // Cash Adjustments Module (All Protected)
