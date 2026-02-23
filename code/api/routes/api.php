@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
 use App\Http\Controllers\Api\V1\Employees\CreateWageController;
 use App\Http\Controllers\Api\V1\Employees\ListWagesController;
+use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Items\CreateItemController;
 use App\Http\Controllers\Api\V1\Items\CreateItemVariantController;
 use App\Http\Controllers\Api\V1\Items\DeleteItemController;
@@ -203,6 +204,11 @@ Route::prefix('v1')->group(function () {
         // Wage history endpoints
         Route::get('/{employee}/wages', ListWagesController::class)->name('employees.wages.list')->middleware('permission:employees.view');
         Route::post('/{employee}/wages', CreateWageController::class)->name('employees.wages.create')->middleware('permission:employees.update');
+    });
+
+    // Attendances Module (All Protected)
+    Route::middleware('auth:api')->prefix('attendances')->name('attendances.')->group(function () {
+        Route::post('check-in', RegisterCheckInController::class)->name('check-in');
     });
 
     // Cash Adjustments Module (All Protected)
