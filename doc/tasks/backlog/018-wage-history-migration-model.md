@@ -12,20 +12,22 @@ Como desarrollador, necesito crear la migración y modelo `WageHistory`, para re
 
 ## ✅ Technical Tasks
 
-- [ ] 📂 Create migration `create_wage_histories_table` — id, employee_id (FK), hourly_rate (decimal 10,2), weekly_scheduled_hours (decimal 5,2), effective_from (date), effective_to (date nullable), timestamps
-- [ ] 🔧 Create `WageHistory` model — $casts (hourly_rate → decimal:2, weekly_scheduled_hours → decimal:2), relationship: belongsTo(Employee)
-- [ ] 🔧 Add scope effective(date) — effective_from <= date AND (effective_to IS NULL OR effective_to >= date)
-- [ ] 🔧 Add method minuteRate(): decimal — hourly_rate / 60
-- [ ] 🔧 Add validation: hourly_rate > 0, weekly_scheduled_hours > 0
-- [ ] 🏭 Create WageHistoryFactory
-- [ ] 🧪 Unit test: effective scope, minuteRate calculation, positive hourly_rate constraint
+- [x] 📂 Create migration `create_wage_histories_table` — id, employee_id (FK), hourly_rate (decimal 10,2), weekly_scheduled_hours (decimal 5,2), effective_from (date), effective_to (date nullable), timestamps
+- [x] 🔧 Create `WageHistory` model — $casts (hourly_rate → decimal:2, weekly_scheduled_hours → decimal:2), relationship: belongsTo(Employee)
+- [x] 🔧 Add scope effective(date) — effective_from <= date AND (effective_to IS NULL OR effective_to >= date)
+- [x] 🔧 Add method minuteRate(): decimal — hourly_rate / 60
+- [x] 🔧 Add validation: hourly_rate > 0, weekly_scheduled_hours > 0
+- [x] 🏭 Create WageHistoryFactory
+- [x] 🧪 Unit test: effective scope, minuteRate calculation, positive hourly_rate constraint
+- [x] 🔧 Auto-close previous wage on create (CreateWageAction with transaction + lock)
+- [x] 🌐 API: POST /employees/{employee}/wages, GET /employees/{employee}/wages
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Scope returns correct wage for a given date
-- [ ] minuteRate calculates correctly ($125/hr → $2.083/min)
+- [x] Scope returns correct wage for a given date
+- [x] minuteRate calculates correctly ($125/hr → $2.083/min)
 
 ---
 
