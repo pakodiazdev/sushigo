@@ -17,6 +17,7 @@ Como desarrollador, necesito crear la migración y modelo `AttendanceAuditLog`, 
 - [x] 🔧 Create `AttendanceAuditLog` model — polymorphic relationship (auditable), belongsTo(User)
 - [x] 🔧 Add INDEX(auditable_type, auditable_id)
 - [x] 🧪 Unit test: create log entry, polymorphic lookup
+- [x] 🌱 Development seeder: `AttendanceAuditLogSeeder` — 5 realistic scenarios (check-in correction, check-out correction, status change ABSENCE→LEAVE, missing attendance CREATE, duplicate DELETE)
 
 ---
 
