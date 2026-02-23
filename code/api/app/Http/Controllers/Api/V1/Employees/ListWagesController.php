@@ -10,10 +10,8 @@ class ListWagesController extends Controller
 {
     public function __invoke(Employee $employee): ResponseEntity
     {
-        $wages = $employee->wageHistories()->orderByDesc('effective_from')->get()->map(function ($w) {
-            return $w->toArray();
-        })->all();
+        $wages = $employee->wageHistories()->orderByDesc('effective_from')->get()->toArray();
 
-        return new ResponseEntity(data: ['wages' => $wages]);
+        return new ResponseEntity(data: $wages);
     }
 }

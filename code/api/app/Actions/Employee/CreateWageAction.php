@@ -12,9 +12,7 @@ class CreateWageAction
     /**
      * Create a new WageHistory for the given employee, closing any open wage.
      *
-     * @param Employee $employee
-     * @param array $data
-     * @return WageHistory
+     * @param array $data<string, mixed>
      */
     public function __invoke(Employee $employee, array $data): WageHistory
     {
@@ -27,7 +25,12 @@ class CreateWageAction
             $newFrom = Carbon::parse($data['effective_from'])->startOfDay();
 
             foreach ($open as $o) {
-                $o->update(['effective_to' => $newFrom->copy()->subDay()->toDateString()]);
+                $existingFrom = Carbon::parse($o->effective_from)->startOfDay();
+                if ($existingFrom->equalTo($newFrom) || $newFrom->lessThan($existingFrom)) {
+                    $o->delete();
+                } else {
+                    $o->update(['effective_to' => $newFrom->copy()->subDay()->toDateString()]);
+                }
             }
 
             $data['employee_id'] = $employee->id;
