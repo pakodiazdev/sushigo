@@ -16,8 +16,9 @@ return new class extends Migration
             $table->json('old_values')->nullable()->comment('Snapshot before the change. NULL for CREATE.');
             $table->json('new_values')->nullable()->comment('Snapshot after the change. NULL for DELETE.');
             $table->foreignId('user_id')
+                ->nullable()
                 ->constrained('users')
-                ->restrictOnDelete();
+                ->nullOnDelete();
             $table->text('reason')->nullable()->comment('Optional human explanation for the change.');
             $table->timestamp('created_at')->useCurrent();
 
