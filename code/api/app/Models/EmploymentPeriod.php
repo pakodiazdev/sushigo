@@ -6,6 +6,7 @@ use App\Support\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EmploymentPeriod extends Model
@@ -37,6 +38,15 @@ class EmploymentPeriod extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * All schedule versions associated with this employment period.
+     * Use the effective() scope to get the active one for a given date.
+     */
+    public function employeeSchedules(): HasMany
+    {
+        return $this->hasMany(EmployeeSchedule::class)->orderBy('effective_from', 'desc');
     }
 
     public function scopeActive($query)

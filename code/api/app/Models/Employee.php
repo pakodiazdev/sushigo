@@ -93,6 +93,16 @@ class Employee extends Model
         return $this->hasMany(Attendance::class)->orderBy('date', 'desc');
     }
 
+    /**
+     * All schedules for this employee, via their employment periods.
+     * For the active schedule use:
+     *   $employee->load('employmentPeriods.employeeSchedules')
+     */
+    public function employeeSchedules(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(EmployeeSchedule::class, EmploymentPeriod::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
