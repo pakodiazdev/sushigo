@@ -3,6 +3,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Loader2, Edit, UserMinus, UserPlus, Power, PowerOff } from 'lucide-react'
 import type { Employee } from '@/types/employee'
 import { EmploymentPeriodsSection } from './employment-periods-section'
+import { WageHistorySection } from './wage-history-section'
 import { EmployeeInfoHeader } from './employee-info-header'
 import { DeactivateForm } from './deactivate-form'
 import { RehireForm } from './rehire-form'
@@ -69,6 +70,11 @@ export function EmployeeDetailView({
 
       {/* Employment history */}
       <EmploymentPeriodsSection periods={employee.employment_periods || []} />
+
+      <hr className="border-border" />
+
+      {/* Wage history */}
+      <WageHistorySection employeeId={employee.id} />
 
       <hr className="border-border" />
 

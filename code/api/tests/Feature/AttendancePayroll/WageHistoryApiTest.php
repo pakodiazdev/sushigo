@@ -82,7 +82,7 @@ class WageHistoryApiTest extends TestCase
 
         $response->assertStatus(200);
 
-        $wages = $response->json('data.wages');
+        $wages = $response->json('data');
         $this->assertCount(2, $wages);
         $this->assertStringStartsWith('2026-01-01', $wages[0]['effective_from']);
     }

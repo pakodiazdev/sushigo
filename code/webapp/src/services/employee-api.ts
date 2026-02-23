@@ -9,6 +9,7 @@ import type {
   PaginatedResponse,
   EntityResponse,
 } from '@/types/employee'
+import type { WageHistory, CreateWageData } from '@/types/wage-history'
 
 const api = apiClient
 
@@ -43,4 +44,12 @@ export const employeeApi = {
 
   assignableRoles: () =>
     api.get<{ status: number; data: string[] }>('/employees/assignable-roles'),
+
+  // ── Wage History ───────────────────────────────────────────────────────────
+
+  listWages: (employeeId: string) =>
+    api.get<{ status: number; data: WageHistory[] }>(`/employees/${employeeId}/wages`),
+
+  createWage: (employeeId: string, data: CreateWageData) =>
+    api.post<EntityResponse<WageHistory>>(`/employees/${employeeId}/wages`, data),
 }

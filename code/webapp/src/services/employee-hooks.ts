@@ -8,6 +8,7 @@ import type {
   DeactivateEmployeeData,
   RehireEmployeeData,
 } from "@/types/employee";
+import type { CreateWageData } from "@/types/wage-history";
 
 // ============================================================================
 // Employees Hooks
@@ -168,7 +169,45 @@ export function useRehireEmployee() {
     onError: (error: any) => {
       showError(
         error.response?.data?.message ||
-          "No se pudo registrar el reingreso del empleado.",
+        "No se pudo registrar el reingreso del empleado.",
+        "Error",
+      );
+    },
+  });
+}
+
+// ============================================================================
+// Wage History Hooks
+// ============================================================================
+
+export function useWageHistory(employeeId: string) {
+  return useQuery({
+    queryKey: ["employees", employeeId, "wages"],
+    queryFn: async () => {
+      const response = await employeeApi.listWages(employeeId);
+      return response.data.data;
+    },
+    enabled: !!employeeId,
+  });
+}
+
+export function useCreateWage() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+
+  return useMutation({
+    mutationFn: ({ employeeId, data }: { employeeId: string; data: CreateWageData }) =>
+      employeeApi.createWage(employeeId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["employees", variables.employeeId, "wages"] });
+      showSuccess(
+        "El salario ha sido registrado exitosamente.",
+        "Salario registrado",
+      );
+    },
+    onError: (error: any) => {
+      showError(
+        error.response?.data?.message || "No se pudo registrar el salario.",
         "Error",
       );
     },

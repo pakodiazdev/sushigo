@@ -25,7 +25,7 @@ class ResponseEntity implements Responsable
     {
         return response()->json([
             'status' => $this->status,
-            'data'   => (object) $this->data,
+            'data'   => array_is_list($this->data) ? $this->data : (object) $this->data,
             'meta'   => empty($this->meta) ? null : (object) $this->meta,
         ], $this->status);
     }

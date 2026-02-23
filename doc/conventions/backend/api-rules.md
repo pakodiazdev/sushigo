@@ -10,6 +10,7 @@ Rules and conventions established for the sushigo-api project.
 - [Seeders](#seeders)
 - [Swagger/OpenAPI](#swaggeropenapi)
 - [Configuration](#configuration)
+- [API Response Standards](#api-response-standards)
 
 ---
 
@@ -602,7 +603,72 @@ class RoleSeeder extends LockedSeeder
 
 ---
 
-## 📚 References
+## � API Response Standards
+
+### ResponseEntity
+
+All API endpoints must use `ResponseEntity` for consistent response structure.
+
+**Response format:**
+```json
+{
+  "status": 200,
+  "data": { ... },
+  "meta": null
+}
+```
+
+### Returning Single Entities
+
+For single entity responses, pass the model as an associative array:
+
+```php
+// ✅ GOOD - Single entity
+return new ResponseEntity(data: $employee->toArray());
+
+// Response:
+// { "status": 200, "data": { "id": "...", "name": "..." }, "meta": null }
+```
+
+### Returning Lists/Collections
+
+**⚠️ IMPORTANT: Always wrap arrays in an associative key**
+
+`ResponseEntity` converts `data` to `(object)`, which breaks indexed arrays. For list endpoints, wrap the array in a named key:
+
+```php
+// ❌ BAD - This breaks the array structure
+$wages = $employee->wageHistories()->get()->toArray();
+return new ResponseEntity(data: $wages);
+// Result: { "data": { "0": {...}, "1": {...} } } ← Object, not array!
+
+// ✅ GOOD - Wrap in a named key
+$wages = $employee->wageHistories()->get()->toArray();
+return new ResponseEntity(data: ['wages' => $wages]);
+// Result: { "data": { "wages": [{...}, {...}] } } ← Correct array
+```
+
+**Frontend must access the wrapped key:**
+```typescript
+// Frontend hook
+const response = await employeeApi.listWages(employeeId);
+return response.data.data.wages; // Access the wrapped array
+```
+
+### Standard List Response Keys
+
+Use plural, snake_case keys for lists:
+
+| Entity    | Key         |
+| --------- | ----------- |
+| Employees | `employees` |
+| Wages     | `wages`     |
+| Periods   | `periods`   |
+| Items     | `items`     |
+
+---
+
+## �📚 References
 
 - Laravel Documentation: https://laravel.com/docs
 - PSR-12 Coding Standard: https://www.php-fig.org/psr/psr-12/
