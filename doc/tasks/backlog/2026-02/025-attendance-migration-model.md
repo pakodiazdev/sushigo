@@ -12,22 +12,22 @@ Como desarrollador, necesito crear la migración y modelo `Attendance`, para alm
 
 ## ✅ Technical Tasks
 
-- [ ] 📂 Create migration `create_attendances_table` — id, employee_id (FK), date, check_in (datetime nullable), check_out (datetime nullable), lunch_start (datetime nullable), lunch_end (datetime nullable), entry_late_seconds (int default 0), lunch_late_seconds (int default 0), net_worked_minutes (int nullable), overtime_minutes (int default 0), overtime_authorized (bool default false), overtime_authorized_by (FK nullable → users), overtime_authorized_at (datetime nullable), day_status (enum), confirmed_by (FK nullable → users), meta (json nullable), timestamps
-- [ ] 🔧 UNIQUE(employee_id, date), INDEX(date), INDEX(day_status)
-- [ ] 🔧 Create `DayStatus` enum: WORKED, DAY_OFF, LEAVE, VACATION, HOLIDAY, ABSENCE, EXTRA
-- [ ] 🔧 Create `Attendance` model — $casts, relationships: belongsTo(Employee), hasMany(PartialLeave), hasMany(OvertimeBankMovement)
-- [ ] 🔧 Add scopes: byDate(date), byStatus(status), forEmployee(employeeId)
-- [ ] 🔧 Add helper methods: isLateDeductible() (entry_late_seconds > 1800), entryLateMinutes(), lunchLateMinutes()
-- [ ] 🏭 Create AttendanceFactory
-- [ ] 🧪 Unit tests: unique constraint, isLateDeductible at boundary (1800s vs 1801s), status enum
+- [x] 📂 Create migration `create_attendances_table` — id, employee_id (FK), date, check_in (datetime nullable), check_out (datetime nullable), lunch_start (datetime nullable), lunch_end (datetime nullable), entry_late_seconds (int default 0), lunch_late_seconds (int default 0), net_worked_minutes (int nullable), overtime_minutes (int default 0), overtime_authorized (bool default false), overtime_authorized_by (FK nullable → users), overtime_authorized_at (datetime nullable), day_status (enum), confirmed_by (FK nullable → users), meta (json nullable), timestamps
+- [x] 🔧 UNIQUE(employee_id, date), INDEX(date), INDEX(day_status)
+- [x] 🔧 Create `DayStatus` enum: WORKED, DAY_OFF, LEAVE, VACATION, HOLIDAY, ABSENCE, EXTRA
+- [x] 🔧 Create `Attendance` model — $casts, relationships: belongsTo(Employee), hasMany(PartialLeave), hasMany(OvertimeBankMovement)
+- [x] 🔧 Add scopes: byDate(date), byStatus(status), forEmployee(employeeId)
+- [x] 🔧 Add helper methods: isEntryLateDeductible(), isLunchLateDeductible(), entryLateMinutes(), lunchLateMinutes()
+- [x] 🏭 Create AttendanceFactory (states: worked, dayOff, absence, leave, vacation, holiday, extra, late, withOvertime, onDate)
+- [x] 🧪 Unit tests: unique constraint, isLateDeductible at boundary (1800s vs 1801s), status enum — 23 tests ✅
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] UNIQUE(employee_id, date) enforced
-- [ ] isLateDeductible returns false at 1800s, true at 1801s
-- [ ] DayStatus enum restricts values
+- [x] UNIQUE(employee_id, date) enforced
+- [x] isLateDeductible returns false at 1800s, true at 1801s
+- [x] DayStatus enum restricts values
 
 ---
 
