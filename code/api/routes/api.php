@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchStartController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
+use App\Http\Controllers\Api\V1\Attendances\TodayAttendanceController;
 use App\Http\Controllers\Api\V1\Items\CreateItemController;
 use App\Http\Controllers\Api\V1\Items\CreateItemVariantController;
 use App\Http\Controllers\Api\V1\Items\DeleteItemController;
@@ -211,7 +212,10 @@ Route::prefix('v1')->group(function () {
 
     // Attendances Module (All Protected)
     Route::middleware('auth:api')->prefix('attendances')->name('attendances.')->group(function () {
+        // Static routes first (must precede {id}/... wildcard routes)
+        Route::get('today', TodayAttendanceController::class)->name('today');
         Route::post('check-in', RegisterCheckInController::class)->name('check-in');
+        // Per-attendance actions (identified by public_id)
         Route::patch('{id}/lunch-start', RegisterLunchStartController::class)->name('lunch-start');
         Route::patch('{id}/lunch-return', RegisterLunchReturnController::class)->name('lunch-return');
         Route::patch('{id}/check-out', RegisterCheckOutController::class)->name('check-out');
