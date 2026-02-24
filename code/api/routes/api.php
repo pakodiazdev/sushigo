@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\Employees\CreateWageController;
 use App\Http\Controllers\Api\V1\Employees\ListWagesController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchStartController;
+use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
 use App\Http\Controllers\Api\V1\Items\CreateItemController;
 use App\Http\Controllers\Api\V1\Items\CreateItemVariantController;
 use App\Http\Controllers\Api\V1\Items\DeleteItemController;
@@ -211,6 +212,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('attendances')->name('attendances.')->group(function () {
         Route::post('check-in', RegisterCheckInController::class)->name('check-in');
         Route::patch('{id}/lunch-start', RegisterLunchStartController::class)->name('lunch-start');
+        Route::patch('{id}/lunch-return', RegisterLunchReturnController::class)->name('lunch-return');
     });
 
     // Cash Adjustments Module (All Protected)
