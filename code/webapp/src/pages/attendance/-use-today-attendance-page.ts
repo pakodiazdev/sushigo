@@ -1,11 +1,12 @@
+import { useState } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import { useTodayAttendance } from '@/services/attendance-hooks'
+import { useTodayAttendance, useCheckIn } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
-import type { TodayAttendanceRow, AttendancePhase } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
 
 // ============================================================================
 // Hook: useTodayAttendancePage
-// Owns all data-fetching, derived state, and summary metrics for the page.
+// Owns all data-fetching, derived state, summary metrics, and check-in action.
 // ============================================================================
 
 export interface AttendanceSummary {
@@ -31,7 +32,18 @@ function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   return { total: rows.length, pending, checkedIn, done, withOvertime }
 }
 
+/** Format current time as "HH:mm" for display in the confirm dialog */
+function currentTimeLabel(): string {
+  return new Date().toTimeString().slice(0, 5)
+}
+
+/** ISO datetime string truncated to seconds: "2026-02-24T09:05:30" */
+function nowIso(): string {
+  return new Date().toISOString().slice(0, 19)
+}
+
 export interface UseTodayAttendancePageResult {
+  // Data
   rows: TodayAttendanceRow[]
   summary: AttendanceSummary
   isLoading: boolean
@@ -39,6 +51,13 @@ export interface UseTodayAttendancePageResult {
   branchName: string | null
   hasBranch: boolean
   getPhase: (row: TodayAttendanceRow) => AttendancePhase
+  // Check-in action
+  pendingCheckInEmployee: TodayAttendanceEmployee | null
+  isCheckingIn: boolean
+  confirmTimeLabel: string
+  openCheckIn: (employee: TodayAttendanceEmployee) => void
+  closeCheckIn: () => void
+  confirmCheckIn: () => void
 }
 
 export function useTodayAttendancePage(): UseTodayAttendancePageResult {
@@ -46,8 +65,29 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const branchId = currentBranch?.id ?? null
 
   const { data = [], isLoading, isError } = useTodayAttendance(branchId)
+  const checkInMutation = useCheckIn()
 
   const summary = computeSummary(data)
+
+  // Check-in confirm dialog state
+  const [pendingCheckInEmployee, setPendingCheckInEmployee] =
+    useState<TodayAttendanceEmployee | null>(null)
+  const [confirmTimeLabel, setConfirmTimeLabel] = useState('')
+
+  const openCheckIn = (employee: TodayAttendanceEmployee) => {
+    setConfirmTimeLabel(currentTimeLabel())
+    setPendingCheckInEmployee(employee)
+  }
+
+  const closeCheckIn = () => setPendingCheckInEmployee(null)
+
+  const confirmCheckIn = () => {
+    if (!pendingCheckInEmployee) return
+    checkInMutation.mutate(
+      { employee_id: pendingCheckInEmployee.id, check_in: nowIso() },
+      { onSettled: closeCheckIn }
+    )
+  }
 
   return {
     rows: data,
@@ -57,5 +97,12 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     branchName: currentBranch?.name ?? null,
     hasBranch: !!branchId,
     getPhase: (row) => getAttendancePhase(row.attendance),
+    // Check-in
+    pendingCheckInEmployee,
+    isCheckingIn: checkInMutation.isPending,
+    confirmTimeLabel,
+    openCheckIn,
+    closeCheckIn,
+    confirmCheckIn,
   }
 }

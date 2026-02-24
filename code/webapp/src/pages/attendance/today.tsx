@@ -7,14 +7,17 @@ import {
   AlertTriangle,
   RefreshCw,
   Users,
+  LogIn,
 } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { useTodayAttendancePage } from './-use-today-attendance-page'
 import { getAttendancePhase, formatTime, formatSeconds } from '@/types/attendance'
-import type { TodayAttendanceRow, AttendancePhase } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
 
 // ── Route ────────────────────────────────────────────────────────────────────
 
@@ -25,8 +28,21 @@ export const Route = createFileRoute('/attendance/today')({
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export function TodayAttendancePage() {
-  const { rows, summary, isLoading, isError, branchName, hasBranch } =
-    useTodayAttendancePage()
+  const {
+    rows,
+    summary,
+    isLoading,
+    isError,
+    branchName,
+    hasBranch,
+    // Check-in
+    pendingCheckInEmployee,
+    isCheckingIn,
+    confirmTimeLabel,
+    openCheckIn,
+    closeCheckIn,
+    confirmCheckIn,
+  } = useTodayAttendancePage()
 
   if (!hasBranch) {
     return (
@@ -77,10 +93,30 @@ export function TodayAttendancePage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {rows.map((row) => (
-            <EmployeeAttendanceCard key={row.employee.id} row={row} />
+            <EmployeeAttendanceCard
+              key={row.employee.id}
+              row={row}
+              onCheckIn={openCheckIn}
+            />
           ))}
         </div>
       )}
+
+      {/* Check-in confirmation dialog — single instance for the whole list */}
+      <ConfirmDialog
+        isOpen={!!pendingCheckInEmployee}
+        onClose={closeCheckIn}
+        onConfirm={confirmCheckIn}
+        title="Registrar entrada"
+        description={
+          pendingCheckInEmployee
+            ? `¿Confirmas el check-in de ${pendingCheckInEmployee.first_name} ${pendingCheckInEmployee.last_name} a las ${confirmTimeLabel}?`
+            : ''
+        }
+        confirmLabel="Confirmar entrada"
+        variant="info"
+        isLoading={isCheckingIn}
+      />
     </PageContainer>
   )
 }
@@ -161,7 +197,12 @@ function SummaryStat({
 
 // ── Employee Card ─────────────────────────────────────────────────────────────
 
-function EmployeeAttendanceCard({ row }: { row: TodayAttendanceRow }) {
+interface EmployeeAttendanceCardProps {
+  row: TodayAttendanceRow
+  onCheckIn: (employee: TodayAttendanceEmployee) => void
+}
+
+function EmployeeAttendanceCard({ row, onCheckIn }: EmployeeAttendanceCardProps) {
   const phase = getAttendancePhase(row.attendance)
   const att = row.attendance
 
@@ -216,6 +257,18 @@ function EmployeeAttendanceCard({ row }: { row: TodayAttendanceRow }) {
         </div>
       ) : (
         <p className="text-xs text-muted-foreground italic">Sin registro aún</p>
+      )}
+
+      {/* Check-in action — only for pending employees */}
+      {phase === 'pending' && (
+        <Button
+          size="sm"
+          className="w-full mt-auto"
+          onClick={() => onCheckIn(row.employee)}
+        >
+          <LogIn className="h-3.5 w-3.5 mr-1.5" />
+          Registrar entrada
+        </Button>
       )}
 
       {/* Overtime alert */}

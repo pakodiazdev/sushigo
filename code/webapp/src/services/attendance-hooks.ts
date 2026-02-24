@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
+import { useToast } from '@/components/ui/toast-provider'
 import type { TodayAttendanceRow } from '@/types/attendance'
 
 // ============================================================================
@@ -23,5 +24,30 @@ export function useTodayAttendance(branchId: number | null) {
     enabled: !!branchId,
     refetchInterval: 30_000,   // Live refresh every 30 s
     staleTime: 15_000,
+  })
+}
+
+/**
+ * Mutation: register check-in for an employee.
+ * On success: invalidates the today attendance query and shows a toast.
+ */
+export function useCheckIn() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: { employee_id: string; check_in: string }) =>
+      attendanceApi.checkIn(data),
+    onSuccess: () => {
+      // Invalidate all today-attendance queries (any branch) to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      showSuccess('Entrada registrada correctamente.', 'Check-in')
+    },
+    onError: (error: any) => {
+      showError(
+        error.response?.data?.message || 'No se pudo registrar la entrada.',
+        'Error al registrar'
+      )
+    },
   })
 }
