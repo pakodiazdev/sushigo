@@ -14,13 +14,14 @@ class ScheduleDayFactory extends Factory
     public function definition(): array
     {
         return [
-            'employee_schedule_id' => EmployeeSchedule::factory(),
-            'day_of_week'          => fake()->numberBetween(1, 7),
-            'is_day_off'           => false,
-            'expected_start'       => '08:00:00',
-            'expected_lunch_start' => '13:00:00',
-            'expected_lunch_end'   => '14:00:00',
-            'expected_end'         => '17:00:00',
+            'employee_schedule_id'  => EmployeeSchedule::factory(),
+            'day_of_week'           => fake()->numberBetween(1, 7),
+            'is_day_off'            => false,
+            'expected_start'        => '08:00:00',
+            'expected_lunch_start'  => '13:00:00',
+            'expected_lunch_end'    => '14:00:00',
+            'lunch_duration_minutes' => 60,
+            'expected_end'          => '17:00:00',
         ];
     }
 
@@ -30,11 +31,12 @@ class ScheduleDayFactory extends Factory
     public function dayOff(): static
     {
         return $this->state(fn () => [
-            'is_day_off'           => true,
-            'expected_start'       => null,
-            'expected_lunch_start' => null,
-            'expected_lunch_end'   => null,
-            'expected_end'         => null,
+            'is_day_off'             => true,
+            'expected_start'         => null,
+            'expected_lunch_start'   => null,
+            'expected_lunch_end'     => null,
+            'lunch_duration_minutes' => null,
+            'expected_end'           => null,
         ]);
     }
 
@@ -84,5 +86,15 @@ class ScheduleDayFactory extends Factory
             'expected_lunch_end'   => $lunchEnd,
             'expected_end'         => $end,
         ]);
+    }
+
+    /**
+     * Set the expected lunch break duration in minutes.
+     *
+     * @param  int|null  $minutes  e.g. 60. NULL disables lunch tardiness tracking.
+     */
+    public function withLunchDuration(?int $minutes): static
+    {
+        return $this->state(fn () => ['lunch_duration_minutes' => $minutes]);
     }
 }
