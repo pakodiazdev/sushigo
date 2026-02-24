@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,16 +37,18 @@ class ScheduleDay extends Model
         'expected_start',
         'expected_lunch_start',
         'expected_lunch_end',
+        'lunch_duration_minutes',
         'expected_end',
     ];
 
     protected $casts = [
-        'is_day_off'           => 'boolean',
-        'day_of_week'          => 'integer',
-        'expected_start'       => 'datetime',
-        'expected_lunch_start' => 'datetime',
-        'expected_lunch_end'   => 'datetime',
-        'expected_end'         => 'datetime',
+        'is_day_off'              => 'boolean',
+        'day_of_week'             => 'integer',
+        'expected_start'          => 'datetime',
+        'expected_lunch_start'    => 'datetime',
+        'expected_lunch_end'      => 'datetime',
+        'lunch_duration_minutes'  => 'integer',
+        'expected_end'            => 'datetime',
     ];
 
     // ── Relationships ─────────────────────────────────────────────────────────
@@ -64,6 +67,23 @@ class ScheduleDay extends Model
     public function isDayOff(): bool
     {
         return $this->is_day_off;
+    }
+
+    /**
+     * Calculate the expected lunch return time for a given actual lunch_start.
+     *
+     * Returns null when lunch_duration_minutes is not configured — callers
+     * should treat null as "no lunch tardiness tracking".
+     *
+     * Example: lunch_start=13:05, lunch_duration_minutes=60 → return 14:05.
+     */
+    public function expectedLunchReturnTime(CarbonInterface $lunchStart): ?Carbon
+    {
+        if (! $this->lunch_duration_minutes) {
+            return null;
+        }
+
+        return $lunchStart->copy()->addMinutes($this->lunch_duration_minutes);
     }
 
     /**
