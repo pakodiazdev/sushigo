@@ -22,6 +22,8 @@ namespace App\Http\Responses\Entities;
  *     @OA\Property(property="net_worked_minutes", type="integer", nullable=true, example=480),
  *     @OA\Property(property="overtime_minutes", type="integer", nullable=true, example=0),
  *     @OA\Property(property="overtime_authorized", type="boolean", example=false),
+ *     @OA\Property(property="requires_overtime_decision", type="boolean", example=false,
+ *         description="True when overtime_minutes > 0 and overtime has not yet been authorized"),
  *     @OA\Property(property="day_status", type="string", enum={"WORKED","DAY_OFF","LEAVE","VACATION","HOLIDAY","ABSENCE","EXTRA"}, example="WORKED"),
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2026-02-23T09:05:45.000000Z"),
  *     @OA\Property(property="updated_at", type="string", format="date-time", example="2026-02-23T09:05:45.000000Z")

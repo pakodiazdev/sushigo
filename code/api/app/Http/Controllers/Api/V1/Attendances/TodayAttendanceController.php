@@ -42,7 +42,7 @@ use Illuminate\Support\Facades\DB;
  *         response=200,
  *         description="Today attendance list",
  *         @OA\JsonContent(
- *             @OA\Property(property="status", type="string", example="success"),
+ *             @OA\Property(property="status", type="integer", example=200),
  *             @OA\Property(
  *                 property="data",
  *                 type="array",

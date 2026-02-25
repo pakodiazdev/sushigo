@@ -7,6 +7,17 @@ use Illuminate\Validation\Rule;
 
 /**
  * Validate query parameters for the today attendance view.
+ *
+ * @OA\Schema(
+ *   schema="TodayAttendanceRequest",
+ *   required={"branch_id"},
+ *   @OA\Property(
+ *       property="branch_id",
+ *       type="integer",
+ *       example=1,
+ *       description="Branch ID (query param). Returns only active employees assigned to this branch."
+ *   )
+ * )
  */
 class TodayAttendanceRequest extends FormRequest
 {
