@@ -39,7 +39,7 @@ class RegisterCheckOutAction
         $this->guardCheckInExists($attendance);
         $this->guardNoDuplicateCheckOut($attendance);
 
-        $checkOut = Carbon::parse($data['check_out']);
+        $checkOut = Carbon::parse($data['check_out'])->utc();
 
         $netWorkedMinutes = $this->calculateNetWorkedMinutes($attendance, $checkOut);
         $overtimeMinutes  = $this->calculateOvertimeMinutes($attendance, $checkOut);
@@ -122,9 +122,16 @@ class RegisterCheckOutAction
             return 0;
         }
 
-        // expected_end is a time-only value — anchor it to the attendance date
+        // expected_end is a time-only value — anchor it to the attendance date.
+        // Cross-midnight shift: when expected_end < expected_start (e.g. 19:00→04:00 UTC),
+        // the end falls on the next calendar day.
         $expectedEnd = Carbon::parse($scheduleDay->expected_end)
             ->setDateFrom($attendance->date);
+
+        if ($scheduleDay->expected_start
+            && $scheduleDay->expected_end < $scheduleDay->expected_start) {
+            $expectedEnd->addDay();
+        }
 
         $overtimeSeconds = max(0, $checkOut->timestamp - $expectedEnd->timestamp);
 

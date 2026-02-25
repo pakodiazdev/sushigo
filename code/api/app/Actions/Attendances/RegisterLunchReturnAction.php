@@ -41,7 +41,7 @@ class RegisterLunchReturnAction
         $this->guardLunchStartExists($attendance);
         $this->guardNoDuplicateLunchEnd($attendance);
 
-        $lunchEnd = Carbon::parse($data['lunch_end']);
+        $lunchEnd = Carbon::parse($data['lunch_end'])->utc();
 
         $lunchLateSeconds = $this->calculateLunchLateSeconds($attendance, $lunchEnd);
 

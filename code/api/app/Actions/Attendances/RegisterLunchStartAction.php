@@ -34,7 +34,7 @@ class RegisterLunchStartAction
         $this->guardCheckInExists($attendance);
         $this->guardNoDuplicateLunchStart($attendance);
 
-        $lunchStart = Carbon::parse($data['lunch_start']);
+        $lunchStart = Carbon::parse($data['lunch_start'])->utc();
 
         $attendance->update(['lunch_start' => $lunchStart]);
 

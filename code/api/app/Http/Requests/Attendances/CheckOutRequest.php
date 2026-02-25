@@ -14,8 +14,8 @@ use Illuminate\Foundation\Http\FormRequest;
  *         property="check_out",
  *         type="string",
  *         format="date-time",
- *         example="2026-02-23T17:05:00",
- *         description="ISO 8601 datetime (no timezone) at which the employee clocked out."
+ *         example="2026-02-23T17:05:00-06:00",
+ *         description="Check-out datetime in ISO 8601 / RFC 3339 with timezone offset. Normalized to UTC by the server."
  *     )
  * )
  */
@@ -29,7 +29,7 @@ class CheckOutRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'check_out' => ['required', 'date_format:Y-m-d\TH:i:s'],
+            'check_out' => ['required', 'date'],
         ];
     }
 
@@ -37,7 +37,7 @@ class CheckOutRequest extends FormRequest
     {
         return [
             'check_out.required'    => 'La hora de salida es requerida.',
-            'check_out.date_format' => 'La hora de salida debe tener el formato ISO 8601: YYYY-MM-DDTHH:MM:SS.',
+            'check_out.date' => 'La hora de salida debe ser una fecha válida en formato ISO 8601 (ej. 2026-02-23T17:05:00-06:00).',
         ];
     }
 }

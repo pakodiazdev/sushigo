@@ -14,8 +14,8 @@ use Illuminate\Foundation\Http\FormRequest;
  *         property="lunch_end",
  *         type="string",
  *         format="date-time",
- *         example="2026-02-23T14:10:00",
- *         description="ISO 8601 datetime (no timezone) at which the employee returned from lunch."
+ *         example="2026-02-23T14:10:00-06:00",
+ *         description="Lunch-return datetime in ISO 8601 / RFC 3339 with timezone offset. Normalized to UTC by the server."
  *     )
  * )
  */
@@ -29,7 +29,7 @@ class LunchReturnRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lunch_end' => ['required', 'date_format:Y-m-d\TH:i:s'],
+            'lunch_end' => ['required', 'date'],
         ];
     }
 
@@ -37,7 +37,7 @@ class LunchReturnRequest extends FormRequest
     {
         return [
             'lunch_end.required'    => 'La hora de regreso de comida es requerida.',
-            'lunch_end.date_format' => 'La hora de regreso debe tener el formato ISO 8601: YYYY-MM-DDTHH:MM:SS.',
+            'lunch_end.date' => 'La hora de regreso debe ser una fecha válida en formato ISO 8601 (ej. 2026-02-23T14:10:00-06:00).',
         ];
     }
 }

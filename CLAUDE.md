@@ -145,6 +145,20 @@ Use emoji-prefixed format:
 
 Emojis: ✨ (feat), 🐛 (fix), 📚 (docs), 🔨 (refactor), 🔧 (chore), ✅ (test)
 
+### DateTime Standard (mandatory)
+
+**UTC everywhere. RFC 3339 in transport. Local only for display.**
+
+- **Database**: Always UTC (`config/app.timezone = 'UTC'`)
+- **API input**: ISO 8601 with offset (`2026-02-23T09:05:30-06:00`). Backend normalizes with `Carbon::parse()->utc()`
+- **API output**: ISO 8601 UTC (`toIso8601String()` → `2026-02-23T15:05:30+00:00`)
+- **Frontend send**: Local time + offset (RFC 3339). Backend converts to UTC
+- **Frontend display**: `new Date(utcIso).getHours()` → shows local time
+- **Validation**: Use `'date'` rule (not `'date_format'`) to accept offsets
+- **Seeders**: Define times in local for readability, convert with `Carbon::parse($time, $tz)->utc()`
+
+See `doc/conventions/backend/api-rules.md` → "DateTime Standard" section for full reference.
+
 ### API Code Style
 
 - Strong typing always (PHP 8.2) - avoid redundant PHPDoc

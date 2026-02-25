@@ -14,8 +14,8 @@ use Illuminate\Foundation\Http\FormRequest;
  *         property="lunch_start",
  *         type="string",
  *         format="date-time",
- *         example="2026-02-23T13:05:00",
- *         description="ISO 8601 datetime (no timezone) at which the employee left for lunch."
+ *         example="2026-02-23T13:05:00-06:00",
+ *         description="Lunch-start datetime in ISO 8601 / RFC 3339 with timezone offset. Normalized to UTC by the server."
  *     )
  * )
  */
@@ -29,7 +29,7 @@ class LunchStartRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lunch_start' => ['required', 'date_format:Y-m-d\TH:i:s'],
+            'lunch_start' => ['required', 'date'],
         ];
     }
 
@@ -37,7 +37,7 @@ class LunchStartRequest extends FormRequest
     {
         return [
             'lunch_start.required'    => 'La hora de salida a comida es requerida.',
-            'lunch_start.date_format' => 'La hora de salida debe tener el formato ISO 8601: YYYY-MM-DDTHH:MM:SS.',
+            'lunch_start.date' => 'La hora de salida debe ser una fecha válida en formato ISO 8601 (ej. 2026-02-23T13:05:00-06:00).',
         ];
     }
 }
