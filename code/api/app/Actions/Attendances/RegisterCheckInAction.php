@@ -35,7 +35,7 @@ class RegisterCheckInAction
     public function __invoke(array $data): Attendance
     {
         $employee = Employee::where('public_id', $data['employee_id'])->firstOrFail();
-        $checkIn  = Carbon::parse($data['check_in']);
+        $checkIn  = Carbon::parse($data['check_in'])->utc();
         $date     = $checkIn->toDateString();
 
         $this->guardNoDuplicateAttendance($employee->id, $date);

@@ -478,6 +478,157 @@ php artisan l5-swagger:generate
 
 ---
 
+## 🕐 DateTime Standard (UTC + RFC 3339)
+
+All datetime handling in the project follows the **UTC-first** pattern used by Google, GitHub, Stripe, and AWS APIs.
+
+### Three Golden Rules
+
+| Rule | Description |
+|------|-------------|
+| **Storage = UTC** | The database always stores datetimes in UTC. `config/app.timezone = 'UTC'`. No exceptions. |
+| **Transport = ISO 8601 with offset** | The API accepts/returns datetimes with explicit timezone offset (RFC 3339). Never naive (without timezone). |
+| **Display = client responsibility** | The frontend/app converts UTC to the user's local timezone for display. The server never formats for display. |
+
+### API Request Format
+
+Datetime fields must be sent as **ISO 8601 / RFC 3339** with explicit timezone offset:
+
+```
+✅ 2026-02-23T09:05:30-06:00    (local time + offset)
+✅ 2026-02-23T15:05:30Z          (UTC with Z suffix)
+✅ 2026-02-23T15:05:30+00:00     (UTC with explicit offset)
+✅ 2026-02-23T09:05:30            (naive — backward compatible, interpreted as UTC)
+```
+
+### Backend: Normalizing to UTC
+
+Every Action that receives a datetime from the client must normalize to UTC before storing:
+
+```php
+// ✅ GOOD — Normalize to UTC
+$checkIn = Carbon::parse($data['check_in'])->utc();
+
+// ❌ BAD — Assumes timezone based on app config
+$checkIn = Carbon::parse($data['check_in']);
+```
+
+### Backend: Validation Rules
+
+Use Laravel's `date` rule (accepts any parseable datetime, including offsets):
+
+```php
+// ✅ GOOD — Accepts RFC 3339 with offset
+'check_in' => ['required', 'date'],
+
+// ❌ BAD — Rejects timezone offset
+'check_in' => ['required', 'date_format:Y-m-d\TH:i:s'],
+```
+
+### Backend: Response Format
+
+Always return datetimes as ISO 8601 UTC. Carbon's `toIso8601String()` produces `+00:00` suffix:
+
+```php
+// ✅ GOOD — Returns UTC ISO 8601
+'check_in' => $attendance->check_in?->toIso8601String(),
+// Output: "2026-02-23T15:05:30+00:00"
+```
+
+### Frontend: Sending Datetimes
+
+Send the browser's local time with timezone offset (RFC 3339):
+
+```typescript
+// ✅ GOOD — ISO 8601 with offset
+function nowIso(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const offset = -d.getTimezoneOffset()
+  const sign = offset >= 0 ? '+' : '-'
+  const absOff = Math.abs(offset)
+  const oh = pad(Math.floor(absOff / 60))
+  const om = pad(absOff % 60)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${sign}${oh}:${om}`
+}
+// Output in Mexico City (UTC-6): "2026-02-23T09:05:30-06:00"
+```
+
+### Frontend: Displaying Datetimes
+
+Parse UTC from the API and display using browser's local timezone:
+
+```typescript
+// ✅ GOOD — Converts UTC → local for display
+export function formatTime(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso) // Parses UTC, getHours() returns local
+  if (isNaN(d.getTime())) return '—'
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+// ❌ BAD — Extracts time directly from UTC string (shows UTC, not local)
+const timePart = iso.split('T')[1]?.slice(0, 5)
+```
+
+### Seeders: Timezone Conversion
+
+Development seeders define human-readable local times but convert to UTC on insert:
+
+```php
+private const TIMEZONE    = 'America/Mexico_City';
+private const SHIFT_START = '13:00:00'; // 1 PM CDT → 19:00 UTC
+
+private function toUtcTime(string $localTime): string
+{
+    return Carbon::parse($localTime, self::TIMEZONE)
+        ->utc()
+        ->format('H:i:s');
+}
+```
+
+### Cross-Midnight Shifts
+
+When schedule times are in UTC, shifts may cross midnight (e.g., `19:00→04:00 UTC`).
+The `expected_end` comparison must detect and handle this:
+
+```php
+$expectedEnd = Carbon::parse($scheduleDay->expected_end)
+    ->setDateFrom($attendance->date);
+
+// Cross-midnight: expected_end < expected_start means next day
+if ($scheduleDay->expected_start
+    && $scheduleDay->expected_end < $scheduleDay->expected_start) {
+    $expectedEnd->addDay();
+}
+```
+
+### Summary Flow
+
+```
+Frontend (Mexico City, UTC-6)
+│
+│  User clicks "Check-in" at 9:05 AM local
+│  → sends: "2026-02-23T09:05:30-06:00"
+│
+▼ API Request (RFC 3339 with offset)
+│
+Backend (UTC)
+│  Carbon::parse("2026-02-23T09:05:30-06:00")->utc()
+│  → stores: "2026-02-23 15:05:30 UTC"
+│
+▼ API Response (ISO 8601 UTC)
+│  → returns: "2026-02-23T15:05:30+00:00"
+│
+Frontend (display)
+│  new Date("2026-02-23T15:05:30+00:00").getHours()
+│  → shows: "09:05" (local time)
+```
+
+---
+
 ## 📊 Available Artisan Commands
 
 ### Seeders

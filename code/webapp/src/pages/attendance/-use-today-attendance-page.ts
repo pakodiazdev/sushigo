@@ -37,9 +37,16 @@ function currentTimeLabel(): string {
   return new Date().toTimeString().slice(0, 5)
 }
 
-/** ISO datetime string truncated to seconds: "2026-02-24T09:05:30" */
+/** ISO 8601 / RFC 3339 datetime with timezone offset: "2026-02-24T09:05:30-06:00" */
 function nowIso(): string {
-  return new Date().toISOString().slice(0, 19)
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const offset = -d.getTimezoneOffset()
+  const sign = offset >= 0 ? '+' : '-'
+  const absOff = Math.abs(offset)
+  const oh = pad(Math.floor(absOff / 60))
+  const om = pad(absOff % 60)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${sign}${oh}:${om}`
 }
 
 export interface UseTodayAttendancePageResult {

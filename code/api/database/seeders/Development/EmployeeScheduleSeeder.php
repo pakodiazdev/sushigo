@@ -6,22 +6,30 @@ use App\Enums\WorkdayType;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\ScheduleDay;
+use Carbon\Carbon;
 use Database\Seeders\Base\OnceSeeder;
 
 /**
  * Seed development schedules for all active employees.
  *
  * Assigns one EmployeeSchedule + 7 ScheduleDay rows per active EmploymentPeriod.
- * Uses 10 staggered lunch templates (A–J, every 30 min from 15:00 to 20:00)
- * assigned in round-robin so employees don't all take lunch at the same time.
+ * Uses 10 staggered lunch templates (A–J, every 30 min) assigned in round-robin
+ * so employees don't all take lunch at the same time.
  *
- * Shift: 13:00 → 22:00  |  Lunch: 30 min  |  Rest day: Sunday (dow 7)
+ * Constants are defined in local CDT (America/Mexico_City) for readability,
+ * but toUtcTime() converts them to UTC before database insertion.
+ *
+ * Local:  13:00 → 22:00 CDT  |  Lunch: 30 min  |  Rest day: Sunday (dow 7)
+ * UTC:    19:00 → 04:00 UTC  (cross-midnight shift)
  *
  * @see Task #022b
  */
 class EmployeeScheduleSeeder extends OnceSeeder
 {
-    /** 10 staggered lunch windows (start, end), every 30 minutes */
+    /** Branch local timezone — times below are in CDT, converted to UTC on insert */
+    private const TIMEZONE = 'America/Mexico_City';
+
+    /** 10 staggered lunch windows in local CDT (start, end), every 30 minutes */
     private const LUNCH_TEMPLATES = [
         'A' => ['15:00:00', '15:30:00'],
         'B' => ['15:30:00', '16:00:00'],
@@ -35,8 +43,8 @@ class EmployeeScheduleSeeder extends OnceSeeder
         'J' => ['19:30:00', '20:00:00'],
     ];
 
-    private const SHIFT_START = '13:00:00';
-    private const SHIFT_END   = '22:00:00';
+    private const SHIFT_START = '13:00:00';  // 1 PM CDT → 19:00 UTC
+    private const SHIFT_END   = '22:00:00';  // 10 PM CDT → 04:00 UTC (next day)
 
     public function run(): void
     {
@@ -110,10 +118,10 @@ class EmployeeScheduleSeeder extends OnceSeeder
         $workingDay = [
             'employee_schedule_id'  => $scheduleId,
             'is_day_off'            => false,
-            'expected_start'        => self::SHIFT_START,
-            'expected_lunch_start'  => $lunchTimes[0],
-            'expected_lunch_end'    => $lunchTimes[1],
-            'expected_end'          => self::SHIFT_END,
+            'expected_start'        => $this->toUtcTime(self::SHIFT_START),
+            'expected_lunch_start'  => $this->toUtcTime($lunchTimes[0]),
+            'expected_lunch_end'    => $this->toUtcTime($lunchTimes[1]),
+            'expected_end'          => $this->toUtcTime(self::SHIFT_END),
             'lunch_duration_minutes'=> 30,
         ];
 
@@ -136,5 +144,17 @@ class EmployeeScheduleSeeder extends OnceSeeder
             6 => $workingDay,   // Saturday
             7 => $restDay,      // Sunday — rest day
         ];
+    }
+
+    /**
+     * Convert a local CDT time string to its UTC equivalent.
+     *
+     * Example: '13:00:00' (America/Mexico_City) → '19:00:00' (UTC)
+     */
+    private function toUtcTime(string $localTime): string
+    {
+        return Carbon::parse($localTime, self::TIMEZONE)
+            ->utc()
+            ->format('H:i:s');
     }
 }

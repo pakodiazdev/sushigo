@@ -93,10 +93,14 @@ export function formatSeconds(seconds: number | null): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-/** Format "2026-02-23T09:15:00" → "09:15" */
+/** Convert a UTC/ISO 8601 datetime to local "HH:mm" for display.
+ *  Accepts "2026-02-23T15:15:00+00:00" → shows "09:15" in UTC-6 browser.
+ */
 export function formatTime(iso: string | null): string {
   if (!iso) return '—'
-  // ISO can be "2026-02-23T09:15:00" or "2026-02-23 09:15:00"
-  const timePart = iso.replace('T', ' ').split(' ')[1] ?? ''
-  return timePart.slice(0, 5)
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
 }

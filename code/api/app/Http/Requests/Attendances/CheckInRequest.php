@@ -19,8 +19,8 @@ use Illuminate\Validation\Rule;
  *       property="check_in",
  *       type="string",
  *       format="date-time",
- *       example="2026-02-23T09:05:30",
- *       description="Check-in timestamp in ISO 8601 format without timezone (Y-m-d\\TH:i:s)"
+ *       example="2026-02-23T09:05:30-06:00",
+ *       description="Check-in datetime in ISO 8601 / RFC 3339 with timezone offset. Normalized to UTC by the server."
  *   )
  * )
  */
@@ -39,7 +39,7 @@ class CheckInRequest extends FormRequest
                 'string',
                 Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
             ],
-            'check_in' => ['required', 'date_format:Y-m-d\TH:i:s'],
+            'check_in' => ['required', 'date'],
         ];
     }
 
@@ -47,7 +47,7 @@ class CheckInRequest extends FormRequest
     {
         return [
             'employee_id.exists' => 'No se encontró el empleado especificado.',
-            'check_in.date_format' => 'El campo check_in debe tener el formato Y-m-dTH:i:s (ej. 2026-02-23T09:05:30).',
+            'check_in.date' => 'El campo check_in debe ser una fecha válida en formato ISO 8601 (ej. 2026-02-23T09:05:30-06:00).',
         ];
     }
 }
