@@ -25,11 +25,12 @@ export interface AttendanceRecord {
 
 export type DayStatus =
   | 'WORKED'
-  | 'ABSENT'
-  | 'REST'
-  | 'HOLIDAY'
-  | 'VACATION'
+  | 'DAY_OFF'
   | 'LEAVE'
+  | 'VACATION'
+  | 'HOLIDAY'
+  | 'ABSENCE'
+  | 'EXTRA'
 
 // Shape returned by GET /attendances/today per-row
 export interface TodayAttendanceRow {
