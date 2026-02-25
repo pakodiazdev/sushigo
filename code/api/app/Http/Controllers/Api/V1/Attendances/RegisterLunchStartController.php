@@ -32,7 +32,12 @@ use App\Models\Attendance;
  *     @OA\Response(
  *         response=200,
  *         description="Lunch start registered",
- *         @OA\JsonContent(ref="#/components/schemas/AttendanceResponse")
+ *         @OA\JsonContent(
+ *             allOf={
+ *                 @OA\Schema(ref="#/components/schemas/ResponseEntity"),
+ *                 @OA\Schema(@OA\Property(property="data", ref="#/components/schemas/AttendanceResponse"))
+ *             }
+ *         )
  *     ),
  *     @OA\Response(response=404, description="Attendance not found"),
  *     @OA\Response(response=422, description="Validation or business rule error"),
