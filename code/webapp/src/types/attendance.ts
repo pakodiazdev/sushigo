@@ -70,17 +70,17 @@ export interface TodayAttendanceResponse {
 
 export type AttendancePhase =
   | 'pending'       // No check-in yet
-  | 'checked-in'    // Has check_in, no lunch_start
+  | 'checked-in'    // Has check_in, no check_out, no lunch_start
   | 'at-lunch'      // Has lunch_start, no lunch_end
   | 'returned'      // Has lunch_end, no check_out
-  | 'done'          // Has check_out
+  | 'done'          // Has check_out (with or without lunch)
 
 export function getAttendancePhase(attendance: TodayAttendanceData | null): AttendancePhase {
   if (!attendance || !attendance.check_in) return 'pending'
+  if (attendance.check_out) return 'done'
   if (!attendance.lunch_start) return 'checked-in'
   if (!attendance.lunch_end) return 'at-lunch'
-  if (!attendance.check_out) return 'returned'
-  return 'done'
+  return 'returned'
 }
 
 /** Format seconds as "Xm" or "Xh Ym" */
