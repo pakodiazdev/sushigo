@@ -227,6 +227,44 @@ class CheckOutApiTest extends TestCase
         $response->assertStatus(404);
     }
 
+    // ── Cross-midnight UTC (RFC 3339 with offset) ─────────────────────────────
+
+    #[Test]
+    public function calculates_overtime_with_offset_across_utc_midnight(): void
+    {
+        // Night shift: Mon Feb 23 at 23:00 CST → Tue Feb 24 at 06:35 CST (check-out)
+        // UTC equivalent: 05:00 → 12:35
+        // Schedule: expected_start=05:00, expected_end=12:00 (UTC)
+        // Overtime = 35 minutes
+        ['attendance' => $attendance] = $this->makeNightShiftAttendance();
+
+        $response = $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-24T06:35:00-06:00'],  // 12:35 UTC
+        );
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.overtime_minutes', 35)
+            ->assertJsonPath('data.requires_overtime_decision', true);
+    }
+
+    #[Test]
+    public function net_worked_minutes_correct_for_cross_midnight_shift(): void
+    {
+        // Night shift 05:00→12:00 UTC, no lunch, checkout at 12:00 UTC
+        // gross = 12:00 - 05:00 = 7h = 420 min, no lunch → net = 420
+        ['attendance' => $attendance] = $this->makeNightShiftAttendance();
+
+        $response = $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-24T06:00:00-06:00'],  // 12:00 UTC
+        );
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.net_worked_minutes', 420)
+            ->assertJsonPath('data.overtime_minutes', 0);
+    }
+
     // ── Auth ──────────────────────────────────────────────────────────────────
 
     #[Test]
@@ -310,5 +348,46 @@ class CheckOutApiTest extends TestCase
             ->create(['employee_schedule_id' => $schedule->id]);
 
         return compact('employee', 'period', 'schedule');
+    }
+
+    /**
+     * Night shift scenario: check-in crosses UTC midnight.
+     *
+     * Local: Mon Feb 23 at 23:00 CST (UTC-6) = Tue Feb 24 at 05:00 UTC.
+     * Schedule: expected_start=05:00 UTC, expected_end=12:00 UTC, no lunch.
+     * Attendance: date='2026-02-23' (local Monday), check_in='2026-02-24T05:00:00' (UTC).
+     */
+    private function makeNightShiftAttendance(): array
+    {
+        $period = EmploymentPeriod::factory()->create([
+            'is_active'  => true,
+            'start_date' => '2026-01-01',
+        ]);
+
+        $employee = $period->employee;
+
+        $schedule = EmployeeSchedule::factory()->current()->create([
+            'employment_period_id' => $period->id,
+            'effective_from'       => '2026-01-01',
+        ]);
+
+        // Monday (dow=1) — night shift 05:00→12:00 UTC, no lunch
+        ScheduleDay::factory()
+            ->workDay()
+            ->monday()
+            ->withTimes(start: '05:00:00', end: '12:00:00')
+            ->withLunchDuration(null)
+            ->create(['employee_schedule_id' => $schedule->id]);
+
+        // Attendance with LOCAL date (2026-02-23 Monday) but UTC check-in (next day)
+        $attendance = Attendance::factory()->onDate('2026-02-23')->create([
+            'employee_id' => $employee->id,
+            'check_in'    => '2026-02-24T05:00:00',   // UTC
+            'lunch_start' => null,
+            'lunch_end'   => null,
+            'check_out'   => null,
+        ]);
+
+        return compact('attendance', 'employee', 'schedule');
     }
 }

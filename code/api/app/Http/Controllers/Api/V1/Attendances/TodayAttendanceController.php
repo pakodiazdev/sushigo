@@ -61,7 +61,7 @@ class TodayAttendanceController extends Controller
     public function __invoke(TodayAttendanceRequest $request): ResponseEntity
     {
         $branchId = (int) $request->input('branch_id');
-        $today    = Carbon::today()->toDateString();
+        $today    = Carbon::today(config('app.timezone'))->toDateString();
 
         // Fetch all active employees for the branch (via active employment period)
         // and eager-load today's attendance (if any) in a single query.

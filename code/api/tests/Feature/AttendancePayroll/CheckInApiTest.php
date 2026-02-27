@@ -281,6 +281,76 @@ class CheckInApiTest extends TestCase
         $this->assertArrayHasKey('check_in', $response->json('errors'));
     }
 
+    // ── Cross-midnight UTC (RFC 3339 with offset) ─────────────────────────────
+
+    #[Test]
+    public function handles_check_in_with_negative_offset_across_utc_midnight(): void
+    {
+        // Monday Feb 23 at 23:00 CST (UTC-6) = Tuesday Feb 24 at 05:00 UTC.
+        // The attendance date must be the LOCAL date (Feb 23), not UTC (Feb 24).
+        // Schedule: expected_start = 05:00 UTC (the UTC equivalent of 23:00 CST).
+        ['employee' => $employee] = $this->makeEmployeeWithSchedule(
+            date: self::DATE,                   // 2026-02-23 (Monday)
+            expectedStart: '05:00:00',          // UTC schedule start
+            expectedEnd: '12:00:00',            // UTC schedule end
+        );
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in'    => '2026-02-23T23:00:00-06:00',  // RFC 3339 with offset
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.date', '2026-02-23')      // Local date, NOT '2026-02-24'
+            ->assertJsonPath('data.entry_late_seconds', 0)    // On time
+            ->assertJsonPath('data.day_status', 'WORKED');
+    }
+
+    #[Test]
+    public function calculates_late_seconds_with_offset_across_utc_midnight(): void
+    {
+        // Monday Feb 23 at 23:10 CST = Tuesday Feb 24 at 05:10 UTC.
+        // Schedule expected_start = 05:00 UTC → employee is 10 minutes (600 s) late.
+        ['employee' => $employee] = $this->makeEmployeeWithSchedule(
+            date: self::DATE,
+            expectedStart: '05:00:00',
+            expectedEnd: '12:00:00',
+        );
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in'    => '2026-02-23T23:10:00-06:00',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.date', '2026-02-23')
+            ->assertJsonPath('data.entry_late_seconds', 600)
+            ->assertJsonPath('data.entry_late_minutes', 10);
+    }
+
+    #[Test]
+    public function handles_check_in_with_positive_offset_across_utc_midnight(): void
+    {
+        // Tuesday Feb 24 at 01:00 JST (UTC+9) = Monday Feb 23 at 16:00 UTC.
+        // The local date is Feb 24 (Tuesday), but UTC date is Feb 23 (Monday).
+        // attendance.date must be the LOCAL date = Feb 24 (Tuesday).
+        $date = '2026-02-24'; // Tuesday
+        ['employee' => $employee] = $this->makeEmployeeWithSchedule(
+            date: $date,
+            expectedStart: '16:00:00',          // UTC equivalent of 01:00 JST
+            expectedEnd: '22:00:00',
+        );
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in'    => '2026-02-24T01:00:00+09:00',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.date', '2026-02-24')      // Local date (Tuesday)
+            ->assertJsonPath('data.entry_late_seconds', 0);
+    }
+
     // ── Auth ──────────────────────────────────────────────────────────────────
 
     #[Test]
@@ -305,13 +375,16 @@ class CheckInApiTest extends TestCase
      *
      * Returns an array with 'employee', 'period', 'schedule', 'scheduleDay'.
      *
-     * @param  string  $date          The attendance date (Y-m-d)
+     * @param  string  $date          The attendance date (Y-m-d) — used to derive day-of-week
      * @param  string  $expectedStart Expected clock-in time (H:i:s)
+     * @param  string  $expectedEnd   Expected clock-out time (H:i:s)
      */
-    private function makeEmployeeWithSchedule(string $date, string $expectedStart): array
-    {
-        $checkInCarbon = \Carbon\Carbon::parse($date . 'T' . $expectedStart);
-        $dayOfWeekIso  = $checkInCarbon->dayOfWeekIso; // 1=Mon … 7=Sun
+    private function makeEmployeeWithSchedule(
+        string $date,
+        string $expectedStart,
+        string $expectedEnd = '17:00:00',
+    ): array {
+        $dayOfWeekIso = \Carbon\Carbon::parse($date)->dayOfWeekIso; // 1=Mon … 7=Sun
 
         $period = EmploymentPeriod::factory()->create([
             'is_active'  => true,
@@ -328,7 +401,7 @@ class CheckInApiTest extends TestCase
         $scheduleDay = ScheduleDay::factory()
             ->workDay()
             ->onDayOfWeek($dayOfWeekIso)
-            ->withTimes(start: $expectedStart, end: '17:00:00')
+            ->withTimes(start: $expectedStart, end: $expectedEnd)
             ->create(['employee_schedule_id' => $schedule->id]);
 
         return compact('employee', 'period', 'schedule', 'scheduleDay');
