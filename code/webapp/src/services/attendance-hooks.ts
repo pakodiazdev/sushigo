@@ -3,10 +3,6 @@ import { attendanceApi } from './attendance-api'
 import { useToast } from '@/components/ui/toast-provider'
 import type { TodayAttendanceRow } from '@/types/attendance'
 
-// ============================================================================
-// Attendance Query Hooks
-// ============================================================================
-
 /**
  * Fetch today's attendance for all active employees of a branch.
  * Auto-refreshes every 30 seconds so the page stays live.
@@ -22,7 +18,7 @@ export function useTodayAttendance(branchId: number | null) {
       return response.data.data
     },
     enabled: !!branchId,
-    refetchInterval: 30_000,   // Live refresh every 30 s
+    refetchInterval: 30_000,
     staleTime: 15_000,
   })
 }

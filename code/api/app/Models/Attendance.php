@@ -50,8 +50,6 @@ class Attendance extends Model
         'meta'                   => 'array',
     ];
 
-    // ── Relationships ─────────────────────────────────────────────────────────
-
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
@@ -87,8 +85,6 @@ class Attendance extends Model
         return $this->hasMany(OvertimeBankMovement::class); // AP-034
     }
 
-    // ── Scopes ───────────────────────────────────────────────────────────────
-
     public function scopeByDate(Builder $query, string $date): Builder
     {
         return $query->where('date', $date);
@@ -103,8 +99,6 @@ class Attendance extends Model
     {
         return $query->where('employee_id', $employeeId);
     }
-
-    // ── Helper methods ────────────────────────────────────────────────────────
 
     /**
      * Whether the entry tardiness exceeds the 30-minute deductible threshold.

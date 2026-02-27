@@ -1,10 +1,6 @@
 import { apiClient } from '@/lib/api-client'
 import type { TodayAttendanceResponse, AttendanceRecord } from '@/types/attendance'
 
-// ============================================================================
-// Attendance API
-// ============================================================================
-
 export const attendanceApi = {
   /**
    * GET /attendances/today?branch_id=<id>

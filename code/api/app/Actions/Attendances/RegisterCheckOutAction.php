@@ -53,8 +53,6 @@ class RegisterCheckOutAction
         return $attendance->load('employee');
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
     /**
      * Throw a 422 if the attendance has no check_in recorded.
      *

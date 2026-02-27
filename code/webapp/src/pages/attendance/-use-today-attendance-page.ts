@@ -4,11 +4,6 @@ import { useTodayAttendance, useCheckIn } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
 
-// ============================================================================
-// Hook: useTodayAttendancePage
-// Owns all data-fetching, derived state, summary metrics, and check-in action.
-// ============================================================================
-
 export interface AttendanceSummary {
   total: number
   pending: number     // No check-in yet
@@ -76,7 +71,6 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
 
   const summary = computeSummary(data)
 
-  // Check-in confirm dialog state
   const [pendingCheckInEmployee, setPendingCheckInEmployee] =
     useState<TodayAttendanceEmployee | null>(null)
   const [confirmTimeLabel, setConfirmTimeLabel] = useState('')
@@ -104,7 +98,6 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     branchName: currentBranch?.name ?? null,
     hasBranch: !!branchId,
     getPhase: (row) => getAttendancePhase(row.attendance),
-    // Check-in
     pendingCheckInEmployee,
     isCheckingIn: checkInMutation.isPending,
     confirmTimeLabel,

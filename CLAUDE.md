@@ -133,17 +133,60 @@ See `doc/architecture/` for detailed diagrams and flows.
 
 ## Conventions
 
-### Commit Messages
+### Commit Messages (mandatory — always follow this exactly)
 
-Use emoji-prefixed format:
+Full convention reference: `doc/conventions/git/commits.md`
+
+**Format — every field is required:**
 ```
 :emoji [#issue] - short description :emoji
 
 - :emoji Activity 1
 - :emoji Activity 2
+- :emoji Activity 3
 ```
 
-Emojis: ✨ (feat), 🐛 (fix), 📚 (docs), 🔨 (refactor), 🔧 (chore), ✅ (test)
+**Rules (violations like commit 73848c3b must not repeat):**
+- Subject line: `emoji [#NNN] - description emoji` — the dash (` - `) between issue and description is mandatory
+- Each bullet in the body **must start with an emoji** — plain `- text` is not allowed
+- Issue number is always 3 digits zero-padded: `#001`, `#030`, not `#1` or `#30`
+- Description is concise (imperative mood), never a sentence ending in period
+- Final ornamental emoji on the subject line is required
+
+**Emoji types:**
+- ✨ feat — new feature
+- 🐛 fix — bug fix
+- 📚 docs — documentation
+- 🎨 style — formatting, no logic change
+- 🔨 refactor — code restructure
+- 🚀 perf — performance improvement
+- ✅ test — adding/updating tests
+- 🔧 chore — config, tooling, maintenance
+
+**Correct example:**
+```
+🔨 [#030] - Migrate API format from Model to JsonResource 🗂️
+
+- 🗂️ Created BaseResource with envelope { data, status, meta }
+- 📦 Created AttendanceResource migrating 20 fields from toApiArray()
+- 👤 Created EmployeeResource + EmployeeSummaryResource
+- 🔁 Migrated 4 Attendance controllers and 7 Employee controllers
+- 🧹 Removed toApiArray() from both models
+- 🧪 Updated EmployeeModelTest
+```
+
+**Wrong (do not do this):**
+```
+🔨 [#030] Implementar JsonResource — migrar formato API   ← missing dash
+- Crear BaseResource                                       ← missing emoji on bullet
+- Crear AttendanceResource                                 ← missing emoji on bullet
+```
+
+When a commit relates to a backlog story or requirement, add traceability tags before the bullet list:
+```
+Story: AP-NNN · <full story text from backlog.en.md>
+Refs:  RF-XX · <requirement text from spec.en.md>
+```
 
 ### DateTime Standard (mandatory)
 

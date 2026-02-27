@@ -1,7 +1,3 @@
-// ============================================================================
-// Attendance & Payroll — shared types
-// ============================================================================
-
 export interface AttendanceRecord {
   id: string                           // ULID public_id
   employee_id: string
@@ -32,7 +28,6 @@ export type DayStatus =
   | 'ABSENCE'
   | 'EXTRA'
 
-// Shape returned by GET /attendances/today per-row
 export interface TodayAttendanceRow {
   employee: TodayAttendanceEmployee
   attendance: TodayAttendanceData | null
@@ -60,7 +55,6 @@ export interface TodayAttendanceData {
   requires_overtime_decision: boolean
 }
 
-// API response wrapper for today attendance list
 export interface TodayAttendanceResponse {
   status: number
   data: TodayAttendanceRow[]

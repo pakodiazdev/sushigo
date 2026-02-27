@@ -31,8 +31,6 @@ class AttendanceAuditLog extends Model
         'created_at' => 'datetime',
     ];
 
-    // ── Relationships ─────────────────────────────────────────────────────────
-
     public function auditable(): MorphTo
     {
         return $this->morphTo();

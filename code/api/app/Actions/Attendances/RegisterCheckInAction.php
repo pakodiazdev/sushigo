@@ -64,8 +64,6 @@ class RegisterCheckInAction
         return $attendance->load('employee');
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
     /**
      * Throw a 422 if the employee already has an attendance record for this date.
      *

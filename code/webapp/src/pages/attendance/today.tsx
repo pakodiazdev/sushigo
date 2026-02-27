@@ -19,8 +19,6 @@ import { useTodayAttendancePage } from './-use-today-attendance-page'
 import { getAttendancePhase, formatTime, formatSeconds } from '@/types/attendance'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
 
-// ── Route ────────────────────────────────────────────────────────────────────
-
 export const Route = createFileRoute('/attendance/today')({
   component: TodayAttendancePage,
 })
@@ -35,7 +33,6 @@ export function TodayAttendancePage() {
     isError,
     branchName,
     hasBranch,
-    // Check-in
     pendingCheckInEmployee,
     isCheckingIn,
     confirmTimeLabel,
@@ -74,7 +71,6 @@ export function TodayAttendancePage() {
         }
       />
 
-      {/* Summary bar */}
       <SummaryBar
         total={summary.total}
         pending={summary.pending}
@@ -83,7 +79,6 @@ export function TodayAttendancePage() {
         withOvertime={summary.withOvertime}
       />
 
-      {/* Content */}
       {isError ? (
         <ErrorState />
       ) : isLoading && rows.length === 0 ? (
@@ -213,7 +208,6 @@ function EmployeeAttendanceCard({ row, onCheckIn }: EmployeeAttendanceCardProps)
         phaseCardClass(phase),
       )}
     >
-      {/* Header: name + phase badge */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold text-sm truncate text-foreground">
@@ -224,7 +218,6 @@ function EmployeeAttendanceCard({ row, onCheckIn }: EmployeeAttendanceCardProps)
         <PhaseBadge phase={phase} />
       </div>
 
-      {/* Role pills */}
       {row.employee.roles.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {row.employee.roles.map((role) => (
@@ -238,7 +231,6 @@ function EmployeeAttendanceCard({ row, onCheckIn }: EmployeeAttendanceCardProps)
         </div>
       )}
 
-      {/* Attendance timeline */}
       {att ? (
         <div className="space-y-1.5 text-xs">
           <TimeRow icon="↗" label="Entrada" value={formatTime(att.check_in)} />
