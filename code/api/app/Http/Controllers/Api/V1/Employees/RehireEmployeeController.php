@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\V1\Employees;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\RehireEmployeeRequest;
-use App\Http\Responses\Common\ResponseEntity;
+use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\Employee;
 use Illuminate\Support\Facades\DB;
 
 class RehireEmployeeController extends Controller
 {
-    public function __invoke(RehireEmployeeRequest $request, Employee $employee): ResponseEntity
+    public function __invoke(RehireEmployeeRequest $request, Employee $employee): EmployeeResource
     {
         DB::transaction(function () use ($request, $employee) {
             // Lock existing active periods to prevent race conditions
@@ -30,8 +30,6 @@ class RehireEmployeeController extends Controller
 
         $employee->load(['user.roles', 'employmentPeriods.branch']);
 
-        return new ResponseEntity(
-            data: $employee->toApiArray()
-        );
+        return new EmployeeResource($employee);
     }
 }

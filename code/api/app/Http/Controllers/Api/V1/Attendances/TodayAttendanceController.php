@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Api\V1\Attendances;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendances\TodayAttendanceRequest;
+use App\Http\Resources\Attendance\AttendanceResource;
+use App\Http\Resources\Employee\EmployeeSummaryResource;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Attendance;
 use App\Models\Employee;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * GET /api/v1/attendances/today?branch_id=
@@ -18,10 +19,8 @@ use Illuminate\Support\Facades\DB;
  *
  * Response shape per row:
  * {
- *   "employee": { id, code, first_name, last_name, roles },
- *   "attendance": { id, check_in, lunch_start, lunch_end, check_out,
- *                   day_status, entry_late_seconds, lunch_late_seconds,
- *                   overtime_minutes, requires_overtime_decision } | null
+ *   "employee":   EmployeeSummaryResource  { id, code, first_name, last_name, roles },
+ *   "attendance":  AttendanceResource | null
  * }
  *
  * Employees are ordered by last_name ASC, first_name ASC.
@@ -47,7 +46,7 @@ use Illuminate\Support\Facades\DB;
  *                 property="data",
  *                 type="array",
  *                 @OA\Items(
- *                     @OA\Property(property="employee", ref="#/components/schemas/EmployeeResponse"),
+ *                     @OA\Property(property="employee", ref="#/components/schemas/EmployeeSummaryResponse"),
  *                     @OA\Property(property="attendance", nullable=true, ref="#/components/schemas/AttendanceResponse")
  *                 )
  *             )
@@ -83,46 +82,13 @@ class TodayAttendanceController extends Controller
             $attendance = $employee->attendances->first();
 
             return [
-                'employee'   => $this->formatEmployee($employee),
-                'attendance' => $attendance ? $this->formatAttendance($attendance) : null,
+                'employee'   => (new EmployeeSummaryResource($employee))->resolve(),
+                'attendance' => $attendance
+                    ? (new AttendanceResource($attendance))->resolve()
+                    : null,
             ];
         });
 
         return new ResponseEntity(data: $data->values()->all(), status: 200);
-    }
-
-    // ── Private formatters ────────────────────────────────────────────────────
-
-    private function formatEmployee(Employee $employee): array
-    {
-        return [
-            'id'         => $employee->public_id,
-            'code'       => $employee->code,
-            'first_name' => $employee->first_name,
-            'last_name'  => $employee->last_name,
-            'roles'      => $employee->getPositionRoles(),
-        ];
-    }
-
-    private function formatAttendance(Attendance $attendance): array
-    {
-        return [
-            'id'                         => $attendance->public_id,
-            'check_in'                   => $attendance->check_in?->toIso8601String(),
-            'lunch_start'                => $attendance->lunch_start?->toIso8601String(),
-            'lunch_end'                  => $attendance->lunch_end?->toIso8601String(),
-            'check_out'                  => $attendance->check_out?->toIso8601String(),
-            'day_status'                 => $attendance->day_status?->value,
-            'entry_late_seconds'         => $attendance->entry_late_seconds ?? 0,
-            'entry_late_minutes'         => $attendance->entryLateMinutes(),
-            'is_entry_deductible'        => $attendance->isEntryLateDeductible(),
-            'lunch_late_seconds'         => $attendance->lunch_late_seconds ?? 0,
-            'lunch_late_minutes'         => $attendance->lunchLateMinutes(),
-            'is_lunch_deductible'        => $attendance->isLunchLateDeductible(),
-            'net_worked_minutes'         => $attendance->net_worked_minutes,
-            'overtime_minutes'           => $attendance->overtime_minutes,
-            'overtime_authorized'        => $attendance->overtime_authorized,
-            'requires_overtime_decision' => ($attendance->overtime_minutes ?? 0) > 0 && ! $attendance->overtime_authorized,
-        ];
     }
 }

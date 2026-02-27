@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Employees;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\ListEmployeesRequest;
+use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Responses\Common\ResponsePaginated;
 use App\Models\Employee;
 
@@ -66,7 +67,7 @@ class ListEmployeesController extends Controller
 
         $employees = $query->paginate($perPage);
 
-        $employees->getCollection()->transform(fn($employee) => $employee->toApiArray());
+        $employees->getCollection()->transform(fn ($employee) => (new EmployeeResource($employee))->resolve());
 
         return new ResponsePaginated(paginator: $employees);
     }

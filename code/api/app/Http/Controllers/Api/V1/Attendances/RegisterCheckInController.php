@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1\Attendances;
 use App\Actions\Attendances\RegisterCheckInAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendances\CheckInRequest;
-use App\Http\Responses\Common\ResponseEntity;
+use App\Http\Resources\Attendance\AttendanceResource;
 
 /**
  * @OA\Post(
@@ -37,12 +37,9 @@ class RegisterCheckInController extends Controller
     public function __invoke(
         CheckInRequest       $request,
         RegisterCheckInAction $action
-    ): ResponseEntity {
+    ): AttendanceResource {
         $attendance = $action($request->validated());
 
-        return new ResponseEntity(
-            data:   $attendance->toApiArray(),
-            status: 201,
-        );
+        return (new AttendanceResource($attendance))->setStatusCode(201);
     }
 }

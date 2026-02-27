@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Employees;
 
 use App\Http\Controllers\Controller;
-use App\Http\Responses\Common\ResponseEntity;
+use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\Employee;
 
 /**
@@ -28,12 +28,10 @@ use App\Models\Employee;
  */
 class ShowEmployeeController extends Controller
 {
-    public function __invoke(Employee $employee): ResponseEntity
+    public function __invoke(Employee $employee): EmployeeResource
     {
         $employee->load(['user.roles', 'employmentPeriods.branch']);
 
-        return new ResponseEntity(
-            data: $employee->toApiArray()
-        );
+        return new EmployeeResource($employee);
     }
 }

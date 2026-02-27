@@ -141,41 +141,4 @@ class Attendance extends Model
         return (int) floor($this->lunch_late_seconds / 60);
     }
 
-    // ── API representation ────────────────────────────────────────────────────
-
-    /**
-     * Return a typed array representation for API responses.
-     *
-     * The `employee` relation must be loaded for `employee_id` to expose the
-     * public_id. If not loaded, falls back to the integer FK (internal only).
-     *
-     * @return array<string, mixed>
-     */
-    public function toApiArray(): array
-    {
-        return [
-            'id'                  => $this->public_id,
-            'employee_id'         => $this->relationLoaded('employee')
-                ? $this->employee?->public_id
-                : $this->employee_id,
-            'date'                => $this->date?->toDateString(),
-            'check_in'            => $this->check_in?->toIso8601String(),
-            'check_out'           => $this->check_out?->toIso8601String(),
-            'lunch_start'         => $this->lunch_start?->toIso8601String(),
-            'lunch_end'           => $this->lunch_end?->toIso8601String(),
-            'entry_late_seconds'  => $this->entry_late_seconds ?? 0,
-            'entry_late_minutes'  => $this->entryLateMinutes(),
-            'is_entry_deductible' => $this->isEntryLateDeductible(),
-            'lunch_late_seconds'  => $this->lunch_late_seconds ?? 0,
-            'lunch_late_minutes'  => $this->lunchLateMinutes(),
-            'is_lunch_deductible' => $this->isLunchLateDeductible(),
-            'net_worked_minutes'          => $this->net_worked_minutes,
-            'overtime_minutes'            => $this->overtime_minutes,
-            'overtime_authorized'         => $this->overtime_authorized,
-            'requires_overtime_decision'  => ($this->overtime_minutes ?? 0) > 0 && ! $this->overtime_authorized,
-            'day_status'                  => $this->day_status?->value,
-            'created_at'          => $this->created_at,
-            'updated_at'          => $this->updated_at,
-        ];
-    }
 }
