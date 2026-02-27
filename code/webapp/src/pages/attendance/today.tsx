@@ -23,7 +23,7 @@ export const Route = createFileRoute('/attendance/today')({
   component: TodayAttendancePage,
 })
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// #region Page
 
 export function TodayAttendancePage() {
   const {
@@ -116,7 +116,9 @@ export function TodayAttendancePage() {
   )
 }
 
-// ── Summary Bar ───────────────────────────────────────────────────────────────
+// #endregion
+
+// #region Summary Bar
 
 interface SummaryBarProps {
   total: number
@@ -190,7 +192,9 @@ function SummaryStat({
   )
 }
 
-// ── Employee Card ─────────────────────────────────────────────────────────────
+// #endregion
+
+// #region Employee Card
 
 interface EmployeeAttendanceCardProps {
   row: TodayAttendanceRow
@@ -276,7 +280,9 @@ function EmployeeAttendanceCard({ row, onCheckIn }: EmployeeAttendanceCardProps)
   )
 }
 
-// ── Phase helpers ─────────────────────────────────────────────────────────────
+// #endregion
+
+// #region Phase helpers
 
 function phaseCardClass(phase: AttendancePhase): string {
   switch (phase) {
@@ -352,7 +358,9 @@ function LateRow({
   )
 }
 
-// ── States ────────────────────────────────────────────────────────────────────
+// #endregion
+
+// #region States
 
 function EmptyState() {
   return (
@@ -390,3 +398,5 @@ function SkeletonGrid() {
     </div>
   )
 }
+
+// #endregion

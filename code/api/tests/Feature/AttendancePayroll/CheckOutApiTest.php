@@ -60,7 +60,7 @@ class CheckOutApiTest extends TestCase
         Passport::actingAs($this->user);
     }
 
-    // ── Happy path ────────────────────────────────────────────────────────────
+    // #region Happy path
 
     #[Test]
     public function registers_checkout_on_time_no_overtime(): void
@@ -175,7 +175,9 @@ class CheckOutApiTest extends TestCase
         $this->assertEquals(26, strlen($response->json('data.id')));
     }
 
-    // ── 422 error cases ───────────────────────────────────────────────────────
+    // #endregion
+
+    // #region 422 error cases
 
     #[Test]
     public function rejects_when_no_check_in_registered(): void
@@ -225,7 +227,9 @@ class CheckOutApiTest extends TestCase
         $response->assertStatus(404);
     }
 
-    // ── Cross-midnight UTC (RFC 3339 with offset) ─────────────────────────────
+    // #endregion
+
+    // #region Cross-midnight UTC (RFC 3339 with offset)
 
     #[Test]
     public function calculates_overtime_with_offset_across_utc_midnight(): void
@@ -263,7 +267,9 @@ class CheckOutApiTest extends TestCase
             ->assertJsonPath('data.overtime_minutes', 0);
     }
 
-    // ── Auth ──────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Auth
 
     #[Test]
     public function rejects_unauthenticated_request(): void
@@ -280,7 +286,9 @@ class CheckOutApiTest extends TestCase
         $response->assertStatus(401);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Helpers
 
     /**
      * Full scenario with schedule + attendance that has check_in, lunch_start, lunch_end.
@@ -387,4 +395,6 @@ class CheckOutApiTest extends TestCase
 
         return compact('attendance', 'employee', 'schedule');
     }
+    // #endregion
+
 }

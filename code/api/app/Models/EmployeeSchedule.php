@@ -49,7 +49,7 @@ class EmployeeSchedule extends Model
         'working_days_per_week' => 'integer',
     ];
 
-    // ── Relationships ─────────────────────────────────────────────────────────
+    // #region Relationships
 
     public function employmentPeriod(): BelongsTo
     {
@@ -64,7 +64,9 @@ class EmployeeSchedule extends Model
         return $this->hasMany(ScheduleDay::class)->orderBy('day_of_week');
     }
 
-    // ── Scopes ────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Scopes
 
     /**
      * Filter schedules that were effective on a given date.
@@ -87,7 +89,9 @@ class EmployeeSchedule extends Model
             });
     }
 
-    // ── Methods ───────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Methods
 
     /**
      * Return the ScheduleDay configuration for a given ISO day of week.
@@ -115,4 +119,6 @@ class EmployeeSchedule extends Model
             ->where('is_day_off', false)
             ->get();
     }
+    // #endregion
+
 }

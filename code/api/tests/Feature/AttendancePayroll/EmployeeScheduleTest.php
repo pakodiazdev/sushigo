@@ -33,7 +33,7 @@ class EmployeeScheduleTest extends TestCase
         }
     }
 
-    // ── effective() scope ─────────────────────────────────────────────────────
+    // #region effective() scope
 
     #[Test]
     public function effective_scope_returns_schedule_whose_range_contains_the_date(): void
@@ -148,7 +148,9 @@ class EmployeeScheduleTest extends TestCase
         $this->assertEquals('2026-02-01', $result->first()->effective_from->toDateString());
     }
 
-    // ── dayConfig() ───────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region dayConfig()
 
     #[Test]
     public function dayConfig_returns_schedule_day_for_configured_day_of_week(): void
@@ -178,7 +180,9 @@ class EmployeeScheduleTest extends TestCase
         $this->assertNull($schedule->dayConfig(7));
     }
 
-    // ── workingDays() ─────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region workingDays()
 
     #[Test]
     public function workingDays_returns_only_non_day_off_days(): void
@@ -205,7 +209,9 @@ class EmployeeScheduleTest extends TestCase
         $this->assertTrue($working->every(fn ($d) => ! $d->is_day_off));
     }
 
-    // ── Uniqueness constraints ────────────────────────────────────────────────
+    // #endregion
+
+    // #region Uniqueness constraints
 
     #[Test]
     public function cannot_create_duplicate_schedule_day_for_same_day_of_week(): void
@@ -249,7 +255,9 @@ class EmployeeScheduleTest extends TestCase
         $this->assertCount(2, EmployeeSchedule::where('employment_period_id', $period->id)->get());
     }
 
-    // ── ScheduleDay::isDayOff() ───────────────────────────────────────────────
+    // #endregion
+
+    // #region ScheduleDay::isDayOff()
 
     #[Test]
     public function isDayOff_returns_true_when_is_day_off_is_true(): void
@@ -273,7 +281,9 @@ class EmployeeScheduleTest extends TestCase
         $this->assertFalse($day->isDayOff());
     }
 
-    // ── ScheduleDay::expectedDurationMinutes() ────────────────────────────────
+    // #endregion
+
+    // #region ScheduleDay::expectedDurationMinutes()
 
     #[Test]
     public function expectedDurationMinutes_returns_zero_for_day_off(): void
@@ -345,7 +355,9 @@ class EmployeeScheduleTest extends TestCase
         $this->assertSame(540, $day->expectedDurationMinutes());
     }
 
-    // ── Relationships ─────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Relationships
 
     #[Test]
     public function employee_schedule_belongs_to_employment_period(): void
@@ -409,7 +421,9 @@ class EmployeeScheduleTest extends TestCase
         $this->assertEquals($schedule->id, $day->employeeSchedule->id);
     }
 
-    // ── Casts & schema ────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Casts & schema
 
     #[Test]
     public function workday_type_is_cast_to_enum(): void
@@ -459,4 +473,6 @@ class EmployeeScheduleTest extends TestCase
         $this->assertNull(EmployeeSchedule::find($schedule->id));
         $this->assertNotNull(EmployeeSchedule::withTrashed()->find($schedule->id));
     }
+    // #endregion
+
 }

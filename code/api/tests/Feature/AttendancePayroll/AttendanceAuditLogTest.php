@@ -32,7 +32,7 @@ class AttendanceAuditLogTest extends TestCase
         }
     }
 
-    // ── Create log entry ──────────────────────────────────────────────────────
+    // #region Create log entry
 
     #[Test]
     public function it_can_create_a_log_entry(): void
@@ -129,7 +129,9 @@ class AttendanceAuditLogTest extends TestCase
         $this->assertNull($log->reason);
     }
 
-    // ── Action enum cast ──────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Action enum cast
 
     #[Test]
     public function action_is_cast_to_audit_action_enum(): void
@@ -149,7 +151,9 @@ class AttendanceAuditLogTest extends TestCase
         $this->assertSame(AuditAction::UPDATE, $log->action);
     }
 
-    // ── Polymorphic relationship ───────────────────────────────────────────────
+    // #endregion
+
+    // #region Polymorphic relationship
 
     #[Test]
     public function auditable_relationship_resolves_to_employee(): void
@@ -187,7 +191,9 @@ class AttendanceAuditLogTest extends TestCase
         $this->assertTrue($log->user->is($user));
     }
 
-    // ── created_at ────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region created_at
 
     #[Test]
     public function created_at_is_set_automatically(): void
@@ -229,7 +235,9 @@ class AttendanceAuditLogTest extends TestCase
         );
     }
 
-    // ── Index coverage ────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Index coverage
 
     #[Test]
     public function multiple_logs_for_same_auditable_can_be_queried(): void
@@ -255,4 +263,6 @@ class AttendanceAuditLogTest extends TestCase
 
         $this->assertCount(2, $logs);
     }
+    // #endregion
+
 }

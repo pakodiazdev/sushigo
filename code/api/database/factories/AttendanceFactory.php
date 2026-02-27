@@ -37,7 +37,7 @@ class AttendanceFactory extends Factory
         ];
     }
 
-    // ── Status states ─────────────────────────────────────────────────────────
+    // #region Status states
 
     public function worked(): static
     {
@@ -102,7 +102,9 @@ class AttendanceFactory extends Factory
         ]);
     }
 
-    // ── Behaviour states ──────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Behaviour states
 
     /**
      * Employee arrived late by the given number of seconds.
@@ -132,4 +134,6 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => ['date' => $date]);
     }
+    // #endregion
+
 }

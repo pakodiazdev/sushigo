@@ -163,7 +163,7 @@ class CheckInApiTest extends TestCase
         $this->assertEquals(self::DATE, $response->json('data.date'));
     }
 
-    // ── 422 error cases ───────────────────────────────────────────────────────
+    // #region 422 error cases
 
     #[Test]
     public function rejects_duplicate_attendance(): void
@@ -277,7 +277,9 @@ class CheckInApiTest extends TestCase
         $this->assertArrayHasKey('check_in', $response->json('errors'));
     }
 
-    // ── Cross-midnight UTC (RFC 3339 with offset) ─────────────────────────────
+    // #endregion
+
+    // #region Cross-midnight UTC (RFC 3339 with offset)
 
     #[Test]
     public function handles_check_in_with_negative_offset_across_utc_midnight(): void
@@ -347,7 +349,9 @@ class CheckInApiTest extends TestCase
             ->assertJsonPath('data.entry_late_seconds', 0);
     }
 
-    // ── Auth ──────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Auth
 
     #[Test]
     public function rejects_unauthenticated_request(): void
@@ -362,7 +366,9 @@ class CheckInApiTest extends TestCase
         $response->assertStatus(401);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Helpers
 
     /**
      * Create an employee with an active employment period, a current schedule,
@@ -401,4 +407,6 @@ class CheckInApiTest extends TestCase
 
         return compact('employee', 'period', 'schedule', 'scheduleDay');
     }
+    // #endregion
+
 }

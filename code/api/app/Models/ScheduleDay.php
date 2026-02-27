@@ -51,14 +51,16 @@ class ScheduleDay extends Model
         'expected_end'            => 'datetime',
     ];
 
-    // ── Relationships ─────────────────────────────────────────────────────────
+    // #region Relationships
 
     public function employeeSchedule(): BelongsTo
     {
         return $this->belongsTo(EmployeeSchedule::class);
     }
 
-    // ── Methods ───────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Methods
 
     /**
      * Return true when this day is a scheduled rest day.
@@ -125,4 +127,6 @@ class ScheduleDay extends Model
 
         return (int) $grossMinutes;
     }
+    // #endregion
+
 }
