@@ -40,9 +40,7 @@ class AttendanceResource extends BaseResource
     {
         return [
             'id'                         => $this->public_id,
-            'employee_id'                => $this->relationLoaded('employee')
-                ? $this->employee?->public_id
-                : $this->employee_id,
+            'employee_id'                => $this->employee?->public_id,
             'date'                       => $this->date?->toDateString(),
             'check_in'                   => $this->check_in?->toIso8601String(),
             'check_out'                  => $this->check_out?->toIso8601String(),
