@@ -234,7 +234,7 @@ function EmployeeAttendanceCard({ row, onCheckIn }: EmployeeAttendanceCardProps)
       {att ? (
         <div className="space-y-1.5 text-xs">
           <TimeRow icon="↗" label="Entrada" value={formatTime(att.check_in)} />
-          {att.entry_late_seconds && att.entry_late_seconds > 0 ? (
+          {(att.entry_late_seconds ?? 0) > 0 ? (
             <LateRow label="Tardanza entrada" value={formatSeconds(att.entry_late_seconds)} deductible={att.is_entry_deductible} />
           ) : null}
           {att.lunch_start && (
