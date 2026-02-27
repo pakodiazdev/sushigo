@@ -4,6 +4,7 @@ namespace App\Models\Concerns;
 
 use App\Enums\AuditAction;
 use App\Models\AttendanceAuditLog;
+use BackedEnum;
 use Illuminate\Support\Facades\Auth;
 
 /**
