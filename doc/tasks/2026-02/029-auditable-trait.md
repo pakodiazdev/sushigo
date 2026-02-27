@@ -1,4 +1,4 @@
-# 🔧 Task #044: Auditable Trait (auto-audit on model events)
+# 🔧 Task #029: Auditable Trait (auto-audit on model events)
 
 ## 📖 Story
 
