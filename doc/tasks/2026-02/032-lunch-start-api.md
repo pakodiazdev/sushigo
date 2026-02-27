@@ -1,4 +1,4 @@
-# 🍽️ Task #027: Register Lunch-Start API
+# 🍽️ Task #032: Register Lunch-Start API
 
 > **Nota:** El task original se llamó "Lunch Return API". Tras análisis de UX, se separó en dos endpoints:
 > - **#027** (este) — `PATCH {id}/lunch-start` — registra la *salida* a comer

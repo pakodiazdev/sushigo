@@ -1,4 +1,4 @@
-# 🚪 Task #028: Register Check-out API
+# 🚪 Task #034: Register Check-out API
 
 ## 📖 Story
 
