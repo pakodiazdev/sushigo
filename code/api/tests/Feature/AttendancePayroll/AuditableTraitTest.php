@@ -38,7 +38,7 @@ class AuditableTraitTest extends TestCase
         $this->actor    = User::factory()->create();
     }
 
-    // ── CREATE ────────────────────────────────────────────────────────────────
+    // #region CREATE
 
     #[Test]
     public function creating_attendance_writes_create_audit_log(): void
@@ -84,7 +84,9 @@ class AuditableTraitTest extends TestCase
         $this->assertSame('WORKED', $log->new_values['day_status']);
     }
 
-    // ── UPDATE ────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region UPDATE
 
     #[Test]
     public function updating_attendance_writes_update_audit_log_with_diff_only(): void
@@ -172,7 +174,9 @@ class AuditableTraitTest extends TestCase
         $this->assertSame('ABSENCE', $log->new_values['day_status']);
     }
 
-    // ── DELETE ────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region DELETE
 
     #[Test]
     public function deleting_attendance_writes_delete_audit_log(): void
@@ -199,7 +203,9 @@ class AuditableTraitTest extends TestCase
         $this->assertArrayHasKey('employee_id', $log->old_values);
     }
 
-    // ── auditReason ───────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region auditReason
 
     #[Test]
     public function audit_reason_is_stored_when_set_before_update(): void
@@ -267,7 +273,9 @@ class AuditableTraitTest extends TestCase
         $this->assertNull($log->reason);
     }
 
-    // ── Polymorphic relationship ───────────────────────────────────────────────
+    // #endregion
+
+    // #region Polymorphic relationship
 
     #[Test]
     public function audit_log_auditable_resolves_back_to_attendance(): void
@@ -285,7 +293,9 @@ class AuditableTraitTest extends TestCase
         $this->assertTrue($log->auditable->is($attendance));
     }
 
-    // ── No auth user ──────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region No auth user
 
     #[Test]
     public function audit_log_user_id_is_null_when_no_authenticated_user(): void
@@ -300,4 +310,6 @@ class AuditableTraitTest extends TestCase
 
         $this->assertNull($log->user_id);
     }
+    // #endregion
+
 }

@@ -32,7 +32,7 @@ class AttendanceTest extends TestCase
         }
     }
 
-    // ── Creation ──────────────────────────────────────────────────────────────
+    // #region Creation
 
     #[Test]
     public function it_can_create_an_attendance_record(): void
@@ -53,7 +53,9 @@ class AttendanceTest extends TestCase
         $this->assertNotNull($attendance->id);
     }
 
-    // ── UNIQUE(employee_id, date) ─────────────────────────────────────────────
+    // #endregion
+
+    // #region UNIQUE(employee_id, date)
 
     #[Test]
     public function unique_constraint_prevents_two_records_for_same_employee_and_date(): void
@@ -90,7 +92,9 @@ class AttendanceTest extends TestCase
         $this->assertDatabaseCount('attendances', 2);
     }
 
-    // ── isEntryLateDeductible() ───────────────────────────────────────────────
+    // #endregion
+
+    // #region isEntryLateDeductible()
 
     #[Test]
     public function is_entry_late_deductible_returns_false_at_exactly_1800_seconds(): void
@@ -116,7 +120,9 @@ class AttendanceTest extends TestCase
         $this->assertFalse($attendance->isEntryLateDeductible());
     }
 
-    // ── isLunchLateDeductible() ───────────────────────────────────────────────
+    // #endregion
+
+    // #region isLunchLateDeductible()
 
     #[Test]
     public function is_lunch_late_deductible_returns_false_at_exactly_1800_seconds(): void
@@ -134,7 +140,9 @@ class AttendanceTest extends TestCase
         $this->assertTrue($attendance->isLunchLateDeductible());
     }
 
-    // ── entryLateMinutes() / lunchLateMinutes() ───────────────────────────────
+    // #endregion
+
+    // #region entryLateMinutes() / lunchLateMinutes()
 
     #[Test]
     public function entry_late_minutes_converts_seconds_to_whole_minutes_floor(): void
@@ -156,7 +164,9 @@ class AttendanceTest extends TestCase
         $this->assertSame(30, Attendance::factory()->make(['lunch_late_seconds' => 1859])->lunchLateMinutes());
     }
 
-    // ── DayStatus enum cast ───────────────────────────────────────────────────
+    // #endregion
+
+    // #region DayStatus enum cast
 
     #[Test]
     public function day_status_is_cast_to_day_status_enum(): void
@@ -189,7 +199,9 @@ class AttendanceTest extends TestCase
         $this->assertDatabaseCount('attendances', count(DayStatus::cases()));
     }
 
-    // ── Relationship ──────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Relationship
 
     #[Test]
     public function attendance_belongs_to_employee(): void
@@ -212,7 +224,9 @@ class AttendanceTest extends TestCase
         $this->assertCount(3, $employee->attendances);
     }
 
-    // ── Scopes ────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Scopes
 
     #[Test]
     public function scope_by_date_filters_by_date(): void
@@ -259,7 +273,9 @@ class AttendanceTest extends TestCase
         $result->each(fn ($a) => $this->assertEquals($employeeA->id, $a->employee_id));
     }
 
-    // ── Casts & schema ────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Casts & schema
 
     #[Test]
     public function check_in_and_check_out_are_cast_to_datetime(): void
@@ -319,4 +335,6 @@ class AttendanceTest extends TestCase
         $this->assertTrue($attendance->isEntryLateDeductible());
         $this->assertEquals(60, $attendance->entryLateMinutes());
     }
+    // #endregion
+
 }

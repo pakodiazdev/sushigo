@@ -60,7 +60,7 @@ export interface TodayAttendanceResponse {
   data: TodayAttendanceRow[]
 }
 
-// ── Attendance state helpers ─────────────────────────────────────────────────
+// #region Attendance state helpers
 
 export type AttendancePhase =
   | 'pending'       // No check-in yet
@@ -98,3 +98,5 @@ export function formatTime(iso: string | null): string {
   const mm = String(d.getMinutes()).padStart(2, '0')
   return `${hh}:${mm}`
 }
+
+// #endregion

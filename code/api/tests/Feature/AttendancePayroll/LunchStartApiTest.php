@@ -47,7 +47,7 @@ class LunchStartApiTest extends TestCase
         Passport::actingAs($this->user);
     }
 
-    // ── Happy path ────────────────────────────────────────────────────────────
+    // #region Happy path
 
     #[Test]
     public function registers_lunch_start_successfully(): void
@@ -108,7 +108,9 @@ class LunchStartApiTest extends TestCase
         $this->assertEquals(26, strlen($response->json('data.id')));
     }
 
-    // ── 422 error cases ───────────────────────────────────────────────────────
+    // #endregion
+
+    // #region 422 error cases
 
     #[Test]
     public function rejects_when_no_check_in_registered(): void
@@ -173,7 +175,9 @@ class LunchStartApiTest extends TestCase
         $this->assertArrayHasKey('lunch_start', $response->json('errors'));
     }
 
-    // ── Auth ──────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Auth
 
     #[Test]
     public function rejects_unauthenticated_request(): void
@@ -190,7 +194,9 @@ class LunchStartApiTest extends TestCase
         $response->assertStatus(401);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Helpers
 
     /**
      * Create an attendance record that already has a check_in but no lunch_start.
@@ -205,4 +211,6 @@ class LunchStartApiTest extends TestCase
             'lunch_start' => null,
         ]);
     }
+    // #endregion
+
 }

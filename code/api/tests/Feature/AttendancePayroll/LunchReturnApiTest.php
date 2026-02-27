@@ -55,7 +55,7 @@ class LunchReturnApiTest extends TestCase
         Passport::actingAs($this->user);
     }
 
-    // ── Happy path ────────────────────────────────────────────────────────────
+    // #region Happy path
 
     #[Test]
     public function registers_on_time_return(): void
@@ -154,7 +154,9 @@ class LunchReturnApiTest extends TestCase
         $this->assertEquals(26, strlen($response->json('data.id')));
     }
 
-    // ── 422 error cases ───────────────────────────────────────────────────────
+    // #endregion
+
+    // #region 422 error cases
 
     #[Test]
     public function rejects_when_no_lunch_start_registered(): void
@@ -206,7 +208,9 @@ class LunchReturnApiTest extends TestCase
         $response->assertStatus(404);
     }
 
-    // ── Auth ──────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Auth
 
     #[Test]
     public function rejects_unauthenticated_request(): void
@@ -223,7 +227,9 @@ class LunchReturnApiTest extends TestCase
         $response->assertStatus(401);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Helpers
 
     /**
      * Create a full scenario: employee → employment period → schedule → schedule day (Monday)
@@ -267,4 +273,6 @@ class LunchReturnApiTest extends TestCase
 
         return compact('attendance', 'employee', 'period', 'schedule', 'scheduleDay');
     }
+    // #endregion
+
 }

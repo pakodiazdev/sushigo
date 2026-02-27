@@ -49,7 +49,7 @@ class TodayAttendanceApiTest extends TestCase
         Passport::actingAs($this->user);
     }
 
-    // ── Happy path ────────────────────────────────────────────────────────────
+    // #region Happy path
 
     #[Test]
     public function returns_all_active_employees_for_branch(): void
@@ -230,7 +230,9 @@ class TodayAttendanceApiTest extends TestCase
         $this->assertNotContains($inactiveEmp->public_id, $ids);
     }
 
-    // ── Validation ────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Validation
 
     #[Test]
     public function rejects_missing_branch_id(): void
@@ -250,7 +252,9 @@ class TodayAttendanceApiTest extends TestCase
         $this->assertArrayHasKey('branch_id', $response->json('errors'));
     }
 
-    // ── Auth ──────────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Auth
 
     #[Test]
     public function rejects_unauthenticated_request(): void
@@ -262,7 +266,9 @@ class TodayAttendanceApiTest extends TestCase
         $response->assertStatus(401);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // #endregion
+
+    // #region Helpers
 
     /**
      * Create an employee with an active employment period in the given branch.
@@ -291,4 +297,6 @@ class TodayAttendanceApiTest extends TestCase
 
         return $employee;
     }
+    // #endregion
+
 }
