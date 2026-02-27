@@ -202,6 +202,30 @@ Refs:  RF-XX · <requirement text from spec.en.md>
 
 See `doc/conventions/backend/api-rules.md` → "DateTime Standard" section for full reference.
 
+### PHP Class Names (mandatory — no inline FQCNs)
+
+**Always import classes at the top of the file and use their short names. Never use backslash-prefixed FQCNs inline in code.**
+
+```php
+// ✅ Correct — import at top, use short name
+use Carbon\Carbon;
+use Spatie\Permission\PermissionRegistrar;
+use Illuminate\Database\UniqueConstraintViolationException;
+
+Carbon::parse($date);
+app()[PermissionRegistrar::class]->forgetCachedPermissions();
+$this->expectException(UniqueConstraintViolationException::class);
+
+// ❌ Wrong — inline FQCN
+\Carbon\Carbon::parse($date);
+app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+$this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+```
+
+This rule applies everywhere: return types, parameter types, `::class` references, `instanceof` checks, `expectException()` calls. PHP built-ins (e.g. `BackedEnum`) that live in the global namespace need no `use` statement and no `\` prefix.
+
+**PR requirement:** Reviewers must reject any code that uses a backslash-prefixed FQCN anywhere outside a `use` or `namespace` declaration.
+
 ### API Code Style
 
 - Strong typing always (PHP 8.2) - avoid redundant PHPDoc

@@ -5,9 +5,11 @@ namespace Tests\Feature\AttendancePayroll;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\Employee;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class EmployeeModelTest extends TestCase
@@ -18,7 +20,7 @@ class EmployeeModelTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Create position roles needed by factory/model
         foreach (Employee::POSITION_ROLES as $roleName) {
@@ -67,7 +69,7 @@ class EmployeeModelTest extends TestCase
     {
         Employee::factory()->create(['code' => 'EMP-001']);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         Employee::factory()->create(['code' => 'EMP-001']);
     }

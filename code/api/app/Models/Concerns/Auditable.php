@@ -119,7 +119,7 @@ trait Auditable
     private function castAuditValues(array $values): array
     {
         return collect($values)
-            ->map(fn ($value) => $value instanceof \BackedEnum ? $value->value : $value)
+            ->map(fn ($value) => $value instanceof BackedEnum ? $value->value : $value)
             ->all();
     }
 }

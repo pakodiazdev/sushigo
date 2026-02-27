@@ -4,6 +4,7 @@ namespace Tests\Feature\AttendancePayroll;
 
 use App\Models\Attendance;
 use App\Models\Employee;
+use Carbon\Carbon;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\ScheduleDay;
@@ -378,7 +379,7 @@ class CheckInApiTest extends TestCase
         string $expectedStart,
         string $expectedEnd = '17:00:00',
     ): array {
-        $dayOfWeekIso = \Carbon\Carbon::parse($date)->dayOfWeekIso; // 1=Mon … 7=Sun
+        $dayOfWeekIso = Carbon::parse($date)->dayOfWeekIso; // 1=Mon … 7=Sun
 
         $period = EmploymentPeriod::factory()->create([
             'is_active'  => true,
