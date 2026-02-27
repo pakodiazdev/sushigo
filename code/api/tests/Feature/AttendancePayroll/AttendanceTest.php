@@ -8,8 +8,10 @@ use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class AttendanceTest extends TestCase
@@ -20,7 +22,7 @@ class AttendanceTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Role::firstOrCreate(['name' => 'employee',         'guard_name' => 'api']);
         Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
@@ -267,8 +269,8 @@ class AttendanceTest extends TestCase
 
         $attendance->refresh();
 
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $attendance->check_in);
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $attendance->check_out);
+        $this->assertInstanceOf(Carbon::class, $attendance->check_in);
+        $this->assertInstanceOf(Carbon::class, $attendance->check_out);
     }
 
     #[Test]
@@ -279,7 +281,7 @@ class AttendanceTest extends TestCase
 
         $attendance->refresh();
 
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $attendance->date);
+        $this->assertInstanceOf(Carbon::class, $attendance->date);
         $this->assertEquals('2026-02-15', $attendance->date->toDateString());
     }
 

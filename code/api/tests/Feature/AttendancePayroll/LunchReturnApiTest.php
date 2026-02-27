@@ -14,6 +14,7 @@ use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class LunchReturnApiTest extends TestCase
@@ -35,7 +36,7 @@ class LunchReturnApiTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
         $role = Role::create(['name' => 'manager', 'guard_name' => 'api']);

@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
+use App\Models\ScheduleDay;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -132,7 +133,7 @@ class RegisterCheckInAction
      *
      * @throws ValidationException
      */
-    private function resolveScheduleDay(EmployeeSchedule $schedule, int $dayOfWeekIso): \App\Models\ScheduleDay
+    private function resolveScheduleDay(EmployeeSchedule $schedule, int $dayOfWeekIso): ScheduleDay
     {
         $scheduleDay = $schedule->dayConfig($dayOfWeekIso);
 
@@ -162,6 +163,12 @@ class RegisterCheckInAction
     private function calculateLateSeconds(Carbon $checkIn, mixed $expectedStart): int
     {
         $expected = Carbon::parse($expectedStart)->setDateFrom($checkIn);
+
+        // Night-shift guard: if the expected time lands more than 12 h after
+        // check-in it was anchored to the wrong UTC day — step back one day.
+        if ($expected->timestamp - $checkIn->timestamp > 12 * 3600) {
+            $expected->subDay();
+        }
 
         return (int) max(0, $checkIn->timestamp - $expected->timestamp);
     }

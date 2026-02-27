@@ -7,9 +7,12 @@ use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\ScheduleDay;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class EmployeeScheduleTest extends TestCase
@@ -20,7 +23,7 @@ class EmployeeScheduleTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Role::firstOrCreate(['name' => 'employee',         'guard_name' => 'api']);
         Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
@@ -211,7 +214,7 @@ class EmployeeScheduleTest extends TestCase
 
         ScheduleDay::factory()->monday()->create(['employee_schedule_id' => $schedule->id]);
 
-        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        $this->expectException(UniqueConstraintViolationException::class);
 
         ScheduleDay::factory()->monday()->create(['employee_schedule_id' => $schedule->id]);
     }
@@ -225,7 +228,7 @@ class EmployeeScheduleTest extends TestCase
         EmployeeSchedule::factory()->current()->create(['employment_period_id' => $period->id]);
 
         // Second active schedule for the same period — should violate partial unique index
-        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        $this->expectException(UniqueConstraintViolationException::class);
 
         EmployeeSchedule::factory()->current()->create(['employment_period_id' => $period->id]);
     }
@@ -424,8 +427,8 @@ class EmployeeScheduleTest extends TestCase
             ->effectiveBetween('2026-01-01', '2026-06-30')
             ->create();
 
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $schedule->effective_from);
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $schedule->effective_to);
+        $this->assertInstanceOf(Carbon::class, $schedule->effective_from);
+        $this->assertInstanceOf(Carbon::class, $schedule->effective_to);
     }
 
     #[Test]

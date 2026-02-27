@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Attendance;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,8 +16,8 @@ return new class extends Migration
         });
 
         // Backfill any pre-existing rows (development/test databases only)
-        \App\Models\Attendance::withoutTimestamps(function () {
-            \App\Models\Attendance::whereNull('public_id')->each(function ($attendance) {
+        Attendance::withoutTimestamps(function () {
+            Attendance::whereNull('public_id')->each(function ($attendance) {
                 $attendance->update(['public_id' => (string) Str::ulid()]);
             });
         });

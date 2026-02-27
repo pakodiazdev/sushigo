@@ -7,8 +7,11 @@ use App\Models\AttendanceAuditLog;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class AttendanceAuditLogTest extends TestCase
@@ -19,7 +22,7 @@ class AttendanceAuditLogTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Role::firstOrCreate(['name' => 'employee',         'guard_name' => 'api']);
         Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
@@ -202,7 +205,7 @@ class AttendanceAuditLogTest extends TestCase
         ]);
 
         $this->assertNotNull($log->created_at);
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $log->created_at);
+        $this->assertInstanceOf(Carbon::class, $log->created_at);
     }
 
     #[Test]
@@ -222,7 +225,7 @@ class AttendanceAuditLogTest extends TestCase
 
         // updated_at must not exist as a column on this model
         $this->assertFalse(
-            \Illuminate\Support\Facades\Schema::hasColumn('attendance_audit_logs', 'updated_at')
+            Schema::hasColumn('attendance_audit_logs', 'updated_at')
         );
     }
 
