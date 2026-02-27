@@ -122,11 +122,13 @@ class RegisterCheckOutAction
             return 0;
         }
 
-        // expected_end is a time-only value — anchor it to the attendance date.
+        // expected_end is a UTC time-only value — anchor it to the check-in's
+        // UTC date (NOT attendance->date, which stores the employee's local date
+        // and may differ from the UTC date for cross-midnight shifts).
         // Cross-midnight shift: when expected_end < expected_start (e.g. 19:00→04:00 UTC),
         // the end falls on the next calendar day.
         $expectedEnd = Carbon::parse($scheduleDay->expected_end)
-            ->setDateFrom($attendance->date);
+            ->setDateFrom($attendance->check_in);
 
         if ($scheduleDay->expected_start
             && $scheduleDay->expected_end < $scheduleDay->expected_start) {

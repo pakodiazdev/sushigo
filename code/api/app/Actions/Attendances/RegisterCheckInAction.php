@@ -35,14 +35,21 @@ class RegisterCheckInAction
     public function __invoke(array $data): Attendance
     {
         $employee = Employee::where('public_id', $data['employee_id'])->firstOrFail();
-        $checkIn  = Carbon::parse($data['check_in'])->utc();
-        $date     = $checkIn->toDateString();
+
+        // Parse keeping the original timezone offset to derive the employee's
+        // local date and day-of-week.  Only then convert to UTC for storage
+        // and late-seconds calculation.  This prevents cross-midnight UTC bugs
+        // where a late-night local check-in falls on the next UTC day.
+        $checkInLocal = Carbon::parse($data['check_in']);
+        $date         = $checkInLocal->toDateString();
+        $dayOfWeekIso = $checkInLocal->dayOfWeekIso;
+        $checkIn      = $checkInLocal->clone()->utc();
 
         $this->guardNoDuplicateAttendance($employee->id, $date);
 
         $period      = $this->resolveActiveEmploymentPeriod($employee->id, $date);
         $schedule    = $this->resolveActiveSchedule($period->id, $date);
-        $scheduleDay = $this->resolveScheduleDay($schedule, $checkIn->dayOfWeekIso);
+        $scheduleDay = $this->resolveScheduleDay($schedule, $dayOfWeekIso);
 
         $lateSeconds = $this->calculateLateSeconds($checkIn, $scheduleDay->expected_start);
 
