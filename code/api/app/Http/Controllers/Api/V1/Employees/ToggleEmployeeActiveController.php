@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Employees;
 
 use App\Http\Controllers\Controller;
-use App\Http\Responses\Common\ResponseEntity;
+use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\Employee;
 
 /**
@@ -36,7 +36,7 @@ class ToggleEmployeeActiveController extends Controller
      * Use deactivate/rehire for employment period management.
      * Requires an active employment period to operate.
      */
-    public function __invoke(Employee $employee): ResponseEntity
+    public function __invoke(Employee $employee): EmployeeResource
     {
         if (! $employee->employmentPeriods()->active()->exists()) {
             abort(422, 'Employee does not have an active employment period. Use rehire to create a new employment period.');
@@ -45,8 +45,6 @@ class ToggleEmployeeActiveController extends Controller
         $employee->update(['is_active' => ! $employee->is_active]);
         $employee->load(['user.roles', 'employmentPeriods.branch']);
 
-        return new ResponseEntity(
-            data: $employee->toApiArray()
-        );
+        return new EmployeeResource($employee);
     }
 }

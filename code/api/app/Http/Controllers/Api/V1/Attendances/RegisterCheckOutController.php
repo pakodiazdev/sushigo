@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1\Attendances;
 use App\Actions\Attendances\RegisterCheckOutAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendances\CheckOutRequest;
-use App\Http\Responses\Common\ResponseEntity;
+use App\Http\Resources\Attendance\AttendanceResource;
 use App\Models\Attendance;
 
 /**
@@ -49,12 +49,12 @@ class RegisterCheckOutController extends Controller
 {
     public function __construct(private readonly RegisterCheckOutAction $action) {}
 
-    public function __invoke(CheckOutRequest $request, string $id): ResponseEntity
+    public function __invoke(CheckOutRequest $request, string $id): AttendanceResource
     {
         $attendance = Attendance::where('public_id', $id)->firstOrFail();
 
         $attendance = ($this->action)($attendance, $request->validated());
 
-        return new ResponseEntity(data: $attendance->toApiArray(), status: 200);
+        return new AttendanceResource($attendance);
     }
 }

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1\Employees;
 use App\Actions\Employee\CreateEmployeeAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\StoreEmployeeRequest;
-use App\Http\Responses\Common\ResponseEntity;
+use App\Http\Resources\Employee\EmployeeResource;
 
 /**
  * @OA\Post(
@@ -32,12 +32,9 @@ class CreateEmployeeController extends Controller
     public function __invoke(
         StoreEmployeeRequest $request,
         CreateEmployeeAction $action
-    ): ResponseEntity {
+    ): EmployeeResource {
         $employee = $action($request->validated());
 
-        return new ResponseEntity(
-            data: $employee->toApiArray(),
-            status: 201
-        );
+        return (new EmployeeResource($employee))->setStatusCode(201);
     }
 }

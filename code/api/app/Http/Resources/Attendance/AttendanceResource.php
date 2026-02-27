@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Responses\Entities;
+namespace App\Http\Resources\Attendance;
+
+use App\Http\Resources\BaseResource;
 
 /**
  * @OA\Schema(
@@ -29,4 +31,36 @@ namespace App\Http\Responses\Entities;
  *     @OA\Property(property="updated_at", type="string", format="date-time", example="2026-02-23T09:05:45.000000Z")
  * )
  */
-class AttendanceResponse {}
+class AttendanceResource extends BaseResource
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray($request): array
+    {
+        return [
+            'id'                         => $this->public_id,
+            'employee_id'                => $this->relationLoaded('employee')
+                ? $this->employee?->public_id
+                : $this->employee_id,
+            'date'                       => $this->date?->toDateString(),
+            'check_in'                   => $this->check_in?->toIso8601String(),
+            'check_out'                  => $this->check_out?->toIso8601String(),
+            'lunch_start'                => $this->lunch_start?->toIso8601String(),
+            'lunch_end'                  => $this->lunch_end?->toIso8601String(),
+            'entry_late_seconds'         => $this->entry_late_seconds ?? 0,
+            'entry_late_minutes'         => $this->entryLateMinutes(),
+            'is_entry_deductible'        => $this->isEntryLateDeductible(),
+            'lunch_late_seconds'         => $this->lunch_late_seconds ?? 0,
+            'lunch_late_minutes'         => $this->lunchLateMinutes(),
+            'is_lunch_deductible'        => $this->isLunchLateDeductible(),
+            'net_worked_minutes'         => $this->net_worked_minutes,
+            'overtime_minutes'           => $this->overtime_minutes,
+            'overtime_authorized'        => $this->overtime_authorized,
+            'requires_overtime_decision' => ($this->overtime_minutes ?? 0) > 0 && ! $this->overtime_authorized,
+            'day_status'                 => $this->day_status?->value,
+            'created_at'                 => $this->created_at,
+            'updated_at'                 => $this->updated_at,
+        ];
+    }
+}

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\AttendancePayroll;
 
+use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -218,7 +219,7 @@ class EmployeeModelTest extends TestCase
     }
 
     #[Test]
-    public function to_api_array_returns_position_roles_array(): void
+    public function employee_resource_returns_position_roles_array(): void
     {
         $employee = Employee::factory()->withRoles([
             Employee::ROLE_COOK,
@@ -226,12 +227,12 @@ class EmployeeModelTest extends TestCase
         ])->withUser()->create();
 
         $employee->load('user');
-        $apiArray = $employee->toApiArray();
+        $resourceArray = (new EmployeeResource($employee))->resolve();
 
-        $this->assertArrayHasKey('roles', $apiArray);
-        $this->assertIsArray($apiArray['roles']);
-        $this->assertContains(Employee::ROLE_COOK, $apiArray['roles']);
-        $this->assertContains(Employee::ROLE_DELIVERY_DRIVER, $apiArray['roles']);
-        $this->assertArrayNotHasKey('role', $apiArray);
+        $this->assertArrayHasKey('roles', $resourceArray);
+        $this->assertIsArray($resourceArray['roles']);
+        $this->assertContains(Employee::ROLE_COOK, $resourceArray['roles']);
+        $this->assertContains(Employee::ROLE_DELIVERY_DRIVER, $resourceArray['roles']);
+        $this->assertArrayNotHasKey('role', $resourceArray);
     }
 }

@@ -160,38 +160,4 @@ class Employee extends Model
             ->toArray();
     }
 
-    /** @return array<string, mixed> */
-    public function toApiArray(): array
-    {
-        return [
-            'id'           => $this->public_id,
-            'code'         => $this->code,
-            'first_name'   => $this->first_name,
-            'last_name'    => $this->last_name,
-            'roles'        => $this->getPositionRoles(),
-            'is_active'    => $this->is_active,
-            'has_active_period' => $this->active_employment_periods_count !== null
-                ? $this->active_employment_periods_count > 0
-                : ($this->relationLoaded('employmentPeriods')
-                    ? $this->employmentPeriods->contains('is_active', true)
-                    : null),
-            'email'        => $this->user?->email,
-            'phone'        => $this->user?->phone,
-            'phone_country' => $this->user?->phone_country,
-            'meta'         => $this->meta,
-            'created_at'   => $this->created_at,
-            'updated_at'   => $this->updated_at,
-            'employment_periods' => $this->relationLoaded('employmentPeriods')
-                ? $this->employmentPeriods->loadMissing('branch')->map(fn($p) => [
-                    'id' => $p->public_id,
-                    'branch_id' => $p->branch_id,
-                    'branch_name' => $p->branch?->name,
-                    'start_date' => $p->start_date?->toDateString(),
-                    'end_date' => $p->end_date?->toDateString(),
-                    'termination_reason' => $p->termination_reason,
-                    'is_active' => $p->is_active,
-                ])->toArray()
-                : null,
-        ];
-    }
 }
