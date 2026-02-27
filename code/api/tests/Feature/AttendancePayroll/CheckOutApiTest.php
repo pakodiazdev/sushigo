@@ -66,7 +66,6 @@ class CheckOutApiTest extends TestCase
     {
         ['attendance' => $attendance] = $this->makeAttendanceWithLunch();
 
-        // Check out exactly at expected_end (17:00)
         $response = $this->patchJson(
             "/api/v1/attendances/{$attendance->public_id}/check-out",
             ['check_out' => '2026-02-23T17:00:00'],
@@ -200,13 +199,11 @@ class CheckOutApiTest extends TestCase
     {
         ['attendance' => $attendance] = $this->makeAttendanceWithLunch();
 
-        // First check-out succeeds
         $this->patchJson(
             "/api/v1/attendances/{$attendance->public_id}/check-out",
             ['check_out' => '2026-02-23T17:00:00'],
         )->assertStatus(200);
 
-        // Second attempt → 422
         $response = $this->patchJson(
             "/api/v1/attendances/{$attendance->public_id}/check-out",
             ['check_out' => '2026-02-23T17:00:00'],
@@ -339,7 +336,6 @@ class CheckOutApiTest extends TestCase
             'effective_from'       => '2026-01-01',
         ]);
 
-        // Monday (dow=1) — expected_end 17:00, lunch_duration 60 min
         ScheduleDay::factory()
             ->workDay()
             ->monday()

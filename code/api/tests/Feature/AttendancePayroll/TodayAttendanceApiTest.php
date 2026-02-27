@@ -21,7 +21,6 @@ class TodayAttendanceApiTest extends TestCase
     protected User $user;
     protected Branch $branch;
 
-    // Use today's real date so the controller (Carbon::today()) matches the test data
     private string $today;
 
     protected function setUp(): void
@@ -109,7 +108,6 @@ class TodayAttendanceApiTest extends TestCase
         $checked  = $this->makeEmployeeForBranch($this->branch);
         $pending  = $this->makeEmployeeForBranch($this->branch);
 
-        // Only first employee has checked in
         Attendance::factory()->onDate($this->today)->create([
             'employee_id' => $checked->id,
             'check_in'    => $this->today . 'T09:00:00',
@@ -191,7 +189,6 @@ class TodayAttendanceApiTest extends TestCase
                 ],
             ]);
 
-        // Employee id is always a ULID (26 chars)
         $this->assertEquals(26, strlen($response->json('data.0.employee.id')));
     }
 

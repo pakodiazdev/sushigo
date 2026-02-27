@@ -13,6 +13,7 @@ use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class CheckInApiTest extends TestCase
@@ -30,7 +31,7 @@ class CheckInApiTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
         $role = Role::create(['name' => 'manager', 'guard_name' => 'api']);
@@ -48,8 +49,6 @@ class CheckInApiTest extends TestCase
 
         Passport::actingAs($this->user);
     }
-
-    // ── Happy path ────────────────────────────────────────────────────────────
 
     #[Test]
     public function registers_on_time_check_in(): void
@@ -159,9 +158,7 @@ class CheckInApiTest extends TestCase
                 ],
             ]);
 
-        // ID exposed as ULID (26 chars)
         $this->assertEquals(26, strlen($response->json('data.id')));
-        // date formatted as Y-m-d
         $this->assertEquals(self::DATE, $response->json('data.date'));
     }
 
@@ -175,13 +172,11 @@ class CheckInApiTest extends TestCase
             expectedStart: self::START,
         );
 
-        // First check-in succeeds
         $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
             'check_in'    => self::CHECK_IN,
         ])->assertStatus(201);
 
-        // Second check-in for same date → 422
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
             'check_in'    => self::CHECK_IN,
@@ -356,7 +351,6 @@ class CheckInApiTest extends TestCase
     #[Test]
     public function rejects_unauthenticated_request(): void
     {
-        // Log out the Passport user and hit the route without credentials
         auth()->forgetGuards();
 
         $response = $this->postJson('/api/v1/attendances/check-in', [

@@ -81,6 +81,10 @@ class TodayAttendanceController extends Controller
             /** @var Attendance|null $attendance */
             $attendance = $employee->attendances->first();
 
+            // Set the employee relation so AttendanceResource always returns the ULID
+            // instead of the raw integer FK (avoids N+1 and fixes the API contract)
+            $attendance?->setRelation('employee', $employee);
+
             return [
                 'employee'   => (new EmployeeSummaryResource($employee))->resolve(),
                 'attendance' => $attendance

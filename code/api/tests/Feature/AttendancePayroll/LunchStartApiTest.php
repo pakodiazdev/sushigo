@@ -104,7 +104,6 @@ class LunchStartApiTest extends TestCase
                 ],
             ]);
 
-        // id is always a ULID (26 chars)
         $this->assertEquals(26, strlen($response->json('data.id')));
     }
 
@@ -134,13 +133,11 @@ class LunchStartApiTest extends TestCase
     {
         $attendance = $this->makeAttendanceWithCheckIn();
 
-        // First lunch-start succeeds
         $this->patchJson(
             "/api/v1/attendances/{$attendance->public_id}/lunch-start",
             ['lunch_start' => self::LUNCH_START],
         )->assertStatus(200);
 
-        // Second attempt → 422
         $response = $this->patchJson(
             "/api/v1/attendances/{$attendance->public_id}/lunch-start",
             ['lunch_start' => self::LUNCH_START],

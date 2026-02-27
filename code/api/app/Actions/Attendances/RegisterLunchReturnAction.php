@@ -53,8 +53,6 @@ class RegisterLunchReturnAction
         return $attendance->load('employee');
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
     /**
      * Throw a 422 if the attendance has no lunch_start recorded.
      *

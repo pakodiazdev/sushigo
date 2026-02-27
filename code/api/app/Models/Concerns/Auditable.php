@@ -80,8 +80,6 @@ trait Auditable
         });
     }
 
-    // ── Internal helpers ──────────────────────────────────────────────────────
-
     private function writeAuditLog(
         AuditAction $action,
         ?array      $oldValues,
