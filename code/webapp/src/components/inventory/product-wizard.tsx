@@ -349,7 +349,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                         wizardData.conversions.map((conv) => createConversionMutation.mutateAsync(conv))
                     )
                     showSuccess('Conversiones creadas exitosamente', 'Paso 3 Completo')
-                } catch (error: any) {
+                } catch (_error: any) {
                     showError('Error al crear conversiones', 'Error')
                     return
                 }

@@ -83,7 +83,7 @@ export function useEmployeesSearch() {
   const handleCloseForm = () => {
     navigate({
       search: (prev) => {
-        const { form, ...rest } = prev
+        const { form: _form, ...rest } = prev
         return rest
       }
     })

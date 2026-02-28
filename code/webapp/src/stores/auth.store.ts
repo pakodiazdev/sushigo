@@ -168,7 +168,7 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try {
           await authService.logout();
-        } catch (err) {
+        } catch (_err) {
           // Silently handle logout errors - we'll clear state anyway
         } finally {
           set({
@@ -241,7 +241,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             error: null,
           });
-        } catch (err) {
+        } catch (_err) {
           set({
             user: null,
             token: null,
