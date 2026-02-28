@@ -23,11 +23,12 @@ Como desarrollador, necesito que ESLint y la verificación de tipos de TypeScrip
 ### 📊 Estimates
 - **Optimistic:** `1h`
 - **Pessimistic:** `2h`
-- **Tracked:** `~35m`
+- **Tracked:** `~1h 45m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-02-28", "start": "04:57", "end": "05:32" }
+  { "date": "2026-02-28", "start": "04:57", "end": "05:32" },
+  { "date": "2026-02-28", "start": "05:32", "end": "06:11" }
 ]
 ```
