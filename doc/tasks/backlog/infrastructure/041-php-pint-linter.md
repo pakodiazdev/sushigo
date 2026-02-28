@@ -11,12 +11,12 @@ Como desarrollador, necesito que PHP Pint se ejecute automáticamente en cada pu
 ---
 
 ## ✅ Technical Tasks
-- [ ] 🔧 Create `.github/workflows/api-lint.yml`
+- [x] 🔧 Create `.github/workflows/api-lint.yml`
   - Trigger: `pull_request` and `push` to `main`, path filter `code/api/**`
   - Steps: checkout → setup PHP → composer install → `./vendor/bin/pint --test`
-- [ ] 📝 Add or validate `pint.json` config at `code/api/pint.json` (preset: laravel)
-- [ ] ✅ Verify pipeline passes on current codebase before merging
-- [ ] 📝 Update `doc/architecture/infrastructure/infrastructure.en.md` workflow table
+- [x] 📝 Add or validate `pint.json` config at `code/api/pint.json` (preset: laravel)
+- [ ] ✅ Verify pipeline passes on current codebase (CI validates on PR)
+- [x] 📝 Update `doc/architecture/infrastructure/infrastructure.en.md` workflow table (done in #040)
 
 ---
 
