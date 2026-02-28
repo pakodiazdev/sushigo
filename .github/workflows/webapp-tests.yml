@@ -1,0 +1,52 @@
+name: Webapp Tests (Vitest + Coverage)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  webapp-tests:
+    name: webapp-tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: code/webapp
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changes in code/webapp
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            webapp:
+              - 'code/webapp/**'
+
+      - name: Setup Node 24
+        if: steps.changes.outputs.webapp == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: code/webapp/package-lock.json
+
+      - name: Install dependencies
+        if: steps.changes.outputs.webapp == 'true'
+        run: npm ci
+
+      - name: Run Vitest with coverage
+        if: steps.changes.outputs.webapp == 'true'
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: steps.changes.outputs.webapp == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-coverage
+          path: code/webapp/coverage/
+          retention-days: 7

@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
@@ -35,6 +36,20 @@ export default defineConfig({
       host: process.env.VITE_HMR_HOST || 'sushigo.local',
       // Puerto 443 (HTTPS por defecto) - nginx proxy redirigirá el WebSocket
       clientPort: 443,
+    },
+  },
+  test: {
+    environment: 'node',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'json-summary'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/routeTree.gen.ts',
+        'src/main.tsx',
+        'src/**/*.d.ts',
+        'src/pages/**',
+      ],
     },
   },
 })
