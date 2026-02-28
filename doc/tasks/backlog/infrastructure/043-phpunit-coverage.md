@@ -11,13 +11,13 @@ Como desarrollador, necesito que las pruebas de PHPUnit con cobertura se ejecute
 ---
 
 ## ✅ Technical Tasks
-- [ ] 🔧 Create `.github/workflows/api-tests.yml`
+- [x] 🔧 Create `.github/workflows/api-tests.yml`
   - Trigger: `pull_request` and `push` to `main`, path filter `code/api/**`
   - Services: PostgreSQL container (`mydb_test`)
   - Steps: checkout → setup PHP with Xdebug/PCOV → composer install → `php artisan test --coverage --coverage-clover=coverage.xml`
-- [ ] 📤 Upload `coverage.xml` as workflow artifact (consumed by SonarCloud task [#045](https://github.com/pakodiazdev/sushigo/issues/45))
-- [ ] ✅ Verify all existing tests pass in CI environment
-- [ ] 📝 Update `doc/architecture/infrastructure/infrastructure.en.md` workflow table
+- [x] 📤 Upload `coverage.xml` as workflow artifact (consumed by SonarCloud task [#045](https://github.com/pakodiazdev/sushigo/issues/45))
+- [x] ✅ Verify all existing tests pass in CI environment — PHPUnit: PASS
+- [x] 📝 Update `doc/architecture/infrastructure/infrastructure.en.md` workflow table
 
 ---
 
@@ -25,9 +25,11 @@ Como desarrollador, necesito que las pruebas de PHPUnit con cobertura se ejecute
 ### 📊 Estimates
 - **Optimistic:** `2h`
 - **Pessimistic:** `4h`
-- **Tracked:** —
+- **Tracked:** `~7m`
 
 ### 📅 Sessions
 ```json
-[]
+[
+  { "date": "2026-02-28", "start": "06:30", "end": "06:37" }
+]
 ```

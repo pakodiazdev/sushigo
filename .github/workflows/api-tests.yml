@@ -1,0 +1,75 @@
+name: API Tests (PHPUnit + Coverage)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  api-tests:
+    name: api-tests
+    runs-on: ubuntu-latest
+
+    services:
+      pgsql:
+        image: postgres:16
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: mydb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: code/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changes in code/api
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            api:
+              - 'code/api/**'
+
+      - name: Setup PHP 8.2 with PCOV
+        if: steps.changes.outputs.api == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: pcov
+          extensions: pdo_pgsql
+
+      - name: Install Composer dependencies
+        if: steps.changes.outputs.api == 'true'
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Copy .env and generate app key
+        if: steps.changes.outputs.api == 'true'
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      - name: Run PHPUnit with coverage
+        if: steps.changes.outputs.api == 'true'
+        env:
+          DB_HOST: 127.0.0.1
+        run: php artisan test --coverage --coverage-clover=coverage.xml
+
+      - name: Upload coverage report
+        if: steps.changes.outputs.api == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-coverage
+          path: code/api/coverage.xml
+          retention-days: 7

@@ -142,7 +142,7 @@ flowchart LR
 |------|---------|------------|-------|
 | `.github/workflows/api-lint.yml` | PR open/update + push to `main` | `code/api/**` | PHP Pint `--test` |
 | `.github/workflows/webapp-lint.yml` | PR open/update + push to `main` | `code/webapp/**` | ESLint + TypeScript check |
-| `.github/workflows/api-tests.yml` | PR open/update + push to `main` | `code/api/**` | PHPUnit + coverage + SonarCloud analysis |
+| `.github/workflows/api-tests.yml` | PR open/update + push to `main` | `code/api/**` | PHPUnit + coverage → upload `coverage.xml` artifact |
 | `.github/workflows/webapp-tests.yml` | PR open/update + push to `main` | `code/webapp/**` | Vitest + coverage + SonarCloud analysis |
 
 ---
