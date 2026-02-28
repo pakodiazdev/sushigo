@@ -128,7 +128,7 @@ export function CreateAdjustmentDialog({
 
       onSuccess?.()
       onClose()
-    } catch (error) {
+    } catch (_error) {
       // Error is handled by the hook
     }
   }
