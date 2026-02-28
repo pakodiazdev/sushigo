@@ -24,11 +24,11 @@ Como desarrollador, necesito que PHP Pint se ejecute automáticamente en cada pu
 ### 📊 Estimates
 - **Optimistic:** `1h`
 - **Pessimistic:** `2h`
-- **Tracked:** —
+- **Tracked:** `~1h`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-02-28", "start": "02:53" }
+  { "date": "2026-02-28", "start": "02:53", "end": "03:51" }
 ]
 ```
