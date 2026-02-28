@@ -29,5 +29,7 @@ Como desarrollador, necesito que las pruebas de PHPUnit con cobertura se ejecute
 
 ### 📅 Sessions
 ```json
-[]
+[
+  { "date": "2026-02-28", "start": "06:30", "end": "" }
+]
 ```
