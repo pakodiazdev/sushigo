@@ -39,6 +39,10 @@ jobs:
         if: steps.changes.outputs.webapp == 'true'
         run: npm ci
 
+      - name: Generate route tree
+        if: steps.changes.outputs.webapp == 'true'
+        run: npm run generate
+
       - name: Run ESLint
         if: steps.changes.outputs.webapp == 'true'
         run: npm run lint
