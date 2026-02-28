@@ -12,10 +12,12 @@ use App\Models\InventoryLocation;
  *   path="/api/v1/inventory-locations",
  *   summary="List Inventory Locations",
  *   tags={"Inventory Locations"},
+ *
  *   @OA\Parameter(name="operating_unit_id", in="query", required=false, @OA\Schema(type="integer")),
  *   @OA\Parameter(name="type", in="query", required=false, @OA\Schema(type="string", enum={"MAIN", "TEMP", "KITCHEN", "BAR", "RETURN"})),
  *   @OA\Parameter(name="is_active", in="query", required=false, @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponsePaginated")),
  * )
  */

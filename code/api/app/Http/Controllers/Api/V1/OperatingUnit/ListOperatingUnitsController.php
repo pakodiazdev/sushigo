@@ -11,11 +11,13 @@ use Illuminate\Http\Request;
  *   path="/api/v1/operating-units",
  *   summary="List all operating units",
  *   tags={"Operating Units"},
+ *
  *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer")),
  *   @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string")),
  *   @OA\Parameter(name="type", in="query", required=false, @OA\Schema(type="string")),
  *   @OA\Parameter(name="is_active", in="query", required=false, @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="branch_id", in="query", required=false, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Operating units retrieved successfully"),
  * )
  */

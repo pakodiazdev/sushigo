@@ -23,7 +23,7 @@ abstract class BaseResource extends JsonResource
     {
         return [
             'status' => $this->statusCode,
-            'meta'   => null,
+            'meta' => null,
         ];
     }
 

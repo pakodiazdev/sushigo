@@ -13,37 +13,49 @@ use App\Models\UnitOfMeasure;
  *   summary="Update Unit of Measure",
  *   tags={"Units of Measure"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(
  *       name="id",
  *       in="path",
  *       description="Unit of Measure ID",
  *       required=true,
+ *
  *       @OA\Schema(type="integer")
  *   ),
+ *
  *   @OA\RequestBody(
  *       required=true,
+ *
  *       @OA\JsonContent(ref="#/components/schemas/UpdateUnitOfMeasureRequest")
  *   ),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Unit of measure updated successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *              @OA\Schema(
+ *
  *                  @OA\Property(property="data", ref="#/components/schemas/UnitOfMeasureResponse")
  *              )
  *           }
  *       )
  *   ),
+ *
  *   @OA\Response(
  *       response=404,
  *       description="Unit of measure not found",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
  *   ),
+ *
  *   @OA\Response(
  *       response=422,
  *       description="Validation Error",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
  *   )
  * )

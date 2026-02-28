@@ -25,7 +25,7 @@ class AttendanceAuditLog extends Model
     ];
 
     protected $casts = [
-        'action'     => AuditAction::class,
+        'action' => AuditAction::class,
         'old_values' => 'array',
         'new_values' => 'array',
         'created_at' => 'datetime',

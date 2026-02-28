@@ -19,11 +19,17 @@ abstract class InventoryTestCase extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Branch $branch;
+
     protected OperatingUnit $operatingUnit;
+
     protected InventoryLocation $location;
+
     protected UnitOfMeasure $uomKg;
+
     protected UnitOfMeasure $uomGr;
+
     protected UomConversion $conversionKgGr;
 
     protected function setUp(): void
@@ -102,7 +108,7 @@ abstract class InventoryTestCase extends TestCase
     protected function createItem(array $attributes = []): Item
     {
         return Item::create(array_merge([
-            'sku' => 'TEST-' . uniqid(),
+            'sku' => 'TEST-'.uniqid(),
             'name' => 'Test Item',
             'type' => 'INSUMO',
             'is_stocked' => true,
@@ -115,7 +121,7 @@ abstract class InventoryTestCase extends TestCase
     {
         return ItemVariant::create(array_merge([
             'item_id' => $item->id,
-            'code' => 'VAR-' . uniqid(),
+            'code' => 'VAR-'.uniqid(),
             'name' => 'Test Variant',
             'uom_id' => $this->uomKg->id,
             'min_stock' => 0,

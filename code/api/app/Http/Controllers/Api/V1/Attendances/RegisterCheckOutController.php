@@ -19,27 +19,35 @@ use App\Models\Attendance;
  *     summary="Register check-out",
  *     tags={"Attendances"},
  *     security={{"passport":{}}},
+ *
  *     @OA\Parameter(
  *         name="id",
  *         in="path",
  *         required=true,
  *         description="Attendance public_id (ULID)",
+ *
  *         @OA\Schema(type="string", example="01JN4Z8RFPQRSTUV0WXYZ12345")
  *     ),
+ *
  *     @OA\RequestBody(
  *         required=true,
+ *
  *         @OA\JsonContent(ref="#/components/schemas/CheckOutRequest")
  *     ),
+ *
  *     @OA\Response(
  *         response=200,
  *         description="Check-out registered",
+ *
  *         @OA\JsonContent(
  *             allOf={
+ *
  *                 @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *                 @OA\Schema(@OA\Property(property="data", ref="#/components/schemas/AttendanceResponse"))
  *             }
  *         )
  *     ),
+ *
  *     @OA\Response(response=404, description="Attendance not found"),
  *     @OA\Response(response=422, description="Validation or business rule error"),
  *     @OA\Response(response=401, description="Unauthenticated")

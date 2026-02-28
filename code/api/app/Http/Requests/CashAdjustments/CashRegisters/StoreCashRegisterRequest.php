@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="StoreCashRegisterRequest",
  *   required={"branch_id", "code", "name", "type"},
+ *
  *   @OA\Property(property="branch_id", type="integer", example=1, description="Branch ID"),
  *   @OA\Property(property="operating_unit_id", type="integer", example=1, description="Operating Unit ID (for events)", nullable=true),
  *   @OA\Property(property="code", type="string", maxLength=50, example="REG-001", description="Unique register code"),

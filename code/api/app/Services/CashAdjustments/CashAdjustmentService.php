@@ -13,14 +13,8 @@ class CashAdjustmentService
     /**
      * Create a new adjustment with lines
      *
-     * @param CashSession $session
-     * @param string $type
-     * @param string $direction
-     * @param array $lines [['tender_type' => 'CASH', 'amount' => 100.00, ...], ...]
-     * @param string|null $sourceSystem
-     * @param string|null $notes
-     * @param array $meta
-     * @return CashAdjustment
+     * @param  array  $lines  [['tender_type' => 'CASH', 'amount' => 100.00, ...], ...]
+     *
      * @throws \Exception
      */
     public function createAdjustment(
@@ -33,7 +27,7 @@ class CashAdjustmentService
         array $meta = []
     ): CashAdjustment {
         if (empty($lines)) {
-            throw new \Exception("Adjustment must have at least one line");
+            throw new \Exception('Adjustment must have at least one line');
         }
 
         DB::beginTransaction();
@@ -65,6 +59,7 @@ class CashAdjustmentService
             }
 
             DB::commit();
+
             return $adjustment->fresh('lines');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -74,12 +69,6 @@ class CashAdjustmentService
 
     /**
      * Create adjustment from external system report (e.g., POS, Uber Eats)
-     *
-     * @param CashSession $session
-     * @param string $sourceSystem
-     * @param array $lines
-     * @param string|null $notes
-     * @return CashAdjustment
      */
     public function createFromExternalReport(
         CashSession $session,
@@ -99,12 +88,6 @@ class CashAdjustmentService
 
     /**
      * Create manual correction adjustment
-     *
-     * @param CashSession $session
-     * @param string $direction
-     * @param array $lines
-     * @param string $notes
-     * @return CashAdjustment
      */
     public function createCorrection(
         CashSession $session,
@@ -125,15 +108,12 @@ class CashAdjustmentService
     /**
      * Post an adjustment (mark as finalized)
      *
-     * @param CashAdjustment $adjustment
-     * @param User $user
-     * @return CashAdjustment
      * @throws \Exception
      */
     public function postAdjustment(CashAdjustment $adjustment, User $user): CashAdjustment
     {
         if ($adjustment->isPosted()) {
-            throw new \Exception("Adjustment is already posted");
+            throw new \Exception('Adjustment is already posted');
         }
 
         $adjustment->posted_by = $user->id;
@@ -146,14 +126,12 @@ class CashAdjustmentService
     /**
      * Delete an adjustment (only if not posted)
      *
-     * @param CashAdjustment $adjustment
-     * @return bool
      * @throws \Exception
      */
     public function deleteAdjustment(CashAdjustment $adjustment): bool
     {
         if ($adjustment->isPosted()) {
-            throw new \Exception("Cannot delete posted adjustment");
+            throw new \Exception('Cannot delete posted adjustment');
         }
 
         DB::beginTransaction();
@@ -165,6 +143,7 @@ class CashAdjustmentService
             $adjustment->delete();
 
             DB::commit();
+
             return true;
         } catch (\Exception $e) {
             DB::rollBack();
@@ -175,34 +154,30 @@ class CashAdjustmentService
     /**
      * Validate line data
      *
-     * @param array $lineData
      * @throws \Exception
      */
     private function validateLineData(array $lineData): void
     {
-        if (!isset($lineData['tender_type'])) {
-            throw new \Exception("Line must have tender_type");
+        if (! isset($lineData['tender_type'])) {
+            throw new \Exception('Line must have tender_type');
         }
 
-        if (!isset($lineData['amount']) || $lineData['amount'] <= 0) {
-            throw new \Exception("Line must have positive amount");
+        if (! isset($lineData['amount']) || $lineData['amount'] <= 0) {
+            throw new \Exception('Line must have positive amount');
         }
 
         // Validate tender-specific requirements
         if ($lineData['tender_type'] === 'CARD' && empty($lineData['card_terminal_id'])) {
-            throw new \Exception("CARD tender requires card_terminal_id");
+            throw new \Exception('CARD tender requires card_terminal_id');
         }
 
         if ($lineData['tender_type'] === 'TRANSFER' && empty($lineData['bank_account_id'])) {
-            throw new \Exception("TRANSFER tender requires bank_account_id");
+            throw new \Exception('TRANSFER tender requires bank_account_id');
         }
     }
 
     /**
      * Get adjustment summary
-     *
-     * @param CashAdjustment $adjustment
-     * @return array
      */
     public function getAdjustmentSummary(CashAdjustment $adjustment): array
     {
@@ -218,7 +193,7 @@ class CashAdjustmentService
             'posted_at' => $adjustment->posted_at?->format('Y-m-d H:i:s'),
             'total_amount' => $adjustment->getTotalAmount(),
             'lines_count' => $lines->count(),
-            'lines' => $lines->map(fn($line) => [
+            'lines' => $lines->map(fn ($line) => [
                 'tender_type' => $line->tender_type,
                 'amount' => (float) $line->amount,
                 'reference' => $line->reference,

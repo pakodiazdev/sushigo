@@ -47,7 +47,7 @@ class RegisterStockOutRequest extends FormRequest
             'item_variant_id' => ['required', 'integer', 'exists:item_variants,id'],
             'qty' => ['required', 'numeric', 'min:0.0001'],
             'uom_id' => ['required', 'integer', 'exists:units_of_measure,id'],
-            'reason' => ['required', 'string', 'in:' . StockMovement::REASON_SALE . ',' . StockMovement::REASON_CONSUMPTION],
+            'reason' => ['required', 'string', 'in:'.StockMovement::REASON_SALE.','.StockMovement::REASON_CONSUMPTION],
             'sale_price' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],

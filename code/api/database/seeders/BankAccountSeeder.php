@@ -12,8 +12,9 @@ class BankAccountSeeder extends Seeder
     {
         $mainBranch = Branch::where('code', 'MAIN')->first();
 
-        if (!$mainBranch) {
+        if (! $mainBranch) {
             $this->command->warn('Main branch not found. Please run BranchSeeder first.');
+
             return;
         }
 
@@ -50,7 +51,7 @@ class BankAccountSeeder extends Seeder
                     'clabe_masked' => $accountData['clabe_masked'],
                     'is_active' => true,
                     'meta' => [
-                        'description' => 'Cuenta bancaria para operaciones de ' . $mainBranch->name,
+                        'description' => 'Cuenta bancaria para operaciones de '.$mainBranch->name,
                     ],
                 ]
             );

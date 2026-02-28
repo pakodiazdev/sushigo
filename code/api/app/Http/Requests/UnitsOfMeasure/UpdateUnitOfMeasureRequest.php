@@ -3,11 +3,11 @@
 namespace App\Http\Requests\UnitsOfMeasure;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
  * @OA\Schema(
  *   schema="UpdateUnitOfMeasureRequest",
+ *
  *   @OA\Property(property="name", type="string", maxLength=100, example="Kilogramo", description="UOM display name"),
  *   @OA\Property(property="symbol", type="string", maxLength=10, example="kg", description="UOM symbol"),
  *   @OA\Property(property="precision", type="integer", example=3, description="Decimal precision"),

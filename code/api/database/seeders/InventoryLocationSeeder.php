@@ -15,8 +15,9 @@ class InventoryLocationSeeder extends Seeder
     {
         $mainUnit = OperatingUnit::where('type', OperatingUnit::TYPE_BRANCH_MAIN)->first();
 
-        if (!$mainUnit) {
+        if (! $mainUnit) {
             $this->command->warn('Main operating unit not found. Please run OperatingUnitSeeder first.');
+
             return;
         }
 

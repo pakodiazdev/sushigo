@@ -13,17 +13,22 @@ use App\Models\ItemVariant;
  *   summary="Create Item Variant",
  *   tags={"Item Variants"},
  *   security={{"passport": {}}},
+ *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/CreateItemVariantRequest")),
+ *
  *   @OA\Response(
  *       response=201,
  *       description="Item variant created successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *              @OA\Schema(@OA\Property(property="data", ref="#/components/schemas/ItemVariantResponse"))
  *           }
  *       )
  *   ),
+ *
  *   @OA\Response(response=422, description="Validation Error", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */

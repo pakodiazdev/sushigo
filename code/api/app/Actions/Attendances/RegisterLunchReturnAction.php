@@ -31,8 +31,8 @@ use Illuminate\Validation\ValidationException;
 class RegisterLunchReturnAction
 {
     /**
-     * @param  Attendance               $attendance  Already-loaded attendance record
-     * @param  array{lunch_end: string} $data        Validated request data
+     * @param  Attendance  $attendance  Already-loaded attendance record
+     * @param  array{lunch_end: string}  $data  Validated request data
      *
      * @throws ValidationException
      */
@@ -46,7 +46,7 @@ class RegisterLunchReturnAction
         $lunchLateSeconds = $this->calculateLunchLateSeconds($attendance, $lunchEnd);
 
         $attendance->update([
-            'lunch_end'          => $lunchEnd,
+            'lunch_end' => $lunchEnd,
             'lunch_late_seconds' => $lunchLateSeconds,
         ]);
 
@@ -116,7 +116,7 @@ class RegisterLunchReturnAction
      */
     private function resolveScheduleDay(Attendance $attendance): ?ScheduleDay
     {
-        $date      = $attendance->date->toDateString();
+        $date = $attendance->date->toDateString();
         $dayOfWeek = $attendance->date->dayOfWeekIso;
 
         $period = EmploymentPeriod::where('employee_id', $attendance->employee_id)

@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
 /**
  * @OA\Schema(
  *   schema="ListEmployeesRequest",
+ *
  *   @OA\Property(property="is_active", type="boolean", description="Filter by active status"),
  *   @OA\Property(property="role", type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager", "admin", "super-admin"}, description="Filter by position role"),
  *   @OA\Property(property="search", type="string", description="Search in code, first_name, last_name"),

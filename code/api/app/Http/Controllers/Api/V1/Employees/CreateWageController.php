@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1\Employees;
 
+use App\Actions\Employee\CreateWageAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\StoreWageRequest;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Employee;
-use App\Models\WageHistory;
-use App\Actions\Employee\CreateWageAction;
 
 class CreateWageController extends Controller
 {

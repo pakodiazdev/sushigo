@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="CreateItemVariantRequest",
  *   required={"item_id", "uom_id", "code", "name"},
+ *
  *   @OA\Property(property="item_id", type="integer", example=1, description="Parent item ID"),
  *   @OA\Property(property="uom_id", type="integer", example=1, description="Base unit of measure ID"),
  *   @OA\Property(property="code", type="string", maxLength=100, example="ARR-KG", description="Unique variant code"),

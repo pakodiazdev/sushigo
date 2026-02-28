@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 /**
  * @OA\Schema(
  *   schema="AuthTokenResponseSchema",
+ *
  *   @OA\Property(property="status", type="integer", example=200),
  *   @OA\Property(property="data", type="object",
  *     @OA\Property(property="token", type="string", example="eyJ0eXAiOiJKV1QiLCJhbGc..."),
@@ -30,19 +31,19 @@ class AuthTokenResponse implements Responsable
 
         return response()->json([
             'status' => $this->status,
-            'data'   => [
-                'token'      => $this->token,
+            'data' => [
+                'token' => $this->token,
                 'token_type' => 'Bearer',
-                'user'       => [
-                    'id'    => $this->user->id,
-                    'name'  => $this->user->name,
+                'user' => [
+                    'id' => $this->user->id,
+                    'name' => $this->user->name,
                     'email' => $this->user->email,
                     'roles' => $this->user->roles->map(fn ($role) => [
-                        'id'   => $role->id,
+                        'id' => $role->id,
                         'name' => $role->name,
                     ]),
                     'permissions' => $this->user->permissions->map(fn ($perm) => [
-                        'id'   => $perm->id,
+                        'id' => $perm->id,
                         'name' => $perm->name,
                     ]),
                 ],

@@ -11,17 +11,22 @@ use App\Models\Item;
  *   path="/api/v1/items/{id}",
  *   summary="Get Item by ID",
  *   tags={"Items"},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Item retrieved successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *              @OA\Schema(@OA\Property(property="data", ref="#/components/schemas/ItemResponse"))
  *           }
  *       )
  *   ),
+ *
  *   @OA\Response(response=404, description="Item not found", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */

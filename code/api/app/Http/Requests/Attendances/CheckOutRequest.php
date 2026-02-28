@@ -10,6 +10,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *     schema="CheckOutRequest",
  *     required={"check_out"},
+ *
  *     @OA\Property(
  *         property="check_out",
  *         type="string",
@@ -36,7 +37,7 @@ class CheckOutRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'check_out.required'    => 'La hora de salida es requerida.',
+            'check_out.required' => 'La hora de salida es requerida.',
             'check_out.date' => 'La hora de salida debe ser una fecha válida en formato ISO 8601 (ej. 2026-02-23T17:05:00-06:00).',
         ];
     }

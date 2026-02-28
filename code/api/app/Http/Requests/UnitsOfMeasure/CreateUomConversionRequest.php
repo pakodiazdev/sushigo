@@ -9,6 +9,7 @@ use Illuminate\Validation\Rule;
  * @OA\Schema(
  *   schema="CreateUomConversionRequest",
  *   required={"from_uom_id", "to_uom_id", "factor"},
+ *
  *   @OA\Property(property="from_uom_id", type="integer", example=1, description="Source UOM ID"),
  *   @OA\Property(property="to_uom_id", type="integer", example=2, description="Target UOM ID"),
  *   @OA\Property(property="factor", type="number", format="float", example=1000.0, description="Conversion factor (from * factor = to)"),

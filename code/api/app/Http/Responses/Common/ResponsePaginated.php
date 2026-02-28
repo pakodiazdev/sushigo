@@ -9,6 +9,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 /**
  * @OA\Schema(
  *   schema="ResponsePaginated",
+ *
  *   @OA\Property(property="status", type="integer", example=200),
  *   @OA\Property(property="data", type="array", @OA\Items(type="object")),
  *   @OA\Property(property="meta", type="object",
@@ -30,12 +31,12 @@ class ResponsePaginated implements Responsable
     {
         return response()->json([
             'status' => $this->status,
-            'data'   => $this->paginator->items(),
-            'meta'   => [
+            'data' => $this->paginator->items(),
+            'meta' => [
                 'current_page' => $this->paginator->currentPage(),
-                'last_page'    => $this->paginator->lastPage(),
-                'per_page'     => $this->paginator->perPage(),
-                'total'        => $this->paginator->total(),
+                'last_page' => $this->paginator->lastPage(),
+                'per_page' => $this->paginator->perPage(),
+                'total' => $this->paginator->total(),
             ],
         ], $this->status);
     }

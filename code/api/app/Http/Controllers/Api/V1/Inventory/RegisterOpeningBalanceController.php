@@ -13,11 +13,15 @@ use App\Services\Inventory\OpeningBalanceService;
  *   summary="Register Opening Balance",
  *   tags={"Inventory"},
  *   security={{"passport": {}}},
+ *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/RegisterOpeningBalanceRequest")),
+ *
  *   @OA\Response(
  *       response=201,
  *       description="Opening balance registered successfully",
+ *
  *       @OA\JsonContent(
+ *
  *           @OA\Property(property="status", type="integer", example=201),
  *           @OA\Property(property="data", type="object",
  *               @OA\Property(property="id", type="integer", example=1),
@@ -32,6 +36,7 @@ use App\Services\Inventory\OpeningBalanceService;
  *           )
  *       )
  *   ),
+ *
  *   @OA\Response(response=422, description="Validation Error", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  *   @OA\Response(response=400, description="Business Logic Error (e.g., no conversion found)", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )

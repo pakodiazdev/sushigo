@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\BankAccount;
 use App\Models\CashAdjustment;
 use App\Models\CashAdjustmentLine;
 use App\Models\CashTerminal;
-use App\Models\BankAccount;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CashAdjustmentLine>
@@ -55,7 +55,7 @@ class CashAdjustmentLineFactory extends Factory
      */
     public function cash(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'tender_type' => CashAdjustmentLine::TENDER_CASH,
             'card_terminal_id' => null,
             'bank_account_id' => null,
@@ -67,7 +67,7 @@ class CashAdjustmentLineFactory extends Factory
      */
     public function card(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'tender_type' => CashAdjustmentLine::TENDER_CARD,
             'card_terminal_id' => CashTerminal::factory(),
             'bank_account_id' => null,
@@ -79,7 +79,7 @@ class CashAdjustmentLineFactory extends Factory
      */
     public function transfer(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'tender_type' => CashAdjustmentLine::TENDER_TRANSFER,
             'card_terminal_id' => null,
             'bank_account_id' => BankAccount::factory(),
@@ -91,7 +91,7 @@ class CashAdjustmentLineFactory extends Factory
      */
     public function withAmount(float $amount): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'amount' => $amount,
         ]);
     }

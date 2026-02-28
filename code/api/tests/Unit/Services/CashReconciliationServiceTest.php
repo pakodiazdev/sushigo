@@ -18,12 +18,13 @@ class CashReconciliationServiceTest extends TestCase
     use RefreshDatabase;
 
     private CashReconciliationService $service;
+
     private CashSession $session;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CashReconciliationService();
+        $this->service = new CashReconciliationService;
 
         $branch = Branch::factory()->create();
         $register = CashRegister::factory()->for($branch)->create();
@@ -99,7 +100,7 @@ class CashReconciliationServiceTest extends TestCase
             ->create([
                 'operating_date' => now()->subDay(),
                 'opening_balance' => 500.00,
-                'closing_balance' => 800.00
+                'closing_balance' => 800.00,
             ]);
 
         $sessions = collect([$this->session, $session2]);

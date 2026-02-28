@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="ListStockRequest",
+ *
  *   @OA\Property(property="inventory_location_id", type="integer", example=1),
  *   @OA\Property(property="item_variant_id", type="integer", example=1),
  *   @OA\Property(property="min_on_hand", type="number", format="float", example=10.0),

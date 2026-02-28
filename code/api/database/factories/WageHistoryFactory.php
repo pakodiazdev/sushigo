@@ -17,12 +17,12 @@ class WageHistoryFactory extends Factory
         $effectiveFrom = fake()->dateTimeBetween('-2 years', '-1 month');
 
         return [
-            'public_id'               => (string) Str::ulid(),
-            'employee_id'             => Employee::factory(),
-            'hourly_rate'             => fake()->randomFloat(2, 50, 500),
-            'weekly_scheduled_hours'  => fake()->randomElement([20.00, 24.00, 30.00, 38.00, 44.00, 48.00]),
-            'effective_from'          => $effectiveFrom,
-            'effective_to'            => null, // open-ended (current)
+            'public_id' => (string) Str::ulid(),
+            'employee_id' => Employee::factory(),
+            'hourly_rate' => fake()->randomFloat(2, 50, 500),
+            'weekly_scheduled_hours' => fake()->randomElement([20.00, 24.00, 30.00, 38.00, 44.00, 48.00]),
+            'effective_from' => $effectiveFrom,
+            'effective_to' => null, // open-ended (current)
         ];
     }
 
@@ -74,7 +74,7 @@ class WageHistoryFactory extends Factory
     {
         return $this->state(fn () => [
             'effective_from' => $from,
-            'effective_to'   => $to,
+            'effective_to' => $to,
         ]);
     }
 }

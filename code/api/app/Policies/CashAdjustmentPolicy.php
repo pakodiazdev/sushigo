@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\CashAdjustment;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CashAdjustmentPolicy
 {
@@ -21,7 +20,7 @@ class CashAdjustmentPolicy
      */
     public function view(User $user, CashAdjustment $cashAdjustment): bool
     {
-        if (!$user->can('cash_adjustments.view')) {
+        if (! $user->can('cash_adjustments.view')) {
             return false;
         }
 
@@ -41,7 +40,7 @@ class CashAdjustmentPolicy
      */
     public function update(User $user, CashAdjustment $cashAdjustment): bool
     {
-        if (!$user->can('cash_adjustments.update')) {
+        if (! $user->can('cash_adjustments.update')) {
             return false;
         }
 
@@ -57,7 +56,7 @@ class CashAdjustmentPolicy
      */
     public function delete(User $user, CashAdjustment $cashAdjustment): bool
     {
-        if (!$user->can('cash_adjustments.delete')) {
+        if (! $user->can('cash_adjustments.delete')) {
             return false;
         }
 
@@ -73,7 +72,7 @@ class CashAdjustmentPolicy
      */
     public function post(User $user, CashAdjustment $cashAdjustment): bool
     {
-        if (!$user->can('cash_adjustments.post')) {
+        if (! $user->can('cash_adjustments.post')) {
             return false;
         }
 

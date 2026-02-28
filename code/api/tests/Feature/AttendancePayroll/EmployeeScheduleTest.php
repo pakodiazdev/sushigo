@@ -42,7 +42,7 @@ class EmployeeScheduleTest extends TestCase
 
         EmployeeSchedule::factory()->effectiveBetween('2026-01-01', '2026-01-31')->create([
             'employment_period_id' => $period->id,
-            'workday_type'         => 'FULL',
+            'workday_type' => 'FULL',
         ]);
 
         $result = EmployeeSchedule::effective('2026-01-15')
@@ -153,7 +153,7 @@ class EmployeeScheduleTest extends TestCase
     // #region dayConfig()
 
     #[Test]
-    public function dayConfig_returns_schedule_day_for_configured_day_of_week(): void
+    public function day_config_returns_schedule_day_for_configured_day_of_week(): void
     {
         $schedule = EmployeeSchedule::factory()->create();
 
@@ -168,7 +168,7 @@ class EmployeeScheduleTest extends TestCase
     }
 
     #[Test]
-    public function dayConfig_returns_null_for_unconfigured_day_of_week(): void
+    public function day_config_returns_null_for_unconfigured_day_of_week(): void
     {
         $schedule = EmployeeSchedule::factory()->create();
 
@@ -185,7 +185,7 @@ class EmployeeScheduleTest extends TestCase
     // #region workingDays()
 
     #[Test]
-    public function workingDays_returns_only_non_day_off_days(): void
+    public function working_days_returns_only_non_day_off_days(): void
     {
         $schedule = EmployeeSchedule::factory()->create();
 
@@ -260,10 +260,10 @@ class EmployeeScheduleTest extends TestCase
     // #region ScheduleDay::isDayOff()
 
     #[Test]
-    public function isDayOff_returns_true_when_is_day_off_is_true(): void
+    public function is_day_off_returns_true_when_is_day_off_is_true(): void
     {
         $schedule = EmployeeSchedule::factory()->create();
-        $day      = ScheduleDay::factory()->dayOff()->sunday()->create([
+        $day = ScheduleDay::factory()->dayOff()->sunday()->create([
             'employee_schedule_id' => $schedule->id,
         ]);
 
@@ -271,10 +271,10 @@ class EmployeeScheduleTest extends TestCase
     }
 
     #[Test]
-    public function isDayOff_returns_false_for_regular_working_day(): void
+    public function is_day_off_returns_false_for_regular_working_day(): void
     {
         $schedule = EmployeeSchedule::factory()->create();
-        $day      = ScheduleDay::factory()->workDay()->monday()->create([
+        $day = ScheduleDay::factory()->workDay()->monday()->create([
             'employee_schedule_id' => $schedule->id,
         ]);
 
@@ -286,10 +286,10 @@ class EmployeeScheduleTest extends TestCase
     // #region ScheduleDay::expectedDurationMinutes()
 
     #[Test]
-    public function expectedDurationMinutes_returns_zero_for_day_off(): void
+    public function expected_duration_minutes_returns_zero_for_day_off(): void
     {
         $schedule = EmployeeSchedule::factory()->create();
-        $day      = ScheduleDay::factory()->dayOff()->sunday()->create([
+        $day = ScheduleDay::factory()->dayOff()->sunday()->create([
             'employee_schedule_id' => $schedule->id,
         ]);
 
@@ -297,59 +297,59 @@ class EmployeeScheduleTest extends TestCase
     }
 
     #[Test]
-    public function expectedDurationMinutes_returns_null_when_time_fields_are_missing(): void
+    public function expected_duration_minutes_returns_null_when_time_fields_are_missing(): void
     {
         $schedule = EmployeeSchedule::factory()->create();
-        $day      = ScheduleDay::factory()->workDay()->monday()->create([
+        $day = ScheduleDay::factory()->workDay()->monday()->create([
             'employee_schedule_id' => $schedule->id,
-            'expected_start'       => null,
-            'expected_end'         => null,
+            'expected_start' => null,
+            'expected_end' => null,
         ]);
 
         $this->assertNull($day->expectedDurationMinutes());
     }
 
     #[Test]
-    public function expectedDurationMinutes_calculates_gross_duration_without_lunch(): void
+    public function expected_duration_minutes_calculates_gross_duration_without_lunch(): void
     {
         // 08:00 → 17:00 = 540 minutes, no lunch configured
         $schedule = EmployeeSchedule::factory()->create();
-        $day      = ScheduleDay::factory()->workDay()->monday()->withTimes(
-            start:      '08:00:00',
+        $day = ScheduleDay::factory()->workDay()->monday()->withTimes(
+            start: '08:00:00',
             lunchStart: null,
-            lunchEnd:   null,
-            end:        '17:00:00',
+            lunchEnd: null,
+            end: '17:00:00',
         )->create(['employee_schedule_id' => $schedule->id]);
 
         $this->assertSame(540, $day->expectedDurationMinutes());
     }
 
     #[Test]
-    public function expectedDurationMinutes_subtracts_lunch_break_when_both_boundaries_are_set(): void
+    public function expected_duration_minutes_subtracts_lunch_break_when_both_boundaries_are_set(): void
     {
         // 08:00 → 17:00 = 540 min, lunch 13:00 → 14:00 = 60 min → net 480 min
         $schedule = EmployeeSchedule::factory()->create();
-        $day      = ScheduleDay::factory()->workDay()->monday()->withTimes(
-            start:      '08:00:00',
+        $day = ScheduleDay::factory()->workDay()->monday()->withTimes(
+            start: '08:00:00',
             lunchStart: '13:00:00',
-            lunchEnd:   '14:00:00',
-            end:        '17:00:00',
+            lunchEnd: '14:00:00',
+            end: '17:00:00',
         )->create(['employee_schedule_id' => $schedule->id]);
 
         $this->assertSame(480, $day->expectedDurationMinutes());
     }
 
     #[Test]
-    public function expectedDurationMinutes_ignores_partial_lunch_when_one_boundary_is_missing(): void
+    public function expected_duration_minutes_ignores_partial_lunch_when_one_boundary_is_missing(): void
     {
         // Only lunch_start provided, no lunch_end → no deduction
         // 08:00 → 17:00 = 540 min gross
         $schedule = EmployeeSchedule::factory()->create();
-        $day      = ScheduleDay::factory()->workDay()->monday()->withTimes(
-            start:      '08:00:00',
+        $day = ScheduleDay::factory()->workDay()->monday()->withTimes(
+            start: '08:00:00',
             lunchStart: '13:00:00',
-            lunchEnd:   null,
-            end:        '17:00:00',
+            lunchEnd: null,
+            end: '17:00:00',
         )->create(['employee_schedule_id' => $schedule->id]);
 
         $this->assertSame(540, $day->expectedDurationMinutes());
@@ -362,7 +362,7 @@ class EmployeeScheduleTest extends TestCase
     #[Test]
     public function employee_schedule_belongs_to_employment_period(): void
     {
-        $period   = EmploymentPeriod::factory()->create();
+        $period = EmploymentPeriod::factory()->create();
         $schedule = EmployeeSchedule::factory()->create(['employment_period_id' => $period->id]);
 
         $this->assertEquals($period->id, $schedule->employmentPeriod->id);
@@ -414,7 +414,7 @@ class EmployeeScheduleTest extends TestCase
     public function schedule_day_belongs_to_employee_schedule(): void
     {
         $schedule = EmployeeSchedule::factory()->create();
-        $day      = ScheduleDay::factory()->monday()->create([
+        $day = ScheduleDay::factory()->monday()->create([
             'employee_schedule_id' => $schedule->id,
         ]);
 

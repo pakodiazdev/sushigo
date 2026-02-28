@@ -12,7 +12,9 @@ use Illuminate\Http\JsonResponse;
  *   summary="Delete Cash Register",
  *   tags={"Cash Registers"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Register ID"),
+ *
  *   @OA\Response(response=200, description="Cash register deleted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

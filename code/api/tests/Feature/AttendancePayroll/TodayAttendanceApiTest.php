@@ -20,6 +20,7 @@ class TodayAttendanceApiTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Branch $branch;
 
     private string $today;
@@ -41,10 +42,10 @@ class TodayAttendanceApiTest extends TestCase
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
 
-        $this->user   = User::factory()->create();
+        $this->user = User::factory()->create();
         $this->user->assignRole('manager');
         $this->branch = Branch::factory()->create();
-        $this->today  = now()->toDateString();
+        $this->today = now()->toDateString();
 
         Passport::actingAs($this->user);
     }
@@ -86,8 +87,8 @@ class TodayAttendanceApiTest extends TestCase
         $employee = $this->makeEmployeeForBranch($this->branch);
 
         Attendance::factory()->onDate($this->today)->create([
-            'employee_id'        => $employee->id,
-            'check_in'           => $this->today . 'T09:15:00',
+            'employee_id' => $employee->id,
+            'check_in' => $this->today.'T09:15:00',
             'entry_late_seconds' => 900,  // 15 min late
         ]);
 
@@ -106,12 +107,12 @@ class TodayAttendanceApiTest extends TestCase
     #[Test]
     public function mixed_scenario_some_checked_in_some_not(): void
     {
-        $checked  = $this->makeEmployeeForBranch($this->branch);
-        $pending  = $this->makeEmployeeForBranch($this->branch);
+        $checked = $this->makeEmployeeForBranch($this->branch);
+        $pending = $this->makeEmployeeForBranch($this->branch);
 
         Attendance::factory()->onDate($this->today)->create([
             'employee_id' => $checked->id,
-            'check_in'    => $this->today . 'T09:00:00',
+            'check_in' => $this->today.'T09:00:00',
         ]);
 
         $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
@@ -160,7 +161,7 @@ class TodayAttendanceApiTest extends TestCase
 
         Attendance::factory()->onDate($this->today)->create([
             'employee_id' => $employee->id,
-            'check_in'    => $this->today . 'T09:00:00',
+            'check_in' => $this->today.'T09:00:00',
         ]);
 
         $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
@@ -198,12 +199,12 @@ class TodayAttendanceApiTest extends TestCase
     {
         // Create employees with known names
         $emp1 = $this->makeEmployeeForBranch($this->branch, firstName: 'Carlos', lastName: 'Zamora');
-        $emp2 = $this->makeEmployeeForBranch($this->branch, firstName: 'Ana',    lastName: 'Acosta');
-        $emp3 = $this->makeEmployeeForBranch($this->branch, firstName: 'Beto',   lastName: 'Acosta');
+        $emp2 = $this->makeEmployeeForBranch($this->branch, firstName: 'Ana', lastName: 'Acosta');
+        $emp3 = $this->makeEmployeeForBranch($this->branch, firstName: 'Beto', lastName: 'Acosta');
 
         $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
 
-        $data  = $response->json('data');
+        $data = $response->json('data');
         $names = collect($data)->pluck('employee.last_name')->all();
 
         // Acosta, Acosta, Zamora
@@ -217,7 +218,7 @@ class TodayAttendanceApiTest extends TestCase
     #[Test]
     public function excludes_inactive_employees(): void
     {
-        $activeEmp   = $this->makeEmployeeForBranch($this->branch);
+        $activeEmp = $this->makeEmployeeForBranch($this->branch);
         $inactiveEmp = $this->makeEmployeeForBranch($this->branch, active: false);
 
         $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
@@ -280,8 +281,8 @@ class TodayAttendanceApiTest extends TestCase
         bool $active = true,
     ): Employee {
         $period = EmploymentPeriod::factory()->create([
-            'branch_id'  => $branch->id,
-            'is_active'  => $active,
+            'branch_id' => $branch->id,
+            'is_active' => $active,
             'start_date' => '2026-01-01',
         ]);
 
@@ -290,7 +291,7 @@ class TodayAttendanceApiTest extends TestCase
         if ($firstName || $lastName) {
             $employee->update([
                 'first_name' => $firstName ?: $employee->first_name,
-                'last_name'  => $lastName  ?: $employee->last_name,
+                'last_name' => $lastName ?: $employee->last_name,
             ]);
             $employee->refresh();
         }

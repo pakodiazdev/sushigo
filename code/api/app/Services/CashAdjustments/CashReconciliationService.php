@@ -2,18 +2,14 @@
 
 namespace App\Services\CashAdjustments;
 
-use App\Models\CashSession;
 use App\Models\CashRegister;
+use App\Models\CashSession;
 use Illuminate\Support\Collection;
 
 class CashReconciliationService
 {
     /**
      * Calculate variance between expected and actual closing balance
-     *
-     * @param CashSession $session
-     * @param float $actualClosingBalance
-     * @return array
      */
     public function getVariance(CashSession $session, float $actualClosingBalance): array
     {
@@ -36,9 +32,6 @@ class CashReconciliationService
 
     /**
      * Generate daily summary for a session
-     *
-     * @param CashSession $session
-     * @return array
      */
     public function generateDailySummary(CashSession $session): array
     {
@@ -50,20 +43,20 @@ class CashReconciliationService
         $inflowAdjustments = $adjustments->where('direction', 'INFLOW');
         $outflowAdjustments = $adjustments->where('direction', 'OUTFLOW');
 
-        $inflowTotal = $inflowAdjustments->sum(fn($adj) => $adj->getTotalAmount());
-        $outflowTotal = $outflowAdjustments->sum(fn($adj) => $adj->getTotalAmount());
+        $inflowTotal = $inflowAdjustments->sum(fn ($adj) => $adj->getTotalAmount());
+        $outflowTotal = $outflowAdjustments->sum(fn ($adj) => $adj->getTotalAmount());
 
         // Calculate tender breakdown for adjustments
         $adjustmentTenderBreakdown = $this->getTenderBreakdown($adjustments);
 
         // Calculate tender breakdown for expenses
-        $expenseTenderBreakdown = $expenses->groupBy('tender_type')->map(fn($items) => [
+        $expenseTenderBreakdown = $expenses->groupBy('tender_type')->map(fn ($items) => [
             'count' => $items->count(),
             'total' => $items->sum('amount'),
         ]);
 
         // Calculate expense category breakdown
-        $expenseCategoryBreakdown = $expenses->groupBy('category')->map(fn($items) => [
+        $expenseCategoryBreakdown = $expenses->groupBy('category')->map(fn ($items) => [
             'count' => $items->count(),
             'total' => $items->sum('amount'),
         ]);
@@ -88,12 +81,12 @@ class CashReconciliationService
                 'inflow' => [
                     'count' => $inflowAdjustments->count(),
                     'total' => $inflowTotal,
-                    'by_type' => $inflowAdjustments->groupBy('type')->map(fn($items) => $items->count()),
+                    'by_type' => $inflowAdjustments->groupBy('type')->map(fn ($items) => $items->count()),
                 ],
                 'outflow' => [
                     'count' => $outflowAdjustments->count(),
                     'total' => $outflowTotal,
-                    'by_type' => $outflowAdjustments->groupBy('type')->map(fn($items) => $items->count()),
+                    'by_type' => $outflowAdjustments->groupBy('type')->map(fn ($items) => $items->count()),
                 ],
                 'net' => $inflowTotal - $outflowTotal,
                 'tender_breakdown' => $adjustmentTenderBreakdown,
@@ -113,9 +106,6 @@ class CashReconciliationService
 
     /**
      * Generate summary for multiple sessions (e.g., weekly or monthly)
-     *
-     * @param Collection $sessions
-     * @return array
      */
     public function generatePeriodSummary(Collection $sessions): array
     {
@@ -137,8 +127,8 @@ class CashReconciliationService
             $adjustments = $session->adjustments()->posted()->get();
             $expenses = $session->expenses()->posted()->get();
 
-            $totalInflow += $adjustments->where('direction', 'INFLOW')->sum(fn($adj) => $adj->getTotalAmount());
-            $totalOutflow += $adjustments->where('direction', 'OUTFLOW')->sum(fn($adj) => $adj->getTotalAmount());
+            $totalInflow += $adjustments->where('direction', 'INFLOW')->sum(fn ($adj) => $adj->getTotalAmount());
+            $totalOutflow += $adjustments->where('direction', 'OUTFLOW')->sum(fn ($adj) => $adj->getTotalAmount());
             $totalExpenses += $expenses->sum('amount');
 
             $expected = $session->calculateClosingBalance();
@@ -162,6 +152,7 @@ class CashReconciliationService
                 'average_variance' => $sessions->count() > 0 ? $totalVariance / $sessions->count() : 0,
                 'sessions_with_variance' => $sessions->filter(function ($session) {
                     $expected = $session->calculateClosingBalance();
+
                     return abs(($session->closing_balance ?? 0) - $expected) > 0.01;
                 })->count(),
             ],
@@ -170,11 +161,6 @@ class CashReconciliationService
 
     /**
      * Get reconciliation report for a cash register over a date range
-     *
-     * @param CashRegister $cashRegister
-     * @param string $fromDate
-     * @param string $toDate
-     * @return array
      */
     public function getReconciliationReport(CashRegister $cashRegister, string $fromDate, string $toDate): array
     {
@@ -184,7 +170,7 @@ class CashReconciliationService
             ->orderBy('operating_date')
             ->get();
 
-        $dailySummaries = $sessions->map(fn($session) => $this->generateDailySummary($session));
+        $dailySummaries = $sessions->map(fn ($session) => $this->generateDailySummary($session));
         $periodSummary = $this->generatePeriodSummary($sessions);
 
         return [
@@ -201,9 +187,6 @@ class CashReconciliationService
 
     /**
      * Get tender breakdown from adjustments
-     *
-     * @param Collection $adjustments
-     * @return array
      */
     private function getTenderBreakdown(Collection $adjustments): array
     {
@@ -225,9 +208,6 @@ class CashReconciliationService
 
     /**
      * Get variance status classification
-     *
-     * @param float $variance
-     * @return string
      */
     private function getVarianceStatus(float $variance): string
     {

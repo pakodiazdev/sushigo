@@ -62,11 +62,12 @@ class EmployeeSeeder extends OnceSeeder
             // Skip if employee code already exists
             if (Employee::where('code', $employeeData['code'])->exists()) {
                 $this->command->info("⏭ Employee {$employeeData['code']} already exists, skipping");
+
                 continue;
             }
 
             // Backward compatibility: convert legacy 'role' to 'roles' array
-            if (isset($employeeData['role']) && !isset($employeeData['roles'])) {
+            if (isset($employeeData['role']) && ! isset($employeeData['roles'])) {
                 $legacyRole = strtoupper($employeeData['role']);
                 $employeeData['roles'] = [self::LEGACY_ROLE_MAP[$legacyRole] ?? 'cook'];
                 unset($employeeData['role']);
@@ -131,6 +132,7 @@ class EmployeeSeeder extends OnceSeeder
 
         if (Employee::where('code', $code)->exists()) {
             $this->command->info("⏭ Employee {$code} (Dos Reingresos) already exists, skipping");
+
             return;
         }
 
@@ -195,6 +197,7 @@ class EmployeeSeeder extends OnceSeeder
 
         if (Employee::where('code', $code)->exists()) {
             $this->command->info("⏭ Employee {$code} (Reingreso Tres) already exists, skipping");
+
             return;
         }
 
@@ -270,30 +273,30 @@ class EmployeeSeeder extends OnceSeeder
         $bajaCount = 2;
 
         for ($i = 0; $i < $bajaCount; $i++) {
-            $hireDate   = $this->randomDateBetween(now()->subYears(2), now()->subMonths(6));
-            $bajaDate   = $this->randomDateBetween($hireDate->copy()->addMonths(1), now()->subMonths(1));
+            $hireDate = $this->randomDateBetween(now()->subYears(2), now()->subMonths(6));
+            $bajaDate = $this->randomDateBetween($hireDate->copy()->addMonths(1), now()->subMonths(1));
 
             $employee = Employee::factory()->cook()->inactive()->create();
 
             EmploymentPeriod::factory()->create([
-                'employee_id'        => $employee->id,
-                'branch_id'          => $branch->id,
-                'start_date'         => $hireDate->toDateString(),
-                'end_date'           => $bajaDate->toDateString(),
+                'employee_id' => $employee->id,
+                'branch_id' => $branch->id,
+                'start_date' => $hireDate->toDateString(),
+                'end_date' => $bajaDate->toDateString(),
                 'termination_reason' => fake()->randomElement([
                     'Renuncia voluntaria',
                     'Término de contrato',
                     'Despido justificado',
                     'Mutuo acuerdo',
                 ]),
-                'is_active'          => false,
-                'created_at'         => $hireDate,
-                'updated_at'         => $bajaDate,
+                'is_active' => false,
+                'created_at' => $hireDate,
+                'updated_at' => $bajaDate,
             ]);
 
             // Align employee and user timestamps
             $employee->update([
-                'is_active'  => false,
+                'is_active' => false,
                 'created_at' => $hireDate,
                 'updated_at' => $bajaDate,
             ]);

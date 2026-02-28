@@ -13,6 +13,6 @@ namespace App\Enums;
  */
 enum WorkdayType: string
 {
-    case FULL    = 'FULL';
+    case FULL = 'FULL';
     case PARTIAL = 'PARTIAL';
 }

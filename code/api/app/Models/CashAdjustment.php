@@ -29,10 +29,12 @@ class CashAdjustment extends Model
 
     // Type constants
     public const TYPE_EXTERNAL_IMPORT = 'EXTERNAL_IMPORT';
+
     public const TYPE_CORRECTION = 'CORRECTION';
 
     // Direction constants
     public const DIRECTION_INFLOW = 'INFLOW';
+
     public const DIRECTION_OUTFLOW = 'OUTFLOW';
 
     /**

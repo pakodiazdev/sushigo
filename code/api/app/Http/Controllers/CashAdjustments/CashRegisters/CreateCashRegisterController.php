@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\CashAdjustments\CashRegisters;
 
 use App\Http\Controllers\Controller;
-use App\Models\CashRegister;
 use App\Http\Requests\CashAdjustments\CashRegisters\StoreCashRegisterRequest;
+use App\Models\CashRegister;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -13,10 +13,13 @@ use Illuminate\Http\JsonResponse;
  *   summary="Create Cash Register",
  *   tags={"Cash Registers"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/StoreCashRegisterRequest")
  *   ),
+ *
  *   @OA\Response(response=201, description="Cash register created successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

@@ -13,15 +13,20 @@ use App\Http\Responses\Auth\AuthTokenResponse;
  *   summary="Reset password with token",
  *   description="Resets the user password using a valid token",
  *   tags={"Auth"},
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/ResetPasswordRequest")
  *   ),
+ *
  *   @OA\Response(
  *     response=200,
  *     description="Password reset successfully — returns auth token and user (same shape as login)",
+ *
  *     @OA\JsonContent(ref="#/components/schemas/AuthTokenResponseSchema")
  *   ),
+ *
  *   @OA\Response(
  *     response=422,
  *     description="Invalid or expired token"

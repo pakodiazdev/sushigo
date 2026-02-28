@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\CashRegister;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CashRegisterPolicy
 {
@@ -21,7 +20,7 @@ class CashRegisterPolicy
      */
     public function view(User $user, CashRegister $cashRegister): bool
     {
-        if (!$user->can('cash_registers.view')) {
+        if (! $user->can('cash_registers.view')) {
             return false;
         }
 
@@ -41,7 +40,7 @@ class CashRegisterPolicy
      */
     public function update(User $user, CashRegister $cashRegister): bool
     {
-        if (!$user->can('cash_registers.update')) {
+        if (! $user->can('cash_registers.update')) {
             return false;
         }
 
@@ -53,7 +52,7 @@ class CashRegisterPolicy
      */
     public function delete(User $user, CashRegister $cashRegister): bool
     {
-        if (!$user->can('cash_registers.delete')) {
+        if (! $user->can('cash_registers.delete')) {
             return false;
         }
 

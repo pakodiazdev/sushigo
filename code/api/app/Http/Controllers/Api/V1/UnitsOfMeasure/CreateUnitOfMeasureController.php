@@ -13,25 +13,33 @@ use App\Models\UnitOfMeasure;
  *   summary="Create Unit of Measure",
  *   tags={"Units of Measure"},
  *   security={{"passport": {}}},
+ *
  *   @OA\RequestBody(
  *       required=true,
+ *
  *       @OA\JsonContent(ref="#/components/schemas/CreateUnitOfMeasureRequest")
  *   ),
+ *
  *   @OA\Response(
  *       response=201,
  *       description="Unit of measure created successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *              @OA\Schema(
+ *
  *                  @OA\Property(property="data", ref="#/components/schemas/UnitOfMeasureResponse")
  *              )
  *           }
  *       )
  *   ),
+ *
  *   @OA\Response(
  *       response=422,
  *       description="Validation Error",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
  *   )
  * )

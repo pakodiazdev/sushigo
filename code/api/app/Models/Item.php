@@ -32,7 +32,9 @@ class Item extends Model
 
     // Type constants
     public const TYPE_INSUMO = 'INSUMO';
+
     public const TYPE_PRODUCTO = 'PRODUCTO';
+
     public const TYPE_ACTIVO = 'ACTIVO';
 
     /**

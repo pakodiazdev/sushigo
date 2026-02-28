@@ -14,14 +14,18 @@ class LogoutController extends Controller
      *   summary="Logout user",
      *   tags={"Authentication"},
      *   security={{"passport": {}}, {"bearer": {}}},
+     *
      *   @OA\Response(
      *       response=200,
      *       description="Logout successful",
+     *
      *       @OA\JsonContent(ref="#/components/schemas/ResponseMessage")
      *   ),
+     *
      *   @OA\Response(
      *       response=401,
      *       description="Unauthenticated",
+     *
      *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
      *   )
      * )

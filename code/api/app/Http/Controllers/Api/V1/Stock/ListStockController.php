@@ -12,10 +12,12 @@ use App\Models\Stock;
  *   path="/api/v1/stock",
  *   summary="List Stock Records",
  *   tags={"Stock"},
+ *
  *   @OA\Parameter(name="inventory_location_id", in="query", required=false, @OA\Schema(type="integer")),
  *   @OA\Parameter(name="item_variant_id", in="query", required=false, @OA\Schema(type="integer")),
  *   @OA\Parameter(name="min_on_hand", in="query", required=false, @OA\Schema(type="number")),
  *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponsePaginated")),
  * )
  */

@@ -19,7 +19,9 @@ class EmploymentPeriodApiTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Employee $employee;
+
     protected Branch $branch;
 
     protected function setUp(): void

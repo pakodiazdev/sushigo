@@ -12,7 +12,9 @@ use App\Models\OperatingUnit;
  *   summary="Create a new operating unit",
  *   tags={"Operating Units"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/CreateOperatingUnitRequest")),
+ *
  *   @OA\Response(response=201, description="Operating unit created successfully"),
  *   @OA\Response(response=422, description="Validation error")
  * )

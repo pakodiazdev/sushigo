@@ -13,14 +13,18 @@ use Illuminate\Http\Request;
  *   summary="List assignable position roles for the current user",
  *   tags={"Employees"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Response(
  *       response=200,
  *       description="List of roles the authenticated user can assign",
+ *
  *       @OA\JsonContent(
+ *
  *           @OA\Property(property="status", type="integer", example=200),
  *           @OA\Property(property="data", type="array", @OA\Items(type="string"))
  *       )
  *   ),
+ *
  *   @OA\Response(response=401, description="Unauthenticated")
  * )
  */
@@ -32,7 +36,7 @@ class AssignableRolesController extends Controller
 
         return response()->json([
             'status' => 200,
-            'data'   => array_values($roles),
+            'data' => array_values($roles),
         ]);
     }
 }

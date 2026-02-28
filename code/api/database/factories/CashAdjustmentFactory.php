@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\CashSession;
 use App\Models\CashAdjustment;
+use App\Models\CashSession;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CashAdjustment>
@@ -42,7 +42,7 @@ class CashAdjustmentFactory extends Factory
      */
     public function inflow(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'direction' => CashAdjustment::DIRECTION_INFLOW,
         ]);
     }
@@ -52,7 +52,7 @@ class CashAdjustmentFactory extends Factory
      */
     public function outflow(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'direction' => CashAdjustment::DIRECTION_OUTFLOW,
         ]);
     }
@@ -62,7 +62,7 @@ class CashAdjustmentFactory extends Factory
      */
     public function externalImport(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'type' => CashAdjustment::TYPE_EXTERNAL_IMPORT,
             'source_system' => $this->faker->randomElement(['POS', 'UBER_EATS', 'RAPPI', 'DIDI_FOOD']),
         ]);
@@ -73,10 +73,10 @@ class CashAdjustmentFactory extends Factory
      */
     public function correction(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'type' => CashAdjustment::TYPE_CORRECTION,
             'source_system' => 'MANUAL',
-            'notes' => 'Corrección manual: ' . $this->faker->sentence(),
+            'notes' => 'Corrección manual: '.$this->faker->sentence(),
         ]);
     }
 
@@ -85,7 +85,7 @@ class CashAdjustmentFactory extends Factory
      */
     public function posted(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'posted_by' => User::factory(),
             'posted_at' => now(),
         ]);
@@ -96,7 +96,7 @@ class CashAdjustmentFactory extends Factory
      */
     public function draft(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'posted_by' => null,
             'posted_at' => null,
         ]);

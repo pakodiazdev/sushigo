@@ -12,7 +12,7 @@ class CreateWageAction
     /**
      * Create a new WageHistory for the given employee, closing any open wage.
      *
-     * @param array $data<string, mixed>
+     * @param  array  $data<string,  mixed>
      */
     public function __invoke(Employee $employee, array $data): WageHistory
     {

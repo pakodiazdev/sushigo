@@ -25,7 +25,7 @@ class VerifyResetTokenAction
 
         $user = User::where(function ($q) use ($record) {
             $q->where('email', $record->email)
-              ->orWhere('phone', $record->email);
+                ->orWhere('phone', $record->email);
         })->first();
 
         if (! $user) {
@@ -33,7 +33,7 @@ class VerifyResetTokenAction
         }
 
         return [
-            'status'            => 'success',
+            'status' => 'success',
             'masked_identifier' => $this->maskIdentifier($user),
         ];
     }
@@ -66,14 +66,14 @@ class VerifyResetTokenAction
         if ($user->email) {
             [$local, $domain] = explode('@', $user->email, 2);
             $visibleChars = min(3, (int) ceil(strlen($local) / 2));
-            $masked = substr($local, 0, $visibleChars) . str_repeat('*', max(1, strlen($local) - $visibleChars));
+            $masked = substr($local, 0, $visibleChars).str_repeat('*', max(1, strlen($local) - $visibleChars));
 
-            return $masked . '@' . $domain;
+            return $masked.'@'.$domain;
         }
 
-        $phone   = $user->phone;
+        $phone = $user->phone;
         $visible = substr($phone, -4);
 
-        return str_repeat('*', max(1, strlen($phone) - 4)) . $visible;
+        return str_repeat('*', max(1, strlen($phone) - 4)).$visible;
     }
 }

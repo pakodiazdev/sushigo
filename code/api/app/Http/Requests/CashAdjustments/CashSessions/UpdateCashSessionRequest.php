@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="UpdateCashSessionRequest",
+ *
  *   @OA\Property(property="opening_balance", type="number", format="decimal", example=1000.00, description="Opening balance"),
  *   @OA\Property(property="closing_balance", type="number", format="decimal", example=2500.00, description="Closing balance"),
  *   @OA\Property(property="meta", type="object", example={"note": "Evening shift"}, description="Additional metadata", nullable=true),

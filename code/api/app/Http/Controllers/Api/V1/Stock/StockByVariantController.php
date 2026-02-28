@@ -12,7 +12,9 @@ use App\Models\Stock;
  *   path="/api/v1/stock/by-variant/{id}",
  *   summary="Get Stock Summary by Item Variant",
  *   tags={"Stock"},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Item Variant ID"),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=404, description="Item Variant Not Found"),
  * )
@@ -49,7 +51,7 @@ class StockByVariantController extends Controller
             'total_reserved' => (float) $stockRecords->sum('reserved'),
             'total_available' => (float) $stockRecords->sum('available'),
             'avg_weighted_cost' => (float) $stockRecords->avg('weighted_avg_cost'),
-            'total_inventory_value' => (float) $stockRecords->map(fn($s) => $s->on_hand * $s->weighted_avg_cost)->sum(),
+            'total_inventory_value' => (float) $stockRecords->map(fn ($s) => $s->on_hand * $s->weighted_avg_cost)->sum(),
         ];
 
         return new ResponseEntity(

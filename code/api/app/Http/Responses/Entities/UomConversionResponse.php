@@ -7,6 +7,7 @@ namespace App\Http\Responses\Entities;
  *     schema="UomConversionResponse",
  *     title="UOM Conversion Response",
  *     description="Unit of measure conversion entity representation",
+ *
  *     @OA\Property(property="id", type="integer", example=1, description="Conversion ID"),
  *     @OA\Property(property="from_uom_id", type="integer", example=1, description="Source UOM ID"),
  *     @OA\Property(property="to_uom_id", type="integer", example=2, description="Target UOM ID"),

@@ -19,7 +19,7 @@ class UserRoleSeeder extends OnceSeeder
                 $role = Role::where('name', $userData['role'])
                     ->where('guard_name', 'api')
                     ->first();
-                if ($role && !$user->hasRole($role)) {
+                if ($role && ! $user->hasRole($role)) {
                     $user->assignRole($role);
                     $this->command->info("✓ Assigned '{$userData['role']}' role to {$userData['email']}");
                 }
@@ -33,7 +33,7 @@ class UserRoleSeeder extends OnceSeeder
         if ($userRole) {
             foreach ($defaultRoleUsers as $email) {
                 $user = User::where('email', $email)->first();
-                if ($user && !$user->hasRole($userRole)) {
+                if ($user && ! $user->hasRole($userRole)) {
                     $user->assignRole($userRole);
                     $this->command->info("✓ Assigned 'user' role to {$email}");
                 }

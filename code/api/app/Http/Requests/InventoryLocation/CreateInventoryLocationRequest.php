@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="CreateInventoryLocationRequest",
  *   required={"operating_unit_id", "name", "type"},
+ *
  *   @OA\Property(property="operating_unit_id", type="integer", example=1, description="Operating unit ID"),
  *   @OA\Property(property="code", type="string", maxLength=50, example="MESA-REC-01", description="Unique location code"),
  *   @OA\Property(property="name", type="string", maxLength=255, example="Main Warehouse", description="Location name"),
@@ -45,15 +46,15 @@ class CreateInventoryLocationRequest extends FormRequest
     {
         $defaults = [];
 
-        if (!$this->has('priority')) {
+        if (! $this->has('priority')) {
             $defaults['priority'] = 100;
         }
 
-        if (!$this->has('is_primary')) {
+        if (! $this->has('is_primary')) {
             $defaults['is_primary'] = false;
         }
 
-        if (!$this->has('is_active')) {
+        if (! $this->has('is_active')) {
             $defaults['is_active'] = true;
         }
 

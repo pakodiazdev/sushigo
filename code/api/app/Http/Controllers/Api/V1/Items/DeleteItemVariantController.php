@@ -12,12 +12,16 @@ use App\Models\ItemVariant;
  *   summary="Delete Item Variant",
  *   tags={"Item Variants"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Item variant deleted successfully",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseMessage")
  *   ),
+ *
  *   @OA\Response(response=404, description="Item variant not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  *   @OA\Response(response=409, description="Cannot delete - Variant has stock", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )

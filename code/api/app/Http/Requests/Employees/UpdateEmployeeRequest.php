@@ -9,6 +9,7 @@ use Illuminate\Validation\Rule;
 /**
  * @OA\Schema(
  *   schema="UpdateEmployeeRequest",
+ *
  *   @OA\Property(property="first_name", type="string", maxLength=100, example="Juan"),
  *   @OA\Property(property="last_name", type="string", maxLength=100, example="Perez"),
  *   @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager", "admin", "super-admin"}), example={"cook"}, description="Position roles (super-admin only visible to super-admins)"),

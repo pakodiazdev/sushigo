@@ -12,8 +12,10 @@ use App\Models\OperatingUnit;
  *   path="/api/v1/operating-units/{id}/users",
  *   summary="List Users in Operating Unit",
  *   tags={"Operating Unit Users"},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
  *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponsePaginated")),
  *   @OA\Response(response=404, description="Not Found"),
  * )

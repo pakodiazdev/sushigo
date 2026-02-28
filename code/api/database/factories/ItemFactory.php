@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Item;
-use App\Models\UnitOfMeasure;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,7 +18,7 @@ class ItemFactory extends Factory
     public function definition(): array
     {
         return [
-            'sku' => 'SKU-' . fake()->unique()->numerify('######'),
+            'sku' => 'SKU-'.fake()->unique()->numerify('######'),
             'name' => fake()->words(3, true),
             'type' => fake()->randomElement([Item::TYPE_INSUMO, Item::TYPE_PRODUCTO, Item::TYPE_ACTIVO]),
             'is_stocked' => true,

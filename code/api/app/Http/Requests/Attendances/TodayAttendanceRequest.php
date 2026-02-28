@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
  * @OA\Schema(
  *   schema="TodayAttendanceRequest",
  *   required={"branch_id"},
+ *
  *   @OA\Property(
  *       property="branch_id",
  *       type="integer",
@@ -37,8 +38,8 @@ class TodayAttendanceRequest extends FormRequest
     {
         return [
             'branch_id.required' => 'El branch_id es requerido.',
-            'branch_id.integer'  => 'El branch_id debe ser un número entero.',
-            'branch_id.exists'   => 'La sucursal indicada no existe.',
+            'branch_id.integer' => 'El branch_id debe ser un número entero.',
+            'branch_id.exists' => 'La sucursal indicada no existe.',
         ];
     }
 }

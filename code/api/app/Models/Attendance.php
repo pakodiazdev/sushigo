@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Attendance extends Model
 {
-    use HasFactory, HasPublicId, Auditable;
+    use Auditable, HasFactory, HasPublicId;
 
     protected $fillable = [
         'employee_id',
@@ -35,19 +35,19 @@ class Attendance extends Model
     ];
 
     protected $casts = [
-        'date'                   => 'date',
-        'check_in'               => 'datetime',
-        'check_out'              => 'datetime',
-        'lunch_start'            => 'datetime',
-        'lunch_end'              => 'datetime',
-        'entry_late_seconds'     => 'integer',
-        'lunch_late_seconds'     => 'integer',
-        'net_worked_minutes'     => 'integer',
-        'overtime_minutes'       => 'integer',
-        'overtime_authorized'    => 'boolean',
+        'date' => 'date',
+        'check_in' => 'datetime',
+        'check_out' => 'datetime',
+        'lunch_start' => 'datetime',
+        'lunch_end' => 'datetime',
+        'entry_late_seconds' => 'integer',
+        'lunch_late_seconds' => 'integer',
+        'net_worked_minutes' => 'integer',
+        'overtime_minutes' => 'integer',
+        'overtime_authorized' => 'boolean',
         'overtime_authorized_at' => 'datetime',
-        'day_status'             => DayStatus::class,
-        'meta'                   => 'array',
+        'day_status' => DayStatus::class,
+        'meta' => 'array',
     ];
 
     public function employee(): BelongsTo
@@ -134,5 +134,4 @@ class Attendance extends Model
     {
         return (int) floor($this->lunch_late_seconds / 60);
     }
-
 }

@@ -24,8 +24,8 @@ use Illuminate\Validation\ValidationException;
 class RegisterLunchStartAction
 {
     /**
-     * @param  Attendance                    $attendance  Already-loaded attendance record
-     * @param  array{lunch_start: string}    $data        Validated request data
+     * @param  Attendance  $attendance  Already-loaded attendance record
+     * @param  array{lunch_start: string}  $data  Validated request data
      *
      * @throws ValidationException
      */

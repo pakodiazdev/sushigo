@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\CashSession;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CashSessionPolicy
 {
@@ -21,7 +20,7 @@ class CashSessionPolicy
      */
     public function view(User $user, CashSession $cashSession): bool
     {
-        if (!$user->can('cash_sessions.view')) {
+        if (! $user->can('cash_sessions.view')) {
             return false;
         }
 
@@ -41,7 +40,7 @@ class CashSessionPolicy
      */
     public function update(User $user, CashSession $cashSession): bool
     {
-        if (!$user->can('cash_sessions.update')) {
+        if (! $user->can('cash_sessions.update')) {
             return false;
         }
 
@@ -65,7 +64,7 @@ class CashSessionPolicy
      */
     public function post(User $user, CashSession $cashSession): bool
     {
-        if (!$user->can('cash_sessions.post')) {
+        if (! $user->can('cash_sessions.post')) {
             return false;
         }
 

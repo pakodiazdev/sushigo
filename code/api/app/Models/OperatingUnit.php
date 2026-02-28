@@ -32,8 +32,11 @@ class OperatingUnit extends Model
 
     // Type constants
     public const TYPE_BRANCH_MAIN = 'BRANCH_MAIN';
+
     public const TYPE_BRANCH_BUFFER = 'BRANCH_BUFFER';
+
     public const TYPE_BRANCH_RETURN = 'BRANCH_RETURN';
+
     public const TYPE_EVENT_TEMP = 'EVENT_TEMP';
 
     /**

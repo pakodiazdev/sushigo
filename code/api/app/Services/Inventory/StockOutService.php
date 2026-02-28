@@ -16,16 +16,16 @@ class StockOutService
     /**
      * Register a stock outbound movement (SALE or CONSUMPTION)
      *
-     * @param int $inventoryLocationId The inventory location ID (from location)
-     * @param int $itemVariantId The item variant ID
-     * @param float $quantity Quantity in transaction UOM
-     * @param int $transactionUomId Unit of measure for the transaction
-     * @param string $reason Movement reason (SALE or CONSUMPTION)
-     * @param float|null $salePrice Sale price per unit in transaction UOM (optional, for SALE movements)
-     * @param int|null $userId User performing the operation
-     * @param string|null $reference External reference number
-     * @param string|null $notes Additional notes
-     * @return StockMovement
+     * @param  int  $inventoryLocationId  The inventory location ID (from location)
+     * @param  int  $itemVariantId  The item variant ID
+     * @param  float  $quantity  Quantity in transaction UOM
+     * @param  int  $transactionUomId  Unit of measure for the transaction
+     * @param  string  $reason  Movement reason (SALE or CONSUMPTION)
+     * @param  float|null  $salePrice  Sale price per unit in transaction UOM (optional, for SALE movements)
+     * @param  int|null  $userId  User performing the operation
+     * @param  string|null  $reference  External reference number
+     * @param  string|null  $notes  Additional notes
+     *
      * @throws \Exception
      */
     public function registerStockOut(
@@ -40,7 +40,7 @@ class StockOutService
         ?string $notes = null
     ): StockMovement {
         // Validate reason
-        if (!in_array($reason, [StockMovement::REASON_SALE, StockMovement::REASON_CONSUMPTION])) {
+        if (! in_array($reason, [StockMovement::REASON_SALE, StockMovement::REASON_CONSUMPTION])) {
             throw new \Exception("Invalid reason for stock out: {$reason}. Must be SALE or CONSUMPTION.");
         }
 
@@ -70,7 +70,7 @@ class StockOutService
 
             if ($transactionUomId !== $variant->uom_id) {
                 $conversion = $this->getConversion($transactionUomId, $variant->uom_id);
-                if (!$conversion) {
+                if (! $conversion) {
                     throw new \Exception(
                         "No conversion found from {$transactionUom->code} to {$variant->unitOfMeasure->code}"
                     );
@@ -84,7 +84,7 @@ class StockOutService
                 ->where('item_variant_id', $itemVariantId)
                 ->first();
 
-            if (!$stock) {
+            if (! $stock) {
                 throw new \Exception(
                     "No stock found for variant {$variant->sku} at location {$location->name}"
                 );
@@ -184,7 +184,7 @@ class StockOutService
 
         if ($inverseConversion) {
             // Create a virtual conversion with inverted factor
-            $virtual = new UomConversion();
+            $virtual = new UomConversion;
             $virtual->from_uom_id = $fromUomId;
             $virtual->to_uom_id = $toUomId;
             $virtual->factor = 1 / $inverseConversion->factor;

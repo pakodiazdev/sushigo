@@ -7,6 +7,7 @@ namespace App\Http\Responses\Entities;
  *     schema="ItemResponse",
  *     title="Item Response",
  *     description="Item entity representation",
+ *
  *     @OA\Property(property="id", type="integer", example=1, description="Item ID"),
  *     @OA\Property(property="sku", type="string", example="INS-001", description="Unique SKU code"),
  *     @OA\Property(property="name", type="string", example="Arroz Sushi Premium", description="Item name"),

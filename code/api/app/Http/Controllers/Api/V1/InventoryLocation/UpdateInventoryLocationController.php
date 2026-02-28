@@ -13,8 +13,11 @@ use App\Models\InventoryLocation;
  *   summary="Update Inventory Location",
  *   tags={"Inventory Locations"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/UpdateInventoryLocationRequest")),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=404, description="Not Found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  *   @OA\Response(response=422, description="Validation Error", @OA\JsonContent(ref="#/components/schemas/ResponseError")),

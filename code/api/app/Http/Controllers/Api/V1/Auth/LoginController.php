@@ -16,18 +16,24 @@ class LoginController extends Controller
      *   path="/api/v1/auth/login",
      *   summary="Login user",
      *   tags={"Authentication"},
+     *
      *   @OA\RequestBody(
      *       required=true,
+     *
      *       @OA\JsonContent(ref="#/components/schemas/LoginRequestSchema")
      *   ),
+     *
      *   @OA\Response(
      *       response=200,
      *       description="Login successful",
+     *
      *       @OA\JsonContent(ref="#/components/schemas/AuthTokenResponseSchema")
      *   ),
+     *
      *   @OA\Response(
      *       response=422,
      *       description="Invalid credentials",
+     *
      *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
      *   )
      * )

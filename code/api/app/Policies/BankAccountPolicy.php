@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\BankAccount;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class BankAccountPolicy
 {
@@ -21,7 +20,7 @@ class BankAccountPolicy
      */
     public function view(User $user, BankAccount $bankAccount): bool
     {
-        if (!$user->can('bank_accounts.view')) {
+        if (! $user->can('bank_accounts.view')) {
             return false;
         }
 
@@ -41,7 +40,7 @@ class BankAccountPolicy
      */
     public function update(User $user, BankAccount $bankAccount): bool
     {
-        if (!$user->can('bank_accounts.update')) {
+        if (! $user->can('bank_accounts.update')) {
             return false;
         }
 
@@ -53,7 +52,7 @@ class BankAccountPolicy
      */
     public function delete(User $user, BankAccount $bankAccount): bool
     {
-        if (!$user->can('bank_accounts.delete')) {
+        if (! $user->can('bank_accounts.delete')) {
             return false;
         }
 

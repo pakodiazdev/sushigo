@@ -17,13 +17,19 @@ class Employee extends Model
     // Position roles: reflect the person's role in the organization.
     // Assigned to the linked User (the authenticated identity), not to Employee directly.
     // The fact of being an employee is determined by having an Employee record, not by a role.
-    const ROLE_MANAGER          = 'manager';
-    const ROLE_COOK             = 'cook';
-    const ROLE_KITCHEN_ASSISTANT= 'kitchen-assistant';
-    const ROLE_DELIVERY_DRIVER  = 'delivery-driver';
-    const ROLE_ACTING_MANAGER   = 'acting-manager';
-    const ROLE_ADMIN            = 'admin';
-    const ROLE_SUPER_ADMIN      = 'super-admin';
+    const ROLE_MANAGER = 'manager';
+
+    const ROLE_COOK = 'cook';
+
+    const ROLE_KITCHEN_ASSISTANT = 'kitchen-assistant';
+
+    const ROLE_DELIVERY_DRIVER = 'delivery-driver';
+
+    const ROLE_ACTING_MANAGER = 'acting-manager';
+
+    const ROLE_ADMIN = 'admin';
+
+    const ROLE_SUPER_ADMIN = 'super-admin';
 
     /**
      * All assignable position roles.
@@ -160,5 +166,4 @@ class Employee extends Model
             ->values()
             ->toArray();
     }
-
 }

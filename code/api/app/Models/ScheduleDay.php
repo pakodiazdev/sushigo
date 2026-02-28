@@ -42,13 +42,13 @@ class ScheduleDay extends Model
     ];
 
     protected $casts = [
-        'is_day_off'              => 'boolean',
-        'day_of_week'             => 'integer',
-        'expected_start'          => 'datetime',
-        'expected_lunch_start'    => 'datetime',
-        'expected_lunch_end'      => 'datetime',
-        'lunch_duration_minutes'  => 'integer',
-        'expected_end'            => 'datetime',
+        'is_day_off' => 'boolean',
+        'day_of_week' => 'integer',
+        'expected_start' => 'datetime',
+        'expected_lunch_start' => 'datetime',
+        'expected_lunch_end' => 'datetime',
+        'lunch_duration_minutes' => 'integer',
+        'expected_end' => 'datetime',
     ];
 
     // #region Relationships
@@ -113,15 +113,15 @@ class ScheduleDay extends Model
         }
 
         $start = Carbon::parse($this->expected_start);
-        $end   = Carbon::parse($this->expected_end);
+        $end = Carbon::parse($this->expected_end);
 
         $grossMinutes = $start->diffInMinutes($end);
 
         // Subtract lunch break when both boundaries are configured
         if ($this->expected_lunch_start && $this->expected_lunch_end) {
-            $lunchStart    = Carbon::parse($this->expected_lunch_start);
-            $lunchEnd      = Carbon::parse($this->expected_lunch_end);
-            $lunchMinutes  = $lunchStart->diffInMinutes($lunchEnd);
+            $lunchStart = Carbon::parse($this->expected_lunch_start);
+            $lunchEnd = Carbon::parse($this->expected_lunch_end);
+            $lunchMinutes = $lunchStart->diffInMinutes($lunchEnd);
             $grossMinutes -= $lunchMinutes;
         }
 

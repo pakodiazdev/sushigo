@@ -17,7 +17,7 @@ class PassportClientSeeder extends LockedSeeder
             ->where('name', 'SushiGo Personal Access Client')
             ->exists();
 
-        if (!$personalClientExists) {
+        if (! $personalClientExists) {
             DB::table('oauth_clients')->insert([
                 'id' => $personalClientId,
                 'owner_type' => null,
@@ -40,7 +40,7 @@ class PassportClientSeeder extends LockedSeeder
             ->where('name', 'SushiGo Password Grant Client')
             ->exists();
 
-        if (!$passwordClientExists) {
+        if (! $passwordClientExists) {
             DB::table('oauth_clients')->insert([
                 'id' => $passwordClientId,
                 'owner_type' => null,
@@ -62,4 +62,3 @@ class PassportClientSeeder extends LockedSeeder
         $this->command->info('✓ Passport clients configured successfully');
     }
 }
-

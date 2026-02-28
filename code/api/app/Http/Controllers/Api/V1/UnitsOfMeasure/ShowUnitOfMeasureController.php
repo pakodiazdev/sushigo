@@ -11,28 +11,36 @@ use App\Models\UnitOfMeasure;
  *   path="/api/v1/units-of-measure/{id}",
  *   summary="Get Unit of Measure by ID",
  *   tags={"Units of Measure"},
+ *
  *   @OA\Parameter(
  *       name="id",
  *       in="path",
  *       description="Unit of Measure ID",
  *       required=true,
+ *
  *       @OA\Schema(type="integer")
  *   ),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Unit of measure retrieved successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *              @OA\Schema(
+ *
  *                  @OA\Property(property="data", ref="#/components/schemas/UnitOfMeasureResponse")
  *              )
  *           }
  *       )
  *   ),
+ *
  *   @OA\Response(
  *       response=404,
  *       description="Unit of measure not found",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
  *   )
  * )

@@ -12,8 +12,11 @@ use App\Models\OperatingUnit;
  *   summary="Update an existing operating unit",
  *   tags={"Operating Units"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/UpdateOperatingUnitRequest")),
+ *
  *   @OA\Response(response=200, description="Operating unit updated successfully"),
  *   @OA\Response(response=404, description="Operating unit not found"),
  *   @OA\Response(response=422, description="Validation error")

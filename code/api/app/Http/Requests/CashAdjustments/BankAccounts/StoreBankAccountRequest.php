@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="StoreBankAccountRequest",
  *   required={"branch_id", "alias", "bank_name", "account_number_masked"},
+ *
  *   @OA\Property(property="branch_id", type="integer", example=1, description="Branch ID"),
  *   @OA\Property(property="alias", type="string", maxLength=255, example="Cuenta BBVA Principal", description="Account alias"),
  *   @OA\Property(property="bank_name", type="string", maxLength=255, example="BBVA", description="Bank name"),

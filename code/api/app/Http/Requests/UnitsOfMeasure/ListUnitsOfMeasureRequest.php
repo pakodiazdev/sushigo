@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="ListUnitsOfMeasureRequest",
+ *
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Filter by active status"),
  *   @OA\Property(property="is_decimal", type="boolean", example=true, description="Filter by decimal support"),
  *   @OA\Property(property="per_page", type="integer", example=15, description="Items per page"),

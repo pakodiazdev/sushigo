@@ -13,18 +13,24 @@ use Illuminate\Http\JsonResponse;
  *   summary="Verify password reset token",
  *   description="Checks if the combined t param (token.selector) is valid and not expired. Returns a masked version of the account identifier (email or phone).",
  *   tags={"Auth"},
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/VerifyResetTokenRequest")
  *   ),
+ *
  *   @OA\Response(
  *     response=200,
  *     description="Token is valid",
+ *
  *     @OA\JsonContent(
+ *
  *       @OA\Property(property="status", type="string", example="success"),
  *       @OA\Property(property="masked_identifier", type="string", example="ju***@example.com")
  *     )
  *   ),
+ *
  *   @OA\Response(
  *     response=422,
  *     description="Invalid or expired token"

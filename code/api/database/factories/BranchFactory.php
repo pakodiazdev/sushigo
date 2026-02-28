@@ -21,7 +21,7 @@ class BranchFactory extends Factory
     {
         return [
             'code' => strtoupper(fake()->unique()->lexify('BR???')),
-            'name' => fake()->company() . ' Branch',
+            'name' => fake()->company().' Branch',
             'region' => fake()->randomElement(['Norte', 'Sur', 'Este', 'Oeste', 'Centro']),
             'timezone' => fake()->randomElement(['America/Mexico_City', 'America/Monterrey', 'America/Tijuana']),
             'is_active' => true,
@@ -38,7 +38,7 @@ class BranchFactory extends Factory
      */
     public function inactive(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'is_active' => false,
         ]);
     }
@@ -48,7 +48,7 @@ class BranchFactory extends Factory
      */
     public function region(string $region): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'region' => $region,
         ]);
     }

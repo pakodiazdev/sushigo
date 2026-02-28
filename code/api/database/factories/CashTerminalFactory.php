@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Branch;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CashTerminal>
@@ -22,7 +22,7 @@ class CashTerminalFactory extends Factory
 
         return [
             'branch_id' => Branch::factory(),
-            'name' => $provider . ' - ' . $this->faker->randomElement(['Terminal 1', 'Terminal 2', 'Móvil']),
+            'name' => $provider.' - '.$this->faker->randomElement(['Terminal 1', 'Terminal 2', 'Móvil']),
             'provider' => $provider,
             'account_ref' => $this->faker->bothify('ACC-########'),
             'last_four' => $this->faker->numerify('####'),
@@ -40,7 +40,7 @@ class CashTerminalFactory extends Factory
      */
     public function inactive(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'is_active' => false,
         ]);
     }
@@ -50,9 +50,9 @@ class CashTerminalFactory extends Factory
      */
     public function provider(string $provider): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'provider' => $provider,
-            'name' => $provider . ' - Terminal',
+            'name' => $provider.' - Terminal',
         ]);
     }
 }

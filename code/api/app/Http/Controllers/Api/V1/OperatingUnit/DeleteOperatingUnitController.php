@@ -11,7 +11,9 @@ use App\Models\OperatingUnit;
  *   summary="Delete an operating unit (soft delete)",
  *   tags={"Operating Units"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Operating unit deleted successfully"),
  *   @OA\Response(response=404, description="Operating unit not found")
  * )

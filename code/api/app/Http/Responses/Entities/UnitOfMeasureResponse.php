@@ -7,6 +7,7 @@ namespace App\Http\Responses\Entities;
  *     schema="UnitOfMeasureResponse",
  *     title="Unit of Measure Response",
  *     description="Unit of measure entity representation",
+ *
  *     @OA\Property(property="id", type="integer", example=1, description="UOM ID"),
  *     @OA\Property(property="code", type="string", example="KG", description="Unique UOM code"),
  *     @OA\Property(property="name", type="string", example="Kilogramo", description="UOM display name"),

@@ -3,13 +3,12 @@
 namespace Database\Seeders\Production;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 
 class ProductionSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->command->info("🚀 Starting Production Seeders...");
+        $this->command->info('🚀 Starting Production Seeders...');
         $this->command->newLine();
 
         $seeders = [
@@ -28,12 +27,12 @@ class ProductionSeeder extends Seeder
         ];
 
         foreach ($seeders as $seederClass) {
-            $seeder = new $seederClass();
+            $seeder = new $seederClass;
             $seeder->setCommand($this->command);
             $seeder();
         }
 
         $this->command->newLine();
-        $this->command->info("✅ Production seeders completed!");
+        $this->command->info('✅ Production seeders completed!');
     }
 }

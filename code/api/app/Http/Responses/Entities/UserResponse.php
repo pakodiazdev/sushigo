@@ -7,6 +7,7 @@ namespace App\Http\Responses\Entities;
  *     schema="UserResponse",
  *     title="User Response",
  *     description="User entity representation",
+ *
  *     @OA\Property(property="id", type="integer", example=1, description="User ID"),
  *     @OA\Property(property="name", type="string", example="John Doe", description="User full name"),
  *     @OA\Property(property="email", type="string", format="email", example="john@example.com", description="User email address"),

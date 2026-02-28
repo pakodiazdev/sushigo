@@ -14,7 +14,9 @@ use Illuminate\Http\JsonResponse;
  *   description="Finalizes a cash session by calculating closing balance and changing status to POSTED",
  *   tags={"Cash Sessions"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Session ID"),
+ *
  *   @OA\Response(response=200, description="Cash session posted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

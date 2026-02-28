@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\CashAdjustments\BankAccounts;
 
 use App\Http\Controllers\Controller;
-use App\Models\BankAccount;
 use App\Http\Requests\CashAdjustments\BankAccounts\StoreBankAccountRequest;
+use App\Models\BankAccount;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -13,10 +13,13 @@ use Illuminate\Http\JsonResponse;
  *   summary="Create Bank Account",
  *   tags={"Bank Accounts"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/StoreBankAccountRequest")
  *   ),
+ *
  *   @OA\Response(response=201, description="Bank account created successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

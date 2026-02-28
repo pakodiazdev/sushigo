@@ -49,7 +49,7 @@ trait Auditable
     {
         static::created(function (self $model): void {
             $model->writeAuditLog(
-                action:    AuditAction::CREATE,
+                action: AuditAction::CREATE,
                 oldValues: null,
                 newValues: $model->getAuditAttributes(),
             );
@@ -66,7 +66,7 @@ trait Auditable
             $original = array_intersect_key($model->getOriginal(), $dirty);
 
             $model->writeAuditLog(
-                action:    AuditAction::UPDATE,
+                action: AuditAction::UPDATE,
                 oldValues: $model->castAuditValues($original),
                 newValues: $model->castAuditValues($dirty),
             );
@@ -74,7 +74,7 @@ trait Auditable
 
         static::deleted(function (self $model): void {
             $model->writeAuditLog(
-                action:    AuditAction::DELETE,
+                action: AuditAction::DELETE,
                 oldValues: $model->getAuditAttributes(),
                 newValues: null,
             );
@@ -83,17 +83,17 @@ trait Auditable
 
     private function writeAuditLog(
         AuditAction $action,
-        ?array      $oldValues,
-        ?array      $newValues,
+        ?array $oldValues,
+        ?array $newValues,
     ): void {
         AttendanceAuditLog::create([
             'auditable_type' => static::class,
-            'auditable_id'   => $this->getKey(),
-            'action'         => $action,
-            'old_values'     => $oldValues,
-            'new_values'     => $newValues,
-            'user_id'        => Auth::id(),
-            'reason'         => $this->auditReason,
+            'auditable_id' => $this->getKey(),
+            'action' => $action,
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
+            'user_id' => Auth::id(),
+            'reason' => $this->auditReason,
         ]);
 
         // Clear the reason after consuming it — it is single-use per mutation.

@@ -11,7 +11,9 @@ use App\Models\InventoryLocation;
  *   path="/api/v1/inventory-locations/{id}",
  *   summary="Show Inventory Location",
  *   tags={"Inventory Locations"},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=404, description="Not Found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  * )

@@ -29,8 +29,8 @@ use Illuminate\Validation\ValidationException;
 class RegisterCheckOutAction
 {
     /**
-     * @param  Attendance                $attendance  Already-loaded attendance record
-     * @param  array{check_out: string}  $data        Validated request data
+     * @param  Attendance  $attendance  Already-loaded attendance record
+     * @param  array{check_out: string}  $data  Validated request data
      *
      * @throws ValidationException
      */
@@ -42,12 +42,12 @@ class RegisterCheckOutAction
         $checkOut = Carbon::parse($data['check_out'])->utc();
 
         $netWorkedMinutes = $this->calculateNetWorkedMinutes($attendance, $checkOut);
-        $overtimeMinutes  = $this->calculateOvertimeMinutes($attendance, $checkOut);
+        $overtimeMinutes = $this->calculateOvertimeMinutes($attendance, $checkOut);
 
         $attendance->update([
-            'check_out'          => $checkOut,
+            'check_out' => $checkOut,
             'net_worked_minutes' => $netWorkedMinutes,
-            'overtime_minutes'   => $overtimeMinutes,
+            'overtime_minutes' => $overtimeMinutes,
         ]);
 
         return $attendance->load('employee');
@@ -90,14 +90,14 @@ class RegisterCheckOutAction
      */
     private function calculateNetWorkedMinutes(Attendance $attendance, Carbon $checkOut): int
     {
-        $checkIn      = Carbon::parse($attendance->check_in);
+        $checkIn = Carbon::parse($attendance->check_in);
         $grossMinutes = $checkIn->diffInMinutes($checkOut);
 
         // Deduct the actual lunch break only when both boundaries were recorded
         if ($attendance->lunch_start && $attendance->lunch_end) {
-            $lunchStart    = Carbon::parse($attendance->lunch_start);
-            $lunchEnd      = Carbon::parse($attendance->lunch_end);
-            $lunchMinutes  = $lunchStart->diffInMinutes($lunchEnd);
+            $lunchStart = Carbon::parse($attendance->lunch_start);
+            $lunchEnd = Carbon::parse($attendance->lunch_end);
+            $lunchMinutes = $lunchStart->diffInMinutes($lunchEnd);
             $grossMinutes -= $lunchMinutes;
         }
 
@@ -144,7 +144,7 @@ class RegisterCheckOutAction
      */
     private function resolveScheduleDay(Attendance $attendance): ?ScheduleDay
     {
-        $date      = $attendance->date->toDateString();
+        $date = $attendance->date->toDateString();
         $dayOfWeek = $attendance->date->dayOfWeekIso;
 
         $period = EmploymentPeriod::where('employee_id', $attendance->employee_id)

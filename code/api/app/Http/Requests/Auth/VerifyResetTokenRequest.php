@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="VerifyResetTokenRequest",
  *   required={"t"},
+ *
  *   @OA\Property(property="t", type="string", description="Combined reset param: {40-char token}.{24-char selector}"),
  * )
  */

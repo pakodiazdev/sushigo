@@ -20,8 +20,10 @@ class LunchStartApiTest extends TestCase
     protected User $user;
 
     /** Monday 2026-02-23 — same date used across all tests */
-    private const DATE        = '2026-02-23';
-    private const CHECK_IN    = '2026-02-23T09:00:00';
+    private const DATE = '2026-02-23';
+
+    private const CHECK_IN = '2026-02-23T09:00:00';
+
     private const LUNCH_START = '2026-02-23T13:05:00';
 
     protected function setUp(): void
@@ -60,7 +62,7 @@ class LunchStartApiTest extends TestCase
         );
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.lunch_start', self::LUNCH_START . '+00:00');
+            ->assertJsonPath('data.lunch_start', self::LUNCH_START.'+00:00');
     }
 
     #[Test]
@@ -74,7 +76,7 @@ class LunchStartApiTest extends TestCase
         )->assertStatus(200);
 
         $this->assertDatabaseHas('attendances', [
-            'id'          => $attendance->id,
+            'id' => $attendance->id,
             'lunch_start' => '2026-02-23 13:05:00',
         ]);
     }
@@ -116,10 +118,10 @@ class LunchStartApiTest extends TestCase
     public function rejects_when_no_check_in_registered(): void
     {
         // Attendance exists but has no check_in (e.g. day_off or absence row)
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->onDate(self::DATE)->create([
             'employee_id' => $employee->id,
-            'check_in'    => null,
+            'check_in' => null,
         ]);
 
         $response = $this->patchJson(
@@ -207,7 +209,7 @@ class LunchStartApiTest extends TestCase
 
         return Attendance::factory()->onDate(self::DATE)->create([
             'employee_id' => $employee->id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
             'lunch_start' => null,
         ]);
     }

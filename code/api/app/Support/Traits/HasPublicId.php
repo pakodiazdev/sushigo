@@ -8,8 +8,7 @@ trait HasPublicId
 {
     public static function bootHasPublicId(): void
     {
-        static::creating(fn ($model) =>
-            $model->public_id = $model->public_id ?: (string) Str::ulid()
+        static::creating(fn ($model) => $model->public_id = $model->public_id ?: (string) Str::ulid()
         );
     }
 

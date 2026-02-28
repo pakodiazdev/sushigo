@@ -27,6 +27,7 @@ class RehireEmployeeRequest extends FormRequest
 
             if ($employee->is_active) {
                 $validator->errors()->add('employee', 'Employee is already active.');
+
                 return;
             }
 

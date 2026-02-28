@@ -10,7 +10,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE inventory_locations DROP CONSTRAINT IF EXISTS inventory_locations_type_check");
+        DB::statement('ALTER TABLE inventory_locations DROP CONSTRAINT IF EXISTS inventory_locations_type_check');
         DB::statement("ALTER TABLE inventory_locations ADD CONSTRAINT inventory_locations_type_check CHECK (type IN ('MAIN', 'TEMP', 'KITCHEN', 'BAR', 'RETURN', 'WASTE', 'DISPLAY'))");
     }
 
@@ -19,7 +19,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE inventory_locations DROP CONSTRAINT IF EXISTS inventory_locations_type_check");
+        DB::statement('ALTER TABLE inventory_locations DROP CONSTRAINT IF EXISTS inventory_locations_type_check');
         DB::statement("ALTER TABLE inventory_locations ADD CONSTRAINT inventory_locations_type_check CHECK (type IN ('MAIN', 'TEMP', 'KITCHEN', 'BAR', 'RETURN', 'WASTE'))");
     }
 };

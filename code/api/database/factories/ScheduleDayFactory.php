@@ -14,14 +14,14 @@ class ScheduleDayFactory extends Factory
     public function definition(): array
     {
         return [
-            'employee_schedule_id'  => EmployeeSchedule::factory(),
-            'day_of_week'           => fake()->numberBetween(1, 7),
-            'is_day_off'            => false,
-            'expected_start'        => '08:00:00',
-            'expected_lunch_start'  => '13:00:00',
-            'expected_lunch_end'    => '14:00:00',
+            'employee_schedule_id' => EmployeeSchedule::factory(),
+            'day_of_week' => fake()->numberBetween(1, 7),
+            'is_day_off' => false,
+            'expected_start' => '08:00:00',
+            'expected_lunch_start' => '13:00:00',
+            'expected_lunch_end' => '14:00:00',
             'lunch_duration_minutes' => 60,
-            'expected_end'          => '17:00:00',
+            'expected_end' => '17:00:00',
         ];
     }
 
@@ -31,12 +31,12 @@ class ScheduleDayFactory extends Factory
     public function dayOff(): static
     {
         return $this->state(fn () => [
-            'is_day_off'             => true,
-            'expected_start'         => null,
-            'expected_lunch_start'   => null,
-            'expected_lunch_end'     => null,
+            'is_day_off' => true,
+            'expected_start' => null,
+            'expected_lunch_start' => null,
+            'expected_lunch_end' => null,
             'lunch_duration_minutes' => null,
-            'expected_end'           => null,
+            'expected_end' => null,
         ]);
     }
 
@@ -58,33 +58,60 @@ class ScheduleDayFactory extends Factory
         return $this->state(fn () => ['day_of_week' => $dow]);
     }
 
-    public function monday(): static    { return $this->onDayOfWeek(1); }
-    public function tuesday(): static   { return $this->onDayOfWeek(2); }
-    public function wednesday(): static { return $this->onDayOfWeek(3); }
-    public function thursday(): static  { return $this->onDayOfWeek(4); }
-    public function friday(): static    { return $this->onDayOfWeek(5); }
-    public function saturday(): static  { return $this->onDayOfWeek(6); }
-    public function sunday(): static    { return $this->onDayOfWeek(7); }
+    public function monday(): static
+    {
+        return $this->onDayOfWeek(1);
+    }
+
+    public function tuesday(): static
+    {
+        return $this->onDayOfWeek(2);
+    }
+
+    public function wednesday(): static
+    {
+        return $this->onDayOfWeek(3);
+    }
+
+    public function thursday(): static
+    {
+        return $this->onDayOfWeek(4);
+    }
+
+    public function friday(): static
+    {
+        return $this->onDayOfWeek(5);
+    }
+
+    public function saturday(): static
+    {
+        return $this->onDayOfWeek(6);
+    }
+
+    public function sunday(): static
+    {
+        return $this->onDayOfWeek(7);
+    }
 
     /**
      * Override the expected time windows for this day.
      *
-     * @param  string       $start       e.g. '09:00:00'
+     * @param  string  $start  e.g. '09:00:00'
      * @param  string|null  $lunchStart  e.g. '13:00:00'
-     * @param  string|null  $lunchEnd    e.g. '14:00:00'
-     * @param  string       $end         e.g. '18:00:00'
+     * @param  string|null  $lunchEnd  e.g. '14:00:00'
+     * @param  string  $end  e.g. '18:00:00'
      */
     public function withTimes(
-        string  $start,
+        string $start,
         ?string $lunchStart = null,
-        ?string $lunchEnd   = null,
-        string  $end        = '17:00:00',
+        ?string $lunchEnd = null,
+        string $end = '17:00:00',
     ): static {
         return $this->state(fn () => [
-            'expected_start'       => $start,
+            'expected_start' => $start,
             'expected_lunch_start' => $lunchStart,
-            'expected_lunch_end'   => $lunchEnd,
-            'expected_end'         => $end,
+            'expected_lunch_end' => $lunchEnd,
+            'expected_end' => $end,
         ]);
     }
 

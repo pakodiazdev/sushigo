@@ -7,6 +7,7 @@ namespace App\Http\Responses\Entities;
  *     schema="ItemVariantResponse",
  *     title="Item Variant Response",
  *     description="Item variant entity representation",
+ *
  *     @OA\Property(property="id", type="integer", example=1, description="Variant ID"),
  *     @OA\Property(property="item_id", type="integer", example=1, description="Parent item ID"),
  *     @OA\Property(property="uom_id", type="integer", example=1, description="Base unit of measure ID"),

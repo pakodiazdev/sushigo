@@ -11,17 +11,22 @@ use App\Models\ItemVariant;
  *   path="/api/v1/item-variants/{id}",
  *   summary="Get Item Variant by ID",
  *   tags={"Item Variants"},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Item variant retrieved successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *              @OA\Schema(@OA\Property(property="data", ref="#/components/schemas/ItemVariantResponse"))
  *           }
  *       )
  *   ),
+ *
  *   @OA\Response(response=404, description="Item variant not found", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */

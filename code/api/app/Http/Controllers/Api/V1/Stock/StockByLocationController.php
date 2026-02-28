@@ -12,7 +12,9 @@ use App\Models\Stock;
  *   path="/api/v1/stock/by-location/{id}",
  *   summary="Get Stock Summary by Location",
  *   tags={"Stock"},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Inventory Location ID"),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=404, description="Location Not Found"),
  * )
@@ -49,7 +51,7 @@ class StockByLocationController extends Controller
             'total_on_hand' => (float) $stockRecords->sum('on_hand'),
             'total_reserved' => (float) $stockRecords->sum('reserved'),
             'total_available' => (float) $stockRecords->sum('available'),
-            'total_inventory_value' => (float) $stockRecords->map(fn($s) => $s->on_hand * $s->weighted_avg_cost)->sum(),
+            'total_inventory_value' => (float) $stockRecords->map(fn ($s) => $s->on_hand * $s->weighted_avg_cost)->sum(),
         ];
 
         return new ResponseEntity(

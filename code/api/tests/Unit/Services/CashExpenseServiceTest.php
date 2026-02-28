@@ -19,14 +19,17 @@ class CashExpenseServiceTest extends TestCase
     use RefreshDatabase;
 
     private CashExpenseService $service;
+
     private CashSession $session;
+
     private Branch $branch;
+
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CashExpenseService();
+        $this->service = new CashExpenseService;
 
         $this->branch = Branch::factory()->create();
         $register = CashRegister::factory()->for($this->branch)->create();

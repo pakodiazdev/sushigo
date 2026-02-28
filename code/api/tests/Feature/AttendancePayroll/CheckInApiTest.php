@@ -4,11 +4,11 @@ namespace Tests\Feature\AttendancePayroll;
 
 use App\Models\Attendance;
 use App\Models\Employee;
-use Carbon\Carbon;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\ScheduleDay;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,9 +24,11 @@ class CheckInApiTest extends TestCase
     protected User $user;
 
     /** Monday 2026-02-23 at 09:00:00 (ISO dow = 1) */
-    private const DATE      = '2026-02-23';
-    private const CHECK_IN  = '2026-02-23T09:00:00';
-    private const START     = '09:00:00';
+    private const DATE = '2026-02-23';
+
+    private const CHECK_IN = '2026-02-23T09:00:00';
+
+    private const START = '09:00:00';
 
     protected function setUp(): void
     {
@@ -61,7 +63,7 @@ class CheckInApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => self::CHECK_IN,  // exactly on time
+            'check_in' => self::CHECK_IN,  // exactly on time
         ]);
 
         $response->assertStatus(201)
@@ -82,7 +84,7 @@ class CheckInApiTest extends TestCase
         // 15 minutes (900 seconds) late — under 30-min deductible threshold
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => '2026-02-23T09:15:00',
+            'check_in' => '2026-02-23T09:15:00',
         ]);
 
         $response->assertStatus(201)
@@ -102,7 +104,7 @@ class CheckInApiTest extends TestCase
         // 35 minutes (2100 seconds) late — exceeds deductible threshold
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => '2026-02-23T09:35:00',
+            'check_in' => '2026-02-23T09:35:00',
         ]);
 
         $response->assertStatus(201)
@@ -122,7 +124,7 @@ class CheckInApiTest extends TestCase
         // 10 minutes early — should record 0 late seconds
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => '2026-02-23T08:50:00',
+            'check_in' => '2026-02-23T08:50:00',
         ]);
 
         $response->assertStatus(201)
@@ -140,7 +142,7 @@ class CheckInApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
         ]);
 
         $response->assertStatus(201)
@@ -175,12 +177,12 @@ class CheckInApiTest extends TestCase
 
         $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
         ])->assertStatus(201);
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
         ]);
 
         $response->assertStatus(422);
@@ -195,7 +197,7 @@ class CheckInApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
         ]);
 
         $response->assertStatus(422);
@@ -206,15 +208,15 @@ class CheckInApiTest extends TestCase
     public function rejects_when_no_active_schedule(): void
     {
         // Employment period exists but no schedule assigned
-        $period   = EmploymentPeriod::factory()->create([
-            'is_active'  => true,
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
             'start_date' => '2026-01-01',
         ]);
         $employee = $period->employee;
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
         ]);
 
         $response->assertStatus(422);
@@ -224,8 +226,8 @@ class CheckInApiTest extends TestCase
     #[Test]
     public function rejects_when_no_schedule_day_configured_for_day_of_week(): void
     {
-        $period   = EmploymentPeriod::factory()->create([
-            'is_active'  => true,
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
             'start_date' => '2026-01-01',
         ]);
         $employee = $period->employee;
@@ -233,7 +235,7 @@ class CheckInApiTest extends TestCase
         // Schedule exists but only has Saturday (6) — no Monday (1) entry
         $schedule = EmployeeSchedule::factory()->current()->create([
             'employment_period_id' => $period->id,
-            'effective_from'       => '2026-01-01',
+            'effective_from' => '2026-01-01',
         ]);
         ScheduleDay::factory()->saturday()->workDay()->create([
             'employee_schedule_id' => $schedule->id,
@@ -242,7 +244,7 @@ class CheckInApiTest extends TestCase
         // Check-in is on Monday 2026-02-23 (dow=1) — not configured
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
         ]);
 
         $response->assertStatus(422);
@@ -252,15 +254,15 @@ class CheckInApiTest extends TestCase
     #[Test]
     public function rejects_when_schedule_day_is_day_off(): void
     {
-        $period   = EmploymentPeriod::factory()->create([
-            'is_active'  => true,
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
             'start_date' => '2026-01-01',
         ]);
         $employee = $period->employee;
 
         $schedule = EmployeeSchedule::factory()->current()->create([
             'employment_period_id' => $period->id,
-            'effective_from'       => '2026-01-01',
+            'effective_from' => '2026-01-01',
         ]);
 
         // Monday (1) is configured as day off
@@ -270,7 +272,7 @@ class CheckInApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
         ]);
 
         $response->assertStatus(422);
@@ -295,7 +297,7 @@ class CheckInApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => '2026-02-23T23:00:00-06:00',  // RFC 3339 with offset
+            'check_in' => '2026-02-23T23:00:00-06:00',  // RFC 3339 with offset
         ]);
 
         $response->assertStatus(201)
@@ -317,7 +319,7 @@ class CheckInApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => '2026-02-23T23:10:00-06:00',
+            'check_in' => '2026-02-23T23:10:00-06:00',
         ]);
 
         $response->assertStatus(201)
@@ -341,7 +343,7 @@ class CheckInApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in'    => '2026-02-24T01:00:00+09:00',
+            'check_in' => '2026-02-24T01:00:00+09:00',
         ]);
 
         $response->assertStatus(201)
@@ -360,7 +362,7 @@ class CheckInApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => 'any-id',
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
         ]);
 
         $response->assertStatus(401);
@@ -376,9 +378,9 @@ class CheckInApiTest extends TestCase
      *
      * Returns an array with 'employee', 'period', 'schedule', 'scheduleDay'.
      *
-     * @param  string  $date          The attendance date (Y-m-d) — used to derive day-of-week
-     * @param  string  $expectedStart Expected clock-in time (H:i:s)
-     * @param  string  $expectedEnd   Expected clock-out time (H:i:s)
+     * @param  string  $date  The attendance date (Y-m-d) — used to derive day-of-week
+     * @param  string  $expectedStart  Expected clock-in time (H:i:s)
+     * @param  string  $expectedEnd  Expected clock-out time (H:i:s)
      */
     private function makeEmployeeWithSchedule(
         string $date,
@@ -388,7 +390,7 @@ class CheckInApiTest extends TestCase
         $dayOfWeekIso = Carbon::parse($date)->dayOfWeekIso; // 1=Mon … 7=Sun
 
         $period = EmploymentPeriod::factory()->create([
-            'is_active'  => true,
+            'is_active' => true,
             'start_date' => '2026-01-01',
         ]);
 
@@ -396,7 +398,7 @@ class CheckInApiTest extends TestCase
 
         $schedule = EmployeeSchedule::factory()->current()->create([
             'employment_period_id' => $period->id,
-            'effective_from'       => '2026-01-01',
+            'effective_from' => '2026-01-01',
         ]);
 
         $scheduleDay = ScheduleDay::factory()

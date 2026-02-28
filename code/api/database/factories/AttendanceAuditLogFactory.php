@@ -18,19 +18,19 @@ class AttendanceAuditLogFactory extends Factory
 
         return [
             'auditable_type' => 'App\\Models\\Employee',
-            'auditable_id'   => 1,
-            'action'         => $action,
-            'old_values'     => $action === AuditAction::CREATE ? null : ['name' => fake()->name()],
-            'new_values'     => $action === AuditAction::DELETE ? null : ['name' => fake()->name()],
-            'user_id'        => User::factory(),
-            'reason'         => fake()->optional()->sentence(),
+            'auditable_id' => 1,
+            'action' => $action,
+            'old_values' => $action === AuditAction::CREATE ? null : ['name' => fake()->name()],
+            'new_values' => $action === AuditAction::DELETE ? null : ['name' => fake()->name()],
+            'user_id' => User::factory(),
+            'reason' => fake()->optional()->sentence(),
         ];
     }
 
     public function create_action(): static
     {
         return $this->state(fn () => [
-            'action'     => AuditAction::CREATE,
+            'action' => AuditAction::CREATE,
             'old_values' => null,
             'new_values' => ['name' => fake()->name()],
         ]);
@@ -39,7 +39,7 @@ class AttendanceAuditLogFactory extends Factory
     public function update_action(): static
     {
         return $this->state(fn () => [
-            'action'     => AuditAction::UPDATE,
+            'action' => AuditAction::UPDATE,
             'old_values' => ['name' => fake()->name()],
             'new_values' => ['name' => fake()->name()],
         ]);
@@ -48,7 +48,7 @@ class AttendanceAuditLogFactory extends Factory
     public function delete_action(): static
     {
         return $this->state(fn () => [
-            'action'     => AuditAction::DELETE,
+            'action' => AuditAction::DELETE,
             'old_values' => ['name' => fake()->name()],
             'new_values' => null,
         ]);

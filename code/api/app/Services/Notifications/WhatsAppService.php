@@ -25,10 +25,10 @@ class WhatsAppService
     public function sendPasswordResetLink(string $phone, string $resetUrl): void
     {
         $message = "🔐 *SushiGo - Configurar contraseña*\n\n"
-            . "Se ha creado una cuenta para ti. Haz clic en el siguiente enlace para configurar tu contraseña:\n\n"
-            . $resetUrl . "\n\n"
-            . "Este enlace expira en 60 minutos.\n"
-            . "Si no solicitaste esto, ignora este mensaje.";
+            ."Se ha creado una cuenta para ti. Haz clic en el siguiente enlace para configurar tu contraseña:\n\n"
+            .$resetUrl."\n\n"
+            ."Este enlace expira en 60 minutos.\n"
+            .'Si no solicitaste esto, ignora este mensaje.';
 
         $this->sendMessage($phone, $message);
 
@@ -41,6 +41,6 @@ class WhatsAppService
     {
         $visible = substr($phone, -4);
 
-        return str_repeat('*', max(0, strlen($phone) - 4)) . $visible;
+        return str_repeat('*', max(0, strlen($phone) - 4)).$visible;
     }
 }
