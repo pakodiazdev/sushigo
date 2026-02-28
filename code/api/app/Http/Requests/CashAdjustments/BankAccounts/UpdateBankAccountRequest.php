@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="UpdateBankAccountRequest",
+ *
  *   @OA\Property(property="alias", type="string", maxLength=255, example="Cuenta BBVA Principal", description="Account alias"),
  *   @OA\Property(property="bank_name", type="string", maxLength=255, example="BBVA", description="Bank name"),
  *   @OA\Property(property="account_number_masked", type="string", maxLength=50, example="****1234", description="Masked account number"),

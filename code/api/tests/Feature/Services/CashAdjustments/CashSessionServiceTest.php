@@ -2,31 +2,32 @@
 
 namespace Tests\Feature\Services\CashAdjustments;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\CashRegister;
-use App\Models\CashSession;
+use App\Models\Branch;
 use App\Models\CashAdjustment;
 use App\Models\CashAdjustmentLine;
 use App\Models\CashExpense;
-use App\Models\Branch;
-use App\Models\User;
+use App\Models\CashRegister;
+use App\Models\CashSession;
 use App\Services\CashAdjustments\CashSessionService;
 use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class CashSessionServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     private CashSessionService $service;
+
     private CashRegister $cashRegister;
+
     private Branch $branch;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->service = new CashSessionService();
+        $this->service = new CashSessionService;
 
         // Create test branch and register
         $this->branch = Branch::factory()->create();

@@ -33,16 +33,24 @@ class StockMovement extends Model
 
     // Reason constants
     public const REASON_TRANSFER = 'TRANSFER';
+
     public const REASON_RETURN = 'RETURN';
+
     public const REASON_SALE = 'SALE';
+
     public const REASON_ADJUSTMENT = 'ADJUSTMENT';
+
     public const REASON_CONSUMPTION = 'CONSUMPTION';
+
     public const REASON_OPENING_BALANCE = 'OPENING_BALANCE';
+
     public const REASON_COUNT_VARIANCE = 'COUNT_VARIANCE';
 
     // Status constants
     public const STATUS_DRAFT = 'DRAFT';
+
     public const STATUS_POSTED = 'POSTED';
+
     public const STATUS_REVERSED = 'REVERSED';
 
     /**

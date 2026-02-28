@@ -12,7 +12,9 @@ use App\Models\InventoryLocation;
  *   summary="Delete Inventory Location",
  *   tags={"Inventory Locations"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=404, description="Not Found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  *   @OA\Response(response=409, description="Conflict - Location has stock", @OA\JsonContent(ref="#/components/schemas/ResponseError")),

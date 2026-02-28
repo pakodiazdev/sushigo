@@ -36,8 +36,8 @@ class WageHistoryTest extends TestCase
         $employee = Employee::factory()->create();
 
         WageHistory::factory()->effectiveBetween('2026-01-01', '2026-01-31')->create([
-            'employee_id'  => $employee->id,
-            'hourly_rate'  => 62.50,
+            'employee_id' => $employee->id,
+            'hourly_rate' => 62.50,
         ]);
 
         $result = WageHistory::effective('2026-01-15')->where('employee_id', $employee->id)->get();
@@ -52,8 +52,8 @@ class WageHistoryTest extends TestCase
         $employee = Employee::factory()->create();
 
         WageHistory::factory()->effectiveBetween('2026-01-01', null)->create([
-            'employee_id'  => $employee->id,
-            'hourly_rate'  => 100.00,
+            'employee_id' => $employee->id,
+            'hourly_rate' => 100.00,
         ]);
 
         // Still active today and in the future
@@ -96,8 +96,8 @@ class WageHistoryTest extends TestCase
         $employee = Employee::factory()->create();
 
         WageHistory::factory()->effectiveBetween('2026-01-01', '2026-01-31')->create([
-            'employee_id'  => $employee->id,
-            'hourly_rate'  => 125.00,
+            'employee_id' => $employee->id,
+            'hourly_rate' => 125.00,
         ]);
 
         // Both boundary dates must be inclusive
@@ -112,14 +112,14 @@ class WageHistoryTest extends TestCase
 
         // Closed old wage
         WageHistory::factory()->effectiveBetween('2025-01-01', '2025-12-31')->create([
-            'employee_id'  => $employee->id,
-            'hourly_rate'  => 75.00,
+            'employee_id' => $employee->id,
+            'hourly_rate' => 75.00,
         ]);
 
         // Current active wage
         WageHistory::factory()->effectiveBetween('2026-01-01', null)->create([
-            'employee_id'  => $employee->id,
-            'hourly_rate'  => 112.50,
+            'employee_id' => $employee->id,
+            'hourly_rate' => 112.50,
         ]);
 
         $result = WageHistory::effective('2026-02-15')->where('employee_id', $employee->id)->get();
@@ -139,13 +139,13 @@ class WageHistoryTest extends TestCase
         $employee = Employee::factory()->create();
 
         WageHistory::factory()->effectiveBetween('2025-01-01', '2025-06-30')->create([
-            'employee_id'  => $employee->id,
-            'hourly_rate'  => 87.50,
+            'employee_id' => $employee->id,
+            'hourly_rate' => 87.50,
         ]);
 
         WageHistory::factory()->effectiveBetween('2025-04-01', '2025-09-30')->create([
-            'employee_id'  => $employee->id,
-            'hourly_rate'  => 100.00,
+            'employee_id' => $employee->id,
+            'hourly_rate' => 100.00,
         ]);
 
         // Both periods cover 2025-05-15, so the scope returns both rows
@@ -180,9 +180,9 @@ class WageHistoryTest extends TestCase
     #[Test]
     public function minute_rate_scales_correctly_with_different_rates(): void
     {
-        $this->assertEqualsWithDelta(125 / 60,  WageHistory::factory()->withHourlyRate(125)->make()->minuteRate(),  0.000001);
+        $this->assertEqualsWithDelta(125 / 60, WageHistory::factory()->withHourlyRate(125)->make()->minuteRate(), 0.000001);
         $this->assertEqualsWithDelta(62.5 / 60, WageHistory::factory()->withHourlyRate(62.5)->make()->minuteRate(), 0.000001);
-        $this->assertEqualsWithDelta(250 / 60,  WageHistory::factory()->withHourlyRate(250)->make()->minuteRate(),  0.000001);
+        $this->assertEqualsWithDelta(250 / 60, WageHistory::factory()->withHourlyRate(250)->make()->minuteRate(), 0.000001);
     }
 
     // ── Relationships ─────────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ class WageHistoryTest extends TestCase
     public function wage_history_belongs_to_employee(): void
     {
         $employee = Employee::factory()->create();
-        $wage     = WageHistory::factory()->create(['employee_id' => $employee->id]);
+        $wage = WageHistory::factory()->create(['employee_id' => $employee->id]);
 
         $this->assertTrue($wage->employee->is($employee));
     }
@@ -340,7 +340,7 @@ class WageHistoryTest extends TestCase
     public function wage_records_survive_when_employee_is_soft_deleted(): void
     {
         $employee = Employee::factory()->create();
-        $wage     = WageHistory::factory()->create(['employee_id' => $employee->id]);
+        $wage = WageHistory::factory()->create(['employee_id' => $employee->id]);
 
         $employee->delete(); // soft-delete only
 

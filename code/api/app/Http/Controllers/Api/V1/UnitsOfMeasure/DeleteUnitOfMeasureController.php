@@ -12,26 +12,34 @@ use App\Models\UnitOfMeasure;
  *   summary="Delete Unit of Measure",
  *   tags={"Units of Measure"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(
  *       name="id",
  *       in="path",
  *       description="Unit of Measure ID",
  *       required=true,
+ *
  *       @OA\Schema(type="integer")
  *   ),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Unit of measure deleted successfully",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseMessage")
  *   ),
+ *
  *   @OA\Response(
  *       response=404,
  *       description="Unit of measure not found",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
  *   ),
+ *
  *   @OA\Response(
  *       response=409,
  *       description="Cannot delete - UOM is in use",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
  *   )
  * )

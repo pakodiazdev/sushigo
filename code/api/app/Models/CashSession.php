@@ -29,6 +29,7 @@ class CashSession extends Model
 
     // Status constants
     public const STATUS_DRAFT = 'DRAFT';
+
     public const STATUS_POSTED = 'POSTED';
 
     /**

@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Item;
-use App\Models\ItemVariant;
 use App\Models\UnitOfMeasure;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,7 +20,7 @@ class ItemVariantFactory extends Factory
     {
         return [
             'item_id' => Item::inRandomOrder()->first()?->id,
-            'code' => 'VAR-' . fake()->unique()->numerify('######'),
+            'code' => 'VAR-'.fake()->unique()->numerify('######'),
             'name' => fake()->words(2, true),
             'uom_id' => UnitOfMeasure::inRandomOrder()->first()?->id,
             'min_stock' => 0,

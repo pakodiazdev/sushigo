@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\CashExpense;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CashExpensePolicy
 {
@@ -21,7 +20,7 @@ class CashExpensePolicy
      */
     public function view(User $user, CashExpense $cashExpense): bool
     {
-        if (!$user->can('cash_expenses.view')) {
+        if (! $user->can('cash_expenses.view')) {
             return false;
         }
 
@@ -41,7 +40,7 @@ class CashExpensePolicy
      */
     public function update(User $user, CashExpense $cashExpense): bool
     {
-        if (!$user->can('cash_expenses.update')) {
+        if (! $user->can('cash_expenses.update')) {
             return false;
         }
 
@@ -57,7 +56,7 @@ class CashExpensePolicy
      */
     public function delete(User $user, CashExpense $cashExpense): bool
     {
-        if (!$user->can('cash_expenses.delete')) {
+        if (! $user->can('cash_expenses.delete')) {
             return false;
         }
 
@@ -73,7 +72,7 @@ class CashExpensePolicy
      */
     public function post(User $user, CashExpense $cashExpense): bool
     {
-        if (!$user->can('cash_expenses.post')) {
+        if (! $user->can('cash_expenses.post')) {
             return false;
         }
 

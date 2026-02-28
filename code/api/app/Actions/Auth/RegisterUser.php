@@ -17,11 +17,11 @@ class RegisterUser
         $phoneCountry = config('employees.default_phone_country');
 
         return $this->userRepository->create([
-            'name'          => $data['name'],
-            'email'         => $data['email'] ?? null,
-            'phone'         => $data['phone'] ?? null,
+            'name' => $data['name'],
+            'email' => $data['email'] ?? null,
+            'phone' => $data['phone'] ?? null,
             'phone_country' => isset($data['phone']) ? $phoneCountry : null,
-            'password'      => Hash::make($data['password']),
+            'password' => Hash::make($data['password']),
         ]);
     }
 }

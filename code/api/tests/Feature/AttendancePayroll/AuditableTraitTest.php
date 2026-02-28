@@ -19,6 +19,7 @@ class AuditableTraitTest extends TestCase
     use RefreshDatabase;
 
     private Employee $employee;
+
     private User $actor;
 
     protected function setUp(): void
@@ -35,7 +36,7 @@ class AuditableTraitTest extends TestCase
         }
 
         $this->employee = Employee::factory()->create();
-        $this->actor    = User::factory()->create();
+        $this->actor = User::factory()->create();
     }
 
     // #region CREATE
@@ -47,7 +48,7 @@ class AuditableTraitTest extends TestCase
 
         $attendance = Attendance::factory()->worked()->create([
             'employee_id' => $this->employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         $this->assertDatabaseCount('attendance_audit_logs', 1);
@@ -55,9 +56,9 @@ class AuditableTraitTest extends TestCase
         $log = AttendanceAuditLog::first();
 
         $this->assertSame(AuditAction::CREATE, $log->action);
-        $this->assertSame(Attendance::class,   $log->auditable_type);
-        $this->assertSame($attendance->id,     $log->auditable_id);
-        $this->assertSame($this->actor->id,    $log->user_id);
+        $this->assertSame(Attendance::class, $log->auditable_type);
+        $this->assertSame($attendance->id, $log->auditable_id);
+        $this->assertSame($this->actor->id, $log->user_id);
         $this->assertNull($log->old_values);
         $this->assertNotNull($log->new_values);
         $this->assertArrayHasKey('employee_id', $log->new_values);
@@ -69,17 +70,17 @@ class AuditableTraitTest extends TestCase
         $this->actingAs($this->actor, 'api');
 
         Attendance::factory()->worked()->create([
-            'employee_id'        => $this->employee->id,
-            'date'               => '2026-02-10',
+            'employee_id' => $this->employee->id,
+            'date' => '2026-02-10',
             'entry_late_seconds' => 900,
         ]);
 
         $log = AttendanceAuditLog::first();
 
-        $this->assertArrayHasKey('employee_id',        $log->new_values);
-        $this->assertArrayHasKey('date',               $log->new_values);
+        $this->assertArrayHasKey('employee_id', $log->new_values);
+        $this->assertArrayHasKey('date', $log->new_values);
         $this->assertArrayHasKey('entry_late_seconds', $log->new_values);
-        $this->assertArrayHasKey('day_status',         $log->new_values);
+        $this->assertArrayHasKey('day_status', $log->new_values);
         // Enum value must be stored as its string representation
         $this->assertSame('WORKED', $log->new_values['day_status']);
     }
@@ -94,8 +95,8 @@ class AuditableTraitTest extends TestCase
         $this->actingAs($this->actor, 'api');
 
         $attendance = Attendance::factory()->worked()->create([
-            'employee_id'        => $this->employee->id,
-            'date'               => '2026-02-10',
+            'employee_id' => $this->employee->id,
+            'date' => '2026-02-10',
             'entry_late_seconds' => 0,
         ]);
 
@@ -109,8 +110,8 @@ class AuditableTraitTest extends TestCase
         $log = AttendanceAuditLog::first();
 
         $this->assertSame(AuditAction::UPDATE, $log->action);
-        $this->assertSame($attendance->id,     $log->auditable_id);
-        $this->assertSame($this->actor->id,    $log->user_id);
+        $this->assertSame($attendance->id, $log->auditable_id);
+        $this->assertSame($this->actor->id, $log->user_id);
 
         // old_values must contain only the changed field
         $this->assertArrayHasKey('entry_late_seconds', $log->old_values);
@@ -131,27 +132,27 @@ class AuditableTraitTest extends TestCase
         $this->actingAs($this->actor, 'api');
 
         $attendance = Attendance::factory()->worked()->create([
-            'employee_id'        => $this->employee->id,
-            'date'               => '2026-02-10',
+            'employee_id' => $this->employee->id,
+            'date' => '2026-02-10',
             'entry_late_seconds' => 0,
-            'overtime_minutes'   => 0,
+            'overtime_minutes' => 0,
         ]);
 
         AttendanceAuditLog::truncate();
 
         $attendance->update([
             'entry_late_seconds' => 2700,
-            'overtime_minutes'   => 45,
+            'overtime_minutes' => 45,
         ]);
 
         $log = AttendanceAuditLog::first();
 
         $this->assertArrayHasKey('entry_late_seconds', $log->old_values);
-        $this->assertArrayHasKey('overtime_minutes',   $log->old_values);
+        $this->assertArrayHasKey('overtime_minutes', $log->old_values);
         $this->assertArrayHasKey('entry_late_seconds', $log->new_values);
-        $this->assertArrayHasKey('overtime_minutes',   $log->new_values);
+        $this->assertArrayHasKey('overtime_minutes', $log->new_values);
         $this->assertSame(2700, $log->new_values['entry_late_seconds']);
-        $this->assertSame(45,   $log->new_values['overtime_minutes']);
+        $this->assertSame(45, $log->new_values['overtime_minutes']);
     }
 
     #[Test]
@@ -161,7 +162,7 @@ class AuditableTraitTest extends TestCase
 
         $attendance = Attendance::factory()->worked()->create([
             'employee_id' => $this->employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         AttendanceAuditLog::truncate();
@@ -170,7 +171,7 @@ class AuditableTraitTest extends TestCase
 
         $log = AttendanceAuditLog::first();
 
-        $this->assertSame('WORKED',  $log->old_values['day_status']);
+        $this->assertSame('WORKED', $log->old_values['day_status']);
         $this->assertSame('ABSENCE', $log->new_values['day_status']);
     }
 
@@ -185,7 +186,7 @@ class AuditableTraitTest extends TestCase
 
         $attendance = Attendance::factory()->worked()->create([
             'employee_id' => $this->employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         AttendanceAuditLog::truncate();
@@ -197,7 +198,7 @@ class AuditableTraitTest extends TestCase
         $log = AttendanceAuditLog::first();
 
         $this->assertSame(AuditAction::DELETE, $log->action);
-        $this->assertSame($attendance->id,     $log->auditable_id);
+        $this->assertSame($attendance->id, $log->auditable_id);
         $this->assertNull($log->new_values);
         $this->assertNotNull($log->old_values);
         $this->assertArrayHasKey('employee_id', $log->old_values);
@@ -214,7 +215,7 @@ class AuditableTraitTest extends TestCase
 
         $attendance = Attendance::factory()->worked()->create([
             'employee_id' => $this->employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         AttendanceAuditLog::truncate();
@@ -234,7 +235,7 @@ class AuditableTraitTest extends TestCase
 
         $attendance = Attendance::factory()->worked()->create([
             'employee_id' => $this->employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         $attendance->auditReason = 'First reason';
@@ -265,7 +266,7 @@ class AuditableTraitTest extends TestCase
 
         Attendance::factory()->worked()->create([
             'employee_id' => $this->employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         $log = AttendanceAuditLog::first();
@@ -284,7 +285,7 @@ class AuditableTraitTest extends TestCase
 
         $attendance = Attendance::factory()->worked()->create([
             'employee_id' => $this->employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         $log = AttendanceAuditLog::first();
@@ -303,7 +304,7 @@ class AuditableTraitTest extends TestCase
         // Unauthenticated context (e.g. CLI commands, seeders)
         $attendance = Attendance::factory()->worked()->create([
             'employee_id' => $this->employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         $log = AttendanceAuditLog::first();

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="CreateUnitOfMeasureRequest",
  *   required={"code", "name", "symbol"},
+ *
  *   @OA\Property(property="code", type="string", maxLength=20, example="KG", description="Unique UOM code"),
  *   @OA\Property(property="name", type="string", maxLength=100, example="Kilogramo", description="UOM display name"),
  *   @OA\Property(property="symbol", type="string", maxLength=10, example="kg", description="UOM symbol"),

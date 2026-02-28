@@ -28,7 +28,7 @@ return new class extends Migration
                 'MANAGER',
                 'CASHIER',
                 'INVENTORY',
-                'AUDITOR'
+                'AUDITOR',
             ])->comment('Role within the operating unit');
 
             $table->boolean('is_active')->default(true)->comment('Assignment active status');

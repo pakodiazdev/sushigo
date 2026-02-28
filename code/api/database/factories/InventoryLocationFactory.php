@@ -20,7 +20,7 @@ class InventoryLocationFactory extends Factory
     {
         return [
             'operating_unit_id' => OperatingUnit::inRandomOrder()->first()?->id ?? OperatingUnit::factory(),
-            'name' => fake()->words(2, true) . ' Warehouse',
+            'name' => fake()->words(2, true).' Warehouse',
             'type' => fake()->randomElement([
                 InventoryLocation::TYPE_MAIN,
                 InventoryLocation::TYPE_KITCHEN,

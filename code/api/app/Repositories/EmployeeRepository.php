@@ -18,10 +18,7 @@ class EmployeeRepository extends BaseRepository
     /**
      * Paginate an index of employees applying filters and sorts.
      *
-     * @param array $filters
-     * @param array $sorts Array of ['field' => string, 'direction' => 'asc'|'desc']
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * @param  array  $sorts  Array of ['field' => string, 'direction' => 'asc'|'desc']
      */
     public function paginateIndex(array $filters = [], array $sorts = [], int $perPage = 15): LengthAwarePaginator
     {
@@ -32,13 +29,13 @@ class EmployeeRepository extends BaseRepository
             $query->where('is_active', (bool) $filters['is_active']);
         }
 
-        if (!empty($filters['role'])) {
+        if (! empty($filters['role'])) {
             // Filter employees whose linked User holds the given position role
             $role = $filters['role'];
-            $query->whereHas('user', fn($q) => $q->role($role));
+            $query->whereHas('user', fn ($q) => $q->role($role));
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             // Escape SQL LIKE wildcards to avoid pattern injection when users include % or _
             $search = $filters['search'];
             $search = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
@@ -52,7 +49,7 @@ class EmployeeRepository extends BaseRepository
 
         // apply sorts parsed by the request when provided
         foreach ($sorts as $sort) {
-            if (!empty($sort['field']) && !empty($sort['direction'])) {
+            if (! empty($sort['field']) && ! empty($sort['direction'])) {
                 $query->orderBy($sort['field'], $sort['direction']);
             }
         }

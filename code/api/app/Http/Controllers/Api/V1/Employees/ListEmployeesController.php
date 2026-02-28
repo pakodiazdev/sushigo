@@ -14,16 +14,20 @@ use App\Models\Employee;
  *   summary="List Employees",
  *   tags={"Employees"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="role", in="query", @OA\Schema(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"})),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15)),
  *   @OA\Parameter(name="sort[]", in="query", @OA\Schema(type="array", @OA\Items(type="string", example="code:asc")), description="Sort fields (field:direction)"),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Employees retrieved successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponsePaginated"),
  *              @OA\Schema(@OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/EmployeeResponse")))
  *           }
@@ -45,11 +49,11 @@ class ListEmployeesController extends Controller
         }
 
         if ($request->input('status') === 'baja') {
-            $query->whereDoesntHave('employmentPeriods', fn($q) => $q->where('is_active', true));
+            $query->whereDoesntHave('employmentPeriods', fn ($q) => $q->where('is_active', true));
         }
 
         if ($request->filled('role')) {
-            $query->whereHas('user', fn($q) => $q->role($request->role));
+            $query->whereHas('user', fn ($q) => $q->role($request->role));
         }
 
         if ($request->filled('search')) {

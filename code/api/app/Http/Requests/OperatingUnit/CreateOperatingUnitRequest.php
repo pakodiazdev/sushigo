@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="CreateOperatingUnitRequest",
  *   required={"branch_id", "name", "type"},
+ *
  *   @OA\Property(property="branch_id", type="integer", example=1),
  *   @OA\Property(property="name", type="string", example="Main Kitchen"),
  *   @OA\Property(property="type", type="string", enum={"BRANCH_MAIN", "BRANCH_BUFFER", "BRANCH_RETURN", "EVENT_TEMP"}, example="BRANCH_MAIN"),

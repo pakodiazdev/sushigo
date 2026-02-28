@@ -14,26 +14,26 @@ class AttendanceFactory extends Factory
 
     public function definition(): array
     {
-        $checkIn  = fake()->dateTimeBetween('today 07:00', 'today 09:30');
+        $checkIn = fake()->dateTimeBetween('today 07:00', 'today 09:30');
         $checkOut = fake()->dateTimeBetween('today 16:00', 'today 19:00');
 
         return [
-            'employee_id'            => Employee::factory(),
-            'date'                   => now()->toDateString(),
-            'check_in'               => $checkIn,
-            'check_out'              => $checkOut,
-            'lunch_start'            => null,
-            'lunch_end'              => null,
-            'entry_late_seconds'     => 0,
-            'lunch_late_seconds'     => 0,
-            'net_worked_minutes'     => null,
-            'overtime_minutes'       => 0,
-            'overtime_authorized'    => false,
+            'employee_id' => Employee::factory(),
+            'date' => now()->toDateString(),
+            'check_in' => $checkIn,
+            'check_out' => $checkOut,
+            'lunch_start' => null,
+            'lunch_end' => null,
+            'entry_late_seconds' => 0,
+            'lunch_late_seconds' => 0,
+            'net_worked_minutes' => null,
+            'overtime_minutes' => 0,
+            'overtime_authorized' => false,
             'overtime_authorized_by' => null,
             'overtime_authorized_at' => null,
-            'day_status'             => DayStatus::WORKED,
-            'confirmed_by'           => null,
-            'meta'                   => null,
+            'day_status' => DayStatus::WORKED,
+            'confirmed_by' => null,
+            'meta' => null,
         ];
     }
 
@@ -43,8 +43,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::WORKED,
-            'check_in'   => fake()->dateTimeBetween('today 07:00', 'today 09:30'),
-            'check_out'  => fake()->dateTimeBetween('today 16:00', 'today 19:00'),
+            'check_in' => fake()->dateTimeBetween('today 07:00', 'today 09:30'),
+            'check_out' => fake()->dateTimeBetween('today 16:00', 'today 19:00'),
         ]);
     }
 
@@ -52,8 +52,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::DAY_OFF,
-            'check_in'   => null,
-            'check_out'  => null,
+            'check_in' => null,
+            'check_out' => null,
         ]);
     }
 
@@ -61,8 +61,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::ABSENCE,
-            'check_in'   => null,
-            'check_out'  => null,
+            'check_in' => null,
+            'check_out' => null,
         ]);
     }
 
@@ -70,8 +70,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::LEAVE,
-            'check_in'   => null,
-            'check_out'  => null,
+            'check_in' => null,
+            'check_out' => null,
         ]);
     }
 
@@ -79,8 +79,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::VACATION,
-            'check_in'   => null,
-            'check_out'  => null,
+            'check_in' => null,
+            'check_out' => null,
         ]);
     }
 
@@ -88,8 +88,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::HOLIDAY,
-            'check_in'   => null,
-            'check_out'  => null,
+            'check_in' => null,
+            'check_out' => null,
         ]);
     }
 
@@ -97,8 +97,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::EXTRA,
-            'check_in'   => fake()->dateTimeBetween('today 07:00', 'today 09:00'),
-            'check_out'  => fake()->dateTimeBetween('today 16:00', 'today 19:00'),
+            'check_in' => fake()->dateTimeBetween('today 07:00', 'today 09:00'),
+            'check_out' => fake()->dateTimeBetween('today 16:00', 'today 19:00'),
         ]);
     }
 
@@ -112,7 +112,7 @@ class AttendanceFactory extends Factory
     public function late(int $seconds = 2700): static
     {
         return $this->state(fn () => [
-            'day_status'         => DayStatus::WORKED,
+            'day_status' => DayStatus::WORKED,
             'entry_late_seconds' => $seconds,
         ]);
     }

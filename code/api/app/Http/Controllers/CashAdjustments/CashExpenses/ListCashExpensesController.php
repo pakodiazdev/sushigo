@@ -13,12 +13,14 @@ use Illuminate\Http\Request;
  *   summary="List Cash Expenses",
  *   tags={"Cash Expenses"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="cash_session_id", in="query", @OA\Schema(type="integer"), description="Filter by cash session ID"),
  *   @OA\Parameter(name="category", in="query", @OA\Schema(type="string"), description="Filter by expense category"),
  *   @OA\Parameter(name="tender_type", in="query", @OA\Schema(type="string", enum={"CASH", "CARD", "TRANSFER"}), description="Filter by tender type"),
  *   @OA\Parameter(name="incurred_from", in="query", @OA\Schema(type="string", format="date-time"), description="Filter from date"),
  *   @OA\Parameter(name="incurred_to", in="query", @OA\Schema(type="string", format="date-time"), description="Filter to date"),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15), description="Items per page"),
+ *
  *   @OA\Response(response=200, description="Cash expenses retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden")

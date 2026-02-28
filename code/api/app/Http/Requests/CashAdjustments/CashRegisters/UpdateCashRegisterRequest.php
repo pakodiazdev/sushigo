@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="UpdateCashRegisterRequest",
+ *
  *   @OA\Property(property="operating_unit_id", type="integer", example=1, description="Operating Unit ID", nullable=true),
  *   @OA\Property(property="code", type="string", maxLength=50, example="REG-001", description="Register code"),
  *   @OA\Property(property="name", type="string", maxLength=255, example="Caja Principal", description="Register name"),
@@ -28,7 +29,7 @@ class UpdateCashRegisterRequest extends FormRequest
 
         return [
             'operating_unit_id' => 'nullable|integer|exists:operating_units,id',
-            'code' => 'sometimes|string|max:50|unique:cash_registers,code,' . $cashRegisterId,
+            'code' => 'sometimes|string|max:50|unique:cash_registers,code,'.$cashRegisterId,
             'name' => 'sometimes|string|max:255',
             'type' => 'sometimes|in:ON_PREMISE,DELIVERY,EVENT',
             'is_active' => 'boolean',

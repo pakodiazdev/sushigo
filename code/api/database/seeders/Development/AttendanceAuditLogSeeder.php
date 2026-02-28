@@ -6,7 +6,6 @@ use App\Enums\AuditAction;
 use App\Models\AttendanceAuditLog;
 use App\Models\Employee;
 use App\Models\User;
-use Carbon\Carbon;
 use Database\Seeders\Base\RepeatableSeeder;
 
 /**
@@ -34,16 +33,18 @@ class AttendanceAuditLogSeeder extends RepeatableSeeder
 
         if (! $admin && ! $superAdmin) {
             $this->command->warn('⚠️  No admin/super-admin user found. Skipping AttendanceAuditLogSeeder.');
+
             return;
         }
 
-        $actorAdmin    = $admin ?? $superAdmin;
-        $actorManager  = $manager ?? $actorAdmin;
+        $actorAdmin = $admin ?? $superAdmin;
+        $actorManager = $manager ?? $actorAdmin;
 
         $employees = Employee::where('is_active', true)->take(5)->get();
 
         if ($employees->isEmpty()) {
             $this->command->warn('⚠️  No active employees found. Skipping AttendanceAuditLogSeeder.');
+
             return;
         }
 
@@ -82,19 +83,19 @@ class AttendanceAuditLogSeeder extends RepeatableSeeder
 
         AttendanceAuditLog::create([
             'auditable_type' => 'App\\Models\\Attendance',
-            'auditable_id'   => $attendanceId,
-            'action'         => AuditAction::UPDATE,
-            'old_values'     => [
-                'check_in'           => $workDay->copy()->setTime(8, 0)->toDateTimeString(),
+            'auditable_id' => $attendanceId,
+            'action' => AuditAction::UPDATE,
+            'old_values' => [
+                'check_in' => $workDay->copy()->setTime(8, 0)->toDateTimeString(),
                 'entry_late_seconds' => 0,
             ],
-            'new_values'     => [
-                'check_in'           => $workDay->copy()->setTime(9, 15)->toDateTimeString(),
+            'new_values' => [
+                'check_in' => $workDay->copy()->setTime(9, 15)->toDateTimeString(),
                 'entry_late_seconds' => 4500, // 75 min late
             ],
-            'user_id'        => $actor->id,
-            'reason'         => 'Corrección de hora de entrada — registro erróneo en terminal, confirmado con cámara.',
-            'created_at'     => $correctionDay->copy()->setTime(10, rand(0, 59)),
+            'user_id' => $actor->id,
+            'reason' => 'Corrección de hora de entrada — registro erróneo en terminal, confirmado con cámara.',
+            'created_at' => $correctionDay->copy()->setTime(10, rand(0, 59)),
         ]);
 
         return 1;
@@ -111,21 +112,21 @@ class AttendanceAuditLogSeeder extends RepeatableSeeder
 
         AttendanceAuditLog::create([
             'auditable_type' => 'App\\Models\\Attendance',
-            'auditable_id'   => $attendanceId,
-            'action'         => AuditAction::UPDATE,
-            'old_values'     => [
-                'check_out'         => null,
+            'auditable_id' => $attendanceId,
+            'action' => AuditAction::UPDATE,
+            'old_values' => [
+                'check_out' => null,
                 'net_worked_minutes' => null,
-                'overtime_minutes'   => 0,
+                'overtime_minutes' => 0,
             ],
-            'new_values'     => [
-                'check_out'          => $workDay->copy()->setTime(18, 0)->toDateTimeString(),
+            'new_values' => [
+                'check_out' => $workDay->copy()->setTime(18, 0)->toDateTimeString(),
                 'net_worked_minutes' => 480, // 8 hrs
-                'overtime_minutes'   => 0,
+                'overtime_minutes' => 0,
             ],
-            'user_id'        => $actor->id,
-            'reason'         => 'Empleado olvidó registrar salida. Horario capturado conforme a su turno programado.',
-            'created_at'     => $workDay->copy()->addDay()->setTime(9, rand(0, 30)),
+            'user_id' => $actor->id,
+            'reason' => 'Empleado olvidó registrar salida. Horario capturado conforme a su turno programado.',
+            'created_at' => $workDay->copy()->addDay()->setTime(9, rand(0, 30)),
         ]);
 
         return 1;
@@ -142,17 +143,17 @@ class AttendanceAuditLogSeeder extends RepeatableSeeder
 
         AttendanceAuditLog::create([
             'auditable_type' => 'App\\Models\\Attendance',
-            'auditable_id'   => $attendanceId,
-            'action'         => AuditAction::UPDATE,
-            'old_values'     => [
+            'auditable_id' => $attendanceId,
+            'action' => AuditAction::UPDATE,
+            'old_values' => [
                 'day_status' => 'ABSENCE',
             ],
-            'new_values'     => [
+            'new_values' => [
                 'day_status' => 'LEAVE',
             ],
-            'user_id'        => $actor->id,
-            'reason'         => 'Empleado presentó comprobante médico con fecha posterior. Estatus corregido a incapacidad.',
-            'created_at'     => $workDay->copy()->addDays(rand(2, 5))->setTime(11, rand(0, 59)),
+            'user_id' => $actor->id,
+            'reason' => 'Empleado presentó comprobante médico con fecha posterior. Estatus corregido a incapacidad.',
+            'created_at' => $workDay->copy()->addDays(rand(2, 5))->setTime(11, rand(0, 59)),
         ]);
 
         return 1;
@@ -169,19 +170,19 @@ class AttendanceAuditLogSeeder extends RepeatableSeeder
 
         AttendanceAuditLog::create([
             'auditable_type' => 'App\\Models\\Attendance',
-            'auditable_id'   => $employee->id * 100 + 50,
-            'action'         => AuditAction::CREATE,
-            'old_values'     => null,
-            'new_values'     => [
+            'auditable_id' => $employee->id * 100 + 50,
+            'action' => AuditAction::CREATE,
+            'old_values' => null,
+            'new_values' => [
                 'employee_id' => $employee->id,
-                'date'        => $workDay->toDateString(),
-                'day_status'  => 'DAY_OFF',
-                'check_in'    => null,
-                'check_out'   => null,
+                'date' => $workDay->toDateString(),
+                'day_status' => 'DAY_OFF',
+                'check_in' => null,
+                'check_out' => null,
             ],
-            'user_id'        => $actor->id,
-            'reason'         => 'Registro creado manualmente — día de descanso no capturado en su momento.',
-            'created_at'     => $workDay->copy()->addDays(1)->setTime(8, rand(0, 30)),
+            'user_id' => $actor->id,
+            'reason' => 'Registro creado manualmente — día de descanso no capturado en su momento.',
+            'created_at' => $workDay->copy()->addDays(1)->setTime(8, rand(0, 30)),
         ]);
 
         return 1;
@@ -198,18 +199,18 @@ class AttendanceAuditLogSeeder extends RepeatableSeeder
 
         AttendanceAuditLog::create([
             'auditable_type' => 'App\\Models\\Attendance',
-            'auditable_id'   => $employee->id * 100 + 77,
-            'action'         => AuditAction::DELETE,
-            'old_values'     => [
+            'auditable_id' => $employee->id * 100 + 77,
+            'action' => AuditAction::DELETE,
+            'old_values' => [
                 'employee_id' => $employee->id,
-                'date'        => $workDay->toDateString(),
-                'check_in'    => $workDay->copy()->setTime(8, 2)->toDateTimeString(),
-                'day_status'  => 'WORKED',
+                'date' => $workDay->toDateString(),
+                'check_in' => $workDay->copy()->setTime(8, 2)->toDateTimeString(),
+                'day_status' => 'WORKED',
             ],
-            'new_values'     => null,
-            'user_id'        => $actor->id,
-            'reason'         => 'Registro duplicado eliminado — fallo en terminal causó doble entrada para la misma fecha.',
-            'created_at'     => $workDay->copy()->addDay()->setTime(14, rand(0, 59)),
+            'new_values' => null,
+            'user_id' => $actor->id,
+            'reason' => 'Registro duplicado eliminado — fallo en terminal causó doble entrada para la misma fecha.',
+            'created_at' => $workDay->copy()->addDay()->setTime(14, rand(0, 59)),
         ]);
 
         return 1;

@@ -9,6 +9,7 @@ use Illuminate\Validation\Rule;
  * @OA\Schema(
  *   schema="CheckInRequest",
  *   required={"employee_id", "check_in"},
+ *
  *   @OA\Property(
  *       property="employee_id",
  *       type="string",

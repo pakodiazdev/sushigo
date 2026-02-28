@@ -12,12 +12,16 @@ use App\Models\Item;
  *   summary="Delete Item",
  *   tags={"Items"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Item deleted successfully",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseMessage")
  *   ),
+ *
  *   @OA\Response(response=404, description="Item not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  *   @OA\Response(response=409, description="Cannot delete - Item has variants", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )

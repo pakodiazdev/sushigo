@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="ListItemsRequest",
+ *
  *   @OA\Property(property="type", type="string", enum={"INSUMO", "PRODUCTO", "ACTIVO"}, description="Filter by item type"),
  *   @OA\Property(property="is_stocked", type="boolean", description="Filter by stocked status"),
  *   @OA\Property(property="is_perishable", type="boolean", description="Filter by perishable status"),

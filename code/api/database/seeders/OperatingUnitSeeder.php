@@ -15,8 +15,9 @@ class OperatingUnitSeeder extends Seeder
     {
         $mainBranch = Branch::where('code', 'MAIN')->first();
 
-        if (!$mainBranch) {
+        if (! $mainBranch) {
             $this->command->warn('Main branch not found. Please run BranchSeeder first.');
+
             return;
         }
 

@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\Auth;
  *   description="Finalizes expense and marks it as posted",
  *   tags={"Cash Expenses"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Expense ID"),
+ *
  *   @OA\Response(response=200, description="Cash expense posted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

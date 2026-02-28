@@ -12,15 +12,19 @@ use Illuminate\Http\Request;
  *   path="/api/v1/item-variants",
  *   summary="List Item Variants",
  *   tags={"Item Variants"},
+ *
  *   @OA\Parameter(name="item_id", in="query", @OA\Schema(type="integer"), description="Filter by item ID"),
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean"), description="Filter by active status"),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string"), description="Search in code and name"),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15)),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Item variants retrieved successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponsePaginated"),
  *              @OA\Schema(@OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/ItemVariantResponse")))
  *           }

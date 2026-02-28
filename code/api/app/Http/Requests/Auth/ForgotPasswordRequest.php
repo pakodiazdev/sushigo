@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="ForgotPasswordRequest",
+ *
  *   @OA\Property(property="email", type="string", format="email", example="juan@sushigo.com", description="User email (required if phone not provided)"),
  *   @OA\Property(property="phone", type="string", example="+525512345678", description="User phone (required if email not provided)"),
  * )

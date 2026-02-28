@@ -2,10 +2,9 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Branch;
-use App\Models\OperatingUnit;
 use App\Models\CashRegister;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CashRegister>
@@ -25,13 +24,13 @@ class CashRegisterFactory extends Factory
         return [
             'branch_id' => Branch::factory(),
             'operating_unit_id' => null,
-            'code' => 'REG-' . strtoupper($this->faker->unique()->bothify('???###')),
+            'code' => 'REG-'.strtoupper($this->faker->unique()->bothify('???###')),
             'name' => $this->faker->randomElement([
                 'Caja Principal',
                 'Caja Express',
                 'Caja Delivery',
                 'Caja Eventos',
-                'Caja Barra'
+                'Caja Barra',
             ]),
             'type' => $type,
             'is_active' => true,
@@ -47,7 +46,7 @@ class CashRegisterFactory extends Factory
      */
     public function inactive(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'is_active' => false,
         ]);
     }
@@ -57,9 +56,9 @@ class CashRegisterFactory extends Factory
      */
     public function onPremise(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'type' => CashRegister::TYPE_ON_PREMISE,
-            'name' => 'Caja ' . $this->faker->randomElement(['Principal', 'Secundaria', 'Express']),
+            'name' => 'Caja '.$this->faker->randomElement(['Principal', 'Secundaria', 'Express']),
         ]);
     }
 
@@ -68,7 +67,7 @@ class CashRegisterFactory extends Factory
      */
     public function delivery(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'type' => CashRegister::TYPE_DELIVERY,
             'name' => 'Caja Delivery',
         ]);
@@ -79,7 +78,7 @@ class CashRegisterFactory extends Factory
      */
     public function event(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'type' => CashRegister::TYPE_EVENT,
             'name' => 'Caja Eventos',
         ]);

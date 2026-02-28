@@ -11,18 +11,19 @@ class UserSeeder extends OnceSeeder
 {
     public function run(): void
     {
-        $this->command->info("👥 Checking production users...");
+        $this->command->info('👥 Checking production users...');
 
         // Check if there are already admin users in the system
         $adminCount = User::role(['super-admin', 'admin'])->count();
 
         if ($adminCount > 0) {
             $this->command->info("✓ Found {$adminCount} admin user(s) in the system");
-            $this->command->info("✓ Skipping default admin creation (system already has administrators)");
+            $this->command->info('✓ Skipping default admin creation (system already has administrators)');
+
             return;
         }
 
-        $this->command->warn("⚠️  No admin users found. Creating default admin for initial setup...");
+        $this->command->warn('⚠️  No admin users found. Creating default admin for initial setup...');
         $this->command->newLine();
 
         // Default admin user for system initialization
@@ -50,17 +51,17 @@ class UserSeeder extends OnceSeeder
             );
 
             // Assign role with correct guard
-            if (!$user->hasRole($userData['role'], 'api')) {
+            if (! $user->hasRole($userData['role'], 'api')) {
                 $user->assignRole($userData['role']);
             }
 
             $this->command->warn("⚠️  Default user created: {$userData['email']}");
             $this->command->warn("   Password: {$userData['password']}");
-            $this->command->warn("   ⚠️  CHANGE THIS PASSWORD IMMEDIATELY!");
+            $this->command->warn('   ⚠️  CHANGE THIS PASSWORD IMMEDIATELY!');
 
             // Assign to main operating unit as OWNER
             if ($mainUnit) {
-                if (!$user->operatingUnits()->where('operating_unit_id', $mainUnit->id)->exists()) {
+                if (! $user->operatingUnits()->where('operating_unit_id', $mainUnit->id)->exists()) {
                     $user->operatingUnits()->attach($mainUnit->id, ['assignment_role' => 'OWNER']);
                     $this->command->info("  → Assigned to: {$mainUnit->name} as OWNER");
                 }
@@ -68,10 +69,10 @@ class UserSeeder extends OnceSeeder
         }
 
         $this->command->newLine();
-        $this->command->warn("⚠️  SECURITY REMINDER:");
-        $this->command->warn("   1. Change default passwords immediately");
-        $this->command->warn("   2. Create proper admin users");
-        $this->command->warn("   3. Disable or delete default users after setup");
+        $this->command->warn('⚠️  SECURITY REMINDER:');
+        $this->command->warn('   1. Change default passwords immediately');
+        $this->command->warn('   2. Create proper admin users');
+        $this->command->warn('   3. Disable or delete default users after setup');
         $this->command->newLine();
 
         $this->command->info('✓ Production users seeded successfully');

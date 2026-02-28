@@ -16,7 +16,7 @@ return new class extends Migration
                 ->nullable()
                 ->after('code')
                 ->comment('Product barcode (EAN, UPC, Code128, etc.)');
-            
+
             $table->index('barcode');
         });
     }

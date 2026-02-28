@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
  * @OA\Schema(
  *   schema="CreateItemRequest",
  *   required={"sku", "name", "type"},
+ *
  *   @OA\Property(property="sku", type="string", maxLength=100, example="INS-001", description="Unique SKU code"),
  *   @OA\Property(property="name", type="string", maxLength=255, example="Arroz Sushi Premium", description="Item name"),
  *   @OA\Property(property="description", type="string", example="Arroz japonés premium para sushi", description="Item description"),

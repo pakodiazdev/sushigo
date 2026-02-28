@@ -8,6 +8,6 @@ class DemoRepeatableSeeder extends RepeatableSeeder
 {
     public function run(): void
     {
-        $this->command->info('✓ Repeatable seeder executed at: ' . now()->toDateTimeString());
+        $this->command->info('✓ Repeatable seeder executed at: '.now()->toDateTimeString());
     }
 }

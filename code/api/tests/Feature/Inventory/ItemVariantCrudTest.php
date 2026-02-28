@@ -10,7 +10,6 @@ class ItemVariantCrudTest extends InventoryTestCase
 {
     use RefreshDatabase;
 
-
     #[Test]
     public function it_can_list_item_variants()
     {
@@ -35,7 +34,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         $this->assertCount(2, $response->json('data'));
     }
 
-
     #[Test]
     public function it_can_filter_variants_by_item()
     {
@@ -54,7 +52,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
     }
-
 
     #[Test]
     public function it_can_create_item_variant()
@@ -90,7 +87,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         ]);
     }
 
-
     #[Test]
     public function it_validates_code_uniqueness()
     {
@@ -110,7 +106,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['code']);
     }
-
 
     #[Test]
     public function it_validates_min_max_stock()
@@ -132,7 +127,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['max_stock']);
     }
-
 
     #[Test]
     public function it_can_show_item_variant_with_stock_totals()
@@ -174,7 +168,6 @@ class ItemVariantCrudTest extends InventoryTestCase
             ]);
     }
 
-
     #[Test]
     public function it_can_update_item_variant()
     {
@@ -203,7 +196,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         ]);
     }
 
-
     #[Test]
     public function it_can_delete_variant_without_stock()
     {
@@ -218,7 +210,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         $response->assertStatus(200);
         $this->assertSoftDeleted('item_variants', ['id' => $variant->id]);
     }
-
 
     #[Test]
     public function it_cannot_delete_variant_with_stock()
@@ -243,7 +234,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         $this->assertDatabaseHas('item_variants', ['id' => $variant->id]);
     }
 
-
     #[Test]
     public function it_can_filter_active_variants()
     {
@@ -260,7 +250,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
     }
-
 
     #[Test]
     public function it_auto_uppercases_code()

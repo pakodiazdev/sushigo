@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 /**
  * @OA\Schema(
  *   schema="ResponseError",
+ *
  *   @OA\Property(property="status", type="integer", example=400),
  *   @OA\Property(property="message", type="string", example="Error message"),
  *   @OA\Property(property="errors", type="object", nullable=true)
@@ -24,11 +25,11 @@ class ResponseError implements Responsable
     public function toResponse($request): JsonResponse
     {
         $response = [
-            'status'  => $this->status,
+            'status' => $this->status,
             'message' => $this->message,
         ];
 
-        if (!empty($this->errors)) {
+        if (! empty($this->errors)) {
             $response['errors'] = (object) $this->errors;
         }
 

@@ -10,7 +10,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     protected $guard_name = 'api';
 
@@ -58,10 +58,10 @@ class User extends Authenticatable
      */
     public function getFullPhoneAttribute(): ?string
     {
-        if (!$this->phone) {
+        if (! $this->phone) {
             return null;
         }
 
-        return ($this->phone_country ?? '') . $this->phone;
+        return ($this->phone_country ?? '').$this->phone;
     }
 }

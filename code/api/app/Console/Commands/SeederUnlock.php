@@ -24,30 +24,35 @@ class SeederUnlock extends Command
 
         $log = $this->findSeeder($seederName, $environment);
 
-        if (!$log) {
+        if (! $log) {
             $this->error("Seeder '{$seederName}' not found in '{$environment}' environment.");
+
             return self::FAILURE;
         }
 
-        if (!$log->is_locked) {
+        if (! $log->is_locked) {
             $this->warn("Seeder '{$seederName}' is not locked.");
+
             return self::SUCCESS;
         }
 
         if (SeederLog::unlock($log->seeder_class, $environment)) {
             $this->info("✓ Seeder '{$seederName}' unlocked in '{$environment}' environment.");
-            $this->warn("⚠️  This seeder will run again on next execution!");
+            $this->warn('⚠️  This seeder will run again on next execution!');
+
             return self::SUCCESS;
         }
 
         $this->error("Failed to unlock seeder '{$seederName}'.");
+
         return self::FAILURE;
     }
 
     private function unlockAll(string $environment): int
     {
-        if (!$this->confirm("Are you sure you want to unlock ALL seeders in '{$environment}' environment?")) {
+        if (! $this->confirm("Are you sure you want to unlock ALL seeders in '{$environment}' environment?")) {
             $this->info('Operation cancelled.');
+
             return self::SUCCESS;
         }
 
@@ -61,7 +66,7 @@ class SeederUnlock extends Command
         $this->info("✓ Unlocked {$count} seeder(s) in '{$environment}' environment.");
 
         if ($count > 0) {
-            $this->warn("⚠️  These seeders will run again on next execution!");
+            $this->warn('⚠️  These seeders will run again on next execution!');
         }
 
         return self::SUCCESS;

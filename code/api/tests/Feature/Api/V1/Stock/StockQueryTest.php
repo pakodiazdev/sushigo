@@ -278,7 +278,7 @@ class StockQueryTest extends InventoryTestCase
         // Calculate expected value from actual stock records
         $expectedValue = Stock::where('inventory_location_id', $location->id)
             ->get()
-            ->sum(fn($s) => $s->on_hand * $s->weighted_avg_cost);
+            ->sum(fn ($s) => $s->on_hand * $s->weighted_avg_cost);
 
         $this->assertGreaterThan(0, $summary['total_inventory_value']);
         $this->assertEquals($expectedValue, $summary['total_inventory_value']);

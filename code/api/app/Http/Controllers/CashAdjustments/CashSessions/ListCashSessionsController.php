@@ -13,11 +13,13 @@ use Illuminate\Http\Request;
  *   summary="List Cash Sessions",
  *   tags={"Cash Sessions"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="cash_register_id", in="query", @OA\Schema(type="integer"), description="Filter by cash register ID"),
  *   @OA\Parameter(name="operating_date_from", in="query", @OA\Schema(type="string", format="date"), description="Filter from date (YYYY-MM-DD)"),
  *   @OA\Parameter(name="operating_date_to", in="query", @OA\Schema(type="string", format="date"), description="Filter to date (YYYY-MM-DD)"),
  *   @OA\Parameter(name="status", in="query", @OA\Schema(type="string", enum={"DRAFT", "POSTED"}), description="Filter by status"),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15), description="Items per page"),
+ *
  *   @OA\Response(response=200, description="Cash sessions retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden")
@@ -59,6 +61,7 @@ class ListCashSessionsController extends Controller
         // Add calculated current_balance to each session
         $sessions->getCollection()->transform(function ($session) {
             $session->current_balance = number_format($session->calculateCurrentBalance(), 2, '.', '');
+
             return $session;
         });
 

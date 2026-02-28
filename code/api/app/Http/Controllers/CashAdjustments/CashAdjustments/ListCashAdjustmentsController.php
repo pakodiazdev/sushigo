@@ -13,11 +13,13 @@ use Illuminate\Http\Request;
  *   summary="List Cash Adjustments",
  *   tags={"Cash Adjustments"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="cash_session_id", in="query", @OA\Schema(type="integer"), description="Filter by cash session ID"),
  *   @OA\Parameter(name="type", in="query", @OA\Schema(type="string", enum={"EXTERNAL_IMPORT", "CORRECTION"}), description="Filter by adjustment type"),
  *   @OA\Parameter(name="direction", in="query", @OA\Schema(type="string", enum={"INFLOW", "OUTFLOW"}), description="Filter by direction"),
  *   @OA\Parameter(name="posted", in="query", @OA\Schema(type="boolean"), description="Filter by posted status"),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15), description="Items per page"),
+ *
  *   @OA\Response(response=200, description="Cash adjustments retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden")

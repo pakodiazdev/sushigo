@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\CashRegister;
 use App\Models\CashSession;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CashSession>
@@ -39,7 +39,7 @@ class CashSessionFactory extends Factory
      */
     public function posted(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => CashSession::STATUS_POSTED,
             'closing_balance' => $this->faker->randomFloat(2, 1000, 10000),
         ]);
@@ -50,7 +50,7 @@ class CashSessionFactory extends Factory
      */
     public function draft(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => CashSession::STATUS_DRAFT,
         ]);
     }
@@ -60,7 +60,7 @@ class CashSessionFactory extends Factory
      */
     public function forDate(string $date): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'operating_date' => $date,
         ]);
     }
@@ -70,7 +70,7 @@ class CashSessionFactory extends Factory
      */
     public function withOpeningBalance(float $amount): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'opening_balance' => $amount,
             'closing_balance' => $amount,
         ]);

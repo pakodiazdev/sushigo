@@ -23,7 +23,7 @@ return new class extends Migration
                 'BRANCH_MAIN',
                 'BRANCH_BUFFER',
                 'BRANCH_RETURN',
-                'EVENT_TEMP'
+                'EVENT_TEMP',
             ])->comment('Type of operating unit');
 
             $table->date('start_date')->nullable()->comment('Start date for temporary units (events)');

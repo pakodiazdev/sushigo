@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="RegisterOpeningBalanceRequest",
  *   required={"inventory_location_id", "item_variant_id", "quantity", "uom_id"},
+ *
  *   @OA\Property(property="inventory_location_id", type="integer", example=1, description="Inventory location ID"),
  *   @OA\Property(property="item_variant_id", type="integer", example=1, description="Item variant ID"),
  *   @OA\Property(property="quantity", type="number", format="float", example=100.5, description="Quantity in entry UOM"),

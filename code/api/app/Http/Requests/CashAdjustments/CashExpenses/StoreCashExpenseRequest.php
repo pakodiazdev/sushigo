@@ -9,6 +9,7 @@ use Illuminate\Validation\Validator;
  * @OA\Schema(
  *   schema="StoreCashExpenseRequest",
  *   required={"cash_session_id", "tender_type", "amount", "category"},
+ *
  *   @OA\Property(property="cash_session_id", type="integer", example=1, description="Cash Session ID"),
  *   @OA\Property(property="tender_type", type="string", enum={"CASH", "CARD", "TRANSFER"}, example="CASH", description="Payment tender type"),
  *   @OA\Property(property="amount", type="number", format="decimal", example=150.00, description="Expense amount"),

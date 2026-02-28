@@ -12,7 +12,9 @@ use Illuminate\Http\JsonResponse;
  *   summary="Delete Cash Terminal",
  *   tags={"Cash Terminals"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Terminal ID"),
+ *
  *   @OA\Response(response=200, description="Cash terminal deleted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

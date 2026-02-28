@@ -36,6 +36,7 @@ class AdminEmployeeSeeder extends OnceSeeder
 
             if (! $user) {
                 $this->command->warn("⚠ User {$userData['email']} not found, skipping employee profile");
+
                 continue;
             }
 
@@ -44,15 +45,16 @@ class AdminEmployeeSeeder extends OnceSeeder
             // Skip if employee code already exists
             if (Employee::where('code', $employeeData['code'])->exists()) {
                 $this->command->info("⏭ Employee {$employeeData['code']} already exists, skipping");
+
                 continue;
             }
 
             $employee = $employeeRepository->create([
-                'user_id'    => $user->id,
-                'code'       => $employeeData['code'],
+                'user_id' => $user->id,
+                'code' => $employeeData['code'],
                 'first_name' => $employeeData['first_name'],
-                'last_name'  => $employeeData['last_name'],
-                'is_active'  => true,
+                'last_name' => $employeeData['last_name'],
+                'is_active' => true,
             ]);
 
             // Sync position roles onto the User (preserves admin/inventory-manager roles)

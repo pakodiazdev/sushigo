@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
  * @OA\Schema(
  *   schema="StoreEmployeeRequest",
  *   required={"code", "first_name", "last_name", "roles"},
+ *
  *   @OA\Property(property="code", type="string", maxLength=20, example="EMP-001", description="Unique employee code"),
  *   @OA\Property(property="first_name", type="string", maxLength=100, example="Juan", description="Employee first name"),
  *   @OA\Property(property="last_name", type="string", maxLength=100, example="Perez", description="Employee last name"),

@@ -27,9 +27,12 @@ class LunchReturnApiTest extends TestCase
      * Monday 2026-02-23 — base date for all tests.
      * Lunch-start at 13:05, schedule has 60 min lunch → expected return = 14:05.
      */
-    private const DATE          = '2026-02-23';
-    private const LUNCH_START   = '2026-02-23T13:05:00';
+    private const DATE = '2026-02-23';
+
+    private const LUNCH_START = '2026-02-23T13:05:00';
+
     private const ON_TIME_RETURN = '2026-02-23T14:05:00';  // exactly on time
+
     private const LUNCH_DURATION = 60;                      // minutes
 
     protected function setUp(): void
@@ -162,10 +165,10 @@ class LunchReturnApiTest extends TestCase
     public function rejects_when_no_lunch_start_registered(): void
     {
         // Attendance has check_in but no lunch_start yet
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->onDate(self::DATE)->create([
             'employee_id' => $employee->id,
-            'check_in'    => '2026-02-23T09:00:00',
+            'check_in' => '2026-02-23T09:00:00',
             'lunch_start' => null,
         ]);
 
@@ -242,11 +245,11 @@ class LunchReturnApiTest extends TestCase
      */
     private function makeAttendanceWithLunchStart(): array
     {
-        $lunchStart   = Carbon::parse(self::LUNCH_START);
+        $lunchStart = Carbon::parse(self::LUNCH_START);
         $dayOfWeekIso = $lunchStart->dayOfWeekIso; // 1 = Monday
 
         $period = EmploymentPeriod::factory()->create([
-            'is_active'  => true,
+            'is_active' => true,
             'start_date' => '2026-01-01',
         ]);
 
@@ -254,7 +257,7 @@ class LunchReturnApiTest extends TestCase
 
         $schedule = EmployeeSchedule::factory()->current()->create([
             'employment_period_id' => $period->id,
-            'effective_from'       => '2026-01-01',
+            'effective_from' => '2026-01-01',
         ]);
 
         $scheduleDay = ScheduleDay::factory()
@@ -266,9 +269,9 @@ class LunchReturnApiTest extends TestCase
 
         $attendance = Attendance::factory()->onDate(self::DATE)->create([
             'employee_id' => $employee->id,
-            'check_in'    => '2026-02-23T09:00:00',
+            'check_in' => '2026-02-23T09:00:00',
             'lunch_start' => self::LUNCH_START,
-            'lunch_end'   => null,
+            'lunch_end' => null,
         ]);
 
         return compact('attendance', 'employee', 'period', 'schedule', 'scheduleDay');

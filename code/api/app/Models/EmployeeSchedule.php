@@ -43,9 +43,9 @@ class EmployeeSchedule extends Model
     ];
 
     protected $casts = [
-        'effective_from'        => 'date',
-        'effective_to'          => 'date',
-        'workday_type'          => WorkdayType::class,
+        'effective_from' => 'date',
+        'effective_to' => 'date',
+        'workday_type' => WorkdayType::class,
         'working_days_per_week' => 'integer',
     ];
 

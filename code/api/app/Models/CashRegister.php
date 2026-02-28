@@ -28,7 +28,9 @@ class CashRegister extends Model
 
     // Type constants
     public const TYPE_ON_PREMISE = 'ON_PREMISE';
+
     public const TYPE_DELIVERY = 'DELIVERY';
+
     public const TYPE_EVENT = 'EVENT';
 
     /**

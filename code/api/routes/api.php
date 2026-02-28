@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
+use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
+use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
+use App\Http\Controllers\Api\V1\Attendances\RegisterLunchStartController;
+use App\Http\Controllers\Api\V1\Attendances\TodayAttendanceController;
 use App\Http\Controllers\Api\V1\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\LogoutController;
@@ -9,20 +14,22 @@ use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\V1\Auth\VerifyResetTokenController;
 use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\CreateWageController;
 use App\Http\Controllers\Api\V1\Employees\DeactivateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
+use App\Http\Controllers\Api\V1\Employees\ListWagesController;
 use App\Http\Controllers\Api\V1\Employees\RehireEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ShowEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
-use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
-use App\Http\Controllers\Api\V1\Employees\CreateWageController;
-use App\Http\Controllers\Api\V1\Employees\ListWagesController;
-use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
-use App\Http\Controllers\Api\V1\Attendances\RegisterLunchStartController;
-use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
-use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
-use App\Http\Controllers\Api\V1\Attendances\TodayAttendanceController;
+use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
+use App\Http\Controllers\Api\V1\Inventory\RegisterOpeningBalanceController;
+use App\Http\Controllers\Api\V1\Inventory\RegisterStockOutController;
+use App\Http\Controllers\Api\V1\InventoryLocation\CreateInventoryLocationController;
+use App\Http\Controllers\Api\V1\InventoryLocation\DeleteInventoryLocationController;
+use App\Http\Controllers\Api\V1\InventoryLocation\ListInventoryLocationsController;
+use App\Http\Controllers\Api\V1\InventoryLocation\ShowInventoryLocationController;
+use App\Http\Controllers\Api\V1\InventoryLocation\UpdateInventoryLocationController;
 use App\Http\Controllers\Api\V1\Items\CreateItemController;
 use App\Http\Controllers\Api\V1\Items\CreateItemVariantController;
 use App\Http\Controllers\Api\V1\Items\DeleteItemController;
@@ -33,13 +40,6 @@ use App\Http\Controllers\Api\V1\Items\ShowItemController;
 use App\Http\Controllers\Api\V1\Items\ShowItemVariantController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemVariantController;
-use App\Http\Controllers\Api\V1\Inventory\RegisterOpeningBalanceController;
-use App\Http\Controllers\Api\V1\Inventory\RegisterStockOutController;
-use App\Http\Controllers\Api\V1\InventoryLocation\CreateInventoryLocationController;
-use App\Http\Controllers\Api\V1\InventoryLocation\DeleteInventoryLocationController;
-use App\Http\Controllers\Api\V1\InventoryLocation\ListInventoryLocationsController;
-use App\Http\Controllers\Api\V1\InventoryLocation\ShowInventoryLocationController;
-use App\Http\Controllers\Api\V1\InventoryLocation\UpdateInventoryLocationController;
 use App\Http\Controllers\Api\V1\OperatingUnit\CreateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnit\DeleteOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnit\ListOperatingUnitsController;
@@ -73,7 +73,7 @@ Route::prefix('v1')->group(function () {
             \DB::connection()->getDatabaseName();
         } catch (\Exception $e) {
             $dbStatus = 'error';
-            $dbMessage = 'Database connection failed: ' . $e->getMessage();
+            $dbMessage = 'Database connection failed: '.$e->getMessage();
         }
 
         return response()->json([
@@ -81,8 +81,8 @@ Route::prefix('v1')->group(function () {
             'timestamp' => now()->toIso8601String(),
             'database' => [
                 'status' => $dbStatus,
-                'message' => $dbMessage
-            ]
+                'message' => $dbMessage,
+            ],
         ], $dbStatus === 'ok' ? 200 : 503);
     })->name('health');
 

@@ -31,7 +31,9 @@ class CashAdjustmentLine extends Model
 
     // Tender type constants
     public const TENDER_CASH = 'CASH';
+
     public const TENDER_CARD = 'CARD';
+
     public const TENDER_TRANSFER = 'TRANSFER';
 
     /**

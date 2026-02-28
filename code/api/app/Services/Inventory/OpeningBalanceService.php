@@ -16,15 +16,15 @@ class OpeningBalanceService
     /**
      * Register opening balance for an item variant at a specific location
      *
-     * @param int $inventoryLocationId The inventory location ID
-     * @param int $itemVariantId The item variant ID
-     * @param float $quantity Quantity in entry UOM
-     * @param int $entryUomId Unit of measure for the entry
-     * @param float|null $unitCost Cost per unit in entry UOM (optional)
-     * @param int|null $userId User performing the operation
-     * @param string|null $reference External reference number
-     * @param string|null $notes Additional notes
-     * @return StockMovement
+     * @param  int  $inventoryLocationId  The inventory location ID
+     * @param  int  $itemVariantId  The item variant ID
+     * @param  float  $quantity  Quantity in entry UOM
+     * @param  int  $entryUomId  Unit of measure for the entry
+     * @param  float|null  $unitCost  Cost per unit in entry UOM (optional)
+     * @param  int|null  $userId  User performing the operation
+     * @param  string|null  $reference  External reference number
+     * @param  string|null  $notes  Additional notes
+     *
      * @throws \Exception
      */
     public function registerOpeningBalance(
@@ -62,7 +62,7 @@ class OpeningBalanceService
 
             if ($entryUomId !== $variant->uom_id) {
                 $conversion = $this->getConversion($entryUomId, $variant->uom_id);
-                if (!$conversion) {
+                if (! $conversion) {
                     throw new \Exception(
                         "No conversion found from {$entryUom->code} to {$variant->unitOfMeasure->code}"
                     );
@@ -164,7 +164,7 @@ class OpeningBalanceService
 
         if ($inverseConversion) {
             // Create a virtual conversion with inverted factor
-            $virtual = new UomConversion();
+            $virtual = new UomConversion;
             $virtual->from_uom_id = $fromUomId;
             $virtual->to_uom_id = $toUomId;
             $virtual->factor = 1 / $inverseConversion->factor;

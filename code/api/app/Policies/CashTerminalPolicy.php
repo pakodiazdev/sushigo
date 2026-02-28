@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\CashTerminal;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CashTerminalPolicy
 {
@@ -21,7 +20,7 @@ class CashTerminalPolicy
      */
     public function view(User $user, CashTerminal $cashTerminal): bool
     {
-        if (!$user->can('cash_terminals.view')) {
+        if (! $user->can('cash_terminals.view')) {
             return false;
         }
 
@@ -41,7 +40,7 @@ class CashTerminalPolicy
      */
     public function update(User $user, CashTerminal $cashTerminal): bool
     {
-        if (!$user->can('cash_terminals.update')) {
+        if (! $user->can('cash_terminals.update')) {
             return false;
         }
 
@@ -53,7 +52,7 @@ class CashTerminalPolicy
      */
     public function delete(User $user, CashTerminal $cashTerminal): bool
     {
-        if (!$user->can('cash_terminals.delete')) {
+        if (! $user->can('cash_terminals.delete')) {
             return false;
         }
 

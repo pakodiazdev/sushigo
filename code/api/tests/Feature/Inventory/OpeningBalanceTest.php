@@ -13,7 +13,6 @@ class OpeningBalanceTest extends InventoryTestCase
 {
     use RefreshDatabase;
 
-
     #[Test]
     public function it_can_register_opening_balance_with_base_unit()
     {
@@ -89,7 +88,6 @@ class OpeningBalanceTest extends InventoryTestCase
         $this->assertEquals(125.50, $variant->last_unit_cost);
     }
 
-
     #[Test]
     public function it_can_register_opening_balance_with_conversion()
     {
@@ -139,7 +137,6 @@ class OpeningBalanceTest extends InventoryTestCase
         $this->assertEquals(150, $variant->last_unit_cost);
     }
 
-
     #[Test]
     public function it_calculates_weighted_average_cost_correctly()
     {
@@ -178,7 +175,6 @@ class OpeningBalanceTest extends InventoryTestCase
         $this->assertEquals(150, $variant->last_unit_cost); // Last cost = most recent
     }
 
-
     #[Test]
     public function it_fails_without_authentication()
     {
@@ -200,7 +196,6 @@ class OpeningBalanceTest extends InventoryTestCase
         $this->assertTrue($response->status() >= 200 && $response->status() < 500);
     }
 
-
     #[Test]
     public function it_validates_required_fields()
     {
@@ -216,7 +211,6 @@ class OpeningBalanceTest extends InventoryTestCase
                 'uom_id',
             ]);
     }
-
 
     #[Test]
     public function it_validates_quantity_must_be_positive()
@@ -237,7 +231,6 @@ class OpeningBalanceTest extends InventoryTestCase
             ->assertJsonValidationErrors(['quantity']);
     }
 
-
     #[Test]
     public function it_validates_location_exists()
     {
@@ -257,7 +250,6 @@ class OpeningBalanceTest extends InventoryTestCase
             ->assertJsonValidationErrors(['inventory_location_id']);
     }
 
-
     #[Test]
     public function it_validates_item_variant_exists()
     {
@@ -273,7 +265,6 @@ class OpeningBalanceTest extends InventoryTestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['item_variant_id']);
     }
-
 
     #[Test]
     public function it_validates_uom_exists()
@@ -293,7 +284,6 @@ class OpeningBalanceTest extends InventoryTestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['uom_id']);
     }
-
 
     #[Test]
     public function it_fails_when_no_conversion_available()
@@ -329,7 +319,6 @@ class OpeningBalanceTest extends InventoryTestCase
                 'status' => 400,
             ]);
     }
-
 
     #[Test]
     public function it_stores_movement_metadata_correctly()

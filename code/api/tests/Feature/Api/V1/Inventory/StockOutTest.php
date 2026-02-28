@@ -7,7 +7,6 @@ use App\Models\Item;
 use App\Models\ItemVariant;
 use App\Models\OperatingUnit;
 use App\Models\Stock;
-use App\Models\StockMovement;
 use App\Models\StockMovementLine;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
@@ -22,9 +21,13 @@ class StockOutTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected InventoryLocation $location;
+
     protected ItemVariant $variant;
+
     protected UnitOfMeasure $baseUom;
+
     protected UnitOfMeasure $transactionUom;
 
     protected function setUp(): void
@@ -72,7 +75,6 @@ class StockOutTest extends TestCase
             'reserved' => 0,
         ]);
     }
-
 
     #[Test]
     public function it_registers_a_sale_with_profit_calculation()
@@ -125,7 +127,6 @@ class StockOutTest extends TestCase
         $this->assertEquals(90.0000, (float) $stock->on_hand);
     }
 
-
     #[Test]
     public function it_registers_consumption_without_sale_price()
     {
@@ -156,7 +157,6 @@ class StockOutTest extends TestCase
         $this->assertEquals(95.0000, (float) $stock->on_hand);
     }
 
-
     #[Test]
     public function it_validates_insufficient_stock()
     {
@@ -176,7 +176,6 @@ class StockOutTest extends TestCase
 
         $this->assertStringContainsString('Insufficient stock', $response->json('message'));
     }
-
 
     #[Test]
     public function it_handles_uom_conversion_for_sales()
@@ -225,7 +224,6 @@ class StockOutTest extends TestCase
         $this->assertEquals(95.0000, (float) $stock->on_hand); // 100 - 5
     }
 
-
     #[Test]
     public function it_validates_required_fields()
     {
@@ -240,7 +238,6 @@ class StockOutTest extends TestCase
                 'reason',
             ]);
     }
-
 
     #[Test]
     public function it_validates_reason_must_be_sale_or_consumption()
@@ -257,7 +254,6 @@ class StockOutTest extends TestCase
             ->assertJsonValidationErrors(['reason']);
     }
 
-
     #[Test]
     public function it_validates_quantity_must_be_positive()
     {
@@ -273,7 +269,6 @@ class StockOutTest extends TestCase
             ->assertJsonValidationErrors(['qty']);
     }
 
-
     #[Test]
     public function it_returns_404_for_nonexistent_location()
     {
@@ -288,7 +283,6 @@ class StockOutTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['inventory_location_id']);
     }
-
 
     #[Test]
     public function it_calculates_zero_profit_when_cost_equals_price()
@@ -310,7 +304,6 @@ class StockOutTest extends TestCase
         $this->assertEquals(0.0000, (float) $line->profit_margin);
         $this->assertEquals(0.0000, (float) $line->profit_total);
     }
-
 
     #[Test]
     public function it_records_negative_profit_for_loss_sales()

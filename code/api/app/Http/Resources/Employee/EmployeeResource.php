@@ -8,6 +8,7 @@ use App\Http\Resources\BaseResource;
  * @OA\Schema(
  *     schema="EmployeeResponse",
  *     title="Employee Response",
+ *
  *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
  *     @OA\Property(property="code", type="string", example="EMP-001"),
  *     @OA\Property(property="first_name", type="string", example="Juan"),
@@ -22,7 +23,9 @@ use App\Http\Resources\BaseResource;
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2026-02-09T00:00:00.000000Z"),
  *     @OA\Property(property="updated_at", type="string", format="date-time", example="2026-02-09T00:00:00.000000Z"),
  *     @OA\Property(property="employment_periods", type="array", nullable=true,
+ *
  *         @OA\Items(type="object",
+ *
  *             @OA\Property(property="id", type="string"),
  *             @OA\Property(property="branch_id", type="integer"),
  *             @OA\Property(property="branch_name", type="string", nullable=true),
@@ -42,32 +45,32 @@ class EmployeeResource extends BaseResource
     public function toArray($request): array
     {
         return [
-            'id'           => $this->public_id,
-            'code'         => $this->code,
-            'first_name'   => $this->first_name,
-            'last_name'    => $this->last_name,
-            'roles'        => $this->getPositionRoles(),
-            'is_active'    => $this->is_active,
+            'id' => $this->public_id,
+            'code' => $this->code,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'roles' => $this->getPositionRoles(),
+            'is_active' => $this->is_active,
             'has_active_period' => $this->active_employment_periods_count !== null
                 ? $this->active_employment_periods_count > 0
                 : ($this->relationLoaded('employmentPeriods')
                     ? $this->employmentPeriods->contains('is_active', true)
                     : null),
-            'email'        => $this->user?->email,
-            'phone'        => $this->user?->phone,
+            'email' => $this->user?->email,
+            'phone' => $this->user?->phone,
             'phone_country' => $this->user?->phone_country,
-            'meta'         => $this->meta,
-            'created_at'   => $this->created_at,
-            'updated_at'   => $this->updated_at,
+            'meta' => $this->meta,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
             'employment_periods' => $this->relationLoaded('employmentPeriods')
                 ? $this->employmentPeriods->loadMissing('branch')->map(fn ($p) => [
-                    'id'                 => $p->public_id,
-                    'branch_id'          => $p->branch_id,
-                    'branch_name'        => $p->branch?->name,
-                    'start_date'         => $p->start_date?->toDateString(),
-                    'end_date'           => $p->end_date?->toDateString(),
+                    'id' => $p->public_id,
+                    'branch_id' => $p->branch_id,
+                    'branch_name' => $p->branch?->name,
+                    'start_date' => $p->start_date?->toDateString(),
+                    'end_date' => $p->end_date?->toDateString(),
                     'termination_reason' => $p->termination_reason,
-                    'is_active'          => $p->is_active,
+                    'is_active' => $p->is_active,
                 ])->toArray()
                 : null,
         ];

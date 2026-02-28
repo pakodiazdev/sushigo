@@ -250,12 +250,12 @@ class CreateEmployeeActionTest extends TestCase
 
         // First creation — succeeds
         ($this->action)([
-            'code'       => 'EMP-TX',
+            'code' => 'EMP-TX',
             'first_name' => 'First',
-            'last_name'  => 'Employee',
-            'roles'      => ['cook'],
-            'email'      => 'first@sushigo.com',
-            'branch_id'  => $this->branch->id,
+            'last_name' => 'Employee',
+            'roles' => ['cook'],
+            'email' => 'first@sushigo.com',
+            'branch_id' => $this->branch->id,
             'start_date' => '2026-01-15',
         ]);
 
@@ -265,12 +265,12 @@ class CreateEmployeeActionTest extends TestCase
         // transaction should trigger a rollback, preventing the user from being persisted.
         try {
             ($this->action)([
-                'code'       => 'EMP-TX2',
+                'code' => 'EMP-TX2',
                 'first_name' => 'Second',
-                'last_name'  => 'Employee',
-                'roles'      => ['cook'],
-                'email'      => 'second@sushigo.com',
-                'branch_id'  => 999999, // non-existent — FK violation triggers rollback
+                'last_name' => 'Employee',
+                'roles' => ['cook'],
+                'email' => 'second@sushigo.com',
+                'branch_id' => 999999, // non-existent — FK violation triggers rollback
                 'start_date' => '2026-01-15',
             ]);
         } catch (\Throwable) {

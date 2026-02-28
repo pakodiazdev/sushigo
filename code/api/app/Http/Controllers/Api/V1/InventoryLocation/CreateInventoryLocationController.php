@@ -13,7 +13,9 @@ use App\Models\InventoryLocation;
  *   summary="Create Inventory Location",
  *   tags={"Inventory Locations"},
  *   security={{"passport": {}}},
+ *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/CreateInventoryLocationRequest")),
+ *
  *   @OA\Response(response=201, description="Created", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=422, description="Validation Error", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  * )

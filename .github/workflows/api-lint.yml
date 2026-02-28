@@ -1,0 +1,43 @@
+name: API Lint (PHP Pint)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  api-lint:
+    name: api-lint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: code/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changes in code/api
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            api:
+              - 'code/api/**'
+
+      - name: Setup PHP 8.2
+        if: steps.changes.outputs.api == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Install Composer dependencies
+        if: steps.changes.outputs.api == 'true'
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Run PHP Pint (check mode)
+        if: steps.changes.outputs.api == 'true'
+        run: ./vendor/bin/pint --test

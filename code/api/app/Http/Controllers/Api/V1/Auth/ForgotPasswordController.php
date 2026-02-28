@@ -13,14 +13,19 @@ use Illuminate\Http\JsonResponse;
  *   summary="Request password reset link",
  *   description="Sends a password reset link via email or WhatsApp",
  *   tags={"Auth"},
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/ForgotPasswordRequest")
  *   ),
+ *
  *   @OA\Response(
  *     response=200,
  *     description="Reset link sent successfully",
+ *
  *     @OA\JsonContent(
+ *
  *       @OA\Property(property="status", type="string", example="success"),
  *       @OA\Property(property="message", type="string")
  *     )

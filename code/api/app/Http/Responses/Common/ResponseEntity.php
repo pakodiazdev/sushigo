@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 /**
  * @OA\Schema(
  *   schema="ResponseEntity",
+ *
  *   @OA\Property(property="status", type="integer", example=200),
  *   @OA\Property(property="data", type="object"),
  *   @OA\Property(property="meta", type="object", nullable=true)
@@ -25,8 +26,8 @@ class ResponseEntity implements Responsable
     {
         return response()->json([
             'status' => $this->status,
-            'data'   => array_is_list($this->data) ? $this->data : (object) $this->data,
-            'meta'   => empty($this->meta) ? null : (object) $this->meta,
+            'data' => array_is_list($this->data) ? $this->data : (object) $this->data,
+            'meta' => empty($this->meta) ? null : (object) $this->meta,
         ], $this->status);
     }
 }

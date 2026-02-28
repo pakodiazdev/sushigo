@@ -2,22 +2,16 @@
 
 namespace App\Services\CashAdjustments;
 
-use App\Models\CashSession;
 use App\Models\CashRegister;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Models\CashSession;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class CashSessionService
 {
     /**
      * Open a new cash session for a register
      *
-     * @param CashRegister $cashRegister
-     * @param string $operatingDate
-     * @param float|null $openingBalance
-     * @param array $meta
-     * @return CashSession
      * @throws \Exception
      */
     public function openSession(
@@ -58,9 +52,6 @@ class CashSessionService
 
     /**
      * Calculate closing balance for a session
-     *
-     * @param CashSession $session
-     * @return float
      */
     public function calculateClosingBalance(CashSession $session): float
     {
@@ -69,9 +60,6 @@ class CashSessionService
 
     /**
      * Update closing balance and recalculate
-     *
-     * @param CashSession $session
-     * @return CashSession
      */
     public function updateClosingBalance(CashSession $session): CashSession
     {
@@ -84,14 +72,12 @@ class CashSessionService
     /**
      * Post a session (mark as finalized)
      *
-     * @param CashSession $session
-     * @return CashSession
      * @throws \Exception
      */
     public function postSession(CashSession $session): CashSession
     {
         if ($session->isPosted()) {
-            throw new \Exception("Session is already posted");
+            throw new \Exception('Session is already posted');
         }
 
         DB::beginTransaction();
@@ -102,6 +88,7 @@ class CashSessionService
             $session->save();
 
             DB::commit();
+
             return $session;
         } catch (\Exception $e) {
             DB::rollBack();
@@ -111,14 +98,11 @@ class CashSessionService
 
     /**
      * Get session summary with all totals
-     *
-     * @param CashSession $session
-     * @return array
      */
     public function getSessionSummary(CashSession $session): array
     {
         // Load relationships if not already loaded
-        if (!$session->relationLoaded('cashRegister')) {
+        if (! $session->relationLoaded('cashRegister')) {
             $session->load('cashRegister');
         }
 
@@ -133,7 +117,7 @@ class CashSessionService
             foreach ($adjustment->lines as $line) {
                 $tenderType = $line->tender_type;
 
-                if (!isset($incomes[$tenderType])) {
+                if (! isset($incomes[$tenderType])) {
                     $incomes[$tenderType] = [
                         'tender_type' => $tenderType,
                         'amount' => 0,
@@ -156,7 +140,7 @@ class CashSessionService
             foreach ($adjustment->lines as $line) {
                 $tenderType = $line->tender_type;
 
-                if (!isset($expensesData[$tenderType])) {
+                if (! isset($expensesData[$tenderType])) {
                     $expensesData[$tenderType] = [
                         'tender_type' => $tenderType,
                         'amount' => 0,
@@ -174,7 +158,7 @@ class CashSessionService
         foreach ($expenses as $expense) {
             $tenderType = $expense->tender_type;
 
-            if (!isset($expensesData[$tenderType])) {
+            if (! isset($expensesData[$tenderType])) {
                 $expensesData[$tenderType] = [
                     'tender_type' => $tenderType,
                     'amount' => 0,
@@ -206,10 +190,6 @@ class CashSessionService
 
     /**
      * Get or create today's session for a register
-     *
-     * @param CashRegister $cashRegister
-     * @param string|null $date
-     * @return CashSession
      */
     public function getOrCreateTodaySession(CashRegister $cashRegister, ?string $date = null): CashSession
     {
@@ -219,7 +199,7 @@ class CashSessionService
             ->where('operating_date', $date)
             ->first();
 
-        if (!$session) {
+        if (! $session) {
             $session = $this->openSession($cashRegister, $date);
         }
 

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\CashAdjustments\BankAccounts;
 
 use App\Http\Controllers\Controller;
-use App\Models\BankAccount;
 use App\Http\Requests\CashAdjustments\BankAccounts\UpdateBankAccountRequest;
+use App\Models\BankAccount;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -13,11 +13,15 @@ use Illuminate\Http\JsonResponse;
  *   summary="Update Bank Account",
  *   tags={"Bank Accounts"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Bank Account ID"),
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/UpdateBankAccountRequest")
  *   ),
+ *
  *   @OA\Response(response=200, description="Bank account updated successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

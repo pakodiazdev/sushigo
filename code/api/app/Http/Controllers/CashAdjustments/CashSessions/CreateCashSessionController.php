@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\CashAdjustments\CashSessions;
 
 use App\Http\Controllers\Controller;
-use App\Models\CashRegister;
 use App\Http\Requests\CashAdjustments\CashSessions\StoreCashSessionRequest;
+use App\Models\CashRegister;
 use App\Services\CashAdjustments\CashSessionService;
 use Illuminate\Http\JsonResponse;
 
@@ -14,10 +14,13 @@ use Illuminate\Http\JsonResponse;
  *   summary="Open Cash Session",
  *   tags={"Cash Sessions"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/StoreCashSessionRequest")
  *   ),
+ *
  *   @OA\Response(response=201, description="Cash session opened successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

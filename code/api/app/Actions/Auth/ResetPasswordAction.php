@@ -30,7 +30,7 @@ class ResetPasswordAction
 
         $user = User::where(function ($q) use ($record) {
             $q->where('email', $record->email)
-              ->orWhere('phone', $record->email);
+                ->orWhere('phone', $record->email);
         })->first();
 
         if (! $user) {
@@ -40,7 +40,7 @@ class ResetPasswordAction
         }
 
         $user->forceFill([
-            'password'       => Hash::make($data['password']),
+            'password' => Hash::make($data['password']),
             'remember_token' => Str::random(60),
         ])->save();
 
@@ -53,7 +53,7 @@ class ResetPasswordAction
 
         return [
             'token' => $token,
-            'user'  => $user,
+            'user' => $user,
         ];
     }
 }

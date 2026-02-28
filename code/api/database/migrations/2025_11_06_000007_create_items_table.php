@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('type', [
                 'INSUMO',
                 'PRODUCTO',
-                'ACTIVO'
+                'ACTIVO',
             ])->comment('Item classification type');
 
             $table->boolean('is_stocked')->default(true)->comment('Whether item is tracked in inventory');

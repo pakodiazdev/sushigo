@@ -27,8 +27,9 @@ class DeactivateEmployeeRequest extends FormRequest
 
             $activePeriod = $employee->employmentPeriods()->active()->first();
 
-            if (!$activePeriod) {
+            if (! $activePeriod) {
                 $validator->errors()->add('employee', 'Employee has no active employment period.');
+
                 return;
             }
 

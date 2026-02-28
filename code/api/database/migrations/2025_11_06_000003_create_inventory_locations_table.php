@@ -25,7 +25,7 @@ return new class extends Migration
                 'KITCHEN',
                 'BAR',
                 'RETURN',
-                'WASTE'
+                'WASTE',
             ])->comment('Type of inventory location');
 
             $table->boolean('is_primary')->default(false)->comment('Primary location flag for unit');

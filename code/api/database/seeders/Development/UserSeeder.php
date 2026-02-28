@@ -17,7 +17,7 @@ class UserSeeder extends OnceSeeder
         $users = config('seeders.development_users', []);
 
         // Get operating units for assignments
-        $mainUnit   = OperatingUnit::where('type', OperatingUnit::TYPE_BRANCH_MAIN)->first();
+        $mainUnit = OperatingUnit::where('type', OperatingUnit::TYPE_BRANCH_MAIN)->first();
         $bufferUnit = OperatingUnit::where('type', OperatingUnit::TYPE_BRANCH_BUFFER)->first();
         $returnUnit = OperatingUnit::where('type', OperatingUnit::TYPE_BRANCH_RETURN)->first();
 
@@ -28,8 +28,8 @@ class UserSeeder extends OnceSeeder
             $user = User::updateOrCreate(
                 ['email' => $userData['email']],
                 [
-                    'name'              => $userData['name'],
-                    'password'          => Hash::make($userData['password']),
+                    'name' => $userData['name'],
+                    'password' => Hash::make($userData['password']),
                     'email_verified_at' => now(),
                 ]
             );
@@ -45,17 +45,17 @@ class UserSeeder extends OnceSeeder
             // We create directly (not via CreateEmployeeAction) because the User already
             // exists — we just link the Employee record to it.
             if (isset($userData['employee']) && $branch) {
-                $empData  = $userData['employee'];
-                $empCode  = $empData['code'];
+                $empData = $userData['employee'];
+                $empCode = $empData['code'];
                 $hireDate = now()->subYear()->startOfDay(); // hired ~1 year ago
 
                 if (! Employee::where('code', $empCode)->exists()) {
                     $employee = Employee::create([
-                        'user_id'    => $user->id,
-                        'code'       => $empCode,
+                        'user_id' => $user->id,
+                        'code' => $empCode,
                         'first_name' => $empData['first_name'],
-                        'last_name'  => $empData['last_name'],
-                        'is_active'  => true,
+                        'last_name' => $empData['last_name'],
+                        'is_active' => true,
                         'created_at' => $hireDate,
                         'updated_at' => $hireDate,
                     ]);
@@ -67,11 +67,11 @@ class UserSeeder extends OnceSeeder
                     // Create active employment period from hire date
                     EmploymentPeriod::create([
                         'employee_id' => $employee->id,
-                        'branch_id'   => $branch->id,
-                        'start_date'  => $hireDate->toDateString(),
-                        'is_active'   => true,
-                        'created_at'  => $hireDate,
-                        'updated_at'  => $hireDate,
+                        'branch_id' => $branch->id,
+                        'start_date' => $hireDate->toDateString(),
+                        'is_active' => true,
+                        'created_at' => $hireDate,
+                        'updated_at' => $hireDate,
                     ]);
 
                     $roles = implode(', ', $positionRoles);
@@ -83,11 +83,11 @@ class UserSeeder extends OnceSeeder
                     if (! $employee->employmentPeriods()->active()->exists()) {
                         EmploymentPeriod::create([
                             'employee_id' => $employee->id,
-                            'branch_id'   => $branch->id,
-                            'start_date'  => $hireDate->toDateString(),
-                            'is_active'   => true,
-                            'created_at'  => $hireDate,
-                            'updated_at'  => $hireDate,
+                            'branch_id' => $branch->id,
+                            'start_date' => $hireDate->toDateString(),
+                            'is_active' => true,
+                            'created_at' => $hireDate,
+                            'updated_at' => $hireDate,
                         ]);
                         $this->command->info("  → Active employment period added to existing employee {$empCode}");
                     } else {
@@ -101,8 +101,8 @@ class UserSeeder extends OnceSeeder
                 if (! $user->operatingUnits()->where('operating_unit_id', $mainUnit->id)->exists()) {
                     $assignmentRole = match ($userData['role']) {
                         'super-admin' => 'OWNER',
-                        'admin'       => 'MANAGER',
-                        default       => 'INVENTORY',
+                        'admin' => 'MANAGER',
+                        default => 'INVENTORY',
                     };
                     $user->operatingUnits()->attach($mainUnit->id, ['assignment_role' => $assignmentRole]);
                     $this->command->info("  → Assigned to: {$mainUnit->name} as {$assignmentRole}");

@@ -10,7 +10,9 @@ use App\Models\OperatingUnit;
  *   path="/api/v1/operating-units/{id}",
  *   summary="Get a single operating unit by ID",
  *   tags={"Operating Units"},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Operating unit retrieved successfully"),
  *   @OA\Response(response=404, description="Operating unit not found")
  * )

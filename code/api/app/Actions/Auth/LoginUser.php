@@ -2,7 +2,6 @@
 
 namespace App\Actions\Auth;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -14,10 +13,10 @@ class LoginUser
 
         $attemptCredentials = [
             $loginField => $credentials[$loginField],
-            'password'  => $credentials['password'],
+            'password' => $credentials['password'],
         ];
 
-        if (!Auth::attempt($attemptCredentials)) {
+        if (! Auth::attempt($attemptCredentials)) {
             throw ValidationException::withMessages([
                 $loginField => ['The provided credentials are incorrect.'],
             ]);
@@ -27,7 +26,7 @@ class LoginUser
         $token = $user->createToken('auth_token')->accessToken;
 
         return [
-            'user'  => $user,
+            'user' => $user,
             'token' => $token,
         ];
     }

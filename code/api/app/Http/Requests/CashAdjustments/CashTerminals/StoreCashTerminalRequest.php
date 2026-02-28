@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="StoreCashTerminalRequest",
  *   required={"branch_id", "name", "provider"},
+ *
  *   @OA\Property(property="branch_id", type="integer", example=1, description="Branch ID"),
  *   @OA\Property(property="name", type="string", maxLength=255, example="Terminal CLIP 1", description="Terminal name"),
  *   @OA\Property(property="provider", type="string", maxLength=100, example="CLIP", description="Payment provider (e.g., CLIP, MERCADOPAGO)"),

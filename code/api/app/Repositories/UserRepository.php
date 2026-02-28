@@ -22,7 +22,7 @@ class UserRepository extends BaseRepository
     public function findByResetSelector(string $selector): ?object
     {
         $expireMinutes = config('auth.passwords.users.expire', 60);
-        $table         = config('auth.passwords.users.table', 'password_reset_tokens');
+        $table = config('auth.passwords.users.table', 'password_reset_tokens');
 
         return DB::table($table)
             ->where('selector', $selector)
@@ -42,7 +42,7 @@ class UserRepository extends BaseRepository
         $table = config('auth.passwords.users.table', 'password_reset_tokens');
 
         DB::table($table)->updateOrInsert(
-            ['email'    => $identifier],
+            ['email' => $identifier],
             ['selector' => $selector, 'token' => $hashedToken, 'created_at' => now()]
         );
     }

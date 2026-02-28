@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Branch;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\BankAccount>
@@ -33,10 +33,10 @@ class BankAccountFactory extends Factory
 
         return [
             'branch_id' => Branch::factory(),
-            'alias' => $bankName . ' - ' . $this->faker->randomElement(['Nomina', 'Operaciones', 'Principal']),
+            'alias' => $bankName.' - '.$this->faker->randomElement(['Nomina', 'Operaciones', 'Principal']),
             'bank_name' => $bankName,
-            'account_number_masked' => '************' . $lastFour,
-            'clabe_masked' => $this->faker->numerify('##############') . '****',
+            'account_number_masked' => '************'.$lastFour,
+            'clabe_masked' => $this->faker->numerify('##############').'****',
             'is_active' => true,
             'meta' => [
                 'account_type' => $this->faker->randomElement(['checking', 'savings']),
@@ -51,7 +51,7 @@ class BankAccountFactory extends Factory
      */
     public function inactive(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'is_active' => false,
         ]);
     }
@@ -61,9 +61,9 @@ class BankAccountFactory extends Factory
      */
     public function bank(string $bankName): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'bank_name' => $bankName,
-            'alias' => $bankName . ' - Principal',
+            'alias' => $bankName.' - Principal',
         ]);
     }
 }

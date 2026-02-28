@@ -32,10 +32,15 @@ class InventoryLocation extends Model
 
     // Type constants
     public const TYPE_MAIN = 'MAIN';
+
     public const TYPE_TEMP = 'TEMP';
+
     public const TYPE_KITCHEN = 'KITCHEN';
+
     public const TYPE_BAR = 'BAR';
+
     public const TYPE_RETURN = 'RETURN';
+
     public const TYPE_WASTE = 'WASTE';
 
     /**

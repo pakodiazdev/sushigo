@@ -13,9 +13,11 @@ use Illuminate\Http\Request;
  *   summary="List Bank Accounts",
  *   tags={"Bank Accounts"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="branch_id", in="query", @OA\Schema(type="integer"), description="Filter by branch ID"),
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean"), description="Filter by active status"),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15), description="Items per page"),
+ *
  *   @OA\Response(response=200, description="Bank accounts retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden")

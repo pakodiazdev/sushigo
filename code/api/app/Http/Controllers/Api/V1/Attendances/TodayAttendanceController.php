@@ -30,28 +30,36 @@ use Carbon\Carbon;
  *     summary="Today attendance view",
  *     tags={"Attendances"},
  *     security={{"passport":{}}},
+ *
  *     @OA\Parameter(
  *         name="branch_id",
  *         in="query",
  *         required=true,
  *         description="Branch ID to filter active employees",
+ *
  *         @OA\Schema(type="integer", example=1)
  *     ),
+ *
  *     @OA\Response(
  *         response=200,
  *         description="Today attendance list",
+ *
  *         @OA\JsonContent(
+ *
  *             @OA\Property(property="status", type="integer", example=200),
  *             @OA\Property(
  *                 property="data",
  *                 type="array",
+ *
  *                 @OA\Items(
+ *
  *                     @OA\Property(property="employee", ref="#/components/schemas/EmployeeSummaryResponse"),
  *                     @OA\Property(property="attendance", nullable=true, ref="#/components/schemas/AttendanceResponse")
  *                 )
  *             )
  *         )
  *     ),
+ *
  *     @OA\Response(response=422, description="Validation error (branch_id missing or invalid)"),
  *     @OA\Response(response=401, description="Unauthenticated")
  * )
@@ -61,14 +69,14 @@ class TodayAttendanceController extends Controller
     public function __invoke(TodayAttendanceRequest $request): ResponseEntity
     {
         $branchId = (int) $request->input('branch_id');
-        $today    = Carbon::today(config('app.timezone'))->toDateString();
+        $today = Carbon::today(config('app.timezone'))->toDateString();
 
         // Fetch all active employees for the branch (via active employment period)
         // and eager-load today's attendance (if any) in a single query.
         $employees = Employee::with([
-                'user.roles',
-                'attendances' => fn ($q) => $q->whereDate('date', $today),
-            ])
+            'user.roles',
+            'attendances' => fn ($q) => $q->whereDate('date', $today),
+        ])
             ->whereHas('employmentPeriods', function ($q) use ($branchId) {
                 $q->where('branch_id', $branchId)
                     ->where('is_active', true);
@@ -86,7 +94,7 @@ class TodayAttendanceController extends Controller
             $attendance?->setRelation('employee', $employee);
 
             return [
-                'employee'   => (new EmployeeSummaryResource($employee))->resolve(),
+                'employee' => (new EmployeeSummaryResource($employee))->resolve(),
                 'attendance' => $attendance
                     ? (new AttendanceResource($attendance))->resolve()
                     : null,

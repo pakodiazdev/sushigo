@@ -15,7 +15,7 @@ class SeedersInfo extends Command
         $environment = app()->environment();
         $environments = config('seeders.environments', []);
 
-        $this->info("📊 Seeders Information");
+        $this->info('📊 Seeders Information');
         $this->newLine();
 
         $this->info("🌍 Current Environment: <fg=yellow>{$environment}</>");
@@ -25,11 +25,11 @@ class SeedersInfo extends Command
             $seederClass = $environments[$environment];
             $this->info("✓ Seeder Class: <fg=green>{$seederClass}</>");
         } else {
-            $this->warn("⚠ No seeder configured for this environment");
+            $this->warn('⚠ No seeder configured for this environment');
         }
         $this->newLine();
 
-        $this->info("📋 Configured Environments:");
+        $this->info('📋 Configured Environments:');
         $this->newLine();
 
         $headers = ['Environment', 'Seeder Class'];
@@ -48,8 +48,8 @@ class SeedersInfo extends Command
         if ($environment !== 'production') {
             $users = config('seeders.development_users', []);
 
-            if (!empty($users)) {
-                $this->info("👥 Development Users:");
+            if (! empty($users)) {
+                $this->info('👥 Development Users:');
                 $this->newLine();
 
                 $userHeaders = ['Name', 'Email', 'Password', 'Role'];
@@ -69,8 +69,8 @@ class SeedersInfo extends Command
             }
 
             $factoryCounts = config('seeders.factory_counts', []);
-            if (!empty($factoryCounts)) {
-                $this->info("🏭 Factory Counts:");
+            if (! empty($factoryCounts)) {
+                $this->info('🏭 Factory Counts:');
                 foreach ($factoryCounts as $entity => $count) {
                     $this->line("  • {$entity}: <fg=yellow>{$count}</>");
                 }
@@ -78,10 +78,10 @@ class SeedersInfo extends Command
             }
         }
 
-        $this->info("💡 Useful Commands:");
-        $this->line("  • Run seeders: <fg=cyan>php artisan db:seed</>");
-        $this->line("  • Fresh migration + seed: <fg=cyan>php artisan migrate:fresh --seed</>");
-        $this->line("  • Specific seeder: <fg=cyan>php artisan db:seed --class=SeederClass</>");
+        $this->info('💡 Useful Commands:');
+        $this->line('  • Run seeders: <fg=cyan>php artisan db:seed</>');
+        $this->line('  • Fresh migration + seed: <fg=cyan>php artisan migrate:fresh --seed</>');
+        $this->line('  • Specific seeder: <fg=cyan>php artisan db:seed --class=SeederClass</>');
         $this->newLine();
 
         return self::SUCCESS;

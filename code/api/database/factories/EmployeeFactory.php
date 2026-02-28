@@ -15,13 +15,13 @@ class EmployeeFactory extends Factory
     public function definition(): array
     {
         return [
-            'public_id'  => (string) Str::ulid(),
-            'user_id'    => null,
-            'code'       => strtoupper(fake()->unique()->bothify('EMP-###')),
+            'public_id' => (string) Str::ulid(),
+            'user_id' => null,
+            'code' => strtoupper(fake()->unique()->bothify('EMP-###')),
             'first_name' => fake()->firstName(),
-            'last_name'  => fake()->lastName(),
-            'is_active'  => true,
-            'meta'       => null,
+            'last_name' => fake()->lastName(),
+            'is_active' => true,
+            'meta' => null,
         ];
     }
 
@@ -52,14 +52,14 @@ class EmployeeFactory extends Factory
 
     public function withUser(?User $user = null): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'user_id' => $user?->id ?? User::factory(),
         ]);
     }
 
     public function inactive(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'is_active' => false,
         ]);
     }

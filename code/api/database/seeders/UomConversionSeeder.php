@@ -19,8 +19,9 @@ class UomConversionSeeder extends Seeder
         $l = UnitOfMeasure::where('code', 'L')->first();
         $ml = UnitOfMeasure::where('code', 'ML')->first();
 
-        if (!$kg || !$gr || !$l || !$ml) {
+        if (! $kg || ! $gr || ! $l || ! $ml) {
             $this->command->warn('Required units of measure not found. Please run UnitOfMeasureSeeder first.');
+
             return;
         }
 

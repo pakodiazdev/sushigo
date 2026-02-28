@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="StoreCashSessionRequest",
  *   required={"cash_register_id", "operating_date"},
+ *
  *   @OA\Property(property="cash_register_id", type="integer", example=1, description="Cash Register ID"),
  *   @OA\Property(property="operating_date", type="string", format="date", example="2025-12-13", description="Operating date (YYYY-MM-DD)"),
  *   @OA\Property(property="opening_balance", type="number", format="decimal", example=1000.00, description="Opening balance (defaults to previous day closing)", nullable=true),

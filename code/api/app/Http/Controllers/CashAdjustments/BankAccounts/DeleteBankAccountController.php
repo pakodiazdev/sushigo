@@ -12,7 +12,9 @@ use Illuminate\Http\JsonResponse;
  *   summary="Delete Bank Account",
  *   tags={"Bank Accounts"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Bank Account ID"),
+ *
  *   @OA\Response(response=200, description="Bank account deleted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

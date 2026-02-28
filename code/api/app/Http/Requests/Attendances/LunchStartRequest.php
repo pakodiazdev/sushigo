@@ -10,6 +10,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *     schema="LunchStartRequest",
  *     required={"lunch_start"},
+ *
  *     @OA\Property(
  *         property="lunch_start",
  *         type="string",
@@ -36,7 +37,7 @@ class LunchStartRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'lunch_start.required'    => 'La hora de salida a comida es requerida.',
+            'lunch_start.required' => 'La hora de salida a comida es requerida.',
             'lunch_start.date' => 'La hora de salida debe ser una fecha válida en formato ISO 8601 (ej. 2026-02-23T13:05:00-06:00).',
         ];
     }

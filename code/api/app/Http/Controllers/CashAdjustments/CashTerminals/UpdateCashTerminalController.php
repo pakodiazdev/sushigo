@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\CashAdjustments\CashTerminals;
 
 use App\Http\Controllers\Controller;
-use App\Models\CashTerminal;
 use App\Http\Requests\CashAdjustments\CashTerminals\UpdateCashTerminalRequest;
+use App\Models\CashTerminal;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -13,11 +13,15 @@ use Illuminate\Http\JsonResponse;
  *   summary="Update Cash Terminal",
  *   tags={"Cash Terminals"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Terminal ID"),
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/UpdateCashTerminalRequest")
  *   ),
+ *
  *   @OA\Response(response=200, description="Cash terminal updated successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

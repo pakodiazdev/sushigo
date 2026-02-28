@@ -21,7 +21,7 @@ class SendWelcomeNotificationAction
         // Log the reset URL so developers can test password setup
         // without needing to open Mailhog or check WhatsApp.
         Log::info('Welcome notification reset URL', [
-            'user'      => $user->email ?? $user->phone,
+            'user' => $user->email ?? $user->phone,
             'reset_url' => $resetUrl,
         ]);
 

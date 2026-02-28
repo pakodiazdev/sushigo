@@ -11,12 +11,12 @@ Como desarrollador, necesito que PHP Pint se ejecute automáticamente en cada pu
 ---
 
 ## ✅ Technical Tasks
-- [ ] 🔧 Create `.github/workflows/api-lint.yml`
+- [x] 🔧 Create `.github/workflows/api-lint.yml`
   - Trigger: `pull_request` and `push` to `main`, path filter `code/api/**`
   - Steps: checkout → setup PHP → composer install → `./vendor/bin/pint --test`
-- [ ] 📝 Add or validate `pint.json` config at `code/api/pint.json` (preset: laravel)
-- [ ] ✅ Verify pipeline passes on current codebase before merging
-- [ ] 📝 Update `doc/architecture/infrastructure/infrastructure.en.md` workflow table
+- [x] 📝 Add or validate `pint.json` config at `code/api/pint.json` (preset: laravel)
+- [x] ✅ Verify pipeline passes on current codebase — pint --test: PASS 389 files, 0 violations
+- [x] 📝 Update `doc/architecture/infrastructure/infrastructure.en.md` workflow table (done in #040)
 
 ---
 
@@ -24,9 +24,11 @@ Como desarrollador, necesito que PHP Pint se ejecute automáticamente en cada pu
 ### 📊 Estimates
 - **Optimistic:** `1h`
 - **Pessimistic:** `2h`
-- **Tracked:** —
+- **Tracked:** `~1h`
 
 ### 📅 Sessions
 ```json
-[]
+[
+  { "date": "2026-02-28", "start": "02:53", "end": "03:51" }
+]
 ```

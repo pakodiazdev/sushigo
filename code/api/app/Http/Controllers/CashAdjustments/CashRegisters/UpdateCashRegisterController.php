@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\CashAdjustments\CashRegisters;
 
 use App\Http\Controllers\Controller;
-use App\Models\CashRegister;
 use App\Http\Requests\CashAdjustments\CashRegisters\UpdateCashRegisterRequest;
+use App\Models\CashRegister;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -13,11 +13,15 @@ use Illuminate\Http\JsonResponse;
  *   summary="Update Cash Register",
  *   tags={"Cash Registers"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Register ID"),
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/UpdateCashRegisterRequest")
  *   ),
+ *
  *   @OA\Response(response=200, description="Cash register updated successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

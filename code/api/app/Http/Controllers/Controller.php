@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
  *     title="SushiGo API",
  *     version="1.0.0",
  *     description="API documentation for SushiGo application. Use 'Authorize' button to login with your credentials.",
+ *
  *     @OA\Contact(
  *         email="support@sushigo.com"
  *     )
@@ -21,6 +22,7 @@ namespace App\Http\Controllers;
  *     securityScheme="passport",
  *     type="oauth2",
  *     description="OAuth2 Password Grant - Use your email and password to authenticate",
+ *
  *     @OA\Flow(
  *         flow="password",
  *         tokenUrl="/oauth/token",

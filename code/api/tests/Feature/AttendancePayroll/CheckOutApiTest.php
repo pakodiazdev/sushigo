@@ -31,11 +31,15 @@ class CheckOutApiTest extends TestCase
      * Early checkout:    16:00 → net = (16:00-09:00) - 60 = 360 min, OT = 0
      * Overtime checkout: 17:35 → net = 8h55m - 60m = 475 min, OT = 35 min
      */
-    private const DATE          = '2026-02-23';
-    private const CHECK_IN      = '2026-02-23T09:00:00';
-    private const LUNCH_START   = '2026-02-23T13:05:00';
-    private const LUNCH_END     = '2026-02-23T14:05:00';    // exactly 60 min lunch
-    private const EXPECTED_END  = '17:00:00';
+    private const DATE = '2026-02-23';
+
+    private const CHECK_IN = '2026-02-23T09:00:00';
+
+    private const LUNCH_START = '2026-02-23T13:05:00';
+
+    private const LUNCH_END = '2026-02-23T14:05:00';    // exactly 60 min lunch
+
+    private const EXPECTED_END = '17:00:00';
 
     protected function setUp(): void
     {
@@ -182,10 +186,10 @@ class CheckOutApiTest extends TestCase
     #[Test]
     public function rejects_when_no_check_in_registered(): void
     {
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->onDate(self::DATE)->create([
             'employee_id' => $employee->id,
-            'check_in'    => null,
+            'check_in' => null,
         ]);
 
         $response = $this->patchJson(
@@ -301,10 +305,10 @@ class CheckOutApiTest extends TestCase
 
         $attendance = Attendance::factory()->onDate(self::DATE)->create([
             'employee_id' => $employee->id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
             'lunch_start' => self::LUNCH_START,
-            'lunch_end'   => self::LUNCH_END,
-            'check_out'   => null,
+            'lunch_end' => self::LUNCH_END,
+            'check_out' => null,
         ]);
 
         return compact('attendance', 'employee', 'schedule');
@@ -319,10 +323,10 @@ class CheckOutApiTest extends TestCase
 
         $attendance = Attendance::factory()->onDate(self::DATE)->create([
             'employee_id' => $employee->id,
-            'check_in'    => self::CHECK_IN,
+            'check_in' => self::CHECK_IN,
             'lunch_start' => null,
-            'lunch_end'   => null,
-            'check_out'   => null,
+            'lunch_end' => null,
+            'check_out' => null,
         ]);
 
         return compact('attendance', 'employee', 'schedule');
@@ -334,7 +338,7 @@ class CheckOutApiTest extends TestCase
     private function makeEmployeeWithSchedule(): array
     {
         $period = EmploymentPeriod::factory()->create([
-            'is_active'  => true,
+            'is_active' => true,
             'start_date' => '2026-01-01',
         ]);
 
@@ -342,7 +346,7 @@ class CheckOutApiTest extends TestCase
 
         $schedule = EmployeeSchedule::factory()->current()->create([
             'employment_period_id' => $period->id,
-            'effective_from'       => '2026-01-01',
+            'effective_from' => '2026-01-01',
         ]);
 
         ScheduleDay::factory()
@@ -365,7 +369,7 @@ class CheckOutApiTest extends TestCase
     private function makeNightShiftAttendance(): array
     {
         $period = EmploymentPeriod::factory()->create([
-            'is_active'  => true,
+            'is_active' => true,
             'start_date' => '2026-01-01',
         ]);
 
@@ -373,7 +377,7 @@ class CheckOutApiTest extends TestCase
 
         $schedule = EmployeeSchedule::factory()->current()->create([
             'employment_period_id' => $period->id,
-            'effective_from'       => '2026-01-01',
+            'effective_from' => '2026-01-01',
         ]);
 
         // Monday (dow=1) — night shift 05:00→12:00 UTC, no lunch
@@ -387,10 +391,10 @@ class CheckOutApiTest extends TestCase
         // Attendance with LOCAL date (2026-02-23 Monday) but UTC check-in (next day)
         $attendance = Attendance::factory()->onDate('2026-02-23')->create([
             'employee_id' => $employee->id,
-            'check_in'    => '2026-02-24T05:00:00',   // UTC
+            'check_in' => '2026-02-24T05:00:00',   // UTC
             'lunch_start' => null,
-            'lunch_end'   => null,
-            'check_out'   => null,
+            'lunch_end' => null,
+            'check_out' => null,
         ]);
 
         return compact('attendance', 'employee', 'schedule');

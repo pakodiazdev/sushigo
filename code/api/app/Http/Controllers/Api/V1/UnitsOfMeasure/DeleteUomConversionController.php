@@ -12,21 +12,27 @@ use App\Models\UomConversion;
  *   summary="Delete UOM Conversion",
  *   tags={"Units of Measure"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(
  *       name="id",
  *       in="path",
  *       description="UOM Conversion ID",
  *       required=true,
+ *
  *       @OA\Schema(type="integer")
  *   ),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="UOM conversion deleted successfully",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseMessage")
  *   ),
+ *
  *   @OA\Response(
  *       response=404,
  *       description="UOM conversion not found",
+ *
  *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
  *   )
  * )

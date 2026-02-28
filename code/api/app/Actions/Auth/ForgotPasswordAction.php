@@ -19,7 +19,7 @@ class ForgotPasswordAction
     public function __invoke(array $data): array
     {
         $field = ! empty($data['email']) ? 'email' : 'phone';
-        $user  = User::where($field, $data[$field])->first();
+        $user = User::where($field, $data[$field])->first();
 
         if ($user) {
             [$resetUrl] = $this->generateResetLink($user);
@@ -35,7 +35,7 @@ class ForgotPasswordAction
         }
 
         return [
-            'status'  => 'success',
+            'status' => 'success',
             'message' => 'Si existe una cuenta, se ha enviado el enlace para restablecer la contraseña.',
         ];
     }
@@ -48,7 +48,7 @@ class ForgotPasswordAction
      */
     public function generateResetLink(User $user): array
     {
-        $selector   = Str::random(24);
+        $selector = Str::random(24);
         $plainToken = Str::random(40);
         $identifier = $user->getEmailForPasswordReset();
 
@@ -59,7 +59,7 @@ class ForgotPasswordAction
         );
 
         $frontendUrl = config('app.frontend_url', 'https://sushigo.local');
-        $resetUrl    = "{$frontendUrl}/reset-password?t={$plainToken}.{$selector}";
+        $resetUrl = "{$frontendUrl}/reset-password?t={$plainToken}.{$selector}";
 
         return [$resetUrl, $plainToken, $selector];
     }

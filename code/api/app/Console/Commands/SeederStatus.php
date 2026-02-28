@@ -24,6 +24,7 @@ class SeederStatus extends Command
 
         if ($logs->isEmpty()) {
             $this->warn("No seeders have been executed in '{$environment}' environment yet.");
+
             return self::SUCCESS;
         }
 

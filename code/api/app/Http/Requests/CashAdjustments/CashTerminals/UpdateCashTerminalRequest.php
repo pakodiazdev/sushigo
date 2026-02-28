@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="UpdateCashTerminalRequest",
+ *
  *   @OA\Property(property="name", type="string", maxLength=255, example="Terminal CLIP 1", description="Terminal name"),
  *   @OA\Property(property="provider", type="string", maxLength=100, example="CLIP", description="Payment provider"),
  *   @OA\Property(property="account_ref", type="string", maxLength=255, example="ACC-12345", description="Provider account reference", nullable=true),

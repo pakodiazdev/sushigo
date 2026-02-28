@@ -14,21 +14,27 @@ class MeController extends Controller
      *   summary="Get authenticated user information",
      *   tags={"Authentication"},
      *   security={{"passport": {}}, {"bearer": {}}},
+     *
      *   @OA\Response(
      *       response=200,
      *       description="User information retrieved successfully",
+     *
      *       @OA\JsonContent(
      *           allOf={
+     *
      *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
      *              @OA\Schema(
+     *
      *                  @OA\Property(property="data", ref="#/components/schemas/UserResponse")
      *              )
      *           }
      *       )
      *   ),
+     *
      *   @OA\Response(
      *       response=401,
      *       description="Unauthenticated",
+     *
      *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
      *   )
      * )
@@ -40,15 +46,15 @@ class MeController extends Controller
 
         return new ResponseEntity(
             data: [
-                'id'    => $user->id,
-                'name'  => $user->name,
+                'id' => $user->id,
+                'name' => $user->name,
                 'email' => $user->email,
                 'roles' => $user->roles->map(fn ($role) => [
-                    'id'   => $role->id,
+                    'id' => $role->id,
                     'name' => $role->name,
                 ]),
                 'permissions' => $user->permissions->map(fn ($perm) => [
-                    'id'   => $perm->id,
+                    'id' => $perm->id,
                     'name' => $perm->name,
                 ]),
             ],

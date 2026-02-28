@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @OA\Schema(
  *   schema="AddUserToOperatingUnitRequest",
  *   required={"user_id"},
+ *
  *   @OA\Property(property="user_id", type="integer", example=1),
  * )
  */

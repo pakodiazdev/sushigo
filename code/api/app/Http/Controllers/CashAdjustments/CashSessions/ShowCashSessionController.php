@@ -12,7 +12,9 @@ use Illuminate\Http\JsonResponse;
  *   summary="Show Cash Session",
  *   tags={"Cash Sessions"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Session ID"),
+ *
  *   @OA\Response(response=200, description="Cash session retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

@@ -12,17 +12,22 @@ use App\Models\Employee;
  *   summary="Toggle Employee Active Status",
  *   tags={"Employees"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="ULID public identifier of the employee"),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Employee status toggled successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *              @OA\Schema(@OA\Property(property="data", ref="#/components/schemas/EmployeeResponse"))
  *           }
  *       )
  *   ),
+ *
  *   @OA\Response(response=404, description="Employee not found", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */

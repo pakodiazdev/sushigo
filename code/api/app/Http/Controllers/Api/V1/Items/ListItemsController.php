@@ -12,6 +12,7 @@ use App\Models\Item;
  *   path="/api/v1/items",
  *   summary="List Items",
  *   tags={"Items"},
+ *
  *   @OA\Parameter(name="type", in="query", @OA\Schema(type="string", enum={"INSUMO", "PRODUCTO", "ACTIVO"})),
  *   @OA\Parameter(name="is_stocked", in="query", @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="is_perishable", in="query", @OA\Schema(type="boolean")),
@@ -19,11 +20,14 @@ use App\Models\Item;
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15)),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Items retrieved successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponsePaginated"),
  *              @OA\Schema(@OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/ItemResponse")))
  *           }

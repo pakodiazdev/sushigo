@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="ListOperatingUnitUsersRequest",
+ *
  *   @OA\Property(property="per_page", type="integer", example=15),
  * )
  */

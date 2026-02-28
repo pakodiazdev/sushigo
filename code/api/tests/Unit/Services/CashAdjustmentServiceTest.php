@@ -7,7 +7,6 @@ use App\Models\CashAdjustment;
 use App\Models\CashAdjustmentLine;
 use App\Models\CashRegister;
 use App\Models\CashSession;
-use App\Models\CashTerminal;
 use App\Models\User;
 use App\Services\CashAdjustments\CashAdjustmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,13 +18,15 @@ class CashAdjustmentServiceTest extends TestCase
     use RefreshDatabase;
 
     private CashAdjustmentService $service;
+
     private CashSession $session;
+
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CashAdjustmentService();
+        $this->service = new CashAdjustmentService;
 
         $branch = Branch::factory()->create();
         $register = CashRegister::factory()->for($branch)->create();

@@ -9,6 +9,7 @@ use Illuminate\Validation\Validator;
  * @OA\Schema(
  *   schema="StoreCashAdjustmentRequest",
  *   required={"cash_session_id", "type", "direction", "lines"},
+ *
  *   @OA\Property(property="cash_session_id", type="integer", example=1, description="Cash Session ID"),
  *   @OA\Property(property="source_system", type="string", maxLength=100, example="POS", description="Source system name", nullable=true),
  *   @OA\Property(property="type", type="string", enum={"EXTERNAL_IMPORT", "CORRECTION"}, example="EXTERNAL_IMPORT", description="Adjustment type"),
@@ -19,9 +20,11 @@ use Illuminate\Validation\Validator;
  *     property="lines",
  *     type="array",
  *     description="Adjustment lines by tender type",
+ *
  *     @OA\Items(
  *       type="object",
  *       required={"tender_type", "amount"},
+ *
  *       @OA\Property(property="tender_type", type="string", enum={"CASH", "CARD", "TRANSFER"}, example="CASH", description="Tender type"),
  *       @OA\Property(property="amount", type="number", format="decimal", example=500.00, description="Line amount"),
  *       @OA\Property(property="currency", type="string", example="MXN", description="Currency code (default: MXN)"),
@@ -81,7 +84,7 @@ class StoreCashAdjustmentRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function ($validator) {
-            if (!$this->has('lines')) {
+            if (! $this->has('lines')) {
                 return;
             }
 
@@ -110,6 +113,7 @@ class StoreCashAdjustmentRequest extends FormRequest
                 if (isset($line['amount']) && is_string($line['amount'])) {
                     $line['amount'] = (float) $line['amount'];
                 }
+
                 return $line;
             })->toArray();
 

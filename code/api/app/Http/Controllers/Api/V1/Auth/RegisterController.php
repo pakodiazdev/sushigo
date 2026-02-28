@@ -16,18 +16,24 @@ class RegisterController extends Controller
      *   path="/api/v1/auth/register",
      *   summary="Register a new user",
      *   tags={"Authentication"},
+     *
      *   @OA\RequestBody(
      *       required=true,
+     *
      *       @OA\JsonContent(ref="#/components/schemas/RegisterRequestSchema")
      *   ),
+     *
      *   @OA\Response(
      *       response=201,
      *       description="User registered successfully",
+     *
      *       @OA\JsonContent(ref="#/components/schemas/AuthTokenResponseSchema")
      *   ),
+     *
      *   @OA\Response(
      *       response=422,
      *       description="Validation error",
+     *
      *       @OA\JsonContent(ref="#/components/schemas/ResponseError")
      *   )
      * )

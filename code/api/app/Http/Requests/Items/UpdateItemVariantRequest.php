@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="UpdateItemVariantRequest",
+ *
  *   @OA\Property(property="name", type="string", maxLength=255, example="Arroz Premium 1kg", description="Variant name"),
  *   @OA\Property(property="description", type="string", example="Presentación de 1 kilogramo", description="Variant description"),
  *   @OA\Property(property="track_lot", type="boolean", example=false, description="Track lot numbers"),
@@ -23,6 +24,7 @@ class UpdateItemVariantRequest extends FormRequest
     public function authorize(): bool
     {
         $variant = ItemVariant::findOrFail($this->route('id'));
+
         return $this->user()->can('update', $variant);
     }
 

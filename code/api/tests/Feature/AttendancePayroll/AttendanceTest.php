@@ -5,7 +5,6 @@ namespace Tests\Feature\AttendancePayroll;
 use App\Enums\DayStatus;
 use App\Models\Attendance;
 use App\Models\Employee;
-use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -41,13 +40,13 @@ class AttendanceTest extends TestCase
 
         $attendance = Attendance::factory()->worked()->create([
             'employee_id' => $employee->id,
-            'date'        => '2026-02-10',
+            'date' => '2026-02-10',
         ]);
 
         $this->assertDatabaseHas('attendances', [
             'employee_id' => $employee->id,
-            'date'        => '2026-02-10',
-            'day_status'  => 'WORKED',
+            'date' => '2026-02-10',
+            'day_status' => 'WORKED',
         ]);
 
         $this->assertNotNull($attendance->id);
@@ -171,7 +170,7 @@ class AttendanceTest extends TestCase
     #[Test]
     public function day_status_is_cast_to_day_status_enum(): void
     {
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->worked()->create(['employee_id' => $employee->id]);
 
         $attendance->refresh();
@@ -184,15 +183,15 @@ class AttendanceTest extends TestCase
     public function all_day_status_values_are_accepted(): void
     {
         $employee = Employee::factory()->create();
-        $date     = '2026-01-01';
+        $date = '2026-01-01';
 
         foreach (DayStatus::cases() as $index => $status) {
             Attendance::factory()->create([
                 'employee_id' => $employee->id,
-                'date'        => now()->addDays($index)->toDateString(),
-                'day_status'  => $status,
-                'check_in'    => null,
-                'check_out'   => null,
+                'date' => now()->addDays($index)->toDateString(),
+                'day_status' => $status,
+                'check_in' => null,
+                'check_out' => null,
             ]);
         }
 
@@ -206,7 +205,7 @@ class AttendanceTest extends TestCase
     #[Test]
     public function attendance_belongs_to_employee(): void
     {
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->create(['employee_id' => $employee->id]);
 
         $this->assertTrue($attendance->employee->is($employee));
@@ -280,7 +279,7 @@ class AttendanceTest extends TestCase
     #[Test]
     public function check_in_and_check_out_are_cast_to_datetime(): void
     {
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->worked()->create(['employee_id' => $employee->id]);
 
         $attendance->refresh();
@@ -292,7 +291,7 @@ class AttendanceTest extends TestCase
     #[Test]
     public function date_is_cast_to_carbon(): void
     {
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->onDate('2026-02-15')->create(['employee_id' => $employee->id]);
 
         $attendance->refresh();
@@ -304,10 +303,10 @@ class AttendanceTest extends TestCase
     #[Test]
     public function meta_is_cast_to_array(): void
     {
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->create([
             'employee_id' => $employee->id,
-            'meta'        => ['source' => 'terminal_01', 'device' => 'fingerprint'],
+            'meta' => ['source' => 'terminal_01', 'device' => 'fingerprint'],
         ]);
 
         $attendance->refresh();
@@ -319,7 +318,7 @@ class AttendanceTest extends TestCase
     #[Test]
     public function overtime_authorized_is_false_by_default(): void
     {
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->create(['employee_id' => $employee->id]);
 
         $this->assertFalse($attendance->overtime_authorized);
@@ -328,7 +327,7 @@ class AttendanceTest extends TestCase
     #[Test]
     public function factory_late_state_sets_entry_late_seconds(): void
     {
-        $employee   = Employee::factory()->create();
+        $employee = Employee::factory()->create();
         $attendance = Attendance::factory()->late(3600)->create(['employee_id' => $employee->id]);
 
         $this->assertEquals(3600, $attendance->entry_late_seconds);

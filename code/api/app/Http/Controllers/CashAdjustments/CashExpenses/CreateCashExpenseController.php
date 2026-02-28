@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\CashAdjustments\CashExpenses;
 
 use App\Http\Controllers\Controller;
-use App\Models\CashSession;
 use App\Http\Requests\CashAdjustments\CashExpenses\StoreCashExpenseRequest;
+use App\Models\CashSession;
 use App\Services\CashAdjustments\CashExpenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -16,10 +16,13 @@ use Illuminate\Support\Facades\Auth;
  *   description="Registers an operational expense paid from cash register",
  *   tags={"Cash Expenses"},
  *   security={{"bearerAuth":{}}},
+ *
  *   @OA\RequestBody(
  *     required=true,
+ *
  *     @OA\JsonContent(ref="#/components/schemas/StoreCashExpenseRequest")
  *   ),
+ *
  *   @OA\Response(response=201, description="Cash expense created successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden"),

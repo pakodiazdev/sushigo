@@ -65,6 +65,7 @@ class UomConversion extends Model
         }
 
         $variance = abs(($actual - $expected) / $expected) * 100;
+
         return $variance <= $this->tolerance;
     }
 }

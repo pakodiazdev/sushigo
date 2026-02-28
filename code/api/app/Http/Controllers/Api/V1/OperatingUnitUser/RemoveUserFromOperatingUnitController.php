@@ -12,8 +12,10 @@ use App\Models\OperatingUnit;
  *   summary="Remove User from Operating Unit",
  *   tags={"Operating Unit Users"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
  *   @OA\Parameter(name="userId", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=404, description="Not Found or Not Assigned"),
  * )
@@ -25,7 +27,7 @@ class RemoveUserFromOperatingUnitController extends Controller
         $operatingUnit = OperatingUnit::findOrFail($id);
 
         // Check if user is assigned
-        if (!$operatingUnit->users()->where('user_id', $userId)->exists()) {
+        if (! $operatingUnit->users()->where('user_id', $userId)->exists()) {
             return response()->json([
                 'status' => 404,
                 'message' => 'User is not assigned to this operating unit',

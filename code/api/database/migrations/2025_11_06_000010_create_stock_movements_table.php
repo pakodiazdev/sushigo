@@ -45,13 +45,13 @@ return new class extends Migration
                 'ADJUSTMENT',
                 'CONSUMPTION',
                 'OPENING_BALANCE',
-                'COUNT_VARIANCE'
+                'COUNT_VARIANCE',
             ])->comment('Movement reason code');
 
             $table->enum('status', [
                 'DRAFT',
                 'POSTED',
-                'REVERSED'
+                'REVERSED',
             ])->default('POSTED')->comment('Movement status');
 
             $table->string('reference', 255)->nullable()->comment('External reference number');

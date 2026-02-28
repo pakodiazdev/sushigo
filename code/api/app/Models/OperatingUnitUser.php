@@ -22,9 +22,13 @@ class OperatingUnitUser extends Model
 
     // Assignment role constants
     public const ROLE_OWNER = 'OWNER';
+
     public const ROLE_MANAGER = 'MANAGER';
+
     public const ROLE_CASHIER = 'CASHIER';
+
     public const ROLE_INVENTORY = 'INVENTORY';
+
     public const ROLE_AUDITOR = 'AUDITOR';
 
     /**

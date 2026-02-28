@@ -13,18 +13,24 @@ use App\Models\Item;
  *   summary="Update Item",
  *   tags={"Items"},
  *   security={{"passport": {}}},
+ *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/UpdateItemRequest")),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Item updated successfully",
+ *
  *       @OA\JsonContent(
  *           allOf={
+ *
  *              @OA\Schema(ref="#/components/schemas/ResponseEntity"),
  *              @OA\Schema(@OA\Property(property="data", ref="#/components/schemas/ItemResponse"))
  *           }
  *       )
  *   ),
+ *
  *   @OA\Response(response=404, description="Item not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  *   @OA\Response(response=422, description="Validation Error", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )

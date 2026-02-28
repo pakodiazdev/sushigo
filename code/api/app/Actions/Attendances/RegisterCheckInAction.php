@@ -42,24 +42,24 @@ class RegisterCheckInAction
         // and late-seconds calculation.  This prevents cross-midnight UTC bugs
         // where a late-night local check-in falls on the next UTC day.
         $checkInLocal = Carbon::parse($data['check_in']);
-        $date         = $checkInLocal->toDateString();
+        $date = $checkInLocal->toDateString();
         $dayOfWeekIso = $checkInLocal->dayOfWeekIso;
-        $checkIn      = $checkInLocal->clone()->utc();
+        $checkIn = $checkInLocal->clone()->utc();
 
         $this->guardNoDuplicateAttendance($employee->id, $date);
 
-        $period      = $this->resolveActiveEmploymentPeriod($employee->id, $date);
-        $schedule    = $this->resolveActiveSchedule($period->id, $date);
+        $period = $this->resolveActiveEmploymentPeriod($employee->id, $date);
+        $schedule = $this->resolveActiveSchedule($period->id, $date);
         $scheduleDay = $this->resolveScheduleDay($schedule, $dayOfWeekIso);
 
         $lateSeconds = $this->calculateLateSeconds($checkIn, $scheduleDay->expected_start);
 
         $attendance = Attendance::create([
-            'employee_id'        => $employee->id,
-            'date'               => $date,
-            'check_in'           => $checkIn,
+            'employee_id' => $employee->id,
+            'date' => $date,
+            'check_in' => $checkIn,
             'entry_late_seconds' => $lateSeconds,
-            'day_status'         => DayStatus::WORKED,
+            'day_status' => DayStatus::WORKED,
         ]);
 
         return $attendance->load('employee');

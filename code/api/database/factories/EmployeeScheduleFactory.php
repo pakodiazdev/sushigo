@@ -17,13 +17,13 @@ class EmployeeScheduleFactory extends Factory
         $effectiveFrom = fake()->dateTimeBetween('-6 months', '-1 month');
 
         return [
-            'public_id'              => (string) Str::ulid(),
-            'employment_period_id'   => EmploymentPeriod::factory(),
-            'name'                   => 'Horario ' . fake()->words(2, true),
-            'effective_from'         => $effectiveFrom,
-            'effective_to'           => null, // open-ended (current)
-            'workday_type'           => fake()->randomElement(['FULL', 'PARTIAL']),
-            'working_days_per_week'  => 6,
+            'public_id' => (string) Str::ulid(),
+            'employment_period_id' => EmploymentPeriod::factory(),
+            'name' => 'Horario '.fake()->words(2, true),
+            'effective_from' => $effectiveFrom,
+            'effective_to' => null, // open-ended (current)
+            'workday_type' => fake()->randomElement(['FULL', 'PARTIAL']),
+            'working_days_per_week' => 6,
         ];
     }
 
@@ -34,7 +34,7 @@ class EmployeeScheduleFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             $from = $attributes['effective_from'];
-            $to   = fake()->dateTimeBetween($from, '-1 day');
+            $to = fake()->dateTimeBetween($from, '-1 day');
 
             return ['effective_to' => $to];
         });
@@ -71,7 +71,7 @@ class EmployeeScheduleFactory extends Factory
     {
         return $this->state(fn () => [
             'effective_from' => $from,
-            'effective_to'   => $to,
+            'effective_to' => $to,
         ]);
     }
 

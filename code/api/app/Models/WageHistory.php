@@ -3,12 +3,12 @@
 namespace App\Models;
 
 use App\Support\Traits\HasPublicId;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use DateTimeInterface;
 
 class WageHistory extends Model
 {
@@ -20,10 +20,10 @@ class WageHistory extends Model
      * weekly_scheduled_hours must be strictly positive.
      */
     const RULES = [
-        'hourly_rate'              => ['required', 'numeric', 'gt:0'],
-        'weekly_scheduled_hours'   => ['required', 'numeric', 'gt:0'],
-        'effective_from'           => ['required', 'date'],
-        'effective_to'             => ['nullable', 'date', 'after_or_equal:effective_from'],
+        'hourly_rate' => ['required', 'numeric', 'gt:0'],
+        'weekly_scheduled_hours' => ['required', 'numeric', 'gt:0'],
+        'effective_from' => ['required', 'date'],
+        'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
     ];
 
     protected $fillable = [
@@ -35,10 +35,10 @@ class WageHistory extends Model
     ];
 
     protected $casts = [
-        'hourly_rate'              => 'decimal:2',
-        'weekly_scheduled_hours'   => 'decimal:2',
-        'effective_from'           => 'date',
-        'effective_to'             => 'date',
+        'hourly_rate' => 'decimal:2',
+        'weekly_scheduled_hours' => 'decimal:2',
+        'effective_from' => 'date',
+        'effective_to' => 'date',
     ];
 
     public function employee(): BelongsTo

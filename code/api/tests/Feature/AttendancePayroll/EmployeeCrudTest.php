@@ -18,6 +18,7 @@ class EmployeeCrudTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Branch $branch;
 
     protected function setUp(): void
@@ -769,12 +770,12 @@ class EmployeeCrudTest extends TestCase
         Passport::actingAs($superAdmin);
 
         $response = $this->postJson('/api/v1/employees', [
-            'code'       => 'EMP-SA-ASSIGN',
+            'code' => 'EMP-SA-ASSIGN',
             'first_name' => 'Super',
-            'last_name'  => 'Test',
-            'roles'      => ['super-admin'],
-            'email'      => 'sa-assign@sushigo.com',
-            'branch_id'  => $this->branch->id,
+            'last_name' => 'Test',
+            'roles' => ['super-admin'],
+            'email' => 'sa-assign@sushigo.com',
+            'branch_id' => $this->branch->id,
             'start_date' => '2026-01-15',
         ]);
 
@@ -790,12 +791,12 @@ class EmployeeCrudTest extends TestCase
         // $this->user is an admin (not super-admin) — super-admin is not in their assignable roles
         // The FormRequest rejects it as an invalid role value → 422
         $response = $this->postJson('/api/v1/employees', [
-            'code'       => 'EMP-SA-BLOCK',
+            'code' => 'EMP-SA-BLOCK',
             'first_name' => 'Regular',
-            'last_name'  => 'Admin',
-            'roles'      => ['super-admin'],
-            'email'      => 'sa-block@sushigo.com',
-            'branch_id'  => $this->branch->id,
+            'last_name' => 'Admin',
+            'roles' => ['super-admin'],
+            'email' => 'sa-block@sushigo.com',
+            'branch_id' => $this->branch->id,
             'start_date' => '2026-01-15',
         ]);
 
@@ -844,8 +845,8 @@ class EmployeeCrudTest extends TestCase
         // syncPositionRoles must preserve super-admin since the acting user cannot manage it
         $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
             'first_name' => $employee->first_name,
-            'last_name'  => $employee->last_name,
-            'roles'      => ['cook'],
+            'last_name' => $employee->last_name,
+            'roles' => ['cook'],
         ]);
 
         $response->assertStatus(200);
