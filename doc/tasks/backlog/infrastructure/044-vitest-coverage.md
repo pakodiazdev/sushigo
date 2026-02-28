@@ -11,13 +11,13 @@ Como desarrollador, necesito que Vitest se ejecute con reporte de cobertura en c
 ---
 
 ## ✅ Technical Tasks
-- [ ] 🔧 Create `.github/workflows/webapp-tests.yml`
+- [x] 🔧 Create `.github/workflows/webapp-tests.yml`
   - Trigger: `pull_request` and `push` to `main`, path filter `code/webapp/**`
   - Steps: checkout → setup Node → npm ci → `npm run test:coverage`
-- [ ] 🔧 Configure Vitest with coverage reporter (lcov + json) in `vite.config.ts`
-- [ ] 📤 Upload lcov coverage report as artifact (consumed by SonarCloud task [#045](https://github.com/pakodiazdev/sushigo/issues/45))
+- [x] 🔧 Configure Vitest with coverage reporter (lcov + json) in `vite.config.ts`
+- [x] 📤 Upload lcov coverage report as artifact (consumed by SonarCloud task [#045](https://github.com/pakodiazdev/sushigo/issues/45))
 - [ ] ✅ Verify tests pass in CI environment
-- [ ] 📝 Update `doc/architecture/infrastructure/infrastructure.en.md` workflow table
+- [x] 📝 Update `doc/architecture/infrastructure/infrastructure.en.md` workflow table
 
 ---
 
@@ -29,5 +29,7 @@ Como desarrollador, necesito que Vitest se ejecute con reporte de cobertura en c
 
 ### 📅 Sessions
 ```json
-[]
+[
+  { "date": "2026-02-28", "start": "17:30", "end": "" }
+]
 ```
