@@ -342,6 +342,27 @@ docker exec -it dev_container php artisan test --testsuite=Feature
 | Admin | admin@sushigo.com | admin123456 | admin |
 | Inventory Manager | inventory@sushigo.com | inventory123456 | inventory-manager |
 
+## Task Tracking Convention (mandatory)
+
+Tasks live in `doc/tasks/` with this structure:
+
+```
+doc/tasks/
+├── yyyy-mm/          ← completed tasks, one folder per month
+│   └── NNN-task-name.md
+└── backlog/
+    └── <category>/   ← pending tasks grouped by category (e.g. infrastructure)
+        └── NNN-task-name.md
+```
+
+**Rules:**
+- When a task is completed, move its `.md` file from `backlog/<category>/` to `doc/tasks/yyyy-mm/` where `yyyy-mm` is the **current month** (e.g. `2026-02`)
+- Never create a `done/` folder — completed tasks go directly into the monthly folder
+- The monthly folder is flat (no subfolders by category inside it)
+- If the `yyyy-mm` folder doesn't exist yet, create it
+
+---
+
 ## Key Files
 
 - `docker-compose.yml` - Main development stack
@@ -351,3 +372,4 @@ docker exec -it dev_container php artisan test --testsuite=Feature
 - `code/webapp/src/routeTree.gen.ts` - Auto-generated route tree
 - `doc/architecture/` - Domain architecture docs (English/Spanish)
 - `doc/conventions/` - Code standards
+- `doc/tasks/` - Task tracking (backlog + monthly completed)
