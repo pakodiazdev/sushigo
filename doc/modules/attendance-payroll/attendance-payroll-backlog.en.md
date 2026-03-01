@@ -1067,55 +1067,75 @@ AP-001 ──→ AP-002
 
 ---
 
-## Suggested Sprints (2 weeks each)
+## Suggested Sprints — Vertical Slices (1 user action per task)
 
-### Sprint 1 — Foundations (models + employee CRUD)
-| ID     | Story                                | Size | Prio |
-| ------ | ------------------------------------ | ---- | ---- |
-| AP-001 | Employee Migration & Model           | M    | P0   |
-| AP-002 | Employee CRUD API                    | M    | P0   |
-| AP-003 | EmploymentPeriod Migration & Model   | S    | P0   |
-| AP-004 | Employment Periods API               | M    | P1   |
-| AP-005 | WageHistory Migration & Model        | S    | P0   |
-| AP-006 | Wage History API                     | S    | P1   |
-| AP-064 | AttendanceAuditLog Migration & Model | S    | P0   |
+> Each task (#087–#118) in `doc/tasks/backlog/` delivers one complete user action:
+> backend (migration if needed + API) + frontend (UI for that action).
+> No task ships backend-only or frontend-only code.
 
-### Sprint 2 — Schedules + Basic Attendance
-| ID     | Story                         | Size | Prio |
-| ------ | ----------------------------- | ---- | ---- |
-| AP-007 | Schedule Migrations & Models  | M    | P0   |
-| AP-008 | Create Schedule with Days API | M    | P1   |
-| AP-009 | Query Current Schedule API    | S    | P1   |
-| AP-012 | Attendance Migration & Model  | M    | P0   |
-| AP-013 | Register Check-in API         | M    | P0   |
-| AP-014 | Register Lunch Return API     | S    | P1   |
-| AP-015 | Register Check-out API        | M    | P0   |
+### Sprint 1 — Schedule Management + Today View
+| Task | User Action                           | Size |
+| ---- | ------------------------------------- | ---- |
+| #087 | Create weekly schedule                | M    |
+| #088 | View current schedule                 | S    |
+| #091 | Today view + Authorize overtime       | M    |
+| #092 | Mark day as day-off or absence        | S    |
 
-### Sprint 3 — Overtime Decisions + Partial Leaves
-| ID     | Story                                 | Size | Prio |
-| ------ | ------------------------------------- | ---- | ---- |
-| AP-016 | Authorize/Reject Overtime Payment API | M    | P1   |
-| AP-017 | Automatic Deductible Tardiness Calc   | S    | P1   |
-| AP-018 | Query Today's Attendance API          | M    | P1   |
-| AP-019 | Mark Day Without Attendance API       | S    | P1   |
-| AP-020 | PartialLeave Migration & Model        | S    | P0   |
-| AP-021 | Register Partial Leave API            | M    | P1   |
-| AP-022 | List Partial Leaves API               | S    | P1   |
-| AP-023 | Unpaid Leave Deduction Calculation    | S    | P1   |
+### Sprint 2 — Partial Leaves + Extra Days + Schedule extras
+| Task | User Action                           | Size |
+| ---- | ------------------------------------- | ---- |
+| #093 | Register partial leave                | M    |
+| #094 | View partial leave history            | S    |
+| #095 | Register negotiated extra day         | M    |
+| #096 | View extra days list                  | S    |
+| #089 | Update current schedule               | S    |
+| #090 | View schedule history                 | S    |
 
-### Sprint 4 — Punctuality + Extra Days
-| ID     | Story                                  | Size | Prio |
-| ------ | -------------------------------------- | ---- | ---- |
-| AP-024 | PunctualityRange Migration & Model     | S    | P0   |
-| AP-025 | BonusGroup + Config Migration & Models | S    | P0   |
-| AP-026 | PunctualityException Migration & Model | S    | P1   |
-| AP-027 | Daily Punctuality Bonus Calc Service   | M    | P1   |
-| AP-028 | Weekly Punctuality Bonus Calc Service  | S    | P1   |
-| AP-031 | NegotiatedExtraDay Migration & Model   | S    | P0   |
-| AP-032 | Register Negotiated Extra Day API      | S    | P1   |
-| AP-065 | Automatic Audit Trait                  | M    | P1   |
+### Sprint 3 — Punctuality Configuration + Reports
+| Task | User Action                           | Size |
+| ---- | ------------------------------------- | ---- |
+| #097 | Configure punctuality ranges          | M    |
+| #098 | Configure bonus groups                | M    |
+| #099 | Assign bonus group to employee        | M    |
+| #100 | Manage punctuality exceptions         | M    |
+| #101 | View today's operational report       | M    |
+| #102 | View weekly summary report            | L    |
 
-### Sprint 5 — Overtime Bank + Weekly Close
+### Sprint 4 — Overtime Bank + Payroll Close
+| Task | User Action                           | Size |
+| ---- | ------------------------------------- | ---- |
+| #103 | Configure overtime payment per employee | M  |
+| #104 | View overtime bank balance            | M    |
+| #105 | Register manual overtime movement     | S    |
+| #106 | Preview weekly payroll close          | L    |
+| #107 | Confirm weekly close                  | M    |
+| #108 | View closed period detail             | M    |
+
+### Sprint 5 — Leaves + Holidays + Vacations
+| Task | User Action                           | Size |
+| ---- | ------------------------------------- | ---- |
+| #109 | Export closed period to CSV           | S    |
+| #110 | Reopen closed period                  | M    |
+| #111 | Register a full-day leave             | M    |
+| #112 | Approve or reject a leave             | M    |
+| #113 | View leave history                    | S    |
+| #114 | Manage holiday catalog                | M    |
+| #115 | Register vacation entitlement         | M    |
+| #116 | Request and approve vacations         | M    |
+
+### Sprint 6 — Permissions + Audit
+| Task | User Action                           | Size |
+| ---- | ------------------------------------- | ---- |
+| #117 | Attendance edit permissions           | M    |
+| #118 | View attendance audit log             | M    |
+
+---
+
+> **Deprecated sprints** (below) kept for historical reference — the fine-grained
+> API-only and migration-only stories have been replaced by the vertical-slice
+> tasks above.
+
+### [Legacy] Sprint 5 — Overtime Bank + Weekly Close
 | ID     | Story                                       | Size | Prio |
 | ------ | ------------------------------------------- | ---- | ---- |
 | AP-034 | OvertimeBankMovement Migration & Model      | S    | P0   |
