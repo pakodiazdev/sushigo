@@ -33,6 +33,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect changes in code/api
         uses: dorny/paths-filter@v3
@@ -73,3 +75,12 @@ jobs:
           name: php-coverage
           path: code/api/coverage.xml
           retention-days: 7
+
+      - name: SonarCloud Scan (API)
+        if: steps.changes.outputs.api == 'true'
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_API }}
+        with:
+          projectBaseDir: code/api

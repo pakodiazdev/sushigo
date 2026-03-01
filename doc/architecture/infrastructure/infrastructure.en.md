@@ -142,8 +142,8 @@ flowchart LR
 |------|---------|------------|-------|
 | `.github/workflows/api-lint.yml` | PR open/update + push to `main` | `code/api/**` | PHP Pint `--test` |
 | `.github/workflows/webapp-lint.yml` | PR open/update + push to `main` | `code/webapp/**` | ESLint + TypeScript check |
-| `.github/workflows/api-tests.yml` | PR open/update + push to `main` | `code/api/**` | PHPUnit + coverage → upload `coverage.xml` artifact |
-| `.github/workflows/webapp-tests.yml` | PR open/update + push to `main` | `code/webapp/**` | Vitest + coverage → upload `coverage/` artifact |
+| `.github/workflows/api-tests.yml` | PR open/update + push to `main` | `code/api/**` | PHPUnit + coverage → SonarCloud scan (`sushigo-api`) |
+| `.github/workflows/webapp-tests.yml` | PR open/update + push to `main` | `code/webapp/**` | Vitest + coverage → SonarCloud scan (`sushigo-webapp`) |
 
 ---
 
