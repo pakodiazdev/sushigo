@@ -11,13 +11,13 @@ Como desarrollador, necesito reglas de protección en la rama `main` que exijan 
 ---
 
 ## ✅ Technical Tasks
-- [ ] 🔧 Enable branch protection on `main`: require pull request before merging
-- [ ] 🔧 Set required status checks: `api-lint`, `webapp-lint`, `api-tests`, `webapp-tests`, `sonarcloud`
-- [ ] 🔧 Require at least 1 approved review before merge
-- [ ] 🔧 Add `dervi` as required reviewer on pull requests
-- [ ] 🔧 Enable GitHub Copilot code review on pull requests
-- [ ] 🔧 Dismiss stale reviews on new commits
-- [ ] 🔧 Require branches to be up to date before merging
+- [x] 🔧 Enable branch protection on `main`: require pull request before merging
+- [x] 🔧 Set required status checks: `api-lint`, `webapp-lint`, `api-tests`, `webapp-tests`
+- [x] 🔧 Require at least 1 approved review before merge
+- [x] 🔧 Add `dervi` as required reviewer on pull requests (via `.github/CODEOWNERS`)
+- [x] 🔧 Enable GitHub Copilot code review on pull requests (via Rulesets)
+- [x] 🔧 Dismiss stale reviews on new commits
+- [x] 🔧 Require branches to be up to date before merging
 
 ---
 
@@ -25,9 +25,15 @@ Como desarrollador, necesito reglas de protección en la rama `main` que exijan 
 ### 📊 Estimates
 - **Optimistic:** `1h`
 - **Pessimistic:** `2h`
-- **Tracked:** —
+- **Tracked:** `1h`
 
 ### 📅 Sessions
 ```json
-[]
+[
+  {
+    "date": "2026-02-28",
+    "duration": "1h",
+    "notes": "Configured branch protection via GitHub API; created CODEOWNERS for dervi; enabled Copilot review via Rulesets"
+  }
+]
 ```

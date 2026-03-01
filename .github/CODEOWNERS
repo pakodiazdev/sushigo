@@ -1,0 +1,7 @@
+# CODEOWNERS — auto-request reviewers on every pull request
+#
+# Format: <pattern> <user_or_team>
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner: request dervi on every PR
+* @dervi
