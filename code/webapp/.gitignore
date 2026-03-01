@@ -24,6 +24,9 @@ dist-ssr
 *.sw?
 
 src/routeTree.gen.ts
+# Coverage reports
+coverage
+
 # Cypress
 cypress/videos
 cypress/screenshots
