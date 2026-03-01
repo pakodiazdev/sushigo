@@ -8,6 +8,7 @@ import { EmployeeInfoHeader } from './employee-info-header'
 import { DeactivateForm } from './deactivate-form'
 import { RehireForm } from './rehire-form'
 import { useEmployeeDetailActions } from './use-employee-detail-actions'
+import { ScheduleSection } from './schedule-section'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,11 @@ export function EmployeeDetailView({
 
       {/* Wage history */}
       <WageHistorySection employeeId={employee.id} />
+
+      <hr className="border-border" />
+
+      {/* Active schedule */}
+      <ScheduleSection employee={employee} />
 
       <hr className="border-border" />
 

@@ -1,10 +1,9 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { DataGrid } from '@/components/ui/data-grid'
 import { EmployeeForm, EmployeeFilters, getEmployeeColumns } from '@/components/employees'
 import { useEmployeesSearch, type EmployeesSearch } from '@/hooks/use-employees-search'
-import type { Employee } from '@/types/employee'
 
 export const Route = createFileRoute('/employees')({
   component: EmployeesPage,
@@ -20,7 +19,6 @@ export const Route = createFileRoute('/employees')({
 })
 
 export function EmployeesPage() {
-  const navigate = useNavigate()
   const {
     data, isLoading, selectedEmployee,
     sorting, perPage, isFormOpen,
@@ -30,10 +28,6 @@ export function EmployeesPage() {
   } = useEmployeesSearch()
 
   const columns = getEmployeeColumns(handleEditEmployee)
-
-  function handleRowClick(employee: Employee) {
-    navigate({ to: '/attendance/employees/$employeeId', params: { employeeId: employee.id } })
-  }
 
   return (
     <PageContainer>
@@ -56,7 +50,6 @@ export function EmployeesPage() {
           columns={columns}
           loading={isLoading}
           emptyMessage="No se encontraron empleados"
-          onRowClick={handleRowClick}
           sorting={sorting}
           onSortChange={handleSortChange}
           perPage={perPage}
