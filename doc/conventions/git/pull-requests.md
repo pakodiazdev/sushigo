@@ -217,6 +217,47 @@ Complete implementation of Employee management module including full CRUD API en
 
 ---
 
+## Navigability Rule (mandatory)
+
+**Every PR must include a reachable path to the new feature from the existing UI.**
+
+A feature that cannot be reached by clicking through the app cannot be reviewed in the PR. Before starting an issue:
+
+1. **Identify the entry point** — which existing page will link to the new one?
+2. **If the entry point doesn't exist yet**, either:
+   - Include it in the same issue (if it's small), or
+   - Do the prerequisite issue first, then come back.
+3. **Never merge a feature that is only reachable by typing a URL directly.**
+
+### Dependent Branch Pattern
+
+When issue B provides the entry point for issue A (e.g. B is an employee detail page with a "New Schedule" button that opens A's form), use a stacked branch strategy:
+
+```
+main
+ └── feature/A-short-desc         ← PR #X (base: main)
+       └── feature/B-short-desc   ← PR #Y (base: feature/A-short-desc)
+```
+
+**Merge order:**
+1. Review and merge PR #X (feature A) into `main` first.
+2. Rebase PR #Y onto `main`, then merge.
+
+Or alternatively, keep them stacked and merge B → A before opening A's PR to main. The reviewer sees both features working end-to-end in a single review pass.
+
+**Example — Schedule flow:**
+- `feature/053-create-weekly-schedule` — the form (no entry point yet)
+- `feature/056-view-current-schedule` — employee detail page with "Crear horario" CTA
+- Branch `056` off `053` → PR #056 targets `feature/053`, making the full flow visible before anything merges to main.
+
+### Checklist item for every frontend PR
+
+Add this to the Testing section of the PR description:
+
+- [ ] Feature is reachable by clicking from an existing page (no direct URL required)
+
+---
+
 ## Frontend Review Checklist
 
 When reviewing PRs that include frontend changes, verify the following rules in addition to the standard checklist:
