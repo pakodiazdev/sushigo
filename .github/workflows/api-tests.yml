@@ -59,6 +59,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --ansi
+          php artisan passport:keys --ansi
 
       - name: Run PHPUnit with coverage
         if: steps.changes.outputs.api == 'true'
