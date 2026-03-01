@@ -11,14 +11,14 @@ Como desarrollador, necesito que SonarCloud analice el proyecto en cada pull req
 ---
 
 ## ✅ Technical Tasks
-- [ ] 🔧 Create SonarCloud project linked to `pakodiazdev/sushigo` repository
-- [ ] 🔑 Add `SONAR_TOKEN` secret to GitHub repository settings
-- [ ] 🔧 Add `sonar-project.properties` to repository root with `api/` and `webapp/` source paths
-- [ ] 🔧 Add SonarCloud scan step to `api-tests.yml` — runs on PR (PR decoration analysis) and on push to main (branch analysis). Consumes `coverage.xml` from task [#043](https://github.com/pakodiazdev/sushigo/issues/43)
-- [ ] 🔧 Add SonarCloud scan step to `webapp-tests.yml` — runs on PR and on push to main. Consumes lcov artifact from task [#044](https://github.com/pakodiazdev/sushigo/issues/44)
+- [x] 🔧 Create SonarCloud projects linked to `pakodiazdev/sushigo` repository (monorepo: `sushigo-api` + `sushigo-webapp`)
+- [x] 🔑 Add `SONAR_TOKEN_API` and `SONAR_TOKEN_WEBAPP` secrets to GitHub repository settings
+- [x] 🔧 Add `code/api/sonar-project.properties` and `code/webapp/sonar-project.properties`
+- [x] 🔧 Add SonarCloud scan step to `api-tests.yml` — runs on PR and push to main. Consumes `coverage.xml` from task [#043](https://github.com/pakodiazdev/sushigo/issues/43)
+- [x] 🔧 Add SonarCloud scan step to `webapp-tests.yml` — runs on PR and push to main. Consumes lcov from task [#044](https://github.com/pakodiazdev/sushigo/issues/44)
 - [ ] 📊 Configure quality gate: minimum coverage threshold 70%, zero new blocker issues
 - [ ] ✅ Verify quality gate passes on first run before enforcing as required check
-- [ ] 📝 Document SonarCloud setup in `doc/architecture/infrastructure/infrastructure.en.md`
+- [x] 📝 Document SonarCloud setup in `doc/architecture/infrastructure/infrastructure.en.md`
 
 ---
 
@@ -30,5 +30,7 @@ Como desarrollador, necesito que SonarCloud analice el proyecto en cada pull req
 
 ### 📅 Sessions
 ```json
-[]
+[
+  { "date": "2026-03-01", "start": "20:26", "end": "23:30" }
+]
 ```

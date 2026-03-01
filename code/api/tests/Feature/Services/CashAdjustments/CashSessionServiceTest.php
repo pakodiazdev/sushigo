@@ -167,7 +167,7 @@ class CashSessionServiceTest extends TestCase
             'closing_balance' => 1000.00,
         ]);
 
-        // Create adjustments with multiple tender types
+        // Create inflow adjustment with multiple tender types
         $adj = CashAdjustment::factory()->create([
             'cash_session_id' => $session->id,
             'direction' => CashAdjustment::DIRECTION_INFLOW,
@@ -183,8 +183,8 @@ class CashSessionServiceTest extends TestCase
             'amount' => 150.00,
         ]);
 
-        // Create expense
-        CashExpense::factory()->create([
+        // Create cash expense (tender type fixed for deterministic assertions)
+        CashExpense::factory()->cash()->create([
             'cash_session_id' => $session->id,
             'category' => 'SUPPLIES',
             'amount' => 100.00,
@@ -192,13 +192,18 @@ class CashSessionServiceTest extends TestCase
 
         $summary = $this->service->getSessionSummary($session);
 
-        $this->assertArrayHasKey('adjustments', $summary);
+        $this->assertArrayHasKey('incomes', $summary);
         $this->assertArrayHasKey('expenses', $summary);
-        $this->assertArrayHasKey('tender_totals', $summary);
-        $this->assertEquals(350.00, $summary['adjustments']['inflow_total']);
-        $this->assertEquals(100.00, $summary['expenses']['total']);
-        $this->assertEquals(200.00, $summary['tender_totals']['CASH']);
-        $this->assertEquals(150.00, $summary['tender_totals']['CARD']);
+        $this->assertArrayHasKey('total_incomes', $summary);
+        $this->assertArrayHasKey('total_expenses', $summary);
+
+        $this->assertEquals('350.00', $summary['total_incomes']);
+        $this->assertEquals('100.00', $summary['total_expenses']);
+
+        // Check incomes breakdown by tender type
+        $incomesByType = collect($summary['incomes'])->keyBy('tender_type');
+        $this->assertEquals(200.00, $incomesByType['CASH']['amount']);
+        $this->assertEquals(150.00, $incomesByType['CARD']['amount']);
     }
 
     public function test_get_or_create_today_session_creates_new_if_not_exists(): void
