@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
+use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchStartController;
@@ -209,6 +210,8 @@ Route::prefix('v1')->group(function () {
         // Wage history endpoints
         Route::get('/{employee}/wages', ListWagesController::class)->name('employees.wages.list')->middleware('permission:employees.view');
         Route::post('/{employee}/wages', CreateWageController::class)->name('employees.wages.create')->middleware('permission:employees.update');
+        // Schedule endpoints
+        Route::get('/{employee}/current-schedule', CurrentScheduleController::class)->name('employees.schedule.current')->middleware('permission:employees.view');
     });
 
     // Employment Periods — Schedules (All Protected)
