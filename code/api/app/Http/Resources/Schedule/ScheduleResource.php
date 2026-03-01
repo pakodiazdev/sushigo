@@ -1,0 +1,57 @@
+<?php
+
+namespace App\Http\Resources\Schedule;
+
+use App\Http\Resources\BaseResource;
+
+/**
+ * @OA\Schema(
+ *     schema="ScheduleResponse",
+ *     title="Schedule Response",
+ *
+ *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
+ *     @OA\Property(property="name", type="string", example="Horario estándar"),
+ *     @OA\Property(property="effective_from", type="string", format="date", example="2026-03-01"),
+ *     @OA\Property(property="effective_to", type="string", format="date", nullable=true, example=null),
+ *     @OA\Property(property="workday_type", type="string", enum={"FULL","PARTIAL"}, example="FULL"),
+ *     @OA\Property(property="working_days_per_week", type="integer", example=5),
+ *     @OA\Property(
+ *         property="days",
+ *         type="array",
+ *
+ *         @OA\Items(
+ *             type="object",
+ *
+ *             @OA\Property(property="day_of_week", type="integer", example=1, description="ISO 8601: 1=Monday … 7=Sunday"),
+ *             @OA\Property(property="is_day_off", type="boolean", example=false),
+ *             @OA\Property(property="expected_start", type="string", nullable=true, example="08:00"),
+ *             @OA\Property(property="expected_lunch_start", type="string", nullable=true, example="13:00"),
+ *             @OA\Property(property="expected_lunch_end", type="string", nullable=true, example="14:00"),
+ *             @OA\Property(property="lunch_duration_minutes", type="integer", nullable=true, example=60),
+ *             @OA\Property(property="expected_end", type="string", nullable=true, example="17:00")
+ *         )
+ *     ),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ */
+class ScheduleResource extends BaseResource
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray($request): array
+    {
+        return [
+            'id'                    => $this->public_id,
+            'name'                  => $this->name,
+            'effective_from'        => $this->effective_from?->toDateString(),
+            'effective_to'          => $this->effective_to?->toDateString(),
+            'workday_type'          => $this->workday_type,
+            'working_days_per_week' => $this->working_days_per_week,
+            'days'                  => ScheduleDayResource::collection($this->whenLoaded('scheduleDays')),
+            'created_at'            => $this->created_at,
+            'updated_at'            => $this->updated_at,
+        ];
+    }
+}
