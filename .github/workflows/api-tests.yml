@@ -33,8 +33,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Detect changes in code/api
         uses: dorny/paths-filter@v3
@@ -75,6 +73,33 @@ jobs:
           name: php-coverage
           path: code/api/coverage.xml
           retention-days: 7
+
+  api-sonar:
+    name: api-sonar
+    runs-on: ubuntu-latest
+    needs: api-tests
+    if: needs.api-tests.result == 'success'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes in code/api
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            api:
+              - 'code/api/**'
+
+      - name: Download coverage report
+        if: steps.changes.outputs.api == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: php-coverage
+          path: code/api
 
       - name: SonarCloud Scan (API)
         if: steps.changes.outputs.api == 'true'
