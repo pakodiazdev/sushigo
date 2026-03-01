@@ -31,6 +31,6 @@ Como desarrollador, necesito que SonarCloud analice el proyecto en cada pull req
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-03-01", "start": "20:26", "end": "" }
+  { "date": "2026-03-01", "start": "20:26", "end": "23:30" }
 ]
 ```

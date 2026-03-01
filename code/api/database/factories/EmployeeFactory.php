@@ -17,7 +17,7 @@ class EmployeeFactory extends Factory
         return [
             'public_id' => (string) Str::ulid(),
             'user_id' => null,
-            'code' => strtoupper(fake()->unique()->bothify('EMP-###')),
+            'code' => strtoupper(fake()->unique()->bothify('EMP-?###')),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'is_active' => true,
