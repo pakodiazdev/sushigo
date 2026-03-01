@@ -34,4 +34,9 @@ export const scheduleApi = {
       `/employment-periods/${periodId}/schedules`,
       toApiPayload(values)
     ),
+
+  getCurrent: (employeeId: string) =>
+    apiClient.get<EntityResponse<EmployeeSchedule>>(
+      `/employees/${employeeId}/current-schedule`
+    ),
 }

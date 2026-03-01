@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useForm, FormProvider } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -17,6 +17,9 @@ export const Route = createFileRoute(
   '/attendance/employees/$employeeId/schedules/new'
 )({
   component: CreateSchedulePage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    periodId: typeof search.periodId === 'string' ? search.periodId : '',
+  }),
 })
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
@@ -66,14 +69,10 @@ const schema = z.object({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function CreateSchedulePage() {
-  const { employeeId } = useParams({ from: '/attendance/employees/$employeeId/schedules/new' })
+  const { employeeId } = Route.useParams()
+  const { periodId } = Route.useSearch()
 
-  // TODO: replace with actual employment period ID from employee query
-  // For now, the periodId is passed via search params or derived from the employee context.
-  // Using employeeId as a placeholder until the employee detail page is built (#056).
-  const periodId = employeeId
-
-  const { submit, isPending } = useCreateSchedule(periodId)
+  const { submit, isPending } = useCreateSchedule(periodId, employeeId)
 
   const methods = useForm<CreateScheduleFormValues>({
     resolver: zodResolver(schema),

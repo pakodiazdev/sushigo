@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/toast-provider'
 import { scheduleApi } from '@/services/schedule-api'
 import type { CreateScheduleFormValues } from '@/types/schedule'
 
-export function useCreateSchedule(periodId: string) {
+export function useCreateSchedule(periodId: string, employeeId: string) {
   const navigate = useNavigate()
   const { showSuccess, showError } = useToast()
 
@@ -14,8 +14,10 @@ export function useCreateSchedule(periodId: string) {
 
     onSuccess: () => {
       showSuccess('Horario creado correctamente')
-      // Navigate back to employees list until #056 (employee detail) is built
-      navigate({ to: '/employees' })
+      navigate({
+        to: '/attendance/employees/$employeeId',
+        params: { employeeId },
+      })
     },
 
     onError: () => {
