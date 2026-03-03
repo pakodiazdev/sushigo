@@ -65,7 +65,7 @@ class CreateScheduleAction
                 ]);
             }
 
-            return $schedule->load('scheduleDays');
+            return $schedule->load('scheduleDays', 'employmentPeriod');
         });
     }
 }

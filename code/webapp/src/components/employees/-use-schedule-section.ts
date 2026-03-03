@@ -13,7 +13,8 @@ export function useScheduleSection(employeeId: string) {
     queryFn: async () => {
       try {
         const res = await scheduleApi.getCurrent(employeeId)
-        return { schedule: res.data.data, periodId: null as string | null }
+        const schedule = res.data.data
+        return { schedule, periodId: schedule.employment_period_id }
       } catch (err) {
         if (isAxiosError(err) && err.response?.status === 404) {
           return {
