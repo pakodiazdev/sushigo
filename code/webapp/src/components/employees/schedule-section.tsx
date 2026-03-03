@@ -338,7 +338,7 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
                   key={day.day_of_week}
                   day={day}
                   hasOverride={hasOverride}
-                  onEdit={() => override.startEdit(day)}
+                  onEdit={() => override.startEdit(day, sortedDays)}
                   showActions={!!periodId}
                 />
               )
