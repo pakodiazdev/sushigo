@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
 import { isAxiosError } from 'axios'
 import { scheduleApi } from '@/services/schedule-api'
 
+export type ScheduleDialogView = 'schedule' | 'create'
+
 export function useScheduleSection(employeeId: string) {
   const [isOpen, setIsOpen] = useState(false)
-  const navigate = useNavigate()
+  const [view, setView] = useState<ScheduleDialogView>('schedule')
 
   const scheduleQuery = useQuery({
     queryKey: ['employees', employeeId, 'current-schedule'],
@@ -32,31 +33,38 @@ export function useScheduleSection(employeeId: string) {
   const periodId = scheduleQuery.data?.periodId ?? null
 
   function open() {
+    setView('schedule')
     setIsOpen(true)
   }
 
   function close() {
     setIsOpen(false)
+    setView('schedule')
   }
 
-  function goToCreateSchedule() {
-    if (!periodId) return
-    close()
-    navigate({
-      to: '/attendance/employees/$employeeId/schedules/new',
-      params: { employeeId },
-      search: { periodId },
-    })
+  function showCreate() {
+    setView('create')
+  }
+
+  function showSchedule() {
+    setView('schedule')
+  }
+
+  function onScheduleCreated() {
+    setView('schedule')
   }
 
   return {
     isOpen,
     open,
     close,
+    view,
+    showCreate,
+    showSchedule,
+    onScheduleCreated,
     schedule,
     periodId,
     isLoading: scheduleQuery.isLoading,
     isError: scheduleQuery.isError,
-    goToCreateSchedule,
   }
 }
