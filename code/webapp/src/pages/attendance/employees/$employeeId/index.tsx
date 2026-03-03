@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { CalendarDays, Plus, ArrowLeft, CheckCircle, XCircle } from 'lucide-react'
+import { CalendarDays, ArrowLeft, CheckCircle, XCircle } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DAY_LABELS } from '@/types/schedule'
 import { useEmployeeSchedulePage } from './-use-employee-schedule-page'
@@ -16,11 +15,9 @@ function EmployeeSchedulePage() {
   const {
     employee,
     schedule,
-    periodIdForForm,
     isLoadingEmployee,
     isLoadingSchedule,
     isError,
-    goToCreateSchedule,
   } = useEmployeeSchedulePage(employeeId)
 
   if (isError) {
@@ -58,12 +55,6 @@ function EmployeeSchedulePage() {
             <CalendarDays className="h-4 w-4" />
             Horario actual
           </h2>
-          {periodIdForForm && (
-            <Button size="sm" onClick={goToCreateSchedule}>
-              <Plus className="mr-1 h-4 w-4" />
-              Nuevo horario
-            </Button>
-          )}
         </div>
 
         {isLoadingSchedule ? (
@@ -71,10 +62,7 @@ function EmployeeSchedulePage() {
         ) : schedule ? (
           <SchedulePanel schedule={schedule} />
         ) : (
-          <EmptySchedule
-            canCreate={!!periodIdForForm}
-            onCreateClick={goToCreateSchedule}
-          />
+          <EmptySchedule />
         )}
       </div>
     </PageContainer>
@@ -133,7 +121,7 @@ function SchedulePanel({ schedule }: { schedule: NonNullable<ReturnType<typeof u
   )
 }
 
-function EmptySchedule({ canCreate, onCreateClick }: { canCreate: boolean; onCreateClick: () => void }) {
+function EmptySchedule() {
   return (
     <div className="flex flex-col items-center justify-center rounded-md border border-dashed py-12 text-center">
       <CalendarDays className="mb-3 h-10 w-10 text-muted-foreground/50" />
@@ -141,12 +129,6 @@ function EmptySchedule({ canCreate, onCreateClick }: { canCreate: boolean; onCre
       <p className="mb-4 text-sm text-muted-foreground">
         Este empleado no tiene un horario vigente configurado.
       </p>
-      {canCreate && (
-        <Button onClick={onCreateClick}>
-          <Plus className="mr-1 h-4 w-4" />
-          Crear horario
-        </Button>
-      )}
     </div>
   )
 }

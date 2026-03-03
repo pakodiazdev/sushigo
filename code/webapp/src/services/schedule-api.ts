@@ -38,6 +38,22 @@ function toApiPayload(values: CreateScheduleFormValues) {
   }
 }
 
+export interface CreateSchedulePayload {
+  name: string
+  effective_from: string
+  workday_type: string
+  working_days_per_week: number
+  days: Array<{
+    day_of_week: number
+    is_day_off: boolean
+    expected_start: string | null
+    expected_lunch_start: string | null
+    expected_lunch_end: string | null
+    lunch_duration_minutes: number | null
+    expected_end: string | null
+  }>
+}
+
 export interface CreateDayOverridePayload {
   day_of_week: number
   effective_from: string
@@ -61,6 +77,12 @@ export const scheduleApi = {
   getCurrent: (employeeId: string) =>
     apiClient.get<EntityResponse<EmployeeSchedule>>(
       `/employees/${employeeId}/current-schedule`
+    ),
+
+  createPayload: (periodId: string, payload: CreateSchedulePayload) =>
+    apiClient.post<EntityResponse<EmployeeSchedule>>(
+      `/employment-periods/${periodId}/schedules`,
+      payload
     ),
 
   createDayOverride: (periodId: string, payload: CreateDayOverridePayload) =>

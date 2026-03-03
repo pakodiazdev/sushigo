@@ -1,13 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
 import { isAxiosError } from 'axios'
 import { employeeApi } from '@/services/employee-api'
 import { scheduleApi } from '@/services/schedule-api'
 import type { EmploymentPeriod } from '@/types/employment-period'
 
 export function useEmployeeSchedulePage(employeeId: string) {
-  const navigate = useNavigate()
-
   const employeeQuery = useQuery({
     queryKey: ['employees', employeeId],
     queryFn: async () => {
@@ -44,15 +41,6 @@ export function useEmployeeSchedulePage(employeeId: string) {
   const periodIdForForm =
     scheduleQuery.data?.periodId ?? activePeriod?.id ?? null
 
-  function goToCreateSchedule() {
-    if (!periodIdForForm) return
-    navigate({
-      to: '/attendance/employees/$employeeId/schedules/new',
-      params: { employeeId },
-      search: { periodId: periodIdForForm },
-    })
-  }
-
   return {
     employee,
     activePeriod,
@@ -61,6 +49,5 @@ export function useEmployeeSchedulePage(employeeId: string) {
     isLoadingEmployee: employeeQuery.isLoading,
     isLoadingSchedule: scheduleQuery.isLoading,
     isError: employeeQuery.isError,
-    goToCreateSchedule,
   }
 }
