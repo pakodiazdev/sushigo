@@ -36,6 +36,18 @@ function dayToEditValues(day: ScheduleDay): EditDayValues {
   }
 }
 
+/**
+ * Find the closest previous working day (by day_of_week, wrapping around)
+ * to use as a template when creating an override for a rest day.
+ */
+function findNearestWorkingDay(dow: number, allDays: ScheduleDay[]): ScheduleDay | null {
+  const working = allDays.filter((d) => !d.is_day_off && d.expected_start && d.expected_end)
+  if (!working.length) return null
+  // Build candidate order: the 6 days before `dow`, descending, wrapping 1-7
+  const candidates = Array.from({ length: 6 }, (_, i) => ((dow - 2 - i + 7) % 7) + 1)
+  return candidates.map((d) => working.find((w) => w.day_of_week === d)).find(Boolean) ?? null
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useCreateDayOverride(employeeId: string, periodId: string | null) {
@@ -105,8 +117,27 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
     },
   })
 
-  function startEdit(day: ScheduleDay) {
+  function startEdit(day: ScheduleDay, allDays?: ScheduleDay[]) {
     setEditingDow(day.day_of_week)
+
+    // When editing a rest day, pre-fill times from the nearest previous working
+    // day so the user gets a sensible starting point instead of empty fields.
+    if (day.is_day_off && allDays) {
+      const template = findNearestWorkingDay(day.day_of_week, allDays)
+      if (template) {
+        setEditValues({
+          is_day_off: false,
+          expected_start:          template.expected_start ?? '',
+          expected_lunch_start:    template.expected_lunch_start ?? '',
+          lunch_duration_minutes:  template.lunch_duration_minutes != null
+            ? String(template.lunch_duration_minutes)
+            : '',
+          expected_end:            template.expected_end ?? '',
+        })
+        return
+      }
+    }
+
     setEditValues(dayToEditValues(day))
   }
 
