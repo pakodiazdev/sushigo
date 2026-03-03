@@ -1,9 +1,8 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CalendarDays, X, Plus, CheckCircle, XCircle } from 'lucide-react'
+import { CalendarDays, X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SlidePanelOverlayContext } from '@/components/ui/slide-panel'
-import { DAY_LABELS } from '@/types/schedule'
+import { DAY_LABELS, formatLunchDuration } from '@/types/schedule'
 import type { EmployeeSchedule } from '@/types/schedule'
 import type { Employee } from '@/types/employee'
 import { useScheduleSection } from './-use-schedule-section'
@@ -45,7 +44,7 @@ export function ScheduleSection({ employee }: ScheduleSectionProps) {
   )
 }
 
-// ── Dialog (portals above the SlidePanel) ────────────────────────────────────
+// ── Dialog (portals to viewport, centered on page) ───────────────────────────
 
 interface ScheduleDialogProps {
   isOpen: boolean
@@ -70,16 +69,17 @@ function ScheduleDialog({
 }: ScheduleDialogProps) {
   const [visible, setVisible] = useState(false)
   const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null)
-  const slidePanelOverlay = useContext(SlidePanelOverlayContext)
 
   useEffect(() => {
     if (isOpen) {
       setVisible(true)
+      document.body.style.overflow = 'hidden'
       requestAnimationFrame(() => {
         requestAnimationFrame(() => setAnimating('enter'))
       })
     } else if (visible) {
       setAnimating('exit')
+      document.body.style.overflow = ''
       const timer = setTimeout(() => {
         setVisible(false)
         setAnimating(null)
@@ -87,6 +87,10 @@ function ScheduleDialog({
       return () => clearTimeout(timer)
     }
   }, [isOpen, visible])
+
+  useEffect(() => {
+    return () => { document.body.style.overflow = '' }
+  }, [])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -112,15 +116,11 @@ function ScheduleDialog({
         ? 'animate-dialog-out'
         : ''
 
-  const portalTarget = slidePanelOverlay?.current ?? null
-
   const content = (
-    <div
-      className={`${portalTarget ? 'absolute' : 'fixed'} inset-0 z-[60] flex items-start justify-center overflow-y-auto px-4 pt-12 pb-8`}
-    >
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 ${backdropAnimation}`}
+        className={`absolute inset-0 bg-black/50 ${backdropAnimation}`}
         onClick={onClose}
       />
 
@@ -155,12 +155,20 @@ function ScheduleDialog({
           ) : schedule ? (
             <ScheduleContent schedule={schedule} />
           ) : (
-            <EmptySchedule canCreate={!!periodId} onCreateClick={onCreateSchedule} />
+            <EmptySchedule canCreate={!!periodId} />
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end border-t px-5 py-3">
+        <div className="flex items-center justify-between border-t px-5 py-3">
+          {periodId && !isLoading ? (
+            <Button type="button" size="sm" onClick={onCreateSchedule}>
+              <Plus className="mr-1 h-4 w-4" />
+              {schedule ? 'Nuevo horario' : 'Crear horario'}
+            </Button>
+          ) : (
+            <span />
+          )}
           <Button type="button" variant="outline" size="sm" onClick={onClose}>
             Cerrar
           </Button>
@@ -169,7 +177,7 @@ function ScheduleDialog({
     </div>
   )
 
-  return portalTarget ? createPortal(content, portalTarget) : content
+  return createPortal(content, document.body)
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -183,6 +191,9 @@ function ScheduleContent({ schedule }: { schedule: EmployeeSchedule }) {
           {schedule.workday_type === 'FULL' ? 'Jornada completa' : 'Jornada parcial'}
         </span>
         <span className="text-muted-foreground">{schedule.working_days_per_week} días/sem</span>
+        <span className="text-muted-foreground">
+          Desde {new Date(schedule.effective_from).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </span>
       </div>
 
       <div className="overflow-x-auto rounded border">
@@ -191,27 +202,28 @@ function ScheduleContent({ schedule }: { schedule: EmployeeSchedule }) {
             <tr className="border-b bg-muted/40 text-xs font-medium text-muted-foreground">
               <th className="py-2 pl-3 pr-2 text-left">Día</th>
               <th className="py-2 pr-2 text-left">Entrada</th>
-              <th className="py-2 pr-2 text-left">Fin almuerzo</th>
+              <th className="py-2 pr-2 text-left">Inicio comida</th>
+              <th className="py-2 pr-2 text-left">Duración</th>
               <th className="py-2 pr-3 text-left">Salida</th>
-              <th className="py-2 pr-3 text-center">Estado</th>
             </tr>
           </thead>
           <tbody>
-            {[...(schedule.days ?? [])].sort((a, b) => a.day_of_week - b.day_of_week).map((day) => (
-              <tr key={day.day_of_week} className="border-b last:border-0">
-                <td className="py-2 pl-3 pr-2 font-medium">{DAY_LABELS[day.day_of_week]}</td>
-                <td className="py-2 pr-2 text-muted-foreground">{day.expected_start ?? '—'}</td>
-                <td className="py-2 pr-2 text-muted-foreground">{day.expected_lunch_end ?? '—'}</td>
-                <td className="py-2 pr-3 text-muted-foreground">{day.expected_end ?? '—'}</td>
-                <td className="py-2 pr-3 text-center">
-                  {day.is_day_off ? (
-                    <XCircle className="mx-auto h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <CheckCircle className="mx-auto h-4 w-4 text-green-500" />
-                  )}
-                </td>
-              </tr>
-            ))}
+            {[...(schedule.days ?? [])].sort((a, b) => a.day_of_week - b.day_of_week).map((day) =>
+              day.is_day_off ? (
+                <tr key={day.day_of_week} className="border-b last:border-0 opacity-40">
+                  <td className="py-2 pl-3 pr-2 font-medium">{DAY_LABELS[day.day_of_week]}</td>
+                  <td colSpan={4} className="py-2 pr-3 italic text-muted-foreground">Descanso</td>
+                </tr>
+              ) : (
+                <tr key={day.day_of_week} className="border-b last:border-0">
+                  <td className="py-2 pl-3 pr-2 font-medium">{DAY_LABELS[day.day_of_week]}</td>
+                  <td className="py-2 pr-2 text-muted-foreground">{day.expected_start ?? '—'}</td>
+                  <td className="py-2 pr-2 text-muted-foreground">{day.expected_lunch_start ?? '—'}</td>
+                  <td className="py-2 pr-2 text-muted-foreground">{formatLunchDuration(day.lunch_duration_minutes)}</td>
+                  <td className="py-2 pr-3 text-muted-foreground">{day.expected_end ?? '—'}</td>
+                </tr>
+              )
+            )}
           </tbody>
         </table>
       </div>
@@ -219,7 +231,7 @@ function ScheduleContent({ schedule }: { schedule: EmployeeSchedule }) {
   )
 }
 
-function EmptySchedule({ canCreate, onCreateClick }: { canCreate: boolean; onCreateClick: () => void }) {
+function EmptySchedule({ canCreate }: { canCreate: boolean }) {
   return (
     <div className="flex flex-col items-center py-8 text-center">
       <CalendarDays className="mb-2 h-8 w-8 text-muted-foreground/50" />
@@ -227,11 +239,8 @@ function EmptySchedule({ canCreate, onCreateClick }: { canCreate: boolean; onCre
       <p className="mb-4 text-xs text-muted-foreground">
         Este empleado no tiene un horario vigente configurado.
       </p>
-      {canCreate && (
-        <Button size="sm" onClick={onCreateClick}>
-          <Plus className="mr-1 h-4 w-4" />
-          Crear horario
-        </Button>
+      {!canCreate && (
+        <p className="text-xs text-muted-foreground">El empleado no tiene un período laboral activo.</p>
       )}
     </div>
   )

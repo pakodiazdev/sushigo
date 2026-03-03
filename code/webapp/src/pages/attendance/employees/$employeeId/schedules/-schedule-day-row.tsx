@@ -1,7 +1,7 @@
 import { useFormContext, useWatch } from 'react-hook-form'
 import { Input } from '@/components/ui/input'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
-import { DAY_LABELS } from '@/types/schedule'
+import { DAY_LABELS, LUNCH_DURATION_OPTIONS } from '@/types/schedule'
 import type { CreateScheduleFormValues } from '@/types/schedule'
 
 interface ScheduleDayRowProps {
@@ -42,7 +42,6 @@ export function ScheduleDayRow({ index }: ScheduleDayRowProps) {
             if (val) {
               setValue(`days.${index}.expected_start`, '')
               setValue(`days.${index}.expected_lunch_start`, '')
-              setValue(`days.${index}.expected_lunch_end`, '')
               setValue(`days.${index}.lunch_duration_minutes`, '')
               setValue(`days.${index}.expected_end`, '')
             }
@@ -74,14 +73,19 @@ export function ScheduleDayRow({ index }: ScheduleDayRowProps) {
         />
       </td>
 
-      {/* Lunch end */}
+      {/* Lunch duration select */}
       <td className="py-2 pr-2">
-        <Input
-          type="time"
+        <select
           disabled={isDayOff}
-          {...register(`days.${index}.expected_lunch_end`)}
-          className="w-28"
-        />
+          {...register(`days.${index}.lunch_duration_minutes`)}
+          className="h-9 w-32 rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {LUNCH_DURATION_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </td>
 
       {/* Expected end */}

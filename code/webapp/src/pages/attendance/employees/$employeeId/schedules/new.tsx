@@ -30,7 +30,6 @@ const daySchema = z
     is_day_off: z.boolean(),
     expected_start: z.string(),
     expected_lunch_start: z.string(),
-    expected_lunch_end: z.string(),
     lunch_duration_minutes: z.string(),
     expected_end: z.string(),
   })
@@ -155,8 +154,8 @@ function CreateSchedulePage() {
                     <th className="py-2 pr-4 pl-3">Día</th>
                     <th className="py-2 pr-4">Descanso</th>
                     <th className="py-2 pr-2">Entrada</th>
-                    <th className="py-2 pr-2">Inicio almuerzo</th>
-                    <th className="py-2 pr-2">Fin almuerzo</th>
+                    <th className="py-2 pr-2">Inicio comida</th>
+                    <th className="py-2 pr-2">Duración comida</th>
                     <th className="py-2 pr-3">Salida</th>
                   </tr>
                 </thead>
