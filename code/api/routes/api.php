@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
+use App\Http\Controllers\Api\V1\Schedules\CreateScheduleDayOverrideController;
 use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
@@ -218,6 +219,9 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('employment-periods')->name('employment-periods.')->group(function () {
         Route::post('/{employmentPeriod}/schedules', CreateScheduleController::class)
             ->name('schedules.create')
+            ->middleware('permission:employees.update');
+        Route::post('/{employmentPeriod}/schedule-day-overrides', CreateScheduleDayOverrideController::class)
+            ->name('schedule-day-overrides.create')
             ->middleware('permission:employees.update');
     });
 

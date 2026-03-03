@@ -12,6 +12,23 @@ export interface ScheduleDay {
   expected_end: string | null          // 'HH:MM'
 }
 
+export interface ScheduleDayOverride {
+  id: string // ULID
+  employment_period_id: string // ULID
+  day_of_week: number // ISO 8601: 1=Monday … 7=Sunday
+  effective_from: string  // 'YYYY-MM-DD'
+  effective_to: string | null // null = indefinite
+  is_day_off: boolean
+  expected_start: string | null
+  expected_lunch_start: string | null
+  expected_lunch_end: string | null
+  lunch_duration_minutes: number | null
+  expected_end: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface EmployeeSchedule {
   id: string // ULID
   employment_period_id: string // ULID of the employment period
@@ -21,6 +38,7 @@ export interface EmployeeSchedule {
   workday_type: WorkdayType
   working_days_per_week: number
   days: ScheduleDay[]
+  active_overrides: ScheduleDayOverride[]
   created_at: string
   updated_at: string
 }
