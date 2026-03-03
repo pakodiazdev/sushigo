@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { EmployeeSchedule, CreateScheduleFormValues } from '@/types/schedule'
+import type { EmployeeSchedule, ScheduleDayOverride, CreateScheduleFormValues } from '@/types/schedule'
 
 interface EntityResponse<T> {
   data: T
@@ -38,6 +38,19 @@ function toApiPayload(values: CreateScheduleFormValues) {
   }
 }
 
+export interface CreateDayOverridePayload {
+  day_of_week: number
+  effective_from: string
+  effective_to: string | null
+  is_day_off: boolean
+  expected_start: string | null
+  expected_lunch_start: string | null
+  expected_lunch_end: string | null
+  lunch_duration_minutes: number | null
+  expected_end: string | null
+  note: string | null
+}
+
 export const scheduleApi = {
   create: (periodId: string, values: CreateScheduleFormValues) =>
     apiClient.post<EntityResponse<EmployeeSchedule>>(
@@ -48,5 +61,11 @@ export const scheduleApi = {
   getCurrent: (employeeId: string) =>
     apiClient.get<EntityResponse<EmployeeSchedule>>(
       `/employees/${employeeId}/current-schedule`
+    ),
+
+  createDayOverride: (periodId: string, payload: CreateDayOverridePayload) =>
+    apiClient.post<EntityResponse<ScheduleDayOverride>>(
+      `/employment-periods/${periodId}/schedule-day-overrides`,
+      payload
     ),
 }

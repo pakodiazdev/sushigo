@@ -49,6 +49,15 @@ class EmploymentPeriod extends Model
         return $this->hasMany(EmployeeSchedule::class)->orderBy('effective_from', 'desc');
     }
 
+    /**
+     * Day-level overrides (temporary exceptions) for this employment period.
+     * Use the effective() or notExpired() scope to filter by date.
+     */
+    public function scheduleDayOverrides(): HasMany
+    {
+        return $this->hasMany(ScheduleDayOverride::class)->orderBy('effective_from');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

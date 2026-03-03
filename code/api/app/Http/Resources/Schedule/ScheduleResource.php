@@ -51,6 +51,19 @@ class ScheduleResource extends BaseResource
             'workday_type'           => $this->workday_type,
             'working_days_per_week'  => $this->working_days_per_week,
             'days'                   => ScheduleDayResource::collection($this->whenLoaded('scheduleDays')),
+            'active_overrides'       => $this->whenLoaded('employmentPeriod', function () {
+                if (! $this->employmentPeriod->relationLoaded('scheduleDayOverrides')) {
+                    return [];
+                }
+
+                $today = now()->toDateString();
+
+                $notExpired = $this->employmentPeriod->scheduleDayOverrides->filter(
+                    fn ($o) => is_null($o->effective_to) || $o->effective_to->toDateString() >= $today
+                )->values();
+
+                return ScheduleDayOverrideResource::collection($notExpired);
+            }),
             'created_at'             => $this->created_at,
             'updated_at'             => $this->updated_at,
         ];
