@@ -17,7 +17,6 @@ function addMinutesToTime(time: string, minutes: number): string {
 
 function toApiPayload(values: CreateScheduleFormValues) {
   return {
-    name: values.name,
     effective_from: values.effective_from,
     workday_type: values.workday_type,
     working_days_per_week: Number(values.working_days_per_week),
@@ -39,7 +38,6 @@ function toApiPayload(values: CreateScheduleFormValues) {
 }
 
 export interface CreateSchedulePayload {
-  name: string
   effective_from: string
   workday_type: string
   working_days_per_week: number
