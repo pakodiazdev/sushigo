@@ -157,7 +157,7 @@
 > As a developer, I want to create the schedule migrations and models, to define the basis for punctuality calculation.
 
 **AC:**
-- [ ] Migration `employee_schedules`: id, employment_period_id (FK), name, effective_from, effective_to (nullable), workday_type (enum FULL|PARTIAL), working_days_per_week (default 6), timestamps
+- [ ] Migration `employee_schedules`: id, employment_period_id (FK), effective_from, effective_to (nullable), workday_type (enum FULL|PARTIAL), working_days_per_week (default 6), timestamps
 - [ ] Migration `schedule_days`: id, employee_schedule_id (FK), day_of_week (1-7 ISO), is_day_off, expected_start (time nullable), expected_lunch_end (time nullable), expected_end (time nullable), timestamps
 - [ ] UNIQUE(employee_schedule_id, day_of_week)
 - [ ] `EmployeeSchedule` model with `hasMany(ScheduleDay)`, scope `effective(date)`
@@ -188,7 +188,7 @@
 **AC:**
 - [ ] `GET /api/v1/employees/{id}/current-schedule` — returns current schedule + its 7 days
 - [ ] 404 if no current schedule exists
-- [ ] Response includes: schedule name, workday type, days with their times
+- [ ] Response includes: workday type, effective date, days with their times
 - [ ] Feature test
 
 ---
@@ -212,7 +212,7 @@
 > As an Admin, I want to update the times of a current schedule, to correct errors without creating a new one.
 
 **AC:**
-- [ ] `PUT /api/v1/schedules/{id}` — updates name, workday_type, working_days_per_week + days[]
+- [ ] `PUT /api/v1/schedules/{id}` — updates workday_type, working_days_per_week + days[]
 - [ ] Can only edit if the schedule is current (effective_to IS NULL)
 - [ ] Error 422 if attempting to edit a closed schedule
 - [ ] Feature test

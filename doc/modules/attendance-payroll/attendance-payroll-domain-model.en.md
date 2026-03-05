@@ -394,7 +394,6 @@ erDiagram
 | ----------------------- | ------------ | ---- | ------- | ----------------------------------------------------- | ----- |
 | `id`                    | bigint       | NO   | auto    | PK                                                    | —     |
 | `employment_period_id`  | bigint FK    | NO   | —       | Associated employment period.                         | RF-09 |
-| `name`                  | varchar(100) | NO   | —       | Descriptive name (e.g. "Full schedule January 2026"). | RF-08 |
 | `effective_from`        | date         | NO   | —       | Effective start date.                                 | RF-09 |
 | `effective_to`          | date         | YES  | NULL    | Effective end date. NULL = currently active.          | RF-09 |
 | `workday_type`          | enum         | NO   | —       | `FULL` (full workday) or `PARTIAL` (variable).        | RF-10 |

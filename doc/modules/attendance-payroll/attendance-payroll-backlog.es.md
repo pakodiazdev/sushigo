@@ -157,7 +157,7 @@
 > Como desarrollador, quiero crear las migraciones y modelos de horarios, para definir la base de cálculo de puntualidad.
 
 **CA:**
-- [ ] Migración `employee_schedules`: id, employment_period_id (FK), name, effective_from, effective_to (nullable), workday_type (enum FULL|PARTIAL), working_days_per_week (default 6), timestamps
+- [ ] Migración `employee_schedules`: id, employment_period_id (FK), effective_from, effective_to (nullable), workday_type (enum FULL|PARTIAL), working_days_per_week (default 6), timestamps
 - [ ] Migración `schedule_days`: id, employee_schedule_id (FK), day_of_week (1-7 ISO), is_day_off, expected_start (time nullable), expected_lunch_end (time nullable), expected_end (time nullable), timestamps
 - [ ] UNIQUE(employee_schedule_id, day_of_week)
 - [ ] Modelo `EmployeeSchedule` con `hasMany(ScheduleDay)`, scope `effective(date)`
@@ -188,7 +188,7 @@
 **CA:**
 - [ ] `GET /api/v1/employees/{id}/current-schedule` — retorna horario vigente + sus 7 días
 - [ ] 404 si no hay horario vigente
-- [ ] Respuesta incluye: nombre del horario, tipo de jornada, días con sus tiempos
+- [ ] Respuesta incluye: tipo de jornada, fecha de vigencia, días con sus tiempos
 - [ ] Test feature
 
 ---
