@@ -40,18 +40,18 @@ Como desarrollador, necesito datos de horarios sembrados para todos los empleado
 
 ### Templates escalonados (A–J)
 
-| Template | lunch_start | lunch_end | Nombre del schedule |
-|----------|------------|----------|-------------------|
-| A | 15:00 | 15:30 | Horario A — {code} |
-| B | 15:30 | 16:00 | Horario B — {code} |
-| C | 16:00 | 16:30 | Horario C — {code} |
-| D | 16:30 | 17:00 | Horario D — {code} |
-| E | 17:00 | 17:30 | Horario E — {code} |
-| F | 17:30 | 18:00 | Horario F — {code} |
-| G | 18:00 | 18:30 | Horario G — {code} |
-| H | 18:30 | 19:00 | Horario H — {code} |
-| I | 19:00 | 19:30 | Horario I — {code} |
-| J | 19:30 | 20:00 | Horario J — {code} |
+| Template | lunch_start | lunch_end |
+|----------|------------|----------|
+| A | 15:00 | 15:30 |
+| B | 15:30 | 16:00 |
+| C | 16:00 | 16:30 |
+| D | 16:30 | 17:00 |
+| E | 17:00 | 17:30 |
+| F | 17:30 | 18:00 |
+| G | 18:00 | 18:30 |
+| H | 18:30 | 19:00 |
+| I | 19:00 | 19:30 |
+| J | 19:30 | 20:00 |
 
 ---
 

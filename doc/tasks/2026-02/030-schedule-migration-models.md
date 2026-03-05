@@ -12,7 +12,7 @@ Como desarrollador, necesito crear las migraciones y modelos de horarios, para d
 
 ## ✅ Technical Tasks
 
-- [x] 📂 Create migration `create_employee_schedules_table` — id, public_id (ULID), employment_period_id (FK restrictOnDelete), name (varchar 100), effective_from (date), effective_to (date nullable), workday_type (enum: FULL|PARTIAL), working_days_per_week (smallint default 6), timestamps, softDeletes
+- [x] 📂 Create migration `create_employee_schedules_table` — id, public_id (ULID), employment_period_id (FK restrictOnDelete), effective_from (date), effective_to (date nullable), workday_type (enum: FULL|PARTIAL), working_days_per_week (smallint default 6), timestamps, softDeletes
 - [x] 📂 Create migration `create_schedule_days_table` — id, employee_schedule_id (FK cascadeOnDelete), day_of_week (smallint 1-7 ISO), is_day_off (bool default false), expected_start (time nullable), expected_lunch_start (time nullable), expected_lunch_end (time nullable), expected_end (time nullable), timestamps. UNIQUE(employee_schedule_id, day_of_week)
 - [x] 🔧 Create `WorkdayType` enum: FULL, PARTIAL
 - [x] 🔧 Create `EmployeeSchedule` model — HasPublicId, SoftDeletes, hasMany(ScheduleDay), belongsTo(EmploymentPeriod), scope effective(date), method dayConfig(dayOfWeek), method workingDays()

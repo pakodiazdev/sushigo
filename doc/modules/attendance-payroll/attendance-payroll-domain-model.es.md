@@ -450,7 +450,6 @@ erDiagram
 |-------|------|------|---------|-------------|-----|
 | `id` | bigint | NO | auto | PK | — |
 | `employment_period_id` | bigint FK | NO | — | Periodo laboral asociado. | RF-09 |
-| `name` | varchar(100) | NO | — | Nombre descriptivo (ej: "Horario completo enero 2026"). | RF-08 |
 | `effective_from` | date | NO | — | Inicio de vigencia. | RF-09 |
 | `effective_to` | date | SÍ | NULL | Fin de vigencia. NULL = vigente. | RF-09 |
 | `workday_type` | enum | NO | — | `FULL` (jornada completa) o `PARTIAL` (variable). | RF-10 |
