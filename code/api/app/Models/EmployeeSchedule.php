@@ -35,7 +35,6 @@ class EmployeeSchedule extends Model
 
     protected $fillable = [
         'employment_period_id',
-        'name',
         'effective_from',
         'effective_to',
         'workday_type',

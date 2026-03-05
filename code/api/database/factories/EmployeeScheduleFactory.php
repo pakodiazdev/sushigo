@@ -19,7 +19,6 @@ class EmployeeScheduleFactory extends Factory
         return [
             'public_id' => (string) Str::ulid(),
             'employment_period_id' => EmploymentPeriod::factory(),
-            'name' => 'Horario '.fake()->words(2, true),
             'effective_from' => $effectiveFrom,
             'effective_to' => null, // open-ended (current)
             'workday_type' => fake()->randomElement(['FULL', 'PARTIAL']),
@@ -83,11 +82,4 @@ class EmployeeScheduleFactory extends Factory
         return $this->state(fn () => ['working_days_per_week' => $days]);
     }
 
-    /**
-     * Set a specific schedule name.
-     */
-    public function withName(string $name): static
-    {
-        return $this->state(fn () => ['name' => $name]);
-    }
 }

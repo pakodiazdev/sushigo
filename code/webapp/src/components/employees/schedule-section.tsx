@@ -50,7 +50,7 @@ interface ScheduleDialogProps {
 }
 
 function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
-  const { isOpen, close, view } = ctx
+  const { isOpen, close, view, isTransitioning } = ctx
   const [visible, setVisible] = useState(false)
   const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null)
 
@@ -113,41 +113,46 @@ function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
           </button>
         </div>
 
-        {/* Body — switches between schedule view and create form */}
-        {view === 'create' ? (
-          <CreateScheduleForm
-            employeeId={employee.id}
-            periodId={ctx.periodId}
-            hasExistingSchedule={!!ctx.schedule}
-            onSuccess={ctx.onScheduleCreated}
-            onCancel={ctx.showSchedule}
-          />
-        ) : (
-          <>
-            <div className="p-5">
-              {ctx.isLoading ? (
-                <ScheduleSkeleton />
-              ) : ctx.isError ? (
-                <p className="text-sm text-muted-foreground">Error al cargar el horario.</p>
-              ) : ctx.schedule ? (
-                <ScheduleContent schedule={ctx.schedule} employeeId={employee.id} periodId={ctx.periodId} />
-              ) : (
-                <EmptySchedule canCreate={!!ctx.periodId} />
-              )}
-            </div>
+        {/* Body — switches between schedule view and create form, with fade */}
+        <div
+          className="transition-opacity duration-[150ms]"
+          style={{ opacity: isTransitioning ? 0 : 1 }}
+        >
+          {view === 'create' ? (
+            <CreateScheduleForm
+              employeeId={employee.id}
+              periodId={ctx.periodId}
+              hasExistingSchedule={!!ctx.schedule}
+              onSuccess={ctx.onScheduleCreated}
+              onCancel={ctx.showSchedule}
+            />
+          ) : (
+            <>
+              <div className="p-5">
+                {ctx.isLoading ? (
+                  <ScheduleSkeleton />
+                ) : ctx.isError ? (
+                  <p className="text-sm text-muted-foreground">Error al cargar el horario.</p>
+                ) : ctx.schedule ? (
+                  <ScheduleContent schedule={ctx.schedule} employeeId={employee.id} periodId={ctx.periodId} />
+                ) : (
+                  <EmptySchedule canCreate={!!ctx.periodId} />
+                )}
+              </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between border-t px-5 py-3">
-              {ctx.periodId && !ctx.isLoading ? (
-                <Button type="button" size="sm" onClick={ctx.showCreate}>
-                  <Plus className="mr-1 h-4 w-4" />
-                  {ctx.schedule ? 'Nuevo horario' : 'Crear horario'}
-                </Button>
-              ) : <span />}
-              <Button type="button" variant="outline" size="sm" onClick={close}>Cerrar</Button>
-            </div>
-          </>
-        )}
+              {/* Footer */}
+              <div className="flex items-center justify-between border-t px-5 py-3">
+                {ctx.periodId && !ctx.isLoading ? (
+                  <Button type="button" size="sm" onClick={ctx.showCreate}>
+                    <Plus className="mr-1 h-4 w-4" />
+                    {ctx.schedule ? 'Nuevo horario' : 'Crear horario'}
+                  </Button>
+                ) : <span />}
+                <Button type="button" variant="outline" size="sm" onClick={close}>Cerrar</Button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -185,15 +190,10 @@ function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, onSucce
           </div>
         )}
 
-        {/* Name + Date */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="Nombre" error={errors.name?.message} required>
-            <Input placeholder="Horario estándar" error={!!errors.name} {...register('name')} />
-          </FormField>
-          <FormField label="Vigente desde" error={errors.effective_from?.message} required>
-            <Input type="date" error={!!errors.effective_from} {...register('effective_from')} />
-          </FormField>
-        </div>
+        {/* Date */}
+        <FormField label="Vigente desde" error={errors.effective_from?.message} required>
+          <Input type="date" error={!!errors.effective_from} {...register('effective_from')} />
+        </FormField>
 
         {/* Shared work hours */}
         <div>
@@ -287,7 +287,6 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-medium">{schedule.name}</span>
         <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
           {schedule.workday_type === 'FULL' ? 'Jornada completa' : 'Jornada parcial'}
         </span>

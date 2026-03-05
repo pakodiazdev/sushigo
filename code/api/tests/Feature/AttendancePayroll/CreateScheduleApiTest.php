@@ -57,7 +57,6 @@ class CreateScheduleApiTest extends TestCase
         ])->toArray();
 
         return array_merge([
-            'name'                  => 'Horario estándar',
             'effective_from'        => '2026-03-01',
             'workday_type'          => 'FULL',
             'working_days_per_week' => 5,
@@ -74,14 +73,12 @@ class CreateScheduleApiTest extends TestCase
         );
 
         $response->assertStatus(201)
-            ->assertJsonPath('data.name', 'Horario estándar')
             ->assertJsonPath('data.workday_type', 'FULL')
             ->assertJsonPath('data.working_days_per_week', 5)
             ->assertJsonCount(7, 'data.days');
 
         $this->assertDatabaseHas('employee_schedules', [
             'employment_period_id'  => $this->period->id,
-            'name'                  => 'Horario estándar',
             'effective_from'        => '2026-03-01',
             'effective_to'          => null,
         ]);

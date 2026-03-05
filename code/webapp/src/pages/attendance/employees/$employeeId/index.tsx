@@ -76,7 +76,6 @@ function SchedulePanel({ schedule }: { schedule: NonNullable<ReturnType<typeof u
     <div className="rounded-md border">
       {/* Header info */}
       <div className="flex flex-wrap gap-3 border-b px-4 py-3 text-sm">
-        <span className="font-medium">{schedule.name}</span>
         <Badge>{schedule.workday_type === 'FULL' ? 'Jornada completa' : 'Jornada parcial'}</Badge>
         <span className="text-muted-foreground">
           {schedule.working_days_per_week} días/semana

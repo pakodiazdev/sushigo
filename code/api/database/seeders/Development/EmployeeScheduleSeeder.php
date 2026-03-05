@@ -82,7 +82,6 @@ class EmployeeScheduleSeeder extends OnceSeeder
             // (effective_to = NULL, workday_type = FULL, working_days_per_week = 6)
             $schedule = EmployeeSchedule::factory()->current()->create([
                 'employment_period_id' => $period->id,
-                'name' => "Horario {$templateKey} — {$period->employee->code}",
                 'effective_from' => $period->start_date,
                 'working_days_per_week' => 6,
                 'workday_type' => WorkdayType::FULL,

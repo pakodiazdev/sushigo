@@ -18,7 +18,6 @@ class CreateScheduleAction
      *
      * @param  EmploymentPeriod  $period
      * @param  array{
-     *     name: string,
      *     effective_from: string,
      *     workday_type: string,
      *     working_days_per_week: int,
@@ -44,7 +43,6 @@ class CreateScheduleAction
                 ->update(['effective_to' => Carbon::parse($effectiveFrom)->subDay()->toDateString()]);
 
             $schedule = $period->employeeSchedules()->create([
-                'name'                  => $data['name'],
                 'effective_from'        => $effectiveFrom,
                 'effective_to'          => null,
                 'workday_type'          => $data['workday_type'],

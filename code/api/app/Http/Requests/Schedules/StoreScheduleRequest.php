@@ -9,9 +9,8 @@ use Illuminate\Validation\Rule;
 /**
  * @OA\Schema(
  *   schema="StoreScheduleRequest",
- *   required={"name","effective_from","workday_type","working_days_per_week","days"},
+ *   required={"effective_from","workday_type","working_days_per_week","days"},
  *
- *   @OA\Property(property="name", type="string", maxLength=100, example="Horario estándar"),
  *   @OA\Property(property="effective_from", type="string", format="date", example="2026-03-01"),
  *   @OA\Property(property="workday_type", type="string", enum={"FULL","PARTIAL"}, example="FULL"),
  *   @OA\Property(property="working_days_per_week", type="integer", minimum=1, maximum=7, example=5),
@@ -46,7 +45,6 @@ class StoreScheduleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'                    => ['required', 'string', 'max:100'],
             'effective_from'          => ['required', 'date'],
             'workday_type'            => ['required', 'string', Rule::in(array_column(WorkdayType::cases(), 'value'))],
             'working_days_per_week'   => ['required', 'integer', 'min:1', 'max:7'],

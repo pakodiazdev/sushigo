@@ -10,7 +10,6 @@ use App\Http\Resources\BaseResource;
  *     title="Schedule Response",
  *
  *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
- *     @OA\Property(property="name", type="string", example="Horario estándar"),
  *     @OA\Property(property="effective_from", type="string", format="date", example="2026-03-01"),
  *     @OA\Property(property="effective_to", type="string", format="date", nullable=true, example=null),
  *     @OA\Property(property="workday_type", type="string", enum={"FULL","PARTIAL"}, example="FULL"),
@@ -45,7 +44,6 @@ class ScheduleResource extends BaseResource
         return [
             'id'                     => $this->public_id,
             'employment_period_id'   => $this->whenLoaded('employmentPeriod', fn () => $this->employmentPeriod->public_id),
-            'name'                   => $this->name,
             'effective_from'         => $this->effective_from?->toDateString(),
             'effective_to'           => $this->effective_to?->toDateString(),
             'workday_type'           => $this->workday_type,

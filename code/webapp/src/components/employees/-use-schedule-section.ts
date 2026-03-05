@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { scheduleApi } from '@/services/schedule-api'
@@ -8,6 +8,7 @@ export type ScheduleDialogView = 'schedule' | 'create'
 export function useScheduleSection(employeeId: string) {
   const [isOpen, setIsOpen] = useState(false)
   const [view, setView] = useState<ScheduleDialogView>('schedule')
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
   const scheduleQuery = useQuery({
     queryKey: ['employees', employeeId, 'current-schedule'],
@@ -32,6 +33,14 @@ export function useScheduleSection(employeeId: string) {
   const schedule = scheduleQuery.data?.schedule ?? null
   const periodId = scheduleQuery.data?.periodId ?? null
 
+  const switchView = useCallback((target: ScheduleDialogView) => {
+    setIsTransitioning(true)
+    setTimeout(() => {
+      setView(target)
+      setIsTransitioning(false)
+    }, 150)
+  }, [])
+
   function open() {
     setView('schedule')
     setIsOpen(true)
@@ -42,23 +51,16 @@ export function useScheduleSection(employeeId: string) {
     setView('schedule')
   }
 
-  function showCreate() {
-    setView('create')
-  }
-
-  function showSchedule() {
-    setView('schedule')
-  }
-
-  function onScheduleCreated() {
-    setView('schedule')
-  }
+  function showCreate() { switchView('create') }
+  function showSchedule() { switchView('schedule') }
+  function onScheduleCreated() { switchView('schedule') }
 
   return {
     isOpen,
     open,
     close,
     view,
+    isTransitioning,
     showCreate,
     showSchedule,
     onScheduleCreated,

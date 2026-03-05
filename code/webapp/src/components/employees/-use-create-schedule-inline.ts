@@ -10,7 +10,6 @@ import { DAY_LABELS, LUNCH_DURATION_OPTIONS } from '@/types/schedule'
 
 const schema = z
   .object({
-    name:                    z.string().min(1, 'El nombre es requerido').max(100),
     effective_from:          z.string().min(1, 'La fecha de vigencia es requerida'),
     expected_start:          z.string().min(1, 'La hora de entrada es requerida'),
     expected_lunch_start:    z.string().optional(),
@@ -78,7 +77,6 @@ function buildPayload(values: CreateScheduleSimpleValues) {
   })
 
   return {
-    name:                   values.name,
     effective_from:         values.effective_from,
     workday_type:           'FULL' as const,
     working_days_per_week:  workingDays,
@@ -99,7 +97,6 @@ export function useCreateScheduleInline(
   const form = useForm<CreateScheduleSimpleValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name:                   'Horario estándar',
       effective_from:         '',
       expected_start:         '',
       expected_lunch_start:   '',

@@ -32,7 +32,6 @@ export interface ScheduleDayOverride {
 export interface EmployeeSchedule {
   id: string // ULID
   employment_period_id: string // ULID of the employment period
-  name: string
   effective_from: string  // 'YYYY-MM-DD'
   effective_to: string | null
   workday_type: WorkdayType
@@ -75,7 +74,6 @@ export function formatLunchDuration(minutes: number | null | undefined): string 
 }
 
 export interface CreateScheduleFormValues {
-  name: string
   effective_from: string
   workday_type: WorkdayType
   working_days_per_week: string  // string for select; converted to int on submit
