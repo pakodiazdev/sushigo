@@ -2,7 +2,12 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string
-  // more env variables...
+  /**
+   * Clock format used throughout the UI.
+   * '12' = h:mm AM/PM (default)  |  '24' = HH:mm
+   * @see doc/conventions/frontend/time-format.md
+   */
+  readonly VITE_TIME_FORMAT?: '12' | '24'
 }
 
 interface ImportMeta {

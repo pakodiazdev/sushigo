@@ -6,6 +6,12 @@ import { LUNCH_DURATION_OPTIONS } from '@/types/schedule'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Alcance temporal de un ajuste de día:
+ *   single_date  → solo la fecha indicada (excepción puntual)
+ *   range        → rango con fecha de fin (excepción temporal)
+ *   indefinite   → desde la fecha indicada, sin fin (cambio permanente de ese día)
+ */
 export type OverrideScope = 'single_date' | 'range' | 'indefinite'
 
 export interface EditDayValues {
@@ -87,13 +93,16 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
         : null
 
       // Resolve effective_to based on scope
+      // single_date  → same-day range (from = to)
+      // range        → explicit end date chosen by user
+      // indefinite   → no end date (permanent per-day adjustment)
       let resolvedTo: string | null = null
       if (scope === 'single_date') {
         resolvedTo = effectiveFrom
       } else if (scope === 'range') {
         resolvedTo = effectiveTo
       } else {
-        resolvedTo = null // indefinite
+        resolvedTo = null // indefinite — no expiry
       }
 
       return scheduleApi.createDayOverride(periodId, {
@@ -117,8 +126,15 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
     },
   })
 
-  function startEdit(day: ScheduleDay, allDays?: ScheduleDay[]) {
+  function startEdit(day: ScheduleDay, allDays?: ScheduleDay[], prefillValues?: EditDayValues) {
     setEditingDow(day.day_of_week)
+
+    // When explicit pre-fill values are given (e.g. pre-loading from an active
+    // permanent override), use them directly without any template logic.
+    if (prefillValues) {
+      setEditValues(prefillValues)
+      return
+    }
 
     // When editing a rest day, pre-fill times from the nearest previous working
     // day so the user gets a sensible starting point instead of empty fields.

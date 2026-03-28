@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CalendarDays, X, Plus, Pencil, Check, Ban, Zap, ArrowLeft, AlertTriangle } from 'lucide-react'
+import { CalendarDays, X, Plus, Pencil, Check, Ban, Zap, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/ui/form-fields'
@@ -12,6 +12,9 @@ import { useCreateScheduleInline } from './-use-create-schedule-inline'
 import type { CreateScheduleSimpleValues } from './-use-create-schedule-inline'
 import { useCreateDayOverride } from './-use-create-day-override'
 import type { OverrideScope, EditDayValues } from './-use-create-day-override'
+import { useWeeklyCalendar, resolveWeek, addDays, fmtDayShort } from './-use-weekly-calendar'
+import type { ResolvedDay } from './-use-weekly-calendar'
+import { formatTime } from '@/lib/time-format'
 
 // ── Section (trigger inside detail view) ─────────────────────────────────────
 
@@ -276,6 +279,9 @@ interface ScheduleContentProps {
 
 function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProps) {
   const override = useCreateDayOverride(employeeId, periodId)
+  const [viewMode, setViewMode] = useState<'config' | 'week'>('config')
+  const { weekStart, prevWeek, nextWeek, jumpToDate, overrideListDow, openOverrideList, closeOverrideList } =
+    useWeeklyCalendar()
 
   const overridesByDow = (schedule.active_overrides ?? []).reduce<Record<number, ScheduleDayOverride[]>>(
     (acc, o) => ({ ...acc, [o.day_of_week]: [...(acc[o.day_of_week] ?? []), o] }),
@@ -284,6 +290,39 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
 
   const sortedDays = [...(schedule.days ?? [])].sort((a, b) => a.day_of_week - b.day_of_week)
 
+  // Use the browser's local date so that late-evening sessions in Mexico don't
+  // accidentally roll over to UTC tomorrow when checking if an override is active.
+  const todayLocal = (() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })()
+
+  const totalWeeklyHours = sortedDays.reduce<number>((sum, day) => {
+    return sum + (calcDayHours(day.expected_start, day.expected_end, day.lunch_duration_minutes) ?? 0)
+  }, 0)
+
+  // Expected hours: 8h/day × working days (only for FULL jornada)
+  const expectedWeeklyHours = schedule.workday_type === 'FULL' ? schedule.working_days_per_week * 8 : null
+  const pendingHours = expectedWeeklyHours !== null ? Math.max(0, expectedWeeklyHours - totalWeeklyHours) : null
+
+  const overridesForDow =
+    overrideListDow !== null
+      ? (schedule.active_overrides ?? []).filter((o) => o.day_of_week === overrideListDow)
+      : []
+
+  const handleOverrideSelect = (o: ScheduleDayOverride) => {
+    closeOverrideList()
+    jumpToDate(o.effective_from)
+    setViewMode('week')
+  }
+
+  const tabCls = (mode: 'config' | 'week') =>
+    `px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+      viewMode === mode
+        ? 'border-primary text-primary'
+        : 'border-transparent text-muted-foreground hover:text-foreground'
+    }`
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -291,91 +330,208 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
           {schedule.workday_type === 'FULL' ? 'Jornada completa' : 'Jornada parcial'}
         </span>
         <span className="text-muted-foreground">{schedule.working_days_per_week} días/sem</span>
+        {expectedWeeklyHours !== null ? (
+          <span className="font-medium tabular-nums">
+            {formatHours(totalWeeklyHours > 0 ? totalWeeklyHours : null)} de {formatHours(expectedWeeklyHours)}
+          </span>
+        ) : (
+          <span className="font-medium tabular-nums">{formatHours(totalWeeklyHours > 0 ? totalWeeklyHours : null)}/sem</span>
+        )}
+        {pendingHours !== null && pendingHours > 0 && (
+          <span className="text-xs text-amber-600 dark:text-amber-400">· {formatHours(pendingHours)} pendientes</span>
+        )}
         <span className="text-muted-foreground">
           Desde {new Date(schedule.effective_from).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/40 text-xs font-medium text-muted-foreground">
-              <th className="py-2 pl-3 pr-2 text-left">Día</th>
-              <th className="py-2 pr-2 text-left">Entrada</th>
-              <th className="py-2 pr-2 text-left">Inicio comida</th>
-              <th className="py-2 pr-2 text-left">Duración</th>
-              <th className="py-2 pr-2 text-left">Salida</th>
-              {periodId && <th className="py-2 pr-3 text-left" />}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedDays.map((day) => {
-              const hasOverride = !!(overridesByDow[day.day_of_week]?.length)
-              const isEditing = override.editingDow === day.day_of_week
-
-              if (isEditing && override.editValues) {
-                return (
-                  <EditRow
-                    key={day.day_of_week}
-                    day={day}
-                    values={override.editValues}
-                    errors={override.editErrors}
-                    hasErrors={override.hasEditErrors}
-                    isPending={override.isPending}
-                    onUpdate={override.updateEditField}
-                    onToggleDayOff={override.toggleDayOff}
-                    onSave={override.openScopeDialog}
-                    onCancel={override.cancelEdit}
-                    lunchOptions={override.lunchOptions}
-                    showActions={!!periodId}
-                  />
-                )
-              }
-
-              return (
-                <ReadRow
-                  key={day.day_of_week}
-                  day={day}
-                  hasOverride={hasOverride}
-                  onEdit={() => override.startEdit(day, sortedDays)}
-                  showActions={!!periodId}
-                />
-              )
-            })}
-          </tbody>
-        </table>
+      {/* View tabs */}
+      <div className="flex border-b">
+        <button className={tabCls('config')} onClick={() => setViewMode('config')}>Configuración</button>
+        <button className={tabCls('week')} onClick={() => setViewMode('week')}>Vista semanal</button>
       </div>
 
-      {override.scopeOpen && override.editingDow && (
-        <OverrideScopeDialog
-          dayLabel={DAY_LABELS[override.editingDow] ?? ''}
-          isPending={override.isPending}
-          isError={override.isError}
-          onSubmit={override.submit}
-          onClose={override.closeScopeDialog}
+      {viewMode === 'config' ? (
+        <>
+          <div className="overflow-x-auto rounded border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40 text-xs font-medium text-muted-foreground">
+                  <th className="py-2 pl-3 pr-2 text-left">Día</th>
+                  <th className="py-2 pr-2 text-left">Entrada</th>
+                  <th className="py-2 pr-2 text-left">Inicio comida</th>
+                  <th className="py-2 pr-2 text-left">Duración</th>
+                  <th className="py-2 pr-2 text-left">Salida</th>
+                  <th className="py-2 pr-2 text-right">Hrs</th>
+                  {periodId && <th className="py-2 pr-3 text-left" />}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedDays.map((day) => {
+                  const allOverridesForDow = overridesByDow[day.day_of_week] ?? []
+                  // An indefinite override that has already started is treated as
+                  // the day's current effective schedule, not as an "exception".
+                  const permanentOverride =
+                    allOverridesForDow.find(
+                      (o) => o.effective_to === null && o.effective_from <= todayLocal,
+                    ) ?? null
+                  // Any override that is NOT the active permanent one is a
+                  // temporary exception (single date, range, or future indefinite).
+                  const hasTemporaryOverride = allOverridesForDow.some((o) => o !== permanentOverride)
+                  const isEditing = override.editingDow === day.day_of_week
+
+                  if (isEditing && override.editValues) {
+                    return (
+                      <EditRow
+                        key={day.day_of_week}
+                        day={day}
+                        values={override.editValues}
+                        errors={override.editErrors}
+                        hasErrors={override.hasEditErrors}
+                        isPending={override.isPending}
+                        onUpdate={override.updateEditField}
+                        onToggleDayOff={override.toggleDayOff}
+                        onSave={override.openScopeDialog}
+                        onCancel={override.cancelEdit}
+                        lunchOptions={override.lunchOptions}
+                        showActions={!!periodId}
+                      />
+                    )
+                  }
+
+                  return (
+                    <ReadRow
+                      key={day.day_of_week}
+                      day={day}
+                      permanentOverride={permanentOverride}
+                      hasTemporaryOverride={hasTemporaryOverride}
+                      onEdit={() => {
+                        if (permanentOverride) {
+                          // Pre-fill the edit form from the currently active
+                          // permanent override, not from the base schedule day.
+                          const prefill: EditDayValues = {
+                            is_day_off: permanentOverride.is_day_off,
+                            expected_start: permanentOverride.expected_start ?? '',
+                            expected_lunch_start: permanentOverride.expected_lunch_start ?? '',
+                            lunch_duration_minutes:
+                              permanentOverride.lunch_duration_minutes != null
+                                ? String(permanentOverride.lunch_duration_minutes)
+                                : '',
+                            expected_end: permanentOverride.expected_end ?? '',
+                          }
+                          override.startEdit(day, sortedDays, prefill)
+                        } else {
+                          override.startEdit(day, sortedDays)
+                        }
+                      }}
+                      onClickOverride={
+                        allOverridesForDow.length > 0
+                          ? () => openOverrideList(day.day_of_week)
+                          : undefined
+                      }
+                      showActions={!!periodId}
+                    />
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {override.scopeOpen && override.editingDow && (
+            <OverrideScopeDialog
+              dayLabel={DAY_LABELS[override.editingDow] ?? ''}
+              dayOfWeek={override.editingDow}
+              existingOverrides={overridesByDow[override.editingDow] ?? []}
+              isPending={override.isPending}
+              isError={override.isError}
+              onSubmit={override.submit}
+              onClose={override.closeScopeDialog}
+            />
+          )}
+        </>
+      ) : (
+        <WeeklyCalendar
+          schedule={schedule}
+          weekStart={weekStart}
+          prevWeek={prevWeek}
+          nextWeek={nextWeek}
+          openOverrideList={openOverrideList}
+        />
+      )}
+
+      {/* OverrideListDialog — shared between Configuración and Vista semanal */}
+      {overrideListDow !== null && (
+        <OverrideListDialog
+          dow={overrideListDow}
+          dayLabel={DAY_LABELS[overrideListDow] ?? ''}
+          overrides={overridesForDow}
+          onSelect={handleOverrideSelect}
+          onClose={closeOverrideList}
         />
       )}
     </div>
   )
 }
 
+// ── Hours helpers ─────────────────────────────────────────────────────────────
+
+function calcDayHours(start: string | null, end: string | null, lunchMinutes: number | null): number | null {
+  if (!start || !end) return null
+  const toMin = (t: string) => { const [h = 0, m = 0] = t.split(':').map(Number); return h * 60 + m }
+  const startMin = toMin(start)
+  const endMin = toMin(end)
+  // Handle cross-midnight shifts (e.g. 19:00 → 04:00)
+  const span = endMin >= startMin ? endMin - startMin : endMin + 1440 - startMin
+  const net = span - (lunchMinutes ?? 0)
+  return net > 0 ? net / 60 : null
+}
+
+function formatHours(h: number | null): string {
+  if (h === null) return '—'
+  const total = Math.round(h * 60)
+  const hours = Math.floor(total / 60)
+  const mins = total % 60
+  return mins === 0 ? `${hours}h` : `${hours}h ${mins}m`
+}
+
 // ── ReadRow ───────────────────────────────────────────────────────────────────
 
 interface ReadRowProps {
   day: ScheduleDay
-  hasOverride: boolean
+  /** An indefinite override whose effective_from ≤ today — treated as the
+   *  day's current schedule rather than a temporary exception. */
+  permanentOverride: ScheduleDayOverride | null
+  /** True when there are active/upcoming overrides besides the permanentOverride. */
+  hasTemporaryOverride: boolean
   onEdit: () => void
+  onClickOverride?: () => void
   showActions: boolean
 }
 
-function ReadRow({ day, hasOverride, onEdit, showActions }: ReadRowProps) {
-  if (day.is_day_off) {
+function ReadRow({ day, permanentOverride, hasTemporaryOverride, onEdit, onClickOverride, showActions }: ReadRowProps) {
+  const hasPermanentOverride = permanentOverride !== null
+  // The effective day-off state: override wins over base when active.
+  const effectiveIsDayOff = permanentOverride ? permanentOverride.is_day_off : day.is_day_off
+
+  // Row tint: amber when a permanent change is in effect; dim when a base rest day.
+  const rowCls = hasPermanentOverride
+    ? 'border-b last:border-0 bg-amber-50/40 dark:bg-amber-950/15'
+    : effectiveIsDayOff
+      ? 'border-b last:border-0 opacity-40'
+      : 'border-b last:border-0'
+
+  if (effectiveIsDayOff) {
     return (
-      <tr className="border-b last:border-0 opacity-40">
+      <tr className={rowCls}>
         <td className="py-2 pl-3 pr-2 font-medium">
-          <DayLabel label={DAY_LABELS[day.day_of_week] ?? ''} hasOverride={hasOverride} />
+          <DayLabel
+            label={DAY_LABELS[day.day_of_week] ?? ''}
+            hasTemporaryOverride={hasTemporaryOverride}
+            hasPermanentOverride={hasPermanentOverride}
+            onClickOverride={onClickOverride}
+          />
         </td>
-        <td colSpan={4} className="py-2 pr-2 italic text-muted-foreground">Descanso</td>
+        <td colSpan={5} className="py-2 pr-2 italic text-muted-foreground">Descanso</td>
         {showActions && (
           <td className="py-2 pr-3">
             <button onClick={onEdit} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Agregar excepción">
@@ -387,15 +543,29 @@ function ReadRow({ day, hasOverride, onEdit, showActions }: ReadRowProps) {
     )
   }
 
+  // Working day — use override values when a permanent change is active.
+  const displayStart = permanentOverride ? permanentOverride.expected_start : day.expected_start
+  const displayLunchStart = permanentOverride ? permanentOverride.expected_lunch_start : day.expected_lunch_start
+  const displayLunchDuration = permanentOverride ? permanentOverride.lunch_duration_minutes : day.lunch_duration_minutes
+  const displayEnd = permanentOverride ? permanentOverride.expected_end : day.expected_end
+
   return (
-    <tr className="border-b last:border-0">
+    <tr className={rowCls}>
       <td className="py-2 pl-3 pr-2 font-medium">
-        <DayLabel label={DAY_LABELS[day.day_of_week] ?? ''} hasOverride={hasOverride} />
+        <DayLabel
+          label={DAY_LABELS[day.day_of_week] ?? ''}
+          hasTemporaryOverride={hasTemporaryOverride}
+          hasPermanentOverride={hasPermanentOverride}
+          onClickOverride={onClickOverride}
+        />
       </td>
-      <td className="py-2 pr-2 text-muted-foreground">{day.expected_start ?? '—'}</td>
-      <td className="py-2 pr-2 text-muted-foreground">{day.expected_lunch_start ?? '—'}</td>
-      <td className="py-2 pr-2 text-muted-foreground">{formatLunchDuration(day.lunch_duration_minutes)}</td>
-      <td className="py-2 pr-2 text-muted-foreground">{day.expected_end ?? '—'}</td>
+      <td className="py-2 pr-2 text-muted-foreground">{formatTime(displayStart)}</td>
+      <td className="py-2 pr-2 text-muted-foreground">{formatTime(displayLunchStart)}</td>
+      <td className="py-2 pr-2 text-muted-foreground">{formatLunchDuration(displayLunchDuration)}</td>
+      <td className="py-2 pr-2 text-muted-foreground">{formatTime(displayEnd)}</td>
+      <td className="py-2 pr-2 text-right tabular-nums text-muted-foreground">
+        {formatHours(calcDayHours(displayStart, displayEnd, displayLunchDuration))}
+      </td>
       {showActions && (
         <td className="py-2 pr-3">
           <button onClick={onEdit} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Agregar excepción">
@@ -455,6 +625,13 @@ function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, onToggle
           {errors.expected_end && <span className="text-[10px] text-red-600">{errors.expected_end}</span>}
         </div>
       </td>
+      <td className="py-2 pr-2 text-right tabular-nums text-muted-foreground text-xs">
+        {formatHours(values.is_day_off ? null : calcDayHours(
+          values.expected_start,
+          values.expected_end,
+          values.lunch_duration_minutes ? Number(values.lunch_duration_minutes) : null,
+        ))}
+      </td>
       {showActions && (
         <td className="py-2 pr-3">
           <div className="flex items-center gap-1">
@@ -469,14 +646,62 @@ function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, onToggle
 
 // ── DayLabel ─────────────────────────────────────────────────────────────────
 
-function DayLabel({ label, hasOverride }: { label: string; hasOverride: boolean }) {
+/**
+ * Three visual states:
+ *   ⚡ (Zap)  — hasTemporaryOverride: there are active/upcoming exceptions
+ *   ● (dot)   — hasPermanentOverride only: the day's schedule was permanently
+ *               changed and that change is already in effect (it IS the schedule)
+ *   (nothing) — no overrides
+ *
+ * Temporary exceptions take visual priority when both flags are true.
+ */
+function DayLabel({
+  label,
+  hasTemporaryOverride,
+  hasPermanentOverride,
+  onClickOverride,
+}: {
+  label: string
+  hasTemporaryOverride: boolean
+  hasPermanentOverride: boolean
+  onClickOverride?: () => void
+}) {
+  const showZap = hasTemporaryOverride
+  const showDot = !hasTemporaryOverride && hasPermanentOverride
+
   return (
     <span className="flex items-center gap-1">
       {label}
-      {hasOverride && (
-        <span title="Tiene una excepción activa o próxima">
-          <Zap className="h-3 w-3 text-amber-500" aria-hidden />
-        </span>
+      {showZap && (
+        onClickOverride ? (
+          <button
+            onClick={onClickOverride}
+            title="Ver excepciones"
+            className="rounded p-0.5 hover:bg-amber-100 dark:hover:bg-amber-900"
+          >
+            <Zap className="h-3 w-3 text-amber-500" />
+          </button>
+        ) : (
+          <span title="Tiene una excepción activa o próxima">
+            <Zap className="h-3 w-3 text-amber-500" aria-hidden />
+          </span>
+        )
+      )}
+      {showDot && (
+        onClickOverride ? (
+          <button
+            onClick={onClickOverride}
+            title="Cambio permanente activo — ver historial"
+            className="rounded p-0.5 hover:bg-amber-100 dark:hover:bg-amber-900"
+          >
+            <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+          </button>
+        ) : (
+          <span
+            className="inline-block h-2 w-2 rounded-full bg-amber-500"
+            title="Cambio permanente activo"
+          />
+        )
       )}
     </span>
   )
@@ -484,25 +709,98 @@ function DayLabel({ label, hasOverride }: { label: string; hasOverride: boolean 
 
 // ── OverrideScopeDialog ───────────────────────────────────────────────────────
 
+/** Returns the next calendar date (local) that falls on the given ISO day-of-week (1=Mon … 7=Sun). */
+function nextDateForDow(dow: number): string {
+  const jsTarget = dow === 7 ? 0 : dow
+  const today = new Date()
+  const daysAhead = (jsTarget - today.getDay() + 7) % 7 // 0 = today, >0 = next occurrence
+  const result = new Date(today)
+  result.setDate(today.getDate() + daysAhead)
+  const y = result.getFullYear()
+  const m = String(result.getMonth() + 1).padStart(2, '0')
+  const d = String(result.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 interface OverrideScopeDialogProps {
   dayLabel: string
+  dayOfWeek: number
+  existingOverrides: ScheduleDayOverride[]
   isPending: boolean
   isError: boolean
   onSubmit: (params: { scope: OverrideScope; effectiveFrom: string; effectiveTo: string | null; note: string }) => void
   onClose: () => void
 }
 
-function OverrideScopeDialog({ dayLabel, isPending, isError, onSubmit, onClose }: OverrideScopeDialogProps) {
+/**
+ * Detect existing overrides that overlap with the proposed [newFrom, newTo] range.
+ * null newTo means indefinite (treated as +∞ via sentinel '9999-12-31').
+ * Overlap condition: newFrom <= oTo AND oFrom <= newTo  (null = +∞)
+ */
+function detectConflicts(
+  newFrom: string,
+  newTo: string | null,
+  existing: ScheduleDayOverride[],
+): ScheduleDayOverride[] {
+  const INF = '9999-12-31'
+  const newToStr = newTo ?? INF
+  return existing.filter((o) => {
+    const oToStr = o.effective_to ?? INF
+    return newFrom <= oToStr && o.effective_from <= newToStr
+  })
+}
+
+const SCOPE_OPTIONS: { value: OverrideScope; label: string; description: string }[] = [
+  {
+    value: 'single_date',
+    label: 'Solo esta fecha',
+    description: 'Un cambio puntual para una fecha específica.',
+  },
+  {
+    value: 'range',
+    label: 'Rango de fechas',
+    description: 'Aplica durante un período con fecha de fin.',
+  },
+  {
+    value: 'indefinite',
+    label: 'De aquí en adelante',
+    description: 'Solo este día cambia permanentemente. Los demás días conservan su horario.',
+  },
+]
+
+function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending, isError, onSubmit, onClose }: OverrideScopeDialogProps) {
   const [scope, setScope] = useState<OverrideScope>('single_date')
-  const [effectiveFrom, setEffectiveFrom] = useState('')
+  const [effectiveFrom, setEffectiveFrom] = useState(() => nextDateForDow(dayOfWeek))
   const [effectiveTo, setEffectiveTo] = useState('')
   const [note, setNote] = useState('')
+  // step: 'form' → filling dates | 'conflicts' → reviewing conflicts before confirm
+  const [step, setStep] = useState<'form' | 'conflicts'>('form')
+  const [conflicts, setConflicts] = useState<ScheduleDayOverride[]>([])
 
   const today = new Date().toISOString().slice(0, 10)
-  const canSubmit = !!effectiveFrom && (
-    scope === 'single_date' || scope === 'indefinite' ||
-    (scope === 'range' && !!effectiveTo && effectiveTo >= effectiveFrom)
-  )
+  const canSubmit =
+    !!effectiveFrom &&
+    (scope !== 'range' || (!!effectiveTo && effectiveTo >= effectiveFrom))
+
+  const isIndefinite = scope === 'indefinite'
+  const dateLabel = scope === 'single_date' ? 'Fecha' : 'A partir de'
+  const submitLabel = isIndefinite ? 'Aplicar cambio permanente' : 'Guardar excepción'
+
+  function handlePrimaryClick() {
+    // Resolve the effective_to that will be sent (mirrors hook logic)
+    const resolvedTo = scope === 'single_date' ? effectiveFrom : (effectiveTo || null)
+    const found = detectConflicts(effectiveFrom, resolvedTo, existingOverrides)
+    if (found.length > 0) {
+      setConflicts(found)
+      setStep('conflicts')
+    } else {
+      onSubmit({ scope, effectiveFrom, effectiveTo: effectiveTo || null, note })
+    }
+  }
+
+  function handleConfirmConflicts() {
+    onSubmit({ scope, effectiveFrom, effectiveTo: effectiveTo || null, note })
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-[300] flex items-center justify-center px-4">
@@ -511,52 +809,311 @@ function OverrideScopeDialog({ dayLabel, isPending, isError, onSubmit, onClose }
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-500" aria-hidden />
-            <h3 className="text-base font-semibold">Excepción — {dayLabel}</h3>
+            <h3 className="text-base font-semibold">Ajuste — {dayLabel}</h3>
           </div>
           <button onClick={onClose} className="rounded-sm text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
-        <div className="space-y-4 p-5">
-          <fieldset className="space-y-2">
-            <legend className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">¿Cuándo aplica?</legend>
-            {([
-              { value: 'single_date', label: 'Solo esta fecha' },
-              { value: 'range', label: 'Rango de fechas' },
-              { value: 'indefinite', label: 'Indefinido (sin fecha de fin)' },
-            ] as { value: OverrideScope; label: string }[]).map((opt) => (
-              <label key={opt.value} className="flex cursor-pointer items-center gap-2 text-sm">
-                <input type="radio" name="override-scope" value={opt.value} checked={scope === opt.value} onChange={() => setScope(opt.value)} className="h-4 w-4" />
-                {opt.label}
-              </label>
-            ))}
-          </fieldset>
-          <div className="space-y-2">
-            <label className="block text-xs font-medium">
-              {scope === 'single_date' ? 'Fecha' : 'Inicio'}<span className="ml-0.5 text-red-500">*</span>
-            </label>
-            <Input type="date" value={effectiveFrom} min={today} onChange={(e) => setEffectiveFrom(e.target.value)} />
-          </div>
-          {scope === 'range' && (
-            <div className="space-y-2">
-              <label className="block text-xs font-medium">Fin<span className="ml-0.5 text-red-500">*</span></label>
-              <Input type="date" value={effectiveTo} min={effectiveFrom || today} onChange={(e) => setEffectiveTo(e.target.value)} />
+
+        {step === 'form' ? (
+          <>
+            <div className="space-y-4 p-5">
+              <fieldset className="space-y-1">
+                <legend className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">¿Cuándo aplica?</legend>
+                {SCOPE_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-md border p-3 transition-colors ${
+                      scope === opt.value
+                        ? 'border-primary bg-primary/5'
+                        : 'border-transparent hover:border-border hover:bg-muted/40'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="override-scope"
+                      value={opt.value}
+                      checked={scope === opt.value}
+                      onChange={() => setScope(opt.value)}
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                    />
+                    <span className="space-y-0.5">
+                      <span className="block text-sm font-medium">{opt.label}</span>
+                      <span className="block text-xs text-muted-foreground">{opt.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-medium">
+                  {dateLabel}<span className="ml-0.5 text-red-500">*</span>
+                </label>
+                <Input type="date" value={effectiveFrom} min={today} onChange={(e) => setEffectiveFrom(e.target.value)} />
+              </div>
+
+              {scope === 'range' && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium">Hasta<span className="ml-0.5 text-red-500">*</span></label>
+                  <Input type="date" value={effectiveTo} min={effectiveFrom || today} onChange={(e) => setEffectiveTo(e.target.value)} />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-muted-foreground">Motivo (opcional)</label>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Ej. Clases de inglés los jueves"
+                  maxLength={255}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+
+              {isError && <p className="text-xs text-red-600">Ocurrió un error. Intenta de nuevo.</p>}
             </div>
-          )}
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-muted-foreground">Motivo (opcional)</label>
-            <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ej. Paco llega tarde este lunes" maxLength={255} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
-          </div>
-          {isError && <p className="text-xs text-red-600">Ocurrió un error. Intenta de nuevo.</p>}
-        </div>
-        <div className="flex justify-end gap-2 border-t px-5 py-3">
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button type="button" size="sm" disabled={!canSubmit || isPending}
-            onClick={() => onSubmit({ scope, effectiveFrom, effectiveTo: scope === 'range' ? (effectiveTo || null) : null, note })}>
-            {isPending ? 'Guardando…' : 'Guardar excepción'}
-          </Button>
-        </div>
+            <div className="flex justify-end gap-2 border-t px-5 py-3">
+              <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+              <Button type="button" size="sm" disabled={!canSubmit || isPending} onClick={handlePrimaryClick}>
+                {isPending ? 'Guardando…' : submitLabel}
+              </Button>
+            </div>
+          </>
+        ) : (
+          /* ── Paso 2: confirmación de conflictos ─────────────────────── */
+          <>
+            <div className="space-y-3 p-5">
+              <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" aria-hidden />
+                <p className="text-sm text-amber-800 dark:text-amber-300">
+                  Se encontró{conflicts.length === 1 ? '' : 'n'}{' '}
+                  <strong>{conflicts.length} ajuste{conflicts.length === 1 ? '' : 's'}</strong>{' '}
+                  existente{conflicts.length === 1 ? '' : 's'} para {dayLabel} que se cruza{conflicts.length === 1 ? '' : 'n'} con las fechas seleccionadas.
+                </p>
+              </div>
+              <ul className="divide-y rounded-md border text-sm">
+                {conflicts.map((o) => {
+                  const hrs = calcDayHours(o.expected_start, o.expected_end, o.lunch_duration_minutes)
+                  return (
+                    <li key={o.id} className="px-3 py-2.5 space-y-0.5">
+                      <p className="font-medium text-xs text-amber-600 dark:text-amber-400">{overrideDateLabel(o)}</p>
+                      <p className="text-muted-foreground">
+                        {o.is_day_off
+                          ? 'Descanso'
+                          : `${formatTime(o.expected_start)} → ${formatTime(o.expected_end)}${hrs ? ` · ${formatHours(hrs)}` : ''}`}
+                      </p>
+                      {o.note && <p className="text-xs text-muted-foreground">{o.note}</p>}
+                    </li>
+                  )
+                })}
+              </ul>
+              <p className="text-xs text-muted-foreground">
+                El sistema aplicará el ajuste con <strong>fecha de inicio más reciente</strong>. Los ajustes anteriores permanecerán en el registro histórico.
+              </p>
+              {isError && <p className="text-xs text-red-600">Ocurrió un error. Intenta de nuevo.</p>}
+            </div>
+            <div className="flex justify-end gap-2 border-t px-5 py-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => setStep('form')}>← Volver</Button>
+              <Button type="button" size="sm" disabled={isPending} onClick={handleConfirmConflicts}>
+                {isPending ? 'Guardando…' : 'Continuar de todos modos'}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>,
     document.body
+  )
+}
+
+// ── WeeklyCalendar ────────────────────────────────────────────────────────────
+
+interface WeeklyCalendarProps {
+  schedule: EmployeeSchedule
+  weekStart: string
+  prevWeek: () => void
+  nextWeek: () => void
+  openOverrideList: (dow: number) => void
+}
+
+function WeeklyCalendar({ schedule, weekStart, prevWeek, nextWeek, openOverrideList }: WeeklyCalendarProps) {
+  const resolvedDays = resolveWeek(weekStart, schedule.days ?? [], schedule.active_overrides ?? [])
+  const weekEnd = addDays(weekStart, 6)
+  const weekLabel = `${fmtDayShort(weekStart)} – ${fmtDayShort(weekEnd)} ${new Date(weekEnd + 'T00:00:00').getFullYear()}`
+
+  const weeklyHours = resolvedDays.reduce<number>(
+    (sum, d) => sum + (calcDayHours(d.expected_start, d.expected_end, d.lunch_duration_minutes) ?? 0),
+    0,
+  )
+
+  return (
+    <div className="space-y-3">
+      {/* Week navigation */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={prevWeek}
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          title="Semana anterior"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="text-center">
+          <span className="text-sm font-medium">{weekLabel}</span>
+          {weeklyHours > 0 && (
+            <span className="ml-2 text-xs text-muted-foreground">· {formatHours(weeklyHours)} total</span>
+          )}
+        </div>
+        <button
+          onClick={nextWeek}
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          title="Semana siguiente"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Weekly table */}
+      <div className="overflow-x-auto rounded border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/40 text-xs font-medium text-muted-foreground">
+              <th className="py-2 pl-3 pr-2 text-left">Día</th>
+              <th className="py-2 pr-2 text-left">Entrada</th>
+              <th className="py-2 pr-2 text-left">Salida</th>
+              <th className="py-2 pr-3 text-right">Hrs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resolvedDays.map((day) => (
+              <WeekDayRow
+                key={day.date}
+                day={day}
+                onClickOverride={() => openOverrideList(day.dow)}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ── WeekDayRow ────────────────────────────────────────────────────────────────
+
+interface WeekDayRowProps {
+  day: ResolvedDay
+  onClickOverride: () => void
+}
+
+function WeekDayRow({ day, onClickOverride }: WeekDayRowProps) {
+  const isOverride = day.source === 'override'
+  const rowCls = day.is_day_off
+    ? 'border-b last:border-0 opacity-40'
+    : isOverride
+      ? 'border-b last:border-0 bg-amber-50/60 dark:bg-amber-950/20'
+      : 'border-b last:border-0'
+
+  const dayName = DAY_LABELS[day.dow] ?? ''
+  const dateLabel = fmtDayShort(day.date)
+
+  return (
+    <tr className={rowCls}>
+      <td className="py-2 pl-3 pr-2 font-medium">
+        <span className="flex items-center gap-1.5">
+          <span>
+            <span className="font-medium">{dayName}</span>
+            <span className="ml-1 text-xs text-muted-foreground font-normal">{dateLabel}</span>
+          </span>
+          {isOverride && (
+            <button
+              onClick={onClickOverride}
+              title="Ver excepciones"
+              className="rounded p-0.5 hover:bg-amber-100 dark:hover:bg-amber-900"
+            >
+              <Zap className="h-3 w-3 text-amber-500" />
+            </button>
+          )}
+        </span>
+      </td>
+      {day.is_day_off ? (
+        <td colSpan={3} className="py-2 pr-3 italic text-muted-foreground">Descanso</td>
+      ) : (
+        <>
+          <td className="py-2 pr-2 text-muted-foreground">{formatTime(day.expected_start)}</td>
+          <td className="py-2 pr-2 text-muted-foreground">{formatTime(day.expected_end)}</td>
+          <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">
+            {formatHours(calcDayHours(day.expected_start, day.expected_end, day.lunch_duration_minutes))}
+          </td>
+        </>
+      )}
+    </tr>
+  )
+}
+
+// ── OverrideListDialog ────────────────────────────────────────────────────────
+
+interface OverrideListDialogProps {
+  dow: number
+  dayLabel: string
+  overrides: ScheduleDayOverride[]
+  onSelect: (override: ScheduleDayOverride) => void
+  onClose: () => void
+}
+
+function overrideDateLabel(o: ScheduleDayOverride): string {
+  const from = new Date(o.effective_from + 'T00:00:00')
+    .toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+  if (o.effective_to === null) return `desde ${from}`
+  if (o.effective_from === o.effective_to) return from
+  const to = new Date(o.effective_to + 'T00:00:00')
+    .toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+  return `${from} – ${to}`
+}
+
+function OverrideListDialog({ dow: _dow, dayLabel, overrides, onSelect, onClose }: OverrideListDialogProps) {
+  return createPortal(
+    <div className="fixed inset-0 z-[400] flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background shadow-xl">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-amber-500" aria-hidden />
+            <h3 className="text-base font-semibold">Excepciones — {dayLabel}</h3>
+          </div>
+          <button onClick={onClose} className="rounded-sm text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-72 overflow-y-auto">
+          {overrides.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted-foreground">Sin excepciones activas.</p>
+          ) : (
+            <ul className="divide-y">
+              {overrides.map((o) => {
+                const hrs = calcDayHours(o.expected_start, o.expected_end, o.lunch_duration_minutes)
+                return (
+                  <li key={o.id}>
+                    <button
+                      onClick={() => onSelect(o)}
+                      className="w-full px-5 py-3 text-left hover:bg-muted/50 transition-colors"
+                    >
+                      <p className="text-xs font-medium text-amber-600 dark:text-amber-400">{overrideDateLabel(o)}</p>
+                      <p className="mt-0.5 text-sm">
+                        {o.is_day_off
+                          ? 'Descanso'
+                          : `${formatTime(o.expected_start)} → ${formatTime(o.expected_end)}${hrs ? ` · ${formatHours(hrs)}` : ''}`}
+                      </p>
+                      {o.note && <p className="mt-0.5 text-xs text-muted-foreground">{o.note}</p>}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
