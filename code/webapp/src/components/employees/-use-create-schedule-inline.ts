@@ -98,10 +98,10 @@ export function useCreateScheduleInline(
     resolver: zodResolver(schema),
     defaultValues: {
       effective_from:         '',
-      expected_start:         '',
+      expected_start:         '13:00',
       expected_lunch_start:   '',
       lunch_duration_minutes: '',
-      expected_end:           '',
+      expected_end:           '22:00',
       dow_1_off: false,
       dow_2_off: false,
       dow_3_off: false,
