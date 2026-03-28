@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CalendarDays, X, Plus, Pencil, Check, Ban, Zap, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
+import { CalendarDays, X, Plus, Pencil, Check, Ban, Zap, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/ui/form-fields'
@@ -71,7 +71,7 @@ function buildSummaryLines(days: ScheduleDay[]): { icon: 'work' | 'lunch' | 'res
 
   const lines: { icon: 'work' | 'lunch' | 'rest'; text: string }[] = []
 
-  lines.push({ icon: 'work', text: `${dayRange} · ${startT} – ${endT}` })
+  lines.push({ icon: 'work', text: `🕐 ${dayRange} · ${startT} – ${endT}` })
 
   // ── Lunch ────────────────────────────────────────────────────────────────────
   if (ref.expected_lunch_start && ref.lunch_duration_minutes) {
@@ -100,7 +100,6 @@ function ScheduleSummary({ schedule }: { schedule: EmployeeSchedule }) {
     <div className="mt-1.5 space-y-0.5 pl-0.5">
       {lines.map((line, i) => (
         <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {line.icon === 'work' && <Clock className="h-3 w-3 shrink-0" />}
           <span>{line.text}</span>
         </div>
       ))}
