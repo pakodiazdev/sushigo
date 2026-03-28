@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CalendarDays, X, Plus, Pencil, Check, Ban, Zap, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight, Clock, UtensilsCrossed } from 'lucide-react'
+import { CalendarDays, X, Plus, Pencil, Check, Ban, Zap, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/ui/form-fields'
@@ -79,14 +79,14 @@ function buildSummaryLines(days: ScheduleDay[]): { icon: 'work' | 'lunch' | 'res
     const durLabel = mins % 60 === 0 ? `${mins / 60} hr` : `${mins} min`
     lines.push({
       icon: 'lunch',
-      text: `Comida ${durLabel} a las ${formatTime(ref.expected_lunch_start)}`,
+      text: `🍽️ ${durLabel} a las ${formatTime(ref.expected_lunch_start)}`,
     })
   }
 
   // ── Rest days ────────────────────────────────────────────────────────────────
   if (resting.length > 0) {
     const restLabel = resting.map((d) => DOW_NAMES[d.day_of_week - 1]).join(', ')
-    lines.push({ icon: 'rest', text: `Descansa ${restLabel}` })
+    lines.push({ icon: 'rest', text: `🏠 ${restLabel}` })
   }
 
   return lines
@@ -100,9 +100,7 @@ function ScheduleSummary({ schedule }: { schedule: EmployeeSchedule }) {
     <div className="mt-1.5 space-y-0.5 pl-0.5">
       {lines.map((line, i) => (
         <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {line.icon === 'work'  && <Clock           className="h-3 w-3 shrink-0" />}
-          {line.icon === 'lunch' && <UtensilsCrossed className="h-3 w-3 shrink-0" />}
-          {line.icon === 'rest'  && <Ban             className="h-3 w-3 shrink-0" />}
+          {line.icon === 'work' && <Clock className="h-3 w-3 shrink-0" />}
           <span>{line.text}</span>
         </div>
       ))}
