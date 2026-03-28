@@ -28,7 +28,7 @@ const DOW_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábad
  *   • Lunch: "Comida 1 hr a las 4:00 PM"   (omitted if no lunch configured)
  *   • Rest:  "Descansa Sábado, Domingo"     (omitted if 0 rest days)
  */
-function buildSummaryLines(days: ScheduleDay[]): { icon: 'work' | 'lunch' | 'rest'; text: string }[] {
+export function buildSummaryLines(days: ScheduleDay[]): { icon: 'work' | 'lunch' | 'rest'; text: string }[] {
   const working = days.filter((d) => !d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
   const resting = days.filter((d) =>  d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
 
