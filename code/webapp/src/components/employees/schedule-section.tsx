@@ -137,6 +137,14 @@ function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
               employeeId={employee.id}
               periodId={ctx.periodId}
               hasExistingSchedule={!!ctx.schedule}
+              initialEffectiveFrom={
+                // When there's no schedule yet, pre-fill with the active
+                // employment period's start date so the admin doesn't have to
+                // look it up. Leave empty when replacing an existing schedule.
+                !ctx.schedule
+                  ? employee.employment_periods?.find((p) => p.is_active)?.start_date
+                  : undefined
+              }
               onSuccess={ctx.onScheduleCreated}
               onCancel={ctx.showSchedule}
             />
@@ -180,13 +188,15 @@ interface CreateScheduleFormProps {
   employeeId: string
   periodId: string | null
   hasExistingSchedule: boolean
+  /** Pre-filled value for the "Vigente desde" date field (YYYY-MM-DD). */
+  initialEffectiveFrom?: string
   onSuccess: () => void
   onCancel: () => void
 }
 
-function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, onSuccess, onCancel }: CreateScheduleFormProps) {
+function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, initialEffectiveFrom, onSuccess, onCancel }: CreateScheduleFormProps) {
   const { form, onSubmit, isPending, dowKeys, dayLabels, lunchOptions } =
-    useCreateScheduleInline(employeeId, periodId, onSuccess)
+    useCreateScheduleInline(employeeId, periodId, onSuccess, initialEffectiveFrom)
 
   const { register, formState: { errors }, watch } = form
 

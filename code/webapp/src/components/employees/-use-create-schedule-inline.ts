@@ -90,6 +90,7 @@ export function useCreateScheduleInline(
   employeeId: string,
   periodId: string | null,
   onSuccess: () => void,
+  initialEffectiveFrom?: string,
 ) {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
@@ -97,7 +98,7 @@ export function useCreateScheduleInline(
   const form = useForm<CreateScheduleSimpleValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      effective_from:         '',
+      effective_from:         initialEffectiveFrom ?? '',
       expected_start:         '13:00',
       expected_lunch_start:   '',
       lunch_duration_minutes: '',
