@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { CalendarDays, X, Plus, Pencil, Check, Ban, Zap, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, X, Plus, Pencil, Check, Ban, Zap, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight, Clock, UtensilsCrossed } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/ui/form-fields'
@@ -15,6 +15,100 @@ import type { OverrideScope, EditDayValues } from './-use-create-day-override'
 import { useWeeklyCalendar, resolveWeek, addDays, fmtDayShort } from './-use-weekly-calendar'
 import type { ResolvedDay } from './-use-weekly-calendar'
 import { formatTime } from '@/lib/time-format'
+
+// ── Schedule summary helpers ──────────────────────────────────────────────────
+
+/** Single-letter abbreviations for ISO DOW 1=Mon…7=Sun (Mexican convention). */
+const DOW_ABBR  = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const
+const DOW_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] as const
+
+/**
+ * Given the 7 schedule days, build 1-3 compact summary lines:
+ *   • Work:  "L-V · 1:00 PM – 10:00 PM"
+ *   • Lunch: "Comida 1 hr a las 4:00 PM"   (omitted if no lunch configured)
+ *   • Rest:  "Descansa Sábado, Domingo"     (omitted if 0 rest days)
+ */
+function buildSummaryLines(days: ScheduleDay[]): { icon: 'work' | 'lunch' | 'rest'; text: string }[] {
+  const working = days.filter((d) => !d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
+  const resting = days.filter((d) =>  d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
+
+  if (working.length === 0) return []
+
+  // ── Day-range label ──────────────────────────────────────────────────────────
+  let dayRange: string
+  if (working.length === 7) {
+    dayRange = 'L-D'
+  } else if (working.length === 1) {
+    dayRange = DOW_NAMES[working[0]!.day_of_week - 1]!
+  } else {
+    // Are the working days consecutive in ISO order (no gaps)?
+    const isConsecutive = working.every(
+      (d, i) => i === 0 || d.day_of_week === working[i - 1]!.day_of_week + 1,
+    )
+    if (isConsecutive) {
+      dayRange = `${DOW_ABBR[working[0]!.day_of_week - 1]}-${DOW_ABBR[working[working.length - 1]!.day_of_week - 1]}`
+    } else {
+      // Non-consecutive (e.g. Mon+Wed+Fri) — check circular block (rest is a
+      // contiguous gap). If rest days are all consecutive, show a circular range.
+      const isRestConsecutive = resting.every(
+        (d, i) => i === 0 || d.day_of_week === resting[i - 1]!.day_of_week + 1,
+      )
+      if (isRestConsecutive) {
+        // Work wraps around: start right after the rest block, end right before.
+        const firstWork = working[0]!
+        const lastWork  = working[working.length - 1]!
+        dayRange = `${DOW_ABBR[firstWork.day_of_week - 1]}-${DOW_ABBR[lastWork.day_of_week - 1]}`
+      } else {
+        dayRange = working.map((d) => DOW_ABBR[d.day_of_week - 1]).join('')
+      }
+    }
+  }
+
+  // ── Times (use the first working day as reference) ───────────────────────────
+  const ref = working[0]!
+  const startT = formatTime(ref.expected_start)
+  const endT   = formatTime(ref.expected_end)
+
+  const lines: { icon: 'work' | 'lunch' | 'rest'; text: string }[] = []
+
+  lines.push({ icon: 'work', text: `${dayRange} · ${startT} – ${endT}` })
+
+  // ── Lunch ────────────────────────────────────────────────────────────────────
+  if (ref.expected_lunch_start && ref.lunch_duration_minutes) {
+    const mins = ref.lunch_duration_minutes
+    const durLabel = mins % 60 === 0 ? `${mins / 60} hr` : `${mins} min`
+    lines.push({
+      icon: 'lunch',
+      text: `Comida ${durLabel} a las ${formatTime(ref.expected_lunch_start)}`,
+    })
+  }
+
+  // ── Rest days ────────────────────────────────────────────────────────────────
+  if (resting.length > 0) {
+    const restLabel = resting.map((d) => DOW_NAMES[d.day_of_week - 1]).join(', ')
+    lines.push({ icon: 'rest', text: `Descansa ${restLabel}` })
+  }
+
+  return lines
+}
+
+function ScheduleSummary({ schedule }: { schedule: EmployeeSchedule }) {
+  const lines = buildSummaryLines(schedule.days)
+  if (lines.length === 0) return null
+
+  return (
+    <div className="mt-1.5 space-y-0.5 pl-0.5">
+      {lines.map((line, i) => (
+        <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {line.icon === 'work'  && <Clock           className="h-3 w-3 shrink-0" />}
+          {line.icon === 'lunch' && <UtensilsCrossed className="h-3 w-3 shrink-0" />}
+          {line.icon === 'rest'  && <Ban             className="h-3 w-3 shrink-0" />}
+          <span>{line.text}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 // ── Section (trigger inside detail view) ─────────────────────────────────────
 
@@ -48,6 +142,9 @@ export function ScheduleSection({ employee }: ScheduleSectionProps) {
           </Button>
         )}
       </div>
+
+      {/* Compact schedule summary shown directly in the detail view */}
+      {ctx.schedule && <ScheduleSummary schedule={ctx.schedule} />}
 
       <ScheduleDialog ctx={ctx} employee={employee} />
     </>
