@@ -9,7 +9,7 @@ import {
   useToggleEmployeeActive,
   useAssignableRoles,
 } from '@/services/employee-hooks'
-import type { Employee, EmployeePositionRole, EmployeeUpdateData } from '@/types/employee'
+import type { Employee, EmployeePositionRole, EmployeeUpdateData, EntityResponse } from '@/types/employee'
 import { useAuthStore } from '@/stores/auth.store'
 import type { EmployeeFormValues } from './employee-edit-create-form'
 
@@ -49,15 +49,21 @@ export function useEmployeeForm({
   const isEditing = !!employee
   const [mode, setMode] = useState<PanelMode>('create')
 
+  // Holds the employee returned by the create API so the detail view can render
+  // immediately after creation without an extra round-trip — cleared when the
+  // panel closes so the next open starts fresh.
+  const [justCreatedEmployee, setJustCreatedEmployee] = useState<Employee | null>(null)
+
   useEffect(() => {
     setMode(isEditing ? 'detail' : 'create')
+    if (!isOpen) setJustCreatedEmployee(null)
   }, [isEditing, isOpen])
 
   // ── Queries ──────────────────────────────────────────────────────────────────
 
   // Fetch full employee data when editing to get email/phone from the User record.
   const employeeQuery = useEmployee(isOpen && isEditing && employee?.id ? employee.id : '')
-  const fullEmployee = employeeQuery.data || employee
+  const fullEmployee = employeeQuery.data || justCreatedEmployee || employee
 
   const nextCodeQuery = useNextEmployeeCode(isOpen && !isEditing)
   const assignableRolesQuery = useAssignableRoles()
@@ -106,7 +112,7 @@ export function useEmployeeForm({
         // explicit runtime check as a second line of defence (same pattern as
         // handleRehireSubmit in useEmployeeDetailActions).
         if (!currentBranch) return
-        await createMutation.mutateAsync({
+        const response = await createMutation.mutateAsync({
           code: (values as { code: string }).code,
           first_name: values.first_name,
           last_name: values.last_name,
@@ -116,7 +122,11 @@ export function useEmployeeForm({
           start_date: (values as { start_date: string }).start_date,
           branch_id: currentBranch.id,
         })
-        onSuccess()
+        // Stay on the panel so the admin can assign a schedule right away.
+        // Store the created employee and switch to detail view instead of closing.
+        const newEmployee = (response.data as EntityResponse<Employee>).data
+        setJustCreatedEmployee(newEmployee)
+        setMode('detail')
       }
     } catch (error) {
       console.error('Error submitting employee form:', error)
