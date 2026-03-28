@@ -27,7 +27,10 @@ export function useScheduleSection(employeeId: string) {
         throw err
       }
     },
-    enabled: isOpen,
+    // Fetch eagerly so the section knows whether a schedule exists before the
+    // dialog is opened — this lets us show the correct button label ("Ver" vs
+    // "Agregar") without waiting for the user to click first.
+    enabled: !!employeeId,
   })
 
   const schedule = scheduleQuery.data?.schedule ?? null
@@ -46,6 +49,12 @@ export function useScheduleSection(employeeId: string) {
     setIsOpen(true)
   }
 
+  // Opens the dialog directly on the create form — used when no schedule exists yet.
+  function openToCreate() {
+    setView('create')
+    setIsOpen(true)
+  }
+
   function close() {
     setIsOpen(false)
     setView('schedule')
@@ -55,9 +64,14 @@ export function useScheduleSection(employeeId: string) {
   function showSchedule() { switchView('schedule') }
   function onScheduleCreated() { switchView('schedule') }
 
+  const hasSchedule = scheduleQuery.data !== undefined
+    ? scheduleQuery.data.schedule !== null
+    : undefined // undefined = still loading (unknown)
+
   return {
     isOpen,
     open,
+    openToCreate,
     close,
     view,
     isTransitioning,
@@ -66,6 +80,7 @@ export function useScheduleSection(employeeId: string) {
     onScheduleCreated,
     schedule,
     periodId,
+    hasSchedule,
     isLoading: scheduleQuery.isLoading,
     isError: scheduleQuery.isError,
   }
