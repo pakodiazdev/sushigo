@@ -25,8 +25,17 @@ export function SearchInput({
   const onChangeRef = useRef(onChange)
   useEffect(() => { onChangeRef.current = onChange }, [onChange])
 
-  // Debounce the search — depends only on localValue/debounceMs, not on onChange
+  // Track whether this is the initial mount to skip the debounce on first render.
+  // Without this, loading the page at ?page=2 would trigger onChange('') after
+  // 300ms and reset the page param back to 1.
+  const isMounted = useRef(false)
+
+  // Debounce the search — only fires on user-driven changes, not on mount.
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true
+      return
+    }
     const timer = setTimeout(() => {
       onChangeRef.current(localValue)
     }, debounceMs)
