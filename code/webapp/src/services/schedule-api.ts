@@ -1,11 +1,6 @@
 import { apiClient } from '@/lib/api-client'
 import type { EmployeeSchedule, ScheduleDayOverride, CreateScheduleFormValues } from '@/types/schedule'
-
-interface EntityResponse<T> {
-  data: T
-  status: number
-  meta: null
-}
+import type { EntityResponse } from '@/types/employee'
 
 function addMinutesToTime(time: string, minutes: number): string {
   const parts = time.split(':').map(Number)

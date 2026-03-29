@@ -12,6 +12,7 @@ import { useCreateScheduleInline } from './-use-create-schedule-inline'
 import type { CreateScheduleSimpleValues } from './-use-create-schedule-inline'
 import { useCreateDayOverride } from './-use-create-day-override'
 import type { OverrideScope, EditDayValues } from './-use-create-day-override'
+import { useOverrideScopeDialog } from './use-override-scope-dialog'
 import { useWeeklyCalendar, resolveWeek, addDays, fmtDayShort } from './-use-weekly-calendar'
 import type { ResolvedDay } from './-use-weekly-calendar'
 import { formatTime } from '@/lib/time-format'
@@ -824,19 +825,6 @@ function DayLabel({
 
 // ── OverrideScopeDialog ───────────────────────────────────────────────────────
 
-/** Returns the next calendar date (local) that falls on the given ISO day-of-week (1=Mon … 7=Sun). */
-function nextDateForDow(dow: number): string {
-  const jsTarget = dow === 7 ? 0 : dow
-  const today = new Date()
-  const daysAhead = (jsTarget - today.getDay() + 7) % 7 // 0 = today, >0 = next occurrence
-  const result = new Date(today)
-  result.setDate(today.getDate() + daysAhead)
-  const y = result.getFullYear()
-  const m = String(result.getMonth() + 1).padStart(2, '0')
-  const d = String(result.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
 interface OverrideScopeDialogProps {
   dayLabel: string
   dayOfWeek: number
@@ -845,24 +833,6 @@ interface OverrideScopeDialogProps {
   isError: boolean
   onSubmit: (params: { scope: OverrideScope; effectiveFrom: string; effectiveTo: string | null; note: string }) => void
   onClose: () => void
-}
-
-/**
- * Detect existing overrides that overlap with the proposed [newFrom, newTo] range.
- * null newTo means indefinite (treated as +∞ via sentinel '9999-12-31').
- * Overlap condition: newFrom <= oTo AND oFrom <= newTo  (null = +∞)
- */
-function detectConflicts(
-  newFrom: string,
-  newTo: string | null,
-  existing: ScheduleDayOverride[],
-): ScheduleDayOverride[] {
-  const INF = '9999-12-31'
-  const newToStr = newTo ?? INF
-  return existing.filter((o) => {
-    const oToStr = o.effective_to ?? INF
-    return newFrom <= oToStr && o.effective_from <= newToStr
-  })
 }
 
 const SCOPE_OPTIONS: { value: OverrideScope; label: string; description: string }[] = [
@@ -884,38 +854,23 @@ const SCOPE_OPTIONS: { value: OverrideScope; label: string; description: string 
 ]
 
 function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending, isError, onSubmit, onClose }: OverrideScopeDialogProps) {
-  const [scope, setScope] = useState<OverrideScope>('single_date')
-  const [effectiveFrom, setEffectiveFrom] = useState(() => nextDateForDow(dayOfWeek))
-  const [effectiveTo, setEffectiveTo] = useState('')
-  const [note, setNote] = useState('')
-  // step: 'form' → filling dates | 'conflicts' → reviewing conflicts before confirm
-  const [step, setStep] = useState<'form' | 'conflicts'>('form')
-  const [conflicts, setConflicts] = useState<ScheduleDayOverride[]>([])
+  const {
+    register,
+    errors,
+    isValid,
+    scope,
+    effectiveFrom,
+    step,
+    conflicts,
+    handlePrimaryClick,
+    handleConfirmConflicts,
+    backToForm,
+  } = useOverrideScopeDialog(dayOfWeek, existingOverrides, onSubmit)
 
   const today = new Date().toISOString().slice(0, 10)
-  const canSubmit =
-    !!effectiveFrom &&
-    (scope !== 'range' || (!!effectiveTo && effectiveTo >= effectiveFrom))
-
   const isIndefinite = scope === 'indefinite'
   const dateLabel = scope === 'single_date' ? 'Fecha' : 'A partir de'
   const submitLabel = isIndefinite ? 'Aplicar cambio permanente' : 'Guardar excepción'
-
-  function handlePrimaryClick() {
-    // Resolve the effective_to that will be sent (mirrors hook logic)
-    const resolvedTo = scope === 'single_date' ? effectiveFrom : (effectiveTo || null)
-    const found = detectConflicts(effectiveFrom, resolvedTo, existingOverrides)
-    if (found.length > 0) {
-      setConflicts(found)
-      setStep('conflicts')
-    } else {
-      onSubmit({ scope, effectiveFrom, effectiveTo: effectiveTo || null, note })
-    }
-  }
-
-  function handleConfirmConflicts() {
-    onSubmit({ scope, effectiveFrom, effectiveTo: effectiveTo || null, note })
-  }
 
   return createPortal(
     <div className="fixed inset-0 z-[300] flex items-center justify-center px-4">
@@ -945,10 +900,9 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
                   >
                     <input
                       type="radio"
-                      name="override-scope"
                       value={opt.value}
+                      {...register('scope')}
                       checked={scope === opt.value}
-                      onChange={() => setScope(opt.value)}
                       className="mt-0.5 h-4 w-4 shrink-0"
                     />
                     <span className="space-y-0.5">
@@ -963,13 +917,15 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
                 <label className="block text-xs font-medium">
                   {dateLabel}<span className="ml-0.5 text-red-500">*</span>
                 </label>
-                <Input type="date" value={effectiveFrom} min={today} onChange={(e) => setEffectiveFrom(e.target.value)} />
+                <Input type="date" min={today} {...register('effectiveFrom')} />
+                {errors.effectiveFrom && <p className="text-[10px] text-red-600">{errors.effectiveFrom.message}</p>}
               </div>
 
               {scope === 'range' && (
                 <div className="space-y-2">
                   <label className="block text-xs font-medium">Hasta<span className="ml-0.5 text-red-500">*</span></label>
-                  <Input type="date" value={effectiveTo} min={effectiveFrom || today} onChange={(e) => setEffectiveTo(e.target.value)} />
+                  <Input type="date" min={effectiveFrom || today} {...register('effectiveTo')} />
+                  {errors.effectiveTo && <p className="text-[10px] text-red-600">{errors.effectiveTo.message}</p>}
                 </div>
               )}
 
@@ -977,10 +933,9 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
                 <label className="block text-xs font-medium text-muted-foreground">Motivo (opcional)</label>
                 <input
                   type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
                   placeholder="Ej. Clases de inglés los jueves"
                   maxLength={255}
+                  {...register('note')}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
@@ -989,7 +944,7 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
             </div>
             <div className="flex justify-end gap-2 border-t px-5 py-3">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-              <Button type="button" size="sm" disabled={!canSubmit || isPending} onClick={handlePrimaryClick}>
+              <Button type="button" size="sm" disabled={!isValid || isPending} onClick={handlePrimaryClick}>
                 {isPending ? 'Guardando…' : submitLabel}
               </Button>
             </div>
@@ -1028,7 +983,7 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
               {isError && <p className="text-xs text-red-600">Ocurrió un error. Intenta de nuevo.</p>}
             </div>
             <div className="flex justify-end gap-2 border-t px-5 py-3">
-              <Button type="button" variant="outline" size="sm" onClick={() => setStep('form')}>← Volver</Button>
+              <Button type="button" variant="outline" size="sm" onClick={backToForm}>← Volver</Button>
               <Button type="button" size="sm" disabled={isPending} onClick={handleConfirmConflicts}>
                 {isPending ? 'Guardando…' : 'Continuar de todos modos'}
               </Button>

@@ -19,7 +19,7 @@ export function useEmployeeSchedulePage(employeeId: string) {
     queryFn: async () => {
       try {
         const res = await scheduleApi.getCurrent(employeeId)
-        return { schedule: res.data.data, periodId: null as string | null }
+        return { schedule: res.data.data, periodId: res.data.data.employment_period_id as string | null }
       } catch (err) {
         if (isAxiosError(err) && err.response?.status === 404) {
           const periodId = (err.response.data?.meta?.employment_period_id as string) ?? null

@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { scheduleApi } from '@/services/schedule-api'
 import type { ScheduleDay } from '@/types/schedule'
@@ -21,6 +24,16 @@ export interface EditDayValues {
   lunch_duration_minutes: string // string for select
   expected_end: string
 }
+
+// ── Schema ────────────────────────────────────────────────────────────────────
+
+const editDaySchema = z.object({
+  is_day_off: z.boolean(),
+  expected_start: z.string(),
+  expected_lunch_start: z.string(),
+  lunch_duration_minutes: z.string(),
+  expected_end: z.string(),
+})
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -61,10 +74,20 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
 
   // Which day_of_week is in edit mode (null = none)
   const [editingDow, setEditingDow] = useState<number | null>(null)
-  // Draft values for the day being edited
-  const [editValues, setEditValues] = useState<EditDayValues | null>(null)
   // Whether the scope dialog is open
   const [scopeOpen, setScopeOpen] = useState(false)
+
+  const editForm = useForm<EditDayValues>({
+    resolver: zodResolver(editDaySchema),
+    mode: 'onChange',
+    defaultValues: {
+      is_day_off: false,
+      expected_start: '',
+      expected_lunch_start: '',
+      lunch_duration_minutes: '',
+      expected_end: '',
+    },
+  })
 
   const mutation = useMutation({
     mutationFn: ({
@@ -78,16 +101,18 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
       effectiveTo: string | null
       note: string
     }) => {
-      if (!periodId || !editingDow || !editValues) {
+      const currentValues = editForm.getValues()
+
+      if (!periodId || !editingDow || !currentValues) {
         return Promise.reject(new Error('Missing required state'))
       }
 
-      const isDayOff = editValues.is_day_off
-      const lunchDuration = isDayOff || !editValues.lunch_duration_minutes
+      const isDayOff = currentValues.is_day_off
+      const lunchDuration = isDayOff || !currentValues.lunch_duration_minutes
         ? null
-        : Number(editValues.lunch_duration_minutes)
+        : Number(currentValues.lunch_duration_minutes)
 
-      const lunchStart = isDayOff ? null : (editValues.expected_lunch_start || null)
+      const lunchStart = isDayOff ? null : (currentValues.expected_lunch_start || null)
       const lunchEnd = lunchStart && lunchDuration
         ? addMinutesToTime(lunchStart, lunchDuration)
         : null
@@ -110,11 +135,11 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
         effective_from: effectiveFrom,
         effective_to: resolvedTo,
         is_day_off: isDayOff,
-        expected_start: isDayOff ? null : (editValues.expected_start || null),
+        expected_start: isDayOff ? null : (currentValues.expected_start || null),
         expected_lunch_start: lunchStart,
         expected_lunch_end: lunchEnd,
         lunch_duration_minutes: lunchDuration,
-        expected_end: isDayOff ? null : (editValues.expected_end || null),
+        expected_end: isDayOff ? null : (currentValues.expected_end || null),
         note: note || null,
       })
     },
@@ -122,7 +147,7 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'current-schedule'] })
       setScopeOpen(false)
       setEditingDow(null)
-      setEditValues(null)
+      editForm.reset()
     },
   })
 
@@ -132,7 +157,7 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
     // When explicit pre-fill values are given (e.g. pre-loading from an active
     // permanent override), use them directly without any template logic.
     if (prefillValues) {
-      setEditValues(prefillValues)
+      editForm.reset(prefillValues)
       return
     }
 
@@ -141,25 +166,25 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
     if (day.is_day_off && allDays) {
       const template = findNearestWorkingDay(day.day_of_week, allDays)
       if (template) {
-        setEditValues({
+        editForm.reset({
           is_day_off: false,
-          expected_start:          template.expected_start ?? '',
-          expected_lunch_start:    template.expected_lunch_start ?? '',
-          lunch_duration_minutes:  template.lunch_duration_minutes != null
+          expected_start:         template.expected_start ?? '',
+          expected_lunch_start:   template.expected_lunch_start ?? '',
+          lunch_duration_minutes: template.lunch_duration_minutes != null
             ? String(template.lunch_duration_minutes)
             : '',
-          expected_end:            template.expected_end ?? '',
+          expected_end:           template.expected_end ?? '',
         })
         return
       }
     }
 
-    setEditValues(dayToEditValues(day))
+    editForm.reset(dayToEditValues(day))
   }
 
   function cancelEdit() {
     setEditingDow(null)
-    setEditValues(null)
+    editForm.reset()
   }
 
   function openScopeDialog() {
@@ -171,22 +196,24 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
   }
 
   function updateEditField<K extends keyof EditDayValues>(field: K, value: EditDayValues[K]) {
-    setEditValues((prev) => prev ? { ...prev, [field]: value } : prev)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    editForm.setValue(field, value as any, { shouldValidate: true })
   }
 
   function toggleDayOff(val: boolean) {
-    setEditValues((prev) => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        is_day_off: val,
-        expected_start: val ? '' : prev.expected_start,
-        expected_lunch_start: val ? '' : prev.expected_lunch_start,
-        lunch_duration_minutes: val ? '' : prev.lunch_duration_minutes,
-        expected_end: val ? '' : prev.expected_end,
-      }
+    const prev = editForm.getValues()
+    editForm.reset({
+      ...prev,
+      is_day_off: val,
+      expected_start: val ? '' : prev.expected_start,
+      expected_lunch_start: val ? '' : prev.expected_lunch_start,
+      lunch_duration_minutes: val ? '' : prev.lunch_duration_minutes,
+      expected_end: val ? '' : prev.expected_end,
     })
   }
+
+  const watchedValues = editForm.watch()
+  const editValues: EditDayValues | null = editingDow !== null ? watchedValues : null
 
   // Check if there are validation errors for current edit values
   const editErrors = editValues && !editValues.is_day_off

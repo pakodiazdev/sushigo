@@ -68,7 +68,7 @@ class CurrentScheduleApiTest extends TestCase
         $response = $this->getJson("/api/v1/employees/{$employee->public_id}/current-schedule");
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.name', $schedule->name)
+            ->assertJsonPath('data.workday_type', $schedule->workday_type->value)
             ->assertJsonCount(7, 'data.days');
     }
 
