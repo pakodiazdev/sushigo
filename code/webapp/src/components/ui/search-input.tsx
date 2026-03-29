@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -20,14 +20,19 @@ export function SearchInput({
 }: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value)
 
-  // Debounce the search
+  // Keep a stable ref to onChange so the debounce effect never re-fires
+  // just because the parent re-rendered and produced a new function reference.
+  const onChangeRef = useRef(onChange)
+  useEffect(() => { onChangeRef.current = onChange }, [onChange])
+
+  // Debounce the search — depends only on localValue/debounceMs, not on onChange
   useEffect(() => {
     const timer = setTimeout(() => {
-      onChange(localValue)
+      onChangeRef.current(localValue)
     }, debounceMs)
 
     return () => clearTimeout(timer)
-  }, [localValue, debounceMs, onChange])
+  }, [localValue, debounceMs])
 
   // Sync with external value changes
   useEffect(() => {
