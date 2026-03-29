@@ -16,7 +16,6 @@ class CreateScheduleAction
      * transaction. If a previous open-ended schedule exists, its effective_to
      * is set to (new.effective_from − 1 day) automatically.
      *
-     * @param  EmploymentPeriod  $period
      * @param  array{
      *     effective_from: string,
      *     workday_type: string,
@@ -37,15 +36,24 @@ class CreateScheduleAction
         return DB::transaction(function () use ($period, $data) {
             $effectiveFrom = Carbon::parse($data['effective_from'])->toDateString();
 
-            // Close the previous open-ended schedule for this period (if any)
+            // Close the previous open-ended schedule for this period (if any).
+            // Lock the row to prevent race conditions with concurrent creates.
+            // Only close schedules whose effective_from is strictly before the new date
+            // to avoid violating the employee_schedules_effective_range_check constraint
+            // (which requires effective_to >= effective_from).
+            $closingTo = Carbon::parse($effectiveFrom)->subDay()->toDateString();
+
             $period->employeeSchedules()
                 ->whereNull('effective_to')
-                ->update(['effective_to' => Carbon::parse($effectiveFrom)->subDay()->toDateString()]);
+                ->where('effective_from', '<', $effectiveFrom)
+                ->lockForUpdate()
+                ->get()
+                ->each(fn ($schedule) => $schedule->update(['effective_to' => $closingTo]));
 
             $schedule = $period->employeeSchedules()->create([
-                'effective_from'        => $effectiveFrom,
-                'effective_to'          => null,
-                'workday_type'          => $data['workday_type'],
+                'effective_from' => $effectiveFrom,
+                'effective_to' => null,
+                'workday_type' => $data['workday_type'],
                 'working_days_per_week' => $data['working_days_per_week'],
             ]);
 
@@ -53,13 +61,13 @@ class CreateScheduleAction
                 $isDayOff = (bool) $day['is_day_off'];
 
                 $schedule->scheduleDays()->create([
-                    'day_of_week'             => $day['day_of_week'],
-                    'is_day_off'              => $isDayOff,
-                    'expected_start'          => $isDayOff ? null : ($day['expected_start'] ?? null),
-                    'expected_lunch_start'    => $isDayOff ? null : ($day['expected_lunch_start'] ?? null),
-                    'expected_lunch_end'      => $isDayOff ? null : ($day['expected_lunch_end'] ?? null),
-                    'lunch_duration_minutes'  => $isDayOff ? null : ($day['lunch_duration_minutes'] ?? null),
-                    'expected_end'            => $isDayOff ? null : ($day['expected_end'] ?? null),
+                    'day_of_week' => $day['day_of_week'],
+                    'is_day_off' => $isDayOff,
+                    'expected_start' => $isDayOff ? null : ($day['expected_start'] ?? null),
+                    'expected_lunch_start' => $isDayOff ? null : ($day['expected_lunch_start'] ?? null),
+                    'expected_lunch_end' => $isDayOff ? null : ($day['expected_lunch_end'] ?? null),
+                    'lunch_duration_minutes' => $isDayOff ? null : ($day['lunch_duration_minutes'] ?? null),
+                    'expected_end' => $isDayOff ? null : ($day['expected_end'] ?? null),
                 ]);
             }
 

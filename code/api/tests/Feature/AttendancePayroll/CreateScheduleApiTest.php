@@ -19,6 +19,7 @@ class CreateScheduleApiTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected EmploymentPeriod $period;
 
     protected function setUp(): void
@@ -47,20 +48,20 @@ class CreateScheduleApiTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         $days = collect(range(1, 7))->map(fn ($dow) => [
-            'day_of_week'   => $dow,
-            'is_day_off'    => $dow >= 6, // Sat & Sun off
-            'expected_start'      => $dow < 6 ? '08:00' : null,
-            'expected_lunch_start'=> $dow < 6 ? '13:00' : null,
-            'expected_lunch_end'  => $dow < 6 ? '14:00' : null,
+            'day_of_week' => $dow,
+            'is_day_off' => $dow >= 6, // Sat & Sun off
+            'expected_start' => $dow < 6 ? '08:00' : null,
+            'expected_lunch_start' => $dow < 6 ? '13:00' : null,
+            'expected_lunch_end' => $dow < 6 ? '14:00' : null,
             'lunch_duration_minutes' => $dow < 6 ? 60 : null,
-            'expected_end'        => $dow < 6 ? '17:00' : null,
+            'expected_end' => $dow < 6 ? '17:00' : null,
         ])->toArray();
 
         return array_merge([
-            'effective_from'        => '2026-03-01',
-            'workday_type'          => 'FULL',
+            'effective_from' => '2026-03-01',
+            'workday_type' => 'FULL',
             'working_days_per_week' => 5,
-            'days'                  => $days,
+            'days' => $days,
         ], $overrides);
     }
 
@@ -78,9 +79,9 @@ class CreateScheduleApiTest extends TestCase
             ->assertJsonCount(7, 'data.days');
 
         $this->assertDatabaseHas('employee_schedules', [
-            'employment_period_id'  => $this->period->id,
-            'effective_from'        => '2026-03-01',
-            'effective_to'          => null,
+            'employment_period_id' => $this->period->id,
+            'effective_from' => '2026-03-01',
+            'effective_to' => null,
         ]);
 
         $this->assertDatabaseCount('schedule_days', 7);
@@ -91,8 +92,8 @@ class CreateScheduleApiTest extends TestCase
     {
         $previous = EmployeeSchedule::factory()->create([
             'employment_period_id' => $this->period->id,
-            'effective_from'       => '2026-01-01',
-            'effective_to'         => null,
+            'effective_from' => '2026-01-01',
+            'effective_to' => null,
         ]);
 
         $this->postJson(
@@ -101,7 +102,7 @@ class CreateScheduleApiTest extends TestCase
         )->assertStatus(201);
 
         $this->assertDatabaseHas('employee_schedules', [
-            'id'           => $previous->id,
+            'id' => $previous->id,
             'effective_to' => '2026-02-28',
         ]);
     }
@@ -110,10 +111,10 @@ class CreateScheduleApiTest extends TestCase
     public function validation_rejects_when_a_working_day_is_missing_expected_start(): void
     {
         $days = collect(range(1, 7))->map(fn ($dow) => [
-            'day_of_week'    => $dow,
-            'is_day_off'     => false,
+            'day_of_week' => $dow,
+            'is_day_off' => false,
             'expected_start' => null, // missing for all days
-            'expected_end'   => '17:00',
+            'expected_end' => '17:00',
         ])->toArray();
 
         $response = $this->postJson(
@@ -123,6 +124,25 @@ class CreateScheduleApiTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('days.0.expected_start', $response->json('errors'));
+    }
+
+    #[Test]
+    public function validation_rejects_when_a_working_day_is_missing_expected_end(): void
+    {
+        $days = collect(range(1, 7))->map(fn ($dow) => [
+            'day_of_week' => $dow,
+            'is_day_off' => false,
+            'expected_start' => '09:00',
+            'expected_end' => null,
+        ])->toArray();
+
+        $response = $this->postJson(
+            "/api/v1/employment-periods/{$this->period->public_id}/schedules",
+            $this->validPayload(['days' => $days])
+        );
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('days.0.expected_end', $response->json('errors'));
     }
 
     #[Test]
@@ -167,9 +187,8 @@ class CreateScheduleApiTest extends TestCase
     }
 
     #[Test]
-    public function unauthenticated_request_returns_401(): void
+    public function user_without_permission_returns_403(): void
     {
-        Passport::actingAs(User::factory()->create()); // no role
         $user = User::factory()->create(); // fresh user with no permissions
         Passport::actingAs($user);
 

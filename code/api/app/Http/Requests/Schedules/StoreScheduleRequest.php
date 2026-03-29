@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Schedules;
 
 use App\Enums\WorkdayType;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -45,20 +46,20 @@ class StoreScheduleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'effective_from'          => ['required', 'date'],
-            'workday_type'            => ['required', 'string', Rule::in(array_column(WorkdayType::cases(), 'value'))],
-            'working_days_per_week'   => ['required', 'integer', 'min:1', 'max:7'],
+            'effective_from' => ['required', 'date'],
+            'workday_type' => ['required', 'string', Rule::in(array_column(WorkdayType::cases(), 'value'))],
+            'working_days_per_week' => ['required', 'integer', 'min:1', 'max:7'],
 
-            'days'                    => ['required', 'array', 'size:7'],
-            'days.*.day_of_week'      => ['required', 'integer', 'min:1', 'max:7', 'distinct'],
-            'days.*.is_day_off'       => ['required', 'boolean'],
+            'days' => ['required', 'array', 'size:7'],
+            'days.*.day_of_week' => ['required', 'integer', 'min:1', 'max:7', 'distinct'],
+            'days.*.is_day_off' => ['required', 'boolean'],
 
-            // Time fields: required when the day is NOT marked as day-off
-            'days.*.expected_start'   => ['nullable', 'date_format:H:i', Rule::requiredIf(fn () => false)],
+            // Time fields: required when the day is NOT marked as day-off (enforced via withValidator)
+            'days.*.expected_start' => ['nullable', 'date_format:H:i'],
             'days.*.expected_lunch_start' => ['nullable', 'date_format:H:i'],
-            'days.*.expected_lunch_end'   => ['nullable', 'date_format:H:i'],
+            'days.*.expected_lunch_end' => ['nullable', 'date_format:H:i'],
             'days.*.lunch_duration_minutes' => ['nullable', 'integer', 'min:1', 'max:480'],
-            'days.*.expected_end'     => ['nullable', 'date_format:H:i'],
+            'days.*.expected_end' => ['nullable', 'date_format:H:i'],
         ];
     }
 
@@ -85,18 +86,37 @@ class StoreScheduleRequest extends FormRequest
                     }
                 }
             }
+
+            // Validate that the new effective_from is strictly after any existing open-ended
+            // schedule's effective_from. This prevents CreateScheduleAction from computing
+            // effective_to < effective_from, which would violate the DB CHECK constraint.
+            $period = $this->route('employmentPeriod');
+            $newFrom = $this->input('effective_from');
+
+            if ($period && $newFrom) {
+                $existingFrom = $period->employeeSchedules()
+                    ->whereNull('effective_to')
+                    ->value('effective_from');
+
+                if ($existingFrom && Carbon::parse($newFrom)->toDateString() <= Carbon::parse($existingFrom)->toDateString()) {
+                    $v->errors()->add(
+                        'effective_from',
+                        'La fecha de inicio debe ser posterior al inicio del horario activo ('.Carbon::parse($existingFrom)->toDateString().').'
+                    );
+                }
+            }
         });
     }
 
     public function messages(): array
     {
         return [
-            'days.size'               => 'Se requieren exactamente 7 días (uno por cada día de la semana).',
+            'days.size' => 'Se requieren exactamente 7 días (uno por cada día de la semana).',
             'days.*.day_of_week.distinct' => 'No puede haber días duplicados.',
-            'days.*.day_of_week.min'  => 'El día de la semana debe ser entre 1 (lunes) y 7 (domingo).',
-            'days.*.day_of_week.max'  => 'El día de la semana debe ser entre 1 (lunes) y 7 (domingo).',
+            'days.*.day_of_week.min' => 'El día de la semana debe ser entre 1 (lunes) y 7 (domingo).',
+            'days.*.day_of_week.max' => 'El día de la semana debe ser entre 1 (lunes) y 7 (domingo).',
             'days.*.expected_start.date_format' => 'El horario de entrada debe tener formato HH:MM (ej. 08:00).',
-            'days.*.expected_end.date_format'   => 'El horario de salida debe tener formato HH:MM (ej. 17:00).',
+            'days.*.expected_end.date_format' => 'El horario de salida debe tener formato HH:MM (ej. 17:00).',
         ];
     }
 }
