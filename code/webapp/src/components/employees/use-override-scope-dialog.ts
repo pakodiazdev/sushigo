@@ -119,6 +119,7 @@ export function useOverrideScopeDialog(
 
   return {
     register: form.register,
+    setValue: form.setValue,
     errors: form.formState.errors,
     isValid: form.formState.isValid,
     scope,

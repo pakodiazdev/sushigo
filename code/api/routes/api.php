@@ -1,9 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
-use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
-use App\Http\Controllers\Api\V1\Schedules\CreateScheduleDayOverrideController;
-use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchStartController;
@@ -51,6 +48,9 @@ use App\Http\Controllers\Api\V1\OperatingUnit\UpdateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\AddUserToOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\ListOperatingUnitUsersController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitController;
+use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
+use App\Http\Controllers\Api\V1\Schedules\CreateScheduleDayOverrideController;
+use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
 use App\Http\Controllers\Api\V1\Stock\ListStockController;
 use App\Http\Controllers\Api\V1\Stock\StockByLocationController;
 use App\Http\Controllers\Api\V1\Stock\StockByVariantController;

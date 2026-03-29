@@ -44,15 +44,15 @@ class ScheduleDayOverride extends Model
     ];
 
     protected $casts = [
-        'effective_from'         => 'date',
-        'effective_to'           => 'date',
-        'is_day_off'             => 'boolean',
-        'day_of_week'            => 'integer',
-        'expected_start'         => 'datetime',
-        'expected_lunch_start'   => 'datetime',
-        'expected_lunch_end'     => 'datetime',
+        'effective_from' => 'date',
+        'effective_to' => 'date',
+        'is_day_off' => 'boolean',
+        'day_of_week' => 'integer',
+        'expected_start' => 'datetime',
+        'expected_lunch_start' => 'datetime',
+        'expected_lunch_end' => 'datetime',
         'lunch_duration_minutes' => 'integer',
-        'expected_end'           => 'datetime',
+        'expected_end' => 'datetime',
     ];
 
     // #region Relationships

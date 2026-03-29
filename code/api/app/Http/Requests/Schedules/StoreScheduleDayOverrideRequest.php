@@ -31,16 +31,16 @@ class StoreScheduleDayOverrideRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'day_of_week'            => ['required', 'integer', 'min:1', 'max:7'],
-            'effective_from'         => ['required', 'date'],
-            'effective_to'           => ['nullable', 'date', 'after_or_equal:effective_from'],
-            'is_day_off'             => ['required', 'boolean'],
-            'expected_start'         => ['nullable', 'date_format:H:i'],
-            'expected_lunch_start'   => ['nullable', 'date_format:H:i'],
-            'expected_lunch_end'     => ['nullable', 'date_format:H:i'],
+            'day_of_week' => ['required', 'integer', 'min:1', 'max:7'],
+            'effective_from' => ['required', 'date'],
+            'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
+            'is_day_off' => ['required', 'boolean'],
+            'expected_start' => ['nullable', 'date_format:H:i'],
+            'expected_lunch_start' => ['nullable', 'date_format:H:i'],
+            'expected_lunch_end' => ['nullable', 'date_format:H:i'],
             'lunch_duration_minutes' => ['nullable', 'integer', 'min:1', 'max:480'],
-            'expected_end'           => ['nullable', 'date_format:H:i'],
-            'note'                   => ['nullable', 'string', 'max:255'],
+            'expected_end' => ['nullable', 'date_format:H:i'],
+            'note' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -63,11 +63,11 @@ class StoreScheduleDayOverrideRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'day_of_week.min'              => 'El día debe ser entre 1 (lunes) y 7 (domingo).',
-            'day_of_week.max'              => 'El día debe ser entre 1 (lunes) y 7 (domingo).',
-            'effective_to.after_or_equal'  => 'La fecha de fin debe ser igual o posterior a la fecha de inicio.',
-            'expected_start.date_format'   => 'La hora de entrada debe tener formato HH:MM (ej. 08:00).',
-            'expected_end.date_format'     => 'La hora de salida debe tener formato HH:MM (ej. 17:00).',
+            'day_of_week.min' => 'El día debe ser entre 1 (lunes) y 7 (domingo).',
+            'day_of_week.max' => 'El día debe ser entre 1 (lunes) y 7 (domingo).',
+            'effective_to.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio.',
+            'expected_start.date_format' => 'La hora de entrada debe tener formato HH:MM (ej. 08:00).',
+            'expected_end.date_format' => 'La hora de salida debe tener formato HH:MM (ej. 17:00).',
         ];
     }
 }

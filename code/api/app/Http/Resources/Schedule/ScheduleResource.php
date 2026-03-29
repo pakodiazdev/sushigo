@@ -42,14 +42,14 @@ class ScheduleResource extends BaseResource
     public function toArray($request): array
     {
         return [
-            'id'                     => $this->public_id,
-            'employment_period_id'   => $this->whenLoaded('employmentPeriod', fn () => $this->employmentPeriod->public_id),
-            'effective_from'         => $this->effective_from?->toDateString(),
-            'effective_to'           => $this->effective_to?->toDateString(),
-            'workday_type'           => $this->workday_type,
-            'working_days_per_week'  => $this->working_days_per_week,
-            'days'                   => ScheduleDayResource::collection($this->whenLoaded('scheduleDays')),
-            'active_overrides'       => $this->whenLoaded('employmentPeriod', function () {
+            'id' => $this->public_id,
+            'employment_period_id' => $this->whenLoaded('employmentPeriod', fn () => $this->employmentPeriod->public_id),
+            'effective_from' => $this->effective_from?->toDateString(),
+            'effective_to' => $this->effective_to?->toDateString(),
+            'workday_type' => $this->workday_type,
+            'working_days_per_week' => $this->working_days_per_week,
+            'days' => ScheduleDayResource::collection($this->whenLoaded('scheduleDays')),
+            'active_overrides' => $this->whenLoaded('employmentPeriod', function () {
                 if (! $this->employmentPeriod->relationLoaded('scheduleDayOverrides')) {
                     return [];
                 }
@@ -62,8 +62,8 @@ class ScheduleResource extends BaseResource
 
                 return ScheduleDayOverrideResource::collection($notExpired);
             }),
-            'created_at'             => $this->created_at,
-            'updated_at'             => $this->updated_at,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

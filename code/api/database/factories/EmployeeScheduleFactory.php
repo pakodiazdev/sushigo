@@ -81,5 +81,4 @@ class EmployeeScheduleFactory extends Factory
     {
         return $this->state(fn () => ['working_days_per_week' => $days]);
     }
-
 }

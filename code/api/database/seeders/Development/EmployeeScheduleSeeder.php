@@ -141,5 +141,4 @@ class EmployeeScheduleSeeder extends OnceSeeder
             7 => $restDay,      // Sunday — rest day
         ];
     }
-
 }

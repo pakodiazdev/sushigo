@@ -21,6 +21,7 @@ class ScheduleDayOverrideApiTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected EmploymentPeriod $period;
 
     protected function setUp(): void
@@ -50,16 +51,16 @@ class ScheduleDayOverrideApiTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'day_of_week'            => 1, // Monday
-            'effective_from'         => '2026-03-09',
-            'effective_to'           => '2026-03-09',
-            'is_day_off'             => false,
-            'expected_start'         => '09:00',
-            'expected_lunch_start'   => '14:00',
-            'expected_lunch_end'     => '15:00',
+            'day_of_week' => 1, // Monday
+            'effective_from' => '2026-03-09',
+            'effective_to' => '2026-03-09',
+            'is_day_off' => false,
+            'expected_start' => '09:00',
+            'expected_lunch_start' => '14:00',
+            'expected_lunch_end' => '15:00',
             'lunch_duration_minutes' => 60,
-            'expected_end'           => '18:00',
-            'note'                   => 'Paco llega tarde este lunes',
+            'expected_end' => '18:00',
+            'note' => 'Paco llega tarde este lunes',
         ], $overrides);
     }
 
@@ -86,9 +87,9 @@ class ScheduleDayOverrideApiTest extends TestCase
 
         $this->assertDatabaseHas('schedule_day_overrides', [
             'employment_period_id' => $this->period->id,
-            'day_of_week'          => 1,
-            'effective_from'       => '2026-03-09',
-            'effective_to'         => '2026-03-09',
+            'day_of_week' => 1,
+            'effective_from' => '2026-03-09',
+            'effective_to' => '2026-03-09',
         ]);
     }
 
@@ -97,7 +98,7 @@ class ScheduleDayOverrideApiTest extends TestCase
     {
         $response = $this->postJson($this->url(), $this->validPayload([
             'effective_from' => '2026-03-09',
-            'effective_to'   => null,
+            'effective_to' => null,
         ]));
 
         $response->assertStatus(201)
@@ -105,7 +106,7 @@ class ScheduleDayOverrideApiTest extends TestCase
 
         $this->assertDatabaseHas('schedule_day_overrides', [
             'employment_period_id' => $this->period->id,
-            'effective_to'         => null,
+            'effective_to' => null,
         ]);
     }
 
@@ -113,9 +114,9 @@ class ScheduleDayOverrideApiTest extends TestCase
     public function admin_can_create_a_day_off_override(): void
     {
         $response = $this->postJson($this->url(), $this->validPayload([
-            'is_day_off'             => true,
-            'expected_start'         => '09:00', // should be nullified
-            'expected_end'           => '18:00', // should be nullified
+            'is_day_off' => true,
+            'expected_start' => '09:00', // should be nullified
+            'expected_end' => '18:00', // should be nullified
         ]));
 
         $response->assertStatus(201)
@@ -125,9 +126,9 @@ class ScheduleDayOverrideApiTest extends TestCase
 
         $this->assertDatabaseHas('schedule_day_overrides', [
             'employment_period_id' => $this->period->id,
-            'is_day_off'           => true,
-            'expected_start'       => null,
-            'expected_end'         => null,
+            'is_day_off' => true,
+            'expected_start' => null,
+            'expected_end' => null,
         ]);
     }
 
@@ -146,7 +147,7 @@ class ScheduleDayOverrideApiTest extends TestCase
     public function validation_rejects_missing_expected_start_for_working_day(): void
     {
         $response = $this->postJson($this->url(), $this->validPayload([
-            'is_day_off'     => false,
+            'is_day_off' => false,
             'expected_start' => null,
         ]));
 
@@ -158,7 +159,7 @@ class ScheduleDayOverrideApiTest extends TestCase
     public function validation_rejects_missing_expected_end_for_working_day(): void
     {
         $response = $this->postJson($this->url(), $this->validPayload([
-            'is_day_off'   => false,
+            'is_day_off' => false,
             'expected_end' => null,
         ]));
 
@@ -171,7 +172,7 @@ class ScheduleDayOverrideApiTest extends TestCase
     {
         $response = $this->postJson($this->url(), $this->validPayload([
             'effective_from' => '2026-03-15',
-            'effective_to'   => '2026-03-10',
+            'effective_to' => '2026-03-10',
         ]));
 
         $response->assertStatus(422);
@@ -234,34 +235,34 @@ class ScheduleDayOverrideApiTest extends TestCase
         // Create a current schedule for the period
         $schedule = EmployeeSchedule::factory()->create([
             'employment_period_id' => $this->period->id,
-            'effective_from'       => Carbon::now()->subMonth()->toDateString(),
-            'effective_to'         => null,
+            'effective_from' => Carbon::now()->subMonth()->toDateString(),
+            'effective_to' => null,
         ]);
 
         foreach (range(1, 7) as $dow) {
             $schedule->scheduleDays()->create([
-                'day_of_week'    => $dow,
-                'is_day_off'     => $dow >= 6,
+                'day_of_week' => $dow,
+                'is_day_off' => $dow >= 6,
                 'expected_start' => $dow < 6 ? '08:00:00' : null,
-                'expected_end'   => $dow < 6 ? '17:00:00' : null,
+                'expected_end' => $dow < 6 ? '17:00:00' : null,
             ]);
         }
 
         // Create a not-expired override for Monday
         ScheduleDayOverride::factory()->create([
             'employment_period_id' => $this->period->id,
-            'day_of_week'          => 1,
-            'effective_from'       => Carbon::now()->toDateString(),
-            'effective_to'         => Carbon::now()->addDays(7)->toDateString(),
-            'is_day_off'           => false,
-            'expected_start'       => '10:00',
-            'expected_end'         => '19:00',
+            'day_of_week' => 1,
+            'effective_from' => Carbon::now()->toDateString(),
+            'effective_to' => Carbon::now()->addDays(7)->toDateString(),
+            'is_day_off' => false,
+            'expected_start' => '10:00',
+            'expected_end' => '19:00',
         ]);
 
         // Create an expired override (should NOT appear)
         ScheduleDayOverride::factory()->expired()->create([
             'employment_period_id' => $this->period->id,
-            'day_of_week'          => 2,
+            'day_of_week' => 2,
         ]);
 
         $response = $this->getJson("/api/v1/employees/{$employee->public_id}/current-schedule");
@@ -279,16 +280,16 @@ class ScheduleDayOverrideApiTest extends TestCase
 
         $schedule = EmployeeSchedule::factory()->create([
             'employment_period_id' => $this->period->id,
-            'effective_from'       => Carbon::now()->subMonth()->toDateString(),
-            'effective_to'         => null,
+            'effective_from' => Carbon::now()->subMonth()->toDateString(),
+            'effective_to' => null,
         ]);
 
         foreach (range(1, 7) as $dow) {
             $schedule->scheduleDays()->create([
-                'day_of_week'    => $dow,
-                'is_day_off'     => $dow >= 6,
+                'day_of_week' => $dow,
+                'is_day_off' => $dow >= 6,
                 'expected_start' => $dow < 6 ? '08:00:00' : null,
-                'expected_end'   => $dow < 6 ? '17:00:00' : null,
+                'expected_end' => $dow < 6 ? '17:00:00' : null,
             ]);
         }
 
