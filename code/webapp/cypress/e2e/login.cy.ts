@@ -1,197 +1,191 @@
-describe('Login Flow', () => {
-    // Cargar fixtures
-    let users: any;
+/**
+ * Login Flow — E2E tests
+ *
+ * DB reset strategy
+ * ─────────────────
+ * • before()     → cy.task('db:reset') ONCE per file (~30s). All tests share this state.
+ * • beforeEach() → cy.clearLocalStorage() only (milliseconds). Ensures each test
+ *                  starts with a clean session without hitting the database.
+ *
+ * Tests that only interact with the UI (validation, layout) are grouped
+ * separately and don't need login or DB data — they run extra fast.
+ */
 
-    before(() => {
-        // Arrange: Preparar el entorno una sola vez antes de todos los tests
-        cy.fixture('users').then((data) => {
-            users = data;
-        });
-    });
+import users from '../fixtures/users.json'
 
-    beforeEach(() => {
-        // Arrange: Resetear la base de datos antes de cada test
-        cy.resetDatabase();
-    });
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
-    describe('Login exitoso', () => {
-        it('debe permitir el login con credenciales válidas de admin', () => {
-            // Arrange: Preparar datos del usuario
-            const { email, password, expectedName } = users.admin;
+const { email: adminEmail, password: adminPassword } = users.admin
+const { email: invalidEmail, password: invalidPassword } = users.invalidUser
 
-            // Act: Ejecutar el login
-            cy.login(email, password);
+// ── Suite setup ────────────────────────────────────────────────────────────────
 
-            // Assert: Verificar que se redirige al dashboard
-            cy.url().should('not.include', '/login');
-            cy.url().should('include', '/');
+before(() => {
+  // Reset DB once for the entire file — not per test.
+  cy.task('db:reset', null, { timeout: 90_000 })
+})
 
-            // Assert: Verificar que el usuario está autenticado
-            cy.window().then((win) => {
-                const authStorage = win.localStorage.getItem('auth-storage');
-                expect(authStorage).to.exist;
-                const { state } = JSON.parse(authStorage);
-                expect(state.token).to.exist;
-                expect(state.isAuthenticated).to.be.true;
-            });
+beforeEach(() => {
+  // Clear session state between tests (fast — no DB touch).
+  cy.clearLocalStorage()
+})
 
-            // Assert: Verificar que se muestra el contenido del dashboard
-            cy.contains('Dashboard', { timeout: 10000 }).should('be.visible');
-        });
+// ══════════════════════════════════════════════════════════════════════════════
+// 1. UI — layout and static content (no auth needed)
+// ══════════════════════════════════════════════════════════════════════════════
 
-        it('debe mantener la sesión después de recargar la página', () => {
-            // Arrange: Hacer login primero
-            const { email, password } = users.admin;
-            cy.login(email, password);
-            cy.url().should('not.include', '/login');
+describe('Login page — UI', () => {
+  beforeEach(() => {
+    cy.visit('/login')
+  })
 
-            // Act: Recargar la página
-            cy.reload();
+  it('muestra el logo de Sushigo', () => {
+    cy.contains('Sushigo').should('be.visible')
+  })
 
-            // Assert: Verificar que sigue autenticado
-            cy.url().should('not.include', '/login');
-            cy.window().then((win) => {
-                const authStorage = win.localStorage.getItem('auth-storage');
-                expect(authStorage).to.exist;
-                const { state } = JSON.parse(authStorage);
-                expect(state.token).to.exist;
-            });
-        });
-    });
+  it('muestra credenciales de demo', () => {
+    cy.contains('Demo').should('be.visible')
+    cy.contains('admin@sushigo.com').should('be.visible')
+  })
 
-    describe('Login fallido', () => {
-        it('debe mostrar error con credenciales inválidas', () => {
-            // Arrange: Preparar credenciales inválidas
-            const { email, password } = users.invalidUser;
+  it('requiere email — validación nativa del navegador', () => {
+    cy.get('input#password').type('somepassword')
+    cy.get('button[type="submit"]').click()
+    cy.get('input#email:invalid').should('exist')
+  })
 
-            // Act: Intentar login con credenciales incorrectas
-            cy.visit('/login');
-            cy.get('input#email').type(email);
-            cy.get('input#password').type(password);
-            cy.get('button[type="submit"]').click();
+  it('requiere contraseña — validación nativa del navegador', () => {
+    cy.get('input#email').type('test@test.com')
+    cy.get('button[type="submit"]').click()
+    cy.get('input#password:invalid').should('exist')
+  })
 
-            // Assert: Verificar que se muestra mensaje de error
-            cy.contains('credenciales', { matchCase: false }).should('be.visible');
+  it('deshabilita el formulario mientras procesa el login', () => {
+    cy.get('input#email').type(adminEmail)
+    cy.get('input#password').type(adminPassword)
+    cy.get('button[type="submit"]').click()
 
-            // Assert: Verificar que permanece en la página de login
-            cy.url().should('include', '/login');
+    // Los campos se deshabilitan durante el submit
+    cy.get('input#email').should('be.disabled')
+    cy.get('input#password').should('be.disabled')
+    cy.get('button[type="submit"]').should('be.disabled')
+  })
+})
 
-            // Assert: Verificar que no hay token en localStorage
-            cy.window().then((win) => {
-                const authStorage = win.localStorage.getItem('auth-storage');
-                if (authStorage) {
-                    const { state } = JSON.parse(authStorage);
-                    expect(state.isAuthenticated).to.be.false;
-                }
-            });
-        });
+// ══════════════════════════════════════════════════════════════════════════════
+// 2. Login exitoso
+// ══════════════════════════════════════════════════════════════════════════════
 
-        it('debe mantener los datos del formulario después de un error de login', () => {
-            // Arrange: Preparar credenciales inválidas
-            const { email, password } = users.invalidUser;
+describe('Login exitoso', () => {
+  it('redirige fuera de /login con credenciales válidas de admin', () => {
+    cy.login(adminEmail, adminPassword)
 
-            // Act: Intentar login con credenciales incorrectas
-            cy.visit('/login');
-            cy.get('input#email').type(email);
-            cy.get('input#password').type(password);
-            cy.get('button[type="submit"]').click();
+    cy.url().should('not.include', '/login')
+    cy.url().should('include', '/')
+  })
 
-            // Assert: Esperar que el error sea visible
-            cy.contains('credenciales', { matchCase: false }).should('be.visible');
+  it('almacena token y estado de autenticación en localStorage', () => {
+    cy.login(adminEmail, adminPassword)
+    cy.url().should('not.include', '/login')
 
-            // Assert: Verificar que los campos mantienen los valores ingresados
-            cy.get('input#email').should('have.value', email);
-            cy.get('input#password').should('have.value', password);
+    cy.window().then((win) => {
+      const raw = win.localStorage.getItem('auth-storage')
+      expect(raw).to.exist
+      const { state } = JSON.parse(raw!)
+      expect(state.token).to.exist
+      expect(state.isAuthenticated).to.be.true
+    })
+  })
 
-            // Assert: Verificar que los campos están habilitados para corrección
-            cy.get('input#email').should('not.be.disabled');
-            cy.get('input#password').should('not.be.disabled');
-            cy.get('button[type="submit"]').should('not.be.disabled');
-        });
+  it('muestra contenido del dashboard tras el login', () => {
+    cy.login(adminEmail, adminPassword)
+    cy.url().should('not.include', '/login')
+    cy.contains('Dashboard', { timeout: 10_000 }).should('be.visible')
+  })
 
-        it('debe mostrar error cuando falta el email', () => {
-            // Arrange: Visitar página de login
-            cy.visit('/login');
+  it('mantiene la sesión después de recargar la página', () => {
+    cy.login(adminEmail, adminPassword)
+    cy.url().should('not.include', '/login')
 
-            // Act: Intentar enviar el formulario solo con password
-            cy.get('input#password').type('somepassword');
-            cy.get('button[type="submit"]').click();
+    cy.reload()
 
-            // Assert: El navegador debe validar que email es requerido
-            cy.get('input#email:invalid').should('exist');
-        });
+    cy.url().should('not.include', '/login')
+    cy.window().then((win) => {
+      const raw = win.localStorage.getItem('auth-storage')
+      expect(raw).to.exist
+      const { state } = JSON.parse(raw!)
+      expect(state.token).to.exist
+    })
+  })
+})
 
-        it('debe mostrar error cuando falta la contraseña', () => {
-            // Arrange: Visitar página de login
-            cy.visit('/login');
+// ══════════════════════════════════════════════════════════════════════════════
+// 3. Login fallido
+// ══════════════════════════════════════════════════════════════════════════════
 
-            // Act: Intentar enviar el formulario solo con email
-            cy.get('input#email').type('test@test.com');
-            cy.get('button[type="submit"]').click();
+describe('Login fallido', () => {
+  beforeEach(() => {
+    cy.visit('/login')
+  })
 
-            // Assert: El navegador debe validar que password es requerido
-            cy.get('input#password:invalid').should('exist');
-        });
-    });
+  it('muestra error con credenciales inválidas', () => {
+    cy.get('input#email').type(invalidEmail)
+    cy.get('input#password').type(invalidPassword)
+    cy.get('button[type="submit"]').click()
 
-    describe('UI y experiencia de usuario', () => {
-        it('debe deshabilitar el formulario mientras se procesa el login', () => {
-            // Arrange: Visitar página de login
-            cy.visit('/login');
+    cy.contains('credenciales', { matchCase: false, timeout: 8_000 }).should('be.visible')
+    cy.url().should('include', '/login')
+  })
 
-            // Act: Llenar formulario y enviar
-            cy.get('input#email').type(users.admin.email);
-            cy.get('input#password').type(users.admin.password);
-            cy.get('button[type="submit"]').click();
+  it('no guarda token tras credenciales inválidas', () => {
+    cy.get('input#email').type(invalidEmail)
+    cy.get('input#password').type(invalidPassword)
+    cy.get('button[type="submit"]').click()
 
-            // Assert: Los campos deben estar deshabilitados durante el proceso
-            cy.get('input#email').should('be.disabled');
-            cy.get('input#password').should('be.disabled');
-            cy.get('button[type="submit"]').should('be.disabled');
-        });
+    cy.contains('credenciales', { matchCase: false, timeout: 8_000 }).should('be.visible')
 
-        it('debe mostrar la información de demo en la página de login', () => {
-            // Arrange & Act: Visitar página de login
-            cy.visit('/login');
+    cy.window().then((win) => {
+      const raw = win.localStorage.getItem('auth-storage')
+      if (raw) {
+        const { state } = JSON.parse(raw)
+        expect(state.isAuthenticated).to.be.false
+      }
+    })
+  })
 
-            // Assert: Verificar que se muestra la información de demo
-            cy.contains('Demo').should('be.visible');
-            cy.contains('admin@sushigo.com').should('be.visible');
-        });
+  it('mantiene los valores del formulario tras un error', () => {
+    cy.get('input#email').type(invalidEmail)
+    cy.get('input#password').type(invalidPassword)
+    cy.get('button[type="submit"]').click()
 
-        it('debe mostrar el logo de Sushigo', () => {
-            // Arrange & Act: Visitar página de login
-            cy.visit('/login');
+    cy.contains('credenciales', { matchCase: false, timeout: 8_000 }).should('be.visible')
 
-            // Assert: Verificar que el logo está visible
-            cy.contains('Sushigo').should('be.visible');
-        });
-    });
+    cy.get('input#email').should('have.value', invalidEmail)
+    cy.get('input#password').should('have.value', invalidPassword)
+    cy.get('input#email').should('not.be.disabled')
+    cy.get('input#password').should('not.be.disabled')
+    cy.get('button[type="submit"]').should('not.be.disabled')
+  })
+})
 
-    describe('Navegación', () => {
-        it('debe redirigir a login si se intenta acceder a rutas protegidas sin autenticación', () => {
-            // Arrange: Asegurar que no hay sesión
-            cy.clearLocalStorage();
+// ══════════════════════════════════════════════════════════════════════════════
+// 4. Navegación y guards de ruta
+// ══════════════════════════════════════════════════════════════════════════════
 
-            // Act: Intentar acceder a una ruta protegida
-            cy.visit('/dashboard', { failOnStatusCode: false });
+describe('Navegación y guards', () => {
+  it('redirige a /login al acceder a ruta protegida sin sesión', () => {
+    cy.clearLocalStorage()
+    cy.visit('/dashboard', { failOnStatusCode: false })
+    cy.url().should('include', '/login')
+  })
 
-            // Assert: Debe redirigir a login
-            cy.url().should('include', '/login');
-        });
+  it('redirige al dashboard si el usuario ya está autenticado y visita /login', () => {
+    cy.login(adminEmail, adminPassword)
+    cy.url().should('not.include', '/login')
 
-        it('debe redirigir al dashboard si el usuario ya está autenticado', () => {
-            // Arrange: Hacer login primero
-            const { email, password } = users.admin;
-            cy.login(email, password);
-            cy.url().should('not.include', '/login');
+    cy.visit('/login')
 
-            // Act: Intentar volver a la página de login
-            cy.visit('/login');
-
-            // Assert: Debe redirigir al dashboard
-            cy.url().should('not.include', '/login');
-            cy.url().should('eq', Cypress.config().baseUrl + '/');
-        });
-    });
-});
+    cy.url().should('not.include', '/login')
+    cy.url().should('eq', Cypress.config().baseUrl + '/')
+  })
+})

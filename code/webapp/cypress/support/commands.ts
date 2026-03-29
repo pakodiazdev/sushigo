@@ -5,17 +5,14 @@
 // ***********************************************
 
 /**
- * Reset database and seed with fresh data
- * Executes: php artisan migrate:fresh --seed
+ * Full database reset: migrate:fresh + seed.
+ * SLOW — call only in before() (once per spec file), never in beforeEach().
+ * Internally delegates to cy.task('db:reset') which runs in Node.js context.
  */
 Cypress.Commands.add('resetDatabase', () => {
-  cy.log('🗄️ Resetting database...');
-  cy.exec(
-    'docker exec devtest_container php /app/code/api/artisan migrate:fresh --seed --env=testing',
-    { timeout: 30000 }
-  ).then((result) => {
+  cy.log('🗄️ Resetting database (migrate:fresh + seed)...');
+  cy.task('db:reset', null, { timeout: 90_000 }).then(() => {
     cy.log('✅ Database reset complete');
-    cy.log(result.stdout);
   });
 });
 
