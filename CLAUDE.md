@@ -133,6 +133,26 @@ See `doc/architecture/` for detailed diagrams and flows.
 
 ## Conventions
 
+### Pre-commit Checks (mandatory — always run before committing)
+
+**Before every commit, run the linters and fix all errors. Never commit with lint failures.**
+
+```bash
+# PHP — Laravel Pint (auto-fixes formatting)
+docker exec dev_container bash -c "cd /app/code/api && ./vendor/bin/pint"
+
+# Frontend — ESLint + TypeScript (must pass with 0 errors)
+docker exec dev_container bash -c "cd /app/code/webapp && npm run lint && npm run typecheck"
+```
+
+**Rules:**
+- Run `pint` (not `pint --test`) so it auto-fixes files in place
+- Stage the auto-fixed files and include them in the same commit
+- A commit must not be created if `npm run lint` or `npm run typecheck` report errors
+- If linters cannot run (e.g. containers are down), fix manually before committing
+
+---
+
 ### Commit Messages (mandatory — always follow this exactly)
 
 Full convention reference: `doc/conventions/git/commits.md`
