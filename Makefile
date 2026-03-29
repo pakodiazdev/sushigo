@@ -1,4 +1,4 @@
-.PHONY: help e2e-ui cypress-ui cypress-run cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart
+.PHONY: help e2e-ui cypress-ui cypress-run cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart
 
 # Colores para output
 GREEN  := \033[0;32m
@@ -49,6 +49,19 @@ e2e-ui: ## Abrir Cypress UI (interfaz interactiva con VNC en http://localhost:60
 	@docker exec -it cypress-ui npx cypress open || echo "$(RED)Error: Asegúrate de que el contenedor cypress-ui esté corriendo$(NC)"
 # --config-file cypress.devtest.config.ts
 cypress-ui: e2e-ui ## Alias de e2e-ui
+
+cypress-spec: ## Ejecutar un spec con headed mode: make cypress-spec SPEC=login [GREP="Logout"]
+	@if [ -z "$(SPEC)" ]; then echo "$(RED)Uso: make cypress-spec SPEC=<nombre> [GREP='texto']$(NC)"; exit 1; fi
+	@echo "$(GREEN)Ejecutando spec: $(SPEC).cy.ts$(if $(GREP), [grep: $(GREP)])...$(NC)"
+	@docker exec -it cypress-ui bash -c \
+		"npx cypress run --headed --browser chrome --spec 'cypress/e2e/$(SPEC).cy.ts'$(if $(GREP), --env grep='$(GREP)')"
+
+cypress-debug: ## Abrir spec en modo interactivo (navegador queda abierto): make cypress-debug SPEC=login [GREP="Logout"]
+	@if [ -z "$(SPEC)" ]; then echo "$(RED)Uso: make cypress-debug SPEC=<nombre> [GREP='texto']$(NC)"; exit 1; fi
+	@echo "$(GREEN)Abriendo spec en modo debug: $(SPEC).cy.ts$(if $(GREP), [grep: $(GREP)])...$(NC)"
+	@echo "$(YELLOW)Navegador quedará abierto al terminar — ver VNC en http://localhost:6080$(NC)"
+	@docker exec -it cypress-ui bash -c \
+		"npx cypress open --browser chrome --e2e --config specPattern='cypress/e2e/$(SPEC).cy.ts'$(if $(GREP), --env grep='$(GREP)')"
 
 cypress-run: ## Ejecutar tests de Cypress en modo headless
 	@echo "$(GREEN)Ejecutando tests de Cypress...$(NC)"

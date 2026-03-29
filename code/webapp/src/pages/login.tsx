@@ -56,7 +56,8 @@ export function LoginPage() {
                             </label>
                             <Input
                                 id="identifier"
-                                type={isEmail ? 'email' : 'text'}
+                                type="text"
+                                inputMode={isEmail ? 'email' : 'tel'}
                                 placeholder="tu@email.com o teléfono 551234567"
                                 value={identifier}
                                 onChange={(e) => setIdentifier(e.target.value)}

@@ -22,8 +22,8 @@ Cypress.Commands.add('resetDatabase', () => {
 Cypress.Commands.add('login', (email: string, password: string) => {
   cy.log(`🔐 Logging in as ${email}`);
   cy.visit('/login');
-  cy.get('input#email').type(email);
-  cy.get('input#password').type(password);
+  cy.get('input#identifier').clear().type(email);
+  cy.get('input#password').clear().type(password);
   cy.get('button[type="submit"]').click();
 });
 
@@ -68,6 +68,25 @@ Cypress.Commands.add('logout', () => {
   cy.clearLocalStorage();
 });
 
+/**
+ * Minimiza el Dev Debugger flotante si está visible.
+ * Solo aparece en entorno devtest — no hace nada en producción.
+ */
+Cypress.Commands.add('closeDevDebugger', () => {
+  cy.get('body').then(($body) => {
+    if ($body.find('span:contains("Dev Debugger")').length > 0) {
+      cy.log('🔧 Minimizando Dev Debugger...');
+      // span → div.flex → div.bg-blue-600 (header) → último button = MinusCircle
+      cy.contains('span', 'Dev Debugger')
+        .parent()
+        .parent()
+        .find('button')
+        .last()
+        .click({ force: true });
+    }
+  });
+});
+
 declare global {
   namespace Cypress {
     interface Chainable {
@@ -98,6 +117,24 @@ declare global {
        * @example cy.logout()
        */
       logout(): Chainable<void>;
+
+      /**
+       * Minimiza el Dev Debugger flotante si está visible (entorno devtest).
+       * @example cy.closeDevDebugger()
+       */
+      closeDevDebugger(): Chainable<void>;
+
+      /**
+       * Cypress task to get password reset link from Mailhog
+       * @example cy.task<string | null>('mailhog:getResetLink', 'user@email.com')
+       */
+      task(event: 'mailhog:getResetLink', email: string, options?: Partial<Loggable & Timeoutable>): Chainable<string | null>;
+
+      /**
+       * Cypress task to clear all emails from Mailhog
+       * @example cy.task('mailhog:clear')
+       */
+      task(event: 'mailhog:clear', arg?: null, options?: Partial<Loggable & Timeoutable>): Chainable<null>;
     }
   }
 }
