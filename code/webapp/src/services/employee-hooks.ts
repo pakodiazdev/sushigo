@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/toast-provider";
 import { employeeApi } from "@/services/employee-api";
 import type {
@@ -21,6 +21,7 @@ export function useEmployees(filters?: EmployeeFilters) {
       const response = await employeeApi.list(filters);
       return response.data;
     },
+    placeholderData: keepPreviousData,
   });
 }
 

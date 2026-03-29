@@ -20,8 +20,8 @@ export const Route = createFileRoute('/employees')({
 
 export function EmployeesPage() {
   const {
-    data, isLoading, selectedEmployee,
-    sorting, perPage, isFormOpen,
+    data, isLoading, isFetching, selectedEmployee,
+    sorting, page, perPage, isFormOpen,
     searchText, roleFilter, statusFilter,
     handleFilterChange, handleSortChange, handlePerPageChange,
     handlePageChange, handleNewEmployee, handleEditEmployee, handleCloseForm,
@@ -48,7 +48,7 @@ export function EmployeesPage() {
         <DataGrid
           data={data?.data || []}
           columns={columns}
-          loading={isLoading}
+          loading={isLoading || isFetching}
           emptyMessage="No se encontraron empleados"
           sorting={sorting}
           onSortChange={handleSortChange}
@@ -56,7 +56,7 @@ export function EmployeesPage() {
           onPerPageChange={handlePerPageChange}
           totalResults={data?.meta?.total}
           pagination={data?.meta ? {
-            currentPage: data.meta.current_page,
+            currentPage: page,
             totalPages: data.meta.last_page,
             onPageChange: handlePageChange,
           } : undefined}
