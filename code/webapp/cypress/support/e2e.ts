@@ -16,6 +16,11 @@
 // Import commands.js using ES2015 syntax:
 import './commands'
 
+// Grep plugin — filter tests by name or tag from CLI
+// Usage: --env grep="Logout"  or  --env grep="@smoke"
+import registerCypressGrep from '@cypress/grep'
+registerCypressGrep()
+
 // Prevenir redirecciones a HTTPS
 Cypress.on('window:before:load', (win) => {
   // Interceptar y modificar las redirecciones HTTPS
