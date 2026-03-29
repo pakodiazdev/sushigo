@@ -58,7 +58,7 @@ describe('buildSummaryLines — day-range label', () => {
   })
 
   it('shows "L-V" for Monday–Friday (Sat+Sun off)', () => {
-    const days = [1, 2, 3, 4, 5].map(workDay).concat([restDay(6), restDay(7)])
+    const days = [1, 2, 3, 4, 5].map((d) => workDay(d)).concat([restDay(6), restDay(7)])
     const [first] = buildSummaryLines(days)
     expect(first!.text).toContain('L-V')
   })
@@ -70,7 +70,7 @@ describe('buildSummaryLines — day-range label', () => {
   })
 
   it('shows "L-S" for Monday–Saturday (Sunday off)', () => {
-    const days = [1, 2, 3, 4, 5, 6].map(workDay).concat([restDay(7)])
+    const days = [1, 2, 3, 4, 5, 6].map((d) => workDay(d)).concat([restDay(7)])
     const [first] = buildSummaryLines(days)
     expect(first!.text).toContain('L-S')
   })
@@ -151,7 +151,7 @@ describe('buildSummaryLines — lunch line', () => {
 
 describe('buildSummaryLines — rest days line', () => {
   it('lists rest day names in Spanish', () => {
-    const days = [1, 2, 3, 4, 5].map(workDay).concat([restDay(6), restDay(7)])
+    const days = [1, 2, 3, 4, 5].map((d) => workDay(d)).concat([restDay(6), restDay(7)])
     const rest = buildSummaryLines(days).find((l) => l.icon === 'rest')
     expect(rest).toBeDefined()
     expect(rest!.text).toContain('Sábado')
@@ -164,7 +164,7 @@ describe('buildSummaryLines — rest days line', () => {
   })
 
   it('rest line has 🏠 emoji prefix', () => {
-    const days = [1, 2, 3, 4, 5].map(workDay).concat([restDay(6), restDay(7)])
+    const days = [1, 2, 3, 4, 5].map((d) => workDay(d)).concat([restDay(6), restDay(7)])
     const rest = buildSummaryLines(days).find((l) => l.icon === 'rest')
     expect(rest!.text).toMatch(/^🏠/)
   })
@@ -181,7 +181,7 @@ describe('buildSummaryLines — rest days line', () => {
 
 describe('buildSummaryLines — line ordering', () => {
   it('returns lines in order: work, lunch, rest', () => {
-    const days = [1, 2, 3, 4, 5].map(workDay).concat([restDay(6), restDay(7)])
+    const days = [1, 2, 3, 4, 5].map((d) => workDay(d)).concat([restDay(6), restDay(7)])
     const lines = buildSummaryLines(days)
     expect(lines.map((l) => l.icon)).toEqual(['work', 'lunch', 'rest'])
   })

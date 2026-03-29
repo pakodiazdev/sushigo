@@ -36,7 +36,7 @@ export function useEmployeesSearch() {
     ...sortSpecsToParams(sorting),
   }
 
-  const { data, isLoading } = useEmployees(activeFilters)
+  const { data, isLoading, isFetching } = useEmployees(activeFilters)
 
   // Fetch individual employee when editing (fallback if not in current page)
   const editingId = search.form && search.form !== 'new' ? search.form : ''
@@ -93,6 +93,7 @@ export function useEmployeesSearch() {
     // Data
     data,
     isLoading,
+    isFetching,
     selectedEmployee,
     // Derived state
     sorting,
