@@ -116,15 +116,15 @@ describe('Crear empleado', () => {
     // ── 6. Verificar que el salario quedó registrado ──────────────────────────
     // El botón "Guardar Salario" debe desaparecer (el modal se cierra)
     cy.contains('button', 'Guardar Salario', { timeout: 10_000 }).should('not.exist')
-    
+
     // El salario se registró exitosamente - verificamos que aparezca info de salario
     // o que el botón cambie a "Ver Salario" / "Editar Salario"
     cy.get('body').then(($body) => {
       // Si hay texto de salario visible o botón de editar, el salario está registrado
-      const hasSalaryInfo = $body.text().includes('$') || 
-                            $body.text().includes('Salario') ||
-                            $body.find('button:contains("Editar Salario")').length > 0 ||
-                            $body.find('button:contains("Ver Salario")').length > 0
+      const hasSalaryInfo = $body.text().includes('$') ||
+        $body.text().includes('Salario') ||
+        $body.find('button:contains("Editar Salario")').length > 0 ||
+        $body.find('button:contains("Ver Salario")').length > 0
       expect(hasSalaryInfo, 'Salary info should be visible').to.be.true
     })
 
@@ -178,7 +178,7 @@ describe('Login nuevo empleado', () => {
     // Logout primero - limpiar storage antes de visitar cualquier página
     cy.clearLocalStorage()
     cy.clearCookies()
-    
+
     // Visitar login y esperar a que cargue
     cy.visit('/login')
     cy.url().should('include', '/login')
@@ -190,7 +190,7 @@ describe('Login nuevo empleado', () => {
 
     // Verificar acceso exitoso - debe llegar al dashboard
     cy.url({ timeout: 15_000 }).should('not.include', '/login')
-    
+
     // Verificar que el dashboard cargó (significa que el usuario está autenticado)
     cy.contains('Dashboard', { timeout: 10_000 }).should('exist')
   })

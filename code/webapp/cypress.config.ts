@@ -98,7 +98,7 @@ export default defineConfig({
                         // First decode quoted-printable encoding
                         const rawBody = msg.Content?.Body || ''
                         const body = decodeQuotedPrintable(rawBody)
-                        
+
                         // Match the reset link - the token format is {plainToken}.{selector}
                         const match = body.match(/https?:\/\/[^\s"<>]+\/reset-password\?t=[A-Za-z0-9.]+/)
                         if (match) {
@@ -135,7 +135,7 @@ export default defineConfig({
                 method: 'DELETE',
               },
               (res) => {
-                res.on('data', () => {})
+                res.on('data', () => { })
                 res.on('end', () => {
                   console.log('[mailhog] Cleared all messages')
                   resolve(null)
