@@ -90,7 +90,7 @@ export function buildSummaryLines(days: ScheduleDay[]): { icon: 'work' | 'lunch'
   return lines
 }
 
-function ScheduleSummary({ schedule }: { schedule: EmployeeSchedule }) {
+function ScheduleSummary({ schedule }: { readonly schedule: EmployeeSchedule }) {
   const lines = buildSummaryLines(schedule.days)
   if (lines.length === 0) return null
 
@@ -214,9 +214,9 @@ function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
       <button type="button" aria-label="Cerrar" className={`absolute inset-0 w-full border-0 bg-black/50 p-0 ${backdropCls}`} onClick={close} />
 
-      <div
-        className={`relative z-10 w-full max-w-2xl rounded-lg border border-border bg-background shadow-xl ${panelCls}`}
-        role="dialog"
+      <dialog
+        open
+        className={`relative z-10 m-0 w-full max-w-2xl rounded-lg border border-border bg-background p-0 shadow-xl ${panelCls}`}
         aria-modal="true"
       >
         {/* Header */}
@@ -271,7 +271,7 @@ function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
             </>
           )}
         </div>
-      </div>
+      </dialog>
     </div>
   )
 
@@ -631,11 +631,14 @@ function ReadRow({ day, permanentOverride, hasTemporaryOverride, onEdit, onClick
   const effectiveIsDayOff = permanentOverride ? permanentOverride.is_day_off : day.is_day_off
 
   // Row tint: amber when a permanent change is in effect; dim when a base rest day.
-  const rowCls = hasPermanentOverride
-    ? 'border-b last:border-0 bg-amber-50/40 dark:bg-amber-950/15'
-    : effectiveIsDayOff
-      ? 'border-b last:border-0 opacity-40'
-      : 'border-b last:border-0'
+  let rowCls: string
+  if (hasPermanentOverride) {
+    rowCls = 'border-b last:border-0 bg-amber-50/40 dark:bg-amber-950/15'
+  } else if (effectiveIsDayOff) {
+    rowCls = 'border-b last:border-0 opacity-40'
+  } else {
+    rowCls = 'border-b last:border-0'
+  }
 
   if (effectiveIsDayOff) {
     return (
@@ -711,6 +714,8 @@ interface EditRowProps {
 }
 
 function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, onToggleDayOff, onSave, onCancel, lunchOptions, showActions }: EditRowProps) {
+  const editLunchMins = values.lunch_duration_minutes ? Number(values.lunch_duration_minutes) : null
+  const editHours = values.is_day_off ? null : calcDayHours(values.expected_start, values.expected_end, editLunchMins)
   return (
     <tr className="border-b last:border-0 bg-muted/20">
       <td className="py-2 pl-3 pr-2 font-medium text-sm">
@@ -718,7 +723,7 @@ function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, onToggle
           <span>{DAY_LABELS[day.day_of_week]}</span>
           <label className="flex items-center gap-1 text-xs font-normal text-muted-foreground cursor-pointer">
             <input type="checkbox" checked={values.is_day_off} onChange={(e) => onToggleDayOff(e.target.checked)} className="h-3 w-3" />
-            Descanso
+            {' '}Descanso
           </label>
         </div>
       </td>
@@ -743,11 +748,7 @@ function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, onToggle
         </div>
       </td>
       <td className="py-2 pr-2 text-right tabular-nums text-muted-foreground text-xs">
-        {formatHours(values.is_day_off ? null : calcDayHours(
-          values.expected_start,
-          values.expected_end,
-          values.lunch_duration_minutes ? Number(values.lunch_duration_minutes) : null,
-        ))}
+        {formatHours(editHours)}
       </td>
       {showActions && (
         <td className="py-2 pr-3">
@@ -915,24 +916,25 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
               </fieldset>
 
               <div className="space-y-2">
-                <label className="block text-xs font-medium">
+                <label htmlFor="scope-effective-from" className="block text-xs font-medium">
                   {dateLabel}<span className="ml-0.5 text-red-500">*</span>
                 </label>
-                <Input type="date" min={today} {...register('effectiveFrom')} />
+                <Input id="scope-effective-from" type="date" min={today} {...register('effectiveFrom')} />
                 {errors.effectiveFrom && <p className="text-[10px] text-red-600">{errors.effectiveFrom.message}</p>}
               </div>
 
               {scope === 'range' && (
                 <div className="space-y-2">
-                  <label className="block text-xs font-medium">Hasta<span className="ml-0.5 text-red-500">*</span></label>
-                  <Input type="date" min={effectiveFrom || today} {...register('effectiveTo')} />
+                  <label htmlFor="scope-effective-to" className="block text-xs font-medium">Hasta<span className="ml-0.5 text-red-500">*</span></label>
+                  <Input id="scope-effective-to" type="date" min={effectiveFrom || today} {...register('effectiveTo')} />
                   {errors.effectiveTo && <p className="text-[10px] text-red-600">{errors.effectiveTo.message}</p>}
                 </div>
               )}
 
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-muted-foreground">Motivo (opcional)</label>
+                <label htmlFor="scope-note" className="block text-xs font-medium text-muted-foreground">Motivo (opcional)</label>
                 <input
+                  id="scope-note"
                   type="text"
                   placeholder="Ej. Clases de inglés los jueves"
                   maxLength={255}
@@ -965,14 +967,14 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
               <ul className="divide-y rounded-md border text-sm">
                 {conflicts.map((o) => {
                   const hrs = calcDayHours(o.expected_start, o.expected_end, o.lunch_duration_minutes)
+                  const hrsLabel = hrs ? ` · ${formatHours(hrs)}` : ''
+                  const conflictTime = o.is_day_off
+                    ? 'Descanso'
+                    : `${formatTime(o.expected_start)} → ${formatTime(o.expected_end)}${hrsLabel}`
                   return (
                     <li key={o.id} className="px-3 py-2.5 space-y-0.5">
                       <p className="font-medium text-xs text-amber-600 dark:text-amber-400">{overrideDateLabel(o)}</p>
-                      <p className="text-muted-foreground">
-                        {o.is_day_off
-                          ? 'Descanso'
-                          : `${formatTime(o.expected_start)} → ${formatTime(o.expected_end)}${hrs ? ` · ${formatHours(hrs)}` : ''}`}
-                      </p>
+                      <p className="text-muted-foreground">{conflictTime}</p>
                       {o.note && <p className="text-xs text-muted-foreground">{o.note}</p>}
                     </li>
                   )
@@ -1078,11 +1080,14 @@ interface WeekDayRowProps {
 
 function WeekDayRow({ day, onClickOverride }: WeekDayRowProps) {
   const isOverride = day.source === 'override'
-  const rowCls = day.is_day_off
-    ? 'border-b last:border-0 opacity-40'
-    : isOverride
-      ? 'border-b last:border-0 bg-amber-50/60 dark:bg-amber-950/20'
-      : 'border-b last:border-0'
+  let rowCls: string
+  if (day.is_day_off) {
+    rowCls = 'border-b last:border-0 opacity-40'
+  } else if (isOverride) {
+    rowCls = 'border-b last:border-0 bg-amber-50/60 dark:bg-amber-950/20'
+  } else {
+    rowCls = 'border-b last:border-0'
+  }
 
   const dayName = DAY_LABELS[day.dow] ?? ''
   const dateLabel = fmtDayShort(day.date)
@@ -1162,6 +1167,10 @@ function OverrideListDialog({ dow: _dow, dayLabel, overrides, onSelect, onClose 
             <ul className="divide-y">
               {overrides.map((o) => {
                 const hrs = calcDayHours(o.expected_start, o.expected_end, o.lunch_duration_minutes)
+                const hrsLabel = hrs ? ` · ${formatHours(hrs)}` : ''
+                const overrideTime = o.is_day_off
+                  ? 'Descanso'
+                  : `${formatTime(o.expected_start)} → ${formatTime(o.expected_end)}${hrsLabel}`
                 return (
                   <li key={o.id}>
                     <button
@@ -1169,11 +1178,7 @@ function OverrideListDialog({ dow: _dow, dayLabel, overrides, onSelect, onClose 
                       className="w-full px-5 py-3 text-left hover:bg-muted/50 transition-colors"
                     >
                       <p className="text-xs font-medium text-amber-600 dark:text-amber-400">{overrideDateLabel(o)}</p>
-                      <p className="mt-0.5 text-sm">
-                        {o.is_day_off
-                          ? 'Descanso'
-                          : `${formatTime(o.expected_start)} → ${formatTime(o.expected_end)}${hrs ? ` · ${formatHours(hrs)}` : ''}`}
-                      </p>
+                      <p className="mt-0.5 text-sm">{overrideTime}</p>
                       {o.note && <p className="mt-0.5 text-xs text-muted-foreground">{o.note}</p>}
                     </button>
                   </li>
@@ -1190,7 +1195,7 @@ function OverrideListDialog({ dow: _dow, dayLabel, overrides, onSelect, onClose 
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function EmptySchedule({ canCreate }: { canCreate: boolean }) {
+function EmptySchedule({ canCreate }: { readonly canCreate: boolean }) {
   return (
     <div className="flex flex-col items-center py-8 text-center">
       <CalendarDays className="mb-2 h-8 w-8 text-muted-foreground/50" />
