@@ -54,9 +54,12 @@ class ScheduleResource extends BaseResource
                     return [];
                 }
 
-                // Use local date so evening-shift sessions in Mexico City (UTC-6)
-                // don't prematurely expire overrides that are still active today.
-                $today = now('America/Mexico_City')->toDateString();
+                // Use the branch's configured timezone so overrides that are still
+                // active today (local calendar date) are not prematurely excluded
+                // during evening hours when UTC has already rolled over to the next day.
+                // Falls back to UTC if branch data is not loaded.
+                $timezone = $this->employmentPeriod->branch?->timezone ?? 'UTC';
+                $today = now($timezone)->toDateString();
 
                 $notExpired = $this->employmentPeriod->scheduleDayOverrides->filter(
                     fn ($o) => is_null($o->effective_to) || $o->effective_to->toDateString() >= $today
