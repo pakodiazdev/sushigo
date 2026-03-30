@@ -50,7 +50,7 @@ export function dayToEditValues(day: ScheduleDay): EditDayValues {
     is_day_off: day.is_day_off,
     expected_start: day.expected_start ?? '',
     expected_lunch_start: day.expected_lunch_start ?? '',
-    lunch_duration_minutes: day.lunch_duration_minutes != null ? String(day.lunch_duration_minutes) : '',
+    lunch_duration_minutes: day.lunch_duration_minutes == null ? '' : String(day.lunch_duration_minutes),
     expected_end: day.expected_end ?? '',
   }
 }
@@ -168,9 +168,9 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
           is_day_off: false,
           expected_start:         template.expected_start ?? '',
           expected_lunch_start:   template.expected_lunch_start ?? '',
-          lunch_duration_minutes: template.lunch_duration_minutes != null
-            ? String(template.lunch_duration_minutes)
-            : '',
+          lunch_duration_minutes: template.lunch_duration_minutes == null
+            ? ''
+            : String(template.lunch_duration_minutes),
           expected_end:           template.expected_end ?? '',
         })
         return
@@ -211,15 +211,15 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
   }
 
   const watchedValues = editForm.watch()
-  const editValues: EditDayValues | null = editingDow !== null ? watchedValues : null
+  const editValues: EditDayValues | null = editingDow === null ? null : watchedValues
 
   // Check if there are validation errors for current edit values
-  const editErrors = editValues && !editValues.is_day_off
-    ? {
-        expected_start: !editValues.expected_start ? 'Requerido' : null,
-        expected_end: !editValues.expected_end ? 'Requerido' : null,
+  const editErrors = editValues === null || editValues.is_day_off
+    ? { expected_start: null, expected_end: null }
+    : {
+        expected_start: editValues.expected_start ? null : 'Requerido',
+        expected_end: editValues.expected_end ? null : 'Requerido',
       }
-    : { expected_start: null, expected_end: null }
 
   const hasEditErrors = !!(editErrors.expected_start || editErrors.expected_end)
 

@@ -247,4 +247,50 @@ describe('ScheduleSection', () => {
       expect(headings.length).toBeGreaterThan(0)
     })
   })
+
+  it('switches to week view when "Vista semanal" tab is clicked', async () => {
+    renderSection()
+    await waitFor(() => {
+      const buttons = screen.getAllByRole('button')
+      expect(buttons.find((b) => /ver horario/i.test(b.textContent ?? ''))).toBeDefined()
+    })
+
+    const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(verBtn) })
+
+    // Wait for schedule content to load
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Vista semanal/i).length).toBeGreaterThan(0)
+    })
+
+    // Click the "Vista semanal" tab
+    const weekTab = screen.queryAllByText(/Vista semanal/i)[0]!
+    await act(async () => { fireEvent.click(weekTab) })
+
+    // Weekly calendar should render with day names
+    await waitFor(() => {
+      // Weekly calendar renders day column headers like "Lun", "Mar", etc.
+      expect(screen.queryAllByText(/lun|mar|mié|jue|vie|sáb|dom/i).length).toBeGreaterThan(0)
+    })
+  })
+
+  it('shows loading skeleton when schedule is loading', async () => {
+    // Make getCurrent hang so we catch the loading state
+    const { scheduleApi } = await import('@/services/schedule-api')
+    vi.mocked(scheduleApi.getCurrent).mockImplementationOnce(
+      () => new Promise(() => { /* never resolves */ }),
+    )
+
+    renderSection()
+
+    // Before query resolves, open the dialog
+    const buttons = screen.getAllByRole('button')
+    const verBtn = buttons.find((b) => /ver horario/i.test(b.textContent ?? ''))
+    if (verBtn) {
+      await act(async () => { fireEvent.click(verBtn) })
+      // Skeleton should show while loading
+      const skeletonEl = document.querySelector('.animate-pulse')
+      expect(skeletonEl).toBeTruthy()
+    }
+  })
 })

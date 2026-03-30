@@ -192,11 +192,23 @@ interface ScheduleDialogProps {
   employee: Employee
 }
 
+function renderScheduleBody(ctx: CtxType, employee: Employee) {
+  if (ctx.isLoading) return <ScheduleSkeleton />
+  if (ctx.isError) return <p className="text-sm text-muted-foreground">Error al cargar el horario.</p>
+  if (ctx.schedule) return <ScheduleContent schedule={ctx.schedule} employeeId={employee.id} periodId={ctx.periodId} />
+  return <EmptySchedule canCreate={!!ctx.periodId} />
+}
+
 function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
   const { isOpen, close, view, isTransitioning } = ctx
   const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, close)
 
   if (!visible) return null
+
+  // Pre-fill effective_from from active period when creating a first schedule.
+  const initialEffectiveFrom = ctx.schedule
+    ? undefined
+    : employee.employment_periods?.find((p) => p.is_active)?.start_date
 
   const content = (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
@@ -239,31 +251,13 @@ function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
               employeeId={employee.id}
               periodId={ctx.periodId}
               hasExistingSchedule={!!ctx.schedule}
-              initialEffectiveFrom={
-                // When there's no schedule yet, pre-fill with the active
-                // employment period's start date so the admin doesn't have to
-                // look it up. Leave empty when replacing an existing schedule.
-                !ctx.schedule
-                  ? employee.employment_periods?.find((p) => p.is_active)?.start_date
-                  : undefined
-              }
+              initialEffectiveFrom={initialEffectiveFrom}
               onSuccess={ctx.onScheduleCreated}
               onCancel={ctx.showSchedule}
             />
           ) : (
             <>
-              <div className="p-5">
-                {ctx.isLoading ? (
-                  <ScheduleSkeleton />
-                ) : ctx.isError ? (
-                  <p className="text-sm text-muted-foreground">Error al cargar el horario.</p>
-                ) : ctx.schedule ? (
-                  <ScheduleContent schedule={ctx.schedule} employeeId={employee.id} periodId={ctx.periodId} />
-                ) : (
-                  <EmptySchedule canCreate={!!ctx.periodId} />
-                )}
-              </div>
-
+              <div className="p-5">{renderScheduleBody(ctx, employee)}</div>
               {/* Footer */}
               <div className="flex items-center justify-between border-t px-5 py-3">
                 {ctx.periodId && !ctx.isLoading ? (
@@ -598,7 +592,7 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
 
 // ── Hours helpers ─────────────────────────────────────────────────────────────
 
-function calcDayHours(start: string | null, end: string | null, lunchMinutes: number | null): number | null {
+export function calcDayHours(start: string | null, end: string | null, lunchMinutes: number | null): number | null {
   if (!start || !end) return null
   const toMin = (t: string) => { const [h = 0, m = 0] = t.split(':').map(Number); return h * 60 + m }
   const startMin = toMin(start)
@@ -609,7 +603,7 @@ function calcDayHours(start: string | null, end: string | null, lunchMinutes: nu
   return net > 0 ? net / 60 : null
 }
 
-function formatHours(h: number | null): string {
+export function formatHours(h: number | null): string {
   if (h === null) return '—'
   const total = Math.round(h * 60)
   const hours = Math.floor(total / 60)
@@ -1137,7 +1131,7 @@ interface OverrideListDialogProps {
   onClose: () => void
 }
 
-function overrideDateLabel(o: ScheduleDayOverride): string {
+export function overrideDateLabel(o: ScheduleDayOverride): string {
   const from = new Date(o.effective_from + 'T00:00:00')
     .toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
   if (o.effective_to === null) return `desde ${from}`

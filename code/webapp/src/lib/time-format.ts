@@ -40,10 +40,10 @@ export function formatTime(
   if (!time) return '—'
 
   const parts = time.split(':')
-  const h = parseInt(parts[0] ?? '', 10)
-  const m = parseInt(parts[1] ?? '', 10)
+  const h = Number.parseInt(parts[0] ?? '', 10)
+  const m = Number.parseInt(parts[1] ?? '', 10)
 
-  if (isNaN(h) || isNaN(m)) return '—'
+  if (Number.isNaN(h) || Number.isNaN(m)) return '—'
 
   if (format === '24') {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
