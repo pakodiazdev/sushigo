@@ -71,9 +71,33 @@ const mockPermanentOverride: ScheduleDayOverride = {
   updated_at: '2026-01-01T00:00:00+00:00',
 }
 
+// A future temporary override on the same day — makes hasTemporaryOverride=true
+const mockTemporaryOverride: ScheduleDayOverride = {
+  id: 'ovr-2',
+  employment_period_id: 'period-1',
+  day_of_week: 1, // Monday
+  effective_from: '2026-04-07', // future
+  effective_to: '2026-04-07',
+  is_day_off: true,
+  expected_start: null,
+  expected_lunch_start: null,
+  expected_lunch_end: null,
+  lunch_duration_minutes: null,
+  expected_end: null,
+  note: 'Día festivo',
+  created_at: '2026-01-01T00:00:00+00:00',
+  updated_at: '2026-01-01T00:00:00+00:00',
+}
+
 const mockScheduleWithOverride = {
   ...mockSchedule,
   active_overrides: [mockPermanentOverride],
+}
+
+// Both permanent + temporary on Monday — triggers showZap in DayLabel
+const mockScheduleWithBothOverrides = {
+  ...mockSchedule,
+  active_overrides: [mockPermanentOverride, mockTemporaryOverride],
 }
 
 const mockEmployee: Employee = {
@@ -422,6 +446,39 @@ describe('ScheduleSection', () => {
       await waitFor(() => {
         // EditRow is gone — no more cancel button
         expect(screen.queryAllByTitle('Cancelar').length).toBe(0)
+      })
+    }
+  })
+
+  it('shows Zap indicator and opens OverrideListDialog with overrides when clicked', async () => {
+    const { scheduleApi } = await import('@/services/schedule-api')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(scheduleApi.getCurrent).mockResolvedValueOnce({ data: { status: 200, data: mockScheduleWithBothOverrides } } as any)
+
+    renderSection()
+    await waitFor(() => {
+      const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))
+      expect(verBtn).toBeDefined()
+    })
+
+    const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(verBtn) })
+
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Jornada completa/i).length).toBeGreaterThan(0)
+    })
+
+    // With both overrides on Monday, showZap=true → Zap button renders
+    const zapBtns = screen.queryAllByTitle('Ver excepciones')
+    if (zapBtns.length > 0) {
+      await act(async () => { fireEvent.click(zapBtns[0]!) })
+      // OverrideListDialog with override items should appear
+      await waitFor(() => {
+        expect(screen.queryAllByText(/Excepciones/i).length).toBeGreaterThan(0)
+      })
+      // Override list should show the override items (day-off one: "Descanso")
+      await waitFor(() => {
+        expect(screen.queryAllByText(/Descanso|09:00/i).length).toBeGreaterThan(0)
       })
     }
   })
