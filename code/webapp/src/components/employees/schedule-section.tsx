@@ -414,8 +414,21 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })()
 
+  // Returns the most-recently-started indefinite override for a day-of-week that
+  // has already taken effect. Sorting DESC by effective_from ensures we get the
+  // latest one when multiple permanent overrides exist for the same day.
+  const findActivePermanentOverride = (dow: number): ScheduleDayOverride | null =>
+    [...(overridesByDow[dow] ?? [])]
+      .sort((a, b) => b.effective_from.localeCompare(a.effective_from))
+      .find((o) => o.effective_to === null && o.effective_from <= todayLocal) ?? null
+
+  // Use effective times (permanent override when active, otherwise base schedule)
+  // so the total matches the per-row hours shown in the config table.
   const totalWeeklyHours = sortedDays.reduce<number>((sum, day) => {
-    return sum + (calcDayHours(day.expected_start, day.expected_end, day.lunch_duration_minutes) ?? 0)
+    const permanentOverride = findActivePermanentOverride(day.day_of_week)
+    const effectiveDay = permanentOverride ?? day
+    if (effectiveDay.is_day_off) return sum
+    return sum + (calcDayHours(effectiveDay.expected_start, effectiveDay.expected_end, effectiveDay.lunch_duration_minutes) ?? 0)
   }, 0)
 
   // Expected hours: 8h/day × working days (only for FULL jornada)
@@ -458,7 +471,7 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
           <span className="text-xs text-amber-600 dark:text-amber-400">· {formatHours(pendingHours)} pendientes</span>
         )}
         <span className="text-muted-foreground">
-          Desde {new Date(schedule.effective_from).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+          Desde {new Date(schedule.effective_from + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
       </div>
 
@@ -488,10 +501,8 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
                   const allOverridesForDow = overridesByDow[day.day_of_week] ?? []
                   // An indefinite override that has already started is treated as
                   // the day's current effective schedule, not as an "exception".
-                  const permanentOverride =
-                    allOverridesForDow.find(
-                      (o) => o.effective_to === null && o.effective_from <= todayLocal,
-                    ) ?? null
+                  // Uses the same helper as totalWeeklyHours for consistency.
+                  const permanentOverride = findActivePermanentOverride(day.day_of_week)
                   // Any override that is NOT the active permanent one is a
                   // temporary exception (single date, range, or future indefinite).
                   const hasTemporaryOverride = allOverridesForDow.some((o) => o !== permanentOverride)

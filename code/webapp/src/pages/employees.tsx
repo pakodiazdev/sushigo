@@ -68,6 +68,7 @@ export function EmployeesPage() {
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         onSuccess={handleCloseForm}
+        onCreated={handleEditEmployee}
       />
     </PageContainer>
   )

@@ -12,6 +12,7 @@ interface EmployeeFormProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  onCreated?: (employee: Employee) => void
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -20,7 +21,7 @@ interface EmployeeFormProps {
  * EmployeeForm is a thin orchestration shell.
  * All data-fetching, mutations, and submit logic live in useEmployeeForm.
  */
-export function EmployeeForm({ employee, isOpen, onClose, onSuccess }: EmployeeFormProps) {
+export function EmployeeForm({ employee, isOpen, onClose, onSuccess, onCreated }: EmployeeFormProps) {
   const {
     mode,
     setMode,
@@ -45,7 +46,7 @@ export function EmployeeForm({ employee, isOpen, onClose, onSuccess }: EmployeeF
     handleRehire,
     handleToggleActive,
     handleRefreshCode,
-  } = useEmployeeForm({ employee, isOpen, onClose, onSuccess })
+  } = useEmployeeForm({ employee, isOpen, onClose, onSuccess, onCreated })
 
   // ── Render ───────────────────────────────────────────────────────────────────
 

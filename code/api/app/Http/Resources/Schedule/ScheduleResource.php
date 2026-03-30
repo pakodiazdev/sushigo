@@ -54,11 +54,18 @@ class ScheduleResource extends BaseResource
                     return [];
                 }
 
-                $today = now()->toDateString();
+                // Use local date so evening-shift sessions in Mexico City (UTC-6)
+                // don't prematurely expire overrides that are still active today.
+                $today = now('America/Mexico_City')->toDateString();
 
                 $notExpired = $this->employmentPeriod->scheduleDayOverrides->filter(
                     fn ($o) => is_null($o->effective_to) || $o->effective_to->toDateString() >= $today
                 )->values();
+
+                // The overrides come from the parent's eager-loaded collection, so
+                // their own `employmentPeriod` relation is not loaded. Set it explicitly
+                // so ScheduleDayOverrideResource can include employment_period_id.
+                $notExpired->each(fn ($o) => $o->setRelation('employmentPeriod', $this->employmentPeriod));
 
                 return ScheduleDayOverrideResource::collection($notExpired);
             }),
