@@ -37,7 +37,7 @@ const editDaySchema = z.object({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function addMinutesToTime(time: string, minutes: number): string {
+export function addMinutesToTime(time: string, minutes: number): string {
   const parts = time.split(':').map(Number)
   const h = parts[0] ?? 0
   const m = parts[1] ?? 0
@@ -45,7 +45,7 @@ function addMinutesToTime(time: string, minutes: number): string {
   return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
-function dayToEditValues(day: ScheduleDay): EditDayValues {
+export function dayToEditValues(day: ScheduleDay): EditDayValues {
   return {
     is_day_off: day.is_day_off,
     expected_start: day.expected_start ?? '',
@@ -59,7 +59,7 @@ function dayToEditValues(day: ScheduleDay): EditDayValues {
  * Find the closest previous working day (by day_of_week, wrapping around)
  * to use as a template when creating an override for a rest day.
  */
-function findNearestWorkingDay(dow: number, allDays: ScheduleDay[]): ScheduleDay | null {
+export function findNearestWorkingDay(dow: number, allDays: ScheduleDay[]): ScheduleDay | null {
   const working = allDays.filter((d) => !d.is_day_off && d.expected_start && d.expected_end)
   if (!working.length) return null
   // Build candidate order: the 6 days before `dow`, descending, wrapping 1-7
