@@ -57,13 +57,7 @@ function EmployeeSchedulePage() {
           </h2>
         </div>
 
-        {isLoadingSchedule ? (
-          <ScheduleSkeleton />
-        ) : schedule ? (
-          <SchedulePanel schedule={schedule} />
-        ) : (
-          <EmptySchedule />
-        )}
+        {renderScheduleContent(isLoadingSchedule, schedule)}
       </div>
     </PageContainer>
   )
@@ -71,7 +65,15 @@ function EmployeeSchedulePage() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function SchedulePanel({ schedule }: { schedule: NonNullable<ReturnType<typeof useEmployeeSchedulePage>['schedule']> }) {
+type SchedulePanelSchedule = NonNullable<ReturnType<typeof useEmployeeSchedulePage>['schedule']>
+
+function renderScheduleContent(isLoading: boolean, schedule: SchedulePanelSchedule | null | undefined) {
+  if (isLoading) return <ScheduleSkeleton />
+  if (schedule) return <SchedulePanel schedule={schedule} />
+  return <EmptySchedule />
+}
+
+function SchedulePanel({ schedule }: { readonly schedule: SchedulePanelSchedule }) {
   return (
     <div className="rounded-md border">
       {/* Header info */}

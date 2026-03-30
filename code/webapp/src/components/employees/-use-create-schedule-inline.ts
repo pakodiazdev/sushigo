@@ -65,13 +65,14 @@ export function buildPayload(values: CreateScheduleSimpleValues) {
   const days = DOW_KEYS.map((key, idx) => {
     const dow    = idx + 1
     const isOff  = values[key]
+    const effectiveLunchMinutes: number | null = (!isOff && lunchStart) ? lunchMinutes : null
     return {
       day_of_week:            dow,
       is_day_off:             isOff,
       expected_start:         isOff ? null : values.expected_start,
       expected_lunch_start:   isOff ? null : lunchStart,
       expected_lunch_end:     isOff ? null : lunchEnd,
-      lunch_duration_minutes: isOff ? null : (lunchStart ? lunchMinutes : null),
+      lunch_duration_minutes: effectiveLunchMinutes,
       expected_end:           isOff ? null : values.expected_end,
     }
   })
