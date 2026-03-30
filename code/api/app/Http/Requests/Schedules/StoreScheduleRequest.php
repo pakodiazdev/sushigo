@@ -66,46 +66,58 @@ class StoreScheduleRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($v) {
-            $days = $this->input('days', []);
-
-            foreach ($days as $index => $day) {
-                $isDayOff = filter_var($day['is_day_off'] ?? false, FILTER_VALIDATE_BOOLEAN);
-
-                if (! $isDayOff) {
-                    if (empty($day['expected_start'])) {
-                        $v->errors()->add(
-                            "days.{$index}.expected_start",
-                            'El horario de entrada es requerido para días laborales.'
-                        );
-                    }
-                    if (empty($day['expected_end'])) {
-                        $v->errors()->add(
-                            "days.{$index}.expected_end",
-                            'El horario de salida es requerido para días laborales.'
-                        );
-                    }
-                }
-            }
-
-            // Validate that the new effective_from is strictly after any existing open-ended
-            // schedule's effective_from. This prevents CreateScheduleAction from computing
-            // effective_to < effective_from, which would violate the DB CHECK constraint.
-            $period = $this->route('employmentPeriod');
-            $newFrom = $this->input('effective_from');
-
-            if ($period && $newFrom) {
-                $existingFrom = $period->employeeSchedules()
-                    ->whereNull('effective_to')
-                    ->value('effective_from');
-
-                if ($existingFrom && Carbon::parse($newFrom)->toDateString() <= Carbon::parse($existingFrom)->toDateString()) {
-                    $v->errors()->add(
-                        'effective_from',
-                        'La fecha de inicio debe ser posterior al inicio del horario activo ('.Carbon::parse($existingFrom)->toDateString().').'
-                    );
-                }
-            }
+            $this->validateWorkingDayFields($v, $this->input('days', []));
+            $this->validateEffectiveDateConflict($v);
         });
+    }
+
+    private function validateWorkingDayFields($validator, array $days): void
+    {
+        foreach ($days as $index => $day) {
+            $isDayOff = filter_var($day['is_day_off'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            if ($isDayOff) {
+                continue;
+            }
+
+            if (empty($day['expected_start'])) {
+                $validator->errors()->add(
+                    "days.{$index}.expected_start",
+                    'El horario de entrada es requerido para días laborales.'
+                );
+            }
+
+            if (empty($day['expected_end'])) {
+                $validator->errors()->add(
+                    "days.{$index}.expected_end",
+                    'El horario de salida es requerido para días laborales.'
+                );
+            }
+        }
+    }
+
+    private function validateEffectiveDateConflict($validator): void
+    {
+        $period = $this->route('employmentPeriod');
+        $newFrom = $this->input('effective_from');
+
+        if (! $period || ! $newFrom) {
+            return;
+        }
+
+        // Validate that the new effective_from is strictly after any existing open-ended
+        // schedule's effective_from. This prevents CreateScheduleAction from computing
+        // effective_to < effective_from, which would violate the DB CHECK constraint.
+        $existingFrom = $period->employeeSchedules()
+            ->whereNull('effective_to')
+            ->value('effective_from');
+
+        if ($existingFrom && Carbon::parse($newFrom)->toDateString() <= Carbon::parse($existingFrom)->toDateString()) {
+            $validator->errors()->add(
+                'effective_from',
+                'La fecha de inicio debe ser posterior al inicio del horario activo ('.Carbon::parse($existingFrom)->toDateString().').'
+            );
+        }
     }
 
     public function messages(): array

@@ -58,20 +58,25 @@ class CreateScheduleAction
             ]);
 
             foreach ($data['days'] as $day) {
-                $isDayOff = (bool) $day['is_day_off'];
-
-                $schedule->scheduleDays()->create([
-                    'day_of_week' => $day['day_of_week'],
-                    'is_day_off' => $isDayOff,
-                    'expected_start' => $isDayOff ? null : ($day['expected_start'] ?? null),
-                    'expected_lunch_start' => $isDayOff ? null : ($day['expected_lunch_start'] ?? null),
-                    'expected_lunch_end' => $isDayOff ? null : ($day['expected_lunch_end'] ?? null),
-                    'lunch_duration_minutes' => $isDayOff ? null : ($day['lunch_duration_minutes'] ?? null),
-                    'expected_end' => $isDayOff ? null : ($day['expected_end'] ?? null),
-                ]);
+                $schedule->scheduleDays()->create($this->prepareDayData($day));
             }
 
             return $schedule->load('scheduleDays', 'employmentPeriod');
         });
+    }
+
+    private function prepareDayData(array $day): array
+    {
+        $isDayOff = (bool) $day['is_day_off'];
+
+        return [
+            'day_of_week' => $day['day_of_week'],
+            'is_day_off' => $isDayOff,
+            'expected_start' => $isDayOff ? null : ($day['expected_start'] ?? null),
+            'expected_lunch_start' => $isDayOff ? null : ($day['expected_lunch_start'] ?? null),
+            'expected_lunch_end' => $isDayOff ? null : ($day['expected_lunch_end'] ?? null),
+            'lunch_duration_minutes' => $isDayOff ? null : ($day['lunch_duration_minutes'] ?? null),
+            'expected_end' => $isDayOff ? null : ($day['expected_end'] ?? null),
+        ];
     }
 }
