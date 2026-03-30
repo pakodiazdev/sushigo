@@ -96,8 +96,8 @@ function ScheduleSummary({ schedule }: { schedule: EmployeeSchedule }) {
 
   return (
     <div className="mt-1.5 space-y-0.5 pl-0.5">
-      {lines.map((line, i) => (
-        <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      {lines.map((line) => (
+        <div key={line.icon} className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span>{line.text}</span>
         </div>
       ))}
@@ -778,10 +778,10 @@ function DayLabel({
   hasPermanentOverride,
   onClickOverride,
 }: {
-  label: string
-  hasTemporaryOverride: boolean
-  hasPermanentOverride: boolean
-  onClickOverride?: () => void
+  readonly label: string
+  readonly hasTemporaryOverride: boolean
+  readonly hasPermanentOverride: boolean
+  readonly onClickOverride?: () => void
 }) {
   const showZap = hasTemporaryOverride
   const showDot = !hasTemporaryOverride && hasPermanentOverride
