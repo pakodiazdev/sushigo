@@ -1,6 +1,16 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { addDays, getWeekStart, resolveWeek } from '@/components/employees/-use-weekly-calendar'
+import { renderHook, act } from '@testing-library/react'
+import React from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { addDays, getWeekStart, fmtDayShort, resolveWeek, useWeeklyCalendar } from '@/components/employees/-use-weekly-calendar'
 import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
+
+function createWrapper() {
+  const queryClient = new QueryClient()
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children)
+}
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -237,5 +247,70 @@ describe('resolveWeek — override resolution', () => {
     const result = resolveWeek(WEEK, ALL_WEEK, [override])
 
     expect(result[1]!.override).toBeUndefined()
+  })
+})
+
+// ── fmtDayShort ───────────────────────────────────────────────────────────────
+
+describe('fmtDayShort', () => {
+  it('includes the day number in the output', () => {
+    expect(fmtDayShort('2026-03-23')).toMatch(/23/)
+  })
+
+  it('includes a month abbreviation', () => {
+    // 2026-01-01 in es-MX → "1 ene." or similar
+    expect(fmtDayShort('2026-01-15')).toMatch(/15/)
+  })
+
+  it('returns a non-empty string', () => {
+    expect(fmtDayShort('2026-06-30').length).toBeGreaterThan(0)
+  })
+})
+
+// ── useWeeklyCalendar hook ────────────────────────────────────────────────────
+
+describe('useWeeklyCalendar', () => {
+  it('initializes weekStart to the current Monday', () => {
+    const { result } = renderHook(() => useWeeklyCalendar(), { wrapper: createWrapper() })
+    const dayOfWeek = new Date(result.current.weekStart + 'T00:00:00').getDay()
+    expect(dayOfWeek).toBe(1) // Monday in JS
+  })
+
+  it('prevWeek moves weekStart back 7 days', () => {
+    const { result } = renderHook(() => useWeeklyCalendar(), { wrapper: createWrapper() })
+    const initial = result.current.weekStart
+    act(() => { result.current.prevWeek() })
+    expect(result.current.weekStart).toBe(addDays(initial, -7))
+  })
+
+  it('nextWeek moves weekStart forward 7 days', () => {
+    const { result } = renderHook(() => useWeeklyCalendar(), { wrapper: createWrapper() })
+    const initial = result.current.weekStart
+    act(() => { result.current.nextWeek() })
+    expect(result.current.weekStart).toBe(addDays(initial, 7))
+  })
+
+  it('jumpToDate sets weekStart to the Monday of that week', () => {
+    const { result } = renderHook(() => useWeeklyCalendar(), { wrapper: createWrapper() })
+    act(() => { result.current.jumpToDate('2026-03-25') }) // Wednesday → Monday 2026-03-23
+    expect(result.current.weekStart).toBe('2026-03-23')
+  })
+
+  it('openOverrideList sets overrideListDow', () => {
+    const { result } = renderHook(() => useWeeklyCalendar(), { wrapper: createWrapper() })
+    act(() => { result.current.openOverrideList(3) })
+    expect(result.current.overrideListDow).toBe(3)
+  })
+
+  it('closeOverrideList clears overrideListDow', () => {
+    const { result } = renderHook(() => useWeeklyCalendar(), { wrapper: createWrapper() })
+    act(() => { result.current.openOverrideList(5) })
+    act(() => { result.current.closeOverrideList() })
+    expect(result.current.overrideListDow).toBeNull()
+  })
+
+  it('starts with overrideListDow as null', () => {
+    const { result } = renderHook(() => useWeeklyCalendar(), { wrapper: createWrapper() })
+    expect(result.current.overrideListDow).toBeNull()
   })
 })

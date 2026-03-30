@@ -64,9 +64,9 @@ export function useScheduleSection(employeeId: string) {
   function showSchedule() { switchView('schedule') }
   function onScheduleCreated() { switchView('schedule') }
 
-  const hasSchedule = scheduleQuery.data !== undefined
-    ? scheduleQuery.data.schedule !== null
-    : undefined // undefined = still loading (unknown)
+  const hasSchedule = scheduleQuery.data === undefined
+    ? undefined // still loading (unknown)
+    : scheduleQuery.data.schedule !== null
 
   return {
     isOpen,
