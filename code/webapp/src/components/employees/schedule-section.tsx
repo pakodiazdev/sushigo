@@ -23,6 +23,31 @@ import { formatTime } from '@/lib/time-format'
 const DOW_ABBR  = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const
 const DOW_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] as const
 
+/** Compute the compact day-range label (e.g. "L-V", "L-D", "LXV"). */
+function computeDayRangeLabel(working: ScheduleDay[], resting: ScheduleDay[]): string {
+  if (working.length === 7) return 'L-D'
+  if (working.length === 1) return DOW_NAMES[working[0]!.day_of_week - 1]!
+
+  const isConsecutive = working.every(
+    (d, i) => i === 0 || d.day_of_week === working[i - 1]!.day_of_week + 1,
+  )
+  if (isConsecutive) {
+    return `${DOW_ABBR[working[0]!.day_of_week - 1]}-${DOW_ABBR[working[working.length - 1]!.day_of_week - 1]}`
+  }
+
+  // Non-consecutive — check if the rest block is contiguous (circular range).
+  const isRestConsecutive = resting.every(
+    (d, i) => i === 0 || d.day_of_week === resting[i - 1]!.day_of_week + 1,
+  )
+  if (isRestConsecutive) {
+    const firstWork = working[0]!
+    const lastWork  = working[working.length - 1]!
+    return `${DOW_ABBR[firstWork.day_of_week - 1]}-${DOW_ABBR[lastWork.day_of_week - 1]}`
+  }
+
+  return working.map((d) => DOW_ABBR[d.day_of_week - 1]).join('')
+}
+
 /**
  * Given the 7 schedule days, build 1-3 compact summary lines:
  *   • Work:  "L-V · 1:00 PM – 10:00 PM"
@@ -35,35 +60,7 @@ export function buildSummaryLines(days: ScheduleDay[]): { icon: 'work' | 'lunch'
 
   if (working.length === 0) return []
 
-  // ── Day-range label ──────────────────────────────────────────────────────────
-  let dayRange: string
-  if (working.length === 7) {
-    dayRange = 'L-D'
-  } else if (working.length === 1) {
-    dayRange = DOW_NAMES[working[0]!.day_of_week - 1]!
-  } else {
-    // Are the working days consecutive in ISO order (no gaps)?
-    const isConsecutive = working.every(
-      (d, i) => i === 0 || d.day_of_week === working[i - 1]!.day_of_week + 1,
-    )
-    if (isConsecutive) {
-      dayRange = `${DOW_ABBR[working[0]!.day_of_week - 1]}-${DOW_ABBR[working[working.length - 1]!.day_of_week - 1]}`
-    } else {
-      // Non-consecutive (e.g. Mon+Wed+Fri) — check circular block (rest is a
-      // contiguous gap). If rest days are all consecutive, show a circular range.
-      const isRestConsecutive = resting.every(
-        (d, i) => i === 0 || d.day_of_week === resting[i - 1]!.day_of_week + 1,
-      )
-      if (isRestConsecutive) {
-        // Work wraps around: start right after the rest block, end right before.
-        const firstWork = working[0]!
-        const lastWork  = working[working.length - 1]!
-        dayRange = `${DOW_ABBR[firstWork.day_of_week - 1]}-${DOW_ABBR[lastWork.day_of_week - 1]}`
-      } else {
-        dayRange = working.map((d) => DOW_ABBR[d.day_of_week - 1]).join('')
-      }
-    }
-  }
+  const dayRange = computeDayRangeLabel(working, resting)
 
   // ── Times (use the first working day as reference) ───────────────────────────
   const ref = working[0]!
@@ -153,13 +150,13 @@ export function ScheduleSection({ employee }: ScheduleSectionProps) {
 
 type CtxType = ReturnType<typeof useScheduleSection>
 
-interface ScheduleDialogProps {
-  ctx: CtxType
-  employee: Employee
+function animCls(animating: 'enter' | 'exit' | null, enterVal: string, exitVal: string): string {
+  if (animating === 'enter') return enterVal
+  if (animating === 'exit') return exitVal
+  return ''
 }
 
-function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
-  const { isOpen, close, view, isTransitioning } = ctx
+function useDialogAnimation(isOpen: boolean, close: () => void) {
   const [visible, setVisible] = useState(false)
   const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null)
 
@@ -184,12 +181,22 @@ function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
     return () => document.removeEventListener('keydown', onEsc)
   }, [isOpen, close])
 
-  if (!visible) return null
+  const backdropCls = animCls(animating, 'animate-dialog-backdrop-in', 'animate-dialog-backdrop-out')
+  const panelCls    = animCls(animating, 'animate-dialog-in', 'animate-dialog-out')
 
-  const backdropCls = animating === 'enter' ? 'animate-dialog-backdrop-in'
-    : animating === 'exit' ? 'animate-dialog-backdrop-out' : ''
-  const panelCls = animating === 'enter' ? 'animate-dialog-in'
-    : animating === 'exit' ? 'animate-dialog-out' : ''
+  return { visible, backdropCls, panelCls }
+}
+
+interface ScheduleDialogProps {
+  ctx: CtxType
+  employee: Employee
+}
+
+function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
+  const { isOpen, close, view, isTransitioning } = ctx
+  const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, close)
+
+  if (!visible) return null
 
   const content = (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">

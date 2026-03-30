@@ -121,13 +121,11 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
       // single_date  → same-day range (from = to)
       // range        → explicit end date chosen by user
       // indefinite   → no end date (permanent per-day adjustment)
-      let resolvedTo: string | null = null
+      let resolvedTo: string | null = null // indefinite default
       if (scope === 'single_date') {
         resolvedTo = effectiveFrom
       } else if (scope === 'range') {
         resolvedTo = effectiveTo
-      } else {
-        resolvedTo = null // indefinite — no expiry
       }
 
       return scheduleApi.createDayOverride(periodId, {
