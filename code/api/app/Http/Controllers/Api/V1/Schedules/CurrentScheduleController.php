@@ -50,7 +50,7 @@ class CurrentScheduleController extends Controller
 
         $schedule = EmployeeSchedule::effective(now())
             ->where('employment_period_id', $activePeriod->id)
-            ->with('scheduleDays', 'employmentPeriod.scheduleDayOverrides')
+            ->with('scheduleDays', 'employmentPeriod.scheduleDayOverrides', 'employmentPeriod.branch')
             ->first();
 
         if (! $schedule) {
