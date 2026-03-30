@@ -54,7 +54,7 @@ function addMinutesToTime(time: string, minutes: number): string {
   return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
-function buildPayload(values: CreateScheduleSimpleValues) {
+export function buildPayload(values: CreateScheduleSimpleValues) {
   const lunchStart   = values.expected_lunch_start || null
   const lunchMinutes = values.lunch_duration_minutes ? Number(values.lunch_duration_minutes) : null
   const lunchEnd     = lunchStart && lunchMinutes ? addMinutesToTime(lunchStart, lunchMinutes) : null
@@ -71,7 +71,7 @@ function buildPayload(values: CreateScheduleSimpleValues) {
       expected_start:         isOff ? null : values.expected_start,
       expected_lunch_start:   isOff ? null : lunchStart,
       expected_lunch_end:     isOff ? null : lunchEnd,
-      lunch_duration_minutes: isOff ? null : lunchMinutes,
+      lunch_duration_minutes: isOff ? null : (lunchStart ? lunchMinutes : null),
       expected_end:           isOff ? null : values.expected_end,
     }
   })
