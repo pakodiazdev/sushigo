@@ -199,4 +199,40 @@ class CreateScheduleApiTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    #[Test]
+    public function validation_rejects_effective_from_same_as_existing_open_ended_schedule(): void
+    {
+        EmployeeSchedule::factory()->create([
+            'employment_period_id' => $this->period->id,
+            'effective_from' => '2026-03-01',
+            'effective_to' => null,
+        ]);
+
+        $response = $this->postJson(
+            "/api/v1/employment-periods/{$this->period->public_id}/schedules",
+            $this->validPayload(['effective_from' => '2026-03-01'])
+        );
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('effective_from', $response->json('errors'));
+    }
+
+    #[Test]
+    public function validation_rejects_effective_from_before_existing_open_ended_schedule(): void
+    {
+        EmployeeSchedule::factory()->create([
+            'employment_period_id' => $this->period->id,
+            'effective_from' => '2026-03-15',
+            'effective_to' => null,
+        ]);
+
+        $response = $this->postJson(
+            "/api/v1/employment-periods/{$this->period->public_id}/schedules",
+            $this->validPayload(['effective_from' => '2026-03-01'])
+        );
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('effective_from', $response->json('errors'));
+    }
 }

@@ -108,7 +108,7 @@ function ScheduleSummary({ schedule }: { schedule: EmployeeSchedule }) {
 // ── Section (trigger inside detail view) ─────────────────────────────────────
 
 interface ScheduleSectionProps {
-  employee: Employee
+  readonly employee: Employee
 }
 
 export function ScheduleSection({ employee }: ScheduleSectionProps) {
@@ -188,8 +188,8 @@ function useDialogAnimation(isOpen: boolean, close: () => void) {
 }
 
 interface ScheduleDialogProps {
-  ctx: CtxType
-  employee: Employee
+  readonly ctx: CtxType
+  readonly employee: Employee
 }
 
 function renderScheduleBody(ctx: CtxType, employee: Employee) {
@@ -281,13 +281,13 @@ function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
 // ── CreateScheduleForm ────────────────────────────────────────────────────────
 
 interface CreateScheduleFormProps {
-  employeeId: string
-  periodId: string | null
-  hasExistingSchedule: boolean
+  readonly employeeId: string
+  readonly periodId: string | null
+  readonly hasExistingSchedule: boolean
   /** Pre-filled value for the "Vigente desde" date field (YYYY-MM-DD). */
-  initialEffectiveFrom?: string
-  onSuccess: () => void
-  onCancel: () => void
+  readonly initialEffectiveFrom?: string
+  readonly onSuccess: () => void
+  readonly onCancel: () => void
 }
 
 function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, initialEffectiveFrom, onSuccess, onCancel }: CreateScheduleFormProps) {
@@ -350,7 +350,7 @@ function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, initial
               Días de descanso
             </p>
             <span className="text-xs text-muted-foreground">
-              {workingDays} día{workingDays !== 1 ? 's' : ''} laborable{workingDays !== 1 ? 's' : ''}
+              {workingDays} día{workingDays === 1 ? '' : 's'} laborable{workingDays === 1 ? '' : 's'}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -389,9 +389,9 @@ function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, initial
 // ── ScheduleContent ───────────────────────────────────────────────────────────
 
 interface ScheduleContentProps {
-  schedule: EmployeeSchedule
-  employeeId: string
-  periodId: string | null
+  readonly schedule: EmployeeSchedule
+  readonly employeeId: string
+  readonly periodId: string | null
 }
 
 function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProps) {
@@ -420,12 +420,12 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
 
   // Expected hours: 8h/day × working days (only for FULL jornada)
   const expectedWeeklyHours = schedule.workday_type === 'FULL' ? schedule.working_days_per_week * 8 : null
-  const pendingHours = expectedWeeklyHours !== null ? Math.max(0, expectedWeeklyHours - totalWeeklyHours) : null
+  const pendingHours = expectedWeeklyHours === null ? null : Math.max(0, expectedWeeklyHours - totalWeeklyHours)
 
   const overridesForDow =
-    overrideListDow !== null
-      ? (schedule.active_overrides ?? []).filter((o) => o.day_of_week === overrideListDow)
-      : []
+    overrideListDow === null
+      ? []
+      : (schedule.active_overrides ?? []).filter((o) => o.day_of_week === overrideListDow)
 
   const handleOverrideSelect = (o: ScheduleDayOverride) => {
     closeOverrideList()
@@ -447,12 +447,12 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
           {schedule.workday_type === 'FULL' ? 'Jornada completa' : 'Jornada parcial'}
         </span>
         <span className="text-muted-foreground">{schedule.working_days_per_week} días/sem</span>
-        {expectedWeeklyHours !== null ? (
+        {expectedWeeklyHours === null ? (
+          <span className="font-medium tabular-nums">{formatHours(totalWeeklyHours > 0 ? totalWeeklyHours : null)}/sem</span>
+        ) : (
           <span className="font-medium tabular-nums">
             {formatHours(totalWeeklyHours > 0 ? totalWeeklyHours : null)} de {formatHours(expectedWeeklyHours)}
           </span>
-        ) : (
-          <span className="font-medium tabular-nums">{formatHours(totalWeeklyHours > 0 ? totalWeeklyHours : null)}/sem</span>
         )}
         {pendingHours !== null && pendingHours > 0 && (
           <span className="text-xs text-amber-600 dark:text-amber-400">· {formatHours(pendingHours)} pendientes</span>
@@ -531,9 +531,9 @@ function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProp
                             expected_start: permanentOverride.expected_start ?? '',
                             expected_lunch_start: permanentOverride.expected_lunch_start ?? '',
                             lunch_duration_minutes:
-                              permanentOverride.lunch_duration_minutes != null
-                                ? String(permanentOverride.lunch_duration_minutes)
-                                : '',
+                              permanentOverride.lunch_duration_minutes === null
+                                ? ''
+                                : String(permanentOverride.lunch_duration_minutes),
                             expected_end: permanentOverride.expected_end ?? '',
                           }
                           override.startEdit(day, sortedDays, prefill)
@@ -614,15 +614,15 @@ export function formatHours(h: number | null): string {
 // ── ReadRow ───────────────────────────────────────────────────────────────────
 
 interface ReadRowProps {
-  day: ScheduleDay
+  readonly day: ScheduleDay
   /** An indefinite override whose effective_from ≤ today — treated as the
    *  day's current schedule rather than a temporary exception. */
-  permanentOverride: ScheduleDayOverride | null
+  readonly permanentOverride: ScheduleDayOverride | null
   /** True when there are active/upcoming overrides besides the permanentOverride. */
-  hasTemporaryOverride: boolean
-  onEdit: () => void
-  onClickOverride?: () => void
-  showActions: boolean
+  readonly hasTemporaryOverride: boolean
+  readonly onEdit: () => void
+  readonly onClickOverride?: () => void
+  readonly showActions: boolean
 }
 
 function ReadRow({ day, permanentOverride, hasTemporaryOverride, onEdit, onClickOverride, showActions }: ReadRowProps) {
@@ -697,17 +697,17 @@ function ReadRow({ day, permanentOverride, hasTemporaryOverride, onEdit, onClick
 // ── EditRow ───────────────────────────────────────────────────────────────────
 
 interface EditRowProps {
-  day: ScheduleDay
-  values: EditDayValues
-  errors: { expected_start: string | null; expected_end: string | null }
-  hasErrors: boolean
-  isPending: boolean
-  onUpdate: <K extends keyof EditDayValues>(field: K, value: EditDayValues[K]) => void
-  onToggleDayOff: (val: boolean) => void
-  onSave: () => void
-  onCancel: () => void
-  lunchOptions: { value: string; label: string }[]
-  showActions: boolean
+  readonly day: ScheduleDay
+  readonly values: EditDayValues
+  readonly errors: { expected_start: string | null; expected_end: string | null }
+  readonly hasErrors: boolean
+  readonly isPending: boolean
+  readonly onUpdate: <K extends keyof EditDayValues>(field: K, value: EditDayValues[K]) => void
+  readonly onToggleDayOff: (val: boolean) => void
+  readonly onSave: () => void
+  readonly onCancel: () => void
+  readonly lunchOptions: { value: string; label: string }[]
+  readonly showActions: boolean
 }
 
 function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, onToggleDayOff, onSave, onCancel, lunchOptions, showActions }: EditRowProps) {
@@ -827,13 +827,13 @@ function DayLabel({
 // ── OverrideScopeDialog ───────────────────────────────────────────────────────
 
 interface OverrideScopeDialogProps {
-  dayLabel: string
-  dayOfWeek: number
-  existingOverrides: ScheduleDayOverride[]
-  isPending: boolean
-  isError: boolean
-  onSubmit: (params: { scope: OverrideScope; effectiveFrom: string; effectiveTo: string | null; note: string }) => void
-  onClose: () => void
+  readonly dayLabel: string
+  readonly dayOfWeek: number
+  readonly existingOverrides: ScheduleDayOverride[]
+  readonly isPending: boolean
+  readonly isError: boolean
+  readonly onSubmit: (params: { scope: OverrideScope; effectiveFrom: string; effectiveTo: string | null; note: string }) => void
+  readonly onClose: () => void
 }
 
 const SCOPE_OPTIONS: { value: OverrideScope; label: string; description: string }[] = [
@@ -1000,11 +1000,11 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
 // ── WeeklyCalendar ────────────────────────────────────────────────────────────
 
 interface WeeklyCalendarProps {
-  schedule: EmployeeSchedule
-  weekStart: string
-  prevWeek: () => void
-  nextWeek: () => void
-  openOverrideList: (dow: number) => void
+  readonly schedule: EmployeeSchedule
+  readonly weekStart: string
+  readonly prevWeek: () => void
+  readonly nextWeek: () => void
+  readonly openOverrideList: (dow: number) => void
 }
 
 function WeeklyCalendar({ schedule, weekStart, prevWeek, nextWeek, openOverrideList }: WeeklyCalendarProps) {
@@ -1072,8 +1072,8 @@ function WeeklyCalendar({ schedule, weekStart, prevWeek, nextWeek, openOverrideL
 // ── WeekDayRow ────────────────────────────────────────────────────────────────
 
 interface WeekDayRowProps {
-  day: ResolvedDay
-  onClickOverride: () => void
+  readonly day: ResolvedDay
+  readonly onClickOverride: () => void
 }
 
 function WeekDayRow({ day, onClickOverride }: WeekDayRowProps) {
@@ -1124,11 +1124,11 @@ function WeekDayRow({ day, onClickOverride }: WeekDayRowProps) {
 // ── OverrideListDialog ────────────────────────────────────────────────────────
 
 interface OverrideListDialogProps {
-  dow: number
-  dayLabel: string
-  overrides: ScheduleDayOverride[]
-  onSelect: (override: ScheduleDayOverride) => void
-  onClose: () => void
+  readonly dow: number
+  readonly dayLabel: string
+  readonly overrides: ScheduleDayOverride[]
+  readonly onSelect: (override: ScheduleDayOverride) => void
+  readonly onClose: () => void
 }
 
 export function overrideDateLabel(o: ScheduleDayOverride): string {

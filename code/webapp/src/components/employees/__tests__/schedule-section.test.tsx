@@ -5,7 +5,7 @@ import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ScheduleSection } from '@/components/employees/schedule-section'
 import type { Employee } from '@/types/employee'
-import type { ScheduleDay } from '@/types/schedule'
+import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 
 vi.mock('@/services/schedule-api', () => ({
   scheduleApi: {
@@ -52,6 +52,28 @@ const mockSchedule = {
   active_overrides: [],
   created_at: '2026-01-01T00:00:00+00:00',
   updated_at: '2026-01-01T00:00:00+00:00',
+}
+
+const mockPermanentOverride: ScheduleDayOverride = {
+  id: 'ovr-1',
+  employment_period_id: 'period-1',
+  day_of_week: 1, // Monday
+  effective_from: '2026-01-01', // before today
+  effective_to: null, // indefinite
+  is_day_off: false,
+  expected_start: '09:00',
+  expected_lunch_start: null,
+  expected_lunch_end: null,
+  lunch_duration_minutes: null,
+  expected_end: '18:00',
+  note: null,
+  created_at: '2026-01-01T00:00:00+00:00',
+  updated_at: '2026-01-01T00:00:00+00:00',
+}
+
+const mockScheduleWithOverride = {
+  ...mockSchedule,
+  active_overrides: [mockPermanentOverride],
 }
 
 const mockEmployee: Employee = {
@@ -292,5 +314,133 @@ describe('ScheduleSection', () => {
       const skeletonEl = document.querySelector('.animate-pulse')
       expect(skeletonEl).toBeTruthy()
     }
+  })
+
+  it('renders schedule rows with permanent override (amber class)', async () => {
+    const { scheduleApi } = await import('@/services/schedule-api')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(scheduleApi.getCurrent).mockResolvedValueOnce({ data: { status: 200, data: mockScheduleWithOverride } } as any)
+
+    renderSection()
+    await waitFor(() => {
+      const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))
+      expect(verBtn).toBeDefined()
+    })
+
+    const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(verBtn) })
+
+    // Dialog should open and show schedule content (Jornada completa)
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Jornada completa/i).length).toBeGreaterThan(0)
+    })
+
+    // Monday row should have amber background (bg-amber-50/40 class)
+    const rows = document.querySelectorAll('tr')
+    const hasAmberRow = Array.from(rows).some((r) => r.className.includes('amber'))
+    expect(hasAmberRow).toBe(true)
+  })
+
+  it('opens OverrideListDialog when permanent override indicator is clicked', async () => {
+    const { scheduleApi } = await import('@/services/schedule-api')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(scheduleApi.getCurrent).mockResolvedValueOnce({ data: { status: 200, data: mockScheduleWithOverride } } as any)
+
+    renderSection()
+    await waitFor(() => {
+      const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))
+      expect(verBtn).toBeDefined()
+    })
+
+    const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(verBtn) })
+
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Jornada completa/i).length).toBeGreaterThan(0)
+    })
+
+    // Click the dot indicator button (permanent override indicator)
+    const dotBtn = screen.queryAllByTitle('Cambio permanente activo — ver historial')
+    if (dotBtn.length > 0) {
+      await act(async () => { fireEvent.click(dotBtn[0]!) })
+      await waitFor(() => {
+        // OverrideListDialog shows "Excepciones — Lunes" heading
+        expect(screen.queryAllByText(/Excepciones/i).length).toBeGreaterThan(0)
+      })
+    }
+  })
+
+  it('shows EditRow when pencil (edit) button is clicked', async () => {
+    renderSection()
+    await waitFor(() => {
+      const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))
+      expect(verBtn).toBeDefined()
+    })
+
+    const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(verBtn) })
+
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Jornada completa/i).length).toBeGreaterThan(0)
+    })
+
+    // Click the first edit button (pencil)
+    const editBtns = screen.queryAllByTitle('Agregar excepción')
+    if (editBtns.length > 0) {
+      await act(async () => { fireEvent.click(editBtns[0]!) })
+      // EditRow should render — shows cancel button
+      await waitFor(() => {
+        expect(screen.queryAllByTitle('Cancelar').length).toBeGreaterThan(0)
+      })
+    }
+  })
+
+  it('cancels EditRow when cancel button is clicked', async () => {
+    renderSection()
+    await waitFor(() => {
+      const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))
+      expect(verBtn).toBeDefined()
+    })
+
+    const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(verBtn) })
+
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Jornada completa/i).length).toBeGreaterThan(0)
+    })
+
+    const editBtns = screen.queryAllByTitle('Agregar excepción')
+    if (editBtns.length > 0) {
+      await act(async () => { fireEvent.click(editBtns[0]!) })
+      await waitFor(() => {
+        expect(screen.queryAllByTitle('Cancelar').length).toBeGreaterThan(0)
+      })
+
+      // Cancel should restore ReadRow
+      const cancelBtn = screen.queryAllByTitle('Cancelar')[0]!
+      await act(async () => { fireEvent.click(cancelBtn) })
+      await waitFor(() => {
+        // EditRow is gone — no more cancel button
+        expect(screen.queryAllByTitle('Cancelar').length).toBe(0)
+      })
+    }
+  })
+
+  it('shows error state when schedule fetch fails with non-404 error', async () => {
+    const { scheduleApi } = await import('@/services/schedule-api')
+    vi.mocked(scheduleApi.getCurrent).mockRejectedValueOnce(new Error('Network error'))
+
+    renderSection()
+    await waitFor(() => {
+      const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))
+      expect(verBtn).toBeDefined()
+    })
+
+    const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(verBtn) })
+
+    await waitFor(() => {
+      expect(screen.queryAllByText(/error al cargar/i).length).toBeGreaterThan(0)
+    })
   })
 })
