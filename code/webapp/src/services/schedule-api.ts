@@ -2,7 +2,7 @@ import { apiClient } from '@/lib/api-client'
 import type { EmployeeSchedule, ScheduleDayOverride, CreateScheduleFormValues } from '@/types/schedule'
 import type { EntityResponse } from '@/types/employee'
 
-function addMinutesToTime(time: string, minutes: number): string {
+export function addMinutesToTime(time: string, minutes: number): string {
   const parts = time.split(':').map(Number)
   const h = parts[0] ?? 0
   const m = parts[1] ?? 0
@@ -10,7 +10,7 @@ function addMinutesToTime(time: string, minutes: number): string {
   return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
-function toApiPayload(values: CreateScheduleFormValues) {
+export function toApiPayload(values: CreateScheduleFormValues) {
   return {
     effective_from: values.effective_from,
     workday_type: values.workday_type,
