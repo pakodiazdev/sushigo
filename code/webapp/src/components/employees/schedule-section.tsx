@@ -212,7 +212,7 @@ function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
 
   const content = (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
-      <div className={`absolute inset-0 bg-black/50 ${backdropCls}`} onClick={close} />
+      <button type="button" aria-label="Cerrar" className={`absolute inset-0 w-full border-0 bg-black/50 p-0 ${backdropCls}`} onClick={close} />
 
       <div
         className={`relative z-10 w-full max-w-2xl rounded-lg border border-border bg-background shadow-xl ${panelCls}`}
@@ -875,7 +875,7 @@ function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, isPending
 
   return createPortal(
     <div className="fixed inset-0 z-[300] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <button type="button" aria-label="Cerrar" className="absolute inset-0 w-full border-0 bg-black/50 p-0" onClick={onClose} />
       <div className="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background shadow-xl">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
@@ -1144,7 +1144,7 @@ export function overrideDateLabel(o: ScheduleDayOverride): string {
 function OverrideListDialog({ dow: _dow, dayLabel, overrides, onSelect, onClose }: OverrideListDialogProps) {
   return createPortal(
     <div className="fixed inset-0 z-[400] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <button type="button" aria-label="Cerrar" className="absolute inset-0 w-full border-0 bg-black/40 p-0" onClick={onClose} />
       <div className="relative z-10 w-full max-w-sm rounded-lg border border-border bg-background shadow-xl">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
