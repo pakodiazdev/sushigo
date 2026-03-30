@@ -22,6 +22,11 @@ interface UseEmployeeFormParams {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  /** Called with the newly created employee so the parent can update the URL
+   *  (e.g. navigate to ?form=<id>). This allows the detail view that stays
+   *  open after creation to work correctly: the `employee` prop gets populated,
+   *  the edit guard works, and a page refresh won't lose the just-created data. */
+  onCreated?: (employee: Employee) => void
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -38,6 +43,7 @@ export function useEmployeeForm({
   isOpen,
   onClose,
   onSuccess,
+  onCreated,
 }: UseEmployeeFormParams) {
   // ── Auth state ───────────────────────────────────────────────────────────────
 
@@ -123,10 +129,14 @@ export function useEmployeeForm({
           branch_id: currentBranch.id,
         })
         // Stay on the panel so the admin can assign a schedule right away.
-        // Store the created employee and switch to detail view instead of closing.
+        // Store the created employee for immediate rendering, then notify the
+        // parent so it can update the URL (?form=<id>). This ensures the
+        // `employee` prop gets populated, the edit guard works correctly, and
+        // a page refresh doesn't revert to a blank create form.
         const newEmployee = (response.data as EntityResponse<Employee>).data
         setJustCreatedEmployee(newEmployee)
         setMode('detail')
+        onCreated?.(newEmployee)
       }
     } catch (error) {
       console.error('Error submitting employee form:', error)

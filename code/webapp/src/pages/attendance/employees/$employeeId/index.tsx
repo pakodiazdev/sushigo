@@ -83,7 +83,7 @@ function SchedulePanel({ schedule }: { readonly schedule: SchedulePanelSchedule 
           {schedule.working_days_per_week} días/semana
         </span>
         <span className="text-muted-foreground">
-          Desde {new Date(schedule.effective_from).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+          Desde {new Date(schedule.effective_from + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
       </div>
 
