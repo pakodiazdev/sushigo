@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-function animCls(animating: 'enter' | 'exit' | null, enterVal: string, exitVal: string): string {
+export function animCls(animating: 'enter' | 'exit' | null, enterVal: string, exitVal: string): string {
   if (animating === 'enter') return enterVal
   if (animating === 'exit') return exitVal
   return ''
