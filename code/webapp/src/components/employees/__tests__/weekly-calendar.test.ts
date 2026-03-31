@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { addDays, getWeekStart, fmtDayShort, resolveWeek, useWeeklyCalendar } from '@/components/employees/-use-weekly-calendar'
+import { addDays, getWeekStart, fmtDayShort, resolveWeek, useWeeklyCalendar } from '@/components/employees/use-weekly-calendar'
 import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 
 function createWrapper() {

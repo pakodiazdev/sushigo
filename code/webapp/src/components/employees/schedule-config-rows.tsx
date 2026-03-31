@@ -2,7 +2,7 @@ import { Pencil, Check, Ban, Zap } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { DAY_LABELS, formatLunchDuration } from '@/types/schedule'
 import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
-import type { EditDayValues } from './-use-create-day-override'
+import type { EditDayValues } from './use-create-day-override'
 import { calcDayHours, formatHours } from './schedule-section-utils'
 import { formatTime } from '@/lib/time-format'
 

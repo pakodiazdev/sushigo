@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { EmployeeSchedule, ScheduleDayOverride } from '@/types/schedule'
-import { useCreateDayOverride } from './-use-create-day-override'
-import { useWeeklyCalendar } from './-use-weekly-calendar'
+import { useCreateDayOverride } from './use-create-day-override'
+import { useWeeklyCalendar } from './use-weekly-calendar'
 import { calcDayHours } from './schedule-section-utils'
 
 export function useScheduleContent(

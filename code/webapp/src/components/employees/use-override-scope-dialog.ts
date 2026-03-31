@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import type { OverrideScope } from './-use-create-day-override'
+import type { OverrideScope } from './use-create-day-override'
 import type { ScheduleDayOverride } from '@/types/schedule'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
