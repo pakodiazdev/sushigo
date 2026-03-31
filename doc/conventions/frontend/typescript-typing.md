@@ -38,13 +38,13 @@ onError: (error: unknown) => {
 
 **Available utilities:**
 
-| Function | Returns | Use case |
-|----------|---------|----------|
-| `getApiErrorMessage(error, default)` | `string` | Extract error message for toast/alert |
-| `getApiValidationErrors(error)` | `Record<string, string>` | Map field names to first error |
-| `hasApiValidationErrors(error)` | `boolean` | Check if error has validation errors |
-| `isApiError(error)` | type guard | Check if error is AxiosError |
-| `getApiFieldError(error, field, default)` | `string` | Get specific field's error |
+| Function                                  | Returns                  | Use case                              |
+| ----------------------------------------- | ------------------------ | ------------------------------------- |
+| `getApiErrorMessage(error, default)`      | `string`                 | Extract error message for toast/alert |
+| `getApiValidationErrors(error)`           | `Record<string, string>` | Map field names to first error        |
+| `hasApiValidationErrors(error)`           | `boolean`                | Check if error has validation errors  |
+| `isApiError(error)`                       | type guard               | Check if error is AxiosError          |
+| `getApiFieldError(error, field, default)` | `string`                 | Get specific field's error            |
 
 ### 2. Array Callbacks (map, forEach, filter, find)
 

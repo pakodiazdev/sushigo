@@ -15,10 +15,10 @@ SushiGo is a full-stack tenant platform within the ComandaFlow ecosystem. **This
 
 This monorepo runs inside `dev_container`. Each sub-project maps to a path inside the container:
 
-| Sub-project | Host path         | Container path      |
-|-------------|-------------------|---------------------|
-| API (Laravel)  | `code/api/`    | `/app/code/api`     |
-| Webapp (React) | `code/webapp/` | `/app/code/webapp`  |
+| Sub-project    | Host path      | Container path     |
+| -------------- | -------------- | ------------------ |
+| API (Laravel)  | `code/api/`    | `/app/code/api`    |
+| Webapp (React) | `code/webapp/` | `/app/code/webapp` |
 
 All `php artisan` commands must run from `/app/code/api` inside `dev_container`.
 
@@ -289,13 +289,13 @@ const data: any = response
 
 **Patterns for common cases:**
 
-| Scenario | Type to use |
-|----------|-------------|
-| Error in catch/onError | `unknown` + `getApiErrorMessage()` |
-| Array callback | Import specific type from `@/types/` |
-| Event handler value | `string \| number` or specific union |
-| API response data | Define interface in `@/types/` |
-| JSON meta fields | `Record<string, unknown>` |
+| Scenario               | Type to use                          |
+| ---------------------- | ------------------------------------ |
+| Error in catch/onError | `unknown` + `getApiErrorMessage()`   |
+| Array callback         | Import specific type from `@/types/` |
+| Event handler value    | `string \| number` or specific union |
+| API response data      | Define interface in `@/types/`       |
+| JSON meta fields       | `Record<string, unknown>`            |
 
 **API error utilities** — use `@/lib/api-error.ts`:
 - `getApiErrorMessage(error, defaultMsg)` — extract message safely
@@ -404,11 +404,11 @@ docker exec -it dev_container php artisan test --testsuite=Feature
 
 ### Test Users
 
-| User | Email | Password | Role |
-|------|-------|----------|------|
-| Super Admin | superadmin@sushigo.com | admin123456 | super-admin |
-| Admin | admin@sushigo.com | admin123456 | admin |
-| Inventory Manager | inventory@sushigo.com | inventory123456 | inventory-manager |
+| User              | Email                  | Password        | Role              |
+| ----------------- | ---------------------- | --------------- | ----------------- |
+| Super Admin       | superadmin@sushigo.com | admin123456     | super-admin       |
+| Admin             | admin@sushigo.com      | admin123456     | admin             |
+| Inventory Manager | inventory@sushigo.com  | inventory123456 | inventory-manager |
 
 ## Task Tracking Convention (mandatory)
 
