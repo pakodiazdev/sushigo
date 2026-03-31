@@ -84,7 +84,7 @@ describe('Button', () => {
         it('handles click events', () => {
             const handleClick = vi.fn()
             const { getByText } = render(<Button onClick={handleClick}>Click Me</Button>)
-            
+
             fireEvent.click(getByText('Click Me'))
             expect(handleClick).toHaveBeenCalledTimes(1)
         })

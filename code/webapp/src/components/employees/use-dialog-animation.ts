@@ -32,7 +32,7 @@ export function useDialogAnimation(isOpen: boolean, close: () => void) {
   }, [isOpen, close])
 
   const backdropCls = animCls(animating, 'animate-dialog-backdrop-in', 'animate-dialog-backdrop-out')
-  const panelCls    = animCls(animating, 'animate-dialog-in', 'animate-dialog-out')
+  const panelCls = animCls(animating, 'animate-dialog-in', 'animate-dialog-out')
 
   return { visible, backdropCls, panelCls }
 }

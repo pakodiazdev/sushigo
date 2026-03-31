@@ -35,8 +35,8 @@ describe('PageHeader', () => {
 
     it('renders action when provided', () => {
         const { getByText } = render(
-            <PageHeader 
-                title="Title" 
+            <PageHeader
+                title="Title"
                 description="Description"
                 action={<button>Action Button</button>}
             />
@@ -55,8 +55,8 @@ describe('PageHeader', () => {
 
     it('renders action over children when both provided', () => {
         const { getByText, queryByText } = render(
-            <PageHeader 
-                title="Title" 
+            <PageHeader
+                title="Title"
                 description="Description"
                 action={<button>Action</button>}
             >

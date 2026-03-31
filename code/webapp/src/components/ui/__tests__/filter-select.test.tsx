@@ -21,7 +21,7 @@ describe('FilterSelect', () => {
             <FilterSelect
                 label="Filter By"
                 value=""
-                onChange={() => {}}
+                onChange={() => { }}
                 options={mockOptions}
             />
         )
@@ -33,7 +33,7 @@ describe('FilterSelect', () => {
             <FilterSelect
                 label="Filter"
                 value=""
-                onChange={() => {}}
+                onChange={() => { }}
                 options={mockOptions}
             />
         )
@@ -47,7 +47,7 @@ describe('FilterSelect', () => {
             <FilterSelect
                 label="Filter Placeholder"
                 value=""
-                onChange={() => {}}
+                onChange={() => { }}
                 options={mockOptions}
             />
         )
@@ -59,7 +59,7 @@ describe('FilterSelect', () => {
             <FilterSelect
                 label="Filter Custom"
                 value=""
-                onChange={() => {}}
+                onChange={() => { }}
                 options={mockOptions}
                 placeholder="Select one"
             />
@@ -89,7 +89,7 @@ describe('FilterSelect', () => {
             <FilterSelect
                 label="Filter Selected"
                 value="option2"
-                onChange={() => {}}
+                onChange={() => { }}
                 options={mockOptions}
             />
         )
@@ -103,7 +103,7 @@ describe('FilterSelect', () => {
             <FilterSelect
                 label="Filter Icon"
                 value=""
-                onChange={() => {}}
+                onChange={() => { }}
                 options={mockOptions}
             />
         )
@@ -116,7 +116,7 @@ describe('FilterSelect', () => {
             <FilterSelect
                 label="Filter No Icon"
                 value=""
-                onChange={() => {}}
+                onChange={() => { }}
                 options={mockOptions}
                 showIcon={false}
             />
@@ -131,7 +131,7 @@ describe('FilterSelect', () => {
             <FilterSelect
                 label="Filter Class"
                 value=""
-                onChange={() => {}}
+                onChange={() => { }}
                 options={mockOptions}
                 className="custom-filter-class"
             />

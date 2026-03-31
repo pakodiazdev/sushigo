@@ -82,13 +82,13 @@ describe('ThemeContext', () => {
             const { result } = renderHook(() => useTheme(), {
                 wrapper: ThemeProvider,
             })
-            
+
             expect(result.current.theme).toBe('light')
-            
+
             act(() => {
                 result.current.toggleTheme()
             })
-            
+
             expect(result.current.theme).toBe('dark')
         })
 
@@ -97,13 +97,13 @@ describe('ThemeContext', () => {
             const { result } = renderHook(() => useTheme(), {
                 wrapper: ThemeProvider,
             })
-            
+
             expect(result.current.theme).toBe('dark')
-            
+
             act(() => {
                 result.current.toggleTheme()
             })
-            
+
             expect(result.current.theme).toBe('light')
         })
 
@@ -111,13 +111,13 @@ describe('ThemeContext', () => {
             const { result } = renderHook(() => useTheme(), {
                 wrapper: ThemeProvider,
             })
-            
+
             expect(document.documentElement.classList.contains('light')).toBe(true)
-            
+
             act(() => {
                 result.current.toggleTheme()
             })
-            
+
             expect(document.documentElement.classList.contains('dark')).toBe(true)
             expect(document.documentElement.classList.contains('light')).toBe(false)
         })
@@ -126,13 +126,13 @@ describe('ThemeContext', () => {
             const { result } = renderHook(() => useTheme(), {
                 wrapper: ThemeProvider,
             })
-            
+
             expect(localStorage.getItem('theme')).toBe('light')
-            
+
             act(() => {
                 result.current.toggleTheme()
             })
-            
+
             expect(localStorage.getItem('theme')).toBe('dark')
         })
     })

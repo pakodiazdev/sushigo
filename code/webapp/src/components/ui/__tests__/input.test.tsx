@@ -40,7 +40,7 @@ describe('Input', () => {
         const handleChange = vi.fn()
         const { container } = render(<Input onChange={handleChange} />)
         const input = container.querySelector('input')!
-        
+
         fireEvent.change(input, { target: { value: 'test' } })
         expect(handleChange).toHaveBeenCalled()
     })
@@ -90,7 +90,7 @@ describe('Input', () => {
     })
 
     it('supports value attribute', () => {
-        const { container } = render(<Input value="initial" onChange={() => {}} />)
+        const { container } = render(<Input value="initial" onChange={() => { }} />)
         const input = container.querySelector('input')
         expect(input?.value).toBe('initial')
     })

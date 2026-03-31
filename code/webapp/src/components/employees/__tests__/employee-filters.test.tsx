@@ -43,9 +43,9 @@ describe('EmployeeFilters', () => {
     it('calls onNew when button is clicked', () => {
         const onNew = vi.fn()
         const { getByText } = render(<EmployeeFilters {...defaultProps} onNew={onNew} />)
-        
+
         fireEvent.click(getByText('Nuevo Empleado'))
-        
+
         expect(onNew).toHaveBeenCalledTimes(1)
     })
 
@@ -73,13 +73,13 @@ describe('EmployeeFilters', () => {
         const { container } = render(
             <EmployeeFilters {...defaultProps} onFilterChange={onFilterChange} />
         )
-        
+
         // Find the role select (first combobox after search input)
         const selects = container.querySelectorAll('select')
         const roleSelect = selects[0]
-        
+
         fireEvent.change(roleSelect, { target: { value: 'itamae' } })
-        
+
         expect(onFilterChange).toHaveBeenCalled()
         expect(onFilterChange.mock.calls[0][0]).toBe('role')
     })
@@ -89,13 +89,13 @@ describe('EmployeeFilters', () => {
         const { container } = render(
             <EmployeeFilters {...defaultProps} onFilterChange={onFilterChange} />
         )
-        
+
         // Find the status select (second combobox)
         const selects = container.querySelectorAll('select')
         const statusSelect = selects[1]
-        
+
         fireEvent.change(statusSelect, { target: { value: 'active' } })
-        
+
         expect(onFilterChange).toHaveBeenCalled()
         expect(onFilterChange.mock.calls[0][0]).toBe('status')
     })
@@ -105,12 +105,12 @@ describe('EmployeeFilters', () => {
         const { container } = render(
             <EmployeeFilters {...defaultProps} status="active" onFilterChange={onFilterChange} />
         )
-        
+
         const selects = container.querySelectorAll('select')
         const statusSelect = selects[1]
-        
+
         fireEvent.change(statusSelect, { target: { value: '' } })
-        
+
         expect(onFilterChange).toHaveBeenCalled()
         expect(onFilterChange.mock.calls[0][0]).toBe('status')
         expect(onFilterChange.mock.calls[0][1]).toBeUndefined()
