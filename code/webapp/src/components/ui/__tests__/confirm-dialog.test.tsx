@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { render, cleanup, fireEvent } from '@testing-library/react'
 import { ConfirmDialog } from '../confirm-dialog'
 
 afterEach(() => {
