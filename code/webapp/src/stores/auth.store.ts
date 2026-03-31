@@ -33,7 +33,7 @@ interface AuthState {
 }
 
 // Helper to extract branches from user's operating units
-function extractBranchesFromUser(user: User | null): Branch[] {
+export function extractBranchesFromUser(user: User | null): Branch[] {
   if (!user?.operating_units) return [];
 
   const branches = new Map<number, Branch>();
@@ -69,7 +69,7 @@ async function fetchBranchesFromApi(): Promise<Branch[]> {
 }
 
 // Helper to check if user is admin
-function checkIsAdmin(user: User | null): boolean {
+export function checkIsAdmin(user: User | null): boolean {
   return (
     user?.roles?.some(
       (role) => role.name === "admin" || role.name === "super-admin",
@@ -78,14 +78,14 @@ function checkIsAdmin(user: User | null): boolean {
 }
 
 // Helper to check if user is super-admin
-function checkIsSuperAdmin(user: User | null): boolean {
+export function checkIsSuperAdmin(user: User | null): boolean {
   return (
     user?.roles?.some((role) => role.name === "super-admin") ?? false
   );
 }
 
 // Helper to check permission
-function checkPermission(user: User | null, permission: string): boolean {
+export function checkPermission(user: User | null, permission: string): boolean {
   if (!user) return false;
   if (checkIsAdmin(user)) return true;
   return user.permissions?.some((p) => p.name === permission) ?? false;
