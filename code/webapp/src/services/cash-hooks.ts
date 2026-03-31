@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage } from '@/lib/api-error'
 import {
   cashRegisterApi,
   cashTerminalApi,
@@ -58,8 +59,8 @@ export function useCreateCashRegister() {
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] })
       showSuccess('La caja registradora ha sido creada exitosamente.', 'Caja registradora creada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo crear la caja registradora.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo crear la caja registradora.'), 'Error')
     },
   })
 }
@@ -76,8 +77,8 @@ export function useUpdateCashRegister() {
       queryClient.invalidateQueries({ queryKey: ['cash-registers', variables.id] })
       showSuccess('La caja registradora ha sido actualizada exitosamente.', 'Caja actualizada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo actualizar la caja registradora.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo actualizar la caja registradora.'), 'Error')
     },
   })
 }
@@ -92,8 +93,8 @@ export function useDeleteCashRegister() {
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] })
       showSuccess('La caja registradora ha sido eliminada exitosamente.', 'Caja eliminada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo eliminar la caja registradora.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo eliminar la caja registradora.'), 'Error')
     },
   })
 }
@@ -133,8 +134,8 @@ export function useCreateCashTerminal() {
       queryClient.invalidateQueries({ queryKey: ['cash-terminals'] })
       showSuccess('La terminal de pago ha sido creada exitosamente.', 'Terminal creada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo crear la terminal.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo crear la terminal.'), 'Error')
     },
   })
 }
@@ -151,8 +152,8 @@ export function useUpdateCashTerminal() {
       queryClient.invalidateQueries({ queryKey: ['cash-terminals', variables.id] })
       showSuccess('La terminal de pago ha sido actualizada exitosamente.', 'Terminal actualizada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo actualizar la terminal.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo actualizar la terminal.'), 'Error')
     },
   })
 }
@@ -167,8 +168,8 @@ export function useDeleteCashTerminal() {
       queryClient.invalidateQueries({ queryKey: ['cash-terminals'] })
       showSuccess('La terminal de pago ha sido eliminada exitosamente.', 'Terminal eliminada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo eliminar la terminal.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo eliminar la terminal.'), 'Error')
     },
   })
 }
@@ -208,8 +209,8 @@ export function useCreateBankAccount() {
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
       showSuccess('La cuenta bancaria ha sido creada exitosamente.', 'Cuenta bancaria creada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo crear la cuenta bancaria.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo crear la cuenta bancaria.'), 'Error')
     },
   })
 }
@@ -226,8 +227,8 @@ export function useUpdateBankAccount() {
       queryClient.invalidateQueries({ queryKey: ['bank-accounts', variables.id] })
       showSuccess('La cuenta bancaria ha sido actualizada exitosamente.', 'Cuenta actualizada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo actualizar la cuenta bancaria.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo actualizar la cuenta bancaria.'), 'Error')
     },
   })
 }
@@ -242,8 +243,8 @@ export function useDeleteBankAccount() {
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
       showSuccess('La cuenta bancaria ha sido eliminada exitosamente.', 'Cuenta eliminada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo eliminar la cuenta bancaria.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo eliminar la cuenta bancaria.'), 'Error')
     },
   })
 }
@@ -294,8 +295,8 @@ export function useCreateCashSession() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
       showSuccess('La sesión de caja ha sido abierta exitosamente.', 'Sesión abierta')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo abrir la sesión de caja.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo abrir la sesión de caja.'), 'Error')
     },
   })
 }
@@ -312,8 +313,8 @@ export function useUpdateCashSession() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions', variables.id] })
       showSuccess('La sesión de caja ha sido actualizada exitosamente.', 'Sesión actualizada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo actualizar la sesión.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo actualizar la sesión.'), 'Error')
     },
   })
 }
@@ -329,8 +330,8 @@ export function usePostCashSession() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions', id] })
       showSuccess('La sesión de caja ha sido cerrada exitosamente.', 'Sesión cerrada')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo cerrar la sesión.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo cerrar la sesión.'), 'Error')
     },
   })
 }
@@ -378,8 +379,8 @@ export function useCreateCashAdjustment() {
 
       showSuccess('El ajuste de caja ha sido creado exitosamente.', 'Ajuste creado')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo crear el ajuste.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo crear el ajuste.'), 'Error')
     },
   })
 }
@@ -396,8 +397,8 @@ export function usePostCashAdjustment() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
       showSuccess('El ajuste de caja ha sido confirmado exitosamente.', 'Ajuste confirmado')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo confirmar el ajuste.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo confirmar el ajuste.'), 'Error')
     },
   })
 }
@@ -418,8 +419,8 @@ export function useDeleteCashAdjustment() {
       })
       showSuccess('El ajuste de caja ha sido eliminado exitosamente.', 'Ajuste eliminado')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo eliminar el ajuste.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo eliminar el ajuste.'), 'Error')
     },
   })
 }
@@ -460,8 +461,8 @@ export function useCreateCashExpense() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
       showSuccess('El egreso de caja ha sido registrado exitosamente.', 'Egreso registrado')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo registrar el egreso.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo registrar el egreso.'), 'Error')
     },
   })
 }
@@ -479,8 +480,8 @@ export function useUpdateCashExpense() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
       showSuccess('El egreso de caja ha sido actualizado exitosamente.', 'Egreso actualizado')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo actualizar el egreso.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo actualizar el egreso.'), 'Error')
     },
   })
 }
@@ -497,8 +498,8 @@ export function usePostCashExpense() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
       showSuccess('El egreso de caja ha sido confirmado exitosamente.', 'Egreso confirmado')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo confirmar el egreso.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo confirmar el egreso.'), 'Error')
     },
   })
 }
@@ -514,8 +515,8 @@ export function useDeleteCashExpense() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
       showSuccess('El egreso de caja ha sido eliminado exitosamente.', 'Egreso eliminado')
     },
-    onError: (error: any) => {
-      showError(error.response?.data?.message || 'No se pudo eliminar el egreso.', 'Error')
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo eliminar el egreso.'), 'Error')
     },
   })
 }

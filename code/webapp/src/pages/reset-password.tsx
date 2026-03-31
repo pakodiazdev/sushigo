@@ -1,6 +1,7 @@
 import { createFileRoute, useSearch, Link, useRouter } from '@tanstack/react-router'
 import { useState, useEffect, FormEvent } from 'react'
 import { apiClient } from '@/lib/api-client'
+import { getApiFieldError } from '@/lib/api-error'
 import { useAuthStore } from '@/stores/auth.store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -94,11 +95,8 @@ function ResetPasswordPage() {
             }
 
             setSuccess(true)
-        } catch (err: any) {
-            const message =
-                err.response?.data?.errors?.t?.[0] ||
-                err.response?.data?.message ||
-                'No se pudo restablecer la contraseña. El enlace puede haber expirado.'
+        } catch (err: unknown) {
+            const message = getApiFieldError(err, 't', 'No se pudo restablecer la contraseña. El enlace puede haber expirado.')
             setError(message)
         } finally {
             setIsLoading(false)

@@ -10,6 +10,7 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { itemVariantApi } from '@/services/inventory-api'
 import type { ItemVariant } from '@/types/inventory'
 import { VariantForm, VariantDetails } from '@/components/inventory'
@@ -46,9 +47,9 @@ export function ItemVariantsPage() {
       setSelectedVariant(null)
       showSuccess('Variant deleted successfully', 'Variant Deleted')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || 'Failed to delete variant. It may have existing stock.',
+        getApiErrorMessage(error, 'Failed to delete variant. It may have existing stock.'),
         'Delete Error'
       )
     },

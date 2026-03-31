@@ -5,7 +5,8 @@ import { FormField, Select } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { Loader2 } from 'lucide-react'
 import { useCreateCashSession, useCashRegisters } from '@/services/cash-hooks'
-import { CashRegisterType } from '@/types/cash'
+import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
+import { CashRegisterType, type CashSessionFormData } from '@/types/cash'
 
 interface OpenSessionDialogProps {
   isOpen: boolean
@@ -76,7 +77,7 @@ export function OpenSessionDialog({
     }
 
     try {
-      const payload: any = {
+      const payload: CashSessionFormData = {
         cash_register_id: parseInt(cashRegisterId),
         operating_date: operatingDate,
       }
@@ -92,13 +93,12 @@ export function OpenSessionDialog({
         onSuccess(response.data.data.id)
       }
       onClose()
-    } catch (error: any) {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors)
-      } else if (error.response?.data?.message) {
-        setErrors({ general: error.response.data.message })
+    } catch (error: unknown) {
+      if (hasApiValidationErrors(error)) {
+        setErrors(getApiValidationErrors(error))
       } else {
-        setErrors({ general: 'Error al abrir la sesión' })
+        const message = getApiErrorMessage(error, 'Error al abrir la sesión')
+        setErrors({ general: message })
       }
     }
   }

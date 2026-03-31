@@ -60,7 +60,7 @@ export function useEmployeesSearch() {
     })
   }
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: string | number | undefined) => {
     setSearch({ [key]: value === '' ? undefined : value, page: undefined })
   }
 

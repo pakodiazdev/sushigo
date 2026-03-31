@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
 import { inventoryLocationApi } from '@/services/inventory-api'
 import { apiClient } from '@/lib/api-client'
 import type { InventoryLocation } from '@/types/inventory'
+import type { OperatingUnit } from '@/types/auth'
 
 interface LocationFormProps {
   location?: InventoryLocation | null
@@ -48,12 +50,12 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
       )
       onSuccess()
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors)
+    onError: (error: unknown) => {
+      if (hasApiValidationErrors(error)) {
+        setErrors(getApiValidationErrors(error))
       }
       showError(
-        error.response?.data?.message || 'Error al crear la ubicación',
+        getApiErrorMessage(error, 'Error al crear la ubicación'),
         'Error'
       )
     },
@@ -69,12 +71,12 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
       )
       onSuccess()
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors)
+    onError: (error: unknown) => {
+      if (hasApiValidationErrors(error)) {
+        setErrors(getApiValidationErrors(error))
       }
       showError(
-        error.response?.data?.message || 'Error al actualizar la ubicación',
+        getApiErrorMessage(error, 'Error al actualizar la ubicación'),
         'Error'
       )
     },
@@ -133,7 +135,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
             error={!!errors.operating_unit_id}
           >
             <option value="0">Seleccione una unidad operativa</option>
-            {operatingUnits?.map((unit: any) => (
+            {operatingUnits?.map((unit: OperatingUnit) => (
               <option key={unit.id} value={unit.id}>
                 {unit.name} ({unit.type})
               </option>

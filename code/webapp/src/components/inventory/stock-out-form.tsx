@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
 import { inventoryLocationApi, itemVariantApi, stockMovementApi, stockApi } from '@/services/inventory-api'
 import { apiClient } from '@/lib/api-client'
+import type { InventoryLocation, ItemVariant, Stock } from '@/types/inventory'
 
 interface StockOutFormProps {
   onSuccess: () => void
@@ -34,8 +36,8 @@ export function StockOutForm({
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [selectedVariant, setSelectedVariant] = useState<any>(null)
-  const [currentStock, setCurrentStock] = useState<any>(null)
+  const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null)
+  const [variantStocks, setVariantStocks] = useState<Stock[]>([])
 
   // Fetch locations
   const { data: locationsData } = useQuery({
@@ -72,7 +74,7 @@ export function StockOutForm({
   const units = uomData?.data.data || []
 
   // Sort locations by priority (descending) and name
-  const sortedLocations = [...locations].sort((a: any, b: any) => {
+  const sortedLocations = [...locations].sort((a: InventoryLocation, b: InventoryLocation) => {
     const priorityA = a.priority ?? 0
     const priorityB = b.priority ?? 0
     if (priorityB !== priorityA) return priorityB - priorityA // Higher priority first
@@ -82,7 +84,7 @@ export function StockOutForm({
   // Update variant info and UoM when variant changes
   useEffect(() => {
     if (formData.variant_id && variants.length > 0) {
-      const variant = variants.find((v: any) => v.id === formData.variant_id)
+      const variant = variants.find((v: ItemVariant) => v.id === formData.variant_id)
       if (variant) {
         setSelectedVariant(variant)
         setFormData((prev) => ({ ...prev, uom_id: variant.uom_id }))
@@ -90,12 +92,17 @@ export function StockOutForm({
     }
   }, [formData.variant_id, variants])
 
-  // Update current stock when data arrives
+  // Update stocks array when data arrives
   useEffect(() => {
     if (stockData?.data.data) {
-      setCurrentStock(stockData.data.data)
+      setVariantStocks(stockData.data.data)
     }
   }, [stockData])
+
+  // Derive the stock for the currently selected location
+  const locationStock = variantStocks.find(
+    (s) => s.inventory_location_id === formData.location_id
+  ) || null
 
   const mutation = useMutation({
     mutationFn: (data: typeof formData) => stockMovementApi.stockOut(data),
@@ -116,12 +123,12 @@ export function StockOutForm({
       }
       onSuccess()
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors)
+    onError: (error: unknown) => {
+      if (hasApiValidationErrors(error)) {
+        setErrors(getApiValidationErrors(error))
       }
       showError(
-        error.response?.data?.message || 'Failed to register stock out',
+        getApiErrorMessage(error, 'Failed to register stock out'),
         'Error'
       )
     },
@@ -147,8 +154,8 @@ export function StockOutForm({
     }
 
     // Check available stock
-    if (currentStock && formData.qty > currentStock.available) {
-      newErrors.qty = `Only ${currentStock.available} units available`
+    if (locationStock && formData.qty > locationStock.available) {
+      newErrors.qty = `Only ${locationStock.available} units available`
     }
 
     setErrors(newErrors)
@@ -169,8 +176,8 @@ export function StockOutForm({
   const profitAmount = totalRevenue - totalCost
   const profitMargin = totalRevenue > 0 ? (profitAmount / totalRevenue) * 100 : 0
 
-  const hasLowStock = currentStock && currentStock.available < (selectedVariant?.min_stock || 0)
-  const hasInsufficientStock = currentStock && formData.qty > currentStock.available
+  const hasLowStock = !!(locationStock && locationStock.available < (selectedVariant?.min_stock || 0))
+  const hasInsufficientStock = !!(locationStock && formData.qty > locationStock.available)
 
   return (
     <>
@@ -226,7 +233,7 @@ export function StockOutForm({
           </FormField>
 
           {/* Current Stock Info */}
-          {currentStock && selectedVariant && (
+          {locationStock && selectedVariant && (
             <div
               className={`border rounded-lg p-3 text-sm ${hasInsufficientStock
                 ? 'bg-red-50 border-red-200'
@@ -255,11 +262,11 @@ export function StockOutForm({
               <div className="grid grid-cols-3 gap-2 text-xs">
                 <div>
                   <div className="text-muted-foreground">On Hand</div>
-                  <div className="font-semibold">{currentStock.on_hand || 0}</div>
+                  <div className="font-semibold">{locationStock.on_hand || 0}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground">Reserved</div>
-                  <div className="font-semibold">{currentStock.reserved || 0}</div>
+                  <div className="font-semibold">{locationStock.reserved || 0}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground">Available</div>
@@ -267,7 +274,7 @@ export function StockOutForm({
                     className={`font-semibold ${hasLowStock ? 'text-yellow-700' : 'text-green-600'
                       }`}
                   >
-                    {currentStock.available || 0}
+                    {locationStock.available || 0}
                   </div>
                 </div>
               </div>

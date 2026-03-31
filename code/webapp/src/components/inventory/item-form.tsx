@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
 import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
 
@@ -38,12 +39,12 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
       )
       onSuccess()
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors)
+    onError: (error: unknown) => {
+      if (hasApiValidationErrors(error)) {
+        setErrors(getApiValidationErrors(error))
       }
       showError(
-        error.response?.data?.message || 'Failed to create item',
+        getApiErrorMessage(error, 'Failed to create item'),
         'Error'
       )
     },
@@ -59,12 +60,12 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
       )
       onSuccess()
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors)
+    onError: (error: unknown) => {
+      if (hasApiValidationErrors(error)) {
+        setErrors(getApiValidationErrors(error))
       }
       showError(
-        error.response?.data?.message || 'Failed to update item',
+        getApiErrorMessage(error, 'Failed to update item'),
         'Error'
       )
     },

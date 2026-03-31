@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, FormEvent } from 'react'
 import { apiClient } from '@/lib/api-client'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -40,10 +41,8 @@ function ForgotPasswordPage() {
 
             await apiClient.post('/auth/forgot-password', payload)
             setSuccess(true)
-        } catch (err: any) {
-            const message =
-                err.response?.data?.message ||
-                'No se pudo enviar el enlace. Verifica tus datos e intenta de nuevo.'
+        } catch (err: unknown) {
+            const message = getApiErrorMessage(err, 'No se pudo enviar el enlace. Verifica tus datos e intenta de nuevo.')
             setError(message)
         } finally {
             setIsLoading(false)

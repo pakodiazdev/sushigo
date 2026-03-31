@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
 import { inventoryLocationApi, itemVariantApi, stockMovementApi } from '@/services/inventory-api'
 import { apiClient } from '@/lib/api-client'
+import type { InventoryLocation, ItemVariant, UnitOfMeasure } from '@/types/inventory'
 
 interface OpeningBalanceFormProps {
   onSuccess: () => void
@@ -33,7 +35,7 @@ export function OpeningBalanceForm({
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [selectedVariant, setSelectedVariant] = useState<any>(null)
+  const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null)
 
   // Fetch locations
   const { data: locationsData } = useQuery({
@@ -65,7 +67,7 @@ export function OpeningBalanceForm({
   // Update UoM when variant changes
   useEffect(() => {
     if (formData.item_variant_id && variants.length > 0) {
-      const variant = variants.find((v: any) => v.id === formData.item_variant_id)
+      const variant = variants.find((v: ItemVariant) => v.id === formData.item_variant_id)
       if (variant) {
         setSelectedVariant(variant)
         setFormData((prev) => ({ ...prev, uom_id: variant.uom_id }))
@@ -82,12 +84,12 @@ export function OpeningBalanceForm({
       )
       onSuccess()
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors)
+    onError: (error: unknown) => {
+      if (hasApiValidationErrors(error)) {
+        setErrors(getApiValidationErrors(error))
       }
       showError(
-        error.response?.data?.message || 'Failed to register opening balance',
+        getApiErrorMessage(error, 'Failed to register opening balance'),
         'Error'
       )
     },
@@ -148,7 +150,7 @@ export function OpeningBalanceForm({
               }
             >
               <option value="0">Select location...</option>
-              {locations.map((location: any) => (
+              {locations.map((location: InventoryLocation) => (
                 <option key={location.id} value={location.id}>
                   {location.name} ({location.type})
                 </option>
@@ -170,7 +172,7 @@ export function OpeningBalanceForm({
               }
             >
               <option value="0">Select variant...</option>
-              {variants.map((variant: any) => (
+              {variants.map((variant: ItemVariant) => (
                 <option key={variant.id} value={variant.id}>
                   {variant.code} - {variant.name}
                   {variant.item && ` (${variant.item.sku})`}
@@ -241,7 +243,7 @@ export function OpeningBalanceForm({
               onChange={(e) => setFormData({ ...formData, uom_id: parseInt(e.target.value) })}
             >
               <option value="0">Select unit...</option>
-              {units.map((uom: any) => (
+              {units.map((uom: UnitOfMeasure) => (
                 <option key={uom.id} value={uom.id}>
                   {uom.name} ({uom.symbol}) - {uom.type}
                 </option>

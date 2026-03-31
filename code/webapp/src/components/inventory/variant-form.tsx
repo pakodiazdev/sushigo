@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
 import { itemVariantApi, itemApi } from '@/services/inventory-api'
 import { apiClient } from '@/lib/api-client'
-import type { ItemVariant } from '@/types/inventory'
+import type { ItemVariant, UnitOfMeasure } from '@/types/inventory'
 
 interface VariantFormProps {
   variant?: ItemVariant | null
@@ -69,12 +70,12 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
       )
       onSuccess()
     },
-    onError: (error: any) => {
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors)
+    onError: (error: unknown) => {
+      if (hasApiValidationErrors(error)) {
+        setErrors(getApiValidationErrors(error))
       }
       showError(
-        error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} variant`,
+        getApiErrorMessage(error, `Failed to ${isEditing ? 'update' : 'create'} variant`),
         'Error'
       )
     },
@@ -187,7 +188,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
               onChange={(e) => setFormData({ ...formData, uom_id: parseInt(e.target.value) })}
             >
               <option value="0">Select unit...</option>
-              {units.map((uom: any) => (
+              {units.map((uom: UnitOfMeasure) => (
                 <option key={uom.id} value={uom.id}>
                   {uom.name} ({uom.symbol}) - {uom.type}
                 </option>
