@@ -4,7 +4,8 @@ import type { EditDayValues } from './use-create-day-override'
 import { useScheduleContent } from './use-schedule-content'
 import { ReadRow, EditRow } from './schedule-config-rows'
 import { OverrideScopeDialog } from './override-scope-dialog'
-import { WeeklyCalendar, OverrideListDialog } from './weekly-calendar'
+import { WeeklyCalendar } from './weekly-calendar'
+import { OverrideListDialog } from './override-list-dialog'
 import { formatHours } from './schedule-section-utils'
 
 // ── ScheduleContent ───────────────────────────────────────────────────────────
