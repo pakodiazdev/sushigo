@@ -8,8 +8,7 @@ import type { EmploymentPeriod } from '@/types/employment-period'
 
 describe('EmploymentPeriodCard', () => {
     const activePeriod: EmploymentPeriod = {
-        id: 1,
-        employee_id: 1,
+        id: '1',
         branch_id: 1,
         branch_name: 'Sucursal Centro',
         start_date: '2024-01-15',
@@ -19,8 +18,7 @@ describe('EmploymentPeriodCard', () => {
     }
 
     const terminatedPeriod: EmploymentPeriod = {
-        id: 2,
-        employee_id: 1,
+        id: '2',
         branch_id: 2,
         branch_name: 'Sucursal Norte',
         start_date: '2023-01-10',

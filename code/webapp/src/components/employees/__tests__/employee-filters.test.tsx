@@ -76,12 +76,12 @@ describe('EmployeeFilters', () => {
 
         // Find the role select (first combobox after search input)
         const selects = container.querySelectorAll('select')
-        const roleSelect = selects[0]
+        const roleSelect = selects[0]!
 
         fireEvent.change(roleSelect, { target: { value: 'itamae' } })
 
         expect(onFilterChange).toHaveBeenCalled()
-        expect(onFilterChange.mock.calls[0][0]).toBe('role')
+        expect(onFilterChange.mock.calls[0]![0]).toBe('role')
     })
 
     it('calls onFilterChange when status changes', () => {
@@ -92,12 +92,12 @@ describe('EmployeeFilters', () => {
 
         // Find the status select (second combobox)
         const selects = container.querySelectorAll('select')
-        const statusSelect = selects[1]
+        const statusSelect = selects[1]!
 
         fireEvent.change(statusSelect, { target: { value: 'active' } })
 
         expect(onFilterChange).toHaveBeenCalled()
-        expect(onFilterChange.mock.calls[0][0]).toBe('status')
+        expect(onFilterChange.mock.calls[0]![0]).toBe('status')
     })
 
     it('passes undefined when status is cleared', () => {
@@ -107,12 +107,12 @@ describe('EmployeeFilters', () => {
         )
 
         const selects = container.querySelectorAll('select')
-        const statusSelect = selects[1]
+        const statusSelect = selects[1]!
 
         fireEvent.change(statusSelect, { target: { value: '' } })
 
         expect(onFilterChange).toHaveBeenCalled()
-        expect(onFilterChange.mock.calls[0][0]).toBe('status')
-        expect(onFilterChange.mock.calls[0][1]).toBeUndefined()
+        expect(onFilterChange.mock.calls[0]![0]).toBe('status')
+        expect(onFilterChange.mock.calls[0]![1]).toBeUndefined()
     })
 })

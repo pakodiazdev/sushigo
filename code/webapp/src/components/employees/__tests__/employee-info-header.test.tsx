@@ -11,7 +11,7 @@ afterEach(() => {
 })
 
 const mockEmployee: Employee = {
-    id: 1,
+    id: '1',
     code: 'EMP-001',
     first_name: 'John',
     last_name: 'Doe',
@@ -20,6 +20,7 @@ const mockEmployee: Employee = {
     phone_country: '+1',
     is_active: true,
     roles: ['manager', 'cook'],
+    meta: null,
     created_at: '2024-01-15T10:00:00Z',
     updated_at: '2024-01-15T10:00:00Z',
 }
@@ -132,7 +133,7 @@ describe('EmployeeInfoHeader', () => {
         })
 
         it('handles undefined roles', () => {
-            const undefinedRolesEmployee = { ...mockEmployee, roles: undefined }
+            const undefinedRolesEmployee = { ...mockEmployee, roles: [] as Employee['roles'] }
             const { getByText } = render(
                 <EmployeeInfoHeader employee={undefinedRolesEmployee} hasActivePeriod={true} />
             )

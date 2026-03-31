@@ -37,6 +37,7 @@ import {
   usePostCashExpense,
   useDeleteCashExpense,
 } from '@/services/cash-hooks'
+import { CashRegisterType, AdjustmentType, TenderType, Direction } from '@/types/cash'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ describe('useCreateCashRegister', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashRegister(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ name: 'Caja 1', code: 'C1', type: 'MAIN', branch_id: 1, is_active: true })
+      await result.current.mutateAsync({ name: 'Caja 1', code: 'C1', type: CashRegisterType.ON_PREMISE, branch_id: 1, is_active: true })
     })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('creada'), expect.any(String))
   })
@@ -182,7 +183,7 @@ describe('useCreateCashRegister', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashRegister(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ name: 'Caja 1', code: 'C1', type: 'MAIN', branch_id: 1, is_active: true }) }
+      try { await result.current.mutateAsync({ name: 'Caja 1', code: 'C1', type: CashRegisterType.ON_PREMISE, branch_id: 1, is_active: true }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -275,7 +276,7 @@ describe('useCreateCashTerminal', () => {
     vi.mocked(cashTerminalApi.create).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashTerminal(), { wrapper })
-    await act(async () => { await result.current.mutateAsync({ name: 'Terminal 1', code: 'T1', branch_id: 1, is_active: true }) })
+    await act(async () => { await result.current.mutateAsync({ name: 'Terminal 1', provider: 'Clip', account_ref: 'acc-1', last_four: '1234', branch_id: 1, is_active: true }) })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -284,7 +285,7 @@ describe('useCreateCashTerminal', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashTerminal(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ name: 'T1', code: 'T1', branch_id: 1, is_active: true }) }
+      try { await result.current.mutateAsync({ name: 'T1', provider: 'Clip', account_ref: 'acc-1', last_four: '1234', branch_id: 1, is_active: true }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -374,7 +375,7 @@ describe('useCreateBankAccount', () => {
     vi.mocked(bankAccountApi.create).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateBankAccount(), { wrapper })
-    await act(async () => { await result.current.mutateAsync({ name: 'BBVA', account_number: '123', bank_name: 'BBVA', is_active: true }) })
+    await act(async () => { await result.current.mutateAsync({ alias: 'BBVA Principal', bank_name: 'BBVA', account_number_masked: '****1234', clabe_masked: '****1234', branch_id: 1, is_active: true }) })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -383,7 +384,7 @@ describe('useCreateBankAccount', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateBankAccount(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ name: 'BBVA', account_number: '123', bank_name: 'BBVA', is_active: true }) }
+      try { await result.current.mutateAsync({ alias: 'BBVA Principal', bank_name: 'BBVA', account_number_masked: '****1234', clabe_masked: '****1234', branch_id: 1, is_active: true }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -397,7 +398,7 @@ describe('useUpdateBankAccount', () => {
     vi.mocked(bankAccountApi.update).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateBankAccount(), { wrapper })
-    await act(async () => { await result.current.mutateAsync({ id: 1, data: { name: 'Updated' } }) })
+    await act(async () => { await result.current.mutateAsync({ id: 1, data: { alias: 'Updated' } }) })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -594,7 +595,7 @@ describe('useCreateCashAdjustment', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashAdjustment(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ cash_session_id: 10, type: 'IN', amount: '100', description: 'Test' })
+      await result.current.mutateAsync({ cash_session_id: 10, type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] })
     })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
@@ -605,7 +606,7 @@ describe('useCreateCashAdjustment', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashAdjustment(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ cash_session_id: 0, type: 'IN', amount: '100', description: 'Test' })
+      await result.current.mutateAsync({ cash_session_id: 0, type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] })
     })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
@@ -615,7 +616,7 @@ describe('useCreateCashAdjustment', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashAdjustment(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ cash_session_id: 1, type: 'IN', amount: '100', description: 'Test' }) }
+      try { await result.current.mutateAsync({ cash_session_id: 1, type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -706,7 +707,7 @@ describe('useCreateCashExpense', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashExpense(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ cash_session_id: 1, amount: '50', description: 'Egreso' })
+      await result.current.mutateAsync({ cash_session_id: 1, tender_type: TenderType.CASH, amount: '50', category: 'Supplies', vendor: 'Vendor X', incurred_at: '2026-01-01' })
     })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('registrado'), expect.any(String))
   })
@@ -716,7 +717,7 @@ describe('useCreateCashExpense', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashExpense(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ cash_session_id: 1, amount: '50', description: 'E' }) }
+      try { await result.current.mutateAsync({ cash_session_id: 1, tender_type: TenderType.CASH, amount: '50', category: 'Supplies', vendor: 'Vendor X', incurred_at: '2026-01-01' }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()

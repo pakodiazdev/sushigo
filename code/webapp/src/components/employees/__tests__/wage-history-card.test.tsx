@@ -11,8 +11,7 @@ afterEach(() => {
 })
 
 const mockActiveWage: WageHistory = {
-    id: 1,
-    employee_id: 1,
+    id: '1',
     hourly_rate: '150.00',
     weekly_scheduled_hours: 40,
     effective_from: '2024-01-15',
@@ -24,7 +23,7 @@ const mockActiveWage: WageHistory = {
 
 const mockInactiveWage: WageHistory = {
     ...mockActiveWage,
-    id: 2,
+    id: '2',
     effective_to: '2024-03-31',
 }
 

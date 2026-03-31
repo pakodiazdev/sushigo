@@ -66,7 +66,7 @@ function buildOverrideMock() {
   return {
     editingDow: null as number | null,
     editValues: null,
-    editErrors: {},
+    editErrors: { expected_start: null, expected_end: null },
     hasEditErrors: false,
     isPending: false,
     isError: false,
