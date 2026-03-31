@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-function animCls(animating: 'enter' | 'exit' | null, enterVal: string, exitVal: string): string {
+export function animCls(animating: 'enter' | 'exit' | null, enterVal: string, exitVal: string): string {
   if (animating === 'enter') return enterVal
   if (animating === 'exit') return exitVal
   return ''
@@ -32,7 +32,7 @@ export function useDialogAnimation(isOpen: boolean, close: () => void) {
   }, [isOpen, close])
 
   const backdropCls = animCls(animating, 'animate-dialog-backdrop-in', 'animate-dialog-backdrop-out')
-  const panelCls    = animCls(animating, 'animate-dialog-in', 'animate-dialog-out')
+  const panelCls = animCls(animating, 'animate-dialog-in', 'animate-dialog-out')
 
   return { visible, backdropCls, panelCls }
 }

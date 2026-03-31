@@ -30,8 +30,8 @@ export function useEmployeesSearch() {
     search: search.search,
     role: (search.role as EmployeePositionRole) ?? undefined,
     is_active: search.status === 'active' ? true
-             : search.status === 'inactive' ? false
-             : undefined,
+      : search.status === 'inactive' ? false
+        : undefined,
     status: search.status === 'baja' ? 'baja' : undefined,
     ...sortSpecsToParams(sorting),
   }

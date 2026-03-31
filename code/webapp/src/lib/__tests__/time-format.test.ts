@@ -20,6 +20,15 @@ describe('formatTime', () => {
     expect(formatTime('invalid')).toBe('—')
   })
 
+  it('returns "—" for string without colon', () => {
+    expect(formatTime('1234')).toBe('—')
+  })
+
+  it('returns "—" for partial time string', () => {
+    expect(formatTime('12:')).toBe('—')
+    expect(formatTime(':30')).toBe('—')
+  })
+
   // ── 12-hour format (default) ────────────────────────────────────────────────
 
   it('formats afternoon hour as PM', () => {
