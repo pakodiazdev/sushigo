@@ -17,6 +17,7 @@ services:
     environment:
       - ENV=e2e
       - VITE_APP_PORT=${VITE_APP_PORT:-5173}
+      - VITE_API_URL=https://api.sushigo.e2e.local/api/v1
       - CYPRESS_baseUrl=${CYPRESS_baseUrl:-https://sushigo.e2e.local}
       - DB_HOST=pgsql
       - POSTGRES_USER=${POSTGRES_USER:-admin}
@@ -35,25 +36,31 @@ services:
       - default
 
   cypress:
-    image: cypress/included:13.17.0
+    build:
+      context: .
+      dockerfile: docker/cypress/Dockerfile
     working_dir: /app/code/webapp
     volumes:
       - .:/app
       - cypress-cache:/root/.cache/Cypress
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       # Base URL for Cypress tests - can be overridden via .env or command line
       # Options: https://sushigo.e2e.local (via nginx), http://test_e2e:80 (direct), http://dev:5173 (vite dev)
       CYPRESS_baseUrl: ${CYPRESS_baseUrl:-https://sushigo.e2e.local}
+      # Target container for cy.task('db:reset') / cy.task('db:seed')
+      CYPRESS_container: e2e_container
     extra_hosts:
       - "sushigo.local:host-gateway"
       - "sushigo.e2e.local:host-gateway"
+      - "api.sushigo.e2e.local:host-gateway"
     depends_on:
       test_e2e:
         condition: service_healthy
     networks:
       - default
     entrypoint: [ "/bin/sh", "-c" ]
-    command: [ "npm install && npx cypress run" ] # 👀 UI en Docker (VNC/noVNC) para ver los tests en el navegador
+    command: [ "npm install && npx cypress run" ]
   cypress-ui:
     build:
       context: ./docker/e2e-ui

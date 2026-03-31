@@ -40,5 +40,15 @@ Cypress.on('window:before:load', (win) => {
   })
 })
 
+// Ignore Vite HMR WebSocket errors in e2e — these are dev-server artifacts,
+// not application errors. The WebSocket for Hot Module Replacement fails when
+// running behind an HTTPS nginx reverse-proxy in the e2e container, but the
+// app itself still works correctly.
+Cypress.on('uncaught:exception', (err) => {
+  if (err.message.includes('WebSocket') || err.message.includes('websocket')) {
+    return false
+  }
+})
+
 // Alternatively you can use CommonJS syntax:
 // require('./commands')

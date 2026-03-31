@@ -1,10 +1,11 @@
-import { Pencil, Check, Ban, Zap } from 'lucide-react'
+import { Pencil, Check, Ban } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { DAY_LABELS, formatLunchDuration } from '@/types/schedule'
 import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 import type { EditDayValues } from './use-create-day-override'
 import { calcDayHours, formatHours } from './schedule-section-utils'
 import { formatTime } from '@/lib/time-format'
+import { DayLabel } from './day-label'
 
 // ── ReadRow ───────────────────────────────────────────────────────────────────
 
@@ -113,10 +114,10 @@ export function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, o
   const editHours = values.is_day_off ? null : calcDayHours(values.expected_start, values.expected_end, editLunchMins)
   return (
     <tr className="border-b last:border-0 bg-muted/20">
-      <td className="py-2 pl-3 pr-2 font-medium text-sm">
+      <td className="py-2 pl-3 pr-2 text-sm font-medium">
         <div className="flex flex-col gap-0.5">
           <span>{DAY_LABELS[day.day_of_week]}</span>
-          <label className="flex items-center gap-1 text-xs font-normal text-muted-foreground cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-1 text-xs font-normal text-muted-foreground">
             <input type="checkbox" checked={values.is_day_off} onChange={(e) => onToggleDayOff(e.target.checked)} className="h-3 w-3" />
             {' '}Descanso
           </label>
@@ -132,7 +133,7 @@ export function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, o
         <Input type="time" disabled={values.is_day_off} value={values.expected_lunch_start} onChange={(e) => onUpdate('expected_lunch_start', e.target.value)} className="h-8 w-24 text-xs" />
       </td>
       <td className="py-2 pr-2">
-        <select disabled={values.is_day_off} value={values.lunch_duration_minutes} onChange={(e) => onUpdate('lunch_duration_minutes', e.target.value)} className="h-8 w-28 rounded-md border border-input bg-background px-2 py-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed">
+        <select disabled={values.is_day_off} value={values.lunch_duration_minutes} onChange={(e) => onUpdate('lunch_duration_minutes', e.target.value)} className="h-8 w-28 rounded-md border border-input bg-background px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50">
           {lunchOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
       </td>
@@ -142,7 +143,7 @@ export function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, o
           {errors.expected_end && <span className="text-[10px] text-red-600">{errors.expected_end}</span>}
         </div>
       </td>
-      <td className="py-2 pr-2 text-right tabular-nums text-muted-foreground text-xs">
+      <td className="py-2 pr-2 text-right tabular-nums text-xs text-muted-foreground">
         {formatHours(editHours)}
       </td>
       {showActions && (
@@ -154,68 +155,5 @@ export function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, o
         </td>
       )}
     </tr>
-  )
-}
-
-// ── DayLabel ─────────────────────────────────────────────────────────────────
-
-/**
- * Three visual states:
- *   ⚡ (Zap)  — hasTemporaryOverride: there are active/upcoming exceptions
- *   ● (dot)   — hasPermanentOverride only: the day's schedule was permanently
- *               changed and that change is already in effect (it IS the schedule)
- *   (nothing) — no overrides
- *
- * Temporary exceptions take visual priority when both flags are true.
- */
-export function DayLabel({
-  label,
-  hasTemporaryOverride,
-  hasPermanentOverride,
-  onClickOverride,
-}: {
-  readonly label: string
-  readonly hasTemporaryOverride: boolean
-  readonly hasPermanentOverride: boolean
-  readonly onClickOverride?: () => void
-}) {
-  const showZap = hasTemporaryOverride
-  const showDot = !hasTemporaryOverride && hasPermanentOverride
-
-  return (
-    <span className="flex items-center gap-1">
-      {label}
-      {showZap && (
-        onClickOverride ? (
-          <button
-            onClick={onClickOverride}
-            title="Ver excepciones"
-            className="rounded p-0.5 hover:bg-amber-100 dark:hover:bg-amber-900"
-          >
-            <Zap className="h-3 w-3 text-amber-500" />
-          </button>
-        ) : (
-          <span title="Tiene una excepción activa o próxima">
-            <Zap className="h-3 w-3 text-amber-500" aria-hidden />
-          </span>
-        )
-      )}
-      {showDot && (
-        onClickOverride ? (
-          <button
-            onClick={onClickOverride}
-            title="Cambio permanente activo — ver historial"
-            className="rounded p-0.5 hover:bg-amber-100 dark:hover:bg-amber-900"
-          >
-            <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-          </button>
-        ) : (
-          <span
-            className="inline-block h-2 w-2 rounded-full bg-amber-500"
-            title="Cambio permanente activo"
-          />
-        )
-      )}
-    </span>
   )
 }
