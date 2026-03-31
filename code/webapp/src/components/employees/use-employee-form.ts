@@ -65,6 +65,15 @@ export function useEmployeeForm({
     if (!isOpen) setJustCreatedEmployee(null)
   }, [isEditing, isOpen])
 
+  // Clear the just-created snapshot whenever the panel navigates to a *different*
+  // employee while staying open (e.g. user clicks another row in the table).
+  // Without this, employee A's data flashes briefly in employee B's detail view
+  // because fullEmployee = employeeQuery.data || justCreatedEmployee || employee
+  // and justCreatedEmployee is still set while B's query is pending.
+  useEffect(() => {
+    setJustCreatedEmployee(null)
+  }, [employee?.id])
+
   // ── Queries ──────────────────────────────────────────────────────────────────
 
   // Fetch full employee data when editing to get email/phone from the User record.
