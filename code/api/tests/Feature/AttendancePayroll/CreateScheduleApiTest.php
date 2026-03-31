@@ -187,6 +187,20 @@ class CreateScheduleApiTest extends TestCase
     }
 
     #[Test]
+    public function unauthenticated_request_returns_401(): void
+    {
+        // Reset the guard set by setUp so the request carries no token
+        app('auth')->forgetGuards();
+
+        $response = $this->postJson(
+            "/api/v1/employment-periods/{$this->period->public_id}/schedules",
+            $this->validPayload()
+        );
+
+        $response->assertStatus(401);
+    }
+
+    #[Test]
     public function user_without_permission_returns_403(): void
     {
         $user = User::factory()->create(); // fresh user with no permissions

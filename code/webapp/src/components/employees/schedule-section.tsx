@@ -1,7 +1,7 @@
 import { CalendarDays, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Employee } from '@/types/employee'
-import { useScheduleSection } from './-use-schedule-section'
+import { useScheduleSection } from './use-schedule-section'
 import { ScheduleSummary } from './schedule-summary'
 import { ScheduleDialog } from './schedule-dialog'
 

@@ -8,7 +8,7 @@ import {
   dayToEditValues,
   findNearestWorkingDay,
   useCreateDayOverride,
-} from '@/components/employees/-use-create-day-override'
+} from '@/components/employees/use-create-day-override'
 import type { ScheduleDay } from '@/types/schedule'
 
 // ── helpers ───────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useScheduleSection } from '@/components/employees/-use-schedule-section'
+import { useScheduleSection } from '@/components/employees/use-schedule-section'
 
 vi.mock('@/services/schedule-api', () => ({
   scheduleApi: {

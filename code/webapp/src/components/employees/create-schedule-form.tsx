@@ -2,8 +2,8 @@ import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/ui/form-fields'
-import { useCreateScheduleInline } from './-use-create-schedule-inline'
-import type { CreateScheduleSimpleValues } from './-use-create-schedule-inline'
+import { useCreateScheduleInline } from './use-create-schedule-inline'
+import type { CreateScheduleSimpleValues } from './use-create-schedule-inline'
 
 export interface CreateScheduleFormProps {
   readonly employeeId: string

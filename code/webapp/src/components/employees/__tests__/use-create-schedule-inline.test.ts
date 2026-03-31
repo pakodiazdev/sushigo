@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   buildPayload,
   useCreateScheduleInline,
-} from '@/components/employees/-use-create-schedule-inline'
-import type { CreateScheduleSimpleValues } from '@/components/employees/-use-create-schedule-inline'
+} from '@/components/employees/use-create-schedule-inline'
+import type { CreateScheduleSimpleValues } from '@/components/employees/use-create-schedule-inline'
 
 vi.mock('@/services/schedule-api', () => ({
   scheduleApi: {
