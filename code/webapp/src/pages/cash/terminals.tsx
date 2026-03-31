@@ -10,6 +10,7 @@ import { CashTerminalForm, formatDate } from '@/components/cash'
 import { useCashTerminals } from '@/services/cash-hooks'
 import { apiClient } from '@/lib/api-client'
 import type { CashTerminal } from '@/types/cash'
+import type { OperatingUnit } from '@/types/auth'
 
 export const Route = createFileRoute('/cash/terminals')({
     component: CashTerminalsPage,
@@ -36,7 +37,7 @@ export function CashTerminalsPage() {
     const branches = React.useMemo(() => {
         if (!operatingUnitsData?.data) return []
         const branchesMap = new Map()
-        operatingUnitsData.data.forEach((ou: any) => {
+        operatingUnitsData.data.forEach((ou: OperatingUnit) => {
             if (ou.branch && !branchesMap.has(ou.branch.id)) {
                 branchesMap.set(ou.branch.id, ou.branch)
             }

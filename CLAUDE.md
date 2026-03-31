@@ -259,6 +259,54 @@ This rule applies everywhere: return types, parameter types, `::class` reference
 - Components use PascalCase, files match component names
 - Path aliases via `@/` for absolute imports
 
+### TypeScript Strict Typing (mandatory — no `any`)
+
+**Never use `any` in TypeScript code. Always use specific types or `unknown`.**
+
+```tsx
+// ✅ Correct — use specific types or unknown
+import { getApiErrorMessage } from '@/lib/api-error'
+
+// For error handlers:
+onError: (error: unknown) => {
+  showError(getApiErrorMessage(error, 'Operation failed'))
+}
+
+// For array callbacks, import and use the actual type:
+import type { InventoryLocation, ItemVariant } from '@/types/inventory'
+
+locations.map((loc: InventoryLocation) => loc.name)
+variants.forEach((v: ItemVariant) => console.log(v.sku))
+
+// For dynamic objects where shape is truly unknown:
+const meta: Record<string, unknown> = {}
+
+// ❌ Wrong — avoid any
+onError: (error: any) => { ... }
+items.map((item: any) => item.name)
+const data: any = response
+```
+
+**Patterns for common cases:**
+
+| Scenario | Type to use |
+|----------|-------------|
+| Error in catch/onError | `unknown` + `getApiErrorMessage()` |
+| Array callback | Import specific type from `@/types/` |
+| Event handler value | `string \| number` or specific union |
+| API response data | Define interface in `@/types/` |
+| JSON meta fields | `Record<string, unknown>` |
+
+**API error utilities** — use `@/lib/api-error.ts`:
+- `getApiErrorMessage(error, defaultMsg)` — extract message safely
+- `getApiValidationErrors(error)` — get field→message map for forms
+- `hasApiValidationErrors(error)` — check if error has validation errors
+- `isApiError(error)` — type guard for AxiosError
+
+**PR requirement:** Reviewers must reject any code containing `any`. Run `npm run lint` to catch `@typescript-eslint/no-explicit-any` warnings.
+
+See `doc/conventions/frontend/typescript-typing.md` for detailed patterns.
+
 ### Form Convention (mandatory for all forms)
 
 **Every form in the webapp MUST use `react-hook-form` + `@hookform/resolvers` + `zod`.**

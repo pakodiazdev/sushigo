@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authService, LoginCredentials } from "@/services/auth.service";
 import { apiClient } from "@/lib/api-client";
-import type { User, Branch } from "@/types/auth";
+import type { User, Branch, OperatingUnit } from "@/types/auth";
 
 interface AuthState {
   // State
@@ -56,7 +56,7 @@ async function fetchBranchesFromApi(): Promise<Branch[]> {
       params: { per_page: 100, is_active: true },
     });
     const branches = new Map<number, Branch>();
-    (response.data?.data || []).forEach((ou: any) => {
+    (response.data?.data || []).forEach((ou: OperatingUnit) => {
       if (ou.branch && !branches.has(ou.branch.id)) {
         branches.set(ou.branch.id, ou.branch);
       }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/toast-provider";
 import { employeeApi } from "@/services/employee-api";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type {
   EmployeeFilters,
   EmployeeFormData,
@@ -72,9 +73,9 @@ export function useCreateEmployee() {
         "Empleado creado",
       );
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || "No se pudo crear el empleado.",
+        getApiErrorMessage(error, "No se pudo crear el empleado."),
         "Error",
       );
     },
@@ -96,9 +97,9 @@ export function useUpdateEmployee() {
         "Empleado actualizado",
       );
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || "No se pudo actualizar el empleado.",
+        getApiErrorMessage(error, "No se pudo actualizar el empleado."),
         "Error",
       );
     },
@@ -119,9 +120,9 @@ export function useToggleEmployeeActive() {
         "Estado actualizado",
       );
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || "No se pudo actualizar el estado.",
+        getApiErrorMessage(error, "No se pudo actualizar el estado."),
         "Error",
       );
     },
@@ -143,9 +144,9 @@ export function useDeactivateEmployee() {
         "Baja registrada",
       );
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || "No se pudo dar de baja al empleado.",
+        getApiErrorMessage(error, "No se pudo dar de baja al empleado."),
         "Error",
       );
     },
@@ -167,10 +168,9 @@ export function useRehireEmployee() {
         "Reingreso registrado",
       );
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message ||
-        "No se pudo registrar el reingreso del empleado.",
+        getApiErrorMessage(error, "No se pudo registrar el reingreso del empleado."),
         "Error",
       );
     },
@@ -206,9 +206,9 @@ export function useCreateWage() {
         "Salario registrado",
       );
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || "No se pudo registrar el salario.",
+        getApiErrorMessage(error, "No se pudo registrar el salario."),
         "Error",
       );
     },

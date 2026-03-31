@@ -19,7 +19,7 @@ interface EmployeeFiltersProps {
   search: string
   role: string
   status?: string
-  onFilterChange: (key: string, value: any) => void
+  onFilterChange: (key: string, value: string | number | undefined) => void
   onNew: () => void
 }
 

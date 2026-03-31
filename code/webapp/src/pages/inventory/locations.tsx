@@ -10,6 +10,7 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { inventoryLocationApi } from '@/services/inventory-api'
 import type { InventoryLocation } from '@/types/inventory'
 import { LocationForm, LocationDetails } from '@/components/inventory'
@@ -50,9 +51,9 @@ export function InventoryLocationsPage() {
       setSelectedLocation(null)
       showSuccess('Location deleted successfully', 'Location Deleted')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || 'Failed to delete location. It may have existing stock.',
+        getApiErrorMessage(error, 'Failed to delete location. It may have existing stock.'),
         'Delete Error'
       )
     },

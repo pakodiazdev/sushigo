@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage } from '@/lib/api-error'
 import type { TodayAttendanceRow } from '@/types/attendance'
 
 /**
@@ -39,9 +40,9 @@ export function useCheckIn() {
       queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
       showSuccess('Entrada registrada correctamente.', 'Check-in')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || 'No se pudo registrar la entrada.',
+        getApiErrorMessage(error, 'No se pudo registrar la entrada.'),
         'Error al registrar'
       )
     },

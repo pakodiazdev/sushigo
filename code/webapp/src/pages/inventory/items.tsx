@@ -10,6 +10,7 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
 import { ItemForm, ItemDetails, ProductWizard } from '@/components/inventory'
@@ -64,9 +65,9 @@ export function InventoryItemsPage() {
       setSelectedItem(null)
       showSuccess('Item deleted successfully', 'Item Deleted')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showError(
-        error.response?.data?.message || 'Failed to delete item. It may have existing variants.',
+        getApiErrorMessage(error, 'Failed to delete item. It may have existing variants.'),
         'Delete Error'
       )
     },
