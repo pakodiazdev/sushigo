@@ -239,8 +239,7 @@ class CheckOutApiTest extends TestCase
     public function calculates_overtime_with_offset_across_utc_midnight(): void
     {
         // Night shift: Mon Feb 23 at 23:00 CST → Tue Feb 24 at 06:35 CST (check-out)
-        // UTC equivalent: 05:00 → 12:35
-        // Schedule: expected_start=05:00, expected_end=12:00 (UTC)
+        // Local schedule: expected_start=23:00 CST, expected_end=06:00 CST (next day)
         // Overtime = 35 minutes
         ['attendance' => $attendance] = $this->makeNightShiftAttendance();
 
@@ -363,7 +362,7 @@ class CheckOutApiTest extends TestCase
      * Night shift scenario: check-in crosses UTC midnight.
      *
      * Local: Mon Feb 23 at 23:00 CST (UTC-6) = Tue Feb 24 at 05:00 UTC.
-     * Schedule: expected_start=05:00 UTC, expected_end=12:00 UTC, no lunch.
+     * Schedule: expected_start=23:00 local (CST), expected_end=06:00 local (CST, next day).
      * Attendance: date='2026-02-23' (local Monday), check_in='2026-02-24T05:00:00' (UTC).
      */
     private function makeNightShiftAttendance(): array
@@ -380,11 +379,11 @@ class CheckOutApiTest extends TestCase
             'effective_from' => '2026-01-01',
         ]);
 
-        // Monday (dow=1) — night shift 05:00→12:00 UTC, no lunch
+        // Monday (dow=1) — night shift 23:00→06:00 local (CST), no lunch
         ScheduleDay::factory()
             ->workDay()
             ->monday()
-            ->withTimes(start: '05:00:00', end: '12:00:00')
+            ->withTimes(start: '23:00:00', end: '06:00:00')
             ->withLunchDuration(null)
             ->create(['employee_schedule_id' => $schedule->id]);
 

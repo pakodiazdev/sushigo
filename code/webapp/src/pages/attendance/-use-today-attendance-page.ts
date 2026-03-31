@@ -32,16 +32,18 @@ function currentTimeLabel(): string {
   return new Date().toTimeString().slice(0, 5)
 }
 
-/** ISO 8601 / RFC 3339 datetime with timezone offset: "2026-02-24T09:05:30-06:00" */
-function nowIso(): string {
+/** ISO 8601 / RFC 3339 from a "HH:mm" string using today's date and local timezone offset */
+function timeToIso(hhmm: string): string {
+  const [hours = 0, minutes = 0] = hhmm.split(':').map(Number)
   const d = new Date()
+  d.setHours(hours, minutes, 0, 0)
   const pad = (n: number) => String(n).padStart(2, '0')
   const offset = -d.getTimezoneOffset()
   const sign = offset >= 0 ? '+' : '-'
   const absOff = Math.abs(offset)
   const oh = pad(Math.floor(absOff / 60))
   const om = pad(absOff % 60)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${sign}${oh}:${om}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${sign}${oh}:${om}`
 }
 
 export interface UseTodayAttendancePageResult {
@@ -56,7 +58,8 @@ export interface UseTodayAttendancePageResult {
   // Check-in action
   pendingCheckInEmployee: TodayAttendanceEmployee | null
   isCheckingIn: boolean
-  confirmTimeLabel: string
+  selectedTime: string
+  onTimeChange: (time: string) => void
   openCheckIn: (employee: TodayAttendanceEmployee) => void
   closeCheckIn: () => void
   confirmCheckIn: () => void
@@ -73,10 +76,10 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
 
   const [pendingCheckInEmployee, setPendingCheckInEmployee] =
     useState<TodayAttendanceEmployee | null>(null)
-  const [confirmTimeLabel, setConfirmTimeLabel] = useState('')
+  const [selectedTime, setSelectedTime] = useState('')
 
   const openCheckIn = (employee: TodayAttendanceEmployee) => {
-    setConfirmTimeLabel(currentTimeLabel())
+    setSelectedTime(currentTimeLabel())
     setPendingCheckInEmployee(employee)
   }
 
@@ -85,7 +88,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const confirmCheckIn = () => {
     if (!pendingCheckInEmployee) return
     checkInMutation.mutate(
-      { employee_id: pendingCheckInEmployee.id, check_in: nowIso() },
+      { employee_id: pendingCheckInEmployee.id, check_in: timeToIso(selectedTime) },
       { onSettled: closeCheckIn }
     )
   }
@@ -100,7 +103,8 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     getPhase: (row) => getAttendancePhase(row.attendance),
     pendingCheckInEmployee,
     isCheckingIn: checkInMutation.isPending,
-    confirmTimeLabel,
+    selectedTime,
+    onTimeChange: setSelectedTime,
     openCheckIn,
     closeCheckIn,
     confirmCheckIn,

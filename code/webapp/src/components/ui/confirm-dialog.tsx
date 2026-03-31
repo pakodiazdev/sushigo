@@ -9,7 +9,7 @@ export interface ConfirmDialogProps {
   onClose: () => void
   onConfirm: () => void | Promise<void>
   title: string
-  description?: string
+  description?: React.ReactNode
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'danger' | 'warning' | 'info'
@@ -163,12 +163,12 @@ export function ConfirmDialog({
                 {title}
               </h3>
               {description && (
-                <p
+                <div
                   id="confirm-dialog-desc"
                   className="mt-2 text-sm text-muted-foreground"
                 >
                   {description}
-                </p>
+                </div>
               )}
             </div>
           </div>
