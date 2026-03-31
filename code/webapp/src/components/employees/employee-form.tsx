@@ -8,11 +8,11 @@ import { useEmployeeForm } from './use-employee-form'
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 interface EmployeeFormProps {
-  employee?: Employee | null
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
-  onCreated?: (employee: Employee) => void
+  readonly employee?: Employee | null
+  readonly isOpen: boolean
+  readonly onClose: () => void
+  readonly onSuccess: () => void
+  readonly onCreated?: (employee: Employee) => void
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
