@@ -133,8 +133,10 @@ class RegisterCheckOutAction
 
         // Cross-midnight shift: expected_end (local) < expected_start (local)
         // means the shift ends on the next local calendar day.
-        if ($scheduleDay->expected_start
-            && $scheduleDay->expected_end < $scheduleDay->expected_start) {
+        if (
+            $scheduleDay->expected_start
+            && $scheduleDay->expected_end < $scheduleDay->expected_start
+        ) {
             $expectedEnd->addDay();
         }
 

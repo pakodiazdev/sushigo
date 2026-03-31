@@ -122,6 +122,33 @@ return [
             'password' => 'employee123456',
             'meta' => ['notes' => 'Part-time employee'],
         ],
+        [
+            'code' => 'EMP-006',
+            'first_name' => 'Laura',
+            'last_name' => 'Torres',
+            'roles' => ['cook'],
+            'email' => 'laura.torres@sushigo.com',
+            'phone' => '5512340006',
+            'password' => 'employee123456',
+        ],
+        [
+            'code' => 'EMP-007',
+            'first_name' => 'Miguel',
+            'last_name' => 'Flores',
+            'roles' => ['kitchen-assistant'],
+            'email' => 'miguel.flores@sushigo.com',
+            'phone' => '5512340007',
+            'password' => 'employee123456',
+        ],
+        [
+            'code' => 'EMP-008',
+            'first_name' => 'Sofia',
+            'last_name' => 'Vargas',
+            'roles' => ['delivery-driver'],
+            'email' => 'sofia.vargas@sushigo.com',
+            'phone' => '5512340008',
+            'password' => 'employee123456',
+        ],
     ],
 
     /*
