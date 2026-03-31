@@ -35,7 +35,8 @@ export function TodayAttendancePage() {
     hasBranch,
     pendingCheckInEmployee,
     isCheckingIn,
-    confirmTimeLabel,
+    selectedTime,
+    onTimeChange,
     openCheckIn,
     closeCheckIn,
     confirmCheckIn,
@@ -104,9 +105,28 @@ export function TodayAttendancePage() {
         onConfirm={confirmCheckIn}
         title="Registrar entrada"
         description={
-          pendingCheckInEmployee
-            ? `¿Confirmas el check-in de ${pendingCheckInEmployee.first_name} ${pendingCheckInEmployee.last_name} a las ${confirmTimeLabel}?`
-            : ''
+          pendingCheckInEmployee ? (
+            <span className="flex flex-col gap-3">
+              <span>
+                {`¿Confirmas el check-in de ${pendingCheckInEmployee.first_name} ${pendingCheckInEmployee.last_name}?`}
+              </span>
+              <span className="flex items-center gap-2">
+                <label
+                  htmlFor="checkin-time"
+                  className="text-sm font-medium text-foreground whitespace-nowrap"
+                >
+                  Hora de entrada:
+                </label>
+                <input
+                  id="checkin-time"
+                  type="time"
+                  value={selectedTime}
+                  onChange={e => onTimeChange(e.target.value)}
+                  className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground"
+                />
+              </span>
+            </span>
+          ) : undefined
         }
         confirmLabel="Confirmar entrada"
         variant="info"

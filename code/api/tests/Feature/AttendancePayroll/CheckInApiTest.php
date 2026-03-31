@@ -288,11 +288,11 @@ class CheckInApiTest extends TestCase
     {
         // Monday Feb 23 at 23:00 CST (UTC-6) = Tuesday Feb 24 at 05:00 UTC.
         // The attendance date must be the LOCAL date (Feb 23), not UTC (Feb 24).
-        // Schedule: expected_start = 05:00 UTC (the UTC equivalent of 23:00 CST).
+        // Schedule: expected_start = 23:00 local (CST), i.e. the night shift.
         ['employee' => $employee] = $this->makeEmployeeWithSchedule(
             date: self::DATE,                   // 2026-02-23 (Monday)
-            expectedStart: '05:00:00',          // UTC schedule start
-            expectedEnd: '12:00:00',            // UTC schedule end
+            expectedStart: '23:00:00',          // local schedule start (CST)
+            expectedEnd: '06:00:00',            // local schedule end next day (CST)
         );
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
@@ -310,11 +310,11 @@ class CheckInApiTest extends TestCase
     public function calculates_late_seconds_with_offset_across_utc_midnight(): void
     {
         // Monday Feb 23 at 23:10 CST = Tuesday Feb 24 at 05:10 UTC.
-        // Schedule expected_start = 05:00 UTC → employee is 10 minutes (600 s) late.
+        // Schedule expected_start = 23:00 local (CST) → employee is 10 minutes (600 s) late.
         ['employee' => $employee] = $this->makeEmployeeWithSchedule(
             date: self::DATE,
-            expectedStart: '05:00:00',
-            expectedEnd: '12:00:00',
+            expectedStart: '23:00:00',
+            expectedEnd: '06:00:00',
         );
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
@@ -337,8 +337,8 @@ class CheckInApiTest extends TestCase
         $date = '2026-02-24'; // Tuesday
         ['employee' => $employee] = $this->makeEmployeeWithSchedule(
             date: $date,
-            expectedStart: '16:00:00',          // UTC equivalent of 01:00 JST
-            expectedEnd: '22:00:00',
+            expectedStart: '01:00:00',          // local schedule start (JST)
+            expectedEnd: '09:00:00',            // local schedule end (JST)
         );
 
         $response = $this->postJson('/api/v1/attendances/check-in', [

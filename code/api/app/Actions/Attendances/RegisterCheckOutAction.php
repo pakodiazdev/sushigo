@@ -39,10 +39,11 @@ class RegisterCheckOutAction
         $this->guardCheckInExists($attendance);
         $this->guardNoDuplicateCheckOut($attendance);
 
-        $checkOut = Carbon::parse($data['check_out'])->utc();
+        $checkOutLocal = Carbon::parse($data['check_out']);
+        $checkOut = $checkOutLocal->clone()->utc();
 
         $netWorkedMinutes = $this->calculateNetWorkedMinutes($attendance, $checkOut);
-        $overtimeMinutes = $this->calculateOvertimeMinutes($attendance, $checkOut);
+        $overtimeMinutes = $this->calculateOvertimeMinutes($attendance, $checkOut, $checkOutLocal);
 
         $attendance->update([
             'check_out' => $checkOut,
@@ -108,11 +109,15 @@ class RegisterCheckOutAction
      * Calculate overtime in whole minutes:
      *   overtime = max(0, check_out − expected_end) in minutes (floor)
      *
+     * expected_end is stored as a local time-only value (e.g. "22:00:00").
+     * We anchor it to the attendance START date using the check-out's timezone
+     * offset to get the correct UTC timestamp for comparison.
+     *
      * Returns 0 when:
      *   - The schedule cannot be resolved (non-blocking)
      *   - The employee left before or exactly at expected_end
      */
-    private function calculateOvertimeMinutes(Attendance $attendance, Carbon $checkOut): int
+    private function calculateOvertimeMinutes(Attendance $attendance, Carbon $checkOut, Carbon $checkOutLocal): int
     {
         $scheduleDay = $this->resolveScheduleDay($attendance);
 
@@ -120,14 +125,14 @@ class RegisterCheckOutAction
             return 0;
         }
 
-        // expected_end is a UTC time-only value — anchor it to the check-in's
-        // UTC date (NOT attendance->date, which stores the employee's local date
-        // and may differ from the UTC date for cross-midnight shifts).
-        // Cross-midnight shift: when expected_end < expected_start (e.g. 19:00→04:00 UTC),
-        // the end falls on the next calendar day.
-        $expectedEnd = Carbon::parse($scheduleDay->expected_end)
-            ->setDateFrom($attendance->check_in);
+        // Anchor expected_end to the attendance START date (local) using the
+        // checkout's timezone offset, so the comparison is timezone-correct.
+        $startDate = $attendance->date->toDateString();
+        $timeStr = Carbon::parse($scheduleDay->expected_end)->format('H:i:s');
+        $expectedEnd = Carbon::parse("{$startDate} {$timeStr}", $checkOutLocal->timezone);
 
+        // Cross-midnight shift: expected_end (local) < expected_start (local)
+        // means the shift ends on the next local calendar day.
         if ($scheduleDay->expected_start
             && $scheduleDay->expected_end < $scheduleDay->expected_start) {
             $expectedEnd->addDay();

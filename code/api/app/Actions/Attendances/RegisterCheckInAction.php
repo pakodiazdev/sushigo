@@ -52,7 +52,7 @@ class RegisterCheckInAction
         $schedule = $this->resolveActiveSchedule($period->id, $date);
         $scheduleDay = $this->resolveScheduleDay($schedule, $dayOfWeekIso);
 
-        $lateSeconds = $this->calculateLateSeconds($checkIn, $scheduleDay->expected_start);
+        $lateSeconds = $this->calculateLateSeconds($checkInLocal, $scheduleDay->expected_start);
 
         $attendance = Attendance::create([
             'employee_id' => $employee->id,
@@ -155,21 +155,24 @@ class RegisterCheckInAction
     /**
      * Calculate seconds late = max(0, checkIn − expectedStart).
      *
-     * The expected_start stored in ScheduleDay is a time-only value; we combine
-     * it with the check-in date to get a comparable Carbon timestamp.
+     * expected_start is a time-only value stored in local time (e.g. "09:00:00").
+     * We anchor it to the check-in's local date and timezone to get a correct
+     * comparable timestamp, avoiding UTC-offset errors.
      *
      * If the employee arrives before the expected time, returns 0 (no tardiness).
      */
-    private function calculateLateSeconds(Carbon $checkIn, mixed $expectedStart): int
+    private function calculateLateSeconds(Carbon $checkInLocal, mixed $expectedStart): int
     {
-        $expected = Carbon::parse($expectedStart)->setDateFrom($checkIn);
+        $date = $checkInLocal->toDateString();
+        $timeStr = Carbon::parse($expectedStart)->format('H:i:s');
+        $expected = Carbon::parse("{$date} {$timeStr}", $checkInLocal->timezone);
 
         // Night-shift guard: if the expected time lands more than 12 h after
-        // check-in it was anchored to the wrong UTC day — step back one day.
-        if ($expected->timestamp - $checkIn->timestamp > 12 * 3600) {
+        // check-in it was anchored to the wrong local day — step back one day.
+        if ($expected->timestamp - $checkInLocal->timestamp > 12 * 3600) {
             $expected->subDay();
         }
 
-        return (int) max(0, $checkIn->timestamp - $expected->timestamp);
+        return (int) max(0, $checkInLocal->timestamp - $expected->timestamp);
     }
 }
