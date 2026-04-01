@@ -31,9 +31,9 @@ lunch_late_seconds = max(0, lunch_end − expected_return)
 
 ### 📱 Frontend Tasks (mobile) — pendientes
 
-- [ ] 📱 **Lunch Return Button** — aparece solo cuando `lunch_start` existe pero `lunch_end` es null
+- [x] 📱 **Lunch Return Button** — aparece solo cuando `lunch_start` existe pero `lunch_end` es null
 - [ ] 📱 **Lunch Late Indicator** — muestra minutos de tardanza si `lunch_late_seconds > 0`
-- [ ] 📱 Hook: `useLunchReturn()` — mutation con invalidación de query
+- [x] 📱 Hook: `useLunchReturn()` — mutation con invalidación de query
 
 ---
 

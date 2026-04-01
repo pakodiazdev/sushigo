@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useTodayAttendance, useCheckIn, useLunchStart } from '@/services/attendance-hooks'
+import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn } from '@/services/attendance-hooks'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -19,6 +19,7 @@ vi.mock('@/services/attendance-api', () => ({
     today: vi.fn(),
     checkIn: vi.fn(),
     lunchStart: vi.fn(),
+    lunchReturn: vi.fn(),
   },
 }))
 
@@ -298,6 +299,115 @@ describe('useLunchStart', () => {
 
     expect(attendanceApi.lunchStart).toHaveBeenCalledWith('different-id', {
       lunch_start: '2026-04-01T15:30:00-06:00',
+    })
+  })
+})
+
+// ── useLunchReturn ─────────────────────────────────────────────────────────────
+
+describe('useLunchReturn', () => {
+  const mockLunchReturnResponse = {
+    data: {
+      status: 200,
+      data: {
+        id: 'att-123',
+        lunch_end: '2026-04-01T15:00:00-06:00',
+      },
+    },
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls attendanceApi.lunchReturn with correct data', async () => {
+    vi.mocked(attendanceApi.lunchReturn).mockResolvedValueOnce(mockLunchReturnResponse as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useLunchReturn(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        attendance_id: 'att-123',
+        lunch_end: '2026-04-01T15:00:00-06:00',
+      })
+    })
+
+    expect(attendanceApi.lunchReturn).toHaveBeenCalledWith('att-123', {
+      lunch_end: '2026-04-01T15:00:00-06:00',
+    })
+  })
+
+  it('shows success toast on successful lunch-return', async () => {
+    vi.mocked(attendanceApi.lunchReturn).mockResolvedValueOnce(mockLunchReturnResponse as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useLunchReturn(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        attendance_id: 'att-123',
+        lunch_end: '2026-04-01T15:00:00-06:00',
+      })
+    })
+
+    expect(mockShowSuccess).toHaveBeenCalledWith(
+      'Regreso de comida registrado correctamente.',
+      'Lunch Return'
+    )
+  })
+
+  it('shows error toast on failure', async () => {
+    vi.mocked(attendanceApi.lunchReturn).mockRejectedValueOnce(new Error('Network error'))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useLunchReturn(), { wrapper })
+
+    await act(async () => {
+      try {
+        await result.current.mutateAsync({
+          attendance_id: 'att-123',
+          lunch_end: '2026-04-01T15:00:00-06:00',
+        })
+      } catch {
+        /* expected */
+      }
+    })
+
+    expect(mockShowError).toHaveBeenCalledWith(
+      expect.any(String),
+      'Error al registrar'
+    )
+  })
+
+  it('invalidates today attendance queries on success', async () => {
+    vi.mocked(attendanceApi.lunchReturn).mockResolvedValueOnce(mockLunchReturnResponse as never)
+    const { wrapper, queryClient } = makeWrapper()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    const { result } = renderHook(() => useLunchReturn(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        attendance_id: 'att-123',
+        lunch_end: '2026-04-01T15:00:00-06:00',
+      })
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'today'] })
+  })
+
+  it('passes attendance_id and lunch_end separately', async () => {
+    vi.mocked(attendanceApi.lunchReturn).mockResolvedValueOnce(mockLunchReturnResponse as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useLunchReturn(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        attendance_id: 'different-id',
+        lunch_end: '2026-04-01T16:30:00-06:00',
+      })
+    })
+
+    expect(attendanceApi.lunchReturn).toHaveBeenCalledWith('different-id', {
+      lunch_end: '2026-04-01T16:30:00-06:00',
     })
   })
 })

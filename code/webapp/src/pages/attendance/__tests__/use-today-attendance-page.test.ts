@@ -31,6 +31,7 @@ vi.mock('@/services/attendance-api', () => ({
     today: vi.fn(),
     checkIn: vi.fn(),
     lunchStart: vi.fn(),
+    lunchReturn: vi.fn(),
   },
 }))
 
@@ -463,6 +464,111 @@ describe('useTodayAttendancePage', () => {
         expect(attendanceApi.lunchStart).toHaveBeenCalledWith(
           'att-123',
           expect.objectContaining({ lunch_start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) })
+        )
+      })
+    })
+  })
+
+  // Lunch-return action tests
+  describe('lunch-return action', () => {
+    it('openLunchReturn sets pending data and selected time', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openLunchReturn(employee, 'att-456')
+      })
+
+      expect(result.current.pendingLunchReturn).toEqual({
+        employee,
+        attendanceId: 'att-456',
+      })
+      expect(result.current.selectedLunchReturnTime).toMatch(/^\d{2}:\d{2}$/)
+    })
+
+    it('closeLunchReturn clears pending data', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openLunchReturn(employee, 'att-456')
+      })
+
+      act(() => {
+        result.current.closeLunchReturn()
+      })
+
+      expect(result.current.pendingLunchReturn).toBeNull()
+    })
+
+    it('onLunchReturnTimeChange updates selected return time', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.onLunchReturnTimeChange('15:30')
+      })
+
+      expect(result.current.selectedLunchReturnTime).toBe('15:30')
+    })
+
+    it('confirmLunchReturn does nothing if no pending data', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.confirmLunchReturn()
+      })
+
+      expect(attendanceApi.lunchReturn).not.toHaveBeenCalled()
+    })
+
+    it('confirmLunchReturn does nothing if no selected time', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openLunchReturn(employee, 'att-456')
+      })
+
+      // Clear the time that was set by openLunchReturn
+      act(() => {
+        result.current.onLunchReturnTimeChange('')
+      })
+
+      act(() => {
+        result.current.confirmLunchReturn()
+      })
+
+      expect(attendanceApi.lunchReturn).not.toHaveBeenCalled()
+    })
+
+    it('confirmLunchReturn calls API with correct data', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openLunchReturn(employee, 'att-456')
+      })
+
+      await act(async () => {
+        result.current.confirmLunchReturn()
+      })
+
+      await waitFor(() => {
+        expect(attendanceApi.lunchReturn).toHaveBeenCalledWith(
+          'att-456',
+          expect.objectContaining({ lunch_end: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) })
         )
       })
     })

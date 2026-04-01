@@ -136,3 +136,50 @@ describe('attendanceApi.lunchStart', () => {
     expect(apiClient.patch).toHaveBeenCalledWith('/attendances/def-456/lunch-start', expect.any(Object))
   })
 })
+
+// ── attendanceApi.lunchReturn ──────────────────────────────────────────────────
+
+describe('attendanceApi.lunchReturn', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls PATCH /attendances/{id}/lunch-return with lunch_end', async () => {
+    const mockResponse = {
+      data: {
+        status: 200,
+        data: {
+          id: 'att-123',
+          lunch_end: '2026-04-01T15:00:00-06:00',
+        },
+      },
+    }
+    vi.mocked(apiClient.patch).mockResolvedValueOnce(mockResponse as never)
+
+    const result = await attendanceApi.lunchReturn('att-123', {
+      lunch_end: '2026-04-01T15:00:00-06:00',
+    })
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/att-123/lunch-return', {
+      lunch_end: '2026-04-01T15:00:00-06:00',
+    })
+    expect(result).toEqual(mockResponse)
+  })
+
+  it('interpolates the attendanceId into the URL', async () => {
+    await attendanceApi.lunchReturn('my-attendance-id', { lunch_end: '2026-04-01T16:00:00-06:00' })
+
+    expect(apiClient.patch).toHaveBeenCalledWith(
+      '/attendances/my-attendance-id/lunch-return',
+      { lunch_end: '2026-04-01T16:00:00-06:00' }
+    )
+  })
+
+  it('handles different attendance IDs correctly', async () => {
+    await attendanceApi.lunchReturn('abc', { lunch_end: '2026-04-01T14:00:00Z' })
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/abc/lunch-return', expect.any(Object))
+
+    await attendanceApi.lunchReturn('def-456', { lunch_end: '2026-04-01T15:00:00Z' })
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/def-456/lunch-return', expect.any(Object))
+  })
+})
