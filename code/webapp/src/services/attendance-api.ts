@@ -29,4 +29,15 @@ export const attendanceApi = {
       `/attendances/${attendanceId}/lunch-start`,
       data,
     ),
+
+  /**
+   * PATCH /attendances/{id}/lunch-return
+   * Registers the employee's return from lunch (regreso de comida) at the given datetime.
+   * Body: { lunch_end: "YYYY-MM-DDTHH:mm:ss+offset" }
+   */
+  lunchReturn: (attendanceId: string, data: { lunch_end: string }) =>
+    apiClient.patch<{ status: number; data: AttendanceRecord }>(
+      `/attendances/${attendanceId}/lunch-return`,
+      data,
+    ),
 }

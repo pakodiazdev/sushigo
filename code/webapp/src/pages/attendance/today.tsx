@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Users,
   LogIn,
+  Undo2,
 } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
@@ -48,6 +49,14 @@ export function TodayAttendancePage() {
     openLunchStart,
     closeLunchStart,
     confirmLunchStart,
+    // Lunch-return
+    pendingLunchReturn,
+    isRegisteringLunchReturn,
+    selectedLunchReturnTime,
+    onLunchReturnTimeChange,
+    openLunchReturn,
+    closeLunchReturn,
+    confirmLunchReturn,
   } = useTodayAttendancePage()
 
   if (!hasBranch) {
@@ -102,6 +111,7 @@ export function TodayAttendancePage() {
               row={row}
               onCheckIn={openCheckIn}
               onLunchStart={openLunchStart}
+              onLunchReturn={openLunchReturn}
             />
           ))}
         </div>
@@ -179,6 +189,43 @@ export function TodayAttendancePage() {
         variant="info"
         isLoading={isRegisteringLunch}
         confirmDisabled={!selectedLunchTime}
+      />
+
+      {/* Lunch-return confirmation dialog — single instance for the whole list */}
+      <ConfirmDialog
+        isOpen={!!pendingLunchReturn}
+        onClose={closeLunchReturn}
+        onConfirm={confirmLunchReturn}
+        title="Regresar de comida"
+        description={
+          pendingLunchReturn ? (
+            <span className="flex flex-col gap-3">
+              <span>
+                {`¿Confirmas el regreso de comida de ${pendingLunchReturn.employee.first_name} ${pendingLunchReturn.employee.last_name}?`}
+              </span>
+              <span className="flex items-center gap-2">
+                <label
+                  htmlFor="lunch-return-time"
+                  className="text-sm font-medium text-foreground whitespace-nowrap"
+                >
+                  Hora de regreso:
+                </label>
+                <input
+                  id="lunch-return-time"
+                  type="time"
+                  value={selectedLunchReturnTime}
+                  max={new Date().toTimeString().slice(0, 5)}
+                  onChange={e => onLunchReturnTimeChange(e.target.value)}
+                  className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground"
+                />
+              </span>
+            </span>
+          ) : undefined
+        }
+        confirmLabel="Confirmar regreso"
+        variant="info"
+        isLoading={isRegisteringLunchReturn}
+        confirmDisabled={!selectedLunchReturnTime}
       />
     </PageContainer>
   )
@@ -268,9 +315,10 @@ interface EmployeeAttendanceCardProps {
   row: TodayAttendanceRow
   onCheckIn: (employee: TodayAttendanceEmployee) => void
   onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+  onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
 }
 
-function EmployeeAttendanceCard({ row, onCheckIn, onLunchStart }: Readonly<EmployeeAttendanceCardProps>) {
+function EmployeeAttendanceCard({ row, onCheckIn, onLunchStart, onLunchReturn }: Readonly<EmployeeAttendanceCardProps>) {
   const phase = getAttendancePhase(row.attendance)
   const att = row.attendance
 
@@ -346,6 +394,19 @@ function EmployeeAttendanceCard({ row, onCheckIn, onLunchStart }: Readonly<Emplo
         >
           <UtensilsCrossed className="h-3.5 w-3.5 mr-1.5" />
           Salir a comer
+        </Button>
+      )}
+
+      {/* Lunch-return action — only for employees at lunch (lunch_start exists, but no lunch_end) */}
+      {phase === 'at-lunch' && att && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full mt-auto"
+          onClick={() => onLunchReturn(row.employee, att.id)}
+        >
+          <Undo2 className="h-3.5 w-3.5 mr-1.5" />
+          Regresar de comida
         </Button>
       )}
 

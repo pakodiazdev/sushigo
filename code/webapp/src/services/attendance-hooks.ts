@@ -72,3 +72,27 @@ export function useLunchStart() {
     },
   })
 }
+
+/**
+ * Mutation: register lunch-return (regreso de comida) for an employee.
+ * On success: invalidates the today attendance query and shows a toast.
+ */
+export function useLunchReturn() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: { attendance_id: string; lunch_end: string }) =>
+      attendanceApi.lunchReturn(data.attendance_id, { lunch_end: data.lunch_end }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      showSuccess('Regreso de comida registrado correctamente.', 'Lunch Return')
+    },
+    onError: (error: unknown) => {
+      showError(
+        getApiErrorMessage(error, 'No se pudo registrar el regreso de comida.'),
+        'Error al registrar'
+      )
+    },
+  })
+}
