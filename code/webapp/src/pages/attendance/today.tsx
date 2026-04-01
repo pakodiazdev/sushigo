@@ -270,7 +270,7 @@ interface EmployeeAttendanceCardProps {
   onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
 }
 
-function EmployeeAttendanceCard({ row, onCheckIn, onLunchStart }: EmployeeAttendanceCardProps) {
+function EmployeeAttendanceCard({ row, onCheckIn, onLunchStart }: Readonly<EmployeeAttendanceCardProps>) {
   const phase = getAttendancePhase(row.attendance)
   const att = row.attendance
 
