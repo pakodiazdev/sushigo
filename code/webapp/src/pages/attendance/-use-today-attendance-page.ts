@@ -17,7 +17,8 @@ export interface AttendanceSummary {
   withOvertime: number
 }
 
-function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
+/** Computes attendance summary from rows (exported for testing) */
+export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   let pending = 0, checkedIn = 0, done = 0, withOvertime = 0
 
   for (const row of rows) {
@@ -32,13 +33,13 @@ function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   return { total: rows.length, pending, checkedIn, done, withOvertime }
 }
 
-/** Format current time as "HH:mm" for display in the confirm dialog */
-function currentTimeLabel(): string {
+/** Format current time as "HH:mm" for display in the confirm dialog (exported for testing) */
+export function currentTimeLabel(): string {
   return new Date().toTimeString().slice(0, 5)
 }
 
-/** ISO 8601 / RFC 3339 from a "HH:mm" string using today's date and local timezone offset */
-function timeToIso(hhmm: string): string {
+/** ISO 8601 / RFC 3339 from a "HH:mm" string using today's date and local timezone offset (exported for testing) */
+export function timeToIso(hhmm: string): string {
   if (!hhmm?.includes(':')) {
     throw new TypeError(`Invalid time value: "${hhmm}"`)
   }
