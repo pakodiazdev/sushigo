@@ -18,4 +18,15 @@ export const attendanceApi = {
    */
   checkIn: (data: { employee_id: string; check_in: string }) =>
     apiClient.post<{ status: number; data: AttendanceRecord }>('/attendances/check-in', data),
+
+  /**
+   * PATCH /attendances/{id}/lunch-start
+   * Registers the employee's lunch start (salida a comida) at the given datetime.
+   * Body: { lunch_start: "YYYY-MM-DDTHH:mm:ss+offset" }
+   */
+  lunchStart: (attendanceId: string, data: { lunch_start: string }) =>
+    apiClient.patch<{ status: number; data: AttendanceRecord }>(
+      `/attendances/${attendanceId}/lunch-start`,
+      data,
+    ),
 }

@@ -48,3 +48,27 @@ export function useCheckIn() {
     },
   })
 }
+
+/**
+ * Mutation: register lunch-start (salida a comida) for an employee.
+ * On success: invalidates the today attendance query and shows a toast.
+ */
+export function useLunchStart() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: { attendance_id: string; lunch_start: string }) =>
+      attendanceApi.lunchStart(data.attendance_id, { lunch_start: data.lunch_start }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      showSuccess('Salida a comida registrada correctamente.', 'Lunch Start')
+    },
+    onError: (error: unknown) => {
+      showError(
+        getApiErrorMessage(error, 'No se pudo registrar la salida a comida.'),
+        'Error al registrar'
+      )
+    },
+  })
+}
