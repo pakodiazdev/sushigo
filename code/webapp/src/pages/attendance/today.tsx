@@ -40,6 +40,14 @@ export function TodayAttendancePage() {
     openCheckIn,
     closeCheckIn,
     confirmCheckIn,
+    // Lunch-start
+    pendingLunchStart,
+    isRegisteringLunch,
+    selectedLunchTime,
+    onLunchTimeChange,
+    openLunchStart,
+    closeLunchStart,
+    confirmLunchStart,
   } = useTodayAttendancePage()
 
   if (!hasBranch) {
@@ -93,6 +101,7 @@ export function TodayAttendancePage() {
               key={row.employee.id}
               row={row}
               onCheckIn={openCheckIn}
+              onLunchStart={openLunchStart}
             />
           ))}
         </div>
@@ -133,6 +142,43 @@ export function TodayAttendancePage() {
         variant="info"
         isLoading={isCheckingIn}
         confirmDisabled={!selectedTime}
+      />
+
+      {/* Lunch-start confirmation dialog — single instance for the whole list */}
+      <ConfirmDialog
+        isOpen={!!pendingLunchStart}
+        onClose={closeLunchStart}
+        onConfirm={confirmLunchStart}
+        title="Salir a comer"
+        description={
+          pendingLunchStart ? (
+            <span className="flex flex-col gap-3">
+              <span>
+                {`¿Confirmas la salida a comida de ${pendingLunchStart.employee.first_name} ${pendingLunchStart.employee.last_name}?`}
+              </span>
+              <span className="flex items-center gap-2">
+                <label
+                  htmlFor="lunch-time"
+                  className="text-sm font-medium text-foreground whitespace-nowrap"
+                >
+                  Hora de salida:
+                </label>
+                <input
+                  id="lunch-time"
+                  type="time"
+                  value={selectedLunchTime}
+                  max={new Date().toTimeString().slice(0, 5)}
+                  onChange={e => onLunchTimeChange(e.target.value)}
+                  className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground"
+                />
+              </span>
+            </span>
+          ) : undefined
+        }
+        confirmLabel="Confirmar salida"
+        variant="info"
+        isLoading={isRegisteringLunch}
+        confirmDisabled={!selectedLunchTime}
       />
     </PageContainer>
   )
@@ -221,9 +267,10 @@ function SummaryStat({
 interface EmployeeAttendanceCardProps {
   row: TodayAttendanceRow
   onCheckIn: (employee: TodayAttendanceEmployee) => void
+  onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
 }
 
-function EmployeeAttendanceCard({ row, onCheckIn }: EmployeeAttendanceCardProps) {
+function EmployeeAttendanceCard({ row, onCheckIn, onLunchStart }: EmployeeAttendanceCardProps) {
   const phase = getAttendancePhase(row.attendance)
   const att = row.attendance
 
@@ -286,6 +333,19 @@ function EmployeeAttendanceCard({ row, onCheckIn }: EmployeeAttendanceCardProps)
         >
           <LogIn className="h-3.5 w-3.5 mr-1.5" />
           Registrar entrada
+        </Button>
+      )}
+
+      {/* Lunch-start action — only for checked-in employees (no lunch_start yet) */}
+      {phase === 'checked-in' && att && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full mt-auto"
+          onClick={() => onLunchStart(row.employee, att.id)}
+        >
+          <UtensilsCrossed className="h-3.5 w-3.5 mr-1.5" />
+          Salir a comer
         </Button>
       )}
 
