@@ -42,6 +42,10 @@ class RegisterCheckInAction
         // and late-seconds calculation.  This prevents cross-midnight UTC bugs
         // where a late-night local check-in falls on the next UTC day.
         $checkInLocal = Carbon::parse($data['check_in']);
+
+        // Reject future check-ins (allow up to 5 minutes of clock skew)
+        $this->guardNotInFuture($checkInLocal);
+
         $date = $checkInLocal->toDateString();
         $dayOfWeekIso = $checkInLocal->dayOfWeekIso;
         $checkIn = $checkInLocal->clone()->utc();
@@ -83,8 +87,23 @@ class RegisterCheckInAction
         }
     }
 
-    /**
-     * Return the active employment period for the employee on the given date.
+    /**     * Reject check-in times in the future (allow up to 5 minutes of clock skew).
+     *
+     * @throws ValidationException
+     */
+    private function guardNotInFuture(Carbon $checkInLocal): void
+    {
+        $nowLocal = Carbon::now($checkInLocal->timezone);
+        $toleranceMinutes = 5;
+
+        if ($checkInLocal->isAfter($nowLocal->copy()->addMinutes($toleranceMinutes))) {
+            throw ValidationException::withMessages([
+                'check_in' => 'La hora de entrada no puede ser en el futuro.',
+            ]);
+        }
+    }
+
+    /**     * Return the active employment period for the employee on the given date.
      *
      * @throws ValidationException
      */

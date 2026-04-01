@@ -34,7 +34,13 @@ function currentTimeLabel(): string {
 
 /** ISO 8601 / RFC 3339 from a "HH:mm" string using today's date and local timezone offset */
 function timeToIso(hhmm: string): string {
+  if (!hhmm?.includes(':')) {
+    throw new TypeError(`Invalid time value: "${hhmm}"`)
+  }
   const [hours = 0, minutes = 0] = hhmm.split(':').map(Number)
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    throw new TypeError(`Invalid time value: "${hhmm}"`)
+  }
   const d = new Date()
   d.setHours(hours, minutes, 0, 0)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -86,7 +92,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const closeCheckIn = () => setPendingCheckInEmployee(null)
 
   const confirmCheckIn = () => {
-    if (!pendingCheckInEmployee) return
+    if (!pendingCheckInEmployee || !selectedTime) return
     checkInMutation.mutate(
       { employee_id: pendingCheckInEmployee.id, check_in: timeToIso(selectedTime) },
       { onSettled: closeCheckIn }
