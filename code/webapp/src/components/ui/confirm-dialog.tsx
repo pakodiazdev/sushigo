@@ -14,6 +14,8 @@ export interface ConfirmDialogProps {
   cancelLabel?: string
   variant?: 'danger' | 'warning' | 'info'
   isLoading?: boolean
+  /** Disable the confirm button (e.g. when required input is empty). */
+  confirmDisabled?: boolean
   /** Where to render the dialog overlay.
    *  - undefined (default): renders inline with absolute positioning,
    *    covering the nearest positioned ancestor (e.g. a SlidePanel).
@@ -54,6 +56,7 @@ export function ConfirmDialog({
   cancelLabel = 'Cancelar',
   variant = 'warning',
   isLoading = false,
+  confirmDisabled = false,
   container,
 }: ConfirmDialogProps) {
   const [visible, setVisible] = useState(false)
@@ -187,7 +190,7 @@ export function ConfirmDialog({
           <Button
             type="button"
             onClick={onConfirm}
-            disabled={isLoading}
+            disabled={isLoading || confirmDisabled}
             className={styles.confirmBtn}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

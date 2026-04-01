@@ -121,6 +121,7 @@ export function TodayAttendancePage() {
                   id="checkin-time"
                   type="time"
                   value={selectedTime}
+                  max={new Date().toTimeString().slice(0, 5)}
                   onChange={e => onTimeChange(e.target.value)}
                   className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground"
                 />
@@ -131,6 +132,7 @@ export function TodayAttendancePage() {
         confirmLabel="Confirmar entrada"
         variant="info"
         isLoading={isCheckingIn}
+        confirmDisabled={!selectedTime}
       />
     </PageContainer>
   )

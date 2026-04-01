@@ -59,7 +59,7 @@ describe('Crear empleado', () => {
     cy.contains('button', 'Crear').click()
 
     // Esperar a que aparezca la vista de detalle
-    cy.contains('Empleado Cypress', { timeout: 10_000 }).should('be.visible')
+    cy.contains('Empleado Cypress', { timeout: 10_000 }).scrollIntoView().should('be.visible')
 
     // ── 4. Crear horario: Martes-Domingo, 13:00-22:00, descansa Lunes ────────
     //

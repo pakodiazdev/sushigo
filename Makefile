@@ -1,4 +1,4 @@
-.PHONY: help e2e-ui cypress-ui cypress-run cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart
+.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart
 
 # Colores para output
 GREEN  := \033[0;32m
@@ -66,6 +66,10 @@ cypress-debug: ## Abrir spec en modo interactivo (navegador queda abierto): make
 cypress-run: ## Ejecutar tests de Cypress en modo headless
 	@echo "$(GREEN)Ejecutando tests de Cypress...$(NC)"
 	@docker compose -f docker-compose.yml -f docker-compose.e2e.yml run --rm cypress
+
+cypress-run-headed: cypress-up ## Ejecutar TODOS los tests con navegador visible (ver en VNC http://localhost:6080)
+	@echo "$(GREEN)Ejecutando todos los tests en modo headed (VNC: http://localhost:6080)...$(NC)"
+	@docker exec -it cypress-ui npx cypress run --headed --browser chrome
 
 cypress-build: ## Reconstruir imagen de Cypress UI
 	@echo "$(GREEN)Reconstruyendo imagen de Cypress UI...$(NC)"
