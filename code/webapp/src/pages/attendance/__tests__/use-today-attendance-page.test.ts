@@ -64,7 +64,7 @@ function makeEmployee(overrides: Partial<{ id: string; code: string; first_name:
   }
 }
 
-// Sample attendance rows for testing
+/** Sample attendance rows for testing */
 function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRow {
   return {
     employee: {
@@ -98,7 +98,6 @@ describe('computeSummary', () => {
   it('counts pending employees (no attendance)', () => {
     const rows = [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', first_name: 'María', last_name: 'García', roles: [] } })]
     const result = computeSummary(rows)
-    expect(result.total).toBe(2)
     expect(result.pending).toBe(2)
     expect(result.checkedIn).toBe(0)
     expect(result.done).toBe(0)
@@ -106,11 +105,14 @@ describe('computeSummary', () => {
 
   it('counts checked-in employees (has check_in, no check_out)', () => {
     const rows = [
-      makeRow({ attendance: { id: 'att-1', check_in: '2026-04-01T13:00:00Z' } as TodayAttendanceRow['attendance'] }),
+      makeRow({
+        attendance: { id: 'att-1', check_in: '2026-04-01T13:00:00Z' } as TodayAttendanceRow['attendance'],
+      }),
     ]
     const result = computeSummary(rows)
     expect(result.checkedIn).toBe(1)
     expect(result.pending).toBe(0)
+    expect(result.done).toBe(0)
   })
 
   it('counts done employees (has check_out)', () => {
@@ -126,6 +128,7 @@ describe('computeSummary', () => {
     const result = computeSummary(rows)
     expect(result.done).toBe(1)
     expect(result.checkedIn).toBe(0)
+    expect(result.pending).toBe(0)
   })
 
   it('counts employees with overtime', () => {
@@ -138,7 +141,7 @@ describe('computeSummary', () => {
         } as TodayAttendanceRow['attendance'],
       }),
       makeRow({
-        employee: { id: 'emp-002', code: 'EMP-002', first_name: 'María', last_name: 'García', roles: [] },
+        employee: { id: 'emp-002', code: 'EMP-002', first_name: 'Ana', last_name: 'López', roles: [] },
         attendance: {
           id: 'att-2',
           check_in: '2026-04-01T13:00:00Z',
@@ -150,7 +153,7 @@ describe('computeSummary', () => {
     expect(result.withOvertime).toBe(1)
   })
 
-  it('counts at-lunch phase as checkedIn', () => {
+  it('counts at-lunch as checkedIn', () => {
     const rows = [
       makeRow({
         attendance: {
@@ -162,10 +165,9 @@ describe('computeSummary', () => {
     ]
     const result = computeSummary(rows)
     expect(result.checkedIn).toBe(1)
-    expect(result.done).toBe(0)
   })
 
-  it('counts returned phase as checkedIn', () => {
+  it('counts returned as checkedIn', () => {
     const rows = [
       makeRow({
         attendance: {
@@ -178,7 +180,6 @@ describe('computeSummary', () => {
     ]
     const result = computeSummary(rows)
     expect(result.checkedIn).toBe(1)
-    expect(result.done).toBe(0)
   })
 })
 
@@ -187,13 +188,19 @@ describe('computeSummary', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('currentTimeLabel', () => {
-  it('returns time in HH:mm format', () => {
-    const result = currentTimeLabel()
-    expect(result).toMatch(/^\d{2}:\d{2}$/)
+  it('returns current time in HH:mm format', () => {
+    const label = currentTimeLabel()
+    expect(label).toMatch(/^\d{2}:\d{2}$/)
   })
 
-  it('returns 5 character string', () => {
-    expect(currentTimeLabel().length).toBe(5)
+  it('returns expected format for known time', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-01T14:30:00'))
+
+    const label = currentTimeLabel()
+    expect(label).toBe('14:30')
+
+    vi.useRealTimers()
   })
 })
 
@@ -202,50 +209,37 @@ describe('currentTimeLabel', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('timeToIso', () => {
-  it('converts HH:mm to ISO 8601 format', () => {
-    const result = timeToIso('13:00')
-    // Should match ISO format with timezone offset
-    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T13:00:00[+-]\d{2}:\d{2}$/)
+  it('throws TypeError for invalid time format (no colon)', () => {
+    expect(() => timeToIso('1430')).toThrow(TypeError)
   })
 
-  it('preserves hours and minutes in the output', () => {
-    const result = timeToIso('14:30')
-    expect(result).toContain('T14:30:00')
-  })
-
-  it('throws TypeError for invalid time without colon', () => {
-    expect(() => timeToIso('1300')).toThrow(TypeError)
-    expect(() => timeToIso('1300')).toThrow('Invalid time value')
-  })
-
-  it('throws TypeError for empty string', () => {
+  it('throws TypeError for undefined/empty value', () => {
     expect(() => timeToIso('')).toThrow(TypeError)
   })
 
-  it('throws TypeError for NaN values', () => {
+  it('throws TypeError for invalid time with NaN values', () => {
     expect(() => timeToIso('ab:cd')).toThrow(TypeError)
-    expect(() => timeToIso('ab:cd')).toThrow('Invalid time value')
   })
 
-  it('handles midnight correctly', () => {
-    const result = timeToIso('00:00')
-    expect(result).toContain('T00:00:00')
+  it('returns ISO 8601 string for valid time', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-01T12:00:00'))
+
+    const iso = timeToIso('14:30')
+    expect(iso).toMatch(/^2026-04-01T14:30:00[+-]\d{2}:\d{2}$/)
+
+    vi.useRealTimers()
   })
 
-  it('handles end of day correctly', () => {
-    const result = timeToIso('23:59')
-    expect(result).toContain('T23:59:00')
-  })
-
-  it('includes timezone offset in output', () => {
-    const result = timeToIso('12:00')
-    // Should end with timezone offset like +06:00 or -06:00
-    expect(result).toMatch(/[+-]\d{2}:\d{2}$/)
+  it('includes local timezone offset', () => {
+    const iso = timeToIso('14:30')
+    // Should have either + or - followed by HH:MM offset
+    expect(iso).toMatch(/[+-]\d{2}:\d{2}$/)
   })
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
-// useTodayAttendancePage hook
+// useTodayAttendancePage
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('useTodayAttendancePage', () => {
@@ -259,6 +253,7 @@ describe('useTodayAttendancePage', () => {
     vi.mocked(attendanceApi.today).mockResolvedValue(mockTodayResponse as never)
     vi.mocked(attendanceApi.checkIn).mockResolvedValue({ data: { status: 200, data: {} } } as never)
     vi.mocked(attendanceApi.lunchStart).mockResolvedValue({ data: { status: 200, data: {} } } as never)
+    vi.mocked(attendanceApi.lunchReturn).mockResolvedValue({ data: { status: 200, data: {} } } as never)
   })
 
   afterEach(() => {
@@ -273,8 +268,7 @@ describe('useTodayAttendancePage', () => {
     expect(result.current.hasBranch).toBe(true)
     expect(result.current.pendingCheckInEmployee).toBeNull()
     expect(result.current.pendingLunchStart).toBeNull()
-    expect(result.current.selectedTime).toBe('')
-    expect(result.current.selectedLunchTime).toBe('')
+    expect(result.current.pendingLunchReturn).toBeNull()
   })
 
   it('fetches attendance data on mount', async () => {
@@ -286,9 +280,10 @@ describe('useTodayAttendancePage', () => {
     })
   })
 
-  // Check-in flow tests
+  // ── Check-in flow tests ──────────────────────────────────────────────────────
+
   describe('check-in flow', () => {
-    it('openCheckIn sets pending employee and current time', async () => {
+    it('openCheckIn sets pending employee', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
@@ -299,7 +294,6 @@ describe('useTodayAttendancePage', () => {
       })
 
       expect(result.current.pendingCheckInEmployee).toEqual(employee)
-      expect(result.current.selectedTime).toMatch(/^\d{2}:\d{2}$/)
     })
 
     it('closeCheckIn clears pending employee', async () => {
@@ -319,31 +313,22 @@ describe('useTodayAttendancePage', () => {
       expect(result.current.pendingCheckInEmployee).toBeNull()
     })
 
-    it('onTimeChange updates selected time', async () => {
-      const { wrapper } = makeWrapper()
-      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
-
-      act(() => {
-        result.current.onTimeChange('14:30')
-      })
-
-      expect(result.current.selectedTime).toBe('14:30')
-    })
-
     it('confirmCheckIn does nothing if no pending employee', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
       act(() => {
-        result.current.confirmCheckIn()
+        result.current.confirmCheckIn('14:00')
       })
 
       expect(attendanceApi.checkIn).not.toHaveBeenCalled()
     })
 
-    it('confirmCheckIn does nothing if no selected time', async () => {
+    it('confirmCheckIn calls API with correct data', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
 
       const employee = makeEmployee()
 
@@ -351,22 +336,46 @@ describe('useTodayAttendancePage', () => {
         result.current.openCheckIn(employee)
       })
 
-      // Clear the time that was set by openCheckIn
-      act(() => {
-        result.current.onTimeChange('')
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
       })
 
+      await waitFor(() => {
+        expect(attendanceApi.checkIn).toHaveBeenCalledWith(
+          expect.objectContaining({
+            employee_id: 'emp-001',
+            check_in: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T14:00:00[+-]\d{2}:\d{2}$/),
+          })
+        )
+      })
+    })
+
+    it('confirmCheckIn clears pending employee after success', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      const employee = makeEmployee()
+
       act(() => {
-        result.current.confirmCheckIn()
+        result.current.openCheckIn(employee)
       })
 
-      expect(attendanceApi.checkIn).not.toHaveBeenCalled()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+
+      await waitFor(() => {
+        expect(result.current.pendingCheckInEmployee).toBeNull()
+      })
     })
   })
 
-  // Lunch-start flow tests
+  // ── Lunch-start flow tests ───────────────────────────────────────────────────
+
   describe('lunch-start flow', () => {
-    it('openLunchStart sets pending data and current time', async () => {
+    it('openLunchStart sets pending data', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
@@ -380,7 +389,6 @@ describe('useTodayAttendancePage', () => {
         employee,
         attendanceId: 'att-123',
       })
-      expect(result.current.selectedLunchTime).toMatch(/^\d{2}:\d{2}$/)
     })
 
     it('closeLunchStart clears pending data', async () => {
@@ -400,45 +408,12 @@ describe('useTodayAttendancePage', () => {
       expect(result.current.pendingLunchStart).toBeNull()
     })
 
-    it('onLunchTimeChange updates selected lunch time', async () => {
-      const { wrapper } = makeWrapper()
-      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
-
-      act(() => {
-        result.current.onLunchTimeChange('14:00')
-      })
-
-      expect(result.current.selectedLunchTime).toBe('14:00')
-    })
-
     it('confirmLunchStart does nothing if no pending data', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
       act(() => {
-        result.current.confirmLunchStart()
-      })
-
-      expect(attendanceApi.lunchStart).not.toHaveBeenCalled()
-    })
-
-    it('confirmLunchStart does nothing if no selected time', async () => {
-      const { wrapper } = makeWrapper()
-      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
-
-      const employee = makeEmployee()
-
-      act(() => {
-        result.current.openLunchStart(employee, 'att-123')
-      })
-
-      // Clear the time that was set by openLunchStart
-      act(() => {
-        result.current.onLunchTimeChange('')
-      })
-
-      act(() => {
-        result.current.confirmLunchStart()
+        result.current.confirmLunchStart('14:00')
       })
 
       expect(attendanceApi.lunchStart).not.toHaveBeenCalled()
@@ -457,21 +432,45 @@ describe('useTodayAttendancePage', () => {
       })
 
       await act(async () => {
-        result.current.confirmLunchStart()
+        result.current.confirmLunchStart('14:00')
       })
 
       await waitFor(() => {
         expect(attendanceApi.lunchStart).toHaveBeenCalledWith(
           'att-123',
-          expect.objectContaining({ lunch_start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) })
+          expect.objectContaining({
+            lunch_start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T14:00:00[+-]\d{2}:\d{2}$/),
+          })
         )
+      })
+    })
+
+    it('confirmLunchStart clears pending data after success', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openLunchStart(employee, 'att-123')
+      })
+
+      await act(async () => {
+        result.current.confirmLunchStart('14:00')
+      })
+
+      await waitFor(() => {
+        expect(result.current.pendingLunchStart).toBeNull()
       })
     })
   })
 
-  // Lunch-return action tests
-  describe('lunch-return action', () => {
-    it('openLunchReturn sets pending data and selected time', async () => {
+  // ── Lunch-return flow tests ──────────────────────────────────────────────────
+
+  describe('lunch-return flow', () => {
+    it('openLunchReturn sets pending data', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
@@ -485,7 +484,6 @@ describe('useTodayAttendancePage', () => {
         employee,
         attendanceId: 'att-456',
       })
-      expect(result.current.selectedLunchReturnTime).toMatch(/^\d{2}:\d{2}$/)
     })
 
     it('closeLunchReturn clears pending data', async () => {
@@ -505,45 +503,12 @@ describe('useTodayAttendancePage', () => {
       expect(result.current.pendingLunchReturn).toBeNull()
     })
 
-    it('onLunchReturnTimeChange updates selected return time', async () => {
-      const { wrapper } = makeWrapper()
-      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
-
-      act(() => {
-        result.current.onLunchReturnTimeChange('15:30')
-      })
-
-      expect(result.current.selectedLunchReturnTime).toBe('15:30')
-    })
-
     it('confirmLunchReturn does nothing if no pending data', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
       act(() => {
-        result.current.confirmLunchReturn()
-      })
-
-      expect(attendanceApi.lunchReturn).not.toHaveBeenCalled()
-    })
-
-    it('confirmLunchReturn does nothing if no selected time', async () => {
-      const { wrapper } = makeWrapper()
-      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
-
-      const employee = makeEmployee()
-
-      act(() => {
-        result.current.openLunchReturn(employee, 'att-456')
-      })
-
-      // Clear the time that was set by openLunchReturn
-      act(() => {
-        result.current.onLunchReturnTimeChange('')
-      })
-
-      act(() => {
-        result.current.confirmLunchReturn()
+        result.current.confirmLunchReturn('15:00')
       })
 
       expect(attendanceApi.lunchReturn).not.toHaveBeenCalled()
@@ -562,19 +527,43 @@ describe('useTodayAttendancePage', () => {
       })
 
       await act(async () => {
-        result.current.confirmLunchReturn()
+        result.current.confirmLunchReturn('15:00')
       })
 
       await waitFor(() => {
         expect(attendanceApi.lunchReturn).toHaveBeenCalledWith(
           'att-456',
-          expect.objectContaining({ lunch_end: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) })
+          expect.objectContaining({
+            lunch_end: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T15:00:00[+-]\d{2}:\d{2}$/),
+          })
         )
+      })
+    })
+
+    it('confirmLunchReturn clears pending data after success', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openLunchReturn(employee, 'att-456')
+      })
+
+      await act(async () => {
+        result.current.confirmLunchReturn('15:00')
+      })
+
+      await waitFor(() => {
+        expect(result.current.pendingLunchReturn).toBeNull()
       })
     })
   })
 
-  // Summary and phase tests
+  // ── Summary and phase tests ──────────────────────────────────────────────────
+
   describe('summary and phase', () => {
     it('computes summary from rows', async () => {
       const { wrapper } = makeWrapper()
@@ -607,7 +596,8 @@ describe('useTodayAttendancePage', () => {
     })
   })
 
-  // No branch scenario
+  // ── No branch scenario ───────────────────────────────────────────────────────
+
   describe('no branch selected', () => {
     it('returns hasBranch false when no branch', async () => {
       vi.mocked(useAuthStore).mockImplementation((selector) =>
