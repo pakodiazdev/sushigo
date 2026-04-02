@@ -10,8 +10,8 @@ import {
     LateRow,
     OvertimeAlert,
     RoleBadges,
-    getPhaseCardClass,
 } from '../EmployeeAttendanceCard'
+import { getPhaseCardClass } from '../attendance-helpers'
 import type { TodayAttendanceRow } from '@/types/attendance'
 
 afterEach(() => {

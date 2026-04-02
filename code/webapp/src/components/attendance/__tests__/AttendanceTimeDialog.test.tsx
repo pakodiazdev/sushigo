@@ -3,7 +3,8 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, cleanup, waitFor, fireEvent, renderHook, act } from '@testing-library/react'
-import { AttendanceTimeDialog, useAttendanceTimeDialog } from '../AttendanceTimeDialog'
+import { AttendanceTimeDialog } from '../AttendanceTimeDialog'
+import { useAttendanceTimeDialog } from '../use-attendance-time-dialog'
 
 afterEach(() => {
     cleanup()
