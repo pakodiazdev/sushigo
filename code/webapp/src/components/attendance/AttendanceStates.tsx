@@ -48,12 +48,15 @@ interface SkeletonGridProps {
     count?: number
 }
 
+// Stable keys generated once at module load - avoids array index as key
+const SKELETON_KEYS = Array.from({ length: 20 }, (_, i) => `skeleton-${i}`)
+
 export function SkeletonGrid({ count = 6 }: Readonly<SkeletonGridProps>) {
     return (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: count }).map((_, i) => (
+            {SKELETON_KEYS.slice(0, count).map((key) => (
                 <div
-                    key={i}
+                    key={key}
                     className="rounded-xl border bg-card p-4 h-36 animate-pulse bg-muted/30"
                 />
             ))}
