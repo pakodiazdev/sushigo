@@ -142,4 +142,38 @@ describe('AttendanceTimeDialog', () => {
 
         expect(onClose).toHaveBeenCalled()
     })
+
+    it('does not reset user input when initialTime changes while dialog is open', () => {
+        const { container, rerender } = render(<AttendanceTimeDialog {...defaultProps} />)
+
+        const input = container.querySelector('input[type="time"]') as HTMLInputElement
+        expect(input.value).toBe('14:00')
+
+        // User types a different time
+        fireEvent.change(input, { target: { value: '13:30' } })
+        expect(input.value).toBe('13:30')
+
+        // Re-render with new initialTime (simulates minute boundary crossing)
+        rerender(<AttendanceTimeDialog {...defaultProps} initialTime="14:01" maxTime="14:01" />)
+
+        // User's input should NOT be overwritten
+        expect(input.value).toBe('13:30')
+    })
+
+    it('resets form when dialog reopens', () => {
+        const { container, rerender } = render(<AttendanceTimeDialog {...defaultProps} />)
+
+        const input = container.querySelector('input[type="time"]') as HTMLInputElement
+        fireEvent.change(input, { target: { value: '13:30' } })
+        expect(input.value).toBe('13:30')
+
+        // Close dialog
+        rerender(<AttendanceTimeDialog {...defaultProps} isOpen={false} />)
+
+        // Reopen dialog with new initial time
+        rerender(<AttendanceTimeDialog {...defaultProps} isOpen={true} initialTime="15:00" maxTime="15:00" />)
+
+        // Should reset to new initialTime since dialog was closed and reopened
+        expect(input.value).toBe('15:00')
+    })
 })

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -52,11 +52,15 @@ export function useAttendanceTimeDialog({
         mode: 'onChange',
     })
 
-    // Reset form when dialog opens with new initial time
+    // Track previous open state to detect open transition
+    const wasOpenRef = useRef(false)
+
+    // Reset form only when dialog opens (false → true), not when initialTime changes
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !wasOpenRef.current) {
             reset({ time: initialTime })
         }
+        wasOpenRef.current = isOpen
     }, [isOpen, initialTime, reset])
 
     const time = watch('time')
