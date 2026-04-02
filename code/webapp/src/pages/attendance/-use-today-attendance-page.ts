@@ -1,20 +1,13 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
+import type { AttendanceSummary } from '@/components/attendance'
 
 interface PendingAttendanceData {
   employee: TodayAttendanceEmployee
   attendanceId: string
-}
-
-export interface AttendanceSummary {
-  total: number
-  pending: number     // No check-in yet
-  checkedIn: number   // At work (includes at-lunch / returned phases)
-  done: number        // Checked out
-  withOvertime: number
 }
 
 /** Computes attendance summary from rows (exported for testing) */
@@ -70,27 +63,21 @@ export interface UseTodayAttendancePageResult {
   // Check-in action
   pendingCheckInEmployee: TodayAttendanceEmployee | null
   isCheckingIn: boolean
-  selectedTime: string
-  onTimeChange: (time: string) => void
   openCheckIn: (employee: TodayAttendanceEmployee) => void
   closeCheckIn: () => void
-  confirmCheckIn: () => void
+  confirmCheckIn: (time: string) => void
   // Lunch-start action
   pendingLunchStart: PendingAttendanceData | null
   isRegisteringLunch: boolean
-  selectedLunchTime: string
-  onLunchTimeChange: (time: string) => void
   openLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeLunchStart: () => void
-  confirmLunchStart: () => void
+  confirmLunchStart: (time: string) => void
   // Lunch-return action
   pendingLunchReturn: PendingAttendanceData | null
   isRegisteringLunchReturn: boolean
-  selectedLunchReturnTime: string
-  onLunchReturnTimeChange: (time: string) => void
   openLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeLunchReturn: () => void
-  confirmLunchReturn: () => void
+  confirmLunchReturn: (time: string) => void
 }
 
 export function useTodayAttendancePage(): UseTodayAttendancePageResult {
@@ -104,65 +91,65 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
 
   const summary = computeSummary(data)
 
-  // Check-in state
+  // ── Check-in state ───────────────────────────────────────────────────────────
   const [pendingCheckInEmployee, setPendingCheckInEmployee] =
     useState<TodayAttendanceEmployee | null>(null)
-  const [selectedTime, setSelectedTime] = useState('')
 
-  const openCheckIn = (employee: TodayAttendanceEmployee) => {
-    setSelectedTime(currentTimeLabel())
+  const openCheckIn = useCallback((employee: TodayAttendanceEmployee) => {
     setPendingCheckInEmployee(employee)
-  }
+  }, [])
 
-  const closeCheckIn = () => setPendingCheckInEmployee(null)
+  const closeCheckIn = useCallback(() => {
+    setPendingCheckInEmployee(null)
+  }, [])
 
-  const confirmCheckIn = () => {
-    if (!pendingCheckInEmployee || !selectedTime) return
+  const confirmCheckIn = useCallback((time: string) => {
+    if (!pendingCheckInEmployee) return
     checkInMutation.mutate(
-      { employee_id: pendingCheckInEmployee.id, check_in: timeToIso(selectedTime) },
+      { employee_id: pendingCheckInEmployee.id, check_in: timeToIso(time) },
       { onSettled: closeCheckIn }
     )
-  }
+  }, [pendingCheckInEmployee, checkInMutation, closeCheckIn])
 
-  // Lunch-start state
+  // ── Lunch-start state ────────────────────────────────────────────────────────
   const [pendingLunchStart, setPendingLunchStart] =
     useState<PendingAttendanceData | null>(null)
-  const [selectedLunchTime, setSelectedLunchTime] = useState('')
 
-  const openLunchStart = (employee: TodayAttendanceEmployee, attendanceId: string) => {
-    setSelectedLunchTime(currentTimeLabel())
+  const openLunchStart = useCallback((employee: TodayAttendanceEmployee, attendanceId: string) => {
     setPendingLunchStart({ employee, attendanceId })
-  }
+  }, [])
 
-  const closeLunchStart = () => setPendingLunchStart(null)
+  const closeLunchStart = useCallback(() => {
+    setPendingLunchStart(null)
+  }, [])
 
-  const confirmLunchStart = () => {
-    if (!pendingLunchStart || !selectedLunchTime) return
+  const confirmLunchStart = useCallback((time: string) => {
+    if (!pendingLunchStart) return
     lunchStartMutation.mutate(
-      { attendance_id: pendingLunchStart.attendanceId, lunch_start: timeToIso(selectedLunchTime) },
+      { attendance_id: pendingLunchStart.attendanceId, lunch_start: timeToIso(time) },
       { onSettled: closeLunchStart }
     )
-  }
+  }, [pendingLunchStart, lunchStartMutation, closeLunchStart])
 
-  // Lunch-return state
+  // ── Lunch-return state ───────────────────────────────────────────────────────
   const [pendingLunchReturn, setPendingLunchReturn] =
     useState<PendingAttendanceData | null>(null)
-  const [selectedLunchReturnTime, setSelectedLunchReturnTime] = useState('')
 
-  const openLunchReturn = (employee: TodayAttendanceEmployee, attendanceId: string) => {
-    setSelectedLunchReturnTime(currentTimeLabel())
+  const openLunchReturn = useCallback((employee: TodayAttendanceEmployee, attendanceId: string) => {
     setPendingLunchReturn({ employee, attendanceId })
-  }
+  }, [])
 
-  const closeLunchReturn = () => setPendingLunchReturn(null)
+  const closeLunchReturn = useCallback(() => {
+    setPendingLunchReturn(null)
+  }, [])
 
-  const confirmLunchReturn = () => {
-    if (!pendingLunchReturn || !selectedLunchReturnTime) return
+  const confirmLunchReturn = useCallback((time: string) => {
+    if (!pendingLunchReturn) return
     lunchReturnMutation.mutate(
-      { attendance_id: pendingLunchReturn.attendanceId, lunch_end: timeToIso(selectedLunchReturnTime) },
+      { attendance_id: pendingLunchReturn.attendanceId, lunch_end: timeToIso(time) },
       { onSettled: closeLunchReturn }
     )
-  }
+  }, [pendingLunchReturn, lunchReturnMutation, closeLunchReturn])
 
   return {
     rows: data,
@@ -175,24 +162,18 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     // Check-in
     pendingCheckInEmployee,
     isCheckingIn: checkInMutation.isPending,
-    selectedTime,
-    onTimeChange: setSelectedTime,
     openCheckIn,
     closeCheckIn,
     confirmCheckIn,
     // Lunch-start
     pendingLunchStart,
     isRegisteringLunch: lunchStartMutation.isPending,
-    selectedLunchTime,
-    onLunchTimeChange: setSelectedLunchTime,
     openLunchStart,
     closeLunchStart,
     confirmLunchStart,
     // Lunch-return
     pendingLunchReturn,
     isRegisteringLunchReturn: lunchReturnMutation.isPending,
-    selectedLunchReturnTime,
-    onLunchReturnTimeChange: setSelectedLunchReturnTime,
     openLunchReturn,
     closeLunchReturn,
     confirmLunchReturn,
