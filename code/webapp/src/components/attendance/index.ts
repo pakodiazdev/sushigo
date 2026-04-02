@@ -1,7 +1,14 @@
 // Attendance Components Barrel Export
-export { AttendanceTimeDialog, useAttendanceTimeDialog } from './AttendanceTimeDialog'
-export type { AttendanceTimeDialogProps, UseAttendanceTimeDialogParams, TimeFormValues } from './AttendanceTimeDialog'
 
+// AttendanceTimeDialog component
+export { AttendanceTimeDialog } from './AttendanceTimeDialog'
+export type { AttendanceTimeDialogProps } from './AttendanceTimeDialog'
+
+// Hook and schema from separate file (Fast Refresh compatible)
+export { useAttendanceTimeDialog, createTimeSchema } from './use-attendance-time-dialog'
+export type { UseAttendanceTimeDialogParams, TimeFormValues } from './use-attendance-time-dialog'
+
+// EmployeeAttendanceCard components
 export {
     EmployeeAttendanceCard,
     PhaseBadge,
@@ -9,9 +16,11 @@ export {
     LateRow,
     OvertimeAlert,
     RoleBadges,
-    getPhaseCardClass,
 } from './EmployeeAttendanceCard'
 export type { EmployeeAttendanceCardProps } from './EmployeeAttendanceCard'
+
+// Helper from separate file (Fast Refresh compatible)
+export { getPhaseCardClass } from './attendance-helpers'
 
 export { AttendanceSummaryBar, SummaryStat, OvertimeWarning } from './AttendanceSummaryBar'
 export type { AttendanceSummaryBarProps, AttendanceSummary } from './AttendanceSummaryBar'
