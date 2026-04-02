@@ -44,6 +44,7 @@ export function useAttendanceTimeDialog({
         handleSubmit,
         reset,
         watch,
+        trigger,
         formState: { errors, isValid },
     } = useForm<TimeFormValues>({
         resolver: zodResolver(schema),
@@ -58,9 +59,11 @@ export function useAttendanceTimeDialog({
     useEffect(() => {
         if (isOpen && !wasOpenRef.current) {
             reset({ time: initialTime })
+            // Trigger validation after reset to update isValid
+            void trigger('time')
         }
         wasOpenRef.current = isOpen
-    }, [isOpen, initialTime, reset])
+    }, [isOpen, initialTime, reset, trigger])
 
     const time = watch('time')
 
