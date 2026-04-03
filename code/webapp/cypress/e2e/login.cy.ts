@@ -22,7 +22,7 @@ const { email: invalidEmail, password: invalidPassword } = users.invalidUser
 
 before(() => {
   // Reset DB once for the entire file — not per test.
-  cy.task('db:reset', null, { timeout: 90_000 })
+  cy.task('db:reset', null, { timeout: 180_000 })
 })
 
 beforeEach(() => {

@@ -18,6 +18,7 @@ return [
         'local' => Database\Seeders\Development\DevelopmentSeeder::class,
         'development' => Database\Seeders\Development\DevelopmentSeeder::class,
         'dev' => Database\Seeders\Development\DevelopmentSeeder::class,
+        'devtest' => Database\Seeders\Development\DevelopmentSeeder::class,
         'testing' => Database\Seeders\Development\DevelopmentSeeder::class,
     ],
 

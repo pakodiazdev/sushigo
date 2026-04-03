@@ -87,15 +87,96 @@ export function formatSeconds(seconds: number | null): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-/** Convert a UTC/ISO 8601 datetime to local "HH:mm" for display.
- *  Accepts "2026-02-23T15:15:00+00:00" → shows "09:15" in UTC-6 browser.
+/** CDMX timezone offset (UTC-6 standard) */
+const CDMX_OFFSET_HOURS = -6
+const CDMX_OFFSET_MS = CDMX_OFFSET_HOURS * 60 * 60 * 1000
+
+/** Days in each month (non-leap year) */
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+/** Check if a year is a leap year */
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+}
+
+/**
+ * Pure mathematical calculation of milliseconds since Unix epoch.
+ * Does NOT use any Date methods, avoiding cy.clock() mocking issues.
+ */
+function dateToMs(year: number, month: number, day: number, hour: number, minute: number, second: number): number {
+  // Count days from 1970 to the start of the given year
+  let days = 0
+  for (let y = 1970; y < year; y++) {
+    days += isLeapYear(y) ? 366 : 365
+  }
+
+  // Add days for months before the given month (month is 1-indexed)
+  for (let m = 1; m < month; m++) {
+    days += DAYS_IN_MONTH[m - 1] ?? 0
+    if (m === 2 && isLeapYear(year)) days += 1 // February in leap year
+  }
+
+  // Add the days of the current month (day is 1-indexed)
+  days += day - 1
+
+  // Convert to milliseconds
+  return (
+    days * 86400000 + // days to ms
+    hour * 3600000 + // hours to ms
+    minute * 60000 + // minutes to ms
+    second * 1000 // seconds to ms
+  )
+}
+
+/**
+ * Parse an ISO 8601 datetime string manually to get UTC milliseconds since epoch.
+ * Uses pure math - no Date methods - to avoid cy.clock() mocking issues.
+ * Supports formats like: "2026-04-02T20:00:00+00:00", "2026-04-02T20:00:00Z"
+ */
+function parseIsoToUtcMs(iso: string): number {
+  // Match pattern: YYYY-MM-DDTHH:MM:SS with optional timezone
+  const match = iso.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|([+-])(\d{2}):(\d{2}))?$/
+  )
+  if (!match) return NaN
+
+  const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr, , sign, tzHourStr, tzMinuteStr] = match
+
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  const day = Number(dayStr)
+  const hour = Number(hourStr)
+  const minute = Number(minuteStr)
+  const second = Number(secondStr)
+
+  // Calculate UTC datetime using pure math
+  let utcMs = dateToMs(year, month, day, hour, minute, second)
+
+  // Adjust for timezone offset if present
+  if (sign && tzHourStr && tzMinuteStr) {
+    const offsetMs = (Number(tzHourStr) * 60 + Number(tzMinuteStr)) * 60 * 1000
+    utcMs = sign === '+' ? utcMs - offsetMs : utcMs + offsetMs
+  }
+
+  return utcMs
+}
+
+/**
+ * Convert a UTC/ISO 8601 datetime to CDMX "HH:mm" for display.
+ * Uses pure mathematical ISO parsing to avoid cy.clock() mocking Date methods.
+ * Accepts "2026-02-23T15:15:00+00:00" → shows "09:15" (CDMX = UTC-6).
  */
 export function formatTime(iso: string | null): string {
   if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '—'
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
+  const timestamp = parseIsoToUtcMs(iso)
+  if (isNaN(timestamp)) return '—'
+  // Calculate CDMX time by adding the offset to UTC timestamp
+  const cdmxTimestamp = timestamp + CDMX_OFFSET_MS
+  // Extract hours and minutes from the CDMX timestamp using modular arithmetic
+  const totalMinutes = Math.floor(cdmxTimestamp / 60000)
+  const totalHours = Math.floor(totalMinutes / 60)
+  const hh = String(((totalHours % 24) + 24) % 24).padStart(2, '0')
+  const mm = String(((totalMinutes % 60) + 60) % 60).padStart(2, '0')
   return `${hh}:${mm}`
 }
 

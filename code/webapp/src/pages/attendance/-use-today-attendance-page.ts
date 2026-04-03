@@ -26,12 +26,28 @@ export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   return { total: rows.length, pending, checkedIn, done, withOvertime }
 }
 
-/** Format current time as "HH:mm" for display in the confirm dialog (exported for testing) */
+/** CDMX timezone offset (UTC-6 standard, UTC-5 during DST) */
+const CDMX_OFFSET_HOURS = -6
+
+/**
+ * Get current time in CDMX timezone as "HH:mm".
+ * Uses manual UTC offset calculation for cross-environment compatibility.
+ * (exported for testing)
+ */
 export function currentTimeLabel(): string {
-  return new Date().toTimeString().slice(0, 5)
+  const now = new Date()
+  // Add CDMX offset to get local CDMX time
+  const cdmxTime = new Date(now.getTime() + CDMX_OFFSET_HOURS * 60 * 60 * 1000)
+  const hours = cdmxTime.getUTCHours()
+  const minutes = cdmxTime.getUTCMinutes()
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
-/** ISO 8601 / RFC 3339 from a "HH:mm" string using today's date and local timezone offset (exported for testing) */
+/**
+ * ISO 8601 / RFC 3339 from a "HH:mm" string using today's date in CDMX timezone.
+ * Always outputs with -06:00 offset (CDMX standard time).
+ * (exported for testing)
+ */
 export function timeToIso(hhmm: string): string {
   if (!hhmm?.includes(':')) {
     throw new TypeError(`Invalid time value: "${hhmm}"`)
@@ -40,15 +56,12 @@ export function timeToIso(hhmm: string): string {
   if (Number.isNaN(hours) || Number.isNaN(minutes)) {
     throw new TypeError(`Invalid time value: "${hhmm}"`)
   }
-  const d = new Date()
-  d.setHours(hours, minutes, 0, 0)
+  // Get today's date in CDMX timezone using manual offset
+  const now = new Date()
+  const cdmxTime = new Date(now.getTime() + CDMX_OFFSET_HOURS * 60 * 60 * 1000)
   const pad = (n: number) => String(n).padStart(2, '0')
-  const offset = -d.getTimezoneOffset()
-  const sign = offset >= 0 ? '+' : '-'
-  const absOff = Math.abs(offset)
-  const oh = pad(Math.floor(absOff / 60))
-  const om = pad(absOff % 60)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${sign}${oh}:${om}`
+  // Always use CDMX offset (-06:00)
+  return `${cdmxTime.getUTCFullYear()}-${pad(cdmxTime.getUTCMonth() + 1)}-${pad(cdmxTime.getUTCDate())}T${pad(hours)}:${pad(minutes)}:00-06:00`
 }
 
 export interface UseTodayAttendancePageResult {

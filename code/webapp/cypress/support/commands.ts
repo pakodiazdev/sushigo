@@ -28,35 +28,53 @@ Cypress.Commands.add('login', (email: string, password: string) => {
 });
 
 /**
- * Login via API and set token in localStorage
+ * Login via API and save auth data as Cypress alias for use with visitWithAuth
  */
 Cypress.Commands.add('loginByApi', (email: string, password: string) => {
   cy.log(`🔐 API Login as ${email}`);
   cy.request({
     method: 'POST',
-    url: `${Cypress.env('apiUrl') || 'https://sushigo.local/api'}/auth/login`,
+    url: `${Cypress.env('apiUrl') || 'https://devtest.api.sushigo.local/api/v1'}/auth/login`,
     body: { email, password },
     failOnStatusCode: false,
   }).then((response) => {
     expect(response.status).to.eq(200);
-    const { token, user } = response.body.data;
+    const { token, user, roles, permissions, branches } = response.body.data;
+
+    // Select first branch if available (needed for attendance page)
+    const selectedBranch = branches && branches.length > 0 ? branches[0] : null;
 
     // Store in the same format as zustand persist middleware
+    // CRITICAL: version must match auth.store.ts (currently 2)
     const authStorage = {
       state: {
         user,
         token,
         isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        _hasInitialized: true,
+        roles: roles || [],
+        permissions: permissions || [],
+        branches: branches || [],
+        currentBranch: selectedBranch,
       },
-      version: 0,
+      version: 2,
     };
 
-    window.localStorage.setItem('auth-storage', JSON.stringify(authStorage));
+    // Save as alias for the test to use
+    cy.wrap(authStorage).as('authStorage');
+    cy.log('✅ Login API successful, use cy.visitWithAuth() to load page');
+  });
+});
 
-    cy.log('✅ Logged in successfully');
+/**
+ * Visit a page with auth from the loginByApi alias
+ */
+Cypress.Commands.add('visitWithAuth', (path: string) => {
+  cy.get('@authStorage').then((authStorage) => {
+    cy.visit(path, {
+      onBeforeLoad(win) {
+        win.localStorage.setItem('auth-storage', JSON.stringify(authStorage));
+      },
+    });
   });
 });
 
@@ -111,6 +129,13 @@ declare global {
        * @example cy.loginByApi('admin@sushigo.com', 'admin123456')
        */
       loginByApi(email: string, password: string): Chainable<void>;
+
+      /**
+       * Visit a page with auth from loginByApi
+       * @param path - The path to visit
+       * @example cy.visitWithAuth('/attendance/today')
+       */
+      visitWithAuth(path: string): Chainable<void>;
 
       /**
        * Logout - clear localStorage

@@ -81,6 +81,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Business Timezone
+    |--------------------------------------------------------------------------
+    |
+    | The timezone used for business logic (attendance dates, operational "today",
+    | scheduling, etc.). While the database stores all timestamps in UTC, business
+    | operations use this timezone to determine the correct local date.
+    | This should match the frontend's display timezone (America/Mexico_City).
+    |
+    */
+
+    'business_timezone' => env('BUSINESS_TIMEZONE', 'America/Mexico_City'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

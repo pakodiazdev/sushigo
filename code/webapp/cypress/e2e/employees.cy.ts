@@ -22,7 +22,7 @@ const today = new Date().toISOString().slice(0, 10)
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task('db:reset', null, { timeout: 90_000 })
+  cy.task('db:reset', null, { timeout: 180_000 })
 })
 
 // ══════════════════════════════════════════════════════════════════════════════

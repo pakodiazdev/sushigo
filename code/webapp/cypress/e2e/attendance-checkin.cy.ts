@@ -39,15 +39,30 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task("db:reset", null, { timeout: 90_000 });
+  cy.task("db:reset", null, { timeout: 180_000 });
 });
 
+// Test time configuration: server must believe it's 14:30 CDMX so we can submit check-ins from 12:45 to 14:00
+const TEST_TIME_ISO = "2026-04-02T14:30:00-06:00"; // 14:30 CDMX = server perceives as "now"
+const TEST_TIME_UTC = new Date("2026-04-02T20:30:00Z"); // Same moment in UTC for frontend Date mock
+
 beforeEach(() => {
-  cy.login(adminEmail, adminPassword);
-  cy.url().should("not.include", "/login", { timeout: 10_000 });
-  cy.visit("/attendance/today");
+  // Intercept ALL API requests to add X-Test-Time header so server uses our mock time
+  cy.intercept({ url: /\/api\/v1\// }, (req) => {
+    req.headers["X-Test-Time"] = TEST_TIME_ISO;
+    req.continue();
+  }).as("apiWithTestTime");
+
+  // Use API login to get auth storage
+  cy.loginByApi(adminEmail, adminPassword);
+
+  // Visit with auth - sets localStorage before page loads
+  cy.visitWithAuth("/attendance/today");
   cy.url().should("include", "/attendance/today", { timeout: 10_000 });
   cy.closeDevDebugger();
+
+  // Mock Date AFTER page loads to avoid interfering with auth initialization
+  cy.clock(TEST_TIME_UTC.getTime(), ["Date"]);
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -56,6 +71,9 @@ beforeEach(() => {
  * Opens the check-in dialog for the given employee card and submits with time.
  */
 function openCheckInDialog(lastName: string, firstName: string, time: string) {
+  // Intercept the refetch that TanStack Query will trigger after mutation
+  cy.intercept("GET", "**/attendances/today*").as("refetchAttendance");
+
   cy.contains("p", `${lastName}, ${firstName}`)
     .closest("div.rounded-xl")
     .contains("button", "Registrar entrada")
@@ -67,6 +85,9 @@ function openCheckInDialog(lastName: string, firstName: string, time: string) {
   cy.contains("button", "Confirmar entrada")
     .should("not.be.disabled")
     .click();
+
+  // Wait for the refetch to complete so UI updates with new status
+  cy.wait("@refetchAttendance", { timeout: 10_000 });
 }
 
 /**
