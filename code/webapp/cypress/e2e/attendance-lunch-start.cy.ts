@@ -30,15 +30,31 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task("db:reset", null, { timeout: 90_000 });
+  cy.task("db:reset", null, { timeout: 180_000 });
 });
 
+// Test time configuration: server must believe it's 14:30 CDMX so we can submit check-ins and lunch times
+const TEST_TIME_ISO = "2026-04-02T14:30:00-06:00"; // 14:30 CDMX = server perceives as "now"
+const TEST_TIME_UTC = new Date("2026-04-02T20:30:00Z"); // Same moment in UTC for frontend Date mock
+
 beforeEach(() => {
-  cy.login(adminEmail, adminPassword);
-  cy.url().should("not.include", "/login", { timeout: 10_000 });
-  cy.visit("/attendance/today");
+  // Intercept ALL API requests to add X-Test-Time header so server uses our mock time
+  cy.intercept({ url: /\/api\/v1\// }, (req) => {
+    req.headers["X-Test-Time"] = TEST_TIME_ISO;
+    req.continue();
+  }).as("apiWithTestTime");
+
+  // Use API login to get auth storage
+  cy.loginByApi(adminEmail, adminPassword);
+
+  // Visit with auth - sets localStorage before page loads
+  cy.visitWithAuth("/attendance/today");
   cy.url().should("include", "/attendance/today", { timeout: 10_000 });
   cy.closeDevDebugger();
+
+  // Mock Date for dialogs — the dialogs use Date.now() for default time
+  // but formatTime() uses new Date(iso) which cy.clock breaks
+  cy.clock(TEST_TIME_UTC.getTime(), ["Date"]);
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -47,6 +63,8 @@ beforeEach(() => {
  * Opens the check-in dialog for the given employee card and submits with time.
  */
 function openCheckInDialog(lastName: string, firstName: string, time: string) {
+  cy.intercept("GET", "**/attendances/today*").as("refetchAttendance");
+
   cy.contains("p", `${lastName}, ${firstName}`)
     .closest("div.rounded-xl")
     .contains("button", "Registrar entrada")
@@ -58,6 +76,8 @@ function openCheckInDialog(lastName: string, firstName: string, time: string) {
   cy.contains("button", "Confirmar entrada")
     .should("not.be.disabled")
     .click();
+
+  cy.wait("@refetchAttendance", { timeout: 10_000 });
 }
 
 /**
@@ -65,6 +85,8 @@ function openCheckInDialog(lastName: string, firstName: string, time: string) {
  * Pre-requisite: employee must be in "En trabajo" (checked-in) phase.
  */
 function openLunchStartDialog(lastName: string, firstName: string, time: string) {
+  cy.intercept("GET", "**/attendances/today*").as("refetchLunch");
+
   cy.contains("p", `${lastName}, ${firstName}`)
     .closest("div.rounded-xl")
     .contains("button", "Salir a comer")
@@ -76,6 +98,8 @@ function openLunchStartDialog(lastName: string, firstName: string, time: string)
   cy.contains("button", "Confirmar salida")
     .should("not.be.disabled")
     .click();
+
+  cy.wait("@refetchLunch", { timeout: 10_000 });
 }
 
 /**
@@ -110,8 +134,8 @@ describe("Lunch-start — A tiempo (14:00)", () => {
     getCard("Mendoza", "Carlos").within(() => {
       cy.contains("Comida", { timeout: 10_000 }).should("be.visible");
       cy.contains("Salida comida").should("be.visible");
-      // Verify the time is displayed (14:00 in some format)
-      cy.contains(/2:00\s*PM|14:00/).should("be.visible");
+      // Verify the time is displayed (14:00 format from formatTime)
+      cy.contains("14:00").should("be.visible");
     });
   });
 });
@@ -137,8 +161,8 @@ describe("Lunch-start — Anticipada (13:45)", () => {
     getCard("García", "María").within(() => {
       cy.contains("Comida", { timeout: 10_000 }).should("be.visible");
       cy.contains("Salida comida").should("be.visible");
-      // Verify the time is displayed (13:45 in some format)
-      cy.contains(/1:45\s*PM|13:45/).should("be.visible");
+      // Verify the time is displayed (13:45 format from formatTime)
+      cy.contains("13:45").should("be.visible");
     });
   });
 });

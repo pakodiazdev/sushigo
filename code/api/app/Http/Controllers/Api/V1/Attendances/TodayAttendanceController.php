@@ -69,7 +69,9 @@ class TodayAttendanceController extends Controller
     public function __invoke(TodayAttendanceRequest $request): ResponseEntity
     {
         $branchId = (int) $request->input('branch_id');
-        $today = Carbon::today(config('app.timezone'))->toDateString();
+        // Use business timezone to match the local date used when check-ins are recorded.
+        // See config/app.php 'business_timezone' for documentation.
+        $today = Carbon::today(config('app.business_timezone'))->toDateString();
 
         // Fetch all active employees for the branch (via active employment period)
         // and eager-load today's attendance (if any) in a single query.

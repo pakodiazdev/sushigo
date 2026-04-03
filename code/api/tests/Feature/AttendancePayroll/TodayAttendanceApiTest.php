@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
@@ -45,7 +46,8 @@ class TodayAttendanceApiTest extends TestCase
         $this->user = User::factory()->create();
         $this->user->assignRole('manager');
         $this->branch = Branch::factory()->create();
-        $this->today = now()->toDateString();
+        // Use business timezone to match what the API expects (same as TodayAttendanceController)
+        $this->today = Carbon::today(config('app.business_timezone'))->toDateString();
 
         Passport::actingAs($this->user);
     }
@@ -172,7 +174,11 @@ class TodayAttendanceApiTest extends TestCase
                 'data' => [
                     '*' => [
                         'employee' => [
-                            'id', 'code', 'first_name', 'last_name', 'roles',
+                            'id',
+                            'code',
+                            'first_name',
+                            'last_name',
+                            'roles',
                         ],
                         'attendance' => [
                             'id',

@@ -193,9 +193,10 @@ describe('currentTimeLabel', () => {
     expect(label).toMatch(/^\d{2}:\d{2}$/)
   })
 
-  it('returns expected format for known time', () => {
+  it('returns time in CDMX timezone (UTC-6)', () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-04-01T14:30:00'))
+    // Set system time to 20:30 UTC = 14:30 CDMX (UTC-6)
+    vi.setSystemTime(new Date('2026-04-01T20:30:00Z'))
 
     const label = currentTimeLabel()
     expect(label).toBe('14:30')
@@ -221,20 +222,22 @@ describe('timeToIso', () => {
     expect(() => timeToIso('ab:cd')).toThrow(TypeError)
   })
 
-  it('returns ISO 8601 string for valid time', () => {
+  it('returns ISO 8601 string with CDMX offset (-06:00)', () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-04-01T12:00:00'))
+    // Set system time to any UTC time - timeToIso uses today's date in CDMX
+    vi.setSystemTime(new Date('2026-04-01T18:00:00Z'))
 
     const iso = timeToIso('14:30')
-    expect(iso).toMatch(/^2026-04-01T14:30:00[+-]\d{2}:\d{2}$/)
+    // Should always have CDMX offset (-06:00)
+    expect(iso).toBe('2026-04-01T14:30:00-06:00')
 
     vi.useRealTimers()
   })
 
-  it('includes local timezone offset', () => {
+  it('always uses -06:00 CDMX offset regardless of system timezone', () => {
     const iso = timeToIso('14:30')
-    // Should have either + or - followed by HH:MM offset
-    expect(iso).toMatch(/[+-]\d{2}:\d{2}$/)
+    // Should always end with -06:00 (CDMX standard time)
+    expect(iso).toMatch(/-06:00$/)
   })
 })
 

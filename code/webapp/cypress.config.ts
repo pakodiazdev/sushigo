@@ -13,16 +13,21 @@ const MAILHOG_PORT = parseInt(process.env.CYPRESS_mailhogPort || '8025', 10)
 
 export default defineConfig({
   projectId: 'phbcj4',
+  // Bypass SSL certificate validation for self-signed certs
+  env: {
+    NODE_TLS_REJECT_UNAUTHORIZED: '0',
+  },
   e2e: {
-    baseUrl: process.env.CYPRESS_baseUrl || 'https://sushigonores.local',
+    baseUrl: process.env.CYPRESS_baseUrl || 'https://devtest.sushigo.local',
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
     setupNodeEvents(on, config) {
       // ── Browser flags ──────────────────────────────────────────────
       on('before:browser:launch', (browser, launchOptions) => {
-        if (browser.family === 'chromium') {
+        if (browser.family === 'chromium' || browser.name === 'electron') {
           launchOptions.args.push('--ignore-certificate-errors')
           launchOptions.args.push('--allow-insecure-localhost')
+          launchOptions.args.push('--allow-running-insecure-content')
         }
         return launchOptions
       })
@@ -32,6 +37,15 @@ export default defineConfig({
       // context (same process as Cypress), faster and more reliable.
       on('task', {
         /**
+         * Log a message to the Cypress console (Node side).
+         * Usage: cy.task('log', 'message')
+         */
+        log(message) {
+          console.log(message)
+          return null
+        },
+
+        /**
          * Full reset: migrate:fresh + seed.
          * Slow (~30s). Call once per spec file in before(), not beforeEach().
          * Usage: cy.task('db:reset')
@@ -39,8 +53,8 @@ export default defineConfig({
         'db:reset': () => {
           console.log(`[db:reset] Running migrate:fresh --seed on ${CONTAINER}...`)
           execSync(
-            `docker exec ${CONTAINER} php /app/code/api/artisan migrate:fresh --seed --env=testing`,
-            { timeout: 90_000, stdio: 'inherit' }
+            `docker exec ${CONTAINER} php /app/code/api/artisan migrate:fresh --seed`,
+            { timeout: 180_000, stdio: 'inherit' }
           )
           return null
         },
@@ -52,7 +66,7 @@ export default defineConfig({
         'db:seed': () => {
           console.log(`[db:seed] Running db:seed on ${CONTAINER}...`)
           execSync(
-            `docker exec ${CONTAINER} php /app/code/api/artisan db:seed --env=testing`,
+            `docker exec ${CONTAINER} php /app/code/api/artisan db:seed`,
             { timeout: 60_000, stdio: 'inherit' }
           )
           return null
