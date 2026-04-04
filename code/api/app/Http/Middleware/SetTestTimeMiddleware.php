@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Carbon\Carbon;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -32,7 +33,7 @@ class SetTestTimeMiddleware
             // hydrate datetime columns using that timezone, breaking our UTC-everywhere rule.
             $utcTestTime = Carbon::parse($testTime)->utc();
             Carbon::setTestNow($utcTestTime);
-            \Log::debug('[SetTestTime] Set Carbon test time to: '.$utcTestTime->toIso8601String());
+            Log::debug('[SetTestTime] Set Carbon test time to: '.$utcTestTime->toIso8601String());
         }
 
         return $next($request);
