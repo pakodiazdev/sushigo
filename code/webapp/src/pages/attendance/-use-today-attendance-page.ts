@@ -26,7 +26,7 @@ export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   return { total: rows.length, pending, checkedIn, done, withOvertime }
 }
 
-/** CDMX timezone offset (UTC-6 standard, UTC-5 during DST) */
+/** CDMX timezone offset — hardcoded to UTC-6 (standard time). DST is not handled. */
 const CDMX_OFFSET_HOURS = -6
 
 /**
@@ -45,7 +45,9 @@ export function currentTimeLabel(): string {
 
 /**
  * ISO 8601 / RFC 3339 from a "HH:mm" string using today's date in CDMX timezone.
- * Always outputs with -06:00 offset (CDMX standard time).
+ * Hardcodes -06:00 offset (CDMX standard time) because this is a business app
+ * that always operates in the CDMX timezone — the backend normalizes to UTC via
+ * Carbon::parse($value)->utc(). See CLAUDE.md § DateTime Standard.
  * (exported for testing)
  */
 export function timeToIso(hhmm: string): string {

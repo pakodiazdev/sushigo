@@ -39,22 +39,19 @@ Cypress.Commands.add('loginByApi', (email: string, password: string) => {
     failOnStatusCode: false,
   }).then((response) => {
     expect(response.status).to.eq(200);
-    const { token, user, roles, permissions, branches } = response.body.data;
+    const { token, user } = response.body.data;
 
-    // Select first branch if available (needed for attendance page)
-    const selectedBranch = branches && branches.length > 0 ? branches[0] : null;
-
-    // Store in the same format as zustand persist middleware
+    // Store only the keys that zustand persist partializes (auth.store.ts):
+    //   token, user, isAuthenticated, currentBranch
+    // Branches are resolved by initializeAuth() after hydration via
+    // extractBranchesFromUser() or fetchBranchesFromApi() for admins.
     // CRITICAL: version must match auth.store.ts (currently 2)
     const authStorage = {
       state: {
         user,
         token,
         isAuthenticated: true,
-        roles: roles || [],
-        permissions: permissions || [],
-        branches: branches || [],
-        currentBranch: selectedBranch,
+        currentBranch: null,
       },
       version: 2,
     };

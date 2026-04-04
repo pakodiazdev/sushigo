@@ -26,6 +26,7 @@ class SetTestTimeMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $testTime = $request->header('X-Test-Time');
+        $previousTestNow = Carbon::getTestNow();
 
         if ($testTime && $this->isTestingEnvironment()) {
             // Parse and convert to UTC to avoid timezone pollution in Eloquent datetime casts.
@@ -36,7 +37,13 @@ class SetTestTimeMiddleware
             Log::debug('[SetTestTime] Set Carbon test time to: '.$utcTestTime->toIso8601String());
         }
 
-        return $next($request);
+        try {
+            return $next($request);
+        } finally {
+            // Restore previous test time to prevent leaking into subsequent requests
+            // in long-lived workers (Octane, persistent FPM processes).
+            Carbon::setTestNow($previousTestNow);
+        }
     }
 
     /**

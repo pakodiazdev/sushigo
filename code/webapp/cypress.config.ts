@@ -11,12 +11,11 @@ const CONTAINER = process.env.CYPRESS_container || 'devtest_container'
 const MAILHOG_HOST = process.env.CYPRESS_mailhogHost || 'host.docker.internal'
 const MAILHOG_PORT = parseInt(process.env.CYPRESS_mailhogPort || '8025', 10)
 
+// Bypass Node-side SSL certificate validation for self-signed certs
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+
 export default defineConfig({
   projectId: 'phbcj4',
-  // Bypass SSL certificate validation for self-signed certs
-  env: {
-    NODE_TLS_REJECT_UNAUTHORIZED: '0',
-  },
   e2e: {
     baseUrl: process.env.CYPRESS_baseUrl || 'https://devtest.sushigo.local',
     supportFile: 'cypress/support/e2e.ts',
@@ -53,7 +52,7 @@ export default defineConfig({
         'db:reset': () => {
           console.log(`[db:reset] Running migrate:fresh --seed on ${CONTAINER}...`)
           execSync(
-            `docker exec ${CONTAINER} php /app/code/api/artisan migrate:fresh --seed`,
+            `docker exec ${CONTAINER} php /app/code/api/artisan migrate:fresh --seed --env=testing`,
             { timeout: 180_000, stdio: 'inherit' }
           )
           return null

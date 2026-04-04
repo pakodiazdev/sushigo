@@ -132,6 +132,9 @@ describe('formatSeconds', () => {
 })
 
 describe('formatTime', () => {
+    // formatTime converts UTC ISO strings to CDMX (UTC-6) "HH:mm" display.
+    // Uses pure math (no Date methods) — deterministic regardless of host timezone.
+
     it('returns "—" for null input', () => {
         expect(formatTime(null)).toBe('—')
     })
@@ -139,20 +142,46 @@ describe('formatTime', () => {
     it('returns "—" for invalid date string', () => {
         expect(formatTime('invalid')).toBe('—')
         expect(formatTime('not-a-date')).toBe('—')
+        expect(formatTime('')).toBe('—')
     })
 
-    it('formats valid ISO datetime to local HH:mm', () => {
-        // Note: This test depends on the local timezone
-        // We use a fixed UTC time and check the format pattern
-        const result = formatTime('2026-03-31T15:30:00+00:00')
-        // Should match HH:mm pattern
-        expect(result).toMatch(/^\d{2}:\d{2}$/)
+    it('converts UTC +00:00 to CDMX (UTC-6)', () => {
+        // 15:30 UTC → 09:30 CDMX
+        expect(formatTime('2026-03-31T15:30:00+00:00')).toBe('09:30')
+    })
+
+    it('converts UTC "Z" suffix to CDMX', () => {
+        // 20:00 UTC → 14:00 CDMX
+        expect(formatTime('2026-04-02T20:00:00Z')).toBe('14:00')
+    })
+
+    it('converts positive offset to CDMX via UTC', () => {
+        // 08:00+09:00 = 23:00 UTC previous day → 17:00 CDMX
+        expect(formatTime('2026-04-02T08:00:00+09:00')).toBe('17:00')
+    })
+
+    it('converts negative offset to CDMX via UTC', () => {
+        // 14:30-06:00 = 20:30 UTC → 14:30 CDMX
+        expect(formatTime('2026-04-02T14:30:00-06:00')).toBe('14:30')
+    })
+
+    it('handles midnight UTC → 18:00 CDMX previous day', () => {
+        // 00:00 UTC → 18:00 CDMX (previous day in absolute terms)
+        expect(formatTime('2026-03-31T00:00:00+00:00')).toBe('18:00')
+    })
+
+    it('handles day boundary wraparound (early UTC hours)', () => {
+        // 05:00 UTC → 23:00 CDMX (previous day)
+        expect(formatTime('2026-03-31T05:00:00+00:00')).toBe('23:00')
     })
 
     it('pads single-digit hours and minutes', () => {
-        // Using midnight UTC as test
-        const result = formatTime('2026-03-31T00:05:00+00:00')
-        // Result should be padded (e.g., "00:05" or local equivalent)
-        expect(result).toMatch(/^\d{2}:\d{2}$/)
+        // 06:05 UTC → 00:05 CDMX
+        expect(formatTime('2026-03-31T06:05:00+00:00')).toBe('00:05')
+    })
+
+    it('handles leap year date correctly', () => {
+        // 2028-02-29 is a leap year day: 19:00 UTC → 13:00 CDMX
+        expect(formatTime('2028-02-29T19:00:00+00:00')).toBe('13:00')
     })
 })
