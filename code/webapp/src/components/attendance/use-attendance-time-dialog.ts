@@ -60,7 +60,7 @@ export function useAttendanceTimeDialog({
         if (isOpen && !wasOpenRef.current) {
             reset({ time: initialTime })
             // Trigger validation after reset to update isValid
-            void trigger('time')
+            trigger('time')
         }
         wasOpenRef.current = isOpen
     }, [isOpen, initialTime, reset, trigger])

@@ -135,10 +135,8 @@ function dateToMs(year: number, month: number, day: number, hour: number, minute
  */
 function parseIsoToUtcMs(iso: string): number {
   // Match pattern: YYYY-MM-DDTHH:MM:SS with optional timezone
-  const match = iso.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|([+-])(\d{2}):(\d{2}))?$/
-  )
-  if (!match) return NaN
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|([+-])(\d{2}):(\d{2}))?$/.exec(iso)
+  if (!match) return Number.NaN
 
   const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr, , sign, tzHourStr, tzMinuteStr] = match
 
@@ -169,7 +167,7 @@ function parseIsoToUtcMs(iso: string): number {
 export function formatTime(iso: string | null): string {
   if (!iso) return '—'
   const timestamp = parseIsoToUtcMs(iso)
-  if (isNaN(timestamp)) return '—'
+  if (Number.isNaN(timestamp)) return '—'
   // Calculate CDMX time by adding the offset to UTC timestamp
   const cdmxTimestamp = timestamp + CDMX_OFFSET_MS
   // Extract hours and minutes from the CDMX timestamp using modular arithmetic
