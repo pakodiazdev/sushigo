@@ -102,7 +102,8 @@ class TestReset extends Command
         $tables = Schema::getTableListing();
 
         foreach ($tables as $table) {
-            if (in_array($table, $skipTables)) {
+            $tableName = str_contains($table, '.') ? substr(strrchr($table, '.'), 1) : $table;
+            if (in_array($tableName, $skipTables)) {
                 continue;
             }
             DB::table($table)->truncate();
