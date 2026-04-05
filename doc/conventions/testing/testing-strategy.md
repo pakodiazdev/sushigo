@@ -85,19 +85,41 @@ The rule "required when complex" is tied to the Custom Hook Convention: **if a h
 
 ## Test Data Management
 
+Full convention: [`test-data-seeders.md`](./test-data-seeders.md)
+
+### Seeder categories (summary)
+
+| Category | Namespace | Data | Speed | Used in |
+|---|---|---|---|---|
+| **Testing** | `Testing/` | Concrete, deterministic, bulk inserts | ~1-3s | Cypress, PHPUnit, CI |
+| **Fakes** | `Fakes/` | Factories for volume (N records) | Variable | Dev + Testing on demand |
+| **Development** | `Development/` | Full experience (Actions + factories + scenarios) | ~15-30s | Local dev only |
+
 ### Cypress data strategy
 
-- `db:reset` runs `migrate:fresh --seed` — expensive (~30s). Call **once per spec file** in `before()`, never in `beforeEach()`.
-- `db:seed` runs seeders without migration — use when schema is already fresh.
+- Use `cy.task('test:reset')` (truncate + seed) — **~2-3s**. Call **once per spec file** in `before()`, never in `beforeEach()`.
+- Pass seeder groups: `cy.task('test:reset', 'attendance')` to seed only what the spec needs.
+- `db:reset` (`migrate:fresh --seed`) is available as fallback when schema changes require it.
 - Specs must NOT depend on data created by other specs (isolation).
-- Seeders for testing should be **direct** (`create` not `updateOrCreate`) since they always start from empty tables.
+- Testing seeders use **concrete hardcoded data** — no fakes, no factories, no randomness.
+- When a spec needs volume data (e.g., pagination), combine Testing + Fakes: `cy.task('test:reset', 'attendance,fakes-employees')`.
 
-### Future optimization (Phase 3)
+## Test Environment Services
 
-The project plans to introduce:
-- `php artisan test:reset` — truncate + selective seed (target: ~3-5s instead of ~30s)
-- `database/seeders/Testing/` — dedicated fast seeders without idempotency checks
-- Targeted Cypress tasks: `cy.task('db:reset', 'attendance')` to seed only what the spec needs
+Full convention: [`test-environment-services.md`](./test-environment-services.md)
+
+**Principle:** Tests must not depend on infrastructure services (Mailhog, Redis, S3) that are not the system under test.
+
+**Strategy:** Use environment-aware dependency injection to replace external services with deterministic in-process alternatives in testing/dev environments.
+
+| External Service | Test Replacement |
+|---|---|
+| Email (Mailhog) → password reset link | `FileTokenRecorder` + test-only API endpoint |
+| Queue (Redis) | `QUEUE_CONNECTION=sync` |
+| File Storage (S3) | Local disk adapter |
+| External APIs | Fake/stub clients |
+
+Test-only API endpoints (`/test/*`) are guarded by environment check and never exposed in production.
 
 ---
 

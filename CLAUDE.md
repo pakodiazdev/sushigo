@@ -399,6 +399,16 @@ Full convention reference: `doc/conventions/testing/testing-strategy.md`
 | User-facing happy path (full flow) | Cypress | Required (1 per feature) |
 | Error/validation/security in UI | Cypress | **Prohibited** |
 
+**Test data seeders** (see `doc/conventions/testing/test-data-seeders.md`):
+- `Testing/` — concrete deterministic data, bulk inserts, used by Cypress/PHPUnit via `test:reset`
+- `Fakes/` — factories for volume data (pagination, stress), used on demand in dev + testing
+- `Development/` — full dev experience (Actions + factories + scenarios), never called from Cypress
+
+**Test environment services** (see `doc/conventions/testing/test-environment-services.md`):
+- Tests must not depend on infrastructure services (Mailhog, Redis) that are not the system under test
+- Use environment-aware DI to replace external services with deterministic alternatives
+- Test-only API endpoints (`/test/*`) guarded by environment check, never exposed in production
+
 **PR merge requirements:**
 - SonarCloud line coverage >= 80% on new code (backend and frontend)
 - At least one Cypress spec with the happy path of the delivered feature

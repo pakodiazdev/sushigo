@@ -11,7 +11,7 @@
  *
  * DB reset strategy
  * ─────────────────
- * • before()     → cy.task('db:reset') ONCE por archivo (~90s).
+ * • before()     → cy.task('test:reset', 'attendance') ONCE por archivo (~3-5s).
  * • beforeEach() → login vía UI + navega a /attendance/today.
  * • Cada it() usa un EMPLEADO DISTINTO — no se reutiliza ningún slot.
  *
@@ -31,7 +31,7 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task("db:reset", null, { timeout: 180_000 });
+  cy.task("test:reset", "attendance", { timeout: 60_000 });
 });
 
 // Test time configuration: server must believe it's 16:00 CDMX so we can submit returns at 15:00-15:30
