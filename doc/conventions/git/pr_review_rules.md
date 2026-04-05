@@ -26,6 +26,18 @@ Mandatory rules
 5. Tests and typechecks.
    - If the PR modifies critical logic or models, add/update relevant tests (unit/feature). Run linters and typechecks before requesting final review.
 
+6. Testing strategy compliance (see `doc/conventions/testing/testing-strategy.md`).
+   - Every new/changed API endpoint MUST have PHPUnit Feature tests (happy path + unauthorized access).
+   - Complex business logic MUST have PHPUnit Unit tests.
+   - Route guards and redirect config MUST be validated with Vitest.
+   - Every user-facing feature MUST include at least one Cypress spec covering its happy path.
+   - Error cases, validation, and security MUST NOT be tested in Cypress — use PHPUnit or Vitest.
+   - If changes break existing tests, the PR MUST include test fixes with a comment explaining why.
+
+7. Coverage gate (enforced by SonarCloud).
+   - New code MUST have >= 80% line coverage on both backend (`code/api/`) and frontend (`code/webapp/`).
+   - SonarCloud is a required check — PRs that fail the coverage gate cannot be merged.
+
 
 Reviewer checklist (minimum)
 ---------------------------
@@ -38,6 +50,10 @@ Reviewer checklist (minimum)
 - [ ] Do relevant PHP tests pass locally? (`composer test` / `./vendor/bin/phpunit` where applicable)
 - [ ] Are there no unnecessary formatting-only changes? (if present, move them to a separate PR)
 - [ ] Is minimal documentation updated if applicable (README, comments, OpenAPI docs)?
+- [ ] Does the PR include PHPUnit Feature tests for new/changed endpoints (happy path + auth)?
+- [ ] Does the PR include at least one Cypress spec for the happy path of the delivered feature?
+- [ ] Do all existing tests pass? Are broken tests fixed with explanation?
+- [ ] Does SonarCloud report >= 80% line coverage on new code (backend and frontend)?
 
 
 Notes and best practices

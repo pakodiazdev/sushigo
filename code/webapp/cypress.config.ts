@@ -52,7 +52,7 @@ export default defineConfig({
         'db:reset': () => {
           console.log(`[db:reset] Running migrate:fresh --seed on ${CONTAINER}...`)
           execSync(
-            `docker exec ${CONTAINER} php /app/code/api/artisan migrate:fresh --seed --env=testing`,
+            `docker exec ${CONTAINER} php /app/code/api/artisan migrate:fresh --seed`,
             { timeout: 180_000, stdio: 'inherit' }
           )
           return null

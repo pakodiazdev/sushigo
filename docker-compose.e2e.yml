@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
+      target: dev
     container_name: e2e_container
     working_dir: /app/code
     expose:
@@ -48,6 +49,8 @@ services:
       # Base URL for Cypress tests - can be overridden via .env or command line
       # Options: https://sushigo.e2e.local (via nginx), http://test_e2e:80 (direct), http://dev:5173 (vite dev)
       CYPRESS_baseUrl: ${CYPRESS_baseUrl:-https://sushigo.e2e.local}
+      # API URL for cy.request() calls (loginByApi, etc.)
+      CYPRESS_apiUrl: https://api.sushigo.e2e.local/api/v1
       # Target container for cy.task('db:reset') / cy.task('db:seed')
       CYPRESS_container: e2e_container
     extra_hosts:
