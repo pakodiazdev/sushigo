@@ -66,7 +66,38 @@ This document defines the mandatory testing strategy for the SushiGo project. Ev
 - **Do NOT test error cases, validation, or edge cases in Cypress** — those belong in PHPUnit (backend) or Vitest (frontend).
 - **Do NOT test authorization/security in Cypress** — that belongs in PHPUnit Feature tests.
 - Keep Cypress specs fast: one `db:reset` per spec file (in `before()`), not per test.
+- Cypress specs MUST be idempotent — they must work with a fresh `db:reset` and not depend on state left by other specs.
 - Avoid `cy.wait(ms)` unless absolutely necessary for DOM stability (document the reason with an inline comment).
+
+---
+
+## Vitest Priority Clarification
+
+### Error feedback — Recommended (not just nice-to-have)
+
+Error toasts and inline validation messages are what the user sees when something fails. If an endpoint returns 422 and the frontend shows nothing, the user is lost. While error feedback tests do not block merge, **reviewers should flag missing error feedback tests in PRs that add forms or API interactions**.
+
+### Hook tests — when "complex" means testable
+
+The rule "required when complex" is tied to the Custom Hook Convention: **if a hook was extracted because a component had 3+ `useState` calls or API mutations, that hook requires tests**. This makes the threshold objective and consistent with the component convention.
+
+---
+
+## Test Data Management
+
+### Cypress data strategy
+
+- `db:reset` runs `migrate:fresh --seed` — expensive (~30s). Call **once per spec file** in `before()`, never in `beforeEach()`.
+- `db:seed` runs seeders without migration — use when schema is already fresh.
+- Specs must NOT depend on data created by other specs (isolation).
+- Seeders for testing should be **direct** (`create` not `updateOrCreate`) since they always start from empty tables.
+
+### Future optimization (Phase 3)
+
+The project plans to introduce:
+- `php artisan test:reset` — truncate + selective seed (target: ~3-5s instead of ~30s)
+- `database/seeders/Testing/` — dedicated fast seeders without idempotency checks
+- Targeted Cypress tasks: `cy.task('db:reset', 'attendance')` to seed only what the spec needs
 
 ---
 
