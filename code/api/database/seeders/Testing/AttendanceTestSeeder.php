@@ -43,17 +43,24 @@ class AttendanceTestSeeder extends Seeder
         $now = now();
         $hireDate = $now->copy()->subYear()->toDateString();
         $hashedPassword = Hash::make('employee123456');
-        $userModel = 'App\\Models\\User';
 
-        // Fetch IDs we need from CoreTestSeeder data
         $branchId = DB::table('branches')->where('code', 'MAIN')->value('id');
         $roleMap = DB::table('roles')->where('guard_name', 'api')->pluck('id', 'name')->toArray();
 
-        // ── Build all employee data arrays ──────────────────────────────
         $configEmployees = config('seeders.development_employees', []);
+        $adminProfiles = $this->adminProfiles();
 
-        // Admin profiles to link to existing users
-        $adminProfiles = [
+        $userIdMap = $this->seedUsers($configEmployees, $hashedPassword, $adminProfiles, $now);
+        $this->seedRoleAssignments($configEmployees, $adminProfiles, $userIdMap, $roleMap);
+        $employeeIdMap = $this->seedEmployees($configEmployees, $adminProfiles, $userIdMap, $now);
+        $periodIdMap = $this->seedEmploymentPeriods($employeeIdMap, $branchId, $hireDate, $now);
+        $scheduleData = $this->seedSchedules($employeeIdMap, $periodIdMap, $hireDate, $now);
+        $this->seedScheduleDays($scheduleData, $now);
+    }
+
+    private function adminProfiles(): array
+    {
+        return [
             [
                 'email' => 'admin@sushigo.com',
                 'code' => 'ADM-001',
@@ -69,8 +76,13 @@ class AttendanceTestSeeder extends Seeder
                 'roles' => ['manager'],
             ],
         ];
+    }
 
-        // ── 1. Bulk insert users for config employees ───────────────────
+    /**
+     * @return array<string, int> email => user_id
+     */
+    private function seedUsers(array $configEmployees, string $hashedPassword, array $adminProfiles, $now): array
+    {
         $userRows = [];
         foreach ($configEmployees as $emp) {
             $userRows[] = [
@@ -85,18 +97,22 @@ class AttendanceTestSeeder extends Seeder
         }
         DB::table('users')->insert($userRows);
 
-        // Map email => user_id for all users (config + already-existing admin/inventory)
         $emails = array_merge(
             array_column($configEmployees, 'email'),
             array_column($adminProfiles, 'email'),
         );
-        $userIdMap = DB::table('users')
+
+        return DB::table('users')
             ->whereIn('email', $emails)
             ->pluck('id', 'email')
             ->toArray();
+    }
 
-        // ── 2. Bulk insert role assignments for config employees ────────
+    private function seedRoleAssignments(array $configEmployees, array $adminProfiles, array $userIdMap, array $roleMap): void
+    {
+        $userModel = 'App\\Models\\User';
         $rolePivots = [];
+
         foreach ($configEmployees as $emp) {
             $userId = $userIdMap[$emp['email']];
             foreach ($emp['roles'] ?? [] as $roleName) {
@@ -110,7 +126,6 @@ class AttendanceTestSeeder extends Seeder
             }
         }
 
-        // Admin profile role assignments (only if user doesn't already have the role)
         $existingRoles = DB::table('model_has_roles')
             ->where('model_type', $userModel)
             ->whereIn('model_id', array_values($userIdMap))
@@ -139,8 +154,13 @@ class AttendanceTestSeeder extends Seeder
         if ($rolePivots) {
             DB::table('model_has_roles')->insert($rolePivots);
         }
+    }
 
-        // ── 3. Bulk insert employees (HasPublicId → manual ULID) ────────
+    /**
+     * @return array<string, int> code => employee_id
+     */
+    private function seedEmployees(array $configEmployees, array $adminProfiles, array $userIdMap, $now): array
+    {
         $allEmployees = [];
         foreach ($configEmployees as $emp) {
             $allEmployees[] = [
@@ -180,15 +200,19 @@ class AttendanceTestSeeder extends Seeder
         }
         DB::table('employees')->insert($employeeRows);
 
-        // Map code => employee_id
-        $employeeIdMap = DB::table('employees')
+        return DB::table('employees')
             ->whereIn('code', array_column($allEmployees, 'code'))
             ->pluck('id', 'code')
             ->toArray();
+    }
 
-        // ── 4. Bulk insert employment periods (HasPublicId → manual ULID)
+    /**
+     * @return array<int, int> employee_id => period_id
+     */
+    private function seedEmploymentPeriods(array $employeeIdMap, int $branchId, string $hireDate, $now): array
+    {
         $periodRows = [];
-        foreach ($employeeIdMap as $code => $employeeId) {
+        foreach ($employeeIdMap as $employeeId) {
             $periodRows[] = [
                 'employee_id' => $employeeId,
                 'branch_id' => $branchId,
@@ -203,14 +227,18 @@ class AttendanceTestSeeder extends Seeder
         }
         DB::table('employment_periods')->insert($periodRows);
 
-        // Map employee_id => period_id
-        $periodIdMap = DB::table('employment_periods')
+        return DB::table('employment_periods')
             ->where('is_active', true)
             ->whereIn('employee_id', array_values($employeeIdMap))
             ->pluck('id', 'employee_id')
             ->toArray();
+    }
 
-        // ── 5. Bulk insert schedules (HasPublicId → manual ULID) ──��─────
+    /**
+     * @return array<int, array> schedule rows with _index for lunch template assignment
+     */
+    private function seedSchedules(array $employeeIdMap, array $periodIdMap, string $hireDate, $now): array
+    {
         $scheduleRows = [];
         $employeeCodes = array_keys($employeeIdMap);
         foreach ($employeeCodes as $index => $code) {
@@ -228,27 +256,33 @@ class AttendanceTestSeeder extends Seeder
                 'public_id' => (string) Str::ulid(),
                 'created_at' => $now,
                 'updated_at' => $now,
-                '_index' => $index, // temp: for lunch template assignment
+                '_index' => $index,
             ];
         }
 
-        // Remove temp key before insert
         $cleanRows = array_map(fn ($row) => array_diff_key($row, ['_index' => true]), $scheduleRows);
         DB::table('employee_schedules')->insert($cleanRows);
 
-        // Map period_id => schedule_id
         $scheduleIdMap = DB::table('employee_schedules')
             ->whereIn('employment_period_id', array_column($scheduleRows, 'employment_period_id'))
             ->pluck('id', 'employment_period_id')
             ->toArray();
 
-        // ── 6. Bulk insert schedule days (7 per schedule) ───────────────
+        // Attach resolved schedule IDs for day generation
+        foreach ($scheduleRows as &$row) {
+            $row['_schedule_id'] = $scheduleIdMap[$row['employment_period_id']] ?? null;
+        }
+
+        return $scheduleRows;
+    }
+
+    private function seedScheduleDays(array $scheduleRows, $now): void
+    {
         $dayRows = [];
         $templateCount = count(self::LUNCH_TEMPLATES);
 
         foreach ($scheduleRows as $schedule) {
-            $periodId = $schedule['employment_period_id'];
-            $scheduleId = $scheduleIdMap[$periodId] ?? null;
+            $scheduleId = $schedule['_schedule_id'] ?? null;
             if (! $scheduleId) {
                 continue;
             }
@@ -258,41 +292,46 @@ class AttendanceTestSeeder extends Seeder
             $lunchEnd = self::LUNCH_TEMPLATES[$templateIndex][1];
 
             for ($dow = 1; $dow <= 7; $dow++) {
-                if ($dow === 7) {
-                    // Sunday — rest day
-                    $dayRows[] = [
-                        'employee_schedule_id' => $scheduleId,
-                        'day_of_week' => $dow,
-                        'is_day_off' => true,
-                        'expected_start' => null,
-                        'expected_lunch_start' => null,
-                        'expected_lunch_end' => null,
-                        'expected_end' => null,
-                        'lunch_duration_minutes' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                } else {
-                    // Mon-Sat — working day
-                    $dayRows[] = [
-                        'employee_schedule_id' => $scheduleId,
-                        'day_of_week' => $dow,
-                        'is_day_off' => false,
-                        'expected_start' => self::SHIFT_START,
-                        'expected_lunch_start' => $lunchStart,
-                        'expected_lunch_end' => $lunchEnd,
-                        'expected_end' => self::SHIFT_END,
-                        'lunch_duration_minutes' => 30,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                }
+                $dayRows[] = $dow === 7
+                    ? $this->restDayRow($scheduleId, $dow, $now)
+                    : $this->workDayRow($scheduleId, $dow, $lunchStart, $lunchEnd, $now);
             }
         }
 
-        // Insert in chunks to avoid exceeding PostgreSQL parameter limit
         foreach (array_chunk($dayRows, 50) as $chunk) {
             DB::table('schedule_days')->insert($chunk);
         }
+    }
+
+    private function restDayRow(int $scheduleId, int $dow, $now): array
+    {
+        return [
+            'employee_schedule_id' => $scheduleId,
+            'day_of_week' => $dow,
+            'is_day_off' => true,
+            'expected_start' => null,
+            'expected_lunch_start' => null,
+            'expected_lunch_end' => null,
+            'expected_end' => null,
+            'lunch_duration_minutes' => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+    }
+
+    private function workDayRow(int $scheduleId, int $dow, string $lunchStart, string $lunchEnd, $now): array
+    {
+        return [
+            'employee_schedule_id' => $scheduleId,
+            'day_of_week' => $dow,
+            'is_day_off' => false,
+            'expected_start' => self::SHIFT_START,
+            'expected_lunch_start' => $lunchStart,
+            'expected_lunch_end' => $lunchEnd,
+            'expected_end' => self::SHIFT_END,
+            'lunch_duration_minutes' => 30,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use Database\Seeders\Testing\AttendanceTestSeeder;
+use Database\Seeders\Testing\CoreTestSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -21,15 +23,21 @@ class TestReset extends Command
      */
     private array $seederGroups = [
         'core' => [
-            \Database\Seeders\Testing\CoreTestSeeder::class,
+            CoreTestSeeder::class,
         ],
         'attendance' => [
-            \Database\Seeders\Testing\AttendanceTestSeeder::class,
+            AttendanceTestSeeder::class,
         ],
     ];
 
     public function handle(): int
     {
+        if (app()->environment('production')) {
+            $this->error('⛔ test:reset is not allowed in production.');
+
+            return self::FAILURE;
+        }
+
         if ($this->option('list')) {
             return $this->listGroups();
         }
