@@ -39,16 +39,19 @@ class CoreTestSeeder extends Seeder
         'employees.view', 'employees.create', 'employees.update',
     ];
 
+    /** Basic view-only user permissions shared by most roles */
+    private const BASIC_USER_VIEW = ['=users.show', '=users.index'];
+
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
         'admin' => ['users.', 'employees.'],
         'inventory-manager' => ['users.', 'employees.'],
-        'manager' => ['=users.show', '=users.index', 'employees.'],
-        'cook' => ['=users.show', '=users.index'],
-        'kitchen-assistant' => ['=users.show', '=users.index'],
-        'delivery-driver' => ['=users.show', '=users.index'],
-        'acting-manager' => ['=users.show', '=users.index'],
+        'manager' => [...self::BASIC_USER_VIEW, 'employees.'],
+        'cook' => self::BASIC_USER_VIEW,
+        'kitchen-assistant' => self::BASIC_USER_VIEW,
+        'delivery-driver' => self::BASIC_USER_VIEW,
+        'acting-manager' => self::BASIC_USER_VIEW,
     ];
 
     // ── Operating unit types (mirrored from OperatingUnit model) ───────────
@@ -68,8 +71,8 @@ class CoreTestSeeder extends Seeder
         [$roleMap, $permMap] = $this->seedRolesAndPermissions();
         $this->seedRolePermissionPivots($roleMap, $permMap);
 
-        [$branchId, $unitIds] = $this->seedBranchAndUnits();
-        $this->seedUsers($roleMap, $branchId, $unitIds);
+        [, $unitIds] = $this->seedBranchAndUnits();
+        $this->seedUsers($roleMap, $unitIds);
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
@@ -170,7 +173,6 @@ class CoreTestSeeder extends Seeder
             $roleId = $roleMap[$roleName];
 
             if ($rules === '*') {
-                // All permissions
                 foreach ($permMap as $permId) {
                     $pivots[] = ['permission_id' => $permId, 'role_id' => $roleId];
                 }
@@ -179,23 +181,27 @@ class CoreTestSeeder extends Seeder
             }
 
             foreach ($permMap as $permName => $permId) {
-                foreach ($rules as $rule) {
-                    if (str_starts_with($rule, '=')) {
-                        // Exact match
-                        if ($permName === substr($rule, 1)) {
-                            $pivots[] = ['permission_id' => $permId, 'role_id' => $roleId];
-                            break;
-                        }
-                    } elseif (str_starts_with($permName, $rule)) {
-                        // Prefix match
-                        $pivots[] = ['permission_id' => $permId, 'role_id' => $roleId];
-                        break;
-                    }
+                if ($this->matchesAnyRule($permName, $rules)) {
+                    $pivots[] = ['permission_id' => $permId, 'role_id' => $roleId];
                 }
             }
         }
 
         DB::table('role_has_permissions')->insert($pivots);
+    }
+
+    private function matchesAnyRule(string $permName, array $rules): bool
+    {
+        foreach ($rules as $rule) {
+            if (str_starts_with($rule, '=') && $permName === substr($rule, 1)) {
+                return true;
+            }
+            if (! str_starts_with($rule, '=') && str_starts_with($permName, $rule)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -244,7 +250,7 @@ class CoreTestSeeder extends Seeder
      * @param  array<string, int>  $roleMap
      * @param  array<string, int>  $unitIds
      */
-    private function seedUsers(array $roleMap, int $branchId, array $unitIds): void
+    private function seedUsers(array $roleMap, array $unitIds): void
     {
         $now = now();
         $adminHash = Hash::make('admin123456');

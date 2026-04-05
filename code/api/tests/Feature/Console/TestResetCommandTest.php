@@ -11,6 +11,18 @@ class TestResetCommandTest extends TestCase
 {
     use RefreshDatabase;
 
+    // ── Production guard ───────────────────────────────────────────────
+
+    #[Test]
+    public function refuses_to_run_in_production_environment(): void
+    {
+        app()->detectEnvironment(fn () => 'production');
+
+        $this->artisan('test:reset')
+            ->expectsOutputToContain('not allowed in production')
+            ->assertExitCode(1);
+    }
+
     // ── --list option ────────────────────────────────────────────────────
 
     #[Test]

@@ -14,7 +14,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// ─── Mock Dependencies ─────��──────────────────────────────────────────────────
+// --- Mock Dependencies -------------------------------------------------------
 
 const mockNavigate = vi.fn()
 let mockAuthState = {
@@ -41,7 +41,7 @@ vi.mock('@/components/ui/breadcrumbs', () => ({ Breadcrumbs: () => null }))
 
 let mockPathname = '/dashboard'
 
-// ─── Helpers ─────────────��────────────────────��───────────────────────────────
+// --- Helpers -----------------------------------------------------------------
 
 import { render, cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
@@ -60,7 +60,7 @@ function setPath(path: string) {
   mockPathname = path
 }
 
-// ─── Tests ──────────────────��─────────────────────────────���───────────────────
+// --- Tests -------------------------------------------------------------------
 
 describe('Layout — Auth Guards', () => {
   beforeEach(() => {

@@ -85,10 +85,9 @@ describe('Logout — Happy Path', () => {
     cy.get('button[title="Cerrar sesión"]').click()
     cy.url().should('include', '/login', { timeout: 10_000 })
 
-    // Wait for DOM to stabilize after logout → / → /login redirect chain
+    // Wait deterministically for the login form to be ready after the redirect chain
     cy.get('input#identifier', { timeout: 10_000 }).should('be.visible')
-    // eslint-disable-next-line cypress/no-unnecessary-waiting
-    cy.wait(500)
+    cy.get('button[type="submit"]', { timeout: 10_000 }).should('be.enabled')
     cy.get('input#identifier').clear().type(adminEmail)
     cy.get('input#password').clear().type(adminPassword)
     cy.get('button[type="submit"]').click()

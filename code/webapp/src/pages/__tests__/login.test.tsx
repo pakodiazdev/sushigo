@@ -123,7 +123,7 @@ describe('LoginPage — Form behavior', () => {
 
     fireEvent.change(identifier, { target: { value: 'admin@sushigo.com' } })
     fireEvent.change(password, { target: { value: 'admin123456' } })
-    fireEvent.submit(getByRole('button'))
+    fireEvent.click(getByRole('button'))
 
     await waitFor(() => {
       expect(loginMock).toHaveBeenCalledWith({
@@ -143,7 +143,7 @@ describe('LoginPage — Form behavior', () => {
 
     fireEvent.change(identifier, { target: { value: '5512345678' } })
     fireEvent.change(password, { target: { value: 'secret' } })
-    fireEvent.submit(getByRole('button'))
+    fireEvent.click(getByRole('button'))
 
     await waitFor(() => {
       expect(loginMock).toHaveBeenCalledWith({
@@ -163,7 +163,7 @@ describe('LoginPage — Form behavior', () => {
 
     fireEvent.change(identifier, { target: { value: 'wrong@test.com' } })
     fireEvent.change(password, { target: { value: 'wrongpass' } })
-    fireEvent.submit(getByRole('button'))
+    fireEvent.click(getByRole('button'))
 
     await waitFor(() => {
       expect(loginMock).toHaveBeenCalled()
