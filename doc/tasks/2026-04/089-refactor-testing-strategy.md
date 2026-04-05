@@ -50,11 +50,11 @@ As a developer, I want a documented testing strategy with clear rules about what
 - [x] Update `testing-strategy.md` with seeder categories + environment services
 - [x] Update `CLAUDE.md` with seeder + environment services references
 - [x] Update `seeder-system.md` with Testing/ and Fakes/ namespaces
-- [ ] Optimize seeders for bulk inserts (remove individual `Model::create()` loops)
-- [ ] Create `Fakes/` namespace with first fake seeder (`FakeEmployeesSeeder`)
-- [ ] Implement `FileTokenRecorder` to replace Mailhog dependency in `employees.cy.ts`
-- [ ] Add `storage/testing/` cleanup to `test:reset` truncation step
-- [ ] Update `employees.cy.ts` to use `test:getResetLink` instead of `mailhog:getResetLink`
+- [x] Optimize seeders for bulk inserts (`DB::table()->insert()`, manual ULIDs, single Hash::make)
+- ~~Create `Fakes/` namespace~~ → moved to [#090](../090-test-fakes-and-mailhog-replacement.md)
+- ~~Implement `FileTokenRecorder`~~ → moved to [#090](../090-test-fakes-and-mailhog-replacement.md)
+- ~~Add `storage/testing/` cleanup~~ → moved to [#090](../090-test-fakes-and-mailhog-replacement.md)
+- ~~Update `employees.cy.ts` to use `test:getResetLink`~~ → moved to [#090](../090-test-fakes-and-mailhog-replacement.md)
 
 ### Bugfixes (included)
 - [x] Fix `docker-compose.e2e.yml` — `target: dev` on test_e2e
@@ -95,8 +95,8 @@ As a developer, I want a documented testing strategy with clear rules about what
 | Command | Duration | Notes |
 |---|---|---|
 | `migrate:fresh --seed` (before) | ~30s | Full schema rebuild + all seeders |
-| `test:reset` (core only) | ~2.0s | Truncate + CoreTestSeeder |
-| `test:reset --seeders=attendance` | ~2.6s | Truncate + Core + AttendanceTestSeeder |
+| `test:reset` (core only) | ~1.5s | Truncate + CoreTestSeeder (bulk inserts) |
+| `test:reset --seeders=attendance` | ~1.9s | Truncate + Core + AttendanceTestSeeder (bulk inserts) |
 
 **Data seeded by `test:reset --seeders=attendance`:**
 - 11 users (3 core + 8 employees)
