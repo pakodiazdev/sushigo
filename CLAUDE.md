@@ -382,6 +382,29 @@ export function MyForm() {
 
 **PR requirement:** Any PR that adds a component with 3+ `useState` calls or API mutations must extract the logic into a custom hook. Reviewers should reject PRs where logic and JSX are mixed in the same component.
 
+### Testing Strategy (mandatory)
+
+**Cypress is reserved for happy-path E2E only. Security and error cases belong in PHPUnit/Vitest.**
+
+Full convention reference: `doc/conventions/testing/testing-strategy.md`
+
+**Testing pyramid — what goes where:**
+
+| What to test | Where | Priority |
+|---|---|---|
+| API happy path + authorization + validation | PHPUnit Feature | Required |
+| Complex business logic, edge cases, mocks | PHPUnit Unit | Required |
+| Route guards, redirect config, role checks | Vitest | Required |
+| Error feedback (toasts, form errors) | Vitest | Nice-to-have |
+| User-facing happy path (full flow) | Cypress | Required (1 per feature) |
+| Error/validation/security in UI | Cypress | **Prohibited** |
+
+**PR merge requirements:**
+- SonarCloud line coverage >= 80% on new code (backend and frontend)
+- At least one Cypress spec with the happy path of the delivered feature
+- All existing tests pass — if changes break prior tests, the PR includes fixes with explanation
+- PHPUnit Feature tests for every new/changed endpoint (happy path + unauthorized access)
+
 ## Access URLs (Local Development)
 
 - **Webapp**: https://sushigo.local (via nginx) or http://localhost:5173 (direct Vite)

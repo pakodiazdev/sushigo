@@ -236,8 +236,12 @@ describe('Logout', () => {
     cy.url().should('include', '/login', { timeout: 10_000 })
 
     // Esperar a que el DOM esté estable tras la navegación logout → / → /login
-    cy.get('input#identifier', { timeout: 10_000 }).should('be.visible').clear().type(adminEmail)
-    cy.get('input#password').should('be.visible').clear().type(adminPassword)
+    // Romper la cadena para que Cypress re-consulte el elemento tras re-renders de React
+    cy.get('input#identifier', { timeout: 10_000 }).should('be.visible')
+    // eslint-disable-next-line cypress/no-unnecessary-waiting
+    cy.wait(500)
+    cy.get('input#identifier').clear().type(adminEmail)
+    cy.get('input#password').clear().type(adminPassword)
     cy.get('button[type="submit"]').click()
 
     cy.url().should('not.include', '/login')

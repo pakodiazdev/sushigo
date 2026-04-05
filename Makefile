@@ -69,7 +69,7 @@ cypress-run: ## Ejecutar tests de Cypress en modo headless
 
 cypress-run-headed: cypress-up ## Ejecutar TODOS los tests con navegador visible (ver en VNC http://localhost:6080)
 	@echo "$(GREEN)Ejecutando todos los tests en modo headed (VNC: http://localhost:6080)...$(NC)"
-	@docker exec -it cypress-ui npx cypress run --headed --browser chrome
+	@docker exec cypress-ui npx cypress run --headed --browser chrome
 
 cypress-build: ## Reconstruir imagen de Cypress UI
 	@echo "$(GREEN)Reconstruyendo imagen de Cypress UI...$(NC)"
