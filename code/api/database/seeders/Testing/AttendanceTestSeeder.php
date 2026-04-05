@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Testing;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -110,7 +111,7 @@ class AttendanceTestSeeder extends Seeder
 
     private function seedRoleAssignments(array $configEmployees, array $adminProfiles, array $userIdMap, array $roleMap): void
     {
-        $userModel = 'App\\Models\\User';
+        $userModel = User::class;
         $rolePivots = [];
 
         foreach ($configEmployees as $emp) {

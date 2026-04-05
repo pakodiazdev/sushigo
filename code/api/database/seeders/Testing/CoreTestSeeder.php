@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Testing;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -293,7 +294,7 @@ class CoreTestSeeder extends Seeder
         $adminHash = Hash::make('admin123456');
         $inventoryHash = Hash::make('inventory123456');
 
-        $userModel = 'App\\Models\\User';
+        $userModel = User::class;
         $allUnitIds = array_values($unitIds);
         $mainBufferIds = [$unitIds[self::TYPE_BRANCH_MAIN], $unitIds[self::TYPE_BRANCH_BUFFER]];
 
