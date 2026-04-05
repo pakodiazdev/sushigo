@@ -126,6 +126,16 @@ class AttendanceTestSeeder extends Seeder
             }
         }
 
+        $adminPivots = $this->buildAdminRolePivots($adminProfiles, $userIdMap, $roleMap, $userModel);
+        $rolePivots = array_merge($rolePivots, $adminPivots);
+
+        if ($rolePivots) {
+            DB::table('model_has_roles')->insert($rolePivots);
+        }
+    }
+
+    private function buildAdminRolePivots(array $adminProfiles, array $userIdMap, array $roleMap, string $userModel): array
+    {
         $existingRoles = DB::table('model_has_roles')
             ->where('model_type', $userModel)
             ->whereIn('model_id', array_values($userIdMap))
@@ -134,6 +144,7 @@ class AttendanceTestSeeder extends Seeder
             ->map(fn ($rows) => $rows->pluck('role_id')->toArray())
             ->toArray();
 
+        $pivots = [];
         foreach ($adminProfiles as $profile) {
             $userId = $userIdMap[$profile['email']] ?? null;
             if (! $userId) {
@@ -142,7 +153,7 @@ class AttendanceTestSeeder extends Seeder
             foreach ($profile['roles'] as $roleName) {
                 $roleId = $roleMap[$roleName] ?? null;
                 if ($roleId && ! in_array($roleId, $existingRoles[$userId] ?? [])) {
-                    $rolePivots[] = [
+                    $pivots[] = [
                         'role_id' => $roleId,
                         'model_type' => $userModel,
                         'model_id' => $userId,
@@ -151,9 +162,7 @@ class AttendanceTestSeeder extends Seeder
             }
         }
 
-        if ($rolePivots) {
-            DB::table('model_has_roles')->insert($rolePivots);
-        }
+        return $pivots;
     }
 
     /**
