@@ -13,17 +13,25 @@ database/seeders/
 │   └── RepeatableSeeder.php       # Base for repeatable seeders
 ├── Traits/
 │   └── TrackableSeeder.php        # Trait for tracking and locking
-├── Development/                    # Seeders for development/local/testing
+├── Development/                    # Seeders for development/local (full experience)
 │   ├── DevelopmentSeeder.php      # Development seeder orchestrator
 │   ├── UserSeeder.php             # Test users (OnceSeeder)
 │   ├── RoleSeeder.php             # Development roles (LockedSeeder)
 │   ├── PermissionSeeder.php       # Development permissions (LockedSeeder)
 │   └── UserRoleSeeder.php         # Role assignment (OnceSeeder)
+├── Testing/                        # Fast deterministic seeders for E2E/PHPUnit
+│   ├── CoreTestSeeder.php         # Passport, roles, permissions, branch, users
+│   └── AttendanceTestSeeder.php   # Employees + schedules for attendance tests
+├── Fakes/                          # Volume generators using factories (dev + testing)
+│   └── (future: FakeEmployeesSeeder.php, FakeItemsSeeder.php, etc.)
 └── Production/                     # Seeders for production
     ├── ProductionSeeder.php       # Production seeder orchestrator
     ├── RoleSeeder.php             # Essential roles (LockedSeeder)
     └── PermissionSeeder.php       # Production permissions (LockedSeeder)
 ```
+
+> **Testing & Fakes seeders** follow a different convention than Development/Production.
+> See [`doc/conventions/testing/test-data-seeders.md`](../../../doc/conventions/testing/test-data-seeders.md) for full rules.
 
 ## 📊 Base Classes Comparison
 

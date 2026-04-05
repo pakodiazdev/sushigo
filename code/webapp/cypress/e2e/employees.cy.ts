@@ -3,7 +3,7 @@
  *
  * DB reset strategy
  * ─────────────────
- * • before()     → cy.task('db:reset') ONCE por archivo (~30s).
+ * • before()     → cy.task('test:reset', 'attendance') ONCE por archivo (~3-5s).
  * • beforeEach() → login vía UI + navega a /employees.
  *
  * Para correr solo este archivo:
@@ -22,7 +22,7 @@ const today = new Date().toISOString().slice(0, 10)
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task('db:reset', null, { timeout: 180_000 })
+  cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })
 
 // ══════════════════════════════════════════════════════════════════════════════

@@ -46,7 +46,7 @@ export default defineConfig({
 
         /**
          * Full reset: migrate:fresh + seed.
-         * Slow (~30s). Call once per spec file in before(), not beforeEach().
+         * Slow (~30s). Use only when schema has changed.
          * Usage: cy.task('db:reset')
          */
         'db:reset': () => {
@@ -54,6 +54,24 @@ export default defineConfig({
           execSync(
             `docker exec ${CONTAINER} php /app/code/api/artisan migrate:fresh --seed`,
             { timeout: 180_000, stdio: 'inherit' }
+          )
+          return null
+        },
+
+        /**
+         * Fast reset: truncate + selective seed (no migration).
+         * ~3-5s vs ~30s for migrate:fresh. Preferred for E2E specs.
+         * Usage:
+         *   cy.task('test:reset')                    → core only
+         *   cy.task('test:reset', 'attendance')      → core + attendance
+         *   cy.task('test:reset', 'attendance,cash') → core + attendance + cash
+         */
+        'test:reset': (seeders?: string) => {
+          const seedersFlag = seeders ? ` --seeders=${seeders}` : ''
+          console.log(`[test:reset] Running test:reset${seedersFlag} on ${CONTAINER}...`)
+          execSync(
+            `docker exec ${CONTAINER} php /app/code/api/artisan test:reset${seedersFlag}`,
+            { timeout: 60_000, stdio: 'inherit' }
           )
           return null
         },

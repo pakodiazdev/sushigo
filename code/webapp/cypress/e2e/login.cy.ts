@@ -9,7 +9,7 @@
  *
  * DB reset strategy
  * ─────────────────
- * • before()     → cy.task('db:reset') ONCE per file (~30s).
+ * • before()     → cy.task('test:reset') ONCE per file (~3-5s).
  * • beforeEach() → cy.clearLocalStorage() only (milliseconds).
  */
 
@@ -20,7 +20,7 @@ const { email: adminEmail, password: adminPassword } = users.admin
 // ── Suite setup ────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task('db:reset', null, { timeout: 180_000 })
+  cy.task('test:reset', null, { timeout: 60_000 })
 })
 
 beforeEach(() => {

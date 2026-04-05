@@ -39,10 +39,22 @@ As a developer, I want a documented testing strategy with clear rules about what
 - [x] Create `login.test.tsx` — 13 Vitest tests for UI, form behavior, errors
 - [x] Verify all tests pass in both modes
 
-### Phase 3 — Optimize test data setup (future issue)
-- [ ] Create `php artisan test:reset` command
-- [ ] Create `database/seeders/Testing/` with fast seeders
-- [ ] Update Cypress tasks for targeted seeding
+### Phase 3 — Optimize test data setup
+- [x] Create `php artisan test:reset` command (truncate + selective seed, ~2-3s)
+- [x] Create `database/seeders/Testing/CoreTestSeeder` (Passport, roles, permissions, branch, units, users)
+- [x] Create `database/seeders/Testing/AttendanceTestSeeder` (8 employees + 2 admin profiles, schedules)
+- [x] Add `test:reset` Cypress task in `cypress.config.ts`
+- [x] Update all Cypress specs to use `test:reset` instead of `db:reset`
+- [x] Document seeder architecture convention (`doc/conventions/testing/test-data-seeders.md`)
+- [x] Document test environment services convention (`doc/conventions/testing/test-environment-services.md`)
+- [x] Update `testing-strategy.md` with seeder categories + environment services
+- [x] Update `CLAUDE.md` with seeder + environment services references
+- [x] Update `seeder-system.md` with Testing/ and Fakes/ namespaces
+- [ ] Optimize seeders for bulk inserts (remove individual `Model::create()` loops)
+- [ ] Create `Fakes/` namespace with first fake seeder (`FakeEmployeesSeeder`)
+- [ ] Implement `FileTokenRecorder` to replace Mailhog dependency in `employees.cy.ts`
+- [ ] Add `storage/testing/` cleanup to `test:reset` truncation step
+- [ ] Update `employees.cy.ts` to use `test:getResetLink` instead of `mailhog:getResetLink`
 
 ### Bugfixes (included)
 - [x] Fix `docker-compose.e2e.yml` — `target: dev` on test_e2e
@@ -75,3 +87,21 @@ As a developer, I want a documented testing strategy with clear rules about what
 | **Wall-clock** | **04:42** | **03:52** | **-50s (-18%)** |
 
 **Vitest:** 1100 → 1123 tests (+23 new, covering migrated login tests)
+
+---
+
+## Performance Results (Phase 3 — test:reset)
+
+| Command | Duration | Notes |
+|---|---|---|
+| `migrate:fresh --seed` (before) | ~30s | Full schema rebuild + all seeders |
+| `test:reset` (core only) | ~2.0s | Truncate + CoreTestSeeder |
+| `test:reset --seeders=attendance` | ~2.6s | Truncate + Core + AttendanceTestSeeder |
+
+**Data seeded by `test:reset --seeders=attendance`:**
+- 11 users (3 core + 8 employees)
+- 10 employees (EMP-001..EMP-008 + ADM-001, ADM-002)
+- 10 employment periods, 10 schedules, 70 schedule days
+- 8 roles, 39 permissions, 1 branch, 3 operating units, 2 Passport clients
+
+**Expected Cypress improvement:** Each spec's `before()` hook drops from ~30s to ~3s → ~27s saved × 5 specs using db:reset = **~135s total saved per run**.
