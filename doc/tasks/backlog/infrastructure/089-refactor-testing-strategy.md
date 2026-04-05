@@ -30,13 +30,14 @@ As a developer, I want a documented testing strategy with clear rules about what
 - [x] Create `doc/conventions/testing/testing-strategy.md`
 - [x] Add testing strategy section to `CLAUDE.md`
 - [x] Update `doc/conventions/git/pr_review_rules.md` with testing rules
-- [ ] Apply reviewer observations to testing-strategy.md
-- [ ] Add "Test Data Management" section
+- [x] Apply reviewer observations to testing-strategy.md
+- [x] Add "Test Data Management" section
 
 ### Phase 2 — Refactor login.cy.ts
-- [ ] Reduce to happy-path tests only (~4 tests)
-- [ ] Create Vitest specs for migrated tests (validation, errors, guards)
-- [ ] Verify all tests pass in both modes
+- [x] Reduce to happy-path tests only (18 → 4 tests)
+- [x] Create `Layout.test.tsx` — 10 Vitest tests for auth guards
+- [x] Create `login.test.tsx` — 13 Vitest tests for UI, form behavior, errors
+- [x] Verify all tests pass in both modes
 
 ### Phase 3 — Optimize test data setup (future issue)
 - [ ] Create `php artisan test:reset` command
@@ -52,8 +53,25 @@ As a developer, I want a documented testing strategy with clear rules about what
 
 ## Acceptance Criteria
 
-- [ ] Testing strategy documented and enforced in CLAUDE.md + PR review rules
-- [ ] `login.cy.ts` ≤ 5 Cypress tests (happy path only)
-- [ ] Login validation/error/guard coverage in Vitest
-- [ ] `make cypress-run` time reduced vs baseline
-- [ ] All Cypress tests pass headed and headless
+- [x] Testing strategy documented and enforced in CLAUDE.md + PR review rules
+- [x] `login.cy.ts` ≤ 5 Cypress tests (happy path only) → 4 tests
+- [x] Login validation/error/guard coverage in Vitest → 23 tests
+- [x] `make cypress-run` time reduced vs baseline → 04:06 → 03:17 (-20%)
+- [x] All Cypress tests pass headed and headless
+
+---
+
+## Performance Results (after Phase 2)
+
+| Spec | Before | After | Δ |
+|---|---|---|---|
+| attendance-checkin.cy.ts | 00:55 (8) | 00:51 (8) | -4s |
+| attendance-lunch-return.cy.ts | 00:31 (2) | 00:31 (2) | = |
+| attendance-lunch-start.cy.ts | 00:26 (2) | 00:25 (2) | -1s |
+| employees.cy.ts | 00:39 (3) | 00:42 (3) | +3s |
+| home.cy.ts | 00:04 (2) | 00:05 (2) | +1s |
+| login.cy.ts | **01:30 (18)** | **00:42 (4)** | **-48s** |
+| **Total test time** | **04:06 (35)** | **03:17 (21)** | **-49s (-20%)** |
+| **Wall-clock** | **04:42** | **03:52** | **-50s (-18%)** |
+
+**Vitest:** 1100 → 1123 tests (+23 new, covering migrated login tests)
