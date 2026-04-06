@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
 import { useToast } from '@/components/ui/toast-provider'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { TodayAttendanceRow } from '@/types/attendance'
+import type { TodayAttendanceRow, CloseDayRequest } from '@/types/attendance'
 
 /**
  * Fetch today's attendance for all active employees of a branch.
@@ -92,6 +92,58 @@ export function useLunchReturn() {
       showError(
         getApiErrorMessage(error, 'No se pudo registrar el regreso de comida.'),
         'Error al registrar'
+      )
+    },
+  })
+}
+
+/**
+ * Mutation: register check-out for an employee.
+ * On success: invalidates the today attendance query and shows a toast.
+ */
+export function useCheckOut() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: { attendance_id: string; check_out: string }) =>
+      attendanceApi.checkOut(data.attendance_id, { check_out: data.check_out }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      showSuccess('Salida registrada correctamente.', 'Check-out')
+    },
+    onError: (error: unknown) => {
+      showError(
+        getApiErrorMessage(error, 'No se pudo registrar la salida.'),
+        'Error al registrar'
+      )
+    },
+  })
+}
+
+/**
+ * Mutation: close the day for a branch (batch lunch returns + check-outs + absences).
+ * On success: invalidates the today attendance query and shows a summary toast.
+ */
+export function useCloseDay() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: CloseDayRequest) => attendanceApi.closeDay(data),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      const d = response.data.data
+      const parts: string[] = []
+      if (d.lunch_returns > 0) parts.push(`${d.lunch_returns} regresos`)
+      if (d.check_outs > 0) parts.push(`${d.check_outs} salidas`)
+      if (d.absences > 0) parts.push(`${d.absences} faltas`)
+      showSuccess(parts.join(', ') || 'Sin cambios', 'Día cerrado')
+    },
+    onError: (error: unknown) => {
+      showError(
+        getApiErrorMessage(error, 'No se pudo cerrar el día.'),
+        'Error al cerrar'
       )
     },
   })

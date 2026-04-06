@@ -1,6 +1,7 @@
 <?php
 
 use App\Contracts\PasswordResetTokenRecorder;
+use App\Http\Controllers\Api\V1\Attendances\CloseDayController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
@@ -247,6 +248,7 @@ Route::prefix('v1')->group(function () {
         // Static routes first (must precede {id}/... wildcard routes)
         Route::get('today', TodayAttendanceController::class)->name('today');
         Route::post('check-in', RegisterCheckInController::class)->name('check-in');
+        Route::post('close-day', CloseDayController::class)->name('close-day');
         // Per-attendance actions (identified by public_id)
         Route::patch('{id}/lunch-start', RegisterLunchStartController::class)->name('lunch-start');
         Route::patch('{id}/lunch-return', RegisterLunchReturnController::class)->name('lunch-return');

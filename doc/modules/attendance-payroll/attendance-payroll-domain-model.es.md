@@ -84,7 +84,9 @@ erDiagram
         smallint day_of_week "1=Lun 7=Dom (ISO)"
         boolean is_day_off "default false"
         time expected_start "nullable si day_off"
+        time expected_lunch_start "nullable"
         time expected_lunch_end "nullable"
+        smallint lunch_duration_minutes "nullable"
         time expected_end "nullable"
         timestamp created_at
         timestamp updated_at
@@ -468,7 +470,9 @@ erDiagram
 | `day_of_week` | smallint | NO | — | Día ISO: 1=Lun, 2=Mar, ..., 7=Dom. | RF-08 |
 | `is_day_off` | boolean | NO | false | Día de descanso programado. | RF-08 |
 | `expected_start` | time | SÍ | NULL | Hora esperada de entrada. NULL si `is_day_off`. | RF-08 |
+| `expected_lunch_start` | time | SÍ | NULL | Hora esperada de inicio de comida. | RF-08 |
 | `expected_lunch_end` | time | SÍ | NULL | Hora esperada de regreso de comida. | RF-08 |
+| `lunch_duration_minutes` | smallint | SÍ | NULL | Duración esperada de comida en minutos. Usado para pre-calcular regreso esperado cuando la salida real difiere de la programada. | RF-14 |
 | `expected_end` | time | SÍ | NULL | Hora esperada de salida. | RF-08 |
 | `created_at` | timestamp | NO | now | — | — |
 | `updated_at` | timestamp | NO | now | — | — |
@@ -913,7 +917,9 @@ classDiagram
         +int day_of_week
         +bool is_day_off
         +time expected_start
+        +time expected_lunch_start
         +time expected_lunch_end
+        +int lunch_duration_minutes
         +time expected_end
         --
         +isDayOff() bool

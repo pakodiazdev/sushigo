@@ -1,15 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, DoorClosed } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
+import { Button } from '@/components/ui/button'
 import {
   AttendanceSummaryBar,
   AttendanceTimeDialog,
+  CloseDayPanel,
   EmployeeAttendanceCard,
   EmptyState,
   ErrorState,
   NoBranchState,
   SkeletonGrid,
+  useCloseDayPanel,
 } from '@/components/attendance'
 import { useTodayAttendancePage, currentTimeLabel } from './-use-today-attendance-page'
 
@@ -25,6 +28,7 @@ export function TodayAttendancePage() {
     isError,
     branchName,
     hasBranch,
+    branchId,
     // Check-in
     pendingCheckInEmployee,
     isCheckingIn,
@@ -43,8 +47,15 @@ export function TodayAttendancePage() {
     openLunchReturn,
     closeLunchReturn,
     confirmLunchReturn,
+    // Check-out
+    pendingCheckOut,
+    isCheckingOut,
+    openCheckOut,
+    closeCheckOut,
+    confirmCheckOut,
   } = useTodayAttendancePage()
 
+  const closeDayPanel = useCloseDayPanel(rows, branchId)
   const maxTime = currentTimeLabel()
 
   if (!hasBranch) {
@@ -65,9 +76,17 @@ export function TodayAttendancePage() {
             : 'Actualización automática cada 30 s'
         }
         action={
-          isLoading ? (
-            <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {isLoading && (
+              <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+            )}
+            {rows.length > 0 && (
+              <Button size="sm" onClick={closeDayPanel.open}>
+                <DoorClosed className="h-4 w-4 mr-1.5" />
+                Cerrar día
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -88,6 +107,7 @@ export function TodayAttendancePage() {
               onCheckIn={openCheckIn}
               onLunchStart={openLunchStart}
               onLunchReturn={openLunchReturn}
+              onCheckOut={openCheckOut}
             />
           ))}
         </div>
@@ -149,6 +169,28 @@ export function TodayAttendancePage() {
         inputLabel="Hora de regreso"
         isLoading={isRegisteringLunchReturn}
       />
+
+      {/* Check-out dialog */}
+      <AttendanceTimeDialog
+        isOpen={!!pendingCheckOut}
+        onClose={closeCheckOut}
+        onConfirm={confirmCheckOut}
+        title="Registrar salida"
+        employeeName={
+          pendingCheckOut
+            ? `${pendingCheckOut.employee.first_name} ${pendingCheckOut.employee.last_name}`
+            : ''
+        }
+        confirmLabel="Confirmar salida"
+        initialTime={maxTime}
+        maxTime={maxTime}
+        inputId="checkout-time"
+        inputLabel="Hora de salida"
+        isLoading={isCheckingOut}
+      />
+
+      {/* Close Day Panel */}
+      <CloseDayPanel panel={closeDayPanel} />
     </PageContainer>
   )
 }

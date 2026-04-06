@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { TodayAttendanceResponse, AttendanceRecord } from '@/types/attendance'
+import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse } from '@/types/attendance'
 
 export const attendanceApi = {
   /**
@@ -38,6 +38,28 @@ export const attendanceApi = {
   lunchReturn: (attendanceId: string, data: { lunch_end: string }) =>
     apiClient.patch<{ status: number; data: AttendanceRecord }>(
       `/attendances/${attendanceId}/lunch-return`,
+      data,
+    ),
+
+  /**
+   * PATCH /attendances/{id}/check-out
+   * Registers the employee's check-out (departure) at the given datetime.
+   * Body: { check_out: "YYYY-MM-DDTHH:mm:ss+offset" }
+   */
+  checkOut: (attendanceId: string, data: { check_out: string }) =>
+    apiClient.patch<{ status: number; data: AttendanceRecord }>(
+      `/attendances/${attendanceId}/check-out`,
+      data,
+    ),
+
+  /**
+   * POST /attendances/close-day
+   * Closes the day for a branch: registers pending lunch returns,
+   * batch check-out, and marks absences in one transaction.
+   */
+  closeDay: (data: CloseDayRequest) =>
+    apiClient.post<{ status: number; data: CloseDayResponse }>(
+      '/attendances/close-day',
       data,
     ),
 }

@@ -29,6 +29,7 @@ const mockRow: TodayAttendanceRow = {
         roles: ['cajero'],
     },
     attendance: null,
+    schedule: null,
 }
 
 const mockRowWithAttendance: TodayAttendanceRow = {
@@ -52,6 +53,7 @@ const mockRowWithAttendance: TodayAttendanceRow = {
         overtime_minutes: 30,
         requires_overtime_decision: false,
     },
+    schedule: null,
 }
 
 // ── getPhaseCardClass Tests ────────────────────────────────────────────────────
@@ -181,6 +183,7 @@ describe('EmployeeAttendanceCard', () => {
         onCheckIn: vi.fn(),
         onLunchStart: vi.fn(),
         onLunchReturn: vi.fn(),
+        onCheckOut: vi.fn(),
     }
 
     it('renders employee name', () => {
