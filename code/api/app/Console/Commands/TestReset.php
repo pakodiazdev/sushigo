@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Contracts\PasswordResetTokenRecorder;
+use Database\Seeders\Fakes\FakeEmployeesSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
 use Database\Seeders\Testing\CoreTestSeeder;
 use Illuminate\Console\Command;
@@ -28,6 +30,9 @@ class TestReset extends Command
         'attendance' => [
             AttendanceTestSeeder::class,
         ],
+        'fakes-employees' => [
+            FakeEmployeesSeeder::class,
+        ],
     ];
 
     public function handle(): int
@@ -46,6 +51,7 @@ class TestReset extends Command
 
         $this->info('🧹 Truncating all tables...');
         $this->truncateAllTables();
+        $this->clearTestArtifacts();
 
         $groups = $this->resolveGroups();
 
@@ -120,6 +126,14 @@ class TestReset extends Command
         } finally {
             DB::statement('SET session_replication_role = DEFAULT;');
         }
+    }
+
+    /**
+     * Clear test artifacts (reset link files, etc.) from storage/testing/.
+     */
+    private function clearTestArtifacts(): void
+    {
+        app(PasswordResetTokenRecorder::class)->clear();
     }
 
     private function listGroups(): int
