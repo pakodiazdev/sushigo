@@ -90,15 +90,20 @@ export default defineConfig({
         },
 
         /**
-         * Get password reset link from the test-only API endpoint.
-         * The backend's FileTokenRecorder writes links to storage/testing/
-         * when a reset link is generated (in testing/dev environments).
+         * Get password reset link by running `artisan tinker` in the Laravel container.
+         * Reads the recorded link via App\Contracts\PasswordResetTokenRecorder,
+         * which is populated in testing/dev environments when a reset link is generated.
          * No Mailhog dependency — instant and deterministic.
          * Usage: cy.task('test:getResetLink', 'user@example.com')
          * Returns: The reset URL or null if not found.
          */
         'test:getResetLink': (email: string) => {
-          const apiUrl = process.env.CYPRESS_apiUrl || `https://devtest.api.sushigo.local/api/v1`
+          // Validate email format to prevent shell/PHP injection
+          const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+          if (!emailRegex.test(email)) {
+            console.error(`[test:getResetLink] Invalid email format: ${email}`)
+            return null
+          }
           console.log(`[test:getResetLink] Fetching reset link for ${email}...`)
           try {
             const result = execSync(
@@ -109,10 +114,10 @@ export default defineConfig({
               console.log(`[test:getResetLink] No reset link found for ${email}`)
               return null
             }
-            console.log(`[test:getResetLink] Found: ${result}`)
+            console.log(`[test:getResetLink] Reset link found successfully`)
             return result
           } catch (e) {
-            console.error(`[test:getResetLink] Error:`, e)
+            console.error(`[test:getResetLink] Error fetching reset link`)
             return null
           }
         },

@@ -1,5 +1,6 @@
 <?php
 
+use App\Contracts\PasswordResetTokenRecorder;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
@@ -68,7 +69,7 @@ use Illuminate\Support\Facades\Route;
 if (app()->environment('testing', 'local', 'dev', 'devtest')) {
     Route::prefix('v1/test')->name('test.')->group(function () {
         Route::get('reset-link/{email}', function (string $email) {
-            $recorder = app(\App\Contracts\PasswordResetTokenRecorder::class);
+            $recorder = app(PasswordResetTokenRecorder::class);
             $link = $recorder->retrieve($email);
 
             if (! $link) {
