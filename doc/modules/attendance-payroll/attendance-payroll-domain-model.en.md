@@ -75,7 +75,9 @@ erDiagram
         smallint day_of_week "ISO 1-7"
         boolean is_day_off "default false"
         time expected_start "nullable"
+        time expected_lunch_start "nullable"
         time expected_lunch_end "nullable"
+        smallint lunch_duration_minutes "nullable"
         time expected_end "nullable"
     }
 
@@ -411,9 +413,11 @@ erDiagram
 | `employee_schedule_id` | bigint FK | NO   | —       | Parent schedule.                              | RF-08 |
 | `day_of_week`          | smallint  | NO   | —       | ISO day: 1=Mon, 2=Tue, ..., 7=Sun.            | RF-08 |
 | `is_day_off`           | boolean   | NO   | false   | Scheduled day off.                            | RF-08 |
-| `expected_start`       | time      | YES  | NULL    | Expected clock-in time. NULL if `is_day_off`. | RF-08 |
-| `expected_lunch_end`   | time      | YES  | NULL    | Expected lunch return time.                   | RF-08 |
-| `expected_end`         | time      | YES  | NULL    | Expected clock-out time.                      | RF-08 |
+| `expected_start`         | time      | YES  | NULL    | Expected clock-in time. NULL if `is_day_off`.                        | RF-08 |
+| `expected_lunch_start`   | time      | YES  | NULL    | Expected lunch break start time.                                     | RF-08 |
+| `expected_lunch_end`     | time      | YES  | NULL    | Expected lunch return time.                                          | RF-08 |
+| `lunch_duration_minutes` | smallint  | YES  | NULL    | Expected lunch break duration in minutes. Used to pre-calculate expected return when actual lunch_start differs from scheduled. | RF-14 |
+| `expected_end`           | time      | YES  | NULL    | Expected clock-out time.                                             | RF-08 |
 | `created_at`           | timestamp | NO   | now     | —                                             | —     |
 | `updated_at`           | timestamp | NO   | now     | —                                             | —     |
 
@@ -857,7 +861,9 @@ classDiagram
         +int day_of_week
         +bool is_day_off
         +time expected_start
+        +time expected_lunch_start
         +time expected_lunch_end
+        +int lunch_duration_minutes
         +time expected_end
         --
         +isDayOff() bool

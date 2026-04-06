@@ -6,9 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendances\TodayAttendanceRequest;
 use App\Http\Resources\Attendance\AttendanceResource;
 use App\Http\Resources\Employee\EmployeeSummaryResource;
+use App\Http\Resources\Schedule\ScheduleDayResource;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\EmployeeSchedule;
+use App\Models\EmploymentPeriod;
+use App\Models\ScheduleDay;
 use Carbon\Carbon;
 
 /**
@@ -87,7 +91,13 @@ class TodayAttendanceController extends Controller
             ->orderBy('first_name')
             ->get();
 
-        $data = $employees->map(function (Employee $employee) {
+        $dayOfWeekIso = Carbon::parse($today)->dayOfWeekIso;
+
+        // Pre-load schedule days for today's day-of-week in a single pass.
+        // For each employee: active period → effective schedule → schedule day.
+        $scheduleDaysByEmployee = $this->resolveScheduleDays($employees, $today, $dayOfWeekIso);
+
+        $data = $employees->map(function (Employee $employee) use ($scheduleDaysByEmployee) {
             /** @var Attendance|null $attendance */
             $attendance = $employee->attendances->first();
 
@@ -95,14 +105,82 @@ class TodayAttendanceController extends Controller
             // instead of the raw integer FK (avoids N+1 and fixes the API contract)
             $attendance?->setRelation('employee', $employee);
 
+            $scheduleDay = $scheduleDaysByEmployee[$employee->id] ?? null;
+
             return [
                 'employee' => (new EmployeeSummaryResource($employee))->resolve(),
                 'attendance' => $attendance
                     ? (new AttendanceResource($attendance))->resolve()
                     : null,
+                'schedule' => $scheduleDay
+                    ? (new ScheduleDayResource($scheduleDay))->resolve()
+                    : null,
             ];
         });
 
         return new ResponseEntity(data: $data->values()->all(), status: 200);
+    }
+
+    /**
+     * Resolve today's ScheduleDay for each employee in a batch-friendly way.
+     *
+     * Returns an array keyed by employee internal ID → ScheduleDay|null.
+     * Non-blocking: employees without an active period, schedule, or day config
+     * simply get null (the frontend will handle the absence of schedule data).
+     *
+     * @param  \Illuminate\Support\Collection<Employee>  $employees
+     * @return array<int, ScheduleDay|null>
+     */
+    private function resolveScheduleDays($employees, string $today, int $dayOfWeekIso): array
+    {
+        $result = [];
+
+        // Step 1: Get active employment periods for all employees in one query
+        $periods = EmploymentPeriod::whereIn('employee_id', $employees->pluck('id'))
+            ->where('is_active', true)
+            ->whereDate('start_date', '<=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $today);
+            })
+            ->get()
+            ->keyBy('employee_id');
+
+        if ($periods->isEmpty()) {
+            return $result;
+        }
+
+        // Step 2: Get effective schedules for all periods in one query
+        $schedules = EmployeeSchedule::effective($today)
+            ->whereIn('employment_period_id', $periods->pluck('id'))
+            ->get()
+            ->keyBy('employment_period_id');
+
+        if ($schedules->isEmpty()) {
+            return $result;
+        }
+
+        // Step 3: Get schedule days for today's day-of-week in one query
+        $scheduleDays = ScheduleDay::whereIn('employee_schedule_id', $schedules->pluck('id'))
+            ->where('day_of_week', $dayOfWeekIso)
+            ->get()
+            ->keyBy('employee_schedule_id');
+
+        // Step 4: Map back to employee IDs
+        foreach ($employees as $employee) {
+            $period = $periods[$employee->id] ?? null;
+            if (! $period) {
+                continue;
+            }
+
+            $schedule = $schedules[$period->id] ?? null;
+            if (! $schedule) {
+                continue;
+            }
+
+            $result[$employee->id] = $scheduleDays[$schedule->id] ?? null;
+        }
+
+        return $result;
     }
 }

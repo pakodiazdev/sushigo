@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn } from '@/services/attendance-hooks'
+import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
@@ -74,6 +74,7 @@ export interface UseTodayAttendancePageResult {
   isError: boolean
   branchName: string | null
   hasBranch: boolean
+  branchId: number | null
   getPhase: (row: TodayAttendanceRow) => AttendancePhase
   // Check-in action
   pendingCheckInEmployee: TodayAttendanceEmployee | null
@@ -93,6 +94,12 @@ export interface UseTodayAttendancePageResult {
   openLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeLunchReturn: () => void
   confirmLunchReturn: (time: string) => void
+  // Check-out action
+  pendingCheckOut: PendingAttendanceData | null
+  isCheckingOut: boolean
+  openCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+  closeCheckOut: () => void
+  confirmCheckOut: (time: string) => void
 }
 
 export function useTodayAttendancePage(): UseTodayAttendancePageResult {
@@ -103,6 +110,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const checkInMutation = useCheckIn()
   const lunchStartMutation = useLunchStart()
   const lunchReturnMutation = useLunchReturn()
+  const checkOutMutation = useCheckOut()
 
   const summary = computeSummary(data)
 
@@ -166,6 +174,26 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     )
   }, [pendingLunchReturn, lunchReturnMutation, closeLunchReturn])
 
+  // ── Check-out state ──────────────────────────────────────────────────────────
+  const [pendingCheckOut, setPendingCheckOut] =
+    useState<PendingAttendanceData | null>(null)
+
+  const openCheckOut = useCallback((employee: TodayAttendanceEmployee, attendanceId: string) => {
+    setPendingCheckOut({ employee, attendanceId })
+  }, [])
+
+  const closeCheckOut = useCallback(() => {
+    setPendingCheckOut(null)
+  }, [])
+
+  const confirmCheckOut = useCallback((time: string) => {
+    if (!pendingCheckOut) return
+    checkOutMutation.mutate(
+      { attendance_id: pendingCheckOut.attendanceId, check_out: timeToIso(time) },
+      { onSettled: closeCheckOut }
+    )
+  }, [pendingCheckOut, checkOutMutation, closeCheckOut])
+
   return {
     rows: data,
     summary,
@@ -173,6 +201,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     isError,
     branchName: currentBranch?.name ?? null,
     hasBranch: !!branchId,
+    branchId,
     getPhase: (row) => getAttendancePhase(row.attendance),
     // Check-in
     pendingCheckInEmployee,
@@ -192,5 +221,11 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     openLunchReturn,
     closeLunchReturn,
     confirmLunchReturn,
+    // Check-out
+    pendingCheckOut,
+    isCheckingOut: checkOutMutation.isPending,
+    openCheckOut,
+    closeCheckOut,
+    confirmCheckOut,
   }
 }

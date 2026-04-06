@@ -2,6 +2,7 @@ import {
     UtensilsCrossed,
     AlertTriangle,
     LogIn,
+    LogOut,
     Undo2,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -126,6 +127,7 @@ export interface EmployeeAttendanceCardProps {
     onCheckIn: (employee: TodayAttendanceEmployee) => void
     onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+    onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
 }
 
 export function EmployeeAttendanceCard({
@@ -133,6 +135,7 @@ export function EmployeeAttendanceCard({
     onCheckIn,
     onLunchStart,
     onLunchReturn,
+    onCheckOut,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
@@ -218,6 +221,19 @@ export function EmployeeAttendanceCard({
                 >
                     <Undo2 className="h-3.5 w-3.5 mr-1.5" />
                     Regresar de comida
+                </Button>
+            )}
+
+            {/* Check-out action — only for employees who returned from lunch */}
+            {phase === 'returned' && att && (
+                <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-auto"
+                    onClick={() => onCheckOut(row.employee, att.id)}
+                >
+                    <LogOut className="h-3.5 w-3.5 mr-1.5" />
+                    Registrar salida
                 </Button>
             )}
 

@@ -75,6 +75,7 @@ function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRo
       roles: [],
     },
     attendance: null,
+    schedule: null,
     ...overrides,
   }
 }

@@ -26,3 +26,7 @@ export { AttendanceSummaryBar, SummaryStat, OvertimeWarning } from './Attendance
 export type { AttendanceSummaryBarProps, AttendanceSummary } from './AttendanceSummaryBar'
 
 export { EmptyState, ErrorState, NoBranchState, SkeletonGrid } from './AttendanceStates'
+
+// Close Day Panel
+export { CloseDayPanel } from './CloseDayPanel'
+export { useCloseDayPanel } from './use-close-day-panel'

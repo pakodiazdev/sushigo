@@ -28,9 +28,20 @@ export type DayStatus =
   | 'ABSENCE'
   | 'EXTRA'
 
+export interface TodayScheduleDay {
+  day_of_week: number
+  is_day_off: boolean
+  expected_start: string | null
+  expected_lunch_start: string | null
+  expected_lunch_end: string | null
+  lunch_duration_minutes: number | null
+  expected_end: string | null
+}
+
 export interface TodayAttendanceRow {
   employee: TodayAttendanceEmployee
   attendance: TodayAttendanceData | null
+  schedule: TodayScheduleDay | null
 }
 
 export interface TodayAttendanceEmployee {
@@ -59,6 +70,27 @@ export interface TodayAttendanceResponse {
   status: number
   data: TodayAttendanceRow[]
 }
+
+// #region Close Day types
+
+export interface CloseDayLunchReturn {
+  attendance_id: string
+  lunch_end: string // HH:mm
+}
+
+export interface CloseDayRequest {
+  branch_id: number
+  close_time: string // HH:mm
+  lunch_returns?: CloseDayLunchReturn[]
+}
+
+export interface CloseDayResponse {
+  lunch_returns: number
+  check_outs: number
+  absences: number
+}
+
+// #endregion
 
 // #region Attendance state helpers
 
