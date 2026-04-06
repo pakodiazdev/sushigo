@@ -147,8 +147,8 @@ describe('Login nuevo empleado', () => {
     cy.clearLocalStorage()
     cy.clearCookies()
 
-    // ── 1. Obtener el enlace de reset de Mailhog ─────────────────────────────
-    cy.task<string | null>('mailhog:getResetLink', newEmployeeEmail, { timeout: 30_000 })
+    // ── 1. Obtener el enlace de reset via FileTokenRecorder ──────────────────
+    cy.task<string | null>('test:getResetLink', newEmployeeEmail, { timeout: 10_000 })
       .then((resetLink) => {
         expect(resetLink, 'Reset link should exist').to.not.be.null
 

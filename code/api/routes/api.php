@@ -64,6 +64,22 @@ use App\Http\Controllers\Api\V1\UnitsOfMeasure\ShowUnitOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\UpdateUnitOfMeasureController;
 use Illuminate\Support\Facades\Route;
 
+// ── Test-only routes (never exposed in production) ───────────────────────
+if (app()->environment('testing', 'local', 'dev', 'devtest')) {
+    Route::prefix('v1/test')->name('test.')->group(function () {
+        Route::get('reset-link/{email}', function (string $email) {
+            $recorder = app(\App\Contracts\PasswordResetTokenRecorder::class);
+            $link = $recorder->retrieve($email);
+
+            if (! $link) {
+                return response()->json(['link' => null], 404);
+            }
+
+            return response()->json(['link' => $link]);
+        })->name('reset-link');
+    });
+}
+
 // V1 API Routes
 Route::prefix('v1')->group(function () {
     // Health check endpoint

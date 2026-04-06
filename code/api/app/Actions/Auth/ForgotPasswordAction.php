@@ -2,6 +2,7 @@
 
 namespace App\Actions\Auth;
 
+use App\Contracts\PasswordResetTokenRecorder;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
 use App\Repositories\UserRepository;
@@ -14,6 +15,7 @@ class ForgotPasswordAction
     public function __construct(
         private readonly WhatsAppService $whatsAppService,
         private readonly UserRepository $userRepository,
+        private readonly PasswordResetTokenRecorder $tokenRecorder,
     ) {}
 
     public function __invoke(array $data): array
@@ -60,6 +62,9 @@ class ForgotPasswordAction
 
         $frontendUrl = config('app.frontend_url', 'https://sushigo.local');
         $resetUrl = "{$frontendUrl}/reset-password?t={$plainToken}.{$selector}";
+
+        // Record the link for test infrastructure (no-op in production)
+        $this->tokenRecorder->record($identifier, $resetUrl);
 
         return [$resetUrl, $plainToken, $selector];
     }

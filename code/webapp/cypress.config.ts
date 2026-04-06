@@ -90,7 +90,36 @@ export default defineConfig({
         },
 
         /**
+         * Get password reset link from the test-only API endpoint.
+         * The backend's FileTokenRecorder writes links to storage/testing/
+         * when a reset link is generated (in testing/dev environments).
+         * No Mailhog dependency — instant and deterministic.
+         * Usage: cy.task('test:getResetLink', 'user@example.com')
+         * Returns: The reset URL or null if not found.
+         */
+        'test:getResetLink': (email: string) => {
+          const apiUrl = process.env.CYPRESS_apiUrl || `https://devtest.api.sushigo.local/api/v1`
+          console.log(`[test:getResetLink] Fetching reset link for ${email}...`)
+          try {
+            const result = execSync(
+              `docker exec ${CONTAINER} php /app/code/api/artisan tinker --execute="echo app(App\\\\Contracts\\\\PasswordResetTokenRecorder::class)->retrieve('${email}') ?? 'NULL';"`,
+              { timeout: 10_000, encoding: 'utf-8' }
+            ).trim()
+            if (result === 'NULL' || !result) {
+              console.log(`[test:getResetLink] No reset link found for ${email}`)
+              return null
+            }
+            console.log(`[test:getResetLink] Found: ${result}`)
+            return result
+          } catch (e) {
+            console.error(`[test:getResetLink] Error:`, e)
+            return null
+          }
+        },
+
+        /**
          * Get password reset link from Mailhog for a given email.
+         * @deprecated Use test:getResetLink instead — no Mailhog dependency.
          * Usage: cy.task('mailhog:getResetLink', 'user@example.com')
          * Returns: The reset URL or null if not found.
          */

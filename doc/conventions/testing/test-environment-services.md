@@ -2,6 +2,8 @@
 
 Convention for replacing external service dependencies in testing and development environments. Defines how to decouple tests from infrastructure services like Mailhog, Redis queues, or third-party APIs.
 
+**Status:** ✅ Implemented (Task #090)
+
 ---
 
 ## Guiding Principle
@@ -19,14 +21,15 @@ A Cypress spec that tests "employee creation + password reset + first login" is 
 Laravel's service container + environment detection gives us clean dependency injection per environment:
 
 ```php
-// AppServiceProvider or a dedicated TestingServiceProvider
-public function register(): void
-{
-    if (app()->environment('testing', 'local', 'dev', 'devtest')) {
-        $this->app->bind(PasswordResetLinkResolverInterface::class, FilePasswordResetLinkResolver::class);
-    } else {
-        $this->app->bind(PasswordResetLinkResolverInterface::class, EmailPasswordResetLinkResolver::class);
-    }
+// AppServiceProvider::register()
+use App\Contracts\PasswordResetTokenRecorder;
+use App\Services\Testing\FileTokenRecorder;
+use App\Services\Testing\NullTokenRecorder;
+
+if ($this->app->environment('testing', 'local', 'dev', 'devtest')) {
+    $this->app->singleton(PasswordResetTokenRecorder::class, FileTokenRecorder::class);
+} else {
+    $this->app->singleton(PasswordResetTokenRecorder::class, NullTokenRecorder::class);
 }
 ```
 
@@ -34,98 +37,70 @@ This keeps production code untouched while giving tests fast, reliable alternati
 
 ---
 
-## Case Study: Password Reset Link (Mailhog Replacement)
+## Implemented: Password Reset Link (Mailhog Replacement)
 
-### Current Problem
+### Problem Solved
 
-The `employees.cy.ts` spec:
+The `employees.cy.ts` spec previously depended on Mailhog to retrieve password reset links:
 1. Creates an employee via UI (triggers welcome email with password reset link)
-2. Calls `cy.task('mailhog:getResetLink', email)` to scrape the link from Mailhog's API
+2. Called `cy.task('mailhog:getResetLink', email)` to scrape the link from Mailhog's API
 3. Visits the reset link, sets a password, then logs in
 
-**Failure modes:**
-- Mailhog is not running → test fails
-- Email delivery is delayed → test is flaky with timing
-- Mailhog API format changes → task parser breaks
-- Running in CI without Mailhog → impossible
+**Failure modes eliminated:**
+- Mailhog not running → test fails
+- Email delivery delayed → flaky timing
+- Mailhog API format changes → parser breaks
+- CI without Mailhog → impossible
 
-### Solution: Token File Strategy
+### Implementation
 
-When `APP_ENV` is `testing` or `local`, the password reset notification writes the token/link to a known file instead of (or in addition to) sending email.
-
-#### Backend
+#### Interface — `app/Contracts/PasswordResetTokenRecorder.php`
 
 ```php
-// Interface
 interface PasswordResetTokenRecorder
 {
-    public function record(string $email, string $token, string $link): void;
-}
-
-// Production: no-op (email is the delivery channel)
-class NullTokenRecorder implements PasswordResetTokenRecorder
-{
-    public function record(string $email, string $token, string $link): void {}
-}
-
-// Testing/Dev: write to file
-class FileTokenRecorder implements PasswordResetTokenRecorder
-{
-    public function record(string $email, string $token, string $link): void
-    {
-        $path = storage_path("testing/reset-links/{$email}.txt");
-        File::ensureDirectoryExists(dirname($path));
-        File::put($path, $link);
-    }
+    public function record(string $email, string $resetLink): void;
+    public function retrieve(string $email): ?string;
+    public function clear(): void;
 }
 ```
 
-The notification (or the Action that triggers it) calls the recorder after generating the token:
+#### Production — `app/Services/Testing/NullTokenRecorder.php`
 
-```php
-app(PasswordResetTokenRecorder::class)->record($email, $token, $resetLink);
-```
+No-op implementation. Email is the delivery channel in production.
 
-#### Backend API Endpoint (test-only)
+#### Testing/Dev — `app/Services/Testing/FileTokenRecorder.php`
 
-```php
-// routes/api.php — only registered in non-production
-if (app()->environment('testing', 'local', 'dev', 'devtest')) {
-    Route::get('test/reset-link/{email}', function (string $email) {
-        $path = storage_path("testing/reset-links/{$email}.txt");
-        if (!File::exists($path)) {
-            return response()->json(['link' => null], 404);
-        }
-        return response()->json(['link' => File::get($path)]);
-    })->name('test.reset-link');
-}
-```
+Writes reset links to `storage/testing/reset-links/{email}.txt`. Instant and deterministic.
 
-#### Cypress Task
+#### Hook Point — `app/Actions/Auth/ForgotPasswordAction.php`
+
+The `PasswordResetTokenRecorder` is injected as a constructor dependency. After `generateResetLink()` creates the reset URL, it calls `$this->tokenRecorder->record($email, $resetUrl)`. This is the single point that serves both forgot-password and welcome-employee flows.
+
+#### Cypress Task — `cypress.config.ts`
 
 ```typescript
-// Replace mailhog:getResetLink with a direct API call
 'test:getResetLink': (email: string) => {
-  const apiUrl = process.env.CYPRESS_apiUrl || 'https://devtest.api.sushigo.local/api/v1'
-  // Simple HTTP GET — no Mailhog dependency
-  return fetch(`${apiUrl}/test/reset-link/${email}`, {
-    headers: { Accept: 'application/json' },
-  })
-    .then(res => res.json())
-    .then(data => data.link)
-    .catch(() => null)
+  // Uses artisan tinker to call FileTokenRecorder->retrieve() directly
+  const result = execSync(
+    `docker exec ${CONTAINER} php /app/code/api/artisan tinker --execute="echo app(App\\\\Contracts\\\\PasswordResetTokenRecorder::class)->retrieve('${email}') ?? 'NULL';"`,
+    { timeout: 10_000, encoding: 'utf-8' }
+  ).trim()
+  if (result === 'NULL' || !result) return null
+  return result
 }
 ```
 
-#### Cypress Spec (updated employees.cy.ts)
+#### Cypress Spec — `employees.cy.ts`
 
 ```typescript
-// BEFORE (Mailhog-dependent)
-cy.task<string | null>('mailhog:getResetLink', email, { timeout: 30_000 })
-
-// AFTER (file-based, instant)
+// Uses FileTokenRecorder — no Mailhog dependency, instant response
 cy.task<string | null>('test:getResetLink', email, { timeout: 10_000 })
 ```
+
+#### Cleanup — `test:reset` command
+
+`TestReset::clearTestArtifacts()` calls `app(PasswordResetTokenRecorder::class)->clear()` after truncating tables, which deletes the `storage/testing/reset-links/` directory.
 
 ---
 
@@ -140,22 +115,23 @@ Apply this pattern whenever a test depends on an external service that:
 
 ### How to apply
 
-1. **Define an interface** for the service interaction (e.g., `PasswordResetTokenRecorder`, `SmsGateway`, `FileStorageAdapter`)
-2. **Create a production implementation** that uses the real service
-3. **Create a test implementation** that uses a fast, deterministic alternative (file, in-memory, direct DB)
-4. **Bind in the service provider** based on `app()->environment()`
-5. **Expose a test-only endpoint** (if Cypress needs the result) guarded by environment check
-6. **Create a Cypress task** that calls the test endpoint instead of the external service
+1. **Define an interface** in `app/Contracts/` for the service interaction
+2. **Create a production implementation** (typically a no-op or real service call)
+3. **Create a test implementation** in `app/Services/Testing/` using a fast, deterministic alternative (file, in-memory, direct DB)
+4. **Bind in `AppServiceProvider::register()`** based on `app()->environment()`
+5. **Hook into the action/notification** that generates the data (constructor DI)
+6. **Create a Cypress task** that retrieves the data via artisan tinker or test-only API endpoint
+7. **Add cleanup** to `TestReset::clearTestArtifacts()`
 
 ### Service Replacement Table
 
-| External Service | Production Impl | Test Impl | Test Access |
-|---|---|---|---|
-| **Email (Mailhog)** | SMTP notification | `FileTokenRecorder` | `GET /test/reset-link/{email}` |
-| **SMS** | Twilio/SNS gateway | `FileSmsRecorder` | `GET /test/sms/{phone}` |
-| **File Storage (S3)** | S3 adapter | Local disk adapter | Direct file read |
-| **Queue (Redis)** | Redis queue | Sync queue (`QUEUE_CONNECTION=sync`) | Immediate execution |
-| **External API** | HTTP client | Fake/stub client | Pre-configured responses |
+| External Service | Production Impl | Test Impl | Test Access | Status |
+|---|---|---|---|---|
+| **Email (Mailhog)** | `NullTokenRecorder` | `FileTokenRecorder` | `cy.task('test:getResetLink')` | ✅ Implemented |
+| **SMS** | Twilio/SNS gateway | `FileSmsRecorder` | `cy.task('test:getSmsLink')` | 🔮 Future |
+| **File Storage (S3)** | S3 adapter | Local disk adapter | Direct file read | 🔮 Future |
+| **Queue (Redis)** | Redis queue | Sync queue (`QUEUE_CONNECTION=sync`) | Immediate execution | ✅ Already done |
+| **External API** | HTTP client | Fake/stub client | Pre-configured responses | 🔮 Future |
 
 ---
 
@@ -174,15 +150,4 @@ Apply this pattern whenever a test depends on an external service that:
 
 4. **Prefer file-based recorders over in-memory.** Files survive process restarts and can be inspected for debugging. Use `storage/testing/` as the base directory. Add `storage/testing/` to `.gitignore`.
 
-5. **Clean up test artifacts.** The `test:reset` command should clear `storage/testing/` as part of its truncation step.
-
----
-
-## Implementation Priority
-
-| Service | Priority | Reason |
-|---|---|---|
-| Password reset link (Mailhog) | **High** | `employees.cy.ts` depends on it; Mailhog adds ~2-5s latency + flakiness |
-| Queue (sync in testing) | **Already done** | `QUEUE_CONNECTION=sync` in `.env.testing` |
-| File storage | **Low** | No Cypress specs depend on S3 yet |
-| SMS | **Future** | No SMS features implemented yet |
+5. **Clean up test artifacts.** The `test:reset` command should clear `storage/testing/` as part of its truncation step via `clearTestArtifacts()`.
