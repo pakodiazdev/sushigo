@@ -107,17 +107,19 @@ class TestReset extends Command
 
         DB::statement('SET session_replication_role = replica;');
 
-        $tables = Schema::getTableListing();
+        try {
+            $tables = Schema::getTableListing();
 
-        foreach ($tables as $table) {
-            $tableName = str_contains($table, '.') ? substr(strrchr($table, '.'), 1) : $table;
-            if (in_array($tableName, $skipTables)) {
-                continue;
+            foreach ($tables as $table) {
+                $tableName = str_contains($table, '.') ? substr(strrchr($table, '.'), 1) : $table;
+                if (in_array($tableName, $skipTables)) {
+                    continue;
+                }
+                DB::table($table)->truncate();
             }
-            DB::table($table)->truncate();
+        } finally {
+            DB::statement('SET session_replication_role = DEFAULT;');
         }
-
-        DB::statement('SET session_replication_role = DEFAULT;');
     }
 
     private function listGroups(): int
