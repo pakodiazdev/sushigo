@@ -11,6 +11,8 @@ class TestResetLinkEndpointTest extends TestCase
     #[Test]
     public function returns_reset_link_when_recorded(): void
     {
+        config(['app.log_reset_link' => true]);
+
         $recorder = app(PasswordResetTokenRecorder::class);
         $recorder->record('employee@sushigo.com', 'https://sushigo.local/reset-password?token=abc123');
 

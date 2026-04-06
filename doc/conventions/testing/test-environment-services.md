@@ -73,6 +73,21 @@ No-op implementation. Email is the delivery channel in production.
 
 Writes reset links to `storage/testing/reset-links/{email}.txt`. Instant and deterministic.
 
+**Two-layer protection against accidental production use:**
+
+1. `AppServiceProvider` only binds `FileTokenRecorder` in `testing|local|dev|devtest` environments — production gets `NullTokenRecorder`
+2. `FileTokenRecorder::record()` checks `LOG_RESET_LINK=true` in `.env` — if the flag is missing or `false`, nothing is written even if the class is bound
+
+```env
+# .env (testing/dev only — never set to true in production)
+LOG_RESET_LINK=true
+```
+
+```php
+// config/app.php
+'log_reset_link' => env('LOG_RESET_LINK', false),
+```
+
 #### Hook Point — `app/Actions/Auth/ForgotPasswordAction.php`
 
 The `PasswordResetTokenRecorder` is injected as a constructor dependency. After `generateResetLink()` creates the reset URL, it calls `$this->tokenRecorder->record($email, $resetUrl)`. This is the single point that serves both forgot-password and welcome-employee flows.

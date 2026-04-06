@@ -60,6 +60,7 @@ services:
       - VITE_HMR_HOST=devtest.sushigo.local
       - VITE_API_URL=https://devtest.api.sushigo.local/api/v1
       - APP_ENV=devtest
+      - LOG_RESET_LINK=true
       - CYPRESS_baseUrl=${CYPRESS_baseUrl:-https://devtest.sushigo.local}
       - APP_URL=${APP_URL:-https://api.sushigo.local}
       - API_URL=${API_URL:-https://api.sushigo.local}
