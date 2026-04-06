@@ -197,6 +197,8 @@ class TestResetCommandTest extends TestCase
     #[Test]
     public function clears_test_artifacts_on_reset(): void
     {
+        config(['app.log_reset_link' => true]);
+
         // Create a test artifact via the recorder
         $recorder = app(PasswordResetTokenRecorder::class);
         $recorder->record('test-cleanup@example.com', 'https://example.com/reset?token=abc123');

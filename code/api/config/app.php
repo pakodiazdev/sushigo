@@ -68,6 +68,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Log Reset Link (Testing/Dev only)
+    |--------------------------------------------------------------------------
+    |
+    | When true, FileTokenRecorder writes password reset links to
+    | storage/testing/reset-links/ so Cypress/test tools can retrieve
+    | them without Mailhog. Must be false (or absent) in production.
+    | This is a second safety layer — AppServiceProvider already binds
+    | NullTokenRecorder in production environments.
+    |
+    */
+
+    'log_reset_link' => env('LOG_RESET_LINK', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

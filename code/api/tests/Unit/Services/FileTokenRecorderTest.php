@@ -17,6 +17,9 @@ class FileTokenRecorderTest extends TestCase
     {
         parent::setUp();
 
+        // Enable the flag for all tests (simulates LOG_RESET_LINK=true)
+        config(['app.log_reset_link' => true]);
+
         $this->recorder = new FileTokenRecorder;
         $this->testDirectory = storage_path('testing/reset-links');
     }
@@ -110,5 +113,15 @@ class FileTokenRecorderTest extends TestCase
 
         $this->assertTrue(File::isDirectory($this->testDirectory));
         $this->assertSame('https://link.com', $this->recorder->retrieve('new@example.com'));
+    }
+
+    #[Test]
+    public function does_not_record_when_flag_is_disabled(): void
+    {
+        config(['app.log_reset_link' => false]);
+
+        $this->recorder->record('disabled@example.com', 'https://should-not-be-written.com');
+
+        $this->assertNull($this->recorder->retrieve('disabled@example.com'));
     }
 }
