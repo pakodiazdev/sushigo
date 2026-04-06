@@ -36,7 +36,7 @@ class FakeEmployeesSeeder extends Seeder
             EmploymentPeriod::factory()->create([
                 'employee_id' => $employee->id,
                 'branch_id' => $branch->id,
-                'start_date' => now()->subMonths(rand(1, 24))->toDateString(),
+                'start_date' => now()->subMonths(random_int(1, 24))->toDateString(),
                 'is_active' => true,
             ]);
         }
