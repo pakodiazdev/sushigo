@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Console;
 
+use App\Contracts\PasswordResetTokenRecorder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
@@ -32,8 +33,10 @@ class TestResetCommandTest extends TestCase
             ->expectsOutputToContain('Available seeder groups')
             ->expectsOutputToContain('core')
             ->expectsOutputToContain('attendance')
+            ->expectsOutputToContain('fakes-employees')
             ->expectsOutputToContain('CoreTestSeeder')
             ->expectsOutputToContain('AttendanceTestSeeder')
+            ->expectsOutputToContain('FakeEmployeesSeeder')
             ->assertExitCode(0);
     }
 
@@ -187,6 +190,25 @@ class TestResetCommandTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'admin@sushigo.com']);
         // Attendance data should NOT exist (only core was requested)
         $this->assertDatabaseMissing('employees', ['code' => 'ADM-001']);
+    }
+
+    // ── Test artifact cleanup ──────────────────────────────────────────────
+
+    #[Test]
+    public function clears_test_artifacts_on_reset(): void
+    {
+        // Create a test artifact via the recorder
+        $recorder = app(PasswordResetTokenRecorder::class);
+        $recorder->record('test-cleanup@example.com', 'https://example.com/reset?token=abc123');
+
+        // Verify file was created
+        $this->assertNotNull($recorder->retrieve('test-cleanup@example.com'));
+
+        // Run test:reset — should clear artifacts
+        $this->artisan('test:reset')->assertExitCode(0);
+
+        // Verify artifact was cleaned up
+        $this->assertNull($recorder->retrieve('test-cleanup@example.com'));
     }
 
     // ── FK constraint handling ────────────────────────────────────────────

@@ -13,7 +13,7 @@ use Illuminate\Database\Seeder;
  * Useful for testing pagination, list views, and search with many records.
  * Depends on CoreTestSeeder data (branch, roles must exist).
  *
- * Count is read from config/seeders.php → factory_counts.employees (default: 20).
+ * Count is read from config/seeders.php → factory_counts.employees (default: 5).
  *
  * @see doc/conventions/testing/test-data-seeders.md (Fakes category)
  */
@@ -21,7 +21,7 @@ class FakeEmployeesSeeder extends Seeder
 {
     public function run(): void
     {
-        $count = config('seeders.factory_counts.employees', 20);
+        $count = config('seeders.factory_counts.employees', 5);
         $branch = Branch::where('code', 'MAIN')->first();
 
         if (! $branch) {

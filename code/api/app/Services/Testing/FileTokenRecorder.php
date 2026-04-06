@@ -22,8 +22,9 @@ class FileTokenRecorder implements PasswordResetTokenRecorder
 
     private function filePath(string $email): string
     {
-        // Sanitize email for filename safety
-        $safe = preg_replace('/[^a-zA-Z0-9@._-]/', '_', $email);
+        // Encode the full email to keep filenames filesystem-safe without
+        // introducing collisions between distinct valid email addresses.
+        $safe = rawurlencode($email);
 
         return $this->directory().'/'.$safe.'.txt';
     }
