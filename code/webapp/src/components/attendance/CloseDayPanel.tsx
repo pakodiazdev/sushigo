@@ -64,10 +64,10 @@ export function CloseDayPanel({ panel }: Readonly<CloseDayPanelProps>) {
           <div className="flex justify-between">
             <Button
               variant="outline"
-              onClick={currentStep === 'lunch-returns' ? close : goBack}
+              onClick={currentStep === 'lunch-returns' || !hasPendingLunchReturns ? close : goBack}
               disabled={isSubmitting}
             >
-              {currentStep === 'lunch-returns' ? (
+              {currentStep === 'lunch-returns' || !hasPendingLunchReturns ? (
                 'Cancelar'
               ) : (
                 <>

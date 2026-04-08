@@ -26,22 +26,11 @@ export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   return { total: rows.length, pending, checkedIn, done, withOvertime }
 }
 
+// Re-export from shared utility for backwards compatibility with today.tsx import
+export { currentTimeLabel } from '@/lib/datetime'
+
 /** CDMX timezone offset — hardcoded to UTC-6 (standard time). DST is not handled. */
 const CDMX_OFFSET_HOURS = -6
-
-/**
- * Get current time in CDMX timezone as "HH:mm".
- * Uses manual UTC offset calculation for cross-environment compatibility.
- * (exported for testing)
- */
-export function currentTimeLabel(): string {
-  const now = new Date()
-  // Add CDMX offset to get local CDMX time
-  const cdmxTime = new Date(now.getTime() + CDMX_OFFSET_HOURS * 60 * 60 * 1000)
-  const hours = cdmxTime.getUTCHours()
-  const minutes = cdmxTime.getUTCMinutes()
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
 
 /**
  * ISO 8601 / RFC 3339 from a "HH:mm" string using today's date in CDMX timezone.
