@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useCloseDay } from '@/services/attendance-hooks'
 import { getAttendancePhase, formatTime } from '@/types/attendance'
 import type { TodayAttendanceRow, CloseDayLunchReturn } from '@/types/attendance'
-import { currentTimeLabel } from '@/pages/attendance/-use-today-attendance-page'
+import { currentTimeLabel } from '@/lib/datetime'
 
 export interface LunchReturnEntry {
   attendanceId: string

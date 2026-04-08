@@ -58,7 +58,8 @@ use Carbon\Carbon;
  *                 @OA\Items(
  *
  *                     @OA\Property(property="employee", ref="#/components/schemas/EmployeeSummaryResponse"),
- *                     @OA\Property(property="attendance", nullable=true, ref="#/components/schemas/AttendanceResponse")
+ *                     @OA\Property(property="attendance", nullable=true, ref="#/components/schemas/AttendanceResponse"),
+ *                     @OA\Property(property="schedule", nullable=true, ref="#/components/schemas/ScheduleDayResponse")
  *                 )
  *             )
  *         )

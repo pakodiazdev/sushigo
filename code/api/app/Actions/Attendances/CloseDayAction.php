@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Close the day for a branch: register pending lunch returns, batch check-out,
@@ -42,7 +43,6 @@ class CloseDayAction
         $branchId = $data['branch_id'];
         $businessTz = config('app.business_timezone');
         $today = Carbon::today($businessTz)->toDateString();
-        $dayOfWeekIso = Carbon::parse($today)->dayOfWeekIso;
 
         // Build the close_time as a full ISO datetime in the business timezone
         $closeTimeLocal = Carbon::parse("{$today} {$data['close_time']}", $businessTz);
@@ -51,10 +51,17 @@ class CloseDayAction
         $counts = ['lunch_returns' => 0, 'check_outs' => 0, 'absences' => 0];
 
         DB::transaction(function () use ($data, $branchId, $today, $closeTimeIso, &$counts) {
+            // Resolve active employee IDs for this branch (used in all 3 steps)
+            $activeEmployeeIds = Employee::whereHas('employmentPeriods', function ($q) use ($branchId) {
+                $q->where('branch_id', $branchId)->where('is_active', true);
+            })->pluck('id');
+
             // Step 1: Register pending lunch returns
             $lunchReturns = $data['lunch_returns'] ?? [];
             foreach ($lunchReturns as $lr) {
-                $attendance = Attendance::where('public_id', $lr['attendance_id'])->first();
+                $attendance = Attendance::where('public_id', $lr['attendance_id'])
+                    ->whereIn('employee_id', $activeEmployeeIds)
+                    ->first();
 
                 if (! $attendance) {
                     continue;
@@ -71,20 +78,21 @@ class CloseDayAction
                         'lunch_end' => $lunchEndLocal->toIso8601String(),
                     ]);
                     $counts['lunch_returns']++;
-                } catch (\Exception) {
-                    // Skip if already registered or invalid — non-blocking
+                } catch (ValidationException) {
+                    // Skip if already registered or validation fails — non-blocking
                 }
             }
 
             // Step 2: Batch check-out for all attendances with check_in and no check_out
-            $activeEmployeeIds = Employee::whereHas('employmentPeriods', function ($q) use ($branchId) {
-                $q->where('branch_id', $branchId)->where('is_active', true);
-            })->pluck('id');
-
+            // Exclude at-lunch employees (lunch_start set but lunch_end not resolved)
             $pendingCheckOuts = Attendance::whereIn('employee_id', $activeEmployeeIds)
                 ->whereDate('date', $today)
                 ->whereNotNull('check_in')
                 ->whereNull('check_out')
+                ->where(function ($q) {
+                    $q->whereNull('lunch_start')
+                        ->orWhereNotNull('lunch_end');
+                })
                 ->get();
 
             foreach ($pendingCheckOuts as $attendance) {
@@ -93,7 +101,7 @@ class CloseDayAction
                         'check_out' => $closeTimeIso,
                     ]);
                     $counts['check_outs']++;
-                } catch (\Exception) {
+                } catch (ValidationException) {
                     // Skip if guard fails — non-blocking
                 }
             }
