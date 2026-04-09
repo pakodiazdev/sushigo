@@ -3,6 +3,15 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import type { UseCloseDayPanelResult } from './use-close-day-panel'
 
+function resolveStepLabel(currentStep: string, hasPendingLunchReturns: boolean): string {
+  if (currentStep === 'lunch-returns') {
+    return 'Paso 1 de 2 — Regresos de comida pendientes'
+  }
+  return hasPendingLunchReturns
+    ? 'Paso 2 de 2 — Confirmar cierre'
+    : 'Confirmar cierre del día'
+}
+
 interface CloseDayPanelProps {
   panel: UseCloseDayPanelResult
 }
@@ -24,12 +33,7 @@ export function CloseDayPanel({ panel }: Readonly<CloseDayPanelProps>) {
     isSubmitting,
   } = panel
 
-  const stepLabel =
-    currentStep === 'lunch-returns'
-      ? 'Paso 1 de 2 — Regresos de comida pendientes'
-      : hasPendingLunchReturns
-        ? 'Paso 2 de 2 — Confirmar cierre'
-        : 'Confirmar cierre del día'
+  const stepLabel = resolveStepLabel(currentStep, hasPendingLunchReturns)
 
   return (
     <SlidePanel
