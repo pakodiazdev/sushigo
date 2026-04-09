@@ -132,11 +132,9 @@ erDiagram
 ```mermaid
 erDiagram
     Employee ||--|{ Attendance : "employee_id"
-    Employee ||--|{ PartialLeave : "employee_id"
     Employee ||--|{ NegotiatedExtraDay : "employee_id"
     Employee ||--|{ OvertimeBankMovement : "employee_id"
 
-    Attendance ||--o{ PartialLeave : "attendance_id"
     Attendance ||--o{ OvertimeBankMovement : "attendance_id"
 
     NegotiatedExtraDay }|--|| Branch : "branch_id"
@@ -159,20 +157,6 @@ erDiagram
         enum day_status "WORKED|DAY_OFF|LEAVE|VACATION|HOLIDAY|ABSENCE|EXTRA"
         bigint confirmed_by FK "nullable"
         json meta "nullable"
-    }
-
-    PartialLeave {
-        bigint id PK
-        bigint employee_id FK
-        bigint attendance_id FK "nullable"
-        date date
-        enum type "ARRIVE_LATE|LEAVE_EARLY|TAKE_TIME"
-        boolean is_paid
-        time start_time "nullable"
-        time end_time "nullable"
-        integer duration_minutes
-        text reason "nullable"
-        bigint approved_by FK
     }
 
     NegotiatedExtraDay {
@@ -216,9 +200,9 @@ erDiagram
         bigint id PK
         string name
         string code UK
-        boolean is_paid "default false"
-        boolean is_partial "default false"
-        boolean generates_rest "default false"
+        enum calculation_mode "FIXED_PERCENTAGE|PROPORTIONAL_HOURS"
+        decimal default_pay_percentage "default 100.00"
+        enum default_rest_day_factor "FULL|PROPORTIONAL|NONE"
         boolean counts_for_bonus "default true"
         boolean is_active "default true"
     }
@@ -229,7 +213,16 @@ erDiagram
         bigint leave_type_id FK
         date start_date
         date end_date
+        decimal pay_percentage "nullable - overrides type default"
+        enum rest_day_factor "nullable - FULL|PROPORTIONAL|NONE"
+        enum time_mode "nullable - SCHEDULED|OPEN_ENDED"
+        time scheduled_start_time "nullable"
+        time scheduled_end_time "nullable"
+        time actual_start_time "nullable"
+        time actual_end_time "nullable"
+        integer actual_duration_minutes "nullable"
         enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        bigint requested_by FK
         bigint approved_by FK "nullable"
         datetime approved_at "nullable"
         text notes "nullable"
@@ -484,23 +477,9 @@ erDiagram
 
 ---
 
-### 2.8 `partial_leaves` — Partial Leaves
+### 2.8 `partial_leaves` — ~~Deprecated~~
 
-| Field              | Type      | Null | Default | Description                                                                                 | FR     |
-| ------------------ | --------- | ---- | ------- | ------------------------------------------------------------------------------------------- | ------ |
-| `id`               | bigint    | NO   | auto    | PK                                                                                          | —      |
-| `employee_id`      | bigint FK | NO   | —       | Employee.                                                                                   | RF-25a |
-| `attendance_id`    | bigint FK | YES  | NULL    | Reference to the day's attendance record (if exists).                                       | RF-25a |
-| `date`             | date      | NO   | —       | Leave date.                                                                                 | RF-25a |
-| `type`             | enum      | NO   | —       | `ARRIVE_LATE`, `LEAVE_EARLY`, `TAKE_TIME`.                                                  | RF-25a |
-| `is_paid`          | boolean   | NO   | —       | `true` = paid leave, `false` = unpaid leave.                                                | RF-25a |
-| `start_time`       | time      | YES  | NULL    | Leave start time (nullable if only duration is specified).                                  | RF-25a |
-| `end_time`         | time      | YES  | NULL    | Leave end time.                                                                             | RF-25a |
-| `duration_minutes` | integer   | NO   | —       | Total duration in minutes. If start/end provided, calculated; otherwise directly specified. | RF-25a |
-| `reason`           | text      | YES  | NULL    | Leave reason.                                                                               | RF-25a |
-| `approved_by`      | bigint FK | NO   | —       | User who approved (→ `users`).                                                              | RF-25a |
-| `created_at`       | timestamp | NO   | now     | —                                                                                           | —      |
-| `updated_at`       | timestamp | NO   | now     | —                                                                                           | —      |
+> **Merged into `leaves` (section 2.12).** Partial/hourly leaves (previously recorded here as ARRIVE_LATE, LEAVE_EARLY, TAKE_TIME) are now `Leave` records whose `LeaveType.calculation_mode = PROPORTIONAL_HOURS`. The `time_mode`, `scheduled_start_time`, `scheduled_end_time`, `actual_start_time`, `actual_end_time`, and `actual_duration_minutes` fields on `leaves` cover all sub-day scenarios.
 
 ---
 
@@ -546,38 +525,62 @@ erDiagram
 
 ### 2.11 `leave_types` — Leave Type Catalog
 
-| Field              | Type         | Null | Default | Description                               | FR    |
-| ------------------ | ------------ | ---- | ------- | ----------------------------------------- | ----- |
-| `id`               | bigint       | NO   | auto    | PK                                        | —     |
-| `name`             | varchar(100) | NO   | —       | Leave type name.                          | RF-24 |
-| `code`             | varchar(30)  | NO   | —       | Unique code (e.g. `MEDICAL`, `PERSONAL`). | RF-24 |
-| `is_paid`          | boolean      | NO   | false   | Paid leave by default.                    | RF-24 |
-| `is_partial`       | boolean      | NO   | false   | Allows partial use (hours/minutes)?       | RF-24 |
-| `generates_rest`   | boolean      | NO   | false   | Generates proportional rest?              | RF-24 |
-| `counts_for_bonus` | boolean      | NO   | true    | Counts for punctuality bonus?             | RF-24 |
-| `is_active`        | boolean      | NO   | true    | Active in catalog.                        | RF-24 |
-| `created_at`       | timestamp    | NO   | now     | —                                         | —     |
-| `updated_at`       | timestamp    | NO   | now     | —                                         | —     |
+| Field                      | Type         | Null | Default              | Description                                                                                                                     | FR    |
+| -------------------------- | ------------ | ---- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| `id`                       | bigint       | NO   | auto                 | PK                                                                                                                              | —     |
+| `name`                     | varchar(100) | NO   | —                    | Leave type name.                                                                                                                | RF-24 |
+| `code`                     | varchar(30)  | NO   | —                    | Unique code (e.g. `MEDICAL`, `PERSONAL`, `PERMISSION`).                                                                         | RF-24 |
+| `calculation_mode`         | enum         | NO   | `FIXED_PERCENTAGE`   | `FIXED_PERCENTAGE` — admin sets explicit pay %; `PROPORTIONAL_HOURS` — deduction proportional to hours taken.                  | RF-24 |
+| `default_pay_percentage`   | decimal(5,2) | NO   | 100.00               | Default pay % (0–100) for instances. Only used when `calculation_mode = FIXED_PERCENTAGE`. Overridable per leave instance.      | RF-24 |
+| `default_rest_day_factor`  | enum         | NO   | `PROPORTIONAL`       | Default rest-day impact: `FULL` (full 1/6 regardless of pay %), `PROPORTIONAL` (scaled by pay % or hours ratio), `NONE` (zero). | RF-24 |
+| `counts_for_bonus`         | boolean      | NO   | true                 | Does this leave type count toward the punctuality bonus?                                                                        | RF-24 |
+| `is_active`                | boolean      | NO   | true                 | Active in catalog.                                                                                                              | RF-24 |
+| `created_at`               | timestamp    | NO   | now                  | —                                                                                                                               | —     |
+| `updated_at`               | timestamp    | NO   | now                  | —                                                                                                                               | —     |
 
 **Constraints:** UNIQUE(`code`).
 
+**Default seeded types:**
+
+| code | name | calculation_mode | default_pay_percentage | default_rest_day_factor |
+|---|---|---|---|---|
+| `MEDICAL` | Incapacidad médica | `FIXED_PERCENTAGE` | 0.00 | `NONE` |
+| `PERSONAL` | Permiso personal | `FIXED_PERCENTAGE` | 0.00 | `NONE` |
+| `PERMISSION_PAID` | Permiso con goce | `FIXED_PERCENTAGE` | 100.00 | `FULL` |
+| `PERMISSION_HOURS` | Permiso por horas | `PROPORTIONAL_HOURS` | — | `PROPORTIONAL` |
+
 ---
 
-### 2.12 `leaves` — Leave Requests (Full Day or Range)
+### 2.12 `leaves` — Leave Requests (Full Day, Range, or Partial Hours)
 
-| Field           | Type      | Null | Default   | Description                                     | FR    |
-| --------------- | --------- | ---- | --------- | ----------------------------------------------- | ----- |
-| `id`            | bigint    | NO   | auto      | PK                                              | —     |
-| `employee_id`   | bigint FK | NO   | —         | Employee.                                       | RF-25 |
-| `leave_type_id` | bigint FK | NO   | —         | Leave type from catalog.                        | RF-25 |
-| `start_date`    | date      | NO   | —         | Start date.                                     | RF-25 |
-| `end_date`      | date      | NO   | —         | End date (= start_date if single day).          | RF-25 |
-| `status`        | enum      | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. | RF-25 |
-| `approved_by`   | bigint FK | YES  | NULL      | Who approved (→ `users`).                       | RF-25 |
-| `approved_at`   | datetime  | YES  | NULL      | When it was approved.                           | RF-25 |
-| `notes`         | text      | YES  | NULL      | Notes.                                          | RF-25 |
-| `created_at`    | timestamp | NO   | now       | —                                               | —     |
-| `updated_at`    | timestamp | NO   | now       | —                                               | —     |
+| Field                     | Type          | Null | Default   | Description                                                                                                                         | FR     |
+| ------------------------- | ------------- | ---- | --------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `id`                      | bigint        | NO   | auto      | PK                                                                                                                                  | —      |
+| `employee_id`             | bigint FK     | NO   | —         | Employee.                                                                                                                           | RF-25  |
+| `leave_type_id`           | bigint FK     | NO   | —         | Leave type from catalog.                                                                                                            | RF-25  |
+| `start_date`              | date          | NO   | —         | Start date (= end_date for partial/hourly leaves).                                                                                  | RF-25  |
+| `end_date`                | date          | NO   | —         | End date (= start_date if single day or partial).                                                                                   | RF-25  |
+| `pay_percentage`          | decimal(5,2)  | YES  | NULL      | Pay % override for this instance (0–100). NULL = use `leave_types.default_pay_percentage`. Only for `FIXED_PERCENTAGE` types.       | RF-25  |
+| `rest_day_factor`         | enum          | YES  | NULL      | Rest-day impact override: `FULL`, `PROPORTIONAL`, or `NONE`. NULL = use `leave_types.default_rest_day_factor`.                      | RF-25  |
+| `time_mode`               | enum          | YES  | NULL      | `SCHEDULED` or `OPEN_ENDED`. Required for `PROPORTIONAL_HOURS` types. `SCHEDULED` = known start+end; `OPEN_ENDED` = start only.    | RF-25a |
+| `scheduled_start_time`    | time          | YES  | NULL      | Planned departure time. Required when `time_mode` is set.                                                                           | RF-25a |
+| `scheduled_end_time`      | time          | YES  | NULL      | Planned return time. NULL when `time_mode = OPEN_ENDED`.                                                                            | RF-25a |
+| `actual_start_time`       | time          | YES  | NULL      | Actual departure recorded from Today view after approval.                                                                           | RF-25a |
+| `actual_end_time`         | time          | YES  | NULL      | Actual return recorded from Today view. NULL if employee did not return.                                                            | RF-25a |
+| `actual_duration_minutes` | integer       | YES  | NULL      | Minutes away from work. Computed from actual times if recorded; falls back to scheduled times. Used for payroll deduction.          | RF-25a |
+| `status`                  | enum          | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`.                                                                                     | RF-25  |
+| `requested_by`            | bigint FK     | NO   | —         | User who registered the leave (→ `users`).                                                                                          | RF-25  |
+| `approved_by`             | bigint FK     | YES  | NULL      | User who approved/rejected (→ `users`).                                                                                             | RF-25  |
+| `approved_at`             | datetime      | YES  | NULL      | When approved or rejected.                                                                                                          | RF-25  |
+| `notes`                   | text          | YES  | NULL      | Notes / justification.                                                                                                              | RF-25  |
+| `created_at`              | timestamp     | NO   | now       | —                                                                                                                                   | —      |
+| `updated_at`              | timestamp     | NO   | now       | —                                                                                                                                   | —      |
+
+**Business rules:**
+- `pay_percentage` and `rest_day_factor` on the instance always override the type defaults when not NULL.
+- For `PROPORTIONAL_HOURS` leaves: payroll deduction = `actual_duration_minutes / scheduled_work_minutes × daily_wage`. `rest_day_factor` determines if the proportional rest day is also reduced.
+- For `FIXED_PERCENTAGE` leaves: payroll = `pay_percentage / 100 × daily_wage` per day in range. `rest_day_factor` determines rest-day contribution.
+- `actual_start_time` and `actual_end_time` are filled from the Today attendance view; they do not block approval.
 
 ---
 
@@ -787,19 +790,21 @@ total_pay = base_pay
 
 ### 3.1 Domain Enums
 
-| Enum                        | Values                                                                                                         | Used in                                                                   |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **EmployeeRole**            | `MANAGER`, `COOK`, `KITCHEN_ASSISTANT`, `DELIVERY_DRIVER`                                                      | `employees.role`                                                          |
-| **WorkdayType**             | `FULL`, `PARTIAL`                                                                                              | `employee_schedules.workday_type`                                         |
-| **DayStatus**               | `WORKED`, `DAY_OFF`, `LEAVE`, `VACATION`, `HOLIDAY`, `ABSENCE`, `EXTRA`                                        | `attendances.day_status`                                                  |
-| **PartialLeaveType**        | `ARRIVE_LATE`, `LEAVE_EARLY`, `TAKE_TIME`                                                                      | `partial_leaves.type`                                                     |
-| **OvertimeMovementType**    | `EARNED`, `USED`, `PAID`, `ADJUSTMENT`                                                                         | `overtime_bank_movements.movement_type`                                   |
-| **OvertimeOrigin**          | `AUTO`, `MANUAL`                                                                                               | `overtime_bank_movements.origin`                                          |
-| **OvertimeValuationMethod** | `LFT_PROPORTIONAL`, `AGREED_RATE`                                                                              | `overtime_pay_configs.method`, `overtime_bank_movements.valuation_method` |
-| **LeaveStatus**             | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`                                                                 | `leaves.status`, `vacation_requests.status`                               |
-| **PayPeriodStatus**         | `OPEN`, `CLOSED`, `REOPENED`                                                                                   | `pay_periods.status`                                                      |
-| **PayConcept**              | `BASE_PAY`, `LATE_DEDUCTION`, `UNPAID_LEAVE`, `OVERTIME`, `EXTRA_DAY`, `PUNCTUALITY_BONUS`, `HOLIDAY`, `OTHER` | `pay_period_lines.concept`                                                |
-| **AuditAction**             | `CREATE`, `UPDATE`, `DELETE`                                                                                   | `attendance_audit_logs.action`                                            |
+| Enum                        | Values                                                                                                          | Used in                                                                   |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **EmployeeRole**            | `MANAGER`, `COOK`, `KITCHEN_ASSISTANT`, `DELIVERY_DRIVER`                                                       | `employees.role`                                                          |
+| **WorkdayType**             | `FULL`, `PARTIAL`                                                                                               | `employee_schedules.workday_type`                                         |
+| **DayStatus**               | `WORKED`, `DAY_OFF`, `LEAVE`, `VACATION`, `HOLIDAY`, `ABSENCE`, `EXTRA`                                         | `attendances.day_status`                                                  |
+| **LeaveCalculationMode**    | `FIXED_PERCENTAGE`, `PROPORTIONAL_HOURS`                                                                        | `leave_types.calculation_mode`                                            |
+| **RestDayFactor**           | `FULL`, `PROPORTIONAL`, `NONE`                                                                                  | `leave_types.default_rest_day_factor`, `leaves.rest_day_factor`           |
+| **LeaveTimeMode**           | `SCHEDULED`, `OPEN_ENDED`                                                                                       | `leaves.time_mode`                                                        |
+| **LeaveStatus**             | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`                                                                  | `leaves.status`, `vacation_requests.status`                               |
+| **OvertimeMovementType**    | `EARNED`, `USED`, `PAID`, `ADJUSTMENT`                                                                          | `overtime_bank_movements.movement_type`                                   |
+| **OvertimeOrigin**          | `AUTO`, `MANUAL`                                                                                                | `overtime_bank_movements.origin`                                          |
+| **OvertimeValuationMethod** | `LFT_PROPORTIONAL`, `AGREED_RATE`                                                                               | `overtime_pay_configs.method`, `overtime_bank_movements.valuation_method` |
+| **PayPeriodStatus**         | `OPEN`, `CLOSED`, `REOPENED`                                                                                    | `pay_periods.status`                                                      |
+| **PayConcept**              | `BASE_PAY`, `LATE_DEDUCTION`, `LEAVE_DEDUCTION`, `OVERTIME`, `EXTRA_DAY`, `PUNCTUALITY_BONUS`, `HOLIDAY`, `OTHER` | `pay_period_lines.concept`                                                |
+| **AuditAction**             | `CREATE`, `UPDATE`, `DELETE`                                                                                    | `attendance_audit_logs.action`                                            |
 
 ---
 
