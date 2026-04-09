@@ -183,3 +183,83 @@ describe('attendanceApi.lunchReturn', () => {
     expect(apiClient.patch).toHaveBeenCalledWith('/attendances/def-456/lunch-return', expect.any(Object))
   })
 })
+
+// ── attendanceApi.checkOut ───────────────────────────────────────────────────
+
+describe('attendanceApi.checkOut', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls PATCH /attendances/{id}/check-out with check_out', async () => {
+    const mockResponse = {
+      data: {
+        status: 200,
+        data: {
+          id: 'att-123',
+          check_out: '2026-04-01T22:00:00-06:00',
+          net_worked_minutes: 420,
+          overtime_minutes: 0,
+        },
+      },
+    }
+    vi.mocked(apiClient.patch).mockResolvedValueOnce(mockResponse as never)
+
+    const result = await attendanceApi.checkOut('att-123', {
+      check_out: '2026-04-01T22:00:00-06:00',
+    })
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/att-123/check-out', {
+      check_out: '2026-04-01T22:00:00-06:00',
+    })
+    expect(result).toEqual(mockResponse)
+  })
+
+  it('interpolates the attendanceId into the URL', async () => {
+    await attendanceApi.checkOut('my-attendance-id', { check_out: '2026-04-01T17:00:00-06:00' })
+
+    expect(apiClient.patch).toHaveBeenCalledWith(
+      '/attendances/my-attendance-id/check-out',
+      { check_out: '2026-04-01T17:00:00-06:00' }
+    )
+  })
+})
+
+// ── attendanceApi.closeDay ───────────────────────────────────────────────────
+
+describe('attendanceApi.closeDay', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls POST /attendances/close-day with request data', async () => {
+    const mockResponse = {
+      data: {
+        status: 200,
+        data: { lunch_returns: 2, check_outs: 5, absences: 1 },
+      },
+    }
+    vi.mocked(apiClient.post).mockResolvedValueOnce(mockResponse as never)
+
+    const payload = {
+      branch_id: 1,
+      close_time: '22:00',
+      lunch_returns: [
+        { attendance_id: 'att-001', lunch_end: '15:00' },
+      ],
+    }
+    const result = await attendanceApi.closeDay(payload)
+
+    expect(apiClient.post).toHaveBeenCalledWith('/attendances/close-day', payload)
+    expect(result).toEqual(mockResponse)
+  })
+
+  it('sends request without lunch_returns when not provided', async () => {
+    await attendanceApi.closeDay({ branch_id: 1, close_time: '17:00' })
+
+    expect(apiClient.post).toHaveBeenCalledWith('/attendances/close-day', {
+      branch_id: 1,
+      close_time: '17:00',
+    })
+  })
+})
