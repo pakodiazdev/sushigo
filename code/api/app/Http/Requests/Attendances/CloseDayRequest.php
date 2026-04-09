@@ -30,6 +30,10 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class CloseDayRequest extends FormRequest
 {
+    private const ATTR_ATTENDANCE_ID = 'lunch_returns.*.attendance_id';
+
+    private const ATTR_LUNCH_END = 'lunch_returns.*.lunch_end';
+
     public function authorize(): bool
     {
         return true;
@@ -44,8 +48,8 @@ class CloseDayRequest extends FormRequest
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'close_time' => ['required', 'date_format:H:i'],
             'lunch_returns' => ['sometimes', 'array'],
-            'lunch_returns.*.attendance_id' => ['required', 'string', 'distinct', 'exists:attendances,public_id'],
-            'lunch_returns.*.lunch_end' => ['required', 'date_format:H:i'],
+            self::ATTR_ATTENDANCE_ID => ['required', 'string', 'distinct', 'exists:attendances,public_id'],
+            self::ATTR_LUNCH_END => ['required', 'date_format:H:i'],
         ];
     }
 
@@ -64,13 +68,13 @@ class CloseDayRequest extends FormRequest
 
             'lunch_returns.array' => __('validation.array', ['attribute' => 'lunch_returns']),
 
-            'lunch_returns.*.attendance_id.required' => __('validation.required', ['attribute' => 'lunch_returns.*.attendance_id']),
-            'lunch_returns.*.attendance_id.string' => __('validation.string', ['attribute' => 'lunch_returns.*.attendance_id']),
-            'lunch_returns.*.attendance_id.distinct' => __('validation.distinct', ['attribute' => 'lunch_returns.*.attendance_id']),
-            'lunch_returns.*.attendance_id.exists' => __('validation.exists', ['attribute' => 'lunch_returns.*.attendance_id']),
+            self::ATTR_ATTENDANCE_ID.'.required' => __('validation.required', ['attribute' => self::ATTR_ATTENDANCE_ID]),
+            self::ATTR_ATTENDANCE_ID.'.string' => __('validation.string', ['attribute' => self::ATTR_ATTENDANCE_ID]),
+            self::ATTR_ATTENDANCE_ID.'.distinct' => __('validation.distinct', ['attribute' => self::ATTR_ATTENDANCE_ID]),
+            self::ATTR_ATTENDANCE_ID.'.exists' => __('validation.exists', ['attribute' => self::ATTR_ATTENDANCE_ID]),
 
-            'lunch_returns.*.lunch_end.required' => __('validation.required', ['attribute' => 'lunch_returns.*.lunch_end']),
-            'lunch_returns.*.lunch_end.date_format' => __('validation.date_format', ['attribute' => 'lunch_returns.*.lunch_end', 'format' => 'H:i']),
+            self::ATTR_LUNCH_END.'.required' => __('validation.required', ['attribute' => self::ATTR_LUNCH_END]),
+            self::ATTR_LUNCH_END.'.date_format' => __('validation.date_format', ['attribute' => self::ATTR_LUNCH_END, 'format' => 'H:i']),
         ];
     }
 }
