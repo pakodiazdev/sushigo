@@ -11,6 +11,7 @@ import {
   EmptyState,
   ErrorState,
   NoBranchState,
+  RegisterLeaveDialog,
   SkeletonGrid,
   useCloseDayPanel,
 } from '@/components/attendance'
@@ -53,6 +54,10 @@ export function TodayAttendancePage() {
     openCheckOut,
     closeCheckOut,
     confirmCheckOut,
+    // Register leave
+    pendingLeaveEmployee,
+    openRegisterLeave,
+    closeRegisterLeave,
   } = useTodayAttendancePage()
 
   const closeDayPanel = useCloseDayPanel(rows, branchId)
@@ -108,6 +113,7 @@ export function TodayAttendancePage() {
               onLunchStart={openLunchStart}
               onLunchReturn={openLunchReturn}
               onCheckOut={openCheckOut}
+              onRegisterLeave={openRegisterLeave}
             />
           ))}
         </div>
@@ -187,6 +193,13 @@ export function TodayAttendancePage() {
         inputId="checkout-time"
         inputLabel="Hora de salida"
         isLoading={isCheckingOut}
+      />
+
+      {/* Register Leave Dialog */}
+      <RegisterLeaveDialog
+        isOpen={!!pendingLeaveEmployee}
+        employee={pendingLeaveEmployee}
+        onClose={closeRegisterLeave}
       />
 
       {/* Close Day Panel */}

@@ -29,6 +29,7 @@ class DevelopmentSeeder extends Seeder
             \Database\Seeders\UnitOfMeasureSeeder::class,
             \Database\Seeders\UomConversionSeeder::class,
             AttendanceAuditLogSeeder::class,
+            \Database\Seeders\LeaveTypeSeeder::class,
         ];
 
         foreach ($seeders as $seederClass) {
