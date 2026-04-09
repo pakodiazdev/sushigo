@@ -203,20 +203,23 @@ Special permission:
 - **RF-22:** Daily wage with effective date (raise history).
 - **RF-23:** The close uses the wage effective in the period.
 
-### 9.9 Leaves (paid / unpaid)
-- **RF-24:** Leave catalog with:
-  - paid/unpaid
-  - leave type (partial or full-day/range)
-  - whether it generates proportional rest
-  - whether it counts toward bonus (recommended flag)
-- **RF-25:** Register leave by date or range.
-- **RF-25a (Partial leave):** Record partial leave per employee/date with:
-  - type: **arrive late** | **leave early** | **take time**
-  - time window (start/end) or duration in minutes
-  - **paid** or **unpaid**
-  - reason and approved_by
-- **RF-25b (Unpaid calculation):** If the leave is **unpaid**, deduct pay for **exactly** the time taken **minute by minute** (never more, never less).
-- **RF-25c (Paid calculation):** If the leave is **paid**, keep only the historical event record and **do not** affect payroll.
+### 9.9 Leaves (permisos / ausencias)
+- **RF-24:** Leave type catalog (`leave_types`) with:
+  - `calculation_mode`: `FIXED_PERCENTAGE` — admin sets an explicit pay %; `PROPORTIONAL_HOURS` — deduction is proportional to actual time away.
+  - `default_pay_percentage` (0–100%): default pay for instances. Overridable per leave.
+  - `default_rest_day_factor`: `FULL` | `PROPORTIONAL` | `NONE` — how this leave impacts the 1/6 rest-day calculation. Overridable per leave.
+  - `counts_for_bonus`: whether the leave day counts toward punctuality bonus.
+- **RF-25:** Register leave by date or range. Admin can override `pay_percentage` and `rest_day_factor` per instance to reflect negotiated agreements (e.g., employer tops up IMSS, 50% permission, etc.).
+- **RF-25a (PROPORTIONAL_HOURS leave):** When the leave type uses `PROPORTIONAL_HOURS`:
+  - At request time, specify `time_mode`:
+    - `SCHEDULED`: provide `scheduled_start_time` + `scheduled_end_time` (return time is known).
+    - `OPEN_ENDED`: provide only `scheduled_start_time` (employee may not return the same day).
+  - After approval, the **Today attendance view** allows recording `actual_start_time` and `actual_end_time`.
+  - `actual_duration_minutes` is computed from actual times if recorded; falls back to scheduled duration otherwise.
+- **RF-25b (PROPORTIONAL_HOURS — pay deduction):** Deduction = `actual_duration_minutes / scheduled_work_minutes × daily_wage`.
+- **RF-25c (PROPORTIONAL_HOURS — rest day):** If `rest_day_factor = PROPORTIONAL`: rest deduction = `actual_duration_minutes / scheduled_work_minutes × (1/6 daily_wage)`. If `rest_day_factor = NONE`: no rest-day impact.
+- **RF-25d (FIXED_PERCENTAGE — pay):** Pay per day = `pay_percentage / 100 × daily_wage` for each day in the range.
+- **RF-25e (FIXED_PERCENTAGE — rest day):** `FULL` → full 1/6 per day regardless of pay %; `PROPORTIONAL` → `pay_percentage / 100 × (1/6)`; `NONE` → 0.
 
 ### 9.10 Vacations
 - **RF-26:** Manage vacation balance per LFT (MX).
@@ -279,10 +282,10 @@ Special permission:
   - the **unworked-minutes deduction**, and
   - potential impact on **punctuality bonus** (if applicable).
 
-### 10.1b Partial leave (paid / unpaid)
-- **RN-00c:** Any partial leave (arrive late, leave early, take time) must be recorded and approved.
-- **RN-00d (Unpaid):** If the leave is **unpaid**, deduct pay for the **exact time** taken **minute by minute**.
-- **RN-00e (Paid):** If the leave is **paid**, no deduction applies; only a **historical record** is stored.
+### 10.1b Leave deductions
+- **RN-00c:** Any leave (full-day, range, or partial/hourly) must be registered and approved before affecting payroll.
+- **RN-00d (PROPORTIONAL_HOURS):** Deduct pay for the **exact time away** — `actual_duration_minutes / scheduled_work_minutes × daily_wage`. Rest-day impact governed by `rest_day_factor`.
+- **RN-00e (FIXED_PERCENTAGE):** Pay per day = `pay_percentage / 100 × daily_wage`. A percentage of 100% means no deduction (full pay preserved). Rest-day impact governed by `rest_day_factor`.
 
 ### 10.1 Punctuality (SushiGo)
 - **RN-01:** Ranges by **lateness** (0–9:59 = 100%, 10–14:59 = 50%, 15–20:59 = 25%, 21–25:59 = 10%, 26:00+ = 0%), computed against the employee’s **expected time** from their schedule.
@@ -306,10 +309,12 @@ Special permission:
 - **RN-11b (Valuation):** When paying overtime, apply the employee’s configured method (LFT/proportional or agreed hourly rate) and store the pay history.
 - **RN-12:** Every movement changes the balance and must be auditable.
 
-### 10.5 Proportional rest (original draft)
-- **RN-13 (Full – per day):** 1/6 rest day per day worked.
-- **RN-14 (Full – per hour):** 1/48 rest day per hour worked.
-- **RN-15 (Partial):** proportional per hour.
+### 10.5 Proportional rest (día de descanso)
+- **RN-13 (Worked day):** 1/6 rest-day pay per day with `day_status = WORKED`.
+- **RN-13b (PROPORTIONAL_HOURS leave — partial day):** The worked portion of the day contributes `(scheduled_work_minutes − actual_duration_minutes) / scheduled_work_minutes × (1/6)` if `rest_day_factor = PROPORTIONAL`. If `rest_day_factor = NONE`, contributes 0.
+- **RN-14 (FIXED_PERCENTAGE leave — FULL):** The leave day generates a **full 1/6**, regardless of `pay_percentage`.
+- **RN-15 (FIXED_PERCENTAGE leave — PROPORTIONAL):** The leave day generates `pay_percentage / 100 × (1/6)`.
+- **RN-15b (Any leave — NONE):** The leave day generates **0** rest-day contribution.
 
 ### 10.6 Close
 - **RN-16:** The close stores a calculation snapshot.
