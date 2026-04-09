@@ -42,6 +42,8 @@ use App\Http\Controllers\Api\V1\Items\ShowItemController;
 use App\Http\Controllers\Api\V1\Items\ShowItemVariantController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemVariantController;
+use App\Http\Controllers\Api\V1\Leaves\ListLeaveTypesController;
+use App\Http\Controllers\Api\V1\Leaves\RegisterDirectLeaveController;
 use App\Http\Controllers\Api\V1\OperatingUnit\CreateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnit\DeleteOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnit\ListOperatingUnitsController;
@@ -241,6 +243,16 @@ Route::prefix('v1')->group(function () {
         Route::post('/{employmentPeriod}/schedule-day-overrides', CreateScheduleDayOverrideController::class)
             ->name('schedule-day-overrides.create')
             ->middleware('permission:employees.update');
+    });
+
+    // Leave Types Module (All Protected)
+    Route::middleware('auth:api')->prefix('leave-types')->name('leave-types.')->group(function () {
+        Route::get('/', ListLeaveTypesController::class)->name('index');
+    });
+
+    // Leaves Module (All Protected)
+    Route::middleware('auth:api')->prefix('leaves')->name('leaves.')->group(function () {
+        Route::post('/', RegisterDirectLeaveController::class)->name('register-direct');
     });
 
     // Attendances Module (All Protected)

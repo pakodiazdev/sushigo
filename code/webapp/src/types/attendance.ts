@@ -100,9 +100,12 @@ export type AttendancePhase =
   | 'at-lunch'      // Has lunch_start, no lunch_end
   | 'returned'      // Has lunch_end, no check_out
   | 'done'          // Has check_out (with or without lunch)
+  | 'on-leave'      // Absence registered for today (day_status = LEAVE)
 
 export function getAttendancePhase(attendance: TodayAttendanceData | null): AttendancePhase {
-  if (!attendance || !attendance.check_in) return 'pending'
+  if (!attendance) return 'pending'
+  if (attendance.day_status === 'LEAVE') return 'on-leave'
+  if (!attendance.check_in) return 'pending'
   if (attendance.check_out) return 'done'
   if (!attendance.lunch_start) return 'checked-in'
   if (!attendance.lunch_end) return 'at-lunch'

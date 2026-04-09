@@ -30,3 +30,9 @@ export { EmptyState, ErrorState, NoBranchState, SkeletonGrid } from './Attendanc
 // Close Day Panel
 export { CloseDayPanel } from './CloseDayPanel'
 export { useCloseDayPanel } from './use-close-day-panel'
+
+// Register Leave Dialog
+export { RegisterLeaveDialog } from './RegisterLeaveDialog'
+export type { RegisterLeaveDialogProps } from './RegisterLeaveDialog'
+export { useRegisterLeaveDialog } from './use-register-leave-dialog'
+export type { UseRegisterLeaveDialogProps, UseRegisterLeaveDialogResult, RegisterLeaveFormValues } from './use-register-leave-dialog'

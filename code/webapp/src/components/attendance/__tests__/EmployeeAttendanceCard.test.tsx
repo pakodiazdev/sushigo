@@ -184,6 +184,7 @@ describe('EmployeeAttendanceCard', () => {
         onLunchStart: vi.fn(),
         onLunchReturn: vi.fn(),
         onCheckOut: vi.fn(),
+        onRegisterLeave: vi.fn(),
     }
 
     it('renders employee name', () => {

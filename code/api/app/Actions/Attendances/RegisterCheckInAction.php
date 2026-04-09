@@ -3,10 +3,12 @@
 namespace App\Actions\Attendances;
 
 use App\Enums\DayStatus;
+use App\Enums\LeaveStatus;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
+use App\Models\Leave;
 use App\Models\ScheduleDay;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -51,6 +53,7 @@ class RegisterCheckInAction
         $checkIn = $checkInLocal->clone()->utc();
 
         $this->guardNoDuplicateAttendance($employee->id, $date);
+        $this->guardNoApprovedLeave($employee->id, $date);
 
         $period = $this->resolveActiveEmploymentPeriod($employee->id, $date);
         $schedule = $this->resolveActiveSchedule($period->id, $date);
@@ -87,7 +90,27 @@ class RegisterCheckInAction
         }
     }
 
-    /**     * Reject check-in times in the future (allow up to 5 minutes of clock skew).
+    /**
+     * Throw a 422 if the employee has an approved leave for this date.
+     *
+     * @throws ValidationException
+     */
+    private function guardNoApprovedLeave(int $employeeId, string $date): void
+    {
+        $hasLeave = Leave::where('employee_id', $employeeId)
+            ->where('status', LeaveStatus::APPROVED)
+            ->forDate($date)
+            ->exists();
+
+        if ($hasLeave) {
+            throw ValidationException::withMessages([
+                'check_in' => 'El empleado tiene una ausencia aprobada para este día.',
+            ]);
+        }
+    }
+
+    /**
+     * Reject check-in times in the future (allow up to 5 minutes of clock skew).
      *
      * @throws ValidationException
      */

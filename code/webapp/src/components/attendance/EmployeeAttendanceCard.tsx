@@ -4,6 +4,7 @@ import {
     LogIn,
     LogOut,
     Undo2,
+    CalendarX,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,6 +39,12 @@ export function PhaseBadge({ phase }: Readonly<PhaseBadgeProps>) {
             return <Badge variant="info">↩ Regresó</Badge>
         case 'done':
             return <Badge variant="success">✅ Completo</Badge>
+        case 'on-leave':
+            return (
+                <Badge variant="warning" className="flex items-center gap-1">
+                    <CalendarX className="h-3 w-3" /> Ausencia
+                </Badge>
+            )
     }
 }
 
@@ -128,6 +135,7 @@ export interface EmployeeAttendanceCardProps {
     onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+    onRegisterLeave: (employee: TodayAttendanceEmployee) => void
 }
 
 export function EmployeeAttendanceCard({
@@ -136,6 +144,7 @@ export function EmployeeAttendanceCard({
     onLunchStart,
     onLunchReturn,
     onCheckOut,
+    onRegisterLeave,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
@@ -186,16 +195,27 @@ export function EmployeeAttendanceCard({
                 <p className="text-xs text-muted-foreground italic">Sin registro aún</p>
             )}
 
-            {/* Check-in action — only for pending employees */}
+            {/* Actions for pending employees */}
             {phase === 'pending' && (
-                <Button
-                    size="sm"
-                    className="w-full mt-auto"
-                    onClick={() => onCheckIn(row.employee)}
-                >
-                    <LogIn className="h-3.5 w-3.5 mr-1.5" />
-                    Registrar entrada
-                </Button>
+                <div className="flex flex-col gap-1.5 mt-auto">
+                    <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => onCheckIn(row.employee)}
+                    >
+                        <LogIn className="h-3.5 w-3.5 mr-1.5" />
+                        Registrar entrada
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                        onClick={() => onRegisterLeave(row.employee)}
+                    >
+                        <CalendarX className="h-3.5 w-3.5 mr-1.5" />
+                        Registrar ausencia
+                    </Button>
+                </div>
             )}
 
             {/* Lunch-start action — only for checked-in employees */}

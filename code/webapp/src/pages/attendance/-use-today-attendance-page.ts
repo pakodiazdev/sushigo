@@ -17,7 +17,7 @@ export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   for (const row of rows) {
     const phase = getAttendancePhase(row.attendance)
     if (phase === 'pending') pending++
-    else if (phase === 'done') done++
+    else if (phase === 'done' || phase === 'on-leave') done++
     else checkedIn++
 
     if ((row.attendance?.overtime_minutes ?? 0) > 0) withOvertime++
@@ -89,6 +89,10 @@ export interface UseTodayAttendancePageResult {
   openCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeCheckOut: () => void
   confirmCheckOut: (time: string) => void
+  // Register leave action
+  pendingLeaveEmployee: TodayAttendanceEmployee | null
+  openRegisterLeave: (employee: TodayAttendanceEmployee) => void
+  closeRegisterLeave: () => void
 }
 
 export function useTodayAttendancePage(): UseTodayAttendancePageResult {
@@ -183,6 +187,18 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     )
   }, [pendingCheckOut, checkOutMutation, closeCheckOut])
 
+  // ── Register leave state ─────────────────────────────────────────────────────
+  const [pendingLeaveEmployee, setPendingLeaveEmployee] =
+    useState<TodayAttendanceEmployee | null>(null)
+
+  const openRegisterLeave = useCallback((employee: TodayAttendanceEmployee) => {
+    setPendingLeaveEmployee(employee)
+  }, [])
+
+  const closeRegisterLeave = useCallback(() => {
+    setPendingLeaveEmployee(null)
+  }, [])
+
   return {
     rows: data,
     summary,
@@ -216,5 +232,9 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     openCheckOut,
     closeCheckOut,
     confirmCheckOut,
+    // Register leave
+    pendingLeaveEmployee,
+    openRegisterLeave,
+    closeRegisterLeave,
   }
 }
