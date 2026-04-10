@@ -15,17 +15,16 @@ import type { TodayAttendanceEmployee } from '@/types/attendance'
 
 const schema = z.object({
   leave_type_id: z.number().min(1, 'Selecciona un tipo de ausencia'),
-  // Raw string from <input type="number">; converted to number|null in submit
   pay_percentage: z.string().optional().nullable(),
-  time_mode: z.enum(['SCHEDULED', 'OPEN_ENDED']).optional().nullable(),
+  time_mode: z.enum(['SCHEDULED', 'OPEN_ENDED', '']).optional().nullable(),
   scheduled_start_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'Formato HH:mm')
+    .regex(/^(\d{2}:\d{2})?$/, 'Formato HH:mm')
     .optional()
     .nullable(),
   scheduled_end_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, 'Formato HH:mm')
+    .regex(/^(\d{2}:\d{2})?$/, 'Formato HH:mm')
     .optional()
     .nullable(),
   notes: z.string().max(1000, 'Máximo 1000 caracteres').optional().nullable(),
@@ -119,12 +118,21 @@ export function useRegisterLeaveDialog({
     }
 
     const today = todayDateCdmx()
-    const payPct =
-      values.pay_percentage !== null &&
-      values.pay_percentage !== undefined &&
-      values.pay_percentage !== ''
-        ? Number(values.pay_percentage)
-        : null
+    const emptyToNull = (v: string | null | undefined) => (!v ? null : v)
+
+    // Validate and normalize pay_percentage
+    const rawPct = emptyToNull(values.pay_percentage)
+    let payPct: number | null = null
+    if (rawPct !== null) {
+      const n = Number(rawPct)
+      if (isNaN(n) || n < 0 || n > 100) {
+        form.setError('pay_percentage', { message: 'Debe ser un número entre 0 y 100' })
+        return
+      }
+      payPct = n
+    }
+
+    const timeMode = emptyToNull(values.time_mode) as 'SCHEDULED' | 'OPEN_ENDED' | null
 
     mutation.mutate(
       {
@@ -133,10 +141,10 @@ export function useRegisterLeaveDialog({
         start_date: today,
         end_date: today,
         pay_percentage: payPct,
-        time_mode: values.time_mode ?? null,
-        scheduled_start_time: values.scheduled_start_time ?? null,
-        scheduled_end_time: values.scheduled_end_time ?? null,
-        notes: values.notes ?? null,
+        time_mode: timeMode,
+        scheduled_start_time: emptyToNull(values.scheduled_start_time),
+        scheduled_end_time: emptyToNull(values.scheduled_end_time),
+        notes: emptyToNull(values.notes),
       },
       {
         onSuccess: () => {

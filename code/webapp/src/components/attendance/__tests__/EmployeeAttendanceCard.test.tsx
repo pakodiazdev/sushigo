@@ -102,6 +102,16 @@ describe('PhaseBadge', () => {
         const { getByText } = render(<PhaseBadge phase="done" />)
         expect(getByText(/Completo/)).toBeDefined()
     })
+
+    it('renders correct label for on-leave phase', () => {
+        const { getByText } = render(<PhaseBadge phase="on-leave" />)
+        expect(getByText(/Ausencia/)).toBeDefined()
+    })
+
+    it('renders correct label for returned phase', () => {
+        const { getByText } = render(<PhaseBadge phase="returned" />)
+        expect(getByText(/Regresó/)).toBeDefined()
+    })
 })
 
 // ── TimeRow Tests ──────────────────────────────────────────────────────────────
@@ -224,5 +234,91 @@ describe('EmployeeAttendanceCard', () => {
 
         expect(getByText('mesero')).toBeDefined()
         expect(getByText('cocina')).toBeDefined()
+    })
+
+    it('renders on-leave phase badge for LEAVE day_status', () => {
+        const onLeaveRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: {
+                id: '01HZATTEND000003',
+                check_in: '2024-01-15T08:00:00Z',
+                lunch_start: null,
+                lunch_end: null,
+                check_out: null,
+                day_status: 'LEAVE',
+                entry_late_seconds: 0,
+                entry_late_minutes: 0,
+                is_entry_deductible: false,
+                overtime_minutes: 0,
+                requires_overtime_decision: false,
+            },
+            schedule: null,
+        }
+
+        const { container } = render(<EmployeeAttendanceCard {...defaultProps} row={onLeaveRow} />)
+        expect(container.innerHTML).toContain('Ausencia')
+    })
+
+    it('renders register-leave button for pending employees', () => {
+        const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
+        expect(getByText('Registrar ausencia')).toBeDefined()
+    })
+
+    it('calls onRegisterLeave when register-leave button is clicked', () => {
+        const onRegisterLeave = vi.fn()
+        const { getByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} onRegisterLeave={onRegisterLeave} />
+        )
+
+        fireEvent.click(getByText('Registrar ausencia'))
+        expect(onRegisterLeave).toHaveBeenCalledWith(mockRow.employee)
+    })
+
+    it('renders lunch-start button for checked-in phase', () => {
+        const checkedInRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: {
+                id: '01HZATTEND000004',
+                check_in: '2024-01-15T08:00:00Z',
+                lunch_start: null,
+                lunch_end: null,
+                check_out: null,
+                day_status: 'WORKED',
+                entry_late_seconds: 0,
+                entry_late_minutes: 0,
+                is_entry_deductible: false,
+                overtime_minutes: 0,
+                requires_overtime_decision: false,
+            },
+            schedule: null,
+        }
+        const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={checkedInRow} />)
+        expect(getByText('Salir a comer')).toBeDefined()
+    })
+
+    it('calls onLunchStart when lunch button is clicked', () => {
+        const onLunchStart = vi.fn()
+        const checkedInRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: {
+                id: '01HZATTEND000004',
+                check_in: '2024-01-15T08:00:00Z',
+                lunch_start: null,
+                lunch_end: null,
+                check_out: null,
+                day_status: 'WORKED',
+                entry_late_seconds: 0,
+                entry_late_minutes: 0,
+                is_entry_deductible: false,
+                overtime_minutes: 0,
+                requires_overtime_decision: false,
+            },
+            schedule: null,
+        }
+        const { getByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={checkedInRow} onLunchStart={onLunchStart} />
+        )
+        fireEvent.click(getByText('Salir a comer'))
+        expect(onLunchStart).toHaveBeenCalledWith(checkedInRow.employee, '01HZATTEND000004')
     })
 })

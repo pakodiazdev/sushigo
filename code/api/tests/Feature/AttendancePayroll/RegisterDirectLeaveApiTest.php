@@ -4,6 +4,7 @@ namespace Tests\Feature\AttendancePayroll;
 
 use App\Enums\DayStatus;
 use App\Enums\LeaveStatus;
+use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Models\Leave;
@@ -321,6 +322,79 @@ class RegisterDirectLeaveApiTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrorFor('end_date');
+    }
+
+    // ── Guard: existing worked attendance ────────────────────────────────────
+
+    #[Test]
+    public function rejects_leave_if_employee_already_has_worked_attendance(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
+
+        // Pre-existing WORKED attendance (employee already checked in)
+        Attendance::create([
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => DayStatus::WORKED,
+            'check_in' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/leaves', [
+            'employee_id' => $employee->public_id,
+            'leave_type_id' => $leaveType->id,
+            'start_date' => self::DATE,
+            'end_date' => self::DATE,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('start_date');
+    }
+
+    #[Test]
+    public function rejects_leave_for_multi_day_range_with_one_worked_attendance(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
+
+        Attendance::create([
+            'employee_id' => $employee->id,
+            'date' => '2026-04-10',
+            'day_status' => DayStatus::WORKED,
+            'check_in' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/leaves', [
+            'employee_id' => $employee->public_id,
+            'leave_type_id' => $leaveType->id,
+            'start_date' => '2026-04-09',
+            'end_date' => '2026-04-11',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('start_date');
+    }
+
+    // ── Validation: time ordering ─────────────────────────────────────────────
+
+    #[Test]
+    public function rejects_scheduled_end_time_before_start_time(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::PERMISSION_HOURS)->first();
+
+        $response = $this->postJson('/api/v1/leaves', [
+            'employee_id' => $employee->public_id,
+            'leave_type_id' => $leaveType->id,
+            'start_date' => self::DATE,
+            'end_date' => self::DATE,
+            'time_mode' => 'SCHEDULED',
+            'scheduled_start_time' => '16:00',
+            'scheduled_end_time' => '14:00',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('scheduled_end_time');
     }
 
     // ── Auth ──────────────────────────────────────────────────────────────────

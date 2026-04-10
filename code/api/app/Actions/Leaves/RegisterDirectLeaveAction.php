@@ -36,6 +36,7 @@ class RegisterDirectLeaveAction
         $leaveType = LeaveType::findOrFail($data['leave_type_id']);
 
         $this->guardNoOverlappingApprovedLeave($employee->id, $data['start_date'], $data['end_date']);
+        $this->guardNoExistingWorkedAttendance($employee->id, $data['start_date'], $data['end_date']);
 
         $actualDurationMinutes = $this->computeActualDuration(
             $data['actual_start_time'] ?? null,
@@ -92,23 +93,38 @@ class RegisterDirectLeaveAction
     }
 
     /**
-     * Create or update Attendance records for each day in the range,
-     * setting day_status = LEAVE.
+     * Throw 422 if any date in the range already has a WORKED attendance record.
+     *
+     * @throws ValidationException
+     */
+    private function guardNoExistingWorkedAttendance(int $employeeId, string $startDate, string $endDate): void
+    {
+        $exists = Attendance::where('employee_id', $employeeId)
+            ->where('day_status', DayStatus::WORKED)
+            ->where('date', '>=', $startDate)
+            ->where('date', '<=', $endDate)
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'start_date' => 'El empleado ya tiene asistencia trabajada registrada para alguno de los días indicados.',
+            ]);
+        }
+    }
+
+    /**
+     * Create Attendance records for each day in the range with day_status = LEAVE.
      */
     private function createAttendanceRecords(int $employeeId, string $startDate, string $endDate): void
     {
         $period = CarbonPeriod::create($startDate, $endDate);
 
         foreach ($period as $day) {
-            Attendance::updateOrCreate(
-                [
-                    'employee_id' => $employeeId,
-                    'date' => $day->toDateString(),
-                ],
-                [
-                    'day_status' => DayStatus::LEAVE,
-                ]
-            );
+            Attendance::create([
+                'employee_id' => $employeeId,
+                'date' => $day->toDateString(),
+                'day_status' => DayStatus::LEAVE,
+            ]);
         }
     }
 
@@ -124,6 +140,6 @@ class RegisterDirectLeaveAction
         $start = Carbon::parse($startTime);
         $end = Carbon::parse($endTime);
 
-        return (int) $start->diffInMinutes($end);
+        return (int) $start->diffInMinutes($end, absolute: true);
     }
 }
