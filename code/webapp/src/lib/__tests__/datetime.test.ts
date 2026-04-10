@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { currentTimeLabel } from '../datetime'
+import { currentTimeLabel, todayDateCdmx } from '../datetime'
 
 describe('currentTimeLabel', () => {
   afterEach(() => {
@@ -39,5 +39,47 @@ describe('currentTimeLabel', () => {
     vi.setSystemTime(new Date('2026-04-02T12:00:00Z'))
 
     expect(currentTimeLabel()).toBe('06:00')
+  })
+})
+
+describe('todayDateCdmx', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('returns date in YYYY-MM-DD format', () => {
+    const result = todayDateCdmx()
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('returns CDMX date for a known UTC time', () => {
+    // 2026-04-02T22:00:00Z = 16:00 CDMX → still April 2
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-02T22:00:00Z'))
+
+    expect(todayDateCdmx()).toBe('2026-04-02')
+  })
+
+  it('returns previous day when UTC is past midnight but CDMX is not', () => {
+    // 2026-04-02T03:00:00Z = 21:00 CDMX on April 1
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-02T03:00:00Z'))
+
+    expect(todayDateCdmx()).toBe('2026-04-01')
+  })
+
+  it('pads single-digit months and days', () => {
+    // 2026-01-08T15:00:00Z = 09:00 CDMX on Jan 8
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-08T15:00:00Z'))
+
+    expect(todayDateCdmx()).toBe('2026-01-08')
+  })
+
+  it('handles midnight CDMX (06:00 UTC)', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-09T06:00:00Z'))
+
+    expect(todayDateCdmx()).toBe('2026-04-09')
   })
 })

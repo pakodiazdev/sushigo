@@ -123,7 +123,7 @@ class Leave extends Model
             $start = Carbon::parse($this->scheduled_start_time);
             $end = Carbon::parse($this->scheduled_end_time);
 
-            return (int) $start->diffInMinutes($end);
+            return (int) $start->diffInMinutes($end, absolute: true);
         }
 
         return null;

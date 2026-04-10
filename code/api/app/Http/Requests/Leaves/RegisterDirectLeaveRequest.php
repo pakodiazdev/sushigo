@@ -20,7 +20,11 @@ class RegisterDirectLeaveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_id' => ['required', 'string', 'exists:employees,public_id'],
+            'employee_id' => [
+                'required',
+                'string',
+                Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
+            ],
             'leave_type_id' => ['required', 'integer', 'exists:leave_types,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'gte:start_date'],
@@ -28,9 +32,9 @@ class RegisterDirectLeaveRequest extends FormRequest
             'rest_day_factor' => ['nullable', Rule::in(['FULL', 'PROPORTIONAL', 'NONE'])],
             'time_mode' => ['nullable', Rule::in([LeaveTimeMode::SCHEDULED->value, LeaveTimeMode::OPEN_ENDED->value])],
             'scheduled_start_time' => ['nullable', 'date_format:H:i', 'required_with:time_mode'],
-            'scheduled_end_time' => ['nullable', 'date_format:H:i'],
+            'scheduled_end_time' => ['nullable', 'date_format:H:i', 'after:scheduled_start_time'],
             'actual_start_time' => ['nullable', 'date_format:H:i'],
-            'actual_end_time' => ['nullable', 'date_format:H:i'],
+            'actual_end_time' => ['nullable', 'date_format:H:i', 'after:actual_start_time'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -45,22 +49,23 @@ class RegisterDirectLeaveRequest extends FormRequest
             }
 
             if ($leaveType->calculation_mode === LeaveCalculationMode::PROPORTIONAL_HOURS) {
-                // time_mode is required for PROPORTIONAL_HOURS
                 if (! $this->input('time_mode')) {
-                    $v->errors()->add('time_mode', 'time_mode is required for PROPORTIONAL_HOURS leave types.');
+                    $v->errors()->add('time_mode', 'El modo de horario es requerido para permisos por horas.');
                 }
 
-                // start_date and end_date must be the same day for partial leaves
-                if ($this->input('start_date') && $this->input('end_date')
-                    && $this->input('start_date') !== $this->input('end_date')) {
-                    $v->errors()->add('end_date', 'Partial-hours leaves must be a single day (start_date must equal end_date).');
+                if (
+                    $this->input('start_date') && $this->input('end_date')
+                    && $this->input('start_date') !== $this->input('end_date')
+                ) {
+                    $v->errors()->add('end_date', 'Los permisos por horas deben ser de un solo día.');
                 }
             }
 
-            // scheduled_end_time required when time_mode = SCHEDULED
-            if ($this->input('time_mode') === LeaveTimeMode::SCHEDULED->value
-                && ! $this->input('scheduled_end_time')) {
-                $v->errors()->add('scheduled_end_time', 'scheduled_end_time is required when time_mode is SCHEDULED.');
+            if (
+                $this->input('time_mode') === LeaveTimeMode::SCHEDULED->value
+                && ! $this->input('scheduled_end_time')
+            ) {
+                $v->errors()->add('scheduled_end_time', 'La hora de fin es requerida cuando el horario es definido.');
             }
         });
     }

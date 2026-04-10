@@ -52,8 +52,8 @@ class RegisterCheckInAction
         $dayOfWeekIso = $checkInLocal->dayOfWeekIso;
         $checkIn = $checkInLocal->clone()->utc();
 
-        $this->guardNoDuplicateAttendance($employee->id, $date);
         $this->guardNoApprovedLeave($employee->id, $date);
+        $this->guardNoDuplicateAttendance($employee->id, $date);
 
         $period = $this->resolveActiveEmploymentPeriod($employee->id, $date);
         $schedule = $this->resolveActiveSchedule($period->id, $date);
