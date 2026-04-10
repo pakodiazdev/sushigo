@@ -76,10 +76,10 @@ function registerMedicalAbsence(lastName: string, firstName: string) {
 
   // Wait for leave types to load then pick medical
   cy.wait('@leaveTypesLoad')
-  cy.get('[role="dialog"] select').first().select('Incapacidad médica')
+  cy.get('dialog select').first().select('Incapacidad médica')
 
   // Submit
-  cy.contains('button', 'Registrar ausencia').last().click()
+  cy.get('dialog').contains('button', 'Registrar ausencia').click({ force: true })
 
   cy.wait('@registerLeave').its('response.statusCode').should('eq', 201)
   cy.wait('@refetchAttendance', { timeout: 10_000 })

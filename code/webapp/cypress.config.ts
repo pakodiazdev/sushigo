@@ -66,7 +66,7 @@ export default defineConfig({
          *   cy.task('test:reset', 'attendance')      → core + attendance
          *   cy.task('test:reset', 'attendance,cash') → core + attendance + cash
          */
-        'test:reset': (seeders?: string) => {
+        'test:reset': (seeders) => {
           const seedersFlag = seeders ? ` --seeders=${seeders}` : ''
           console.log(`[test:reset] Running test:reset${seedersFlag} on ${CONTAINER}...`)
           execSync(
@@ -97,7 +97,7 @@ export default defineConfig({
          * Usage: cy.task('test:getResetLink', 'user@example.com')
          * Returns: The reset URL or null if not found.
          */
-        'test:getResetLink': (email: string) => {
+        'test:getResetLink': (email) => {
           // Validate email format to prevent shell/PHP injection
           const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
           if (!emailRegex.test(email)) {
