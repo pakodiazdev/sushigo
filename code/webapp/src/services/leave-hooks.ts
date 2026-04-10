@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { leaveApi } from './leave-api'
+import type { LeaveFilters } from './leave-api'
 import { useToast } from '@/components/ui/toast-provider'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { LeaveType, RegisterDirectLeaveRequest } from '@/types/leave'
+import type { LeaveType, Leave, RegisterDirectLeaveRequest } from '@/types/leave'
 
 /**
  * Fetch all active leave types for the register-absence form.
@@ -40,5 +41,19 @@ export function useRegisterDirectLeave() {
         'Error al registrar'
       )
     },
+  })
+}
+
+/**
+ * Fetch paginated leave history for a specific employee.
+ */
+export function useEmployeeLeaves(employeeId: string, filters: LeaveFilters = {}) {
+  return useQuery<{ data: Leave[]; meta: { current_page: number; last_page: number; per_page: number; total: number } }>({
+    queryKey: ['employees', employeeId, 'leaves', filters],
+    queryFn: async () => {
+      const response = await leaveApi.listEmployeeLeaves(employeeId, filters)
+      return { data: response.data.data, meta: response.data.meta! }
+    },
+    enabled: !!employeeId,
   })
 }

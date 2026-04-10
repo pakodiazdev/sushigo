@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\CreateWageController;
 use App\Http\Controllers\Api\V1\Employees\DeactivateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\ListEmployeeLeavesController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
 use App\Http\Controllers\Api\V1\Employees\ListWagesController;
 use App\Http\Controllers\Api\V1\Employees\RehireEmployeeController;
@@ -233,6 +234,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/{employee}/wages', CreateWageController::class)->name('employees.wages.create')->middleware('permission:employees.update');
         // Schedule endpoints
         Route::get('/{employee}/current-schedule', CurrentScheduleController::class)->name('employees.schedule.current')->middleware('permission:employees.view');
+        // Leave history endpoints
+        Route::get('/{employee}/leaves', ListEmployeeLeavesController::class)->name('employees.leaves.list')->middleware('permission:employees.view');
     });
 
     // Employment Periods — Schedules (All Protected)
