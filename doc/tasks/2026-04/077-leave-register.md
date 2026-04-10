@@ -89,7 +89,7 @@ Como Manager, quiero registrar una ausencia de un empleado directamente desde la
 
 - [x] ✅ PHPUnit: 15 tests / 41 assertions — RegisterDirectLeaveApiTest
 - [x] ✅ Vitest: RegisterLeaveDialog (22 tests), use-register-leave-dialog (9 tests), EmployeeAttendanceCard (30 tests), leave-api (3 tests), datetime (10 tests)
-- [ ] 🌲 Cypress E2E (happy path): open Today view → click "Registrar ausencia" on an employee → select type, fill form → submit → employee row shows LEAVE badge _(pending — will add in follow-up)_
+- [x] 🌲 Cypress E2E (happy path): open Today view → click "Registrar ausencia" on an employee → select type, fill form → submit → employee row shows LEAVE badge
 
 ---
 
@@ -98,8 +98,8 @@ Como Manager, quiero registrar una ausencia de un empleado directamente desde la
 - [x] Manager registers a full-day absence from Today view; attendance row shows LEAVE badge immediately
 - [x] Manager registers a PROPORTIONAL_HOURS absence (SCHEDULED); actual return can be recorded from the row
 - [x] pay_percentage and rest_day_factor show defaults from type and are editable
-- [ ] Attempting check-in on an employee with an approved leave shows a clear error
-- [ ] Seeder populates 4 default leave types
+- [x] Attempting check-in on an employee with an approved leave shows a clear error
+- [x] Seeder populates 4 default leave types
 
 ---
 
