@@ -85,7 +85,7 @@ class TestReset extends Command
 
         $totalMs = round((microtime(true) - $startTime) * 1000);
         $this->newLine();
-        $this->info("✅ test:reset completed in {$totalMs}ms (groups: ".implode(', ', $groups).')');
+        $this->info("✅ test:reset completed in {$totalMs}ms (groups: " . implode(', ', $groups) . ')');
 
         return self::SUCCESS;
     }
@@ -160,7 +160,7 @@ class TestReset extends Command
             $isCore = $name === 'core' ? ' (always included)' : '';
             $this->line("  <fg=yellow>{$name}</>{$isCore}");
             foreach ($seeders as $seeder) {
-                $this->line('    → '.class_basename($seeder));
+                $this->line('    → ' . class_basename($seeder));
             }
         }
 

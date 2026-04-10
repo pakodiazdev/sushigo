@@ -41,12 +41,12 @@ Como Manager, quiero registrar una ausencia de un empleado directamente desde la
   - `notes` text nullable, timestamps
 - [x] 🌱 Seeder `LeaveTypeSeeder` (OnceSeeder) with default types:
 
-  | code | name | calculation_mode | default_pay_% | default_rest_day_factor |
-  |---|---|---|---|---|
-  | `MEDICAL` | Incapacidad médica | `FIXED_PERCENTAGE` | 0.00 | `NONE` |
-  | `PERSONAL` | Permiso personal | `FIXED_PERCENTAGE` | 0.00 | `NONE` |
-  | `PERMISSION_PAID` | Permiso con goce | `FIXED_PERCENTAGE` | 100.00 | `FULL` |
-  | `PERMISSION_HOURS` | Permiso por horas | `PROPORTIONAL_HOURS` | — | `PROPORTIONAL` |
+  | code               | name               | calculation_mode     | default_pay_% | default_rest_day_factor |
+  | ------------------ | ------------------ | -------------------- | ------------- | ----------------------- |
+  | `MEDICAL`          | Incapacidad médica | `FIXED_PERCENTAGE`   | 0.00          | `NONE`                  |
+  | `PERSONAL`         | Permiso personal   | `FIXED_PERCENTAGE`   | 0.00          | `NONE`                  |
+  | `PERMISSION_PAID`  | Permiso con goce   | `FIXED_PERCENTAGE`   | 100.00        | `FULL`                  |
+  | `PERMISSION_HOURS` | Permiso por horas  | `PROPORTIONAL_HOURS` | —             | `PROPORTIONAL`          |
 
 - [x] 🔧 `LeaveType` model — `resolvedPayPercentage()`, `resolvedRestDayFactor(override)`
 - [x] 🔧 `Leave` model — `belongsTo(Employee)`, `belongsTo(LeaveType)`, scopes `approved()`, `forDate(date)`; method `computedDurationMinutes()` (actual ?? scheduled)
