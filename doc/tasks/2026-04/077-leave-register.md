@@ -109,6 +109,15 @@ Como Manager, quiero registrar una ausencia de un empleado directamente desde la
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `5h` · **Pessimistic:** `8h`
+### 📊 Estimates
+- **Optimistic:** `5h` · **Pessimistic:** `8h` · **Tracked:** `5h 40m`
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-04-09", "start": "12:30", "end": "15:00" },
+  { "date": "2026-04-09", "start": "20:00", "end": "23:10" }
+]
+```
