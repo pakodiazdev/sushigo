@@ -12,6 +12,7 @@ use App\Models\Leave;
 use App\Models\LeaveType;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -43,31 +44,35 @@ class RegisterDirectLeaveAction
             $data['actual_end_time'] ?? null
         );
 
-        $leave = Leave::create([
-            'employee_id' => $employee->id,
-            'leave_type_id' => $leaveType->id,
-            'start_date' => $data['start_date'],
-            'end_date' => $data['end_date'],
-            'pay_percentage' => $data['pay_percentage'] ?? null,
-            'rest_day_factor' => isset($data['rest_day_factor'])
-                ? RestDayFactor::from($data['rest_day_factor'])
-                : null,
-            'time_mode' => isset($data['time_mode'])
-                ? LeaveTimeMode::from($data['time_mode'])
-                : null,
-            'scheduled_start_time' => $data['scheduled_start_time'] ?? null,
-            'scheduled_end_time' => $data['scheduled_end_time'] ?? null,
-            'actual_start_time' => $data['actual_start_time'] ?? null,
-            'actual_end_time' => $data['actual_end_time'] ?? null,
-            'actual_duration_minutes' => $actualDurationMinutes,
-            'status' => LeaveStatus::APPROVED,
-            'requested_by' => $requestedById,
-            'approved_by' => $requestedById,
-            'approved_at' => now(),
-            'notes' => $data['notes'] ?? null,
-        ]);
+        $leave = DB::transaction(function () use ($data, $employee, $leaveType, $actualDurationMinutes, $requestedById) {
+            $leave = Leave::create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'start_date' => $data['start_date'],
+                'end_date' => $data['end_date'],
+                'pay_percentage' => $data['pay_percentage'] ?? null,
+                'rest_day_factor' => isset($data['rest_day_factor'])
+                    ? RestDayFactor::from($data['rest_day_factor'])
+                    : null,
+                'time_mode' => isset($data['time_mode'])
+                    ? LeaveTimeMode::from($data['time_mode'])
+                    : null,
+                'scheduled_start_time' => $data['scheduled_start_time'] ?? null,
+                'scheduled_end_time' => $data['scheduled_end_time'] ?? null,
+                'actual_start_time' => $data['actual_start_time'] ?? null,
+                'actual_end_time' => $data['actual_end_time'] ?? null,
+                'actual_duration_minutes' => $actualDurationMinutes,
+                'status' => LeaveStatus::APPROVED,
+                'requested_by' => $requestedById,
+                'approved_by' => $requestedById,
+                'approved_at' => now(),
+                'notes' => $data['notes'] ?? null,
+            ]);
 
-        $this->createAttendanceRecords($employee->id, $data['start_date'], $data['end_date']);
+            $this->createAttendanceRecords($employee->id, $data['start_date'], $data['end_date']);
+
+            return $leave;
+        });
 
         return $leave->load(['employee', 'leaveType', 'requestedBy', 'approvedBy']);
     }
@@ -120,11 +125,15 @@ class RegisterDirectLeaveAction
         $period = CarbonPeriod::create($startDate, $endDate);
 
         foreach ($period as $day) {
-            Attendance::create([
-                'employee_id' => $employeeId,
-                'date' => $day->toDateString(),
-                'day_status' => DayStatus::LEAVE,
-            ]);
+            Attendance::updateOrCreate(
+                [
+                    'employee_id' => $employeeId,
+                    'date' => $day->toDateString(),
+                ],
+                [
+                    'day_status' => DayStatus::LEAVE,
+                ]
+            );
         }
     }
 
