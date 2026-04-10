@@ -75,4 +75,51 @@ describe('leaveApi', () => {
             expect(apiClient.post).toHaveBeenCalledWith('/leaves', payload)
         })
     })
+
+    describe('listEmployeeLeaves', () => {
+        it('calls GET /employees/{id}/leaves without filters', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: { current_page: 1, last_page: 1, per_page: 15, total: 0 } } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const result = await leaveApi.listEmployeeLeaves('emp-001')
+
+            expect(apiClient.get).toHaveBeenCalledWith('/employees/emp-001/leaves')
+            expect(result).toEqual(mockResponse)
+        })
+
+        it('appends query params when filters are provided', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: { current_page: 1, last_page: 1, per_page: 10, total: 0 } } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            await leaveApi.listEmployeeLeaves('emp-001', {
+                status: 'APPROVED',
+                date_from: '2026-01-01',
+                date_to: '2026-03-31',
+                leave_type_id: 2,
+                per_page: 10,
+                page: 2,
+            })
+
+            const calledUrl = vi.mocked(apiClient.get).mock.calls[0][0]
+            expect(calledUrl).toContain('/employees/emp-001/leaves?')
+            expect(calledUrl).toContain('status=APPROVED')
+            expect(calledUrl).toContain('date_from=2026-01-01')
+            expect(calledUrl).toContain('date_to=2026-03-31')
+            expect(calledUrl).toContain('leave_type_id=2')
+            expect(calledUrl).toContain('per_page=10')
+            expect(calledUrl).toContain('page=2')
+        })
+
+        it('omits empty filters', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: { current_page: 1, last_page: 1, per_page: 15, total: 0 } } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            await leaveApi.listEmployeeLeaves('emp-001', { status: 'PENDING' })
+
+            const calledUrl = vi.mocked(apiClient.get).mock.calls[0][0]
+            expect(calledUrl).toContain('status=PENDING')
+            expect(calledUrl).not.toContain('date_from')
+            expect(calledUrl).not.toContain('leave_type_id')
+        })
+    })
 })

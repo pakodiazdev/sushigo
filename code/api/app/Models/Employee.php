@@ -100,6 +100,11 @@ class Employee extends Model
         return $this->hasMany(Attendance::class)->orderBy('date', 'desc');
     }
 
+    public function leaves(): HasMany
+    {
+        return $this->hasMany(Leave::class)->orderBy('start_date', 'desc');
+    }
+
     /**
      * All schedules for this employee, via their employment periods.
      * For the active schedule use:

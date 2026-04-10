@@ -12,20 +12,20 @@ Como Manager, quiero ver el historial completo de ausencias de un empleado desde
 
 ## ✅ Backend Tasks
 
-- [ ] 🌐 `GET /api/v1/employees/{id}/leaves` — `ListEmployeeLeavesController`
+- [x] 🌐 `GET /api/v1/employees/{id}/leaves` — `ListEmployeeLeavesController`
   - Filters: `status`, `date_from`, `date_to`, `leave_type_id`
   - Pagination (15 per page)
   - Response per item: `id`, `leave_type` (code, name, calculation_mode), `start_date`, `end_date`, `resolved_pay_percentage`, `rest_day_factor`, `time_mode`, `scheduled_start_time`, `scheduled_end_time`, `actual_start_time`, `actual_end_time`, `actual_duration_minutes`, `status`, `requested_by` (name), `approved_by` (name nullable), `approved_at`, `notes`
-- [ ] 🔧 `LeaveResource` (if not done in #077) with all fields above
-- [ ] 🧪 Feature tests: list by employee, filter by status, filter by date range, filter by leave type, pagination, unauthorized access
+- [x] 🔧 `LeaveResource` (if not done in #077) with all fields above
+- [x] 🧪 Feature tests: list by employee, filter by status, filter by date range, filter by leave type, pagination, unauthorized access
 
 ---
 
 ## ✅ Frontend Tasks
 
-- [ ] 📝 Add `getEmployeeLeaves(employeeId, filters)` to `src/services/leave.service.ts`
-- [ ] 📱 **"Ausencias" tab** in Employee Detail page
-- [ ] 📱 **Leaves table** — columns:
+- [x] 📝 Add `getEmployeeLeaves(employeeId, filters)` to `src/services/leave-api.ts`
+- [x] 📱 **"Ausencias" tab** in Employee Detail page
+- [x] 📱 **Leaves table** — columns:
   - Fecha(s): date range or single date
   - Tipo: leave type badge (shows `calculation_mode` indicator)
   - Pago: resolved pay % with color (green=100%, yellow=partial, red=0%)
@@ -33,26 +33,26 @@ Como Manager, quiero ver el historial completo de ausencias de un empleado desde
   - Para `PROPORTIONAL_HOURS`: show scheduled and actual times, duration
   - Estado: status badge (APPROVED / CANCELLED)
   - Registrado por: name
-- [ ] 📱 Filter bar: status selector, date range picker, leave type selector
-- [ ] 📱 **"Registrar ausencia" button** at top of tab → opens same form as Today view (#077) but pre-scoped to this employee
-- [ ] 🔧 `useEmployeeLeaves(employeeId)` hook — manages filters, pagination, query
+- [x] 📱 Filter bar: status selector, date range picker, leave type selector
+- [x] 📱 **"Registrar ausencia" button** at top of tab → opens same form as Today view (#077) but pre-scoped to this employee
+- [x] 🔧 `useEmployeeLeaves(employeeId)` hook — manages filters, pagination, query
 
 ---
 
 ## 🧪 Tests
 
-- [ ] ✅ PHPUnit: all backend feature tests listed above
-- [ ] ✅ Vitest: `useEmployeeLeaves` — filter changes trigger new query, pagination works
+- [x] ✅ PHPUnit: 13 tests, 59 assertions — all passing
+- [x] ✅ Vitest: `useEmployeeLeaves` hook (5 tests) + `leaveApi.listEmployeeLeaves` (3 tests)
 - [ ] 🌲 Cypress E2E (happy path): navigate to Employee Detail → Ausencias tab → verify leave registered in #077 appears → apply status filter → verify table updates
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Ausencias tab shows all leaves with pay % and rest-day factor clearly indicated
-- [ ] PROPORTIONAL_HOURS leaves show time details and actual duration
-- [ ] Filters work independently and in combination
-- [ ] "Registrar ausencia" button from this tab pre-fills the employee
+- [x] Ausencias tab shows all leaves with pay % and rest-day factor clearly indicated
+- [x] PROPORTIONAL_HOURS leaves show time details and actual duration
+- [x] Filters work independently and in combination
+- [x] "Registrar ausencia" button from this tab pre-fills the employee
 
 ---
 
