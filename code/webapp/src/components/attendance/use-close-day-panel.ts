@@ -130,7 +130,7 @@ export function useCloseDayPanel(
       if (phase === 'pending') {
         // No check_in → will be marked as ABSENCE
         absences.push({ employeeName: name })
-      } else if (phase !== 'done') {
+      } else if (phase !== 'done' && phase !== 'on-leave') {
         // Has check_in but no check_out → will receive check-out
         // (includes 'at-lunch' employees whose lunch_end was just resolved in step 1)
         checkOuts.push({ employeeName: name })
