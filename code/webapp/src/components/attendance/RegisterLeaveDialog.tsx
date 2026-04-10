@@ -90,12 +90,10 @@ export function RegisterLeaveDialog({
   const content = (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       {/* Backdrop */}
-      <div
-        role="button"
-        tabIndex={0}
-        className={`absolute inset-0 bg-black/50 ${backdropAnim}`}
+      <button
+        type="button"
+        className={`absolute inset-0 bg-black/50 ${backdropAnim} cursor-default appearance-none border-none p-0`}
         onClick={() => { if (!isPending) onClose() }}
-        onKeyDown={(e) => { if (e.key === 'Enter' && !isPending) onClose() }}
         aria-label="Cerrar diálogo"
       />
 

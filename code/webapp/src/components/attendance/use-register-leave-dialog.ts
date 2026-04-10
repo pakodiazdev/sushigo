@@ -118,7 +118,7 @@ export function useRegisterLeaveDialog({
     }
 
     const today = todayDateCdmx()
-    const emptyToNull = (v: string | null | undefined) => (v ? v : null)
+    const emptyToNull = (v: string | null | undefined) => v || null
 
     // Validate and normalize pay_percentage
     const rawPct = emptyToNull(values.pay_percentage)
