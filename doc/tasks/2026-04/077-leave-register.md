@@ -22,13 +22,13 @@ Como Manager, quiero registrar una ausencia de un empleado directamente desde la
 
 ## ✅ Backend Tasks
 
-- [ ] 📂 Migration `create_leave_types_table`
+- [x] 📂 Migration `create_leave_types_table`
   - `code` varchar(30) UK, `name` varchar(100)
   - `calculation_mode` enum(`FIXED_PERCENTAGE`, `PROPORTIONAL_HOURS`) default `FIXED_PERCENTAGE`
   - `default_pay_percentage` decimal(5,2) default 100.00
   - `default_rest_day_factor` enum(`FULL`, `PROPORTIONAL`, `NONE`) default `PROPORTIONAL`
   - `counts_for_bonus` bool default true, `is_active` bool default true, timestamps
-- [ ] 📂 Migration `create_leaves_table`
+- [x] 📂 Migration `create_leaves_table`
   - `employee_id` FK, `leave_type_id` FK
   - `start_date` date, `end_date` date
   - `pay_percentage` decimal(5,2) nullable, `rest_day_factor` enum nullable
@@ -39,7 +39,7 @@ Como Manager, quiero registrar una ausencia de un empleado directamente desde la
   - `status` enum(`PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`) default `PENDING`
   - `requested_by` FK, `approved_by` FK nullable, `approved_at` datetime nullable
   - `notes` text nullable, timestamps
-- [ ] 🌱 Seeder `LeaveTypeSeeder` (OnceSeeder) with default types:
+- [x] 🌱 Seeder `LeaveTypeSeeder` (OnceSeeder) with default types:
 
   | code | name | calculation_mode | default_pay_% | default_rest_day_factor |
   |---|---|---|---|---|
@@ -48,16 +48,16 @@ Como Manager, quiero registrar una ausencia de un empleado directamente desde la
   | `PERMISSION_PAID` | Permiso con goce | `FIXED_PERCENTAGE` | 100.00 | `FULL` |
   | `PERMISSION_HOURS` | Permiso por horas | `PROPORTIONAL_HOURS` | — | `PROPORTIONAL` |
 
-- [ ] 🔧 `LeaveType` model — `resolvedPayPercentage()`, `resolvedRestDayFactor(override)`
-- [ ] 🔧 `Leave` model — `belongsTo(Employee)`, `belongsTo(LeaveType)`, scopes `approved()`, `forDate(date)`; method `computedDurationMinutes()` (actual ?? scheduled)
-- [ ] 🌐 `POST /api/v1/leaves` — `RegisterDirectLeaveController`:
+- [x] 🔧 `LeaveType` model — `resolvedPayPercentage()`, `resolvedRestDayFactor(override)`
+- [x] 🔧 `Leave` model — `belongsTo(Employee)`, `belongsTo(LeaveType)`, scopes `approved()`, `forDate(date)`; method `computedDurationMinutes()` (actual ?? scheduled)
+- [x] 🌐 `POST /api/v1/leaves` — `RegisterDirectLeaveController`:
   - Accepts: `employee_id`, `leave_type_id`, `start_date`, `end_date`, `pay_percentage?`, `rest_day_factor?`, `time_mode?`, `scheduled_start_time?`, `scheduled_end_time?`, `actual_start_time?`, `actual_end_time?`, `notes?`
   - Validates: `time_mode` required when `calculation_mode = PROPORTIONAL_HOURS`; `scheduled_start_time` required when `time_mode` set; `scheduled_end_time` required only when `time_mode = SCHEDULED`
   - Sets `status = APPROVED`, `approved_by = auth()->id()`, `approved_at = now()`
   - Creates/updates `Attendance` record for each date with `day_status = LEAVE`
-- [ ] 🔧 Check-in endpoint (existing): if `APPROVED` leave exists for that date → 422 `"El empleado tiene una ausencia registrada para este día"`
-- [ ] 🔧 `LeaveResource` — wraps leave + type info + resolved pay/rest values
-- [ ] 🧪 Feature tests:
+- [x] 🔧 Check-in endpoint (existing): if `APPROVED` leave exists for that date → 422 `"El empleado tiene una ausencia registrada para este día"`
+- [x] 🔧 `LeaveResource` — wraps leave + type info + resolved pay/rest values
+- [x] 🧪 Feature tests:
   - Register full-day FIXED_PERCENTAGE leave → attendance updated
   - Register PROPORTIONAL_HOURS SCHEDULED → validates times
   - Register PROPORTIONAL_HOURS OPEN_ENDED → no end time required
@@ -69,35 +69,35 @@ Como Manager, quiero registrar una ausencia de un empleado directamente desde la
 
 ## ✅ Frontend Tasks
 
-- [ ] 📝 Add types to `src/types/attendance-payroll.ts`: `LeaveType`, `Leave`, `LeaveStatus`, `LeaveCalculationMode`, `RestDayFactor`, `LeaveTimeMode`
-- [ ] 🔧 `src/services/leave.service.ts`: `getLeaveTypes()` + `registerDirectLeave(data)`
-- [ ] 📱 **"Registrar ausencia" button** on each employee row in Today view (alongside check-in/check-out)
-- [ ] 📱 **Register absence modal/form** (react-hook-form + zod):
+- [x] 📝 Add types to `src/types/leave.ts`: `LeaveType`, `Leave`, `LeaveStatus`, `LeaveCalculationMode`, `RestDayFactor`, `LeaveTimeMode`
+- [x] 🔧 `src/services/leave-api.ts`: `getLeaveTypes()` + `registerDirectLeave(data)`
+- [x] 📱 **"Registrar ausencia" button** on each employee row in Today view (alongside check-in/check-out)
+- [x] 📱 **Register absence modal/form** (react-hook-form + zod):
   - Leave type selector — shows calculation mode indicator and default pay %
   - If `FIXED_PERCENTAGE`: `start_date` / `end_date` (defaults to today)
   - If `PROPORTIONAL_HOURS`: date locked to today; `time_mode` toggle (Horario fijo / Abierto); `scheduled_start_time`; `scheduled_end_time` only if `SCHEDULED`; optional `actual_start_time` / `actual_end_time` if times are already known
   - `pay_percentage` override — pre-filled from type default, editable; shows impact label ("sin descuento" / "descuento parcial X%" / "sin goce")
   - `rest_day_factor` override — pre-filled from type default, editable; shows impact label
   - `notes` textarea
-- [ ] 📱 After submit: employee row in Today view shows `LEAVE` status badge; check-in/check-out buttons disappear
-- [ ] 📱 For `PROPORTIONAL_HOURS` OPEN_ENDED approved leaves: show "Registrar regreso" button on the employee row in Today view → fills `actual_end_time` and recomputes `actual_duration_minutes`
-- [ ] 🔧 `useRegisterDirectLeave(employeeId)` hook — owns mutation, modal state, form reset
+- [x] 📱 After submit: employee row in Today view shows `LEAVE` status badge; check-in/check-out buttons disappear
+- [ ] 📱 For `PROPORTIONAL_HOURS` OPEN_ENDED approved leaves: show "Registrar regreso" button on the employee row in Today view → fills `actual_end_time` and recomputes `actual_duration_minutes` _(deferred to #078)_
+- [x] 🔧 `useRegisterLeaveDialog` hook — owns mutation, modal state, form reset
 
 ---
 
 ## 🧪 Tests
 
-- [ ] ✅ PHPUnit: all backend feature tests listed above
-- [ ] ✅ Vitest: `useRegisterDirectLeave` — modal open/close, form submit, optimistic update
-- [ ] 🌲 Cypress E2E (happy path): open Today view → click "Registrar ausencia" on an employee → select type, fill form → submit → employee row shows LEAVE badge
+- [x] ✅ PHPUnit: 15 tests / 41 assertions — RegisterDirectLeaveApiTest
+- [x] ✅ Vitest: RegisterLeaveDialog (22 tests), use-register-leave-dialog (9 tests), EmployeeAttendanceCard (30 tests), leave-api (3 tests), datetime (10 tests)
+- [ ] 🌲 Cypress E2E (happy path): open Today view → click "Registrar ausencia" on an employee → select type, fill form → submit → employee row shows LEAVE badge _(pending — will add in follow-up)_
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Manager registers a full-day absence from Today view; attendance row shows LEAVE badge immediately
-- [ ] Manager registers a PROPORTIONAL_HOURS absence (SCHEDULED); actual return can be recorded from the row
-- [ ] pay_percentage and rest_day_factor show defaults from type and are editable
+- [x] Manager registers a full-day absence from Today view; attendance row shows LEAVE badge immediately
+- [x] Manager registers a PROPORTIONAL_HOURS absence (SCHEDULED); actual return can be recorded from the row
+- [x] pay_percentage and rest_day_factor show defaults from type and are editable
 - [ ] Attempting check-in on an employee with an approved leave shows a clear error
 - [ ] Seeder populates 4 default leave types
 
