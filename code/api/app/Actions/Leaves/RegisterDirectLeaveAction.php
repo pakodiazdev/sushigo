@@ -36,15 +36,14 @@ class RegisterDirectLeaveAction
         $employee = Employee::where('public_id', $data['employee_id'])->firstOrFail();
         $leaveType = LeaveType::findOrFail($data['leave_type_id']);
 
-        $this->guardNoOverlappingApprovedLeave($employee->id, $data['start_date'], $data['end_date']);
-        $this->guardNoExistingWorkedAttendance($employee->id, $data['start_date'], $data['end_date']);
-
         $actualDurationMinutes = $this->computeActualDuration(
             $data['actual_start_time'] ?? null,
             $data['actual_end_time'] ?? null
         );
 
         $leave = DB::transaction(function () use ($data, $employee, $leaveType, $actualDurationMinutes, $requestedById) {
+            $this->guardNoOverlappingApprovedLeave($employee->id, $data['start_date'], $data['end_date']);
+            $this->guardNoExistingWorkedAttendance($employee->id, $data['start_date'], $data['end_date']);
             $leave = Leave::create([
                 'employee_id' => $employee->id,
                 'leave_type_id' => $leaveType->id,
@@ -88,6 +87,7 @@ class RegisterDirectLeaveAction
             ->where('status', LeaveStatus::APPROVED)
             ->where('start_date', '<=', $endDate)
             ->where('end_date', '>=', $startDate)
+            ->lockForUpdate()
             ->exists();
 
         if ($overlaps) {
@@ -108,6 +108,7 @@ class RegisterDirectLeaveAction
             ->where('day_status', DayStatus::WORKED)
             ->where('date', '>=', $startDate)
             ->where('date', '<=', $endDate)
+            ->lockForUpdate()
             ->exists();
 
         if ($exists) {
