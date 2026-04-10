@@ -7,7 +7,6 @@ use Database\Seeders\Fakes\FakeEmployeesSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
 use Database\Seeders\Testing\CloseDayHappyPathSeeder;
 use Database\Seeders\Testing\CloseDayPendingLunchSeeder;
-use Database\Seeders\Testing\CloseDayTestSeeder;
 use Database\Seeders\Testing\CoreTestSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -32,10 +31,6 @@ class TestReset extends Command
         ],
         'attendance' => [
             AttendanceTestSeeder::class,
-        ],
-        'close-day' => [
-            AttendanceTestSeeder::class,
-            CloseDayTestSeeder::class,
         ],
         'close-day-happy' => [
             AttendanceTestSeeder::class,
@@ -85,7 +80,7 @@ class TestReset extends Command
 
         $totalMs = round((microtime(true) - $startTime) * 1000);
         $this->newLine();
-        $this->info("✅ test:reset completed in {$totalMs}ms (groups: " . implode(', ', $groups) . ')');
+        $this->info("✅ test:reset completed in {$totalMs}ms (groups: ".implode(', ', $groups).')');
 
         return self::SUCCESS;
     }
@@ -160,7 +155,7 @@ class TestReset extends Command
             $isCore = $name === 'core' ? ' (always included)' : '';
             $this->line("  <fg=yellow>{$name}</>{$isCore}");
             foreach ($seeders as $seeder) {
-                $this->line('    → ' . class_basename($seeder));
+                $this->line('    → '.class_basename($seeder));
             }
         }
 
