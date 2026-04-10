@@ -6,6 +6,16 @@ import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { useRegisterLeaveDialog } from './use-register-leave-dialog'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
 
+function getAnimationClass(
+  state: 'enter' | 'exit' | null,
+  enterClass: string,
+  exitClass: string,
+): string {
+  if (state === 'enter') return enterClass
+  if (state === 'exit') return exitClass
+  return ''
+}
+
 // ── Props ───────────────────────────────────────────────────────────────────────
 
 export interface RegisterLeaveDialogProps {
@@ -23,7 +33,7 @@ export function RegisterLeaveDialog({
 }: Readonly<RegisterLeaveDialogProps>) {
   const [visible, setVisible] = useState(false)
   const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null)
-  const dialogRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
   const {
     form,
@@ -70,19 +80,8 @@ export function RegisterLeaveDialog({
 
   if (!visible) return null
 
-  const backdropAnim =
-    animating === 'enter'
-      ? 'animate-dialog-backdrop-in'
-      : animating === 'exit'
-        ? 'animate-dialog-backdrop-out'
-        : ''
-
-  const panelAnim =
-    animating === 'enter'
-      ? 'animate-dialog-in'
-      : animating === 'exit'
-        ? 'animate-dialog-out'
-        : ''
+  const backdropAnim = getAnimationClass(animating, 'animate-dialog-backdrop-in', 'animate-dialog-backdrop-out')
+  const panelAnim = getAnimationClass(animating, 'animate-dialog-in', 'animate-dialog-out')
 
   const employeeName = employee
     ? `${employee.last_name}, ${employee.first_name}`
@@ -92,15 +91,18 @@ export function RegisterLeaveDialog({
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       {/* Backdrop */}
       <div
+        role="button"
+        tabIndex={0}
         className={`absolute inset-0 bg-black/50 ${backdropAnim}`}
-        onClick={() => !isPending && onClose()}
+        onClick={() => { if (!isPending) onClose() }}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !isPending) onClose() }}
+        aria-label="Cerrar diálogo"
       />
 
       {/* Dialog */}
-      <div
+      <dialog
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
+        open
         aria-labelledby="register-leave-title"
         className={`relative z-10 w-full max-w-lg rounded-lg border border-border bg-background shadow-xl ${panelAnim}`}
       >
@@ -252,7 +254,7 @@ export function RegisterLeaveDialog({
             </Button>
           </div>
         </form>
-      </div>
+      </dialog>
     </div>
   )
 

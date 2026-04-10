@@ -118,14 +118,14 @@ export function useRegisterLeaveDialog({
     }
 
     const today = todayDateCdmx()
-    const emptyToNull = (v: string | null | undefined) => (!v ? null : v)
+    const emptyToNull = (v: string | null | undefined) => (v ? v : null)
 
     // Validate and normalize pay_percentage
     const rawPct = emptyToNull(values.pay_percentage)
     let payPct: number | null = null
     if (rawPct !== null) {
       const n = Number(rawPct)
-      if (isNaN(n) || n < 0 || n > 100) {
+      if (Number.isNaN(n) || n < 0 || n > 100) {
         form.setError('pay_percentage', { message: 'Debe ser un número entre 0 y 100' })
         return
       }

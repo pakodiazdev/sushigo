@@ -95,7 +95,7 @@ describe('RegisterLeaveDialog', () => {
         render(
             <RegisterLeaveDialog isOpen={true} employee={mockEmployee} onClose={vi.fn()} />
         )
-        const dialog = document.querySelector('[role="dialog"]')
+        const dialog = document.querySelector('dialog')
         expect(dialog).not.toBeNull()
     })
 
@@ -270,7 +270,7 @@ describe('RegisterLeaveDialog', () => {
         render(
             <RegisterLeaveDialog isOpen={true} employee={null} onClose={vi.fn()} />
         )
-        const dialog = document.querySelector('[role="dialog"]')
+        const dialog = document.querySelector('dialog')
         expect(dialog).not.toBeNull()
     })
 
@@ -278,15 +278,15 @@ describe('RegisterLeaveDialog', () => {
         render(
             <RegisterLeaveDialog isOpen={true} employee={mockEmployee} onClose={vi.fn()} />
         )
-        const dialog = document.querySelector('[role="dialog"]')
-        expect(dialog?.getAttribute('aria-modal')).toBe('true')
+        const dialog = document.querySelector('dialog')
+        expect(dialog?.hasAttribute('open')).toBe(true)
     })
 
     it('has aria-labelledby pointing to title', () => {
         render(
             <RegisterLeaveDialog isOpen={true} employee={mockEmployee} onClose={vi.fn()} />
         )
-        const dialog = document.querySelector('[role="dialog"]')
+        const dialog = document.querySelector('dialog')
         expect(dialog?.getAttribute('aria-labelledby')).toBe('register-leave-title')
         const title = document.getElementById('register-leave-title')
         expect(title).not.toBeNull()
