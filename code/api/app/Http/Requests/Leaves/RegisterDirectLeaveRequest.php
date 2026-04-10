@@ -25,7 +25,7 @@ class RegisterDirectLeaveRequest extends FormRequest
                 'string',
                 Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
             ],
-            'leave_type_id' => ['required', 'integer', 'exists:leave_types,id'],
+            'leave_type_id' => ['required', 'integer', Rule::exists('leave_types', 'id')->where('is_active', true)],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'gte:start_date'],
             'pay_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
