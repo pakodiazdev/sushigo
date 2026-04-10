@@ -15,12 +15,12 @@
  *
  * DB reset strategy
  * ─────────────────
- * • before()     → cy.task('test:reset', 'close-day') ONCE per file.
- *   The 'close-day' group runs AttendanceTestSeeder + CloseDayTestSeeder,
+ * • beforeEach() per describe block → cy.task('test:reset', 'close-day-happy')
+ *   or cy.task('test:reset', 'close-day-pending') depending on the scenario.
+ *   Each group runs AttendanceTestSeeder + the scenario-specific seeder,
  *   pre-creating attendance records so each test starts with employees
  *   already in the correct phase — no UI setup needed.
- * • beforeEach() → login via API + navigate to /attendance/today.
- * • Each it() uses DISTINCT employees — no slot reuse.
+ * • Each describe block uses DISTINCT employees and its own seeder group.
  *
  * Pre-seeded attendance records (date: 2026-04-02):
  *
@@ -47,15 +47,13 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
-before(() => {
-  cy.task("test:reset", "close-day", { timeout: 60_000 });
-});
-
 // Test time: 22:00 CDMX — end of shift, realistic close-day time
 const TEST_TIME_ISO = "2026-04-02T22:00:00-06:00";
 const TEST_TIME_UTC = new Date("2026-04-03T04:00:00Z");
 
-beforeEach(() => {
+function setupBeforeEach(seederGroup: string) {
+  cy.task("test:reset", seederGroup, { timeout: 60_000 });
+
   cy.intercept({ url: /\/api\/v1\// }, (req) => {
     req.headers["X-Test-Time"] = TEST_TIME_ISO;
     req.continue();
@@ -66,7 +64,7 @@ beforeEach(() => {
   cy.url().should("include", "/attendance/today", { timeout: 10_000 });
   cy.closeDevDebugger();
   cy.clock(TEST_TIME_UTC.getTime(), ["Date"]);
-});
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -84,6 +82,10 @@ function getCard(lastName: string, firstName: string) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe("Close day — Happy path (no pending lunch returns)", () => {
+  beforeEach(() => {
+    setupBeforeEach("close-day-happy");
+  });
+
   it("closes the day: applies check-out to returned employees and marks absences", () => {
     // ── Verify pre-seeded state ──
     getCard("Sánchez", "Roberto").within(() => {
@@ -146,6 +148,10 @@ describe("Close day — Happy path (no pending lunch returns)", () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe("Close day — With pending lunch returns (se le pasó al encargado)", () => {
+  beforeEach(() => {
+    setupBeforeEach("close-day-pending");
+  });
+
   it("resolves pending lunch returns in step 1, then confirms close in step 2", () => {
     // ── Verify pre-seeded state ──
     getCard("Mendoza", "Carlos").within(() => {
