@@ -111,6 +111,7 @@ class CoreTestSeeder extends Seeder
 
         [, $unitIds] = $this->seedBranchAndUnits();
         $this->seedUsers($roleMap, $unitIds);
+        $this->seedLeaveTypes();
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
     }
@@ -366,5 +367,57 @@ class CoreTestSeeder extends Seeder
 
         DB::table('model_has_roles')->insert($rolePivots);
         DB::table('operating_unit_users')->insert($unitPivots);
+    }
+
+    private function seedLeaveTypes(): void
+    {
+        $now = now();
+
+        DB::table('leave_types')->insert([
+            [
+                'code' => 'MEDICAL',
+                'name' => 'Incapacidad médica',
+                'calculation_mode' => 'FIXED_PERCENTAGE',
+                'default_pay_percentage' => 0.00,
+                'default_rest_day_factor' => 'NONE',
+                'counts_for_bonus' => false,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'code' => 'PERSONAL',
+                'name' => 'Permiso personal',
+                'calculation_mode' => 'FIXED_PERCENTAGE',
+                'default_pay_percentage' => 0.00,
+                'default_rest_day_factor' => 'NONE',
+                'counts_for_bonus' => false,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'code' => 'PERMISSION_PAID',
+                'name' => 'Permiso con goce de sueldo',
+                'calculation_mode' => 'FIXED_PERCENTAGE',
+                'default_pay_percentage' => 100.00,
+                'default_rest_day_factor' => 'FULL',
+                'counts_for_bonus' => true,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'code' => 'PERMISSION_HOURS',
+                'name' => 'Permiso por horas',
+                'calculation_mode' => 'PROPORTIONAL_HOURS',
+                'default_pay_percentage' => 0.00,
+                'default_rest_day_factor' => 'PROPORTIONAL',
+                'counts_for_bonus' => false,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ]);
     }
 }
