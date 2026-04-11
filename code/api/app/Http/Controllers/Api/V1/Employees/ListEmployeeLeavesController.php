@@ -10,6 +10,40 @@ use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
+/**
+ * @OA\Get(
+ *   path="/api/v1/employees/{employee}/leaves",
+ *   summary="List Employee Leaves",
+ *   description="Returns a paginated list of leaves for a specific employee. Supports filtering by status, date range, overlap range, and leave type.",
+ *   tags={"Employees"},
+ *   security={{"passport": {}}},
+ *
+ *   @OA\Parameter(name="employee", in="path", required=true, @OA\Schema(type="string"), description="Employee public_id (ULID)"),
+ *   @OA\Parameter(name="status", in="query", @OA\Schema(type="string", enum={"APPROVED", "PENDING", "REJECTED", "CANCELLED"}), description="Filter by leave status"),
+ *   @OA\Parameter(name="date_from", in="query", @OA\Schema(type="string", format="date"), description="Filter leaves with start_date >= this date"),
+ *   @OA\Parameter(name="date_to", in="query", @OA\Schema(type="string", format="date"), description="Filter leaves with end_date <= this date"),
+ *   @OA\Parameter(name="overlap_from", in="query", @OA\Schema(type="string", format="date"), description="Filter leaves that overlap with this start date"),
+ *   @OA\Parameter(name="overlap_to", in="query", @OA\Schema(type="string", format="date"), description="Filter leaves that overlap with this end date"),
+ *   @OA\Parameter(name="leave_type_id", in="query", @OA\Schema(type="integer"), description="Filter by leave type ID"),
+ *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15), description="Items per page (1-100)"),
+ *
+ *   @OA\Response(
+ *       response=200,
+ *       description="Employee leaves retrieved successfully",
+ *
+ *       @OA\JsonContent(
+ *           allOf={
+ *
+ *              @OA\Schema(ref="#/components/schemas/ResponsePaginated"),
+ *              @OA\Schema(@OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/LeaveResponse")))
+ *           }
+ *       )
+ *   ),
+ *
+ *   @OA\Response(response=401, description="Unauthenticated"),
+ *   @OA\Response(response=404, description="Employee not found", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
+ * )
+ */
 class ListEmployeeLeavesController extends Controller
 {
     public function __invoke(Request $request, Employee $employee): ResponsePaginated

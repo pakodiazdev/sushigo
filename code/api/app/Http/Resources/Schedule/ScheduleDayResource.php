@@ -4,6 +4,20 @@ namespace App\Http\Resources\Schedule;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @OA\Schema(
+ *     schema="ScheduleDayResponse",
+ *     title="Schedule Day Response",
+ *
+ *     @OA\Property(property="day_of_week", type="integer", example=1, description="ISO day of week (1=Monday, 7=Sunday)"),
+ *     @OA\Property(property="is_day_off", type="boolean", example=false),
+ *     @OA\Property(property="expected_start", type="string", nullable=true, example="09:00"),
+ *     @OA\Property(property="expected_lunch_start", type="string", nullable=true, example="13:00"),
+ *     @OA\Property(property="expected_lunch_end", type="string", nullable=true, example="14:00"),
+ *     @OA\Property(property="lunch_duration_minutes", type="integer", nullable=true, example=60),
+ *     @OA\Property(property="expected_end", type="string", nullable=true, example="18:00")
+ * )
+ */
 class ScheduleDayResource extends JsonResource
 {
     /**
