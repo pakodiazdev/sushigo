@@ -7,6 +7,37 @@ use App\Models\Leave;
 
 /**
  * @mixin Leave
+ *
+ * @OA\Schema(
+ *     schema="LeaveResponse",
+ *     title="Leave Response",
+ *
+ *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
+ *     @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
+ *     @OA\Property(property="leave_type", type="object",
+ *         @OA\Property(property="id", type="integer", example=1),
+ *         @OA\Property(property="code", type="string", example="VACATION"),
+ *         @OA\Property(property="name", type="string", example="Vacaciones"),
+ *         @OA\Property(property="calculation_mode", type="string", enum={"FULL_DAY", "PROPORTIONAL_HOURS"}, example="FULL_DAY")
+ *     ),
+ *     @OA\Property(property="start_date", type="string", format="date", example="2026-03-01"),
+ *     @OA\Property(property="end_date", type="string", format="date", example="2026-03-03"),
+ *     @OA\Property(property="resolved_pay_percentage", type="number", format="float", example=100.0),
+ *     @OA\Property(property="resolved_rest_day_factor", type="string", enum={"FULL", "PROPORTIONAL", "NONE"}, example="FULL"),
+ *     @OA\Property(property="time_mode", type="string", nullable=true, enum={"SCHEDULED", "OPEN_ENDED"}, example=null),
+ *     @OA\Property(property="scheduled_start_time", type="string", nullable=true, example="09:00"),
+ *     @OA\Property(property="scheduled_end_time", type="string", nullable=true, example="13:00"),
+ *     @OA\Property(property="actual_start_time", type="string", nullable=true, example="09:05"),
+ *     @OA\Property(property="actual_end_time", type="string", nullable=true, example="12:55"),
+ *     @OA\Property(property="actual_duration_minutes", type="integer", nullable=true, example=230),
+ *     @OA\Property(property="computed_duration_minutes", type="integer", nullable=true, example=240),
+ *     @OA\Property(property="status", type="string", enum={"APPROVED", "PENDING", "REJECTED", "CANCELLED"}, example="APPROVED"),
+ *     @OA\Property(property="requested_by", type="string", example="Admin User"),
+ *     @OA\Property(property="approved_by", type="string", nullable=true, example="Admin User"),
+ *     @OA\Property(property="approved_at", type="string", format="date-time", nullable=true, example="2026-03-01T10:00:00+00:00"),
+ *     @OA\Property(property="notes", type="string", nullable=true, example="Vacaciones familiares"),
+ *     @OA\Property(property="created_at", type="string", format="date-time", example="2026-03-01T08:00:00+00:00")
+ * )
  */
 class LeaveResource extends BaseResource
 {

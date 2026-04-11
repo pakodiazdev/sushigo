@@ -10,6 +10,25 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
+/**
+ * @OA\Schema(
+ *   schema="RegisterDirectLeaveRequest",
+ *   required={"employee_id", "leave_type_id", "start_date", "end_date"},
+ *
+ *   @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
+ *   @OA\Property(property="leave_type_id", type="integer", example=1, description="Active leave type ID"),
+ *   @OA\Property(property="start_date", type="string", format="date", example="2026-03-01"),
+ *   @OA\Property(property="end_date", type="string", format="date", example="2026-03-03", description="Must be >= start_date"),
+ *   @OA\Property(property="pay_percentage", type="number", nullable=true, example=100, description="Override pay percentage (0-100)"),
+ *   @OA\Property(property="rest_day_factor", type="string", nullable=true, enum={"FULL", "PROPORTIONAL", "NONE"}, description="Override rest day factor"),
+ *   @OA\Property(property="time_mode", type="string", nullable=true, enum={"SCHEDULED", "OPEN_ENDED"}, description="Required for PROPORTIONAL_HOURS leave types"),
+ *   @OA\Property(property="scheduled_start_time", type="string", nullable=true, example="09:00", description="Format H:i, required with time_mode"),
+ *   @OA\Property(property="scheduled_end_time", type="string", nullable=true, example="13:00", description="Format H:i, required when time_mode is SCHEDULED"),
+ *   @OA\Property(property="actual_start_time", type="string", nullable=true, example="09:05", description="Format H:i"),
+ *   @OA\Property(property="actual_end_time", type="string", nullable=true, example="12:55", description="Format H:i"),
+ *   @OA\Property(property="notes", type="string", nullable=true, maxLength=1000, example="Cita médica", description="Optional notes")
+ * )
+ */
 class RegisterDirectLeaveRequest extends FormRequest
 {
     public function authorize(): bool
