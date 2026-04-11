@@ -1,9 +1,9 @@
 import { apiClient } from '@/lib/api-client'
-import type { Leave, LeaveType, RegisterDirectLeaveRequest } from '@/types/leave'
+import type { Leave, LeaveType, LeaveStatus, RegisterDirectLeaveRequest } from '@/types/leave'
 import type { PaginatedResponse } from '@/types/employee'
 
 export interface LeaveFilters {
-  status?: string
+  status?: LeaveStatus | ''
   date_from?: string
   date_to?: string
   leave_type_id?: number
@@ -39,8 +39,9 @@ export const leaveApi = {
     if (filters.per_page) params.set('per_page', String(filters.per_page))
     if (filters.page) params.set('page', String(filters.page))
     const query = params.toString()
+    const url = `/employees/${employeeId}/leaves`
     return apiClient.get<PaginatedResponse<Leave>>(
-      `/employees/${employeeId}/leaves${query ? `?${query}` : ''}`
+      query ? `${url}?${query}` : url
     )
   },
 }

@@ -100,7 +100,7 @@ describe('leaveApi', () => {
                 page: 2,
             })
 
-            const calledUrl = vi.mocked(apiClient.get).mock.calls[0][0]
+            const calledUrl = vi.mocked(apiClient.get).mock.calls[0]![0]
             expect(calledUrl).toContain('/employees/emp-001/leaves?')
             expect(calledUrl).toContain('status=APPROVED')
             expect(calledUrl).toContain('date_from=2026-01-01')
@@ -116,7 +116,7 @@ describe('leaveApi', () => {
 
             await leaveApi.listEmployeeLeaves('emp-001', { status: 'PENDING' })
 
-            const calledUrl = vi.mocked(apiClient.get).mock.calls[0][0]
+            const calledUrl = vi.mocked(apiClient.get).mock.calls[0]![0]
             expect(calledUrl).toContain('status=PENDING')
             expect(calledUrl).not.toContain('date_from')
             expect(calledUrl).not.toContain('leave_type_id')
