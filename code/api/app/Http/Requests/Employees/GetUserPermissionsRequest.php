@@ -33,9 +33,6 @@ class GetUserPermissionsRequest extends FormRequest
         /** @var Employee $employee */
         $employee = $this->route('employee');
 
-        /** @var User $user */
-        $user = $employee->user;
-
-        return $user;
+        return $employee->user ?? throw new \LogicException('User is null — authorize() should have caught this.');
     }
 }

@@ -85,11 +85,11 @@ export function PermissionManagerDialog({
         tabIndex={-1}
       />
 
-      {/* Dialog */}
-      <div
-        className="relative z-10 flex w-full max-w-lg flex-col rounded-lg border border-border bg-background shadow-xl"
+      {/* Dialog — native <dialog> element for a11y (SonarCloud typescript:S6819) */}
+      <dialog
+        open
+        className="relative z-10 m-0 flex w-full max-w-lg flex-col rounded-lg border border-border bg-background p-0 shadow-xl"
         style={{ maxHeight: '85vh' }}
-        role="dialog"
         aria-modal="true"
         aria-labelledby="perm-dialog-title"
       >
@@ -201,7 +201,7 @@ export function PermissionManagerDialog({
             Guardar cambios
           </Button>
         </div>
-      </div>
+      </dialog>
     </div>
   )
 

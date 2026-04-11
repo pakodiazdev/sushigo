@@ -76,12 +76,12 @@ describe('PermissionManagerDialog', () => {
 
   it('renders nothing when isOpen is false', () => {
     render(<PermissionManagerDialog {...BASE_PROPS} isOpen={false} />)
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull()
+    expect(document.body.querySelector('dialog')).toBeNull()
   })
 
   it('renders the dialog when isOpen is true', () => {
     render(<PermissionManagerDialog {...BASE_PROPS} />)
-    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(document.body.querySelector('dialog')).not.toBeNull()
   })
 
   // ── Header ───────────────────────────────────────────────────────────────────
