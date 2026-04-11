@@ -1,4 +1,4 @@
-import { CalendarX, Plus, ChevronLeft, ChevronRight, X, History } from 'lucide-react'
+import { CalendarX, Plus, ChevronLeft, ChevronRight, X, History, Check, XCircle } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { RegisterLeaveDialog } from '@/components/attendance'
@@ -107,6 +107,10 @@ function FullHistoryDialog({
     page,
     setPage,
     updateFilter,
+    onApprove,
+    onReject,
+    isApproving,
+    isRejecting,
 }: {
     isOpen: boolean
     onClose: () => void
@@ -118,6 +122,10 @@ function FullHistoryDialog({
     page: number
     setPage: (p: number) => void
     updateFilter: (key: LeaveFilterBarKey, value: FilterValue) => void
+    onApprove: (leaveId: string) => void
+    onReject: (leaveId: string) => void
+    isApproving: boolean
+    isRejecting: boolean
 }) {
     const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, onClose)
 
@@ -168,7 +176,8 @@ function FullHistoryDialog({
                                         <th className="pb-2 pr-3">Tipo</th>
                                         <th className="pb-2 pr-3">Pago</th>
                                         <th className="pb-2 pr-3">Estado</th>
-                                        <th className="pb-2">Notas</th>
+                                        <th className="pb-2 pr-3">Notas</th>
+                                        <th className="pb-2">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -178,7 +187,33 @@ function FullHistoryDialog({
                                             <td className="py-2 pr-3 font-medium">{leave.leave_type.name}</td>
                                             <td className="py-2 pr-3">{payBadge(leave.resolved_pay_percentage)}</td>
                                             <td className="py-2 pr-3">{statusBadge(leave.status)}</td>
-                                            <td className="max-w-[180px] truncate py-2 text-muted-foreground">{leave.notes ?? '—'}</td>
+                                            <td className="max-w-[180px] truncate py-2 pr-3 text-muted-foreground">{leave.notes ?? '—'}</td>
+                                            <td className="py-2">
+                                                {leave.status === 'PENDING' && (
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onApprove(leave.id)}
+                                                            disabled={isApproving || isRejecting}
+                                                            className="rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-50 dark:hover:bg-green-900/30"
+                                                            aria-label="Aprobar ausencia"
+                                                            title="Aprobar"
+                                                        >
+                                                            <Check className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onReject(leave.id)}
+                                                            disabled={isApproving || isRejecting}
+                                                            className="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/30"
+                                                            aria-label="Rechazar ausencia"
+                                                            title="Rechazar"
+                                                        >
+                                                            <XCircle className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -230,6 +265,10 @@ export function LeaveSummarySection({ employeeId, employee }: LeaveSummarySectio
                         Ausencias
                     </h3>
                     <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" onClick={ctx.openRequestLeave} className="h-7 gap-1 px-2 text-xs">
+                            <Plus className="h-3.5 w-3.5" />
+                            Solicitar permiso
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={ctx.openRegisterLeave} className="h-7 gap-1 px-2 text-xs">
                             <Plus className="h-3.5 w-3.5" />
                             Registrar
@@ -304,13 +343,25 @@ export function LeaveSummarySection({ employeeId, employee }: LeaveSummarySectio
                 page={ctx.page}
                 setPage={ctx.setPage}
                 updateFilter={ctx.updateFilter}
+                onApprove={ctx.handleApprove}
+                onReject={ctx.handleReject}
+                isApproving={ctx.isApproving}
+                isRejecting={ctx.isRejecting}
             />
 
-            {/* Register leave dialog */}
+            {/* Register leave dialog (direct) */}
             <RegisterLeaveDialog
-                isOpen={!!ctx.pendingLeaveEmployee}
+                isOpen={ctx.showRegisterLeave}
                 employee={ctx.pendingLeaveEmployee}
                 onClose={ctx.closeRegisterLeave}
+            />
+
+            {/* Request leave dialog */}
+            <RegisterLeaveDialog
+                isOpen={ctx.showRequestLeave}
+                employee={ctx.pendingLeaveEmployee}
+                onClose={ctx.closeRequestLeave}
+                mode="request"
             />
         </>
     )

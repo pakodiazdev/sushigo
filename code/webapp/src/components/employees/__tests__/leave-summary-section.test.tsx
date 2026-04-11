@@ -27,6 +27,14 @@ interface MockHookReturn {
     pendingLeaveEmployee: TodayAttendanceEmployee | null
     openRegisterLeave: () => void
     closeRegisterLeave: () => void
+    showRegisterLeave: boolean
+    showRequestLeave: boolean
+    openRequestLeave: () => void
+    closeRequestLeave: () => void
+    handleApprove: (leaveId: string) => void
+    handleReject: (leaveId: string) => void
+    isApproving: boolean
+    isRejecting: boolean
 }
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -49,6 +57,14 @@ const defaultHookReturn: MockHookReturn = {
     pendingLeaveEmployee: null,
     openRegisterLeave: vi.fn(),
     closeRegisterLeave: vi.fn(),
+    showRegisterLeave: false,
+    showRequestLeave: false,
+    openRequestLeave: vi.fn(),
+    closeRequestLeave: vi.fn(),
+    handleApprove: vi.fn(),
+    handleReject: vi.fn(),
+    isApproving: false,
+    isRejecting: false,
 }
 
 let currentHook = { ...defaultHookReturn }
@@ -58,8 +74,8 @@ vi.mock('@/components/employees/use-leave-summary-section', () => ({
 }))
 
 vi.mock('@/components/attendance', () => ({
-    RegisterLeaveDialog: ({ isOpen }: { isOpen: boolean }) =>
-        isOpen ? <div data-testid="register-leave-dialog">RegisterLeaveDialog</div> : null,
+    RegisterLeaveDialog: ({ isOpen, mode }: { isOpen: boolean; mode?: string }) =>
+        isOpen ? <div data-testid={`register-leave-dialog${mode === 'request' ? '-request' : ''}`}>RegisterLeaveDialog</div> : null,
 }))
 
 const employee = { id: 'emp-1', first_name: 'Ana', last_name: 'López', code: 'E001' }
@@ -94,7 +110,7 @@ function makeLeave(overrides: Partial<Leave> = {}): Leave {
 
 describe('LeaveSummarySection', () => {
     beforeEach(() => {
-        currentHook = { ...defaultHookReturn, openFullHistory: vi.fn(), openRegisterLeave: vi.fn(), closeFullHistory: vi.fn() }
+        currentHook = { ...defaultHookReturn, openFullHistory: vi.fn(), openRegisterLeave: vi.fn(), openRequestLeave: vi.fn(), closeFullHistory: vi.fn() }
     })
 
     afterEach(() => {
@@ -216,6 +232,7 @@ describe('LeaveSummarySection', () => {
         currentHook = {
             ...currentHook,
             pendingLeaveEmployee: { id: 'emp-1', code: 'E001', first_name: 'Ana', last_name: 'López', roles: [] },
+            showRegisterLeave: true,
         }
 
         render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)

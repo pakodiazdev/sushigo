@@ -22,6 +22,7 @@ export interface RegisterLeaveDialogProps {
   isOpen: boolean
   employee: TodayAttendanceEmployee | null
   onClose: () => void
+  mode?: 'direct' | 'request'
 }
 
 // ── Component ───────────────────────────────────────────────────────────────────
@@ -30,6 +31,7 @@ export function RegisterLeaveDialog({
   isOpen,
   employee,
   onClose,
+  mode = 'direct',
 }: Readonly<RegisterLeaveDialogProps>) {
   const [visible, setVisible] = useState(false)
   const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null)
@@ -47,6 +49,7 @@ export function RegisterLeaveDialog({
   } = useRegisterLeaveDialog({
     employee,
     onSuccess: onClose,
+    mode,
   })
 
   const { register, formState: { errors } } = form
@@ -111,9 +114,12 @@ export function RegisterLeaveDialog({
               id="register-leave-title"
               className="text-base font-semibold text-foreground"
             >
-              Registrar ausencia
+              {mode === 'request' ? 'Solicitar permiso' : 'Registrar ausencia'}
             </h3>
             <p className="mt-0.5 text-sm text-muted-foreground">{employeeName}</p>
+            {mode === 'request' && (
+              <p className="mt-0.5 text-xs text-amber-600">Solicitud — requiere aprobación</p>
+            )}
           </div>
           <button
             type="button"
@@ -248,7 +254,7 @@ export function RegisterLeaveDialog({
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Registrar ausencia
+              {mode === 'request' ? 'Solicitar permiso' : 'Registrar ausencia'}
             </Button>
           </div>
         </form>

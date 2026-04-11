@@ -7,6 +7,7 @@ vi.mock('@/lib/api-client', () => ({
     apiClient: {
         get: vi.fn(),
         post: vi.fn(),
+        patch: vi.fn(),
     },
 }))
 
@@ -137,6 +138,49 @@ describe('leaveApi', () => {
             expect(calledUrl).toContain('status=PENDING')
             expect(calledUrl).not.toContain('date_from')
             expect(calledUrl).not.toContain('leave_type_id')
+        })
+    })
+
+    describe('registerLeaveRequest', () => {
+        it('calls POST /leaves/requests with correct payload', async () => {
+            const mockResponse = { data: { status: 201, data: {} } }
+            vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
+
+            const payload = {
+                employee_id: '01HZTEST00000001',
+                leave_type_id: 1,
+                start_date: '2026-04-15',
+                end_date: '2026-04-15',
+            }
+
+            const result = await leaveApi.registerLeaveRequest(payload)
+
+            expect(apiClient.post).toHaveBeenCalledWith('/leaves/requests', payload)
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('approveLeave', () => {
+        it('calls PATCH /leaves/{id}/approve', async () => {
+            const mockResponse = { data: { status: 200, data: { id: 'leave-001', status: 'APPROVED' } } }
+            vi.mocked(apiClient.patch).mockResolvedValue(mockResponse)
+
+            const result = await leaveApi.approveLeave('leave-001')
+
+            expect(apiClient.patch).toHaveBeenCalledWith('/leaves/leave-001/approve')
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('rejectLeave', () => {
+        it('calls PATCH /leaves/{id}/reject', async () => {
+            const mockResponse = { data: { status: 200, data: { id: 'leave-001', status: 'REJECTED' } } }
+            vi.mocked(apiClient.patch).mockResolvedValue(mockResponse)
+
+            const result = await leaveApi.rejectLeave('leave-001')
+
+            expect(apiClient.patch).toHaveBeenCalledWith('/leaves/leave-001/reject')
+            expect(result).toEqual(mockResponse)
         })
     })
 })

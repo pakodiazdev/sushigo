@@ -43,8 +43,11 @@ use App\Http\Controllers\Api\V1\Items\ShowItemController;
 use App\Http\Controllers\Api\V1\Items\ShowItemVariantController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemVariantController;
+use App\Http\Controllers\Api\V1\Leaves\ApproveLeaveController;
 use App\Http\Controllers\Api\V1\Leaves\ListLeaveTypesController;
 use App\Http\Controllers\Api\V1\Leaves\RegisterDirectLeaveController;
+use App\Http\Controllers\Api\V1\Leaves\RegisterLeaveRequestController;
+use App\Http\Controllers\Api\V1\Leaves\RejectLeaveController;
 use App\Http\Controllers\Api\V1\OperatingUnit\CreateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnit\DeleteOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnit\ListOperatingUnitsController;
@@ -256,6 +259,9 @@ Route::prefix('v1')->group(function () {
     // Leaves Module (All Protected)
     Route::middleware('auth:api')->prefix('leaves')->name('leaves.')->group(function () {
         Route::post('/', RegisterDirectLeaveController::class)->name('register-direct');
+        Route::post('/requests', RegisterLeaveRequestController::class)->name('register-request');
+        Route::patch('/{id}/approve', ApproveLeaveController::class)->name('approve');
+        Route::patch('/{id}/reject', RejectLeaveController::class)->name('reject');
     });
 
     // Attendances Module (All Protected)
