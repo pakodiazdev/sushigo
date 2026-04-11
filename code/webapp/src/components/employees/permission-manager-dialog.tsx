@@ -40,10 +40,12 @@ export function PermissionManagerDialog({
     }
   }, [isOpen])
 
-  // Close on Escape
+  // Close on Escape — capture phase + stopImmediatePropagation so the parent
+  // SlidePanel's own Escape listener does NOT also fire when this dialog is open.
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen && !isSaving) {
+        e.stopImmediatePropagation()
         onClose()
       }
     },
@@ -51,8 +53,8 @@ export function PermissionManagerDialog({
   )
 
   useEffect(() => {
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
+    document.addEventListener('keydown', handleEscape, true)
+    return () => document.removeEventListener('keydown', handleEscape, true)
   }, [handleEscape])
 
   if (!isOpen) return null

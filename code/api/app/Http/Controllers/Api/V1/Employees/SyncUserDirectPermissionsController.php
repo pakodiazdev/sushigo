@@ -44,14 +44,7 @@ class SyncUserDirectPermissionsController extends Controller
 {
     public function __invoke(SyncUserPermissionsRequest $request, Employee $employee): JsonResponse
     {
-        $user = $employee->user;
-
-        if ($user === null) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Este empleado no tiene una cuenta de usuario vinculada.',
-            ], 404);
-        }
+        $user = $request->getValidatedUser();
 
         $grant = $request->input('grant', []);
         $revoke = $request->input('revoke', []);
