@@ -8,6 +8,8 @@ use Spatie\Permission\Models\Role;
 
 class PermissionSeeder extends LockedSeeder
 {
+    private const EMPLOYEES_PATTERN = 'employees.%';
+
     public function run(): void
     {
         $permissions = [
@@ -94,7 +96,7 @@ class PermissionSeeder extends LockedSeeder
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
                         $q->where('name', 'like', 'users.%')
-                            ->orWhere('name', 'like', 'employees.%')
+                            ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', 'leaves.%');
                     })
                     ->get()
@@ -107,7 +109,7 @@ class PermissionSeeder extends LockedSeeder
             $inventoryManagerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
-                        $q->where('name', 'like', 'employees.%')
+                        $q->where('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', 'users.%');
                     })
                     ->get()
@@ -121,7 +123,7 @@ class PermissionSeeder extends LockedSeeder
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
                         $q->whereIn('name', ['users.show', 'users.index'])
-                            ->orWhere('name', 'like', 'employees.%')
+                            ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', 'leaves.%');
                     })
                     ->get()

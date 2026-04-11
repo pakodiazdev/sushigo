@@ -32,13 +32,13 @@ class RegisterDirectLeaveAction
         $attributes = $this->buildLeaveAttributes($data, $employee, $leaveType, $actualDurationMinutes, $requestedById, [
             'status' => LeaveStatus::APPROVED,
             'approved_by' => $requestedById,
-            'approved_at' => now(),
         ]);
 
         $leave = DB::transaction(function () use ($data, $employee, $attributes) {
             $this->guardNoOverlappingApprovedLeave($employee->id, $data['start_date'], $data['end_date']);
             $this->guardNoExistingWorkedAttendance($employee->id, $data['start_date'], $data['end_date']);
 
+            $attributes['approved_at'] = now();
             $leave = Leave::create($attributes);
 
             $this->createAttendanceRecords($employee->id, $data['start_date'], $data['end_date']);
