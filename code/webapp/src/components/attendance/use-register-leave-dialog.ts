@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import type { UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useLeaveTypes, useRegisterDirectLeave } from '@/services/leave-hooks'
+import { useLeaveTypes, useRegisterDirectLeave, useRegisterLeaveRequest } from '@/services/leave-hooks'
 import { todayDateCdmx } from '@/lib/datetime'
 import type { LeaveType } from '@/types/leave'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
@@ -37,6 +37,7 @@ export type RegisterLeaveFormValues = z.infer<typeof schema>
 export interface UseRegisterLeaveDialogProps {
   employee: TodayAttendanceEmployee | null
   onSuccess: () => void
+  mode?: 'direct' | 'request'
 }
 
 export interface UseRegisterLeaveDialogResult {
@@ -55,9 +56,12 @@ export interface UseRegisterLeaveDialogResult {
 export function useRegisterLeaveDialog({
   employee,
   onSuccess,
+  mode = 'direct',
 }: UseRegisterLeaveDialogProps): UseRegisterLeaveDialogResult {
   const { data: leaveTypes = [], isLoading: isLoadingTypes } = useLeaveTypes()
-  const mutation = useRegisterDirectLeave()
+  const directMutation = useRegisterDirectLeave()
+  const requestMutation = useRegisterLeaveRequest()
+  const mutation = mode === 'request' ? requestMutation : directMutation
 
   const form = useForm<RegisterLeaveFormValues>({
     resolver: zodResolver(schema),

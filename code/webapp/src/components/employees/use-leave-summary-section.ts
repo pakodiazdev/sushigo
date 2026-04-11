@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useEmployeeLeaves, useLeaveTypes } from '@/services/leave-hooks'
+import { useEmployeeLeaves, useLeaveTypes, useLeaveActions } from '@/services/leave-hooks'
 import type { LeaveFilters } from '@/services/leave-api'
 import type { Leave } from '@/types/leave'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
@@ -44,20 +44,57 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
 
     // Register leave state
     const [pendingLeaveEmployee, setPendingLeaveEmployee] = useState<TodayAttendanceEmployee | null>(null)
+    const [showRegisterLeave, setShowRegisterLeave] = useState(false)
+    const [showRequestLeave, setShowRequestLeave] = useState(false)
 
-    function openRegisterLeave() {
-        if (!employee) return
-        setPendingLeaveEmployee({
+    // Leave actions (approve/reject)
+    const leaveActions = useLeaveActions(employeeId)
+
+    function buildEmployee(): TodayAttendanceEmployee | null {
+        if (!employee) return null
+        return {
             id: employee.id,
             code: employee.code,
             first_name: employee.first_name,
             last_name: employee.last_name,
             roles: [],
-        })
+        }
+    }
+
+    function openRegisterLeave() {
+        const emp = buildEmployee()
+        if (!emp) return
+        setPendingLeaveEmployee(emp)
+        setShowRegisterLeave(true)
     }
 
     function closeRegisterLeave() {
+        setShowRegisterLeave(false)
         setPendingLeaveEmployee(null)
+    }
+
+    function openRequestLeave() {
+        const emp = buildEmployee()
+        if (!emp) return
+        setPendingLeaveEmployee(emp)
+        setShowRequestLeave(true)
+    }
+
+    function closeRequestLeave() {
+        setShowRequestLeave(false)
+        setPendingLeaveEmployee(null)
+    }
+
+    function handleApprove(leaveId: string) {
+        if (confirm('¿Aprobar esta ausencia? Se crearán los registros de asistencia.')) {
+            leaveActions.approve(leaveId)
+        }
+    }
+
+    function handleReject(leaveId: string) {
+        if (confirm('¿Rechazar esta solicitud de ausencia?')) {
+            leaveActions.reject(leaveId)
+        }
     }
 
     function updateFilter(key: keyof LeaveFilters, value: LeaveFilters[keyof LeaveFilters]) {
@@ -89,9 +126,19 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
         page,
         setPage,
         updateFilter,
-        // Register leave
+        // Register leave (direct)
+        showRegisterLeave,
         pendingLeaveEmployee,
         openRegisterLeave,
         closeRegisterLeave,
+        // Request leave (PENDING)
+        showRequestLeave,
+        openRequestLeave,
+        closeRequestLeave,
+        // Approve/Reject
+        handleApprove,
+        handleReject,
+        isApproving: leaveActions.isApproving,
+        isRejecting: leaveActions.isRejecting,
     }
 }

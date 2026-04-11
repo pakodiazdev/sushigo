@@ -11,6 +11,8 @@ vi.mock('@/services/leave-api', () => ({
     leaveApi: {
         listEmployeeLeaves: vi.fn(),
         listLeaveTypes: vi.fn(),
+        approveLeave: vi.fn(),
+        rejectLeave: vi.fn(),
     },
 }))
 
