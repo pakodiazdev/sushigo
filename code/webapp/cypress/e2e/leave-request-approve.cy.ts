@@ -20,34 +20,34 @@ const { email: adminEmail, password: adminPassword } = users.admin
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task('test:reset', 'attendance', { timeout: 60_000 })
+    cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })
 
 const TEST_TIME_ISO = '2026-04-09T10:00:00-06:00'
 const TEST_TIME_UTC = new Date('2026-04-09T16:00:00Z')
 
 beforeEach(() => {
-  cy.intercept({ url: /\/api\/v1\// }, (req) => {
-    req.headers['X-Test-Time'] = TEST_TIME_ISO
-    req.continue()
-  }).as('apiWithTestTime')
+    cy.intercept({ url: /\/api\/v1\// }, (req) => {
+        req.headers['X-Test-Time'] = TEST_TIME_ISO
+        req.continue()
+    }).as('apiWithTestTime')
 
-  cy.loginByApi(adminEmail, adminPassword)
-  cy.visitWithAuth('/employees')
-  cy.url().should('include', '/employees', { timeout: 10_000 })
-  cy.closeDevDebugger()
+    cy.loginByApi(adminEmail, adminPassword)
+    cy.visitWithAuth('/employees')
+    cy.url().should('include', '/employees', { timeout: 10_000 })
+    cy.closeDevDebugger()
 
-  cy.clock(TEST_TIME_UTC.getTime(), ['Date'])
+    cy.clock(TEST_TIME_UTC.getTime(), ['Date'])
 })
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function openEmployeeDetail(name: string) {
-  cy.contains('td', name, { timeout: 10_000 })
-    .closest('tr')
-    .find('button[title="Ver detalle"]')
-    .click()
-  cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
+    cy.contains('td', name, { timeout: 10_000 })
+        .closest('tr')
+        .find('button[title="Ver detalle"]')
+        .click()
+    cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -55,44 +55,44 @@ function openEmployeeDetail(name: string) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Leave Request — submit & approve (happy path)', () => {
-  it('creates a leave request as PENDING, then approves it', () => {
-    cy.intercept('GET', '**/leave-types*').as('leaveTypesLoad')
-    cy.intercept('POST', '**/leaves/requests').as('createRequest')
-    cy.intercept('PATCH', '**/leaves/*/approve').as('approveLeave')
+    it('creates a leave request as PENDING, then approves it', () => {
+        cy.intercept('GET', '**/leave-types*').as('leaveTypesLoad')
+        cy.intercept('POST', '**/leaves/requests').as('createRequest')
+        cy.intercept('PATCH', '**/leaves/*/approve').as('approveLeave')
 
-    // 1. Open employee detail panel
-    openEmployeeDetail('Carlos Mendoza')
+        // 1. Open employee detail panel
+        openEmployeeDetail('Carlos Mendoza')
 
-    // 2. Find "Ausencias" section and click "Solicitar permiso"
-    cy.contains('h3', 'Ausencias', { timeout: 10_000 }).should('be.visible')
-    cy.contains('button', 'Solicitar permiso').click({ force: true })
+        // 2. Find "Ausencias" section and click "Solicitar permiso"
+        cy.contains('h3', 'Ausencias', { timeout: 10_000 }).should('be.visible')
+        cy.contains('button', 'Solicitar permiso').click({ force: true })
 
-    // 3. Dialog should open with request mode title
-    cy.contains('h3', 'Solicitar permiso').should('be.visible')
-    cy.contains('Solicitud — requiere aprobación').should('be.visible')
+        // 3. Dialog should open with request mode title
+        cy.contains('h3', 'Solicitar permiso').should('be.visible')
+        cy.contains('Solicitud — requiere aprobación').should('be.visible')
 
-    // 4. Select leave type and submit
-    cy.wait('@leaveTypesLoad')
-    cy.get('dialog select').first().select('Incapacidad médica')
-    cy.get('dialog').contains('button', 'Solicitar permiso').click({ force: true })
+        // 4. Select leave type and submit
+        cy.wait('@leaveTypesLoad')
+        cy.get('dialog select').first().select('Incapacidad médica')
+        cy.get('dialog').contains('button', 'Solicitar permiso').click({ force: true })
 
-    // 5. Verify API response
-    cy.wait('@createRequest').its('response.statusCode').should('eq', 201)
+        // 5. Verify API response
+        cy.wait('@createRequest').its('response.statusCode').should('eq', 201)
 
-    // 6. Verify PENDING leave appears in the history
-    cy.contains('button', 'Ver historial').click({ force: true })
-    cy.contains('Historial de ausencias', { timeout: 10_000 }).should('be.visible')
+        // 6. Verify PENDING leave appears in the history
+        cy.contains('button', 'Ver historial').click({ force: true })
+        cy.contains('Historial de ausencias', { timeout: 10_000 }).should('be.visible')
 
-    // Filter by PENDING
-    cy.get('select[aria-label="Filtrar por estado"]').select('Pendiente')
-    cy.contains('td', 'Pendiente', { timeout: 10_000 }).should('be.visible')
+        // Filter by PENDING
+        cy.get('select[aria-label="Filtrar por estado"]').select('Pendiente')
+        cy.contains('td', 'Pendiente', { timeout: 10_000 }).should('be.visible')
 
-    // 7. Approve the leave
-    cy.get('button[aria-label="Aprobar ausencia"]').first().click({ force: true })
-    cy.wait('@approveLeave').its('response.statusCode').should('eq', 200)
+        // 7. Approve the leave
+        cy.get('button[aria-label="Aprobar ausencia"]').first().click({ force: true })
+        cy.wait('@approveLeave').its('response.statusCode').should('eq', 200)
 
-    // 8. After approval the row should show "Aprobada"
-    cy.get('select[aria-label="Filtrar por estado"]').select('Todos los estados')
-    cy.contains('td', 'Aprobada', { timeout: 10_000 }).should('be.visible')
-  })
+        // 8. After approval the row should show "Aprobada"
+        cy.get('select[aria-label="Filtrar por estado"]').select('Todos los estados')
+        cy.contains('td', 'Aprobada', { timeout: 10_000 }).should('be.visible')
+    })
 })
