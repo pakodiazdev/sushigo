@@ -33,6 +33,7 @@ export function useRegisterDirectLeave() {
       leaveApi.registerDirectLeave(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      queryClient.invalidateQueries({ queryKey: ['employees'] })
       showSuccess('Ausencia registrada correctamente.', 'Ausencia')
     },
     onError: (error: unknown) => {

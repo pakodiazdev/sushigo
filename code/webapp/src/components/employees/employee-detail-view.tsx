@@ -9,6 +9,7 @@ import { DeactivateForm } from './deactivate-form'
 import { RehireForm } from './rehire-form'
 import { useEmployeeDetailActions } from './use-employee-detail-actions'
 import { ScheduleSection } from './schedule-section'
+import { LeaveSummarySection } from './leave-summary-section'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -69,8 +70,16 @@ export function EmployeeDetailView({
 
       <hr className="border-border" />
 
-      {/* Employment history */}
-      <EmploymentPeriodsSection periods={employee.employment_periods || []} />
+      {/* Leave summary — monthly badges + last 3 */}
+      <LeaveSummarySection
+        employeeId={employee.id}
+        employee={employee}
+      />
+
+      <hr className="border-border" />
+
+      {/* Active schedule */}
+      <ScheduleSection employee={employee} />
 
       <hr className="border-border" />
 
@@ -79,8 +88,8 @@ export function EmployeeDetailView({
 
       <hr className="border-border" />
 
-      {/* Active schedule */}
-      <ScheduleSection employee={employee} />
+      {/* Employment history */}
+      <EmploymentPeriodsSection periods={employee.employment_periods || []} />
 
       <hr className="border-border" />
 

@@ -96,7 +96,7 @@ describe('useEmployeeLeaves', () => {
   it('passes filters to API', async () => {
     vi.mocked(leaveApi.listEmployeeLeaves).mockResolvedValue(mockLeavesResponse as never)
     const { wrapper } = makeWrapper()
-    const filters = { status: 'APPROVED', page: 2 }
+    const filters = { status: 'APPROVED' as const, page: 2 }
 
     renderHook(() => useEmployeeLeaves('emp-001', filters), { wrapper })
 
@@ -133,7 +133,7 @@ describe('useEmployeeLeaves', () => {
   it('uses correct query key with filters', async () => {
     vi.mocked(leaveApi.listEmployeeLeaves).mockResolvedValue(mockLeavesResponse as never)
     const { wrapper, queryClient } = makeWrapper()
-    const filters = { status: 'PENDING', leave_type_id: 3 }
+    const filters = { status: 'PENDING' as const, leave_type_id: 3 }
 
     const { result } = renderHook(() => useEmployeeLeaves('emp-001', filters), { wrapper })
 
