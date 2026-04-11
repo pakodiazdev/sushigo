@@ -2,6 +2,7 @@
 
 namespace App\Actions\Leaves;
 
+use App\Actions\Leaves\Concerns\LeaveGuards;
 use App\Enums\LeaveStatus;
 use App\Models\Leave;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,8 @@ use Illuminate\Validation\ValidationException;
  */
 class RejectLeaveAction
 {
+    use LeaveGuards;
+
     /**
      * @throws ValidationException
      */
@@ -37,17 +40,5 @@ class RejectLeaveAction
         });
 
         return $leave->load(['employee', 'leaveType', 'requestedBy', 'approvedBy']);
-    }
-
-    /**
-     * @throws ValidationException
-     */
-    private function guardIsPending(Leave $leave): void
-    {
-        if ($leave->status !== LeaveStatus::PENDING) {
-            throw ValidationException::withMessages([
-                'status' => 'Solo se pueden rechazar solicitudes con estado PENDING.',
-            ]);
-        }
     }
 }

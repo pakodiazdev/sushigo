@@ -59,16 +59,4 @@ class ApproveLeaveAction
 
         return $leave->load(['employee', 'leaveType', 'requestedBy', 'approvedBy']);
     }
-
-    /**
-     * @throws ValidationException
-     */
-    private function guardIsPending(Leave $leave): void
-    {
-        if ($leave->status !== LeaveStatus::PENDING) {
-            throw ValidationException::withMessages([
-                'status' => 'Solo se pueden aprobar solicitudes con estado PENDING.',
-            ]);
-        }
-    }
 }

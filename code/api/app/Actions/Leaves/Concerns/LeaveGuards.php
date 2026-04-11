@@ -4,14 +4,32 @@ namespace App\Actions\Leaves\Concerns;
 
 use App\Enums\DayStatus;
 use App\Enums\LeaveStatus;
+use App\Enums\LeaveTimeMode;
+use App\Enums\RestDayFactor;
 use App\Models\Attendance;
+use App\Models\Employee;
 use App\Models\Leave;
+use App\Models\LeaveType;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Validation\ValidationException;
 
 trait LeaveGuards
 {
+    /**
+     * Throw 422 if the leave is not in PENDING status.
+     *
+     * @throws ValidationException
+     */
+    private function guardIsPending(Leave $leave): void
+    {
+        if ($leave->status !== LeaveStatus::PENDING) {
+            throw ValidationException::withMessages([
+                'status' => 'Solo se pueden procesar solicitudes con estado PENDING.',
+            ]);
+        }
+    }
+
     /**
      * Throw 422 if an approved leave already covers any day in the given range.
      *
@@ -93,5 +111,61 @@ trait LeaveGuards
         $end = Carbon::parse($endTime);
 
         return (int) $start->diffInMinutes($end, absolute: true);
+    }
+
+    /**
+     * Build the common Leave attributes array from validated request data.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $overrides  Fields that differ per action (status, approved_by, approved_at)
+     * @return array<string, mixed>
+     */
+    private function buildLeaveAttributes(
+        array $data,
+        Employee $employee,
+        LeaveType $leaveType,
+        ?int $actualDurationMinutes,
+        int $requestedById,
+        array $overrides
+    ): array {
+        return array_merge([
+            'employee_id' => $employee->id,
+            'leave_type_id' => $leaveType->id,
+            'start_date' => $data['start_date'],
+            'end_date' => $data['end_date'],
+            'pay_percentage' => $data['pay_percentage'] ?? null,
+            'rest_day_factor' => isset($data['rest_day_factor'])
+                ? RestDayFactor::from($data['rest_day_factor'])
+                : null,
+            'time_mode' => isset($data['time_mode'])
+                ? LeaveTimeMode::from($data['time_mode'])
+                : null,
+            'scheduled_start_time' => $data['scheduled_start_time'] ?? null,
+            'scheduled_end_time' => $data['scheduled_end_time'] ?? null,
+            'actual_start_time' => $data['actual_start_time'] ?? null,
+            'actual_end_time' => $data['actual_end_time'] ?? null,
+            'actual_duration_minutes' => $actualDurationMinutes,
+            'requested_by' => $requestedById,
+            'notes' => $data['notes'] ?? null,
+        ], $overrides);
+    }
+
+    /**
+     * Resolve Employee and LeaveType from validated request data.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{Employee, LeaveType, int|null}
+     */
+    private function resolveLeaveContext(array $data): array
+    {
+        $employee = Employee::where('public_id', $data['employee_id'])->firstOrFail();
+        $leaveType = LeaveType::findOrFail($data['leave_type_id']);
+
+        $actualDurationMinutes = $this->computeActualDuration(
+            $data['actual_start_time'] ?? null,
+            $data['actual_end_time'] ?? null
+        );
+
+        return [$employee, $leaveType, $actualDurationMinutes];
     }
 }

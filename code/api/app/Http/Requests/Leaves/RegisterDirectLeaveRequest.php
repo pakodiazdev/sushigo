@@ -46,7 +46,7 @@ class RegisterDirectLeaveRequest extends FormRequest
             ],
             'leave_type_id' => ['required', 'integer', Rule::exists('leave_types', 'id')->where('is_active', true)],
             'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'gte:start_date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'pay_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'rest_day_factor' => ['nullable', Rule::in(['FULL', 'PROPORTIONAL', 'NONE'])],
             'time_mode' => ['nullable', Rule::in([LeaveTimeMode::SCHEDULED->value, LeaveTimeMode::OPEN_ENDED->value])],
