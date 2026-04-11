@@ -39,11 +39,11 @@ Below the Roles grid in the employee slide panel, a **"Gestionar permisos direct
 
 - [ ] 📂 Migration `add_label_to_permissions_table` — adds nullable `label` string column to the `permissions` table (Spatie-managed)
 - [ ] 🌱 Update `PermissionSeeder` — populate `label` for every existing permission slug (e.g. `employees.create` → `"Crear empleados"`)
-- [ ] 🌐 `GET /api/v1/users/{id}/permissions` — `GetUserPermissionsController`
+- [ ] 🌐 `GET /api/v1/employees/{employee}/permissions` — `GetUserPermissionsController`
   - Returns all system permissions grouped by module
   - Each permission: `name` (slug), `label`, `group`, `source` (`role|direct|none`), `via_roles: string[]`
   - Requires `users.show` permission
-- [ ] 🌐 `PUT /api/v1/users/{id}/permissions` — `SyncUserDirectPermissionsController`
+- [ ] 🌐 `PUT /api/v1/employees/{employee}/permissions` — `SyncUserDirectPermissionsController`
   - Body: `{ "grant": ["perm.a"], "revoke": ["perm.b"] }`
   - `grant` → `givePermissionTo()` for each slug
   - `revoke` → `revokePermissionTo()` for each slug (removes direct grant only; role grants unaffected)

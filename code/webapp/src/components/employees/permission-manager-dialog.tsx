@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react'
+import { useState, useContext, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, ChevronRight, Loader2, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,28 @@ export function PermissionManagerDialog({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const slidePanelOverlay = useContext(SlidePanelOverlayContext)
 
+  // Reset accordion state every time the dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setExpandedGroups(new Set())
+    }
+  }, [isOpen])
+
+  // Close on Escape
+  const handleEscape = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && !isSaving) {
+        onClose()
+      }
+    },
+    [isOpen, isSaving, onClose],
+  )
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [handleEscape])
+
   if (!isOpen) return null
 
   function toggleGroup(group: string) {
@@ -47,19 +69,18 @@ export function PermissionManagerDialog({
     })
   }
 
-  function isGroupExpanded(group: string) {
-    return expandedGroups.has(group)
-  }
-
   const portalTarget = slidePanelOverlay?.current ?? document.body
   const positionClass = slidePanelOverlay?.current ? 'absolute' : 'fixed'
 
   const content = (
     <div className={`${positionClass} inset-0 z-[60] flex items-center justify-center`}>
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
+      {/* Backdrop — button for accessibility */}
+      <button
+        type="button"
+        aria-label="Cerrar diálogo"
+        className="absolute inset-0 bg-black/50 cursor-default"
         onClick={() => !isSaving && onClose()}
+        tabIndex={-1}
       />
 
       {/* Dialog */}
@@ -101,11 +122,12 @@ export function PermissionManagerDialog({
                     type="button"
                     onClick={() => toggleGroup(group.group)}
                     className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-muted/50"
+                    aria-expanded={expandedGroups.has(group.group)}
                   >
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {group.group}
                     </span>
-                    {isGroupExpanded(group.group) ? (
+                    {expandedGroups.has(group.group) ? (
                       <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     ) : (
                       <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -113,7 +135,7 @@ export function PermissionManagerDialog({
                   </button>
 
                   {/* Permissions list */}
-                  {isGroupExpanded(group.group) && (
+                  {expandedGroups.has(group.group) && (
                     <div className="divide-y divide-border border-t border-border">
                       {group.permissions.map((permission) => {
                         const checked = isChecked(permission.name, permission.source)
@@ -121,8 +143,8 @@ export function PermissionManagerDialog({
                         return (
                           <label
                             key={permission.name}
-                            className={`flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/30 ${
-                              permission.source === 'role' ? 'cursor-default' : ''
+                            className={`flex items-center gap-3 px-3 py-2 hover:bg-muted/30 ${
+                              permission.source === 'role' ? 'cursor-default' : 'cursor-pointer'
                             }`}
                           >
                             <input

@@ -9,6 +9,31 @@ use Spatie\Permission\Models\Permission;
 
 /**
  * @mixin User
+ *
+ * @OA\Schema(
+ *     schema="UserPermissionItem",
+ *     title="User Permission Item",
+ *
+ *     @OA\Property(property="name",      type="string", example="employees.create"),
+ *     @OA\Property(property="label",     type="string", example="Crear empleado"),
+ *     @OA\Property(property="source",    type="string", enum={"role","direct","none"}, example="role"),
+ *     @OA\Property(property="via_roles", type="array", @OA\Items(type="string"), example={"admin"})
+ * )
+ *
+ * @OA\Schema(
+ *     schema="UserPermissionGroup",
+ *     title="User Permission Group",
+ *
+ *     @OA\Property(property="group",       type="string", example="Empleados"),
+ *     @OA\Property(property="permissions", type="array", @OA\Items(ref="#/components/schemas/UserPermissionItem"))
+ * )
+ *
+ * @OA\Schema(
+ *     schema="UserPermissionsResponse",
+ *     title="User Permissions Response",
+ *
+ *     @OA\Property(property="groups", type="array", @OA\Items(ref="#/components/schemas/UserPermissionGroup"))
+ * )
  */
 class UserPermissionsResource extends BaseResource
 {
@@ -26,18 +51,17 @@ class UserPermissionsResource extends BaseResource
         $rolePermissionNames = collect($rolesByPermission)->keys()->flip();
 
         $allPermissions = Permission::where('guard_name', 'api')
-            ->whereNotNull('group')
             ->orderBy('group')
             ->orderBy('name')
             ->get();
 
         $groups = $allPermissions
-            ->groupBy('group')
+            ->groupBy(fn (Permission $permission) => $permission->group ?: 'Otros')
             ->map(fn (Collection $permissions, string $group) => [
                 'group' => $group,
                 'permissions' => $permissions->map(fn (Permission $permission) => [
                     'name' => $permission->name,
-                    'label' => $permission->label,
+                    'label' => $permission->label ?: $permission->name,
                     'source' => $this->resolveSource($permission->name, $directPermissionNames, $rolePermissionNames),
                     'via_roles' => $rolesByPermission[$permission->name] ?? [],
                 ])->values(),
