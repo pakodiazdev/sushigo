@@ -18,6 +18,8 @@ class ListEmployeeLeavesController extends Controller
             'status' => ['sometimes', 'string', Rule::in(array_column(LeaveStatus::cases(), 'value'))],
             'date_from' => ['sometimes', 'date'],
             'date_to' => ['sometimes', 'date'],
+            'overlap_from' => ['sometimes', 'date'],
+            'overlap_to' => ['sometimes', 'date'],
             'leave_type_id' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
@@ -35,6 +37,14 @@ class ListEmployeeLeavesController extends Controller
 
         if (array_key_exists('date_to', $validated)) {
             $query->where('end_date', '<=', $validated['date_to']);
+        }
+
+        if (array_key_exists('overlap_from', $validated)) {
+            $query->where('end_date', '>=', $validated['overlap_from']);
+        }
+
+        if (array_key_exists('overlap_to', $validated)) {
+            $query->where('start_date', '<=', $validated['overlap_to']);
         }
 
         if (array_key_exists('leave_type_id', $validated)) {

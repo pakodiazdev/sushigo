@@ -110,6 +110,23 @@ describe('leaveApi', () => {
             expect(calledUrl).toContain('page=2')
         })
 
+        it('appends overlap query params when provided', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: { current_page: 1, last_page: 1, per_page: 100, total: 0 } } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            await leaveApi.listEmployeeLeaves('emp-001', {
+                overlap_from: '2026-04-01',
+                overlap_to: '2026-04-30',
+                per_page: 100,
+            })
+
+            const calledUrl = vi.mocked(apiClient.get).mock.calls[0]![0]
+            expect(calledUrl).toContain('/employees/emp-001/leaves?')
+            expect(calledUrl).toContain('overlap_from=2026-04-01')
+            expect(calledUrl).toContain('overlap_to=2026-04-30')
+            expect(calledUrl).toContain('per_page=100')
+        })
+
         it('omits empty filters', async () => {
             const mockResponse = { data: { status: 200, data: [], meta: { current_page: 1, last_page: 1, per_page: 15, total: 0 } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
