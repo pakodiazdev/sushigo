@@ -2,15 +2,14 @@
 
 namespace App\Actions\Leaves;
 
+use App\Actions\Leaves\Concerns\LeaveGuards;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveTimeMode;
 use App\Enums\RestDayFactor;
 use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\LeaveType;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Register a leave REQUEST (status = PENDING).
@@ -22,6 +21,8 @@ use Illuminate\Validation\ValidationException;
  */
 class RegisterLeaveRequestAction
 {
+    use LeaveGuards;
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -64,41 +65,5 @@ class RegisterLeaveRequestAction
         });
 
         return $leave->load(['employee', 'leaveType', 'requestedBy', 'approvedBy']);
-    }
-
-    /**
-     * Throw 422 if an approved leave already covers any day in the given range.
-     *
-     * @throws ValidationException
-     */
-    private function guardNoOverlappingApprovedLeave(int $employeeId, string $startDate, string $endDate): void
-    {
-        $overlaps = Leave::where('employee_id', $employeeId)
-            ->where('status', LeaveStatus::APPROVED)
-            ->where('start_date', '<=', $endDate)
-            ->where('end_date', '>=', $startDate)
-            ->lockForUpdate()
-            ->exists();
-
-        if ($overlaps) {
-            throw ValidationException::withMessages([
-                'start_date' => 'El empleado ya tiene una ausencia aprobada que se traslapa con las fechas indicadas.',
-            ]);
-        }
-    }
-
-    /**
-     * Compute actual duration in minutes from start and end time strings (H:i format).
-     */
-    private function computeActualDuration(?string $startTime, ?string $endTime): ?int
-    {
-        if (! $startTime || ! $endTime) {
-            return null;
-        }
-
-        $start = Carbon::parse($startTime);
-        $end = Carbon::parse($endTime);
-
-        return (int) $start->diffInMinutes($end, absolute: true);
     }
 }

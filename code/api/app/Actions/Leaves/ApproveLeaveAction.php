@@ -2,11 +2,9 @@
 
 namespace App\Actions\Leaves;
 
-use App\Enums\DayStatus;
+use App\Actions\Leaves\Concerns\LeaveGuards;
 use App\Enums\LeaveStatus;
-use App\Models\Attendance;
 use App\Models\Leave;
-use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -21,6 +19,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ApproveLeaveAction
 {
+    use LeaveGuards;
+
     /**
      * @throws ValidationException
      */
@@ -69,62 +69,6 @@ class ApproveLeaveAction
             throw ValidationException::withMessages([
                 'status' => 'Solo se pueden aprobar solicitudes con estado PENDING.',
             ]);
-        }
-    }
-
-    /**
-     * @throws ValidationException
-     */
-    private function guardNoExistingWorkedAttendance(int $employeeId, string $startDate, string $endDate): void
-    {
-        $exists = Attendance::where('employee_id', $employeeId)
-            ->where('day_status', DayStatus::WORKED)
-            ->where('date', '>=', $startDate)
-            ->where('date', '<=', $endDate)
-            ->lockForUpdate()
-            ->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'start_date' => 'El empleado ya tiene asistencia trabajada registrada para alguno de los días indicados.',
-            ]);
-        }
-    }
-
-    /**
-     * @throws ValidationException
-     */
-    private function guardNoOverlappingApprovedLeave(int $employeeId, string $startDate, string $endDate, int $excludeLeaveId): void
-    {
-        $overlaps = Leave::where('employee_id', $employeeId)
-            ->where('status', LeaveStatus::APPROVED)
-            ->where('id', '!=', $excludeLeaveId)
-            ->where('start_date', '<=', $endDate)
-            ->where('end_date', '>=', $startDate)
-            ->lockForUpdate()
-            ->exists();
-
-        if ($overlaps) {
-            throw ValidationException::withMessages([
-                'start_date' => 'El empleado ya tiene una ausencia aprobada que se traslapa con las fechas indicadas.',
-            ]);
-        }
-    }
-
-    private function createAttendanceRecords(int $employeeId, string $startDate, string $endDate): void
-    {
-        $period = CarbonPeriod::create($startDate, $endDate);
-
-        foreach ($period as $day) {
-            Attendance::updateOrCreate(
-                [
-                    'employee_id' => $employeeId,
-                    'date' => $day->toDateString(),
-                ],
-                [
-                    'day_status' => DayStatus::LEAVE,
-                ]
-            );
         }
     }
 }
