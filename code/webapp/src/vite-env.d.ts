@@ -1,17 +1,21 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_API_URL: string
-  /**
-   * Clock format used throughout the UI.
-   * '12' = h:mm AM/PM (default)  |  '24' = HH:mm
-   * @see doc/conventions/frontend/time-format.md
-   */
-  readonly VITE_TIME_FORMAT?: '12' | '24'
+    readonly VITE_API_URL: string
+    /**
+     * Clock format used throughout the UI.
+     * '12' = h:mm AM/PM (default)  |  '24' = HH:mm
+     * @see doc/conventions/frontend/time-format.md
+     */
+    readonly VITE_TIME_FORMAT?: '12' | '24'
+    /**
+     * Controls whether the Dev Debugger starts hidden on boot.
+     */
+    readonly VITE_DEV_DEBUGGER_START_HIDDEN?: 'true' | 'false'
 }
 
 interface ImportMeta {
-  readonly env: ImportMetaEnv
+    readonly env: ImportMetaEnv
 }
 
 declare module '*.png' {

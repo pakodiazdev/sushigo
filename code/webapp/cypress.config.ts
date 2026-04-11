@@ -71,7 +71,7 @@ export default defineConfig({
           console.log(`[test:reset] Running test:reset${seedersFlag} on ${CONTAINER}...`)
           execSync(
             `docker exec ${CONTAINER} php /app/code/api/artisan test:reset${seedersFlag}`,
-            { timeout: 60_000, stdio: 'inherit' }
+            { timeout: 120_000, stdio: 'inherit' }
           )
           return null
         },

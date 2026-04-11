@@ -5,6 +5,7 @@ namespace App\Http\Requests\Employees;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use LogicException;
 
 class GetUserPermissionsRequest extends FormRequest
 {
@@ -33,6 +34,6 @@ class GetUserPermissionsRequest extends FormRequest
         /** @var Employee $employee */
         $employee = $this->route('employee');
 
-        return $employee->user ?? throw new \LogicException('User is null — authorize() should have caught this.');
+        return $employee->user ?? throw new LogicException('User is null — authorize() should have caught this.');
     }
 }

@@ -7,13 +7,13 @@ import {
     PlusCircle,
     ChevronDown,
     ChevronUp,
-    RefreshCw
+    RefreshCw,
+    type LucideIcon
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface DebuggerState {
-    isMinimized: boolean
     position: { x: number; y: number }
     expandedSections: {
         user: boolean
@@ -23,6 +23,52 @@ interface DebuggerState {
 }
 
 const STORAGE_KEY = 'dev_debugger_state'
+const SHOULD_START_HIDDEN = import.meta.env.VITE_DEV_DEBUGGER_START_HIDDEN === 'true'
+
+function getDefaultState(): DebuggerState {
+    return {
+        position: { x: window.innerWidth - 420, y: 100 },
+        expandedSections: {
+            user: true,
+            roles: false,
+            queries: false,
+        }
+    }
+}
+
+function loadDebuggerState(): DebuggerState {
+    const fallback = getDefaultState()
+    const saved = localStorage.getItem(STORAGE_KEY)
+
+    if (!saved) {
+        return fallback
+    }
+
+    try {
+        const parsed = JSON.parse(saved) as Partial<DebuggerState>
+
+        return {
+            position: parsed.position ?? fallback.position,
+            expandedSections: {
+                ...fallback.expandedSections,
+                ...parsed.expandedSections,
+            }
+        }
+    } catch {
+        return fallback
+    }
+}
+
+function isEditableElement(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) {
+        return false
+    }
+
+    return target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target instanceof HTMLSelectElement
+        || target.isContentEditable
+}
 
 export function DevDebugger() {
     const { user, isAuthenticated, isAdmin, token } = useAuthStore()
@@ -30,36 +76,53 @@ export function DevDebugger() {
     const dragRef = useRef<HTMLDivElement>(null)
     const [isDragging, setIsDragging] = useState(false)
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+    const [isHidden, setIsHidden] = useState(SHOULD_START_HIDDEN)
+    const [isMinimized, setIsMinimized] = useState(false)
+    const [state, setState] = useState<DebuggerState>(loadDebuggerState)
 
-    // Load state from localStorage
-    const [state, setState] = useState<DebuggerState>(() => {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        return saved ? JSON.parse(saved) : {
-            isMinimized: false,
-            position: { x: window.innerWidth - 420, y: 100 },
-            expandedSections: {
-                user: true,
-                roles: false,
-                queries: false,
-            }
-        }
-    })
-
-    // Save state to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     }, [state])
 
-    // Dragging logic
     useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.key.toLowerCase() !== 'd') {
+                return
+            }
+
+            if (isEditableElement(event.target)) {
+                return
+            }
+
+            event.preventDefault()
+
+            setIsHidden((previouslyHidden) => {
+                const nextHidden = !previouslyHidden
+
+                if (!nextHidden) {
+                    setIsMinimized(false)
+                }
+
+                return nextHidden
+            })
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [])
+
+    useEffect(() => {
+        const handleMouseMove = (event: MouseEvent) => {
             if (!isDragging) return
 
             setState(prev => ({
                 ...prev,
                 position: {
-                    x: e.clientX - dragOffset.x,
-                    y: e.clientY - dragOffset.y,
+                    x: event.clientX - dragOffset.x,
+                    y: event.clientY - dragOffset.y,
                 }
             }))
         }
@@ -79,13 +142,13 @@ export function DevDebugger() {
         }
     }, [isDragging, dragOffset])
 
-    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
         if (!dragRef.current) return
 
         const rect = dragRef.current.getBoundingClientRect()
         setDragOffset({
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
         })
         setIsDragging(true)
     }
@@ -101,7 +164,7 @@ export function DevDebugger() {
     }
 
     const toggleMinimized = () => {
-        setState(prev => ({ ...prev, isMinimized: !prev.isMinimized }))
+        setIsMinimized((previouslyMinimized) => !previouslyMinimized)
     }
 
     const refreshQueries = () => {
@@ -120,9 +183,15 @@ export function DevDebugger() {
     }
 
     const cacheStats = getQueryCacheStats()
+    const shortcutLabel = typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac')
+        ? 'Cmd+Shift+D'
+        : 'Ctrl+Shift+D'
 
-    // Minimized view
-    if (state.isMinimized) {
+    if (isHidden) {
+        return null
+    }
+
+    if (isMinimized) {
         return (
             <div
                 ref={dragRef}
@@ -139,6 +208,7 @@ export function DevDebugger() {
                     <button
                         onClick={toggleMinimized}
                         className="ml-2 p-1 hover:bg-gray-800 rounded"
+                        title="Expand debugger"
                     >
                         <PlusCircle className="h-4 w-4" />
                     </button>
@@ -147,7 +217,6 @@ export function DevDebugger() {
         )
     }
 
-    // Full view
     return (
         <div
             ref={dragRef}
@@ -159,7 +228,6 @@ export function DevDebugger() {
             }}
             className="fixed z-[9999] bg-gray-900 text-white rounded-lg shadow-2xl border-2 border-blue-500 overflow-hidden flex flex-col"
         >
-            {/* Header - Draggable */}
             <div
                 className="bg-blue-600 px-4 py-2 flex items-center justify-between cursor-move"
                 onMouseDown={handleMouseDown}
@@ -179,15 +247,14 @@ export function DevDebugger() {
                     <button
                         onClick={toggleMinimized}
                         className="p-1 hover:bg-blue-700 rounded"
+                        title="Minimize debugger"
                     >
                         <MinusCircle className="h-4 w-4" />
                     </button>
                 </div>
             </div>
 
-            {/* Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 text-sm">
-                {/* User Section */}
                 <Section
                     icon={User}
                     title="Usuario"
@@ -215,7 +282,6 @@ export function DevDebugger() {
                     )}
                 </Section>
 
-                {/* Roles & Permissions Section */}
                 <Section
                     icon={Shield}
                     title="Roles y Permisos"
@@ -270,7 +336,6 @@ export function DevDebugger() {
                     )}
                 </Section>
 
-                {/* Query Cache Section */}
                 <Section
                     icon={RefreshCw}
                     title="Query Cache"
@@ -294,17 +359,15 @@ export function DevDebugger() {
                 </Section>
             </div>
 
-            {/* Footer */}
             <div className="bg-gray-800 px-4 py-2 text-xs text-gray-400 border-t border-gray-700">
-                Solo visible en desarrollo
+                {shortcutLabel} para ocultar o mostrar
             </div>
         </div>
     )
 }
 
-// Helper Components
 interface SectionProps {
-    icon: any
+    icon: LucideIcon
     title: string
     isExpanded: boolean
     onToggle: () => void
@@ -345,15 +408,15 @@ function Section({ icon: Icon, title, isExpanded, onToggle, badge, children }: S
 
 interface InfoRowProps {
     label: string
-    value: any
+    value: string | number | boolean | null | undefined
     highlight?: boolean
 }
 
 function InfoRow({ label, value, highlight }: InfoRowProps) {
     return (
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-3">
             <span className="text-gray-400">{label}:</span>
-            <span className={highlight ? 'text-green-400 font-semibold' : 'text-white'}>
+            <span className={highlight ? 'text-green-400 font-semibold text-right' : 'text-white text-right'}>
                 {value?.toString() || '-'}
             </span>
         </div>
