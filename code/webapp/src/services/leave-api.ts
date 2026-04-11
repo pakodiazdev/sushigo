@@ -6,6 +6,8 @@ export interface LeaveFilters {
   status?: LeaveStatus | ''
   date_from?: string
   date_to?: string
+  overlap_from?: string
+  overlap_to?: string
   leave_type_id?: number
   per_page?: number
   page?: number
@@ -35,6 +37,8 @@ export const leaveApi = {
     if (filters.status) params.set('status', filters.status)
     if (filters.date_from) params.set('date_from', filters.date_from)
     if (filters.date_to) params.set('date_to', filters.date_to)
+    if (filters.overlap_from) params.set('overlap_from', filters.overlap_from)
+    if (filters.overlap_to) params.set('overlap_to', filters.overlap_to)
     if (filters.leave_type_id) params.set('leave_type_id', String(filters.leave_type_id))
     if (filters.per_page) params.set('per_page', String(filters.per_page))
     if (filters.page) params.set('page', String(filters.page))

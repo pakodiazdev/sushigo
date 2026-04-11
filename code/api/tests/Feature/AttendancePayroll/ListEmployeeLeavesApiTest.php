@@ -202,6 +202,53 @@ class ListEmployeeLeavesApiTest extends TestCase
             ->assertJsonPath('data.0.start_date', '2026-04-05');
     }
 
+    #[Test]
+    public function filters_by_overlap_from(): void
+    {
+        $this->createLeave($this->employee, LeaveType::MEDICAL, '2026-02-28', LeaveStatus::APPROVED, '2026-02-28');
+        $this->createLeave($this->employee, LeaveType::PERSONAL, '2026-03-28', LeaveStatus::APPROVED, '2026-04-02');
+
+        $response = $this->getJson("/api/v1/employees/{$this->employee->public_id}/leaves?overlap_from=2026-04-01");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.start_date', '2026-03-28');
+    }
+
+    #[Test]
+    public function filters_by_overlap_to(): void
+    {
+        $this->createLeave($this->employee, LeaveType::MEDICAL, '2026-04-28', LeaveStatus::APPROVED, '2026-05-02');
+        $this->createLeave($this->employee, LeaveType::PERSONAL, '2026-05-05', LeaveStatus::APPROVED, '2026-05-06');
+
+        $response = $this->getJson("/api/v1/employees/{$this->employee->public_id}/leaves?overlap_to=2026-04-30");
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.start_date', '2026-04-28');
+    }
+
+    #[Test]
+    public function filters_by_overlap_range_includes_cross_boundary_leaves(): void
+    {
+        // Leave entirely in March
+        $this->createLeave($this->employee, LeaveType::MEDICAL, '2026-03-10', LeaveStatus::APPROVED, '2026-03-10');
+        // Leave spanning March → April (cross-boundary)
+        $this->createLeave($this->employee, LeaveType::PERSONAL, '2026-03-28', LeaveStatus::APPROVED, '2026-04-05');
+        // Leave entirely in April
+        $this->createLeave($this->employee, LeaveType::PERMISSION_PAID, '2026-04-10', LeaveStatus::APPROVED, '2026-04-10');
+        // Leave entirely in May
+        $this->createLeave($this->employee, LeaveType::MEDICAL, '2026-05-01', LeaveStatus::APPROVED, '2026-05-01');
+
+        $response = $this->getJson("/api/v1/employees/{$this->employee->public_id}/leaves?overlap_from=2026-04-01&overlap_to=2026-04-30");
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $startDates = collect($response->json('data'))->pluck('start_date')->sort()->values()->toArray();
+        $this->assertSame(['2026-03-28', '2026-04-10'], $startDates);
+    }
+
     // ── Pagination ────────────────────────────────────────────────────────────
 
     #[Test]
@@ -245,7 +292,7 @@ class ListEmployeeLeavesApiTest extends TestCase
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private function createLeave(Employee $employee, string $typeCode, string $date, LeaveStatus $status = LeaveStatus::APPROVED): Leave
+    private function createLeave(Employee $employee, string $typeCode, string $date, LeaveStatus $status = LeaveStatus::APPROVED, ?string $endDate = null): Leave
     {
         $leaveType = LeaveType::where('code', $typeCode)->first();
 
@@ -253,7 +300,7 @@ class ListEmployeeLeavesApiTest extends TestCase
             'employee_id' => $employee->id,
             'leave_type_id' => $leaveType->id,
             'start_date' => $date,
-            'end_date' => $date,
+            'end_date' => $endDate ?? $date,
             'pay_percentage' => $leaveType->default_pay_percentage,
             'rest_day_factor' => $leaveType->default_rest_day_factor,
             'status' => $status,
