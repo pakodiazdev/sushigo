@@ -19,6 +19,7 @@ services:
       - ENV=e2e
       - VITE_APP_PORT=${VITE_APP_PORT:-5173}
       - VITE_API_URL=https://api.sushigo.e2e.local/api/v1
+      - VITE_DEV_DEBUGGER_START_HIDDEN=true
       - CYPRESS_baseUrl=${CYPRESS_baseUrl:-https://sushigo.e2e.local}
       - DB_HOST=pgsql
       - POSTGRES_USER=${POSTGRES_USER:-admin}

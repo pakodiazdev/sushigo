@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use LogicException;
 
 /**
  * @OA\Schema(
@@ -61,6 +62,6 @@ class SyncUserPermissionsRequest extends FormRequest
         /** @var Employee $employee */
         $employee = $this->route('employee');
 
-        return $employee->user ?? throw new \LogicException('User is null — authorize() should have caught this.');
+        return $employee->user ?? throw new LogicException('User is null — authorize() should have caught this.');
     }
 }
