@@ -18,12 +18,14 @@ use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\CreateWageController;
 use App\Http\Controllers\Api\V1\Employees\DeactivateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\GetUserPermissionsController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeeLeavesController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
 use App\Http\Controllers\Api\V1\Employees\ListWagesController;
 use App\Http\Controllers\Api\V1\Employees\RehireEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ShowEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
+use App\Http\Controllers\Api\V1\Employees\SyncUserDirectPermissionsController;
 use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
 use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
 use App\Http\Controllers\Api\V1\Inventory\RegisterOpeningBalanceController;
@@ -239,6 +241,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/{employee}/current-schedule', CurrentScheduleController::class)->name('employees.schedule.current')->middleware('permission:employees.view');
         // Leave history endpoints
         Route::get('/{employee}/leaves', ListEmployeeLeavesController::class)->name('employees.leaves.list')->middleware('permission:employees.view');
+        // Direct permission management
+        Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
+        Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');
     });
 
     // Employment Periods — Schedules (All Protected)

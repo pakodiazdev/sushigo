@@ -1,7 +1,8 @@
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Loader2, Edit, UserMinus, UserPlus, Power, PowerOff } from 'lucide-react'
+import { Loader2, Edit, UserMinus, UserPlus, Power, PowerOff, ShieldCheck } from 'lucide-react'
 import type { Employee } from '@/types/employee'
+import { useAuthStore } from '@/stores/auth.store'
 import { EmploymentPeriodsSection } from './employment-periods-section'
 import { WageHistorySection } from './wage-history-section'
 import { EmployeeInfoHeader } from './employee-info-header'
@@ -10,6 +11,8 @@ import { RehireForm } from './rehire-form'
 import { useEmployeeDetailActions } from './use-employee-detail-actions'
 import { ScheduleSection } from './schedule-section'
 import { LeaveSummarySection } from './leave-summary-section'
+import { usePermissionManager } from './use-permission-manager'
+import { PermissionManagerDialog } from './permission-manager-dialog'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -61,6 +64,9 @@ export function EmployeeDetailView({
     onToggleActive,
   })
 
+  const permissionManager = usePermissionManager(employee.id)
+  const canManagePermissions = useAuthStore((s) => s.can('users.update'))
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -108,6 +114,40 @@ export function EmployeeDetailView({
           onSubmit={handleRehireSubmit}
           onCancel={closeRehireForm}
         />
+      )}
+
+      {/* Direct permission manager — only for users with users.update permission */}
+      {employee.has_user && canManagePermissions && (
+        <>
+          <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ShieldCheck className="h-4 w-4" />
+              <span>Permisos directos del usuario</span>
+            </div>
+            <button
+              type="button"
+              onClick={permissionManager.openDialog}
+              className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Gestionar →
+            </button>
+          </div>
+
+          <PermissionManagerDialog
+            isOpen={permissionManager.open}
+            onClose={permissionManager.closeDialog}
+            employeeName={`${employee.first_name} ${employee.last_name}`}
+            groups={permissionManager.groups}
+            isLoading={permissionManager.isLoading}
+            isSaving={permissionManager.isSaving}
+            hasChanges={permissionManager.hasChanges}
+            isChecked={permissionManager.isChecked}
+            togglePermission={permissionManager.togglePermission}
+            onSave={permissionManager.save}
+          />
+
+          <hr className="border-border" />
+        </>
       )}
 
       {/* Action buttons */}

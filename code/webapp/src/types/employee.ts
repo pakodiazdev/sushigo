@@ -30,6 +30,7 @@ export interface Employee {
   roles: EmployeePositionRole[]
   is_active: boolean
   has_active_period?: boolean | null
+  has_user: boolean
   email?: string | null
   phone?: string | null
   phone_country?: string | null
