@@ -75,6 +75,10 @@ class CoreTestSeeder extends Seeder
         'employees.view',
         'employees.create',
         'employees.update',
+        'leaves.register-direct',
+        'leaves.request',
+        'leaves.approve',
+        'leaves.reject',
     ];
 
     /** Basic view-only user permissions shared by most roles */
@@ -83,9 +87,9 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.'],
+        'admin' => ['users.', 'employees.', 'leaves.'],
         'inventory-manager' => ['users.', 'employees.'],
-        'manager' => [...self::BASIC_USER_VIEW, 'employees.'],
+        'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.'],
         'cook' => self::BASIC_USER_VIEW,
         'kitchen-assistant' => self::BASIC_USER_VIEW,
         'delivery-driver' => self::BASIC_USER_VIEW,

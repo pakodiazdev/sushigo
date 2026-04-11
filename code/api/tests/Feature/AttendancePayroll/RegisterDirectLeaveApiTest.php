@@ -34,8 +34,10 @@ class RegisterDirectLeaveApiTest extends TestCase
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
+        Permission::create(['name' => 'leaves.register-direct', 'guard_name' => 'api']);
         $role = Role::create(['name' => 'manager', 'guard_name' => 'api']);
         $role->givePermissionTo('attendances.create');
+        $role->givePermissionTo('leaves.register-direct');
 
         Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
         foreach (Employee::POSITION_ROLES as $roleName) {
@@ -410,6 +412,20 @@ class RegisterDirectLeaveApiTest extends TestCase
             'start_date' => self::DATE,
             'end_date' => self::DATE,
         ])->assertStatus(401);
+    }
+
+    #[Test]
+    public function rejects_request_without_leaves_register_direct_permission(): void
+    {
+        $userWithoutPermission = User::factory()->create();
+        Passport::actingAs($userWithoutPermission);
+
+        $this->postJson('/api/v1/leaves', [
+            'employee_id' => 'any-id',
+            'leave_type_id' => 1,
+            'start_date' => self::DATE,
+            'end_date' => self::DATE,
+        ])->assertStatus(403);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
