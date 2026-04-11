@@ -39,6 +39,7 @@ const mockEmployee: Employee = {
   email: 'juan@example.com',
   phone: null,
   is_active: true,
+  has_user: true,
   roles: [],
   meta: null,
   created_at: '2026-01-01T00:00:00+00:00',

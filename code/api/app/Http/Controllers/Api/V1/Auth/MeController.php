@@ -42,7 +42,7 @@ class MeController extends Controller
     public function __invoke(Request $request)
     {
         $user = $request->user();
-        $user->load('roles', 'permissions');
+        $user->load('roles');
 
         return new ResponseEntity(
             data: [
@@ -53,7 +53,7 @@ class MeController extends Controller
                     'id' => $role->id,
                     'name' => $role->name,
                 ]),
-                'permissions' => $user->permissions->map(fn ($perm) => [
+                'permissions' => $user->getAllPermissions()->map(fn ($perm) => [
                     'id' => $perm->id,
                     'name' => $perm->name,
                 ]),

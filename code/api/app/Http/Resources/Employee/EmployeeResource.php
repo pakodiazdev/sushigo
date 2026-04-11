@@ -56,6 +56,7 @@ class EmployeeResource extends BaseResource
                 : ($this->relationLoaded('employmentPeriods')
                     ? $this->employmentPeriods->contains('is_active', true)
                     : null),
+            'has_user' => $this->user_id !== null,
             'email' => $this->user?->email,
             'phone' => $this->user?->phone,
             'phone_country' => $this->user?->phone_country,

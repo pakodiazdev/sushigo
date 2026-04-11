@@ -13,73 +13,78 @@ class PermissionSeeder extends LockedSeeder
     public function run(): void
     {
         $permissions = [
-            'users.index',
-            'users.show',
-            'users.store',
-            'users.update',
-            'users.destroy',
-            'roles.index',
-            'roles.show',
-            'roles.store',
-            'roles.update',
-            'roles.destroy',
-            'permissions.index',
-            'permissions.show',
+            // Usuarios
+            'users.index' => ['label' => 'Ver lista de usuarios',    'group' => 'Usuarios'],
+            'users.show' => ['label' => 'Ver detalle de usuario',   'group' => 'Usuarios'],
+            'users.store' => ['label' => 'Crear usuario',            'group' => 'Usuarios'],
+            'users.update' => ['label' => 'Editar usuario',           'group' => 'Usuarios'],
+            'users.destroy' => ['label' => 'Eliminar usuario',         'group' => 'Usuarios'],
 
-            // Cash Registers
-            'cash_registers.view',
-            'cash_registers.create',
-            'cash_registers.update',
-            'cash_registers.delete',
+            // Roles
+            'roles.index' => ['label' => 'Ver lista de roles',       'group' => 'Roles'],
+            'roles.show' => ['label' => 'Ver detalle de rol',        'group' => 'Roles'],
+            'roles.store' => ['label' => 'Crear rol',                 'group' => 'Roles'],
+            'roles.update' => ['label' => 'Editar rol',                'group' => 'Roles'],
+            'roles.destroy' => ['label' => 'Eliminar rol',              'group' => 'Roles'],
 
-            // Cash Terminals
-            'cash_terminals.view',
-            'cash_terminals.create',
-            'cash_terminals.update',
-            'cash_terminals.delete',
+            // Permisos
+            'permissions.index' => ['label' => 'Ver lista de permisos', 'group' => 'Permisos'],
+            'permissions.show' => ['label' => 'Ver detalle de permiso', 'group' => 'Permisos'],
 
-            // Bank Accounts
-            'bank_accounts.view',
-            'bank_accounts.create',
-            'bank_accounts.update',
-            'bank_accounts.delete',
+            // Cajas
+            'cash_registers.view' => ['label' => 'Ver cajas',           'group' => 'Cajas'],
+            'cash_registers.create' => ['label' => 'Crear caja',          'group' => 'Cajas'],
+            'cash_registers.update' => ['label' => 'Editar caja',         'group' => 'Cajas'],
+            'cash_registers.delete' => ['label' => 'Eliminar caja',       'group' => 'Cajas'],
 
-            // Cash Sessions
-            'cash_sessions.view',
-            'cash_sessions.create',
-            'cash_sessions.update',
-            'cash_sessions.post',
+            // Terminales
+            'cash_terminals.view' => ['label' => 'Ver terminales',      'group' => 'Terminales'],
+            'cash_terminals.create' => ['label' => 'Crear terminal',      'group' => 'Terminales'],
+            'cash_terminals.update' => ['label' => 'Editar terminal',     'group' => 'Terminales'],
+            'cash_terminals.delete' => ['label' => 'Eliminar terminal',   'group' => 'Terminales'],
 
-            // Cash Adjustments
-            'cash_adjustments.view',
-            'cash_adjustments.create',
-            'cash_adjustments.update',
-            'cash_adjustments.delete',
-            'cash_adjustments.post',
+            // Cuentas bancarias
+            'bank_accounts.view' => ['label' => 'Ver cuentas bancarias',    'group' => 'Cuentas bancarias'],
+            'bank_accounts.create' => ['label' => 'Crear cuenta bancaria',    'group' => 'Cuentas bancarias'],
+            'bank_accounts.update' => ['label' => 'Editar cuenta bancaria',   'group' => 'Cuentas bancarias'],
+            'bank_accounts.delete' => ['label' => 'Eliminar cuenta bancaria', 'group' => 'Cuentas bancarias'],
 
-            // Cash Expenses
-            'cash_expenses.view',
-            'cash_expenses.create',
-            'cash_expenses.update',
-            'cash_expenses.delete',
-            'cash_expenses.post',
+            // Sesiones de caja
+            'cash_sessions.view' => ['label' => 'Ver sesiones de caja',    'group' => 'Sesiones de caja'],
+            'cash_sessions.create' => ['label' => 'Abrir sesión de caja',    'group' => 'Sesiones de caja'],
+            'cash_sessions.update' => ['label' => 'Editar sesión de caja',   'group' => 'Sesiones de caja'],
+            'cash_sessions.post' => ['label' => 'Cerrar sesión de caja',   'group' => 'Sesiones de caja'],
 
-            // Employees
-            'employees.view',
-            'employees.create',
-            'employees.update',
+            // Ajustes de caja
+            'cash_adjustments.view' => ['label' => 'Ver ajustes de caja',    'group' => 'Ajustes de caja'],
+            'cash_adjustments.create' => ['label' => 'Crear ajuste de caja',   'group' => 'Ajustes de caja'],
+            'cash_adjustments.update' => ['label' => 'Editar ajuste de caja',  'group' => 'Ajustes de caja'],
+            'cash_adjustments.delete' => ['label' => 'Eliminar ajuste de caja', 'group' => 'Ajustes de caja'],
+            'cash_adjustments.post' => ['label' => 'Publicar ajuste de caja', 'group' => 'Ajustes de caja'],
 
-            // Leaves
-            'leaves.register-direct',
-            'leaves.request',
-            'leaves.approve',
-            'leaves.reject',
+            // Gastos de caja
+            'cash_expenses.view' => ['label' => 'Ver gastos de caja',    'group' => 'Gastos de caja'],
+            'cash_expenses.create' => ['label' => 'Registrar gasto de caja',  'group' => 'Gastos de caja'],
+            'cash_expenses.update' => ['label' => 'Editar gasto de caja',     'group' => 'Gastos de caja'],
+            'cash_expenses.delete' => ['label' => 'Eliminar gasto de caja',   'group' => 'Gastos de caja'],
+            'cash_expenses.post' => ['label' => 'Publicar gasto de caja',   'group' => 'Gastos de caja'],
+
+            // Empleados
+            'employees.view' => ['label' => 'Ver empleados',    'group' => 'Empleados'],
+            'employees.create' => ['label' => 'Crear empleado',   'group' => 'Empleados'],
+            'employees.update' => ['label' => 'Editar empleado',  'group' => 'Empleados'],
+
+            // Ausencias
+            'leaves.register-direct' => ['label' => 'Registrar ausencia directa', 'group' => 'Ausencias'],
+            'leaves.request' => ['label' => 'Solicitar ausencia',          'group' => 'Ausencias'],
+            'leaves.approve' => ['label' => 'Aprobar ausencia',            'group' => 'Ausencias'],
+            'leaves.reject' => ['label' => 'Rechazar ausencia',           'group' => 'Ausencias'],
         ];
 
-        foreach ($permissions as $permission) {
+        foreach ($permissions as $name => $meta) {
             Permission::updateOrCreate(
-                ['name' => $permission, 'guard_name' => 'api'],
-                ['name' => $permission, 'guard_name' => 'api']
+                ['name' => $name, 'guard_name' => 'api'],
+                ['label' => $meta['label'], 'group' => $meta['group']]
             );
         }
 
