@@ -10,6 +10,14 @@ class PermissionSeeder extends LockedSeeder
 {
     private const EMPLOYEES_PATTERN = 'employees.%';
 
+    private const GROUP_CUENTAS_BANCARIAS = 'Cuentas bancarias';
+
+    private const GROUP_SESIONES_DE_CAJA = 'Sesiones de caja';
+
+    private const GROUP_AJUSTES_DE_CAJA = 'Ajustes de caja';
+
+    private const GROUP_GASTOS_DE_CAJA = 'Gastos de caja';
+
     public function run(): void
     {
         $permissions = [
@@ -44,30 +52,30 @@ class PermissionSeeder extends LockedSeeder
             'cash_terminals.delete' => ['label' => 'Eliminar terminal',   'group' => 'Terminales'],
 
             // Cuentas bancarias
-            'bank_accounts.view' => ['label' => 'Ver cuentas bancarias',    'group' => 'Cuentas bancarias'],
-            'bank_accounts.create' => ['label' => 'Crear cuenta bancaria',    'group' => 'Cuentas bancarias'],
-            'bank_accounts.update' => ['label' => 'Editar cuenta bancaria',   'group' => 'Cuentas bancarias'],
-            'bank_accounts.delete' => ['label' => 'Eliminar cuenta bancaria', 'group' => 'Cuentas bancarias'],
+            'bank_accounts.view' => ['label' => 'Ver cuentas bancarias',    'group' => self::GROUP_CUENTAS_BANCARIAS],
+            'bank_accounts.create' => ['label' => 'Crear cuenta bancaria',    'group' => self::GROUP_CUENTAS_BANCARIAS],
+            'bank_accounts.update' => ['label' => 'Editar cuenta bancaria',   'group' => self::GROUP_CUENTAS_BANCARIAS],
+            'bank_accounts.delete' => ['label' => 'Eliminar cuenta bancaria', 'group' => self::GROUP_CUENTAS_BANCARIAS],
 
             // Sesiones de caja
-            'cash_sessions.view' => ['label' => 'Ver sesiones de caja',    'group' => 'Sesiones de caja'],
-            'cash_sessions.create' => ['label' => 'Abrir sesión de caja',    'group' => 'Sesiones de caja'],
-            'cash_sessions.update' => ['label' => 'Editar sesión de caja',   'group' => 'Sesiones de caja'],
-            'cash_sessions.post' => ['label' => 'Cerrar sesión de caja',   'group' => 'Sesiones de caja'],
+            'cash_sessions.view' => ['label' => 'Ver sesiones de caja',    'group' => self::GROUP_SESIONES_DE_CAJA],
+            'cash_sessions.create' => ['label' => 'Abrir sesión de caja',    'group' => self::GROUP_SESIONES_DE_CAJA],
+            'cash_sessions.update' => ['label' => 'Editar sesión de caja',   'group' => self::GROUP_SESIONES_DE_CAJA],
+            'cash_sessions.post' => ['label' => 'Cerrar sesión de caja',   'group' => self::GROUP_SESIONES_DE_CAJA],
 
             // Ajustes de caja
-            'cash_adjustments.view' => ['label' => 'Ver ajustes de caja',    'group' => 'Ajustes de caja'],
-            'cash_adjustments.create' => ['label' => 'Crear ajuste de caja',   'group' => 'Ajustes de caja'],
-            'cash_adjustments.update' => ['label' => 'Editar ajuste de caja',  'group' => 'Ajustes de caja'],
-            'cash_adjustments.delete' => ['label' => 'Eliminar ajuste de caja', 'group' => 'Ajustes de caja'],
-            'cash_adjustments.post' => ['label' => 'Publicar ajuste de caja', 'group' => 'Ajustes de caja'],
+            'cash_adjustments.view' => ['label' => 'Ver ajustes de caja',    'group' => self::GROUP_AJUSTES_DE_CAJA],
+            'cash_adjustments.create' => ['label' => 'Crear ajuste de caja',   'group' => self::GROUP_AJUSTES_DE_CAJA],
+            'cash_adjustments.update' => ['label' => 'Editar ajuste de caja',  'group' => self::GROUP_AJUSTES_DE_CAJA],
+            'cash_adjustments.delete' => ['label' => 'Eliminar ajuste de caja', 'group' => self::GROUP_AJUSTES_DE_CAJA],
+            'cash_adjustments.post' => ['label' => 'Publicar ajuste de caja', 'group' => self::GROUP_AJUSTES_DE_CAJA],
 
             // Gastos de caja
-            'cash_expenses.view' => ['label' => 'Ver gastos de caja',    'group' => 'Gastos de caja'],
-            'cash_expenses.create' => ['label' => 'Registrar gasto de caja',  'group' => 'Gastos de caja'],
-            'cash_expenses.update' => ['label' => 'Editar gasto de caja',     'group' => 'Gastos de caja'],
-            'cash_expenses.delete' => ['label' => 'Eliminar gasto de caja',   'group' => 'Gastos de caja'],
-            'cash_expenses.post' => ['label' => 'Publicar gasto de caja',   'group' => 'Gastos de caja'],
+            'cash_expenses.view' => ['label' => 'Ver gastos de caja',    'group' => self::GROUP_GASTOS_DE_CAJA],
+            'cash_expenses.create' => ['label' => 'Registrar gasto de caja',  'group' => self::GROUP_GASTOS_DE_CAJA],
+            'cash_expenses.update' => ['label' => 'Editar gasto de caja',     'group' => self::GROUP_GASTOS_DE_CAJA],
+            'cash_expenses.delete' => ['label' => 'Eliminar gasto de caja',   'group' => self::GROUP_GASTOS_DE_CAJA],
+            'cash_expenses.post' => ['label' => 'Publicar gasto de caja',   'group' => self::GROUP_GASTOS_DE_CAJA],
 
             // Empleados
             'employees.view' => ['label' => 'Ver empleados',    'group' => 'Empleados'],
