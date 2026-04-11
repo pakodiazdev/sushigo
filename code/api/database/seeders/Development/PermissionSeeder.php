@@ -66,6 +66,12 @@ class PermissionSeeder extends LockedSeeder
             'employees.view',
             'employees.create',
             'employees.update',
+
+            // Leaves
+            'leaves.register-direct',
+            'leaves.request',
+            'leaves.approve',
+            'leaves.reject',
         ];
 
         foreach ($permissions as $permission) {
@@ -81,14 +87,15 @@ class PermissionSeeder extends LockedSeeder
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
 
-        // admin: user + employee management
+        // admin: user + employee + leave management
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
         if ($adminRole) {
             $adminRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
                         $q->where('name', 'like', 'users.%')
-                            ->orWhere('name', 'like', 'employees.%');
+                            ->orWhere('name', 'like', 'employees.%')
+                            ->orWhere('name', 'like', 'leaves.%');
                     })
                     ->get()
             );
@@ -114,7 +121,8 @@ class PermissionSeeder extends LockedSeeder
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
                         $q->whereIn('name', ['users.show', 'users.index'])
-                            ->orWhere('name', 'like', 'employees.%');
+                            ->orWhere('name', 'like', 'employees.%')
+                            ->orWhere('name', 'like', 'leaves.%');
                     })
                     ->get()
             );

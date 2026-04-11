@@ -34,8 +34,14 @@ class LeaveRequestApiTest extends TestCase
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
+        Permission::create(['name' => 'leaves.request', 'guard_name' => 'api']);
+        Permission::create(['name' => 'leaves.approve', 'guard_name' => 'api']);
+        Permission::create(['name' => 'leaves.reject', 'guard_name' => 'api']);
         $role = Role::create(['name' => 'manager', 'guard_name' => 'api']);
         $role->givePermissionTo('attendances.create');
+        $role->givePermissionTo('leaves.request');
+        $role->givePermissionTo('leaves.approve');
+        $role->givePermissionTo('leaves.reject');
 
         Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
         foreach (Employee::POSITION_ROLES as $roleName) {
@@ -177,6 +183,20 @@ class LeaveRequestApiTest extends TestCase
         ])->assertStatus(401);
     }
 
+    #[Test]
+    public function leave_request_rejects_without_leaves_request_permission(): void
+    {
+        $userWithoutPermission = User::factory()->create();
+        Passport::actingAs($userWithoutPermission);
+
+        $this->postJson('/api/v1/leaves/requests', [
+            'employee_id' => 'any-id',
+            'leave_type_id' => 1,
+            'start_date' => self::DATE,
+            'end_date' => self::DATE,
+        ])->assertStatus(403);
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // PATCH /api/v1/leaves/{id}/approve — Approve Leave
     // ══════════════════════════════════════════════════════════════════════════
@@ -308,6 +328,16 @@ class LeaveRequestApiTest extends TestCase
     }
 
     #[Test]
+    public function approve_rejects_without_leaves_approve_permission(): void
+    {
+        $userWithoutPermission = User::factory()->create();
+        Passport::actingAs($userWithoutPermission);
+
+        $this->patchJson('/api/v1/leaves/fake-id/approve')
+            ->assertStatus(403);
+    }
+
+    #[Test]
     public function approve_returns_404_for_nonexistent_leave(): void
     {
         $this->patchJson('/api/v1/leaves/nonexistent-id/approve')
@@ -382,6 +412,16 @@ class LeaveRequestApiTest extends TestCase
 
         $this->patchJson('/api/v1/leaves/fake-id/reject')
             ->assertStatus(401);
+    }
+
+    #[Test]
+    public function reject_rejects_without_leaves_reject_permission(): void
+    {
+        $userWithoutPermission = User::factory()->create();
+        Passport::actingAs($userWithoutPermission);
+
+        $this->patchJson('/api/v1/leaves/fake-id/reject')
+            ->assertStatus(403);
     }
 
     #[Test]

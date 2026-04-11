@@ -258,10 +258,10 @@ Route::prefix('v1')->group(function () {
 
     // Leaves Module (All Protected)
     Route::middleware('auth:api')->prefix('leaves')->name('leaves.')->group(function () {
-        Route::post('/', RegisterDirectLeaveController::class)->name('register-direct');
-        Route::post('/requests', RegisterLeaveRequestController::class)->name('register-request');
-        Route::patch('/{id}/approve', ApproveLeaveController::class)->name('approve');
-        Route::patch('/{id}/reject', RejectLeaveController::class)->name('reject');
+        Route::post('/', RegisterDirectLeaveController::class)->name('register-direct')->middleware('permission:leaves.register-direct');
+        Route::post('/requests', RegisterLeaveRequestController::class)->name('register-request')->middleware('permission:leaves.request');
+        Route::patch('/{id}/approve', ApproveLeaveController::class)->name('approve')->middleware('permission:leaves.approve');
+        Route::patch('/{id}/reject', RejectLeaveController::class)->name('reject')->middleware('permission:leaves.reject');
     });
 
     // Attendances Module (All Protected)
