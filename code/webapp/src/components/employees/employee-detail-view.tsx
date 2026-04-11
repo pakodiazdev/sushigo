@@ -65,7 +65,7 @@ export function EmployeeDetailView({
   })
 
   const permissionManager = usePermissionManager(employee.id)
-  const canManagePermissions = useAuthStore((s) => s.can('users.update'))
+  const canManagePermissions = useAuthStore((s) => s.can('users.update') && s.can('users.show'))
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
