@@ -348,4 +348,72 @@ describe('useRegisterLeaveDialog', () => {
 
     expect(leaveApi.registerDirectLeave).not.toHaveBeenCalled()
   })
+
+  it('sets error when SCHEDULED mode has no scheduled_end_time', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useRegisterLeaveDialog({ employee: mockEmployee, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    await waitFor(() => expect(result.current.isLoadingTypes).toBe(false))
+
+    act(() => {
+      result.current.form.setValue('leave_type_id', 4) // PROPORTIONAL_HOURS
+      result.current.form.setValue('time_mode', 'SCHEDULED')
+      result.current.form.setValue('scheduled_start_time', '10:00')
+      result.current.form.setValue('scheduled_end_time', null)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit()
+    })
+
+    expect(leaveApi.registerDirectLeave).not.toHaveBeenCalled()
+  })
+
+  it('sets error when pay_percentage is invalid', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useRegisterLeaveDialog({ employee: mockEmployee, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    await waitFor(() => expect(result.current.isLoadingTypes).toBe(false))
+
+    act(() => {
+      result.current.form.setValue('leave_type_id', 1)
+      result.current.form.setValue('pay_percentage', 'abc')
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit()
+    })
+
+    // The API must NOT be called — pay_percentage is invalid
+    expect(leaveApi.registerDirectLeave).not.toHaveBeenCalled()
+  })
+
+  it('sets error when PROPORTIONAL_HOURS has no scheduled_start_time', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useRegisterLeaveDialog({ employee: mockEmployee, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    await waitFor(() => expect(result.current.isLoadingTypes).toBe(false))
+
+    act(() => {
+      result.current.form.setValue('leave_type_id', 4) // PROPORTIONAL_HOURS
+      result.current.form.setValue('time_mode', 'OPEN_ENDED')
+      result.current.form.setValue('scheduled_start_time', null)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit()
+    })
+
+    // The API must NOT be called — scheduled_start_time is missing
+    expect(leaveApi.registerDirectLeave).not.toHaveBeenCalled()
+  })
 })

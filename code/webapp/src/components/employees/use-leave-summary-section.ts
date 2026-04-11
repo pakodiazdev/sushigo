@@ -64,6 +64,7 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
     function openRegisterLeave() {
         const emp = buildEmployee()
         if (!emp) return
+        setShowRequestLeave(false)
         setPendingLeaveEmployee(emp)
         setShowRegisterLeave(true)
     }
@@ -76,6 +77,7 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
     function openRequestLeave() {
         const emp = buildEmployee()
         if (!emp) return
+        setShowRegisterLeave(false)
         setPendingLeaveEmployee(emp)
         setShowRequestLeave(true)
     }

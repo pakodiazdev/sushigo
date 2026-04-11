@@ -387,4 +387,158 @@ describe('LeaveSummarySection', () => {
         render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
         expect(screen.getByText('1 ausencia')).toBeDefined()
     })
+
+    it('calls updateFilter when status select changes', () => {
+        currentHook = {
+            ...currentHook,
+            showFullHistory: true,
+            fullLeaves: [],
+            isLoadingFull: false,
+            updateFilter: vi.fn(),
+            leaveTypes: [],
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+
+        const selects = screen.getAllByRole('combobox')
+        fireEvent.change(selects[0]!, { target: { value: 'APPROVED' } })
+        expect(currentHook.updateFilter).toHaveBeenCalledWith('status', 'APPROVED')
+    })
+
+    it('calls updateFilter with undefined when status select cleared', () => {
+        currentHook = {
+            ...currentHook,
+            showFullHistory: true,
+            fullLeaves: [],
+            isLoadingFull: false,
+            updateFilter: vi.fn(),
+            leaveTypes: [],
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+
+        const selects = screen.getAllByRole('combobox')
+        fireEvent.change(selects[0]!, { target: { value: '' } })
+        expect(currentHook.updateFilter).toHaveBeenCalledWith('status', undefined)
+    })
+
+    it('calls updateFilter when leave type select changes', () => {
+        currentHook = {
+            ...currentHook,
+            showFullHistory: true,
+            fullLeaves: [],
+            isLoadingFull: false,
+            updateFilter: vi.fn(),
+            leaveTypes: [
+                { id: 1, code: 'MEDICAL', name: 'Incapacidad', calculation_mode: 'FIXED_PERCENTAGE' as const, default_pay_percentage: 0, default_rest_day_factor: 'NONE' as const, counts_for_bonus: false },
+            ],
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+
+        const selects = screen.getAllByRole('combobox')
+        fireEvent.change(selects[1]!, { target: { value: '1' } })
+        expect(currentHook.updateFilter).toHaveBeenCalledWith('leave_type_id', 1)
+    })
+
+    it('calls handleApprove when approve button clicked in dialog', () => {
+        currentHook = {
+            ...currentHook,
+            showFullHistory: true,
+            fullLeaves: [makeLeave({ id: 'pending-1', status: 'PENDING' })],
+            isLoadingFull: false,
+            handleApprove: vi.fn(),
+            handleReject: vi.fn(),
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+        fireEvent.click(screen.getByLabelText('Aprobar ausencia'))
+        expect(currentHook.handleApprove).toHaveBeenCalledWith('pending-1')
+    })
+
+    it('calls handleReject when reject button clicked in dialog', () => {
+        currentHook = {
+            ...currentHook,
+            showFullHistory: true,
+            fullLeaves: [makeLeave({ id: 'pending-2', status: 'PENDING' })],
+            isLoadingFull: false,
+            handleApprove: vi.fn(),
+            handleReject: vi.fn(),
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+        fireEvent.click(screen.getByLabelText('Rechazar ausencia'))
+        expect(currentHook.handleReject).toHaveBeenCalledWith('pending-2')
+    })
+
+    it('disables approve/reject buttons when isApproving is true', () => {
+        currentHook = {
+            ...currentHook,
+            showFullHistory: true,
+            fullLeaves: [makeLeave({ id: 'pending-3', status: 'PENDING' })],
+            isLoadingFull: false,
+            isApproving: true,
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+        const approveBtn = screen.getByLabelText('Aprobar ausencia') as HTMLButtonElement
+        const rejectBtn = screen.getByLabelText('Rechazar ausencia') as HTMLButtonElement
+        expect(approveBtn.disabled).toBe(true)
+        expect(rejectBtn.disabled).toBe(true)
+    })
+
+    it('calls setPage when pagination buttons are clicked', () => {
+        currentHook = {
+            ...currentHook,
+            showFullHistory: true,
+            fullLeaves: [makeLeave()],
+            fullMeta: { current_page: 2, last_page: 3, total: 30 },
+            isLoadingFull: false,
+            page: 2,
+            setPage: vi.fn(),
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+
+        // Use aria role to find pagination buttons — they wrap ChevronLeft/ChevronRight icons
+        const paginationButtons = document.body.querySelectorAll('button')
+        const prevBtn = Array.from(paginationButtons).find(b => b.querySelector('.lucide-chevron-left'))
+        const nextBtn = Array.from(paginationButtons).find(b => b.querySelector('.lucide-chevron-right'))
+
+        if (prevBtn) fireEvent.click(prevBtn)
+        expect(currentHook.setPage).toHaveBeenCalledWith(1)
+
+        if (nextBtn) fireEvent.click(nextBtn)
+        expect(currentHook.setPage).toHaveBeenCalledWith(3)
+    })
+
+    it('calls openRequestLeave when Solicitar permiso button clicked', () => {
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+        fireEvent.click(screen.getByText('Solicitar permiso'))
+        expect(currentHook.openRequestLeave).toHaveBeenCalled()
+    })
+
+    it('renders request leave dialog when showRequestLeave is true', () => {
+        currentHook = {
+            ...currentHook,
+            pendingLeaveEmployee: { id: 'emp-1', code: 'E001', first_name: 'Ana', last_name: 'López', roles: [] },
+            showRequestLeave: true,
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+        expect(screen.getByTestId('register-leave-dialog-request')).toBeDefined()
+    })
+
+    it('does not show approve/reject buttons for non-PENDING leaves', () => {
+        currentHook = {
+            ...currentHook,
+            showFullHistory: true,
+            fullLeaves: [makeLeave({ id: 'l1', status: 'APPROVED' })],
+            isLoadingFull: false,
+        }
+
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+        expect(screen.queryByLabelText('Aprobar ausencia')).toBeNull()
+        expect(screen.queryByLabelText('Rechazar ausencia')).toBeNull()
+    })
 })

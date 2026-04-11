@@ -218,4 +218,138 @@ describe('useLeaveSummarySection', () => {
         act(() => result.current.closeRegisterLeave())
         expect(result.current.pendingLeaveEmployee).toBeNull()
     })
+
+    it('openRequestLeave sets pendingLeaveEmployee and showRequestLeave', async () => {
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', employee),
+            { wrapper: createWrapper() },
+        )
+
+        expect(result.current.showRequestLeave).toBe(false)
+
+        act(() => result.current.openRequestLeave())
+
+        expect(result.current.showRequestLeave).toBe(true)
+        expect(result.current.pendingLeaveEmployee).toEqual({
+            id: 'emp-1',
+            code: 'E001',
+            first_name: 'Ana',
+            last_name: 'López',
+            roles: [],
+        })
+    })
+
+    it('openRequestLeave does nothing when employee is undefined', async () => {
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', undefined),
+            { wrapper: createWrapper() },
+        )
+
+        act(() => result.current.openRequestLeave())
+        expect(result.current.showRequestLeave).toBe(false)
+        expect(result.current.pendingLeaveEmployee).toBeNull()
+    })
+
+    it('closeRequestLeave clears pendingLeaveEmployee and showRequestLeave', async () => {
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', employee),
+            { wrapper: createWrapper() },
+        )
+
+        act(() => result.current.openRequestLeave())
+        expect(result.current.showRequestLeave).toBe(true)
+        expect(result.current.pendingLeaveEmployee).not.toBeNull()
+
+        act(() => result.current.closeRequestLeave())
+        expect(result.current.showRequestLeave).toBe(false)
+        expect(result.current.pendingLeaveEmployee).toBeNull()
+    })
+
+    it('openRegisterLeave closes showRequestLeave', async () => {
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', employee),
+            { wrapper: createWrapper() },
+        )
+
+        act(() => result.current.openRequestLeave())
+        expect(result.current.showRequestLeave).toBe(true)
+
+        act(() => result.current.openRegisterLeave())
+        expect(result.current.showRegisterLeave).toBe(true)
+        expect(result.current.showRequestLeave).toBe(false)
+    })
+
+    it('openRequestLeave closes showRegisterLeave', async () => {
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', employee),
+            { wrapper: createWrapper() },
+        )
+
+        act(() => result.current.openRegisterLeave())
+        expect(result.current.showRegisterLeave).toBe(true)
+
+        act(() => result.current.openRequestLeave())
+        expect(result.current.showRequestLeave).toBe(true)
+        expect(result.current.showRegisterLeave).toBe(false)
+    })
+
+    it('handleApprove calls approve when confirm returns true', async () => {
+        const confirmSpy = vi.spyOn(globalThis, 'confirm').mockReturnValue(true)
+        vi.mocked(leaveApi.approveLeave).mockResolvedValue({ data: { status: 200, data: {} } } as never)
+
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', employee),
+            { wrapper: createWrapper() },
+        )
+
+        act(() => result.current.handleApprove('leave-123'))
+
+        expect(confirmSpy).toHaveBeenCalledWith('¿Aprobar esta ausencia? Se crearán los registros de asistencia.')
+        confirmSpy.mockRestore()
+    })
+
+    it('handleApprove does nothing when confirm returns false', async () => {
+        const confirmSpy = vi.spyOn(globalThis, 'confirm').mockReturnValue(false)
+
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', employee),
+            { wrapper: createWrapper() },
+        )
+
+        act(() => result.current.handleApprove('leave-123'))
+
+        expect(confirmSpy).toHaveBeenCalled()
+        expect(leaveApi.approveLeave).not.toHaveBeenCalled()
+        confirmSpy.mockRestore()
+    })
+
+    it('handleReject calls reject when confirm returns true', async () => {
+        const confirmSpy = vi.spyOn(globalThis, 'confirm').mockReturnValue(true)
+        vi.mocked(leaveApi.rejectLeave).mockResolvedValue({ data: { status: 200, data: {} } } as never)
+
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', employee),
+            { wrapper: createWrapper() },
+        )
+
+        act(() => result.current.handleReject('leave-456'))
+
+        expect(confirmSpy).toHaveBeenCalledWith('¿Rechazar esta solicitud de ausencia?')
+        confirmSpy.mockRestore()
+    })
+
+    it('handleReject does nothing when confirm returns false', async () => {
+        const confirmSpy = vi.spyOn(globalThis, 'confirm').mockReturnValue(false)
+
+        const { result } = renderHook(
+            () => useLeaveSummarySection('emp-1', employee),
+            { wrapper: createWrapper() },
+        )
+
+        act(() => result.current.handleReject('leave-456'))
+
+        expect(confirmSpy).toHaveBeenCalled()
+        expect(leaveApi.rejectLeave).not.toHaveBeenCalled()
+        confirmSpy.mockRestore()
+    })
 })

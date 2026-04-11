@@ -74,7 +74,7 @@ describe('Leave Request — submit & approve (happy path)', () => {
     // 4. Select leave type and submit
     cy.wait('@leaveTypesLoad')
     cy.get('dialog select').first().select('Incapacidad médica')
-    cy.get('dialog').contains('button', 'Enviar solicitud').click({ force: true })
+    cy.get('dialog').contains('button', 'Solicitar permiso').click({ force: true })
 
     // 5. Verify API response
     cy.wait('@createRequest').its('response.statusCode').should('eq', 201)
