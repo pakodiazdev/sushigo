@@ -80,7 +80,7 @@ export function OvertimeDecisionDialog({
             <span className="font-semibold text-yellow-700 dark:text-yellow-400">
               {overtimeMinutes} min extra
             </span>
-            . ¿Se pagan?
+            {'. ¿Se pagan?'}
           </p>
         </div>
 
