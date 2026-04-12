@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -14,6 +16,7 @@ export interface OvertimeDecisionDialogProps {
 /**
  * Confirmation dialog for overtime payment decision.
  * Shows "Pagar" (authorize) and "No pagar" (reject) actions.
+ * Supports Escape-to-close and locks background scroll while open.
  */
 export function OvertimeDecisionDialog({
   isOpen,
@@ -24,21 +27,45 @@ export function OvertimeDecisionDialog({
   onReject,
   onClose,
 }: Readonly<OvertimeDecisionDialogProps>) {
+  // Escape key handler
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && !isLoading) onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [isOpen, isLoading, onClose])
+
+  // Scroll lock
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
-  return (
-    <dialog
-      open
-      aria-modal="true"
-      aria-labelledby="overtime-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 w-full h-full"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div
-        className="bg-card rounded-xl border shadow-lg p-6 w-full max-w-sm mx-4 space-y-4"
-        role="document"
+  const content = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 cursor-default appearance-none border-none p-0"
+        onClick={() => { if (!isLoading) onClose() }}
+        aria-label="Cerrar diálogo"
+      />
+
+      {/* Panel */}
+      <dialog
+        open
+        aria-modal="true"
+        aria-labelledby="overtime-dialog-title"
+        className="relative z-10 bg-card rounded-xl border shadow-lg p-6 w-full max-w-sm mx-4 space-y-4"
       >
         <div className="space-y-1">
           <h2
@@ -88,7 +115,9 @@ export function OvertimeDecisionDialog({
             Cancelar
           </Button>
         </div>
-      </div>
-    </dialog>
+      </dialog>
+    </div>
   )
+
+  return createPortal(content, document.body)
 }
