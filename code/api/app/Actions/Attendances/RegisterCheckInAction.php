@@ -10,6 +10,7 @@ use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\ScheduleDay;
+use App\Models\ScheduleDayOverride;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -20,7 +21,7 @@ use Illuminate\Validation\ValidationException;
  *   1. Resolves the employee from their public_id
  *   2. Guards against duplicate attendance for the same date
  *   3. Looks up the active employment period and schedule for the check-in date
- *   4. Retrieves the ScheduleDay configuration for the day of week
+ *   4. Retrieves the effective ScheduleDay (or ScheduleDayOverride) for the day of week
  *   5. Calculates entry_late_seconds = max(0, checkIn − expectedStart) in seconds
  *   6. Persists an Attendance record with day_status = WORKED
  *
@@ -57,7 +58,7 @@ class RegisterCheckInAction
 
         $period = $this->resolveActiveEmploymentPeriod($employee->id, $date);
         $schedule = $this->resolveActiveSchedule($period->id, $date);
-        $scheduleDay = $this->resolveScheduleDay($schedule, $dayOfWeekIso);
+        $scheduleDay = $this->resolveScheduleDay($schedule, $dayOfWeekIso, $period->id, $date);
 
         $lateSeconds = $this->calculateLateSeconds($checkInLocal, $scheduleDay->expected_start);
 
@@ -171,12 +172,37 @@ class RegisterCheckInAction
     }
 
     /**
-     * Return the ScheduleDay config for the ISO day of week (1=Mon … 7=Sun).
+     * Return the effective schedule config for the ISO day of week (1=Mon … 7=Sun).
+     *
+     * A ScheduleDayOverride active on $date takes full precedence over the base
+     * ScheduleDay. This allows managers to mark a normally-off day as workable
+     * (or vice-versa) for a specific date range without changing the base schedule.
      *
      * @throws ValidationException
      */
-    private function resolveScheduleDay(EmployeeSchedule $schedule, int $dayOfWeekIso): ScheduleDay
-    {
+    private function resolveScheduleDay(
+        EmployeeSchedule $schedule,
+        int $dayOfWeekIso,
+        int $periodId,
+        string $date,
+    ): ScheduleDay|ScheduleDayOverride {
+        // Override takes precedence — check it first.
+        $override = ScheduleDayOverride::effective($date)
+            ->where('employment_period_id', $periodId)
+            ->where('day_of_week', $dayOfWeekIso)
+            ->first();
+
+        if ($override) {
+            if ($override->is_day_off) {
+                throw ValidationException::withMessages([
+                    'check_in' => 'Este día está marcado como descanso en el horario del empleado.',
+                ]);
+            }
+
+            return $override;
+        }
+
+        // Fall back to the base schedule day.
         $scheduleDay = $schedule->dayConfig($dayOfWeekIso);
 
         if (! $scheduleDay) {

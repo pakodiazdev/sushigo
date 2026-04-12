@@ -78,7 +78,7 @@ function submitTimeDialog(
   time: string,
   confirmButtonText: string
 ) {
-  cy.intercept("PATCH", "**/attendances/**").as("attendancePatch");
+  cy.intercept({ url: "**/attendances/**", method: /POST|PATCH/ }).as("attendancePatch");
   cy.intercept("GET", "**/attendances/today*").as("refetchAttendance");
 
   cardLocator().within(() => {
