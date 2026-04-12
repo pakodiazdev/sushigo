@@ -44,9 +44,11 @@ export function PermissionManagerDialog({
   // SlidePanel's own Escape listener does NOT also fire when this dialog is open.
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isSaving) {
+      if (e.key === 'Escape' && isOpen) {
         e.stopImmediatePropagation()
-        onClose()
+        if (!isSaving) {
+          onClose()
+        }
       }
     },
     [isOpen, isSaving, onClose],

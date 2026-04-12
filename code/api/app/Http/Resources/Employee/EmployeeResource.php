@@ -16,6 +16,7 @@ use App\Http\Resources\BaseResource;
  *     @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}), example={"cook"}, description="Position roles"),
  *     @OA\Property(property="is_active", type="boolean", example=true),
  *     @OA\Property(property="has_active_period", type="boolean", nullable=true, example=true, description="True when employee has at least one active employment period"),
+ *     @OA\Property(property="has_user", type="boolean", example=true, description="Whether the employee has a linked user account"),
  *     @OA\Property(property="email", type="string", format="email", nullable=true, example="juan@sushigo.com"),
  *     @OA\Property(property="phone", type="string", nullable=true, example="5512345678"),
  *     @OA\Property(property="phone_country", type="string", nullable=true, example="+52"),
