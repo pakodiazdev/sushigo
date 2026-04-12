@@ -12,13 +12,30 @@ import {
     RoleBadges,
 } from '../EmployeeAttendanceCard'
 import { getPhaseCardClass } from '../attendance-helpers'
-import type { TodayAttendanceRow } from '@/types/attendance'
+import type { TodayAttendanceRow, TodayAttendanceData } from '@/types/attendance'
 
 afterEach(() => {
     cleanup()
 })
 
-// ── Helper Functions ───────────────────────────────────────────────────────────
+// ── Fixtures ───────────────────────────────────────────────────────────────────
+
+const makeAttendance = (overrides: Partial<TodayAttendanceData> = {}): TodayAttendanceData => ({
+    id: '01HZATTEND000001',
+    check_in: '2024-01-15T08:00:00Z',
+    lunch_start: null,
+    lunch_end: null,
+    check_out: null,
+    day_status: 'WORKED',
+    entry_late_seconds: 0,
+    entry_late_minutes: 0,
+    is_entry_deductible: false,
+    overtime_minutes: 0,
+    overtime_authorized: false,
+    overtime_authorized_at: null,
+    requires_overtime_decision: false,
+    ...overrides,
+})
 
 const mockRow: TodayAttendanceRow = {
     employee: {
@@ -40,19 +57,15 @@ const mockRowWithAttendance: TodayAttendanceRow = {
         last_name: 'Smith',
         roles: ['mesero', 'cocina'],
     },
-    attendance: {
+    attendance: makeAttendance({
         id: '01HZATTEND000001',
         check_in: '2024-01-15T08:00:00Z',
         lunch_start: '2024-01-15T12:00:00Z',
         lunch_end: '2024-01-15T12:30:00Z',
-        check_out: null,
-        day_status: 'WORKED',
-        entry_late_seconds: 900, // 15 min late
+        entry_late_seconds: 900,
         entry_late_minutes: 15,
-        is_entry_deductible: false,
         overtime_minutes: 30,
-        requires_overtime_decision: false,
-    },
+    }),
     schedule: null,
 }
 
@@ -194,6 +207,7 @@ describe('EmployeeAttendanceCard', () => {
         onLunchStart: vi.fn(),
         onLunchReturn: vi.fn(),
         onCheckOut: vi.fn(),
+        onOvertimeDecision: vi.fn(),
         onRegisterLeave: vi.fn(),
     }
 
@@ -209,7 +223,6 @@ describe('EmployeeAttendanceCard', () => {
 
     it('renders phase badge', () => {
         const { container } = render(<EmployeeAttendanceCard {...defaultProps} />)
-        // Look for the badge text specifically
         expect(container.innerHTML).toContain('Sin registro')
     })
 
@@ -239,19 +252,11 @@ describe('EmployeeAttendanceCard', () => {
     it('renders on-leave phase badge for LEAVE day_status', () => {
         const onLeaveRow: TodayAttendanceRow = {
             employee: mockRow.employee,
-            attendance: {
+            attendance: makeAttendance({
                 id: '01HZATTEND000003',
                 check_in: '2024-01-15T08:00:00Z',
-                lunch_start: null,
-                lunch_end: null,
-                check_out: null,
                 day_status: 'LEAVE',
-                entry_late_seconds: 0,
-                entry_late_minutes: 0,
-                is_entry_deductible: false,
-                overtime_minutes: 0,
-                requires_overtime_decision: false,
-            },
+            }),
             schedule: null,
         }
 
@@ -277,19 +282,7 @@ describe('EmployeeAttendanceCard', () => {
     it('renders lunch-start button for checked-in phase', () => {
         const checkedInRow: TodayAttendanceRow = {
             employee: mockRow.employee,
-            attendance: {
-                id: '01HZATTEND000004',
-                check_in: '2024-01-15T08:00:00Z',
-                lunch_start: null,
-                lunch_end: null,
-                check_out: null,
-                day_status: 'WORKED',
-                entry_late_seconds: 0,
-                entry_late_minutes: 0,
-                is_entry_deductible: false,
-                overtime_minutes: 0,
-                requires_overtime_decision: false,
-            },
+            attendance: makeAttendance({ id: '01HZATTEND000004' }),
             schedule: null,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={checkedInRow} />)
@@ -300,19 +293,7 @@ describe('EmployeeAttendanceCard', () => {
         const onLunchStart = vi.fn()
         const checkedInRow: TodayAttendanceRow = {
             employee: mockRow.employee,
-            attendance: {
-                id: '01HZATTEND000004',
-                check_in: '2024-01-15T08:00:00Z',
-                lunch_start: null,
-                lunch_end: null,
-                check_out: null,
-                day_status: 'WORKED',
-                entry_late_seconds: 0,
-                entry_late_minutes: 0,
-                is_entry_deductible: false,
-                overtime_minutes: 0,
-                requires_overtime_decision: false,
-            },
+            attendance: makeAttendance({ id: '01HZATTEND000004' }),
             schedule: null,
         }
         const { getByText } = render(
@@ -320,5 +301,77 @@ describe('EmployeeAttendanceCard', () => {
         )
         fireEvent.click(getByText('Salir a comer'))
         expect(onLunchStart).toHaveBeenCalledWith(checkedInRow.employee, '01HZATTEND000004')
+    })
+
+    it('shows overtime decision button when requires_overtime_decision is true', () => {
+        const overtimeRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({
+                id: '01HZATTEND000005',
+                check_in: '2024-01-15T08:00:00Z',
+                check_out: '2024-01-15T17:30:00Z',
+                overtime_minutes: 30,
+                requires_overtime_decision: true,
+            }),
+            schedule: null,
+        }
+        const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={overtimeRow} />)
+        expect(getByTestId('btn-overtime-decision')).toBeDefined()
+    })
+
+    it('calls onOvertimeDecision when overtime button is clicked', () => {
+        const onOvertimeDecision = vi.fn()
+        const overtimeRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({
+                id: '01HZATTEND000005',
+                check_in: '2024-01-15T08:00:00Z',
+                check_out: '2024-01-15T17:30:00Z',
+                overtime_minutes: 30,
+                requires_overtime_decision: true,
+            }),
+            schedule: null,
+        }
+        const { getByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={overtimeRow} onOvertimeDecision={onOvertimeDecision} />
+        )
+        fireEvent.click(getByTestId('btn-overtime-decision'))
+        expect(onOvertimeDecision).toHaveBeenCalledWith(overtimeRow.employee, '01HZATTEND000005')
+    })
+
+    it('shows authorized badge when overtime was authorized', () => {
+        const authorizedRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({
+                id: '01HZATTEND000006',
+                check_in: '2024-01-15T08:00:00Z',
+                check_out: '2024-01-15T17:30:00Z',
+                overtime_minutes: 30,
+                overtime_authorized: true,
+                overtime_authorized_at: '2024-01-15T18:00:00Z',
+                requires_overtime_decision: false,
+            }),
+            schedule: null,
+        }
+        const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={authorizedRow} />)
+        expect(getByText(/Pagadas/)).toBeDefined()
+    })
+
+    it('shows rejected badge when overtime was rejected', () => {
+        const rejectedRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({
+                id: '01HZATTEND000007',
+                check_in: '2024-01-15T08:00:00Z',
+                check_out: '2024-01-15T17:30:00Z',
+                overtime_minutes: 30,
+                overtime_authorized: false,
+                overtime_authorized_at: '2024-01-15T18:00:00Z',
+                requires_overtime_decision: false,
+            }),
+            schedule: null,
+        }
+        const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={rejectedRow} />)
+        expect(getByText(/No pagadas/)).toBeDefined()
     })
 })

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut } from '@/services/attendance-hooks'
+import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
@@ -89,6 +89,12 @@ export interface UseTodayAttendancePageResult {
   openCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeCheckOut: () => void
   confirmCheckOut: (time: string) => void
+  // Overtime decision action
+  pendingOvertimeDecision: PendingAttendanceData | null
+  isRecordingOvertimeDecision: boolean
+  openOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+  closeOvertimeDecision: () => void
+  confirmOvertimeDecision: (authorize: boolean) => void
   // Register leave action
   pendingLeaveEmployee: TodayAttendanceEmployee | null
   openRegisterLeave: (employee: TodayAttendanceEmployee) => void
@@ -104,6 +110,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const lunchStartMutation = useLunchStart()
   const lunchReturnMutation = useLunchReturn()
   const checkOutMutation = useCheckOut()
+  const overtimeDecisionMutation = useOvertimeDecision()
 
   const summary = computeSummary(data)
 
@@ -187,6 +194,26 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     )
   }, [pendingCheckOut, checkOutMutation, closeCheckOut])
 
+  // ── Overtime decision state ───────────────────────────────────────────────────
+  const [pendingOvertimeDecision, setPendingOvertimeDecision] =
+    useState<PendingAttendanceData | null>(null)
+
+  const openOvertimeDecision = useCallback((employee: TodayAttendanceEmployee, attendanceId: string) => {
+    setPendingOvertimeDecision({ employee, attendanceId })
+  }, [])
+
+  const closeOvertimeDecision = useCallback(() => {
+    setPendingOvertimeDecision(null)
+  }, [])
+
+  const confirmOvertimeDecision = useCallback((authorize: boolean) => {
+    if (!pendingOvertimeDecision) return
+    overtimeDecisionMutation.mutate(
+      { attendance_id: pendingOvertimeDecision.attendanceId, authorize },
+      { onSettled: closeOvertimeDecision }
+    )
+  }, [pendingOvertimeDecision, overtimeDecisionMutation, closeOvertimeDecision])
+
   // ── Register leave state ─────────────────────────────────────────────────────
   const [pendingLeaveEmployee, setPendingLeaveEmployee] =
     useState<TodayAttendanceEmployee | null>(null)
@@ -232,6 +259,12 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     openCheckOut,
     closeCheckOut,
     confirmCheckOut,
+    // Overtime decision
+    pendingOvertimeDecision,
+    isRecordingOvertimeDecision: overtimeDecisionMutation.isPending,
+    openOvertimeDecision,
+    closeOvertimeDecision,
+    confirmOvertimeDecision,
     // Register leave
     pendingLeaveEmployee,
     openRegisterLeave,

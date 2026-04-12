@@ -1,10 +1,13 @@
 import {
     UtensilsCrossed,
     AlertTriangle,
+    CheckCircle,
+    XCircle,
     LogIn,
     LogOut,
     Undo2,
     CalendarX,
+    Clock,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -106,6 +109,33 @@ export function OvertimeAlert({ overtimeMinutes }: Readonly<OvertimeAlertProps>)
     )
 }
 
+interface OvertimeDecisionBadgeProps {
+    authorized: boolean
+    minutes: number
+}
+
+export function OvertimeDecisionBadge({ authorized, minutes }: Readonly<OvertimeDecisionBadgeProps>) {
+    if (authorized) {
+        return (
+            <div className="flex items-center gap-1.5 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-2 py-1.5">
+                <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400 shrink-0" />
+                <span className="text-[11px] text-green-800 dark:text-green-300 font-medium">
+                    Overtime: {minutes} min — Pagadas
+                </span>
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex items-center gap-1.5 rounded-md bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 px-2 py-1.5">
+            <XCircle className="h-3 w-3 text-slate-500 dark:text-slate-400 shrink-0" />
+            <span className="text-[11px] text-slate-700 dark:text-slate-400 font-medium">
+                Overtime: {minutes} min — No pagadas
+            </span>
+        </div>
+    )
+}
+
 interface RoleBadgesProps {
     roles: string[]
 }
@@ -135,6 +165,7 @@ export interface EmployeeAttendanceCardProps {
     onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+    onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onRegisterLeave: (employee: TodayAttendanceEmployee) => void
 }
 
@@ -144,6 +175,7 @@ export function EmployeeAttendanceCard({
     onLunchStart,
     onLunchReturn,
     onCheckOut,
+    onOvertimeDecision,
     onRegisterLeave,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
@@ -257,9 +289,25 @@ export function EmployeeAttendanceCard({
                 </Button>
             )}
 
-            {/* Overtime alert */}
-            {att?.requires_overtime_decision && (
-                <OvertimeAlert overtimeMinutes={att.overtime_minutes ?? 0} />
+            {/* Overtime section: pending decision button or decision badge */}
+            {att && (att.overtime_minutes ?? 0) > 0 && (
+                att.requires_overtime_decision ? (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-950/30"
+                        onClick={() => onOvertimeDecision(row.employee, att.id)}
+                        data-testid="btn-overtime-decision"
+                    >
+                        <Clock className="h-3.5 w-3.5 mr-1.5" />
+                        Decidir horas extra ({att.overtime_minutes} min)
+                    </Button>
+                ) : (
+                    <OvertimeDecisionBadge
+                        authorized={att.overtime_authorized}
+                        minutes={att.overtime_minutes ?? 0}
+                    />
+                )
             )}
         </div>
     )

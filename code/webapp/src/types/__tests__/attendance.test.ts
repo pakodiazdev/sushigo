@@ -23,6 +23,8 @@ describe('getAttendancePhase', () => {
             entry_late_minutes: null,
             is_entry_deductible: false,
             overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('pending')
@@ -40,6 +42,8 @@ describe('getAttendancePhase', () => {
             entry_late_minutes: null,
             is_entry_deductible: false,
             overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('done')
@@ -57,6 +61,8 @@ describe('getAttendancePhase', () => {
             entry_late_minutes: null,
             is_entry_deductible: false,
             overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('checked-in')
@@ -74,6 +80,8 @@ describe('getAttendancePhase', () => {
             entry_late_minutes: null,
             is_entry_deductible: false,
             overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('at-lunch')
@@ -91,6 +99,8 @@ describe('getAttendancePhase', () => {
             entry_late_minutes: null,
             is_entry_deductible: false,
             overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('returned')

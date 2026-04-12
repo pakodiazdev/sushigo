@@ -61,6 +61,8 @@ function makeAttendanceData(phase: 'pending' | 'checked-in' | 'at-lunch' | 'retu
     entry_late_minutes: 0,
     is_entry_deductible: false,
     overtime_minutes: 0,
+    overtime_authorized: false,
+    overtime_authorized_at: null,
     requires_overtime_decision: false,
     day_status: 'WORKED',
   }

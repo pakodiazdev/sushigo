@@ -14,6 +14,7 @@ export interface AttendanceRecord {
   net_worked_minutes: number | null
   overtime_minutes: number
   overtime_authorized: boolean
+  overtime_authorized_at: string | null
   requires_overtime_decision: boolean
   created_at: string
   updated_at: string
@@ -63,6 +64,8 @@ export interface TodayAttendanceData {
   entry_late_minutes: number | null
   is_entry_deductible: boolean
   overtime_minutes: number
+  overtime_authorized: boolean
+  overtime_authorized_at: string | null
   requires_overtime_decision: boolean
 }
 

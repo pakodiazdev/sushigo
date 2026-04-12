@@ -122,6 +122,31 @@ export function useCheckOut() {
 }
 
 /**
+ * Mutation: record the Manager's overtime decision (authorize or reject) for an attendance.
+ * On success: invalidates the today attendance query and shows a toast.
+ */
+export function useOvertimeDecision() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: { attendance_id: string; authorize: boolean }) =>
+      attendanceApi.overtimeDecision(data.attendance_id, { authorize: data.authorize }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      const label = variables.authorize ? 'Horas extra autorizadas.' : 'Horas extra no pagadas.'
+      showSuccess(label, 'Decisión registrada')
+    },
+    onError: (error: unknown) => {
+      showError(
+        getApiErrorMessage(error, 'No se pudo registrar la decisión.'),
+        'Error al registrar'
+      )
+    },
+  })
+}
+
+/**
  * Mutation: close the day for a branch (batch lunch returns + check-outs + absences).
  * On success: invalidates the today attendance query and shows a summary toast.
  */
