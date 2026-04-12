@@ -11,6 +11,7 @@ import {
   EmptyState,
   ErrorState,
   NoBranchState,
+  OvertimeDecisionDialog,
   RegisterLeaveDialog,
   SkeletonGrid,
   useCloseDayPanel,
@@ -54,6 +55,12 @@ export function TodayAttendancePage() {
     openCheckOut,
     closeCheckOut,
     confirmCheckOut,
+    // Overtime decision
+    pendingOvertimeDecision,
+    isRecordingOvertimeDecision,
+    openOvertimeDecision,
+    closeOvertimeDecision,
+    confirmOvertimeDecision,
     // Register leave
     pendingLeaveEmployee,
     openRegisterLeave,
@@ -62,6 +69,10 @@ export function TodayAttendancePage() {
 
   const closeDayPanel = useCloseDayPanel(rows, branchId)
   const maxTime = currentTimeLabel()
+
+  const pendingOvertimeMinutes = pendingOvertimeDecision
+    ? (rows.find(r => r.attendance?.id === pendingOvertimeDecision.attendanceId)?.attendance?.overtime_minutes ?? 0)
+    : 0
 
   if (!hasBranch) {
     return (
@@ -113,6 +124,7 @@ export function TodayAttendancePage() {
               onLunchStart={openLunchStart}
               onLunchReturn={openLunchReturn}
               onCheckOut={openCheckOut}
+              onOvertimeDecision={openOvertimeDecision}
               onRegisterLeave={openRegisterLeave}
             />
           ))}
@@ -193,6 +205,21 @@ export function TodayAttendancePage() {
         inputId="checkout-time"
         inputLabel="Hora de salida"
         isLoading={isCheckingOut}
+      />
+
+      {/* Overtime Decision Dialog */}
+      <OvertimeDecisionDialog
+        isOpen={!!pendingOvertimeDecision}
+        employeeName={
+          pendingOvertimeDecision
+            ? `${pendingOvertimeDecision.employee.first_name} ${pendingOvertimeDecision.employee.last_name}`
+            : ''
+        }
+        overtimeMinutes={pendingOvertimeMinutes}
+        isLoading={isRecordingOvertimeDecision}
+        onAuthorize={() => confirmOvertimeDecision(true)}
+        onReject={() => confirmOvertimeDecision(false)}
+        onClose={closeOvertimeDecision}
       />
 
       {/* Register Leave Dialog */}

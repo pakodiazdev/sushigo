@@ -15,9 +15,14 @@ export {
     TimeRow,
     LateRow,
     OvertimeAlert,
+    OvertimeDecisionBadge,
     RoleBadges,
 } from './EmployeeAttendanceCard'
 export type { EmployeeAttendanceCardProps } from './EmployeeAttendanceCard'
+
+// OvertimeDecisionDialog
+export { OvertimeDecisionDialog } from './OvertimeDecisionDialog'
+export type { OvertimeDecisionDialogProps } from './OvertimeDecisionDialog'
 
 // Helper from separate file (Fast Refresh compatible)
 export { getPhaseCardClass } from './attendance-helpers'

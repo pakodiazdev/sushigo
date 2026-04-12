@@ -2,6 +2,7 @@
 
 use App\Contracts\PasswordResetTokenRecorder;
 use App\Http\Controllers\Api\V1\Attendances\CloseDayController;
+use App\Http\Controllers\Api\V1\Attendances\OvertimeDecisionController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
@@ -279,6 +280,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('{id}/lunch-start', RegisterLunchStartController::class)->name('lunch-start');
         Route::patch('{id}/lunch-return', RegisterLunchReturnController::class)->name('lunch-return');
         Route::patch('{id}/check-out', RegisterCheckOutController::class)->name('check-out');
+        Route::patch('{id}/overtime-decision', OvertimeDecisionController::class)->name('overtime-decision');
     });
 
     // Cash Adjustments Module (All Protected)

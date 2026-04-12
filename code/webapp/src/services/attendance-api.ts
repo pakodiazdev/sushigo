@@ -53,6 +53,17 @@ export const attendanceApi = {
     ),
 
   /**
+   * PATCH /attendances/{id}/overtime-decision
+   * Authorize or reject overtime payment for a given attendance.
+   * Body: { authorize: boolean }
+   */
+  overtimeDecision: (attendanceId: string, data: { authorize: boolean }) =>
+    apiClient.patch<{ status: number; data: AttendanceRecord }>(
+      `/attendances/${attendanceId}/overtime-decision`,
+      data,
+    ),
+
+  /**
    * POST /attendances/close-day
    * Closes the day for a branch: registers pending lunch returns,
    * batch check-out, and marks absences in one transaction.
