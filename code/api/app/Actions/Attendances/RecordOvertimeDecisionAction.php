@@ -12,7 +12,9 @@ use Illuminate\Validation\ValidationException;
  *
  * Business rules:
  *   1. The attendance must have overtime_minutes > 0; otherwise 422.
- *   2. A decision can only be recorded once (detected via overtime_authorized_at); otherwise 422.
+ *   2. A decision can only be recorded once.
+ *      Enforced atomically: the UPDATE only affects rows where
+ *      overtime_authorized_at IS NULL, and a 422 is thrown if no row was updated.
  *   3. authorize = true  → overtime_authorized = true,  records who/when
  *      authorize = false → overtime_authorized = false, records when (no "who" needed)
  *
@@ -33,15 +35,25 @@ class RecordOvertimeDecisionAction
     public function __invoke(Attendance $attendance, array $data, User $decidedBy): Attendance
     {
         $this->guardHasOvertime($attendance);
-        $this->guardNoDecisionYet($attendance);
 
         $authorize = (bool) $data['authorize'];
+        $now = Carbon::now()->utc();
 
-        $attendance->update([
-            'overtime_authorized' => $authorize,
-            'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
-            'overtime_authorized_at' => Carbon::now()->utc(),
-        ]);
+        // Atomic update: only affects rows where no decision has been recorded yet.
+        // If 0 rows are affected, a concurrent request already recorded the decision.
+        $affected = Attendance::where('id', $attendance->id)
+            ->whereNull('overtime_authorized_at')
+            ->update([
+                'overtime_authorized' => $authorize,
+                'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
+                'overtime_authorized_at' => $now,
+            ]);
+
+        if ($affected === 0) {
+            throw ValidationException::withMessages([
+                'authorize' => 'Ya se registró una decisión sobre las horas extra de este empleado.',
+            ]);
+        }
 
         return $attendance->fresh(['employee']);
     }
@@ -54,21 +66,6 @@ class RecordOvertimeDecisionAction
         if (($attendance->overtime_minutes ?? 0) === 0) {
             throw ValidationException::withMessages([
                 'authorize' => 'Este registro no tiene horas extra que autorizar.',
-            ]);
-        }
-    }
-
-    /**
-     * A decision was already recorded when overtime_authorized_at is not null.
-     * Both authorize and reject set this timestamp so "pending" = null.
-     *
-     * @throws ValidationException
-     */
-    private function guardNoDecisionYet(Attendance $attendance): void
-    {
-        if ($attendance->overtime_authorized_at !== null) {
-            throw ValidationException::withMessages([
-                'authorize' => 'Ya se registró una decisión sobre las horas extra de este empleado.',
             ]);
         }
     }
