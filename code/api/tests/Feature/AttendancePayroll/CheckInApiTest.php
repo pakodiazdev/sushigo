@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\ScheduleDay;
+use App\Models\ScheduleDayOverride;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,6 +30,11 @@ class CheckInApiTest extends TestCase
     private const CHECK_IN = '2026-02-23T09:00:00';
 
     private const START = '09:00:00';
+
+    /** Sunday 2026-02-22 (ISO dow = 7) — used for override tests */
+    private const SUNDAY_DATE = '2026-02-22';
+
+    private const SUNDAY_CHECK_IN = '2026-02-22T13:00:00';
 
     protected function setUp(): void
     {
@@ -269,6 +275,95 @@ class CheckInApiTest extends TestCase
         ScheduleDay::factory()->monday()->dayOff()->create([
             'employee_schedule_id' => $schedule->id,
         ]);
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => self::CHECK_IN,
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('check_in', $response->json('errors'));
+    }
+
+    // #endregion
+
+    // #region ScheduleDayOverride precedence
+
+    #[Test]
+    public function allows_check_in_on_rest_day_when_active_override_marks_it_as_working(): void
+    {
+        // Regression test for: check-in was rejected even when a ScheduleDayOverride
+        // explicitly marked the normally-off day as a working day.
+        //
+        // Scenario:  Sunday (dow=7) is day_off in the base schedule.
+        //            A single-date override flips it to is_day_off=false for 2026-02-22.
+        //            The check-in must succeed with HTTP 201.
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => '2026-01-01',
+        ]);
+        $employee = $period->employee;
+
+        $schedule = EmployeeSchedule::factory()->current()->create([
+            'employment_period_id' => $period->id,
+            'effective_from' => '2026-01-01',
+        ]);
+
+        // Base schedule: Sunday is a rest day
+        ScheduleDay::factory()->onDayOfWeek(7)->dayOff()->create([
+            'employee_schedule_id' => $schedule->id,
+        ]);
+
+        // Override: Sunday 2026-02-22 is treated as a working day
+        ScheduleDayOverride::factory()
+            ->singleDate(self::SUNDAY_DATE)
+            ->create([
+                'employment_period_id' => $period->id,
+                'day_of_week' => 7,
+                'expected_start' => '13:00:00',
+                'expected_end' => '22:00:00',
+            ]);
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => self::SUNDAY_CHECK_IN,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.date', self::SUNDAY_DATE)
+            ->assertJsonPath('data.day_status', 'WORKED');
+    }
+
+    #[Test]
+    public function rejects_check_in_when_active_override_marks_working_day_as_day_off(): void
+    {
+        // Inverse case: Monday (dow=1) is a working day in the base schedule,
+        // but an override marks 2026-02-23 as is_day_off=true.
+        // The check-in must be rejected with HTTP 422.
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => '2026-01-01',
+        ]);
+        $employee = $period->employee;
+
+        $schedule = EmployeeSchedule::factory()->current()->create([
+            'employment_period_id' => $period->id,
+            'effective_from' => '2026-01-01',
+        ]);
+
+        // Base schedule: Monday is a working day
+        ScheduleDay::factory()->monday()->workDay()->create([
+            'employee_schedule_id' => $schedule->id,
+        ]);
+
+        // Override: Monday 2026-02-23 is treated as a rest day
+        ScheduleDayOverride::factory()
+            ->singleDate(self::DATE)
+            ->dayOff()
+            ->create([
+                'employment_period_id' => $period->id,
+                'day_of_week' => 1,
+            ]);
 
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
