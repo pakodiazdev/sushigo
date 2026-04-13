@@ -91,6 +91,16 @@ describe('getPhaseCardClass', () => {
         const result = getPhaseCardClass('done')
         expect(result).toContain('border-green')
     })
+
+    it('returns correct class for day-off phase', () => {
+        const result = getPhaseCardClass('day-off')
+        expect(result).toContain('border-indigo')
+    })
+
+    it('returns correct class for absence phase', () => {
+        const result = getPhaseCardClass('absence')
+        expect(result).toContain('border-red')
+    })
 })
 
 // ── PhaseBadge Tests ───────────────────────────────────────────────────────────
@@ -124,6 +134,16 @@ describe('PhaseBadge', () => {
     it('renders correct label for returned phase', () => {
         const { getByText } = render(<PhaseBadge phase="returned" />)
         expect(getByText(/Regresó/)).toBeDefined()
+    })
+
+    it('renders correct label for day-off phase', () => {
+        const { getByText } = render(<PhaseBadge phase="day-off" />)
+        expect(getByText(/Descanso/)).toBeDefined()
+    })
+
+    it('renders correct label for absence phase', () => {
+        const { getByText } = render(<PhaseBadge phase="absence" />)
+        expect(getByText(/Falta/)).toBeDefined()
     })
 })
 
@@ -209,6 +229,7 @@ describe('EmployeeAttendanceCard', () => {
         onCheckOut: vi.fn(),
         onOvertimeDecision: vi.fn(),
         onRegisterLeave: vi.fn(),
+        onMarkDayStatus: vi.fn(),
     }
 
     it('renders employee name', () => {
@@ -277,6 +298,51 @@ describe('EmployeeAttendanceCard', () => {
 
         fireEvent.click(getByText('Registrar ausencia'))
         expect(onRegisterLeave).toHaveBeenCalledWith(mockRow.employee)
+    })
+
+    it('renders "Marcar día" dropdown trigger for pending employees', () => {
+        const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} />)
+        expect(getByTestId('btn-mark-day')).toBeDefined()
+    })
+
+    it('shows Descanso and Falta options when Marcar día is clicked', () => {
+        const { getByTestId, getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
+
+        fireEvent.click(getByTestId('btn-mark-day'))
+
+        expect(getByText('Descanso')).toBeDefined()
+        expect(getByText('Falta')).toBeDefined()
+    })
+
+    it('calls onMarkDayStatus with DAY_OFF when Descanso is clicked', () => {
+        const onMarkDayStatus = vi.fn()
+        const { getByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
+        )
+
+        fireEvent.click(getByTestId('btn-mark-day'))
+        fireEvent.click(getByTestId('mark-day-off'))
+
+        expect(onMarkDayStatus).toHaveBeenCalledWith(mockRow.employee, 'DAY_OFF')
+    })
+
+    it('calls onMarkDayStatus with ABSENCE when Falta is clicked', () => {
+        const onMarkDayStatus = vi.fn()
+        const { getByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
+        )
+
+        fireEvent.click(getByTestId('btn-mark-day'))
+        fireEvent.click(getByTestId('mark-absence'))
+
+        expect(onMarkDayStatus).toHaveBeenCalledWith(mockRow.employee, 'ABSENCE')
+    })
+
+    it('does not render Marcar día dropdown for employees with attendance', () => {
+        const { queryByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} />
+        )
+        expect(queryByTestId('btn-mark-day')).toBeNull()
     })
 
     it('renders lunch-start button for checked-in phase', () => {

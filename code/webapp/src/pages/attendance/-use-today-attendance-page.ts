@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision } from '@/services/attendance-hooks'
+import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
-import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, DayStatus } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
 
 interface PendingAttendanceData {
@@ -31,6 +31,17 @@ export { currentTimeLabel } from '@/lib/datetime'
 
 /** CDMX timezone offset — hardcoded to UTC-6 (standard time). DST is not handled. */
 const CDMX_OFFSET_HOURS = -6
+
+/**
+ * Today's date in CDMX timezone (YYYY-MM-DD).
+ * Exported for testing.
+ */
+export function todayCdmxDate(): string {
+  const now = new Date()
+  const cdmxTime = new Date(now.getTime() + CDMX_OFFSET_HOURS * 60 * 60 * 1000)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${cdmxTime.getUTCFullYear()}-${pad(cdmxTime.getUTCMonth() + 1)}-${pad(cdmxTime.getUTCDate())}`
+}
 
 /**
  * ISO 8601 / RFC 3339 from a "HH:mm" string using today's date in CDMX timezone.
@@ -99,6 +110,9 @@ export interface UseTodayAttendancePageResult {
   pendingLeaveEmployee: TodayAttendanceEmployee | null
   openRegisterLeave: (employee: TodayAttendanceEmployee) => void
   closeRegisterLeave: () => void
+  // Mark day status action
+  isMarkingDayStatus: boolean
+  markDayStatus: (employee: TodayAttendanceEmployee, status: Extract<DayStatus, 'DAY_OFF' | 'ABSENCE'>) => void
 }
 
 export function useTodayAttendancePage(): UseTodayAttendancePageResult {
@@ -111,6 +125,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const lunchReturnMutation = useLunchReturn()
   const checkOutMutation = useCheckOut()
   const overtimeDecisionMutation = useOvertimeDecision()
+  const markDayStatusMutation = useMarkDayStatus()
 
   const summary = computeSummary(data)
 
@@ -226,6 +241,18 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     setPendingLeaveEmployee(null)
   }, [])
 
+  // ── Mark day status ───────────────────────────────────────────────────────────
+  const markDayStatus = useCallback(
+    (employee: TodayAttendanceEmployee, status: Extract<DayStatus, 'DAY_OFF' | 'ABSENCE'>) => {
+      markDayStatusMutation.mutate({
+        employee_id: employee.id,
+        date: todayCdmxDate(),
+        day_status: status,
+      })
+    },
+    [markDayStatusMutation],
+  )
+
   return {
     rows: data,
     summary,
@@ -269,5 +296,8 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     pendingLeaveEmployee,
     openRegisterLeave,
     closeRegisterLeave,
+    // Mark day status
+    isMarkingDayStatus: markDayStatusMutation.isPending,
+    markDayStatus,
   }
 }

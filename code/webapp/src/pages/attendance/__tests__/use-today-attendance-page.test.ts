@@ -8,6 +8,7 @@ import {
   computeSummary,
   currentTimeLabel,
   timeToIso,
+  todayCdmxDate,
 } from '@/pages/attendance/-use-today-attendance-page'
 import type { TodayAttendanceRow } from '@/types/attendance'
 
@@ -32,6 +33,10 @@ vi.mock('@/services/attendance-api', () => ({
     checkIn: vi.fn(),
     lunchStart: vi.fn(),
     lunchReturn: vi.fn(),
+    checkOut: vi.fn(),
+    overtimeDecision: vi.fn(),
+    closeDay: vi.fn(),
+    markDayStatus: vi.fn(),
   },
 }))
 
@@ -239,6 +244,37 @@ describe('timeToIso', () => {
     const iso = timeToIso('14:30')
     // Should always end with -06:00 (CDMX standard time)
     expect(iso).toMatch(/-06:00$/)
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// todayCdmxDate
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('todayCdmxDate', () => {
+  it('returns a YYYY-MM-DD formatted date string', () => {
+    const result = todayCdmxDate()
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('returns the CDMX date (UTC-6) when system time is set', () => {
+    vi.useFakeTimers()
+    // UTC 2026-04-12T04:00:00Z = CDMX (UTC-6) 2026-04-11T22:00:00
+    vi.setSystemTime(new Date('2026-04-12T04:00:00Z'))
+
+    expect(todayCdmxDate()).toBe('2026-04-11')
+
+    vi.useRealTimers()
+  })
+
+  it('returns the next day in UTC when CDMX is still the same day', () => {
+    vi.useFakeTimers()
+    // UTC 2026-04-12T07:00:00Z = CDMX (UTC-6) 2026-04-12T01:00:00
+    vi.setSystemTime(new Date('2026-04-12T07:00:00Z'))
+
+    expect(todayCdmxDate()).toBe('2026-04-12')
+
+    vi.useRealTimers()
   })
 })
 

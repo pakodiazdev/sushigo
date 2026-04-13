@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
     UtensilsCrossed,
     AlertTriangle,
@@ -8,15 +9,25 @@ import {
     Undo2,
     CalendarX,
     Clock,
+    ChevronDown,
+    BedDouble,
+    UserX,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { getAttendancePhase, formatTime, formatSeconds } from '@/types/attendance'
 import type {
     TodayAttendanceRow,
     AttendancePhase,
     TodayAttendanceEmployee,
+    DayStatus,
 } from '@/types/attendance'
 import { getPhaseCardClass } from './attendance-helpers'
 
@@ -46,6 +57,18 @@ export function PhaseBadge({ phase }: Readonly<PhaseBadgeProps>) {
             return (
                 <Badge variant="warning" className="flex items-center gap-1">
                     <CalendarX className="h-3 w-3" /> Ausencia
+                </Badge>
+            )
+        case 'day-off':
+            return (
+                <Badge variant="info" className="flex items-center gap-1">
+                    <BedDouble className="h-3 w-3" /> Descanso
+                </Badge>
+            )
+        case 'absence':
+            return (
+                <Badge variant="error" className="flex items-center gap-1">
+                    <UserX className="h-3 w-3" /> Falta
                 </Badge>
             )
     }
@@ -167,6 +190,7 @@ export interface EmployeeAttendanceCardProps {
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onRegisterLeave: (employee: TodayAttendanceEmployee) => void
+    onMarkDayStatus: (employee: TodayAttendanceEmployee, status: Extract<DayStatus, 'DAY_OFF' | 'ABSENCE'>) => void
 }
 
 export function EmployeeAttendanceCard({
@@ -177,9 +201,11 @@ export function EmployeeAttendanceCard({
     onCheckOut,
     onOvertimeDecision,
     onRegisterLeave,
+    onMarkDayStatus,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
+    const [isMarkDayOpen, setIsMarkDayOpen] = useState(false)
 
     return (
         <div
@@ -247,6 +273,38 @@ export function EmployeeAttendanceCard({
                         <CalendarX className="h-3.5 w-3.5 mr-1.5" />
                         Registrar ausencia
                     </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger
+                            className="w-full flex items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                            onClick={() => setIsMarkDayOpen((prev) => !prev)}
+                            data-testid="btn-mark-day"
+                        >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                            Marcar día
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent open={isMarkDayOpen} align="left">
+                            <DropdownMenuItem
+                                icon={<BedDouble className="h-4 w-4" />}
+                                onClick={() => {
+                                    setIsMarkDayOpen(false)
+                                    onMarkDayStatus(row.employee, 'DAY_OFF')
+                                }}
+                                data-testid="mark-day-off"
+                            >
+                                Descanso
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                icon={<UserX className="h-4 w-4" />}
+                                onClick={() => {
+                                    setIsMarkDayOpen(false)
+                                    onMarkDayStatus(row.employee, 'ABSENCE')
+                                }}
+                                data-testid="mark-absence"
+                            >
+                                Falta
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             )}
 

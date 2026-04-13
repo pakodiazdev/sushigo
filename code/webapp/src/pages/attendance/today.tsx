@@ -65,6 +65,8 @@ export function TodayAttendancePage() {
     pendingLeaveEmployee,
     openRegisterLeave,
     closeRegisterLeave,
+    // Mark day status
+    markDayStatus,
   } = useTodayAttendancePage()
 
   const closeDayPanel = useCloseDayPanel(rows, branchId)
@@ -126,6 +128,7 @@ export function TodayAttendancePage() {
               onCheckOut={openCheckOut}
               onOvertimeDecision={openOvertimeDecision}
               onRegisterLeave={openRegisterLeave}
+              onMarkDayStatus={markDayStatus}
             />
           ))}
         </div>

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
 import { useToast } from '@/components/ui/toast-provider'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { TodayAttendanceRow, CloseDayRequest } from '@/types/attendance'
+import type { TodayAttendanceRow, CloseDayRequest, DayStatus } from '@/types/attendance'
 
 /**
  * Fetch today's attendance for all active employees of a branch.
@@ -141,6 +141,31 @@ export function useOvertimeDecision() {
       showError(
         getApiErrorMessage(error, 'No se pudo registrar la decisión.'),
         'Error al registrar'
+      )
+    },
+  })
+}
+
+/**
+ * Mutation: mark an employee's day as DAY_OFF or ABSENCE.
+ * On success: invalidates the today attendance query and shows a toast.
+ */
+export function useMarkDayStatus() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: { employee_id: string; date: string; day_status: Extract<DayStatus, 'DAY_OFF' | 'ABSENCE'> }) =>
+      attendanceApi.markDayStatus(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      const label = variables.day_status === 'DAY_OFF' ? 'Día marcado como descanso.' : 'Día marcado como falta.'
+      showSuccess(label, 'Día marcado')
+    },
+    onError: (error: unknown) => {
+      showError(
+        getApiErrorMessage(error, 'No se pudo marcar el día.'),
+        'Error al marcar'
       )
     },
   })
