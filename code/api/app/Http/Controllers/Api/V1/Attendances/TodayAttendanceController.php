@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendances\TodayAttendanceRequest;
 use App\Http\Resources\Attendance\AttendanceResource;
 use App\Http\Resources\Employee\EmployeeSummaryResource;
+use App\Http\Resources\Leave\TodayLeaveResource;
 use App\Http\Resources\Schedule\ScheduleDayResource;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
+use App\Models\Leave;
 use App\Models\ScheduleDay;
 use Carbon\Carbon;
 
@@ -59,7 +61,8 @@ use Carbon\Carbon;
  *
  *                     @OA\Property(property="employee", ref="#/components/schemas/EmployeeSummaryResponse"),
  *                     @OA\Property(property="attendance", nullable=true, ref="#/components/schemas/AttendanceResponse"),
- *                     @OA\Property(property="schedule", nullable=true, ref="#/components/schemas/ScheduleDayResponse")
+ *                     @OA\Property(property="schedule", nullable=true, ref="#/components/schemas/ScheduleDayResponse"),
+ *                     @OA\Property(property="today_leave", nullable=true, ref="#/components/schemas/TodayLeaveResponse")
  *                 )
  *             )
  *         )
@@ -79,10 +82,16 @@ class TodayAttendanceController extends Controller
         $today = Carbon::today(config('app.business_timezone'))->toDateString();
 
         // Fetch all active employees for the branch (via active employment period)
-        // and eager-load today's attendance (if any) in a single query.
+        // and eager-load today's attendance (if any) and any approved leave covering
+        // today in a single query.
         $employees = Employee::with([
             'user.roles',
             'attendances' => fn ($q) => $q->whereDate('date', $today),
+            'leaves' => fn ($q) => $q
+                ->approved()
+                ->forDate($today)
+                ->with('leaveType')
+                ->latest('id'),
         ])
             ->whereHas('employmentPeriods', function ($q) use ($branchId) {
                 $q->where('branch_id', $branchId)
@@ -98,7 +107,7 @@ class TodayAttendanceController extends Controller
         // For each employee: active period → effective schedule → schedule day.
         $scheduleDaysByEmployee = $this->resolveScheduleDays($employees, $today, $dayOfWeekIso);
 
-        $data = $employees->map(function (Employee $employee) use ($scheduleDaysByEmployee) {
+        $data = $employees->map(function (Employee $employee) use ($scheduleDaysByEmployee, $today) {
             /** @var Attendance|null $attendance */
             $attendance = $employee->attendances->first();
 
@@ -108,6 +117,9 @@ class TodayAttendanceController extends Controller
 
             $scheduleDay = $scheduleDaysByEmployee[$employee->id] ?? null;
 
+            /** @var Leave|null $todayLeave */
+            $todayLeave = $employee->leaves->first();
+
             return [
                 'employee' => (new EmployeeSummaryResource($employee))->resolve(),
                 'attendance' => $attendance
@@ -115,6 +127,9 @@ class TodayAttendanceController extends Controller
                     : null,
                 'schedule' => $scheduleDay
                     ? (new ScheduleDayResource($scheduleDay))->resolve()
+                    : null,
+                'today_leave' => $todayLeave
+                    ? (new TodayLeaveResource($todayLeave, $today))->resolve()
                     : null,
             ];
         });

@@ -16,11 +16,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
-import { getAttendancePhase, formatTime, formatSeconds } from '@/types/attendance'
+import { getAttendancePhase, formatTime, formatSeconds, parseIsoToUtcMs } from '@/types/attendance'
 import type {
     TodayAttendanceRow,
     AttendancePhase,
     TodayAttendanceEmployee,
+    TodayLeave,
 } from '@/types/attendance'
 import { getPhaseCardClass } from './attendance-helpers'
 
@@ -173,7 +174,56 @@ export function RoleBadges({ roles }: Readonly<RoleBadgesProps>) {
     )
 }
 
-// ── Main Component ──────────────────���───────────────────────────���──────────────
+// ── Leave Chip ─────────────────────────────────────────────────────────────────
+
+interface LeaveChipProps {
+    leave: TodayLeave
+    nowMs?: number  // injectable for tests; defaults to Date.now()
+}
+
+export function LeaveChip({ leave, nowMs = Date.now() }: Readonly<LeaveChipProps>) {
+    if (leave.time_mode === 'OPEN_ENDED') {
+        return (
+            <div
+                data-testid="leave-chip-full-day"
+                className="flex items-center gap-1.5 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2"
+            >
+                <CalendarX className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                <span className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                    Permiso aprobado (todo el día)
+                </span>
+            </div>
+        )
+    }
+
+    // SCHEDULED leave — compute contextual label based on current time
+    const payLabel = leave.is_paid ? 'c/g' : 's/g'
+    const startsAtMs = leave.starts_at ? parseIsoToUtcMs(leave.starts_at) : null
+    const endsAtMs = leave.ends_at ? parseIsoToUtcMs(leave.ends_at) : null
+
+    let label: string
+    if (startsAtMs !== null && startsAtMs > nowMs) {
+        label = `Llega a las ${formatTime(leave.starts_at)} (permiso ${payLabel})`
+    } else if (endsAtMs !== null && endsAtMs < nowMs) {
+        label = `Salió a las ${formatTime(leave.ends_at)} (permiso ${payLabel})`
+    } else {
+        label = `Permiso ${payLabel} hasta ${formatTime(leave.ends_at)}`
+    }
+
+    return (
+        <div
+            data-testid="leave-chip-scheduled"
+            className="flex items-center gap-1.5 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2"
+        >
+            <CalendarX className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+            <span className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                {label}
+            </span>
+        </div>
+    )
+}
+
+// ── Main Component ──────────────────────────────────────────────────────────────
 
 export interface EmployeeAttendanceCardProps {
     row: TodayAttendanceRow
@@ -196,9 +246,11 @@ export function EmployeeAttendanceCard({
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
+    const leave = row.today_leave
     const [confirmFaltaOpen, setConfirmFaltaOpen] = useState(false)
 
     const isScheduledRestDay = row.schedule?.is_day_off === true
+    const isFullDayLeave = leave?.time_mode === 'OPEN_ENDED'
 
     return (
         <div
@@ -220,6 +272,9 @@ export function EmployeeAttendanceCard({
 
             {/* Role badges */}
             <RoleBadges roles={row.employee.roles} />
+
+            {/* Leave context chip (shown when there is an approved leave covering today) */}
+            {leave && <LeaveChip leave={leave} />}
 
             {/* Attendance details */}
             {att ? (
@@ -257,6 +312,9 @@ export function EmployeeAttendanceCard({
                                 Descanso programado
                             </span>
                         </div>
+                    ) : isFullDayLeave ? (
+                        /* Full-day approved leave — chip already shown above, no action buttons */
+                        null
                     ) : (
                         <>
                             <Button

@@ -67,6 +67,7 @@ const mockRow: TodayAttendanceRow = {
     },
     attendance: null,
     schedule: null,
+    today_leave: null,
 }
 
 const mockRowWithAttendance: TodayAttendanceRow = {
@@ -87,6 +88,7 @@ const mockRowWithAttendance: TodayAttendanceRow = {
         overtime_minutes: 30,
     }),
     schedule: null,
+    today_leave: null,
 }
 
 // ── getPhaseCardClass Tests ────────────────────────────────────────────────────
@@ -305,6 +307,7 @@ describe('EmployeeAttendanceCard', () => {
                 day_status: 'LEAVE',
             }),
             schedule: null,
+            today_leave: null,
         }
 
         const { container } = render(<EmployeeAttendanceCard {...defaultProps} row={onLeaveRow} />)
@@ -378,6 +381,7 @@ describe('EmployeeAttendanceCard', () => {
             employee: mockRow.employee,
             attendance: makeAttendance({ id: '01HZATTEND000004' }),
             schedule: null,
+            today_leave: null,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={checkedInRow} />)
         expect(getByText('Salir a comer')).toBeDefined()
@@ -389,6 +393,7 @@ describe('EmployeeAttendanceCard', () => {
             employee: mockRow.employee,
             attendance: makeAttendance({ id: '01HZATTEND000004' }),
             schedule: null,
+            today_leave: null,
         }
         const { getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} row={checkedInRow} onLunchStart={onLunchStart} />
@@ -408,6 +413,7 @@ describe('EmployeeAttendanceCard', () => {
                 requires_overtime_decision: true,
             }),
             schedule: null,
+            today_leave: null,
         }
         const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={overtimeRow} />)
         expect(getByTestId('btn-overtime-decision')).toBeDefined()
@@ -425,6 +431,7 @@ describe('EmployeeAttendanceCard', () => {
                 requires_overtime_decision: true,
             }),
             schedule: null,
+            today_leave: null,
         }
         const { getByTestId } = render(
             <EmployeeAttendanceCard {...defaultProps} row={overtimeRow} onOvertimeDecision={onOvertimeDecision} />
@@ -446,6 +453,7 @@ describe('EmployeeAttendanceCard', () => {
                 requires_overtime_decision: false,
             }),
             schedule: null,
+            today_leave: null,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={authorizedRow} />)
         expect(getByText(/Pagadas/)).toBeDefined()
@@ -464,6 +472,7 @@ describe('EmployeeAttendanceCard', () => {
                 requires_overtime_decision: false,
             }),
             schedule: null,
+            today_leave: null,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={rejectedRow} />)
         expect(getByText(/No pagadas/)).toBeDefined()
