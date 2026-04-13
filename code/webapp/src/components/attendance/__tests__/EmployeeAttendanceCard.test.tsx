@@ -12,7 +12,7 @@ import {
     RoleBadges,
 } from '../EmployeeAttendanceCard'
 import { getPhaseCardClass } from '../attendance-helpers'
-import type { TodayAttendanceRow, TodayAttendanceData } from '@/types/attendance'
+import type { TodayAttendanceRow, TodayAttendanceData, TodayScheduleDay } from '@/types/attendance'
 
 afterEach(() => {
     cleanup()
@@ -36,6 +36,26 @@ const makeAttendance = (overrides: Partial<TodayAttendanceData> = {}): TodayAtte
     requires_overtime_decision: false,
     ...overrides,
 })
+
+const workSchedule: TodayScheduleDay = {
+    day_of_week: 1,
+    is_day_off: false,
+    expected_start: '09:00',
+    expected_lunch_start: '13:00',
+    expected_lunch_end: '14:00',
+    lunch_duration_minutes: 60,
+    expected_end: '17:00',
+}
+
+const restSchedule: TodayScheduleDay = {
+    day_of_week: 7,
+    is_day_off: true,
+    expected_start: null,
+    expected_lunch_start: null,
+    expected_lunch_end: null,
+    lunch_duration_minutes: null,
+    expected_end: null,
+}
 
 const mockRow: TodayAttendanceRow = {
     employee: {
@@ -228,7 +248,6 @@ describe('EmployeeAttendanceCard', () => {
         onLunchReturn: vi.fn(),
         onCheckOut: vi.fn(),
         onOvertimeDecision: vi.fn(),
-        onRegisterLeave: vi.fn(),
         onMarkDayStatus: vi.fn(),
     }
 
@@ -247,7 +266,14 @@ describe('EmployeeAttendanceCard', () => {
         expect(container.innerHTML).toContain('Sin registro')
     })
 
-    it('renders check-in button for pending phase', () => {
+    it('renders check-in button for pending employee on a work day', () => {
+        const { getByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={{ ...mockRow, schedule: workSchedule }} />
+        )
+        expect(getByText('Registrar entrada')).toBeDefined()
+    })
+
+    it('renders check-in button when schedule is null', () => {
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
         expect(getByText('Registrar entrada')).toBeDefined()
     })
@@ -285,64 +311,66 @@ describe('EmployeeAttendanceCard', () => {
         expect(container.innerHTML).toContain('Ausencia')
     })
 
-    it('renders register-leave button for pending employees', () => {
-        const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
-        expect(getByText('Registrar ausencia')).toBeDefined()
-    })
-
-    it('calls onRegisterLeave when register-leave button is clicked', () => {
-        const onRegisterLeave = vi.fn()
-        const { getByText } = render(
-            <EmployeeAttendanceCard {...defaultProps} onRegisterLeave={onRegisterLeave} />
+    it('renders "Marcar falta" button for pending employees on a work day', () => {
+        const { getByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={{ ...mockRow, schedule: workSchedule }} />
         )
-
-        fireEvent.click(getByText('Registrar ausencia'))
-        expect(onRegisterLeave).toHaveBeenCalledWith(mockRow.employee)
+        expect(getByTestId('btn-mark-falta')).toBeDefined()
     })
 
-    it('renders "Marcar día" dropdown trigger for pending employees', () => {
+    it('renders "Marcar falta" button when schedule is null', () => {
         const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} />)
-        expect(getByTestId('btn-mark-day')).toBeDefined()
+        expect(getByTestId('btn-mark-falta')).toBeDefined()
     })
 
-    it('shows Descanso and Falta options when Marcar día is clicked', () => {
+    it('opens confirm dialog when "Marcar falta" is clicked', () => {
         const { getByTestId, getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
 
-        fireEvent.click(getByTestId('btn-mark-day'))
+        fireEvent.click(getByTestId('btn-mark-falta'))
 
-        expect(getByText('Descanso')).toBeDefined()
-        expect(getByText('Falta')).toBeDefined()
+        expect(getByText('¿Confirmar falta?')).toBeDefined()
     })
 
-    it('calls onMarkDayStatus with DAY_OFF when Descanso is clicked', () => {
+    it('calls onMarkDayStatus with ABSENCE when confirm dialog is confirmed', () => {
         const onMarkDayStatus = vi.fn()
-        const { getByTestId } = render(
+        const { getByTestId, getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
         )
 
-        fireEvent.click(getByTestId('btn-mark-day'))
-        fireEvent.click(getByTestId('mark-day-off'))
-
-        expect(onMarkDayStatus).toHaveBeenCalledWith(mockRow.employee, 'DAY_OFF')
-    })
-
-    it('calls onMarkDayStatus with ABSENCE when Falta is clicked', () => {
-        const onMarkDayStatus = vi.fn()
-        const { getByTestId } = render(
-            <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
-        )
-
-        fireEvent.click(getByTestId('btn-mark-day'))
-        fireEvent.click(getByTestId('mark-absence'))
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        fireEvent.click(getByText('Confirmar falta'))
 
         expect(onMarkDayStatus).toHaveBeenCalledWith(mockRow.employee, 'ABSENCE')
     })
 
-    it('does not render Marcar día dropdown for employees with attendance', () => {
+    it('does NOT call onMarkDayStatus when confirm dialog is cancelled', () => {
+        const onMarkDayStatus = vi.fn()
+        const { getByTestId, getByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
+        )
+
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        fireEvent.click(getByText('Cancelar'))
+
+        expect(onMarkDayStatus).not.toHaveBeenCalled()
+    })
+
+    it('shows "Descanso programado" indicator for scheduled rest-day employees', () => {
+        const restDayRow: TodayAttendanceRow = { ...mockRow, schedule: restSchedule }
+        const { container, queryByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={restDayRow} />
+        )
+
+        expect(container.innerHTML).toContain('Descanso programado')
+        expect(queryByTestId('btn-mark-falta')).toBeNull()
+        expect(container.innerHTML).not.toContain('Registrar entrada')
+    })
+
+    it('does not render action buttons for employees with attendance', () => {
         const { queryByTestId } = render(
             <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} />
         )
-        expect(queryByTestId('btn-mark-day')).toBeNull()
+        expect(queryByTestId('btn-mark-falta')).toBeNull()
     })
 
     it('renders lunch-start button for checked-in phase', () => {

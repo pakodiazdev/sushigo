@@ -1,8 +1,11 @@
 /**
  * Attendance Day Status — E2E happy-path tests
  *
- * Covers marking an employee's day as DAY_OFF (Descanso) and ABSENCE (Falta)
- * from the Today view using the "Marcar día" dropdown.
+ * Covers marking an employee's day as ABSENCE (Falta) from the Today view
+ * using the "Marcar falta" button + confirmation dialog.
+ *
+ * Note: DAY_OFF (Descanso) is now auto-managed by CloseDayAction — no manual
+ * action is needed from the Today view for rest days.
  *
  * DB reset strategy
  * ─────────────────
@@ -11,7 +14,6 @@
  * • Each it() uses a DIFFERENT employee — no slot is reused.
  *
  * Employees used:
- *   EMP-001  Mendoza, Carlos   → marked as DAY_OFF (Descanso)
  *   EMP-002  García, María     → marked as ABSENCE (Falta)
  *
  * Para correr solo este archivo:
@@ -49,18 +51,20 @@ beforeEach(() => {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Opens the "Marcar día" dropdown for the given employee and clicks an option.
+ * Clicks "Marcar falta" for the given employee and confirms the dialog.
  */
-function markDay(lastName: string, firstName: string, option: "Descanso" | "Falta") {
+function markFalta(lastName: string, firstName: string) {
   cy.intercept("GET", "**/attendances/today*").as("refetchAttendance");
 
   cy.contains("p", `${lastName}, ${firstName}`)
     .closest("div.rounded-xl")
-    .find("[data-testid='btn-mark-day']")
+    .find("[data-testid='btn-mark-falta']")
     .scrollIntoView()
     .click({ force: true });
 
-  cy.contains("button", option).click({ force: true });
+  // Confirm dialog appears
+  cy.contains("¿Confirmar falta?").should("be.visible");
+  cy.contains("button", "Confirmar falta").click({ force: true });
 
   cy.wait("@refetchAttendance", { timeout: 10_000 });
 }
@@ -76,35 +80,18 @@ function getCard(lastName: string, firstName: string) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 1. Marcar como Descanso (DAY_OFF)
-// ══════════════════════════════════════════════════════════════════════════════
-
-describe("Day Status — Marcar Descanso (DAY_OFF)", () => {
-  it("marca el día de Carlos como Descanso y muestra el badge correspondiente", () => {
-    markDay("Mendoza", "Carlos", "Descanso");
-
-    getCard("Mendoza", "Carlos").within(() => {
-      cy.contains("Descanso", { timeout: 10_000 }).should("be.visible");
-      // Action buttons should no longer be visible once day is marked
-      cy.contains("Registrar entrada").should("not.exist");
-      cy.contains("Marcar día").should("not.exist");
-    });
-  });
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
-// 2. Marcar como Falta (ABSENCE)
+// 1. Marcar como Falta (ABSENCE)
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe("Day Status — Marcar Falta (ABSENCE)", () => {
   it("marca el día de María como Falta y muestra el badge correspondiente", () => {
-    markDay("García", "María", "Falta");
+    markFalta("García", "María");
 
     getCard("García", "María").within(() => {
       cy.contains("Falta", { timeout: 10_000 }).should("be.visible");
       // Action buttons should no longer be visible once day is marked
       cy.contains("Registrar entrada").should("not.exist");
-      cy.contains("Marcar día").should("not.exist");
+      cy.contains("Marcar falta").should("not.exist");
     });
   });
 });

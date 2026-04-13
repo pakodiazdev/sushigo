@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
-import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, DayStatus } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
 
 interface PendingAttendanceData {
@@ -106,13 +106,9 @@ export interface UseTodayAttendancePageResult {
   openOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeOvertimeDecision: () => void
   confirmOvertimeDecision: (authorize: boolean) => void
-  // Register leave action
-  pendingLeaveEmployee: TodayAttendanceEmployee | null
-  openRegisterLeave: (employee: TodayAttendanceEmployee) => void
-  closeRegisterLeave: () => void
   // Mark day status action
   isMarkingDayStatus: boolean
-  markDayStatus: (employee: TodayAttendanceEmployee, status: Extract<DayStatus, 'DAY_OFF' | 'ABSENCE'>) => void
+  markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
 }
 
 export function useTodayAttendancePage(): UseTodayAttendancePageResult {
@@ -229,21 +225,9 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     )
   }, [pendingOvertimeDecision, overtimeDecisionMutation, closeOvertimeDecision])
 
-  // ── Register leave state ─────────────────────────────────────────────────────
-  const [pendingLeaveEmployee, setPendingLeaveEmployee] =
-    useState<TodayAttendanceEmployee | null>(null)
-
-  const openRegisterLeave = useCallback((employee: TodayAttendanceEmployee) => {
-    setPendingLeaveEmployee(employee)
-  }, [])
-
-  const closeRegisterLeave = useCallback(() => {
-    setPendingLeaveEmployee(null)
-  }, [])
-
   // ── Mark day status ───────────────────────────────────────────────────────────
   const markDayStatus = useCallback(
-    (employee: TodayAttendanceEmployee, status: Extract<DayStatus, 'DAY_OFF' | 'ABSENCE'>) => {
+    (employee: TodayAttendanceEmployee, status: 'ABSENCE') => {
       markDayStatusMutation.mutate({
         employee_id: employee.id,
         date: todayCdmxDate(),
@@ -292,10 +276,6 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     openOvertimeDecision,
     closeOvertimeDecision,
     confirmOvertimeDecision,
-    // Register leave
-    pendingLeaveEmployee,
-    openRegisterLeave,
-    closeRegisterLeave,
     // Mark day status
     isMarkingDayStatus: markDayStatusMutation.isPending,
     markDayStatus,

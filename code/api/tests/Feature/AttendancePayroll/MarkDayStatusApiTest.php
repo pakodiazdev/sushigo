@@ -34,7 +34,7 @@ class MarkDayStatusApiTest extends TestCase
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
 
-        $role = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
 
         $this->user = User::factory()->create();
         $this->user->assignRole('manager');
@@ -43,31 +43,6 @@ class MarkDayStatusApiTest extends TestCase
     }
 
     // #region Happy path
-
-    #[Test]
-    public function marks_day_as_day_off(): void
-    {
-        $employee = Employee::factory()->create();
-
-        $response = $this->postJson('/api/v1/attendances/day-status', [
-            'employee_id' => $employee->public_id,
-            'date' => self::DATE,
-            'day_status' => 'DAY_OFF',
-        ]);
-
-        $response->assertStatus(201)
-            ->assertJsonPath('data.day_status', 'DAY_OFF')
-            ->assertJsonPath('data.date', self::DATE)
-            ->assertJsonPath('data.check_in', null)
-            ->assertJsonPath('data.check_out', null);
-
-        $this->assertDatabaseHas('attendances', [
-            'employee_id' => $employee->id,
-            'date' => self::DATE,
-            'day_status' => DayStatus::DAY_OFF->value,
-            'check_in' => null,
-        ]);
-    }
 
     #[Test]
     public function marks_day_as_absence(): void
@@ -100,7 +75,7 @@ class MarkDayStatusApiTest extends TestCase
         $response = $this->postJson('/api/v1/attendances/day-status', [
             'employee_id' => $employee->public_id,
             'date' => self::DATE,
-            'day_status' => 'DAY_OFF',
+            'day_status' => 'ABSENCE',
         ]);
 
         $response->assertStatus(201)
@@ -126,6 +101,21 @@ class MarkDayStatusApiTest extends TestCase
     // #region 422 error cases
 
     #[Test]
+    public function rejects_day_off_status(): void
+    {
+        $employee = Employee::factory()->create();
+
+        $response = $this->postJson('/api/v1/attendances/day-status', [
+            'employee_id' => $employee->public_id,
+            'date' => self::DATE,
+            'day_status' => 'DAY_OFF',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('day_status', $response->json('errors'));
+    }
+
+    #[Test]
     public function rejects_duplicate_attendance(): void
     {
         $employee = Employee::factory()->create();
@@ -134,7 +124,7 @@ class MarkDayStatusApiTest extends TestCase
         $this->postJson('/api/v1/attendances/day-status', [
             'employee_id' => $employee->public_id,
             'date' => self::DATE,
-            'day_status' => 'DAY_OFF',
+            'day_status' => 'ABSENCE',
         ])->assertStatus(201);
 
         // Second mark for the same employee/date is rejected
@@ -163,7 +153,7 @@ class MarkDayStatusApiTest extends TestCase
         $response = $this->postJson('/api/v1/attendances/day-status', [
             'employee_id' => $employee->public_id,
             'date' => self::DATE,
-            'day_status' => 'DAY_OFF',
+            'day_status' => 'ABSENCE',
         ]);
 
         $response->assertStatus(422);
@@ -176,7 +166,7 @@ class MarkDayStatusApiTest extends TestCase
         $response = $this->postJson('/api/v1/attendances/day-status', [
             'employee_id' => '01ZZZZZZZZZZZZZZZZZZZZZZZ',
             'date' => self::DATE,
-            'day_status' => 'DAY_OFF',
+            'day_status' => 'ABSENCE',
         ]);
 
         $response->assertStatus(422);
@@ -206,7 +196,7 @@ class MarkDayStatusApiTest extends TestCase
         $response = $this->postJson('/api/v1/attendances/day-status', [
             'employee_id' => $employee->public_id,
             'date' => '12/04/2026',
-            'day_status' => 'DAY_OFF',
+            'day_status' => 'ABSENCE',
         ]);
 
         $response->assertStatus(422);
@@ -236,7 +226,7 @@ class MarkDayStatusApiTest extends TestCase
         $response = $this->postJson('/api/v1/attendances/day-status', [
             'employee_id' => 'any-id',
             'date' => self::DATE,
-            'day_status' => 'DAY_OFF',
+            'day_status' => 'ABSENCE',
         ]);
 
         $response->assertStatus(401);

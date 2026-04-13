@@ -27,9 +27,9 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(
  *       property="day_status",
  *       type="string",
- *       enum={"DAY_OFF","ABSENCE"},
- *       example="DAY_OFF",
- *       description="Status to assign: DAY_OFF (rest day) or ABSENCE (no-show)"
+ *       enum={"ABSENCE"},
+ *       example="ABSENCE",
+ *       description="Only ABSENCE (unexcused no-show) is accepted. DAY_OFF is auto-managed by CloseDayAction."
  *   )
  * )
  */
@@ -51,7 +51,7 @@ class DayStatusRequest extends FormRequest
             'date' => ['required', 'date_format:Y-m-d'],
             'day_status' => [
                 'required',
-                Rule::in([DayStatus::DAY_OFF->value, DayStatus::ABSENCE->value]),
+                Rule::in([DayStatus::ABSENCE->value]),
             ],
         ];
     }
@@ -61,7 +61,7 @@ class DayStatusRequest extends FormRequest
         return [
             'employee_id.exists' => 'No se encontró el empleado especificado.',
             'date.date_format' => 'La fecha debe estar en formato YYYY-MM-DD.',
-            'day_status.in' => 'El estado debe ser DAY_OFF o ABSENCE.',
+            'day_status.in' => 'Solo se permite el estado ABSENCE. El estado DAY_OFF es asignado automáticamente al cerrar el día.',
         ];
     }
 }
