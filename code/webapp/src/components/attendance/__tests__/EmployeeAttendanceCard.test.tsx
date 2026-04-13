@@ -10,9 +10,10 @@ import {
     LateRow,
     OvertimeAlert,
     RoleBadges,
+    LeaveChip,
 } from '../EmployeeAttendanceCard'
 import { getPhaseCardClass } from '../attendance-helpers'
-import type { TodayAttendanceRow, TodayAttendanceData, TodayScheduleDay } from '@/types/attendance'
+import type { TodayAttendanceRow, TodayAttendanceData, TodayScheduleDay, TodayLeave } from '@/types/attendance'
 
 afterEach(() => {
     cleanup()
@@ -67,6 +68,7 @@ const mockRow: TodayAttendanceRow = {
     },
     attendance: null,
     schedule: null,
+    today_leave: null,
 }
 
 const mockRowWithAttendance: TodayAttendanceRow = {
@@ -87,6 +89,7 @@ const mockRowWithAttendance: TodayAttendanceRow = {
         overtime_minutes: 30,
     }),
     schedule: null,
+    today_leave: null,
 }
 
 // ── getPhaseCardClass Tests ────────────────────────────────────────────────────
@@ -240,16 +243,17 @@ describe('RoleBadges', () => {
 
 // ── EmployeeAttendanceCard Tests ───────────────────────────────────────────────
 
+const defaultProps = {
+    row: mockRow,
+    onCheckIn: vi.fn(),
+    onLunchStart: vi.fn(),
+    onLunchReturn: vi.fn(),
+    onCheckOut: vi.fn(),
+    onOvertimeDecision: vi.fn(),
+    onMarkDayStatus: vi.fn(),
+}
+
 describe('EmployeeAttendanceCard', () => {
-    const defaultProps = {
-        row: mockRow,
-        onCheckIn: vi.fn(),
-        onLunchStart: vi.fn(),
-        onLunchReturn: vi.fn(),
-        onCheckOut: vi.fn(),
-        onOvertimeDecision: vi.fn(),
-        onMarkDayStatus: vi.fn(),
-    }
 
     it('renders employee name', () => {
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
@@ -305,6 +309,7 @@ describe('EmployeeAttendanceCard', () => {
                 day_status: 'LEAVE',
             }),
             schedule: null,
+            today_leave: null,
         }
 
         const { container } = render(<EmployeeAttendanceCard {...defaultProps} row={onLeaveRow} />)
@@ -378,6 +383,7 @@ describe('EmployeeAttendanceCard', () => {
             employee: mockRow.employee,
             attendance: makeAttendance({ id: '01HZATTEND000004' }),
             schedule: null,
+            today_leave: null,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={checkedInRow} />)
         expect(getByText('Salir a comer')).toBeDefined()
@@ -389,6 +395,7 @@ describe('EmployeeAttendanceCard', () => {
             employee: mockRow.employee,
             attendance: makeAttendance({ id: '01HZATTEND000004' }),
             schedule: null,
+            today_leave: null,
         }
         const { getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} row={checkedInRow} onLunchStart={onLunchStart} />
@@ -408,6 +415,7 @@ describe('EmployeeAttendanceCard', () => {
                 requires_overtime_decision: true,
             }),
             schedule: null,
+            today_leave: null,
         }
         const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={overtimeRow} />)
         expect(getByTestId('btn-overtime-decision')).toBeDefined()
@@ -425,6 +433,7 @@ describe('EmployeeAttendanceCard', () => {
                 requires_overtime_decision: true,
             }),
             schedule: null,
+            today_leave: null,
         }
         const { getByTestId } = render(
             <EmployeeAttendanceCard {...defaultProps} row={overtimeRow} onOvertimeDecision={onOvertimeDecision} />
@@ -446,6 +455,7 @@ describe('EmployeeAttendanceCard', () => {
                 requires_overtime_decision: false,
             }),
             schedule: null,
+            today_leave: null,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={authorizedRow} />)
         expect(getByText(/Pagadas/)).toBeDefined()
@@ -464,8 +474,154 @@ describe('EmployeeAttendanceCard', () => {
                 requires_overtime_decision: false,
             }),
             schedule: null,
+            today_leave: null,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={rejectedRow} />)
         expect(getByText(/No pagadas/)).toBeDefined()
+    })
+})
+
+// ── LeaveChip ─────────────────────────────────────────────────────────────────
+
+const makeLeave = (overrides: Partial<TodayLeave> = {}): TodayLeave => ({
+    id: '01LEAVEID000000001',
+    time_mode: 'OPEN_ENDED',
+    calculation_mode: 'FIXED_PERCENTAGE',
+    is_paid: true,
+    starts_at: null,
+    ends_at: null,
+    note: null,
+    ...overrides,
+})
+
+// 2026-04-13T12:00:00Z  →  noon UTC  (used as "now" for time-based label tests)
+const NOW_MS = new Date('2026-04-13T12:00:00Z').getTime()
+
+// ISO strings for a SCHEDULED leave that runs 09:00–14:00 CDMX (UTC-6)
+// = 2026-04-13T15:00:00Z .. 2026-04-13T20:00:00Z
+const STARTS_AT = '2026-04-13T15:00:00+00:00'  // 15:00 UTC = 09:00 CDMX
+const ENDS_AT   = '2026-04-13T20:00:00+00:00'  // 20:00 UTC = 14:00 CDMX
+
+describe('LeaveChip — OPEN_ENDED leave', () => {
+    it('renders "Permiso aprobado (todo el día)" chip', () => {
+        const { getByTestId, getByText } = render(
+            <LeaveChip leave={makeLeave({ time_mode: 'OPEN_ENDED' })} nowMs={NOW_MS} />
+        )
+        expect(getByTestId('leave-chip-full-day')).toBeDefined()
+        expect(getByText(/Permiso aprobado \(todo el día\)/)).toBeDefined()
+    })
+})
+
+describe('LeaveChip — SCHEDULED leave', () => {
+    it('shows "Llega a las" when starts_at is in the future', () => {
+        // NOW_MS = 12:00 UTC, starts_at = 15:00 UTC  → starts_at > now → "Llega a las"
+        const leave = makeLeave({
+            time_mode: 'SCHEDULED',
+            starts_at: STARTS_AT,
+            ends_at: ENDS_AT,
+            is_paid: true,
+        })
+        const { getByText } = render(<LeaveChip leave={leave} nowMs={NOW_MS} />)
+        expect(getByText(/Llega a las/)).toBeDefined()
+        expect(getByText(/c\/g/)).toBeDefined()
+    })
+
+    it('shows "Salió a las" when ends_at is in the past', () => {
+        // NOW_MS_AFTER = 21:00 UTC, ends_at = 20:00 UTC  → ends_at < now → "Salió a las"
+        const nowMsAfter = new Date('2026-04-13T21:00:00Z').getTime()
+        const leave = makeLeave({
+            time_mode: 'SCHEDULED',
+            starts_at: STARTS_AT,
+            ends_at: ENDS_AT,
+            is_paid: false,
+        })
+        const { getByText } = render(<LeaveChip leave={leave} nowMs={nowMsAfter} />)
+        expect(getByText(/Salió a las/)).toBeDefined()
+        expect(getByText(/s\/g/)).toBeDefined()
+    })
+
+    it('shows "Permiso c/g hasta" when leave is ongoing', () => {
+        // NOW_MS_DURING = 17:00 UTC (between 15:00 and 20:00)
+        const nowMsDuring = new Date('2026-04-13T17:00:00Z').getTime()
+        const leave = makeLeave({
+            time_mode: 'SCHEDULED',
+            starts_at: STARTS_AT,
+            ends_at: ENDS_AT,
+            is_paid: true,
+        })
+        const { getByText } = render(<LeaveChip leave={leave} nowMs={nowMsDuring} />)
+        expect(getByText(/Permiso c\/g hasta/)).toBeDefined()
+    })
+
+    it('shows "Permiso s/g hasta" for unpaid ongoing leave', () => {
+        const nowMsDuring = new Date('2026-04-13T17:00:00Z').getTime()
+        const leave = makeLeave({
+            time_mode: 'SCHEDULED',
+            starts_at: STARTS_AT,
+            ends_at: ENDS_AT,
+            is_paid: false,
+        })
+        const { getByText } = render(<LeaveChip leave={leave} nowMs={nowMsDuring} />)
+        expect(getByText(/Permiso s\/g hasta/)).toBeDefined()
+    })
+
+    it('shows "horario no disponible" fallback when timestamps are null', () => {
+        const leave = makeLeave({
+            time_mode: 'SCHEDULED',
+            starts_at: null,
+            ends_at: null,
+            is_paid: true,
+        })
+        const { getByText } = render(<LeaveChip leave={leave} nowMs={NOW_MS} />)
+        expect(getByText(/horario no disponible/)).toBeDefined()
+    })
+
+    it('uses "leave-chip-scheduled" testid', () => {
+        const leave = makeLeave({
+            time_mode: 'SCHEDULED',
+            starts_at: STARTS_AT,
+            ends_at: ENDS_AT,
+        })
+        const { getByTestId } = render(<LeaveChip leave={leave} nowMs={NOW_MS} />)
+        expect(getByTestId('leave-chip-scheduled')).toBeDefined()
+    })
+})
+
+describe('EmployeeAttendanceCard — full-day leave hides action buttons', () => {
+    it('hides "Registrar entrada" and "Marcar falta" for OPEN_ENDED leave', () => {
+        const row: TodayAttendanceRow = {
+            ...mockRow,
+            today_leave: makeLeave({ time_mode: 'OPEN_ENDED' }),
+        }
+        const { queryByTestId, queryByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={row} />
+        )
+        expect(queryByText('Registrar entrada')).toBeNull()
+        expect(queryByTestId('btn-mark-falta')).toBeNull()
+    })
+
+    it('shows the leave chip on the card', () => {
+        const row: TodayAttendanceRow = {
+            ...mockRow,
+            today_leave: makeLeave({ time_mode: 'OPEN_ENDED' }),
+        }
+        const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={row} />)
+        expect(getByTestId('leave-chip-full-day')).toBeDefined()
+    })
+
+    it('keeps action buttons for SCHEDULED leave (partial day)', () => {
+        const row: TodayAttendanceRow = {
+            ...mockRow,
+            today_leave: makeLeave({
+                time_mode: 'SCHEDULED',
+                starts_at: STARTS_AT,
+                ends_at: ENDS_AT,
+            }),
+        }
+        const { getByText, getByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={row} />
+        )
+        expect(getByText('Registrar entrada')).toBeDefined()
+        expect(getByTestId('btn-mark-falta')).toBeDefined()
     })
 })

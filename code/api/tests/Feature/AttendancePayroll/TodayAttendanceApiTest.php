@@ -6,6 +6,8 @@ use App\Models\Attendance;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
+use App\Models\Leave;
+use App\Models\LeaveType;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -271,6 +273,175 @@ class TodayAttendanceApiTest extends TestCase
         $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
 
         $response->assertStatus(401);
+    }
+
+    // #endregion
+
+    // #region Today Leave
+
+    #[Test]
+    public function employee_with_approved_full_day_leave_has_today_leave_present(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $leaveType = LeaveType::factory()->create();
+
+        Leave::factory()
+            ->approved()
+            ->openEnded()
+            ->coveringDate($this->today)
+            ->create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'requested_by' => $this->user->id,
+            ]);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertNotNull($row['today_leave']);
+        $this->assertEquals('OPEN_ENDED', $row['today_leave']['time_mode']);
+        $this->assertNull($row['today_leave']['starts_at']);
+        $this->assertNull($row['today_leave']['ends_at']);
+    }
+
+    #[Test]
+    public function employee_with_approved_scheduled_leave_has_starts_at_and_ends_at(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $leaveType = LeaveType::factory()->proportionalHours()->create();
+
+        Leave::factory()
+            ->approved()
+            ->scheduled('09:00:00', '14:00:00')
+            ->coveringDate($this->today)
+            ->create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'requested_by' => $this->user->id,
+            ]);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertNotNull($row['today_leave']);
+        $this->assertEquals('SCHEDULED', $row['today_leave']['time_mode']);
+        $this->assertEquals('PROPORTIONAL_HOURS', $row['today_leave']['calculation_mode']);
+        $this->assertNotNull($row['today_leave']['starts_at']);
+        $this->assertNotNull($row['today_leave']['ends_at']);
+    }
+
+    #[Test]
+    public function employee_with_no_leave_has_null_today_leave(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertNull($row['today_leave']);
+    }
+
+    #[Test]
+    public function pending_leave_does_not_appear_as_today_leave(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $leaveType = LeaveType::factory()->create();
+
+        Leave::factory()
+            ->openEnded()
+            ->coveringDate($this->today)
+            ->create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'requested_by' => $this->user->id,
+                'status' => 'PENDING',
+            ]);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertNull($row['today_leave']);
+    }
+
+    #[Test]
+    public function rejected_leave_does_not_appear_as_today_leave(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $leaveType = LeaveType::factory()->create();
+
+        Leave::factory()
+            ->rejected()
+            ->openEnded()
+            ->coveringDate($this->today)
+            ->create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'requested_by' => $this->user->id,
+            ]);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertNull($row['today_leave']);
+    }
+
+    #[Test]
+    public function paid_leave_has_is_paid_true(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $leaveType = LeaveType::factory()->create(['default_pay_percentage' => 100.00]);
+
+        Leave::factory()
+            ->approved()
+            ->openEnded()
+            ->coveringDate($this->today)
+            ->create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'requested_by' => $this->user->id,
+                'pay_percentage' => null,  // use type default (100%)
+            ]);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertTrue($row['today_leave']['is_paid']);
+    }
+
+    #[Test]
+    public function unpaid_leave_has_is_paid_false(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $leaveType = LeaveType::factory()->unpaid()->create();
+
+        Leave::factory()
+            ->approved()
+            ->openEnded()
+            ->coveringDate($this->today)
+            ->create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $leaveType->id,
+                'requested_by' => $this->user->id,
+            ]);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertFalse($row['today_leave']['is_paid']);
     }
 
     // #endregion

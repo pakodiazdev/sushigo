@@ -39,10 +39,21 @@ export interface TodayScheduleDay {
   expected_end: string | null
 }
 
+export interface TodayLeave {
+  id: string
+  time_mode: 'SCHEDULED' | 'OPEN_ENDED'
+  calculation_mode: 'FIXED_PERCENTAGE' | 'PROPORTIONAL_HOURS'
+  is_paid: boolean
+  starts_at: string | null  // ISO UTC — only for SCHEDULED leaves
+  ends_at: string | null    // ISO UTC — only for SCHEDULED leaves
+  note: string | null
+}
+
 export interface TodayAttendanceRow {
   employee: TodayAttendanceEmployee
   attendance: TodayAttendanceData | null
   schedule: TodayScheduleDay | null
+  today_leave: TodayLeave | null
 }
 
 export interface TodayAttendanceEmployee {
@@ -177,7 +188,7 @@ function dateToMs(year: number, month: number, day: number, hour: number, minute
  * Uses pure math - no Date methods - to avoid cy.clock() mocking issues.
  * Supports formats like: "2026-04-02T20:00:00+00:00", "2026-04-02T20:00:00Z"
  */
-function parseIsoToUtcMs(iso: string): number {
+export function parseIsoToUtcMs(iso: string): number {
   // Match pattern: YYYY-MM-DDTHH:MM:SS with optional timezone
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|([+-])(\d{2}):(\d{2}))?$/.exec(iso)
   if (!match) return Number.NaN

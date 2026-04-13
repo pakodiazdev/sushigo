@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Contracts\PasswordResetTokenRecorder;
 use Database\Seeders\Fakes\FakeEmployeesSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
+use Database\Seeders\Testing\AttendanceTodayLeaveSeeder;
 use Database\Seeders\Testing\CloseDayHappyPathSeeder;
 use Database\Seeders\Testing\CloseDayPendingLunchSeeder;
 use Database\Seeders\Testing\CoreTestSeeder;
@@ -31,6 +32,10 @@ class TestReset extends Command
         ],
         'attendance' => [
             AttendanceTestSeeder::class,
+        ],
+        'attendance-today-leave' => [
+            AttendanceTestSeeder::class,
+            AttendanceTodayLeaveSeeder::class,
         ],
         'close-day-happy' => [
             AttendanceTestSeeder::class,
