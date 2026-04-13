@@ -52,15 +52,11 @@ trait ResolvesEffectiveScheduleDay
             })
             ->first();
 
-        if (! $period) {
-            return null;
-        }
+        $schedule = $period
+            ? EmployeeSchedule::effective($date)->where('employment_period_id', $period->id)->first()
+            : null;
 
-        $schedule = EmployeeSchedule::effective($date)
-            ->where('employment_period_id', $period->id)
-            ->first();
-
-        if (! $schedule) {
+        if (! $period || ! $schedule) {
             return null;
         }
 
@@ -77,10 +73,6 @@ trait ResolvesEffectiveScheduleDay
         // Fall back to the base schedule day.
         $scheduleDay = $schedule->dayConfig($dayOfWeek);
 
-        if (! $scheduleDay || $scheduleDay->isDayOff()) {
-            return null;
-        }
-
-        return $scheduleDay;
+        return ($scheduleDay && ! $scheduleDay->isDayOff()) ? $scheduleDay : null;
     }
 }
