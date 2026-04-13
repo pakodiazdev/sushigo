@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse, DayStatus } from '@/types/attendance'
+import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse } from '@/types/attendance'
 
 export const attendanceApi = {
   /**
@@ -65,10 +65,11 @@ export const attendanceApi = {
 
   /**
    * POST /attendances/day-status
-   * Marks an employee's day as DAY_OFF or ABSENCE without registering check-in/check-out.
-   * Body: { employee_id: ULID, date: "YYYY-MM-DD", day_status: "DAY_OFF" | "ABSENCE" }
+   * Marks an employee's day as ABSENCE (unexcused no-show).
+   * DAY_OFF is auto-managed by CloseDayAction — cannot be set via this endpoint.
+   * Body: { employee_id: ULID, date: "YYYY-MM-DD", day_status: "ABSENCE" }
    */
-  markDayStatus: (data: { employee_id: string; date: string; day_status: Extract<DayStatus, 'DAY_OFF' | 'ABSENCE'> }) =>
+  markDayStatus: (data: { employee_id: string; date: string; day_status: 'ABSENCE' }) =>
     apiClient.post<{ status: number; data: AttendanceRecord }>('/attendances/day-status', data),
 
   /**

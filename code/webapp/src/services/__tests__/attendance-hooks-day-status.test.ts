@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useMarkDayStatus } from '@/services/attendance-hooks'
@@ -43,20 +43,6 @@ function makeWrapper() {
   return { queryClient, wrapper }
 }
 
-const mockDayOffResponse = {
-  data: {
-    status: 201,
-    data: {
-      id: 'att-001',
-      employee_id: 'emp-001',
-      date: '2026-04-12',
-      day_status: 'DAY_OFF',
-      check_in: null,
-      check_out: null,
-    },
-  },
-}
-
 const mockAbsenceResponse = {
   data: {
     status: 201,
@@ -78,51 +64,12 @@ afterEach(() => {
 // ── useMarkDayStatus ───────────────────────────────────────────────────────────
 
 describe('useMarkDayStatus', () => {
-  it('calls attendanceApi.markDayStatus with correct payload for DAY_OFF', async () => {
-    vi.mocked(attendanceApi.markDayStatus).mockResolvedValue(mockDayOffResponse as never)
-    const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useMarkDayStatus(), { wrapper })
-
-    await act(async () => {
-      result.current.mutate({
-        employee_id: 'emp-001',
-        date: '2026-04-12',
-        day_status: 'DAY_OFF',
-      })
-    })
-
-    expect(attendanceApi.markDayStatus).toHaveBeenCalledWith({
-      employee_id: 'emp-001',
-      date: '2026-04-12',
-      day_status: 'DAY_OFF',
-    })
-  })
-
-  it('shows success toast with "descanso" label when DAY_OFF succeeds', async () => {
-    vi.mocked(attendanceApi.markDayStatus).mockResolvedValue(mockDayOffResponse as never)
-    const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useMarkDayStatus(), { wrapper })
-
-    await act(async () => {
-      result.current.mutate({
-        employee_id: 'emp-001',
-        date: '2026-04-12',
-        day_status: 'DAY_OFF',
-      })
-    })
-
-    expect(mockShowSuccess).toHaveBeenCalledWith(
-      expect.stringContaining('descanso'),
-      'Día marcado',
-    )
-  })
-
-  it('shows success toast with "falta" label when ABSENCE succeeds', async () => {
+  it('calls attendanceApi.markDayStatus with ABSENCE payload', async () => {
     vi.mocked(attendanceApi.markDayStatus).mockResolvedValue(mockAbsenceResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useMarkDayStatus(), { wrapper })
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({
         employee_id: 'emp-001',
         date: '2026-04-12',
@@ -130,9 +77,31 @@ describe('useMarkDayStatus', () => {
       })
     })
 
-    expect(mockShowSuccess).toHaveBeenCalledWith(
-      expect.stringContaining('falta'),
-      'Día marcado',
+    await waitFor(() => expect(attendanceApi.markDayStatus).toHaveBeenCalledWith({
+      employee_id: 'emp-001',
+      date: '2026-04-12',
+      day_status: 'ABSENCE',
+    }))
+  })
+
+  it('shows success toast with "falta" label when ABSENCE succeeds', async () => {
+    vi.mocked(attendanceApi.markDayStatus).mockResolvedValue(mockAbsenceResponse as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useMarkDayStatus(), { wrapper })
+
+    act(() => {
+      result.current.mutate({
+        employee_id: 'emp-001',
+        date: '2026-04-12',
+        day_status: 'ABSENCE',
+      })
+    })
+
+    await waitFor(() =>
+      expect(mockShowSuccess).toHaveBeenCalledWith(
+        expect.stringContaining('falta'),
+        'Día marcado',
+      )
     )
   })
 
@@ -141,14 +110,36 @@ describe('useMarkDayStatus', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useMarkDayStatus(), { wrapper })
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({
         employee_id: 'emp-001',
         date: '2026-04-12',
-        day_status: 'DAY_OFF',
+        day_status: 'ABSENCE',
       })
     })
 
-    expect(mockShowError).toHaveBeenCalled()
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+  })
+
+  it('invalidates today attendance queries on success', async () => {
+    vi.mocked(attendanceApi.markDayStatus).mockResolvedValue(mockAbsenceResponse as never)
+    const { wrapper, queryClient } = makeWrapper()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    const { result } = renderHook(() => useMarkDayStatus(), { wrapper })
+
+    act(() => {
+      result.current.mutate({
+        employee_id: 'emp-001',
+        date: '2026-04-12',
+        day_status: 'ABSENCE',
+      })
+    })
+
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ queryKey: ['attendances', 'today'] })
+      )
+    )
   })
 })

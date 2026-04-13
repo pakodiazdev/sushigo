@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
 import { useToast } from '@/components/ui/toast-provider'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { TodayAttendanceRow, CloseDayRequest, DayStatus } from '@/types/attendance'
+import type { TodayAttendanceRow, CloseDayRequest } from '@/types/attendance'
 
 /**
  * Fetch today's attendance for all active employees of a branch.
@@ -147,7 +147,8 @@ export function useOvertimeDecision() {
 }
 
 /**
- * Mutation: mark an employee's day as DAY_OFF or ABSENCE.
+ * Mutation: mark an employee's day as ABSENCE (unexcused no-show).
+ * DAY_OFF is auto-managed by CloseDayAction — do not send it here.
  * On success: invalidates the today attendance query and shows a toast.
  */
 export function useMarkDayStatus() {
@@ -155,12 +156,11 @@ export function useMarkDayStatus() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (data: { employee_id: string; date: string; day_status: Extract<DayStatus, 'DAY_OFF' | 'ABSENCE'> }) =>
+    mutationFn: (data: { employee_id: string; date: string; day_status: 'ABSENCE' }) =>
       attendanceApi.markDayStatus(data),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
-      const label = variables.day_status === 'DAY_OFF' ? 'Día marcado como descanso.' : 'Día marcado como falta.'
-      showSuccess(label, 'Día marcado')
+      showSuccess('Día marcado como falta.', 'Día marcado')
     },
     onError: (error: unknown) => {
       showError(
@@ -188,6 +188,8 @@ export function useCloseDay() {
       if (d.lunch_returns > 0) parts.push(`${d.lunch_returns} regresos`)
       if (d.check_outs > 0) parts.push(`${d.check_outs} salidas`)
       if (d.absences > 0) parts.push(`${d.absences} faltas`)
+      if (d.leaves > 0) parts.push(`${d.leaves} permisos`)
+      if (d.day_offs > 0) parts.push(`${d.day_offs} descansos`)
       showSuccess(parts.join(', ') || 'Sin cambios', 'Día cerrado')
     },
     onError: (error: unknown) => {

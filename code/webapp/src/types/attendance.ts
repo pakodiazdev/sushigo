@@ -91,6 +91,8 @@ export interface CloseDayResponse {
   lunch_returns: number
   check_outs: number
   absences: number
+  leaves: number
+  day_offs: number
 }
 
 // #endregion

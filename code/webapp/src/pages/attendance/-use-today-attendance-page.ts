@@ -17,7 +17,7 @@ export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   for (const row of rows) {
     const phase = getAttendancePhase(row.attendance)
     if (phase === 'pending') pending++
-    else if (phase === 'done' || phase === 'on-leave') done++
+    else if (phase === 'done' || phase === 'on-leave' || phase === 'day-off' || phase === 'absence') done++
     else checkedIn++
 
     if ((row.attendance?.overtime_minutes ?? 0) > 0) withOvertime++
