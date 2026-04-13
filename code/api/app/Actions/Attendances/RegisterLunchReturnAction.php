@@ -2,10 +2,8 @@
 
 namespace App\Actions\Attendances;
 
+use App\Actions\Attendances\Concerns\ResolvesEffectiveScheduleDay;
 use App\Models\Attendance;
-use App\Models\EmployeeSchedule;
-use App\Models\EmploymentPeriod;
-use App\Models\ScheduleDay;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -30,6 +28,8 @@ use Illuminate\Validation\ValidationException;
  */
 class RegisterLunchReturnAction
 {
+    use ResolvesEffectiveScheduleDay;
+
     /**
      * @param  Attendance  $attendance  Already-loaded attendance record
      * @param  array{lunch_end: string}  $data  Validated request data
@@ -93,53 +93,15 @@ class RegisterLunchReturnAction
      */
     private function calculateLunchLateSeconds(Attendance $attendance, Carbon $lunchEnd): int
     {
-        $scheduleDay = $this->resolveScheduleDay($attendance);
+        $scheduleDay = $this->resolveEffectiveScheduleDay($attendance);
 
-        if (! $scheduleDay) {
+        if (! $scheduleDay || ! $scheduleDay->lunch_duration_minutes) {
             return 0;
         }
 
-        $expectedReturn = $scheduleDay->expectedLunchReturnTime(
-            Carbon::parse($attendance->lunch_start)
-        );
-
-        if (! $expectedReturn) {
-            return 0;
-        }
+        $expectedReturn = Carbon::parse($attendance->lunch_start)
+            ->addMinutes($scheduleDay->lunch_duration_minutes);
 
         return (int) max(0, $lunchEnd->timestamp - $expectedReturn->timestamp);
-    }
-
-    /**
-     * Attempt to resolve the ScheduleDay for the attendance's date.
-     * Returns null if any step fails (period, schedule, or day not found).
-     */
-    private function resolveScheduleDay(Attendance $attendance): ?ScheduleDay
-    {
-        $date = $attendance->date->toDateString();
-        $dayOfWeek = $attendance->date->dayOfWeekIso;
-
-        $period = EmploymentPeriod::where('employee_id', $attendance->employee_id)
-            ->where('is_active', true)
-            ->whereDate('start_date', '<=', $date)
-            ->where(function ($q) use ($date) {
-                $q->whereNull('end_date')
-                    ->orWhereDate('end_date', '>=', $date);
-            })
-            ->first();
-
-        if (! $period) {
-            return null;
-        }
-
-        $schedule = EmployeeSchedule::effective($date)
-            ->where('employment_period_id', $period->id)
-            ->first();
-
-        if (! $schedule) {
-            return null;
-        }
-
-        return $schedule->dayConfig($dayOfWeek);
     }
 }
