@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
     UtensilsCrossed,
     AlertTriangle,
@@ -8,9 +9,12 @@ import {
     Undo2,
     CalendarX,
     Clock,
+    BedDouble,
+    UserX,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { getAttendancePhase, formatTime, formatSeconds } from '@/types/attendance'
 import type {
@@ -20,7 +24,7 @@ import type {
 } from '@/types/attendance'
 import { getPhaseCardClass } from './attendance-helpers'
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────���───────
 
 interface PhaseBadgeProps {
     phase: AttendancePhase
@@ -46,6 +50,18 @@ export function PhaseBadge({ phase }: Readonly<PhaseBadgeProps>) {
             return (
                 <Badge variant="warning" className="flex items-center gap-1">
                     <CalendarX className="h-3 w-3" /> Ausencia
+                </Badge>
+            )
+        case 'day-off':
+            return (
+                <Badge variant="info" className="flex items-center gap-1">
+                    <BedDouble className="h-3 w-3" /> Descanso
+                </Badge>
+            )
+        case 'absence':
+            return (
+                <Badge variant="error" className="flex items-center gap-1">
+                    <UserX className="h-3 w-3" /> Falta
                 </Badge>
             )
     }
@@ -157,7 +173,7 @@ export function RoleBadges({ roles }: Readonly<RoleBadgesProps>) {
     )
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+// ── Main Component ──────────────────���───────────────────────────���──────────────
 
 export interface EmployeeAttendanceCardProps {
     row: TodayAttendanceRow
@@ -166,7 +182,7 @@ export interface EmployeeAttendanceCardProps {
     onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
-    onRegisterLeave: (employee: TodayAttendanceEmployee) => void
+    onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
 }
 
 export function EmployeeAttendanceCard({
@@ -176,10 +192,13 @@ export function EmployeeAttendanceCard({
     onLunchReturn,
     onCheckOut,
     onOvertimeDecision,
-    onRegisterLeave,
+    onMarkDayStatus,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
+    const [confirmFaltaOpen, setConfirmFaltaOpen] = useState(false)
+
+    const isScheduledRestDay = row.schedule?.is_day_off === true
 
     return (
         <div
@@ -230,25 +249,53 @@ export function EmployeeAttendanceCard({
             {/* Actions for pending employees */}
             {phase === 'pending' && (
                 <div className="flex flex-col gap-1.5 mt-auto">
-                    <Button
-                        size="sm"
-                        className="w-full"
-                        onClick={() => onCheckIn(row.employee)}
-                    >
-                        <LogIn className="h-3.5 w-3.5 mr-1.5" />
-                        Registrar entrada
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                        onClick={() => onRegisterLeave(row.employee)}
-                    >
-                        <CalendarX className="h-3.5 w-3.5 mr-1.5" />
-                        Registrar ausencia
-                    </Button>
+                    {isScheduledRestDay ? (
+                        /* Scheduled rest day — read-only indicator, no action buttons */
+                        <div className="flex items-center gap-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2">
+                            <BedDouble className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
+                            <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
+                                Descanso programado
+                            </span>
+                        </div>
+                    ) : (
+                        <>
+                            <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={() => onCheckIn(row.employee)}
+                            >
+                                <LogIn className="h-3.5 w-3.5 mr-1.5" />
+                                Registrar entrada
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                                data-testid="btn-mark-falta"
+                                onClick={() => setConfirmFaltaOpen(true)}
+                            >
+                                <UserX className="h-3.5 w-3.5 mr-1.5" />
+                                Marcar falta
+                            </Button>
+                        </>
+                    )}
                 </div>
             )}
+
+            {/* Confirm-falta dialog */}
+            <ConfirmDialog
+                isOpen={confirmFaltaOpen}
+                onClose={() => setConfirmFaltaOpen(false)}
+                onConfirm={() => {
+                    setConfirmFaltaOpen(false)
+                    onMarkDayStatus(row.employee, 'ABSENCE')
+                }}
+                title="¿Confirmar falta?"
+                description={`${row.employee.last_name}, ${row.employee.first_name} no tiene registro de entrada. ¿Confirmar que faltó hoy?`}
+                confirmLabel="Confirmar falta"
+                variant="danger"
+                container="viewport"
+            />
 
             {/* Lunch-start action — only for checked-in employees */}
             {phase === 'checked-in' && att && (

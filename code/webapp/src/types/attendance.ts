@@ -91,6 +91,8 @@ export interface CloseDayResponse {
   lunch_returns: number
   check_outs: number
   absences: number
+  leaves: number
+  day_offs: number
 }
 
 // #endregion
@@ -103,11 +105,15 @@ export type AttendancePhase =
   | 'at-lunch'      // Has lunch_start, no lunch_end
   | 'returned'      // Has lunch_end, no check_out
   | 'done'          // Has check_out (with or without lunch)
-  | 'on-leave'      // Absence registered for today (day_status = LEAVE)
+  | 'on-leave'      // Formal leave (day_status = LEAVE)
+  | 'day-off'       // Manually marked rest day (day_status = DAY_OFF)
+  | 'absence'       // Manually marked no-show (day_status = ABSENCE)
 
 export function getAttendancePhase(attendance: TodayAttendanceData | null): AttendancePhase {
   if (!attendance) return 'pending'
   if (attendance.day_status === 'LEAVE') return 'on-leave'
+  if (attendance.day_status === 'DAY_OFF') return 'day-off'
+  if (attendance.day_status === 'ABSENCE') return 'absence'
   if (!attendance.check_in) return 'pending'
   if (attendance.check_out) return 'done'
   if (!attendance.lunch_start) return 'checked-in'

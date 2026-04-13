@@ -105,6 +105,44 @@ describe('getAttendancePhase', () => {
         }
         expect(getAttendancePhase(attendance)).toBe('returned')
     })
+
+    it('returns "day-off" when day_status is DAY_OFF', () => {
+        const attendance: TodayAttendanceData = {
+            id: '1',
+            check_in: null,
+            lunch_start: null,
+            lunch_end: null,
+            check_out: null,
+            day_status: 'DAY_OFF',
+            entry_late_seconds: null,
+            entry_late_minutes: null,
+            is_entry_deductible: false,
+            overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
+            requires_overtime_decision: false,
+        }
+        expect(getAttendancePhase(attendance)).toBe('day-off')
+    })
+
+    it('returns "absence" when day_status is ABSENCE', () => {
+        const attendance: TodayAttendanceData = {
+            id: '1',
+            check_in: null,
+            lunch_start: null,
+            lunch_end: null,
+            check_out: null,
+            day_status: 'ABSENCE',
+            entry_late_seconds: null,
+            entry_late_minutes: null,
+            is_entry_deductible: false,
+            overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
+            requires_overtime_decision: false,
+        }
+        expect(getAttendancePhase(attendance)).toBe('absence')
+    })
 })
 
 describe('formatSeconds', () => {

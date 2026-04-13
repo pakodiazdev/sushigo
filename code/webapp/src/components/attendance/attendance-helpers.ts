@@ -17,5 +17,9 @@ export function getPhaseCardClass(phase: AttendancePhase): string {
             return 'border-green-200 dark:border-green-800'
         case 'on-leave':
             return 'border-amber-200 dark:border-amber-800'
+        case 'day-off':
+            return 'border-indigo-200 dark:border-indigo-800 opacity-70'
+        case 'absence':
+            return 'border-red-200 dark:border-red-800 opacity-70'
     }
 }

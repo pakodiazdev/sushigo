@@ -64,6 +64,15 @@ export const attendanceApi = {
     ),
 
   /**
+   * POST /attendances/day-status
+   * Marks an employee's day as ABSENCE (unexcused no-show).
+   * DAY_OFF is auto-managed by CloseDayAction — cannot be set via this endpoint.
+   * Body: { employee_id: ULID, date: "YYYY-MM-DD", day_status: "ABSENCE" }
+   */
+  markDayStatus: (data: { employee_id: string; date: string; day_status: 'ABSENCE' }) =>
+    apiClient.post<{ status: number; data: AttendanceRecord }>('/attendances/day-status', data),
+
+  /**
    * POST /attendances/close-day
    * Closes the day for a branch: registers pending lunch returns,
    * batch check-out, and marks absences in one transaction.

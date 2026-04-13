@@ -12,7 +12,6 @@ import {
   ErrorState,
   NoBranchState,
   OvertimeDecisionDialog,
-  RegisterLeaveDialog,
   SkeletonGrid,
   useCloseDayPanel,
 } from '@/components/attendance'
@@ -61,10 +60,8 @@ export function TodayAttendancePage() {
     openOvertimeDecision,
     closeOvertimeDecision,
     confirmOvertimeDecision,
-    // Register leave
-    pendingLeaveEmployee,
-    openRegisterLeave,
-    closeRegisterLeave,
+    // Mark day status
+    markDayStatus,
   } = useTodayAttendancePage()
 
   const closeDayPanel = useCloseDayPanel(rows, branchId)
@@ -125,7 +122,7 @@ export function TodayAttendancePage() {
               onLunchReturn={openLunchReturn}
               onCheckOut={openCheckOut}
               onOvertimeDecision={openOvertimeDecision}
-              onRegisterLeave={openRegisterLeave}
+              onMarkDayStatus={markDayStatus}
             />
           ))}
         </div>
@@ -220,13 +217,6 @@ export function TodayAttendancePage() {
         onAuthorize={() => confirmOvertimeDecision(true)}
         onReject={() => confirmOvertimeDecision(false)}
         onClose={closeOvertimeDecision}
-      />
-
-      {/* Register Leave Dialog */}
-      <RegisterLeaveDialog
-        isOpen={!!pendingLeaveEmployee}
-        employee={pendingLeaveEmployee}
-        onClose={closeRegisterLeave}
       />
 
       {/* Close Day Panel */}

@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\AttendancePayroll;
 
+use App\Enums\LeaveStatus;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
+use App\Models\Leave;
+use App\Models\LeaveType;
 use App\Models\ScheduleDay;
 use App\Models\User;
 use Carbon\Carbon;
@@ -178,8 +181,167 @@ class CloseDayApiTest extends TestCase
                     'lunch_returns',
                     'check_outs',
                     'absences',
+                    'leaves',
+                    'day_offs',
                 ],
             ]);
+    }
+
+    #[Test]
+    public function closes_day_marks_leave_for_employee_with_approved_leave_today(): void
+    {
+        ['employee' => $employee] = $this->makeEmployeeWithSchedule();
+
+        // Create an approved leave covering today
+        $leaveType = LeaveType::create([
+            'name' => 'Permiso Personal',
+            'code' => 'PERSONAL',
+            'calculation_mode' => 'FIXED_PERCENTAGE',
+            'default_pay_percentage' => 100.00,
+            'default_rest_day_factor' => 'PROPORTIONAL',
+            'counts_for_bonus' => true,
+            'is_active' => true,
+        ]);
+
+        Leave::create([
+            'public_id' => str_pad('1', 26, '0', STR_PAD_LEFT),
+            'employee_id' => $employee->id,
+            'leave_type_id' => $leaveType->id,
+            'start_date' => self::DATE,
+            'end_date' => self::DATE,
+            'status' => LeaveStatus::APPROVED,
+            'requested_by' => $this->user->id,
+            'approved_by' => $this->user->id,
+            'approved_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/attendances/close-day', [
+            'branch_id' => $this->branchId,
+            'close_time' => '22:00',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.absences', 0)
+            ->assertJsonPath('data.leaves', 1)
+            ->assertJsonPath('data.day_offs', 0);
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => 'LEAVE',
+        ]);
+    }
+
+    #[Test]
+    public function closes_day_marks_day_off_for_employee_on_scheduled_rest_day(): void
+    {
+        // Create employee with Monday as a rest day
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => '2026-01-01',
+        ]);
+
+        if (! isset($this->branchId)) {
+            $this->branchId = $period->branch_id;
+        } else {
+            $period->update(['branch_id' => $this->branchId]);
+        }
+
+        $employee = $period->employee;
+
+        $schedule = EmployeeSchedule::factory()->current()->create([
+            'employment_period_id' => $period->id,
+            'effective_from' => '2026-01-01',
+        ]);
+
+        // Monday is a rest day for this employee
+        ScheduleDay::factory()
+            ->dayOff()
+            ->monday()
+            ->create(['employee_schedule_id' => $schedule->id]);
+
+        $response = $this->postJson('/api/v1/attendances/close-day', [
+            'branch_id' => $this->branchId,
+            'close_time' => '22:00',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.absences', 0)
+            ->assertJsonPath('data.leaves', 0)
+            ->assertJsonPath('data.day_offs', 1);
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => 'DAY_OFF',
+        ]);
+    }
+
+    #[Test]
+    public function closes_day_prioritizes_leave_over_rest_day(): void
+    {
+        // Employee whose schedule marks Monday as rest, but has an approved leave
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => '2026-01-01',
+        ]);
+
+        if (! isset($this->branchId)) {
+            $this->branchId = $period->branch_id;
+        } else {
+            $period->update(['branch_id' => $this->branchId]);
+        }
+
+        $employee = $period->employee;
+
+        $schedule = EmployeeSchedule::factory()->current()->create([
+            'employment_period_id' => $period->id,
+            'effective_from' => '2026-01-01',
+        ]);
+
+        ScheduleDay::factory()
+            ->dayOff()
+            ->monday()
+            ->create(['employee_schedule_id' => $schedule->id]);
+
+        $leaveType = LeaveType::create([
+            'name' => 'Médico',
+            'code' => 'MEDICAL',
+            'calculation_mode' => 'FIXED_PERCENTAGE',
+            'default_pay_percentage' => 100.00,
+            'default_rest_day_factor' => 'PROPORTIONAL',
+            'counts_for_bonus' => true,
+            'is_active' => true,
+        ]);
+
+        Leave::create([
+            'public_id' => str_pad('2', 26, '0', STR_PAD_LEFT),
+            'employee_id' => $employee->id,
+            'leave_type_id' => $leaveType->id,
+            'start_date' => self::DATE,
+            'end_date' => self::DATE,
+            'status' => LeaveStatus::APPROVED,
+            'requested_by' => $this->user->id,
+            'approved_by' => $this->user->id,
+            'approved_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/attendances/close-day', [
+            'branch_id' => $this->branchId,
+            'close_time' => '22:00',
+        ]);
+
+        // LEAVE wins over DAY_OFF
+        $response->assertStatus(200)
+            ->assertJsonPath('data.leaves', 1)
+            ->assertJsonPath('data.day_offs', 0)
+            ->assertJsonPath('data.absences', 0);
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => 'LEAVE',
+        ]);
     }
 
     #[Test]

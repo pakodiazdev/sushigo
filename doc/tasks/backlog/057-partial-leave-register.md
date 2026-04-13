@@ -1,47 +1,23 @@
-# 🕐 Task #057: Register Partial Leave
+# ~~🕐 Task #057: Register Partial Leave~~ — DEPRECATED
 
-## 📖 Story
+> **⚠️ DEPRECATED — Superseded by #096 (Leave Request) and #077 (Leave Foundation)**
+>
+> **Reason:** This task originally planned a separate `partial_leaves` table with its own model and endpoints. After architectural review, partial leaves are handled by the existing `leaves` table (created in #077) using `calculation_mode = PROPORTIONAL_HOURS` and `time_mode = SCHEDULED`. No new table or model is needed.
+>
+> **Where the functionality lives:**
+> - **Register a partial leave** → `POST /api/v1/leaves` (from #077) with `calculation_mode = PROPORTIONAL_HOURS`, `time_mode = SCHEDULED`, `starts_at`, `ends_at`
+> - **Express same-day partial leave** → same endpoint, `status = APPROVED` directly (manager approves inline)
+> - **Anticipated partial leave** → same endpoint with `submit_as_request = true` (see #096 for approve/reject flow)
+> - **Today view context** → #098 surfaces the approved leave on the employee card
+>
+> **Do not implement this task.** Close GitHub issue #57.
+
+---
+
+## 📖 Original Story (archived)
 
 **English:**
 As a Manager, I want to register a partial leave event for an employee (arrive late by permission, leave early, or take time off during the shift), specifying whether it is paid or unpaid, so the system has the evidence to apply deductions at close time.
 
 **Español:**
 Como Manager, quiero registrar un permiso parcial para un empleado (llegó tarde con permiso, salió temprano, o tomó tiempo durante el turno), indicando si es pagado o no, para que el sistema tenga la evidencia y aplique deducciones en el cierre.
-
----
-
-## ✅ Backend Tasks
-
-- [ ] 📂 Migration `create_partial_leaves_table` — employee_id (FK), attendance_id (FK nullable), type (enum: ARRIVE_LATE|LEAVE_EARLY|TAKE_TIME), is_paid (bool), start_time (nullable), end_time (nullable), duration_minutes, reason, approved_by (FK), timestamps
-- [ ] 🔧 `PartialLeave` model — `belongsTo(Employee)`, `belongsTo(Attendance)`, method `deductionAmount(minuteRate)`: returns `duration_minutes × minuteRate` if unpaid, 0 if paid
-- [ ] 🌐 `POST /api/v1/partial-leaves` — RegisterPartialLeaveController
-- [ ] 📝 StorePartialLeaveRequest — employee_id, date, type, is_paid, start_time (opt), end_time (opt), duration_minutes, reason; `approved_by` from auth user; auto-links attendance_id if attendance exists; auto-computes duration_minutes when start+end provided
-- [ ] 🧪 Feature tests: paid leave, unpaid leave, with time window, duration only
-
-## ✅ Frontend Tasks
-
-- [ ] 📝 Add `PartialLeave`, `PartialLeaveType` types to `src/types/attendance-payroll.ts`
-- [ ] 🔧 `registerPartialLeave(data)` in `src/services/partial-leave.service.ts`
-- [ ] 📱 **"Permiso parcial" button** on each attendance row in the Today view — opens a modal
-- [ ] 📱 **Partial leave modal** (react-hook-form + zod) — fields: type (select), is_paid (toggle), start_time + end_time or duration_minutes, reason; duration auto-calculated when both times provided
-- [ ] 🔧 `useRegisterPartialLeave()` hook — mutation, on success closes modal and updates row
-
----
-
-## 🎯 Acceptance Criteria
-
-- [ ] Manager can register a partial leave from the Today view
-- [ ] Duration is auto-calculated when start and end times are both entered
-- [ ] Paid/unpaid toggle is clearly visible with a label explaining the payroll impact
-
----
-
-## 🔗 References
-
-- **Backlog:** AP-020, AP-021 · RF-25a, RN-00c
-
----
-
-## ⏱️ Estimates
-
-- **Optimistic:** `3h` · **Pessimistic:** `5h`

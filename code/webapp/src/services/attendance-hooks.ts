@@ -147,6 +147,31 @@ export function useOvertimeDecision() {
 }
 
 /**
+ * Mutation: mark an employee's day as ABSENCE (unexcused no-show).
+ * DAY_OFF is auto-managed by CloseDayAction — do not send it here.
+ * On success: invalidates the today attendance query and shows a toast.
+ */
+export function useMarkDayStatus() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: { employee_id: string; date: string; day_status: 'ABSENCE' }) =>
+      attendanceApi.markDayStatus(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      showSuccess('Día marcado como falta.', 'Día marcado')
+    },
+    onError: (error: unknown) => {
+      showError(
+        getApiErrorMessage(error, 'No se pudo marcar el día.'),
+        'Error al marcar'
+      )
+    },
+  })
+}
+
+/**
  * Mutation: close the day for a branch (batch lunch returns + check-outs + absences).
  * On success: invalidates the today attendance query and shows a summary toast.
  */
@@ -163,6 +188,8 @@ export function useCloseDay() {
       if (d.lunch_returns > 0) parts.push(`${d.lunch_returns} regresos`)
       if (d.check_outs > 0) parts.push(`${d.check_outs} salidas`)
       if (d.absences > 0) parts.push(`${d.absences} faltas`)
+      if (d.leaves > 0) parts.push(`${d.leaves} permisos`)
+      if (d.day_offs > 0) parts.push(`${d.day_offs} descansos`)
       showSuccess(parts.join(', ') || 'Sin cambios', 'Día cerrado')
     },
     onError: (error: unknown) => {
