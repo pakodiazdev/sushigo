@@ -2,10 +2,8 @@
 
 namespace App\Actions\Attendances;
 
+use App\Actions\Attendances\Concerns\ResolvesEffectiveScheduleDay;
 use App\Models\Attendance;
-use App\Models\EmployeeSchedule;
-use App\Models\EmploymentPeriod;
-use App\Models\ScheduleDay;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +18,7 @@ use Illuminate\Validation\ValidationException;
  *   4. Calculates overtime_minutes:
  *        max(0, check_out − scheduleDay.expected_end) in whole minutes
  *      If the schedule cannot be resolved, overtime_minutes = 0 (non-blocking)
+ *      ScheduleDayOverride takes precedence over the base ScheduleDay when present
  *   5. Persists check_out, net_worked_minutes, overtime_minutes
  *
  * All business rule violations are surfaced as 422 ValidationException.
@@ -28,6 +27,8 @@ use Illuminate\Validation\ValidationException;
  */
 class RegisterCheckOutAction
 {
+    use ResolvesEffectiveScheduleDay;
+
     /**
      * @param  Attendance  $attendance  Already-loaded attendance record
      * @param  array{check_out: string}  $data  Validated request data
@@ -119,7 +120,7 @@ class RegisterCheckOutAction
      */
     private function calculateOvertimeMinutes(Attendance $attendance, Carbon $checkOut, Carbon $checkOutLocal): int
     {
-        $scheduleDay = $this->resolveScheduleDay($attendance);
+        $scheduleDay = $this->resolveEffectiveScheduleDay($attendance);
 
         if (! $scheduleDay || ! $scheduleDay->expected_end) {
             return 0;
@@ -143,38 +144,5 @@ class RegisterCheckOutAction
         $overtimeSeconds = max(0, $checkOut->timestamp - $expectedEnd->timestamp);
 
         return (int) floor($overtimeSeconds / 60);
-    }
-
-    /**
-     * Attempt to resolve the ScheduleDay for the attendance's date.
-     * Returns null if any step fails (non-blocking — callers default to 0).
-     */
-    private function resolveScheduleDay(Attendance $attendance): ?ScheduleDay
-    {
-        $date = $attendance->date->toDateString();
-        $dayOfWeek = $attendance->date->dayOfWeekIso;
-
-        $period = EmploymentPeriod::where('employee_id', $attendance->employee_id)
-            ->where('is_active', true)
-            ->whereDate('start_date', '<=', $date)
-            ->where(function ($q) use ($date) {
-                $q->whereNull('end_date')
-                    ->orWhereDate('end_date', '>=', $date);
-            })
-            ->first();
-
-        if (! $period) {
-            return null;
-        }
-
-        $schedule = EmployeeSchedule::effective($date)
-            ->where('employment_period_id', $period->id)
-            ->first();
-
-        if (! $schedule) {
-            return null;
-        }
-
-        return $schedule->dayConfig($dayOfWeek);
     }
 }

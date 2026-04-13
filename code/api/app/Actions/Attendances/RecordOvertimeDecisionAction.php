@@ -2,7 +2,9 @@
 
 namespace App\Actions\Attendances;
 
+use App\Enums\AuditAction;
 use App\Models\Attendance;
+use App\Models\AttendanceAuditLog;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -54,6 +56,27 @@ class RecordOvertimeDecisionAction
                 'authorize' => 'Ya se registró una decisión sobre las horas extra de este empleado.',
             ]);
         }
+
+        // The atomic query-builder update bypasses Eloquent model events, so the
+        // Auditable trait never fires. We write the audit entry manually to ensure
+        // overtime decisions are included in the audit trail (RF-19).
+        AttendanceAuditLog::create([
+            'auditable_type' => Attendance::class,
+            'auditable_id' => $attendance->id,
+            'action' => AuditAction::UPDATE,
+            'old_values' => [
+                'overtime_authorized' => $attendance->getRawOriginal('overtime_authorized'),
+                'overtime_authorized_by' => $attendance->getRawOriginal('overtime_authorized_by'),
+                'overtime_authorized_at' => $attendance->getRawOriginal('overtime_authorized_at'),
+            ],
+            'new_values' => [
+                'overtime_authorized' => $authorize,
+                'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
+                'overtime_authorized_at' => $now->toDateTimeString(),
+            ],
+            'user_id' => $decidedBy->id,
+            'reason' => null,
+        ]);
 
         return $attendance->fresh(['employee']);
     }
