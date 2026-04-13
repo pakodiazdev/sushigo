@@ -204,16 +204,16 @@ export function LeaveChip({ leave, nowMs = Date.now() }: Readonly<LeaveChipProps
     const endsAtMs = parsedEndMs === null || Number.isNaN(parsedEndMs) ? null : parsedEndMs
 
     let label: string
-    if (startsAtMs !== null && startsAtMs > nowMs) {
+    if (endsAtMs === null) {
+        label = `Permiso ${payLabel} (horario no disponible)`
+    } else if (startsAtMs !== null && startsAtMs > nowMs) {
         // Leave hasn't started yet — employee will arrive at work when the leave ends
         label = `Llega a las ${formatTime(leave.ends_at)} (permiso ${payLabel})`
-    } else if (endsAtMs !== null && endsAtMs < nowMs) {
+    } else if (endsAtMs < nowMs) {
         // Leave is over — employee left work when the leave started
         label = `Salió a las ${formatTime(leave.starts_at)} (permiso ${payLabel})`
-    } else if (endsAtMs !== null) {
-        label = `Permiso ${payLabel} hasta ${formatTime(leave.ends_at)}`
     } else {
-        label = `Permiso ${payLabel} (horario no disponible)`
+        label = `Permiso ${payLabel} hasta ${formatTime(leave.ends_at)}`
     }
 
     return (
@@ -257,6 +257,44 @@ export function EmployeeAttendanceCard({
 
     const isScheduledRestDay = row.schedule?.is_day_off === true
     const isFullDayLeave = leave?.time_mode === 'OPEN_ENDED'
+
+    function renderPendingActions() {
+        if (isScheduledRestDay) {
+            return (
+                <div className="flex items-center gap-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2">
+                    <BedDouble className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
+                    <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
+                        Descanso programado
+                    </span>
+                </div>
+            )
+        }
+        if (isFullDayLeave) {
+            return null
+        }
+        return (
+            <>
+                <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => onCheckIn(row.employee)}
+                >
+                    <LogIn className="h-3.5 w-3.5 mr-1.5" />
+                    Registrar entrada
+                </Button>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                    data-testid="btn-mark-falta"
+                    onClick={() => setConfirmFaltaOpen(true)}
+                >
+                    <UserX className="h-3.5 w-3.5 mr-1.5" />
+                    Marcar falta
+                </Button>
+            </>
+        )
+    }
 
     return (
         <div
@@ -310,39 +348,7 @@ export function EmployeeAttendanceCard({
             {/* Actions for pending employees */}
             {phase === 'pending' && (
                 <div className="flex flex-col gap-1.5 mt-auto">
-                    {isScheduledRestDay ? (
-                        /* Scheduled rest day — read-only indicator, no action buttons */
-                        <div className="flex items-center gap-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2">
-                            <BedDouble className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
-                            <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
-                                Descanso programado
-                            </span>
-                        </div>
-                    ) : isFullDayLeave ? (
-                        /* Full-day approved leave — chip already shown above, no action buttons */
-                        null
-                    ) : (
-                        <>
-                            <Button
-                                size="sm"
-                                className="w-full"
-                                onClick={() => onCheckIn(row.employee)}
-                            >
-                                <LogIn className="h-3.5 w-3.5 mr-1.5" />
-                                Registrar entrada
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
-                                data-testid="btn-mark-falta"
-                                onClick={() => setConfirmFaltaOpen(true)}
-                            >
-                                <UserX className="h-3.5 w-3.5 mr-1.5" />
-                                Marcar falta
-                            </Button>
-                        </>
-                    )}
+                    {renderPendingActions()}
                 </div>
             )}
 
