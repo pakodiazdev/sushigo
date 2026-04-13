@@ -65,7 +65,8 @@ class AttendanceTodayLeaveSeeder extends Seeder
                 'updated_at' => $now,
             ],
             // EMP-008: approved partial unpaid leave (SCHEDULED, PROPORTIONAL_HOURS)
-            // Shift is 13:00-22:00 CDMX; leave covers 13:00-16:00 → arrives 3h late
+            // Shift is 13:00-22:00 CDMX; leave covers 13:00-16:00
+            // → employee is absent 13:00-16:00, arrives at work at 16:00 (ends_at)
             [
                 'public_id' => (string) Str::ulid(),
                 'employee_id' => $employeeIdMap['EMP-008'],

@@ -205,9 +205,11 @@ export function LeaveChip({ leave, nowMs = Date.now() }: Readonly<LeaveChipProps
 
     let label: string
     if (startsAtMs !== null && startsAtMs > nowMs) {
-        label = `Llega a las ${formatTime(leave.starts_at)} (permiso ${payLabel})`
+        // Leave hasn't started yet — employee will arrive at work when the leave ends
+        label = `Llega a las ${formatTime(leave.ends_at)} (permiso ${payLabel})`
     } else if (endsAtMs !== null && endsAtMs < nowMs) {
-        label = `Salió a las ${formatTime(leave.ends_at)} (permiso ${payLabel})`
+        // Leave is over — employee left work when the leave started
+        label = `Salió a las ${formatTime(leave.starts_at)} (permiso ${payLabel})`
     } else if (endsAtMs !== null) {
         label = `Permiso ${payLabel} hasta ${formatTime(leave.ends_at)}`
     } else {

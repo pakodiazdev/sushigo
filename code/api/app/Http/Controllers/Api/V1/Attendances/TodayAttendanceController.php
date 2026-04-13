@@ -88,11 +88,13 @@ class TodayAttendanceController extends Controller
             'user.roles',
             'attendances' => fn ($q) => $q->whereDate('date', $today),
             // Pick only the first approved leave covering today.
-            // Tie-break: earliest created (oldest id) — predictable and stable.
+            // reorder() clears the default orderBy('start_date', 'desc') inherited from
+            // Employee::leaves(), then oldest('id') applies a stable, predictable tie-break.
             'leaves' => fn ($q) => $q
                 ->approved()
                 ->forDate($today)
                 ->with('leaveType')
+                ->reorder()
                 ->oldest('id'),
         ])
             ->whereHas('employmentPeriods', function ($q) use ($branchId) {
