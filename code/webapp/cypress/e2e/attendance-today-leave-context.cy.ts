@@ -59,18 +59,12 @@ function getCard(lastName: string, firstName: string) {
 
 describe('Today Leave — full-day approved leave (OPEN_ENDED)', () => {
   it('shows the full-day leave chip on the employee card', () => {
-    cy.intercept('GET', '**/attendances/today*').as('todayLoad')
-    cy.wait('@todayLoad', { timeout: 15_000 })
-
     getCard('Flores', 'Miguel').within(() => {
       cy.contains('Permiso aprobado (todo el día)', { timeout: 10_000 }).should('be.visible')
     })
   })
 
   it('hides "Registrar entrada" and "Marcar falta" buttons for full-day leave', () => {
-    cy.intercept('GET', '**/attendances/today*').as('todayLoad')
-    cy.wait('@todayLoad', { timeout: 15_000 })
-
     getCard('Flores', 'Miguel').within(() => {
       cy.contains('Registrar entrada').should('not.exist')
       cy.contains('Marcar falta').should('not.exist')
@@ -84,9 +78,6 @@ describe('Today Leave — full-day approved leave (OPEN_ENDED)', () => {
 
 describe('Today Leave — partial scheduled leave (SCHEDULED)', () => {
   it('shows a contextual "Llega a las" chip when the leave starts after now', () => {
-    cy.intercept('GET', '**/attendances/today*').as('todayLoad')
-    cy.wait('@todayLoad', { timeout: 15_000 })
-
     // At 10:00 CDMX the scheduled leave starts at 13:00 → still in the future
     getCard('Vargas', 'Sofia').within(() => {
       cy.contains(/Llega a las/, { timeout: 10_000 }).should('be.visible')
@@ -94,9 +85,6 @@ describe('Today Leave — partial scheduled leave (SCHEDULED)', () => {
   })
 
   it('keeps "Registrar entrada" and "Marcar falta" buttons for partial-day leave', () => {
-    cy.intercept('GET', '**/attendances/today*').as('todayLoad')
-    cy.wait('@todayLoad', { timeout: 15_000 })
-
     getCard('Vargas', 'Sofia').within(() => {
       cy.contains('Registrar entrada').should('be.visible')
       cy.contains('Marcar falta').should('be.visible')
@@ -110,9 +98,6 @@ describe('Today Leave — partial scheduled leave (SCHEDULED)', () => {
 
 describe('Today Leave — employee with no approved leave', () => {
   it('does not show any leave chip for employees without leave', () => {
-    cy.intercept('GET', '**/attendances/today*').as('todayLoad')
-    cy.wait('@todayLoad', { timeout: 15_000 })
-
     getCard('Mendoza', 'Carlos').within(() => {
       cy.contains('Permiso aprobado').should('not.exist')
       cy.contains(/Llega a las/).should('not.exist')
