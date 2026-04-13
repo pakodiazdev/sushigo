@@ -87,11 +87,13 @@ class TodayAttendanceController extends Controller
         $employees = Employee::with([
             'user.roles',
             'attendances' => fn ($q) => $q->whereDate('date', $today),
+            // Pick only the first approved leave covering today.
+            // Tie-break: earliest created (oldest id) — predictable and stable.
             'leaves' => fn ($q) => $q
                 ->approved()
                 ->forDate($today)
                 ->with('leaveType')
-                ->latest('id'),
+                ->oldest('id'),
         ])
             ->whereHas('employmentPeriods', function ($q) use ($branchId) {
                 $q->where('branch_id', $branchId)

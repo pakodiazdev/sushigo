@@ -198,16 +198,20 @@ export function LeaveChip({ leave, nowMs = Date.now() }: Readonly<LeaveChipProps
 
     // SCHEDULED leave — compute contextual label based on current time
     const payLabel = leave.is_paid ? 'c/g' : 's/g'
-    const startsAtMs = leave.starts_at ? parseIsoToUtcMs(leave.starts_at) : null
-    const endsAtMs = leave.ends_at ? parseIsoToUtcMs(leave.ends_at) : null
+    const parsedStartMs = leave.starts_at ? parseIsoToUtcMs(leave.starts_at) : null
+    const parsedEndMs = leave.ends_at ? parseIsoToUtcMs(leave.ends_at) : null
+    const startsAtMs = parsedStartMs === null || Number.isNaN(parsedStartMs) ? null : parsedStartMs
+    const endsAtMs = parsedEndMs === null || Number.isNaN(parsedEndMs) ? null : parsedEndMs
 
     let label: string
     if (startsAtMs !== null && startsAtMs > nowMs) {
         label = `Llega a las ${formatTime(leave.starts_at)} (permiso ${payLabel})`
     } else if (endsAtMs !== null && endsAtMs < nowMs) {
         label = `Salió a las ${formatTime(leave.ends_at)} (permiso ${payLabel})`
-    } else {
+    } else if (endsAtMs !== null) {
         label = `Permiso ${payLabel} hasta ${formatTime(leave.ends_at)}`
+    } else {
+        label = `Permiso ${payLabel} (horario no disponible)`
     }
 
     return (
