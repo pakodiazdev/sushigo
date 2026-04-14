@@ -20,7 +20,7 @@ export default function Layout() {
     }, [_hasHydrated, initializeAuth]);
 
     // Public routes that don't require authentication
-    const publicRoutes = ['/login', '/logout', '/reset-password', '/forgot-password'];
+    const publicRoutes = ['/login', '/logout', '/reset-password', '/forgot-password', '/unauthorized'];
     const isPublicRoute = publicRoutes.includes(currentPath);
 
     // Handle redirections - only after loading is complete
