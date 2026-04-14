@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { requirePermission } from '@/lib/route-guards'
 import { useQuery } from '@tanstack/react-query'
 import {
   Package,
@@ -19,6 +20,7 @@ import { stockApi, inventoryLocationApi } from '@/services/inventory-api'
 import type { Stock, InventoryLocation } from '@/types/inventory'
 
 export const Route = createFileRoute('/stock-dashboard')({
+  beforeLoad: requirePermission('stock.view'),
   component: StockDashboardPage,
 })
 

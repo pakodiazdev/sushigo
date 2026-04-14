@@ -23,6 +23,7 @@ import { Logo } from '@/components/ui/logo';
 import { BranchSwitcher } from '@/components/auth';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useMenuAccess, type AccessResult } from '@/hooks/use-menu-access';
 
 interface SubMenuItem {
     label: string;
@@ -34,6 +35,11 @@ interface MenuItem {
     label: string;
     path?: string;
     subItems?: SubMenuItem[];
+    // Access control
+    requiredPermission?: string;
+    requiredRole?: 'admin' | 'super-admin';
+    /** 'hidden' = remove from DOM (default). 'disabled' = greyed-out. */
+    accessMode?: 'hidden' | 'disabled';
 }
 
 const menuItems: MenuItem[] = [
@@ -41,10 +47,18 @@ const menuItems: MenuItem[] = [
     { icon: Package, label: 'Productos', path: '/productos' },
     { icon: ShoppingCart, label: 'Órdenes', path: '/ordenes' },
     { icon: Users, label: 'Clientes', path: '/clientes' },
-    { icon: UserCog, label: 'Empleados', path: '/employees' },
+    {
+        icon: UserCog,
+        label: 'Empleados',
+        path: '/employees',
+        requiredPermission: 'employees.view',
+        accessMode: 'hidden',
+    },
     {
         icon: CalendarCheck,
         label: 'Asistencia',
+        requiredPermission: 'employees.view',
+        accessMode: 'hidden',
         subItems: [
             { label: 'Hoy', path: '/attendance/today' },
         ]
@@ -52,6 +66,8 @@ const menuItems: MenuItem[] = [
     {
         icon: Warehouse,
         label: 'Inventario',
+        requiredPermission: 'items.view',
+        accessMode: 'hidden',
         subItems: [
             { label: '+ Nuevo Producto', path: '/inventory/items?wizard=true' },
             { label: 'Ubicaciones', path: '/inventory/locations' },
@@ -62,14 +78,28 @@ const menuItems: MenuItem[] = [
     {
         icon: DollarSign,
         label: 'Caja',
+        requiredPermission: 'cash_registers.view',
+        accessMode: 'hidden',
         subItems: [
             { label: 'Cajas Registradoras', path: '/cash/registers' },
             { label: 'Terminales', path: '/cash/terminals' },
             { label: 'Cuentas Bancarias', path: '/cash/bank-accounts' },
         ]
     },
-    { icon: BarChart3, label: 'Stock Dashboard', path: '/stock-dashboard' },
-    { icon: Settings, label: 'Configuración', path: '/configuracion' },
+    {
+        icon: BarChart3,
+        label: 'Stock Dashboard',
+        path: '/stock-dashboard',
+        requiredPermission: 'stock.view',
+        accessMode: 'hidden',
+    },
+    {
+        icon: Settings,
+        label: 'Configuración',
+        path: '/configuracion',
+        requiredRole: 'super-admin',
+        accessMode: 'hidden',
+    },
 ];
 
 export default function Sidebar() {
@@ -77,6 +107,7 @@ export default function Sidebar() {
     const router = useRouterState();
     const currentPath = router.location.pathname;
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+    const { resolveAccess } = useMenuAccess();
 
     const toggleSubmenu = (label: string) => {
         setExpandedMenus(prev =>
@@ -96,6 +127,104 @@ export default function Sidebar() {
             return item.subItems.some(subItem => currentPath === subItem.path);
         }
         return false;
+    };
+
+    const renderMenuItem = (item: MenuItem, access: AccessResult) => {
+        const Icon = item.icon;
+        const hasSubItems = item.subItems && item.subItems.length > 0;
+        const isExpanded = isSubmenuExpanded(item.label);
+        const isActive = isMenuItemActive(item);
+
+        const baseItemClass = cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg",
+            "transition-colors duration-200 font-medium",
+            isCollapsed && "justify-center",
+        );
+
+        if (access === 'disabled') {
+            return (
+                <li key={item.label}>
+                    <span
+                        className={cn(baseItemClass, "opacity-50 cursor-not-allowed text-muted-foreground")}
+                        title="Sin acceso"
+                        aria-disabled="true"
+                    >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {!isCollapsed && <span>{item.label}</span>}
+                    </span>
+                </li>
+            );
+        }
+
+        return (
+            <li key={item.label}>
+                {item.path ? (
+                    <Link
+                        to={item.path}
+                        onClick={closeMobileSidebar}
+                        className={cn(
+                            baseItemClass,
+                            isActive
+                                ? "bg-primary text-primary-foreground"
+                                : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                        )}
+                    >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {!isCollapsed && <span>{item.label}</span>}
+                    </Link>
+                ) : (
+                    <>
+                        <button
+                            onClick={() => !isCollapsed && toggleSubmenu(item.label)}
+                            className={cn(
+                                "w-full",
+                                baseItemClass,
+                                isActive
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                            )}
+                        >
+                            <Icon className="h-5 w-5 shrink-0" />
+                            {!isCollapsed && (
+                                <>
+                                    <span className="flex-1 text-left">{item.label}</span>
+                                    {hasSubItems && (
+                                        isExpanded
+                                            ? <ChevronUp className="h-4 w-4" />
+                                            : <ChevronDown className="h-4 w-4" />
+                                    )}
+                                </>
+                            )}
+                        </button>
+
+                        {hasSubItems && !isCollapsed && isExpanded && (
+                            <ul className="mt-1 ml-8 space-y-1">
+                                {item.subItems!.map((subItem) => {
+                                    const isSubActive = currentPath === subItem.path;
+                                    return (
+                                        <li key={subItem.path}>
+                                            <Link
+                                                to={subItem.path}
+                                                onClick={closeMobileSidebar}
+                                                className={cn(
+                                                    "block px-3 py-2 rounded-lg text-sm",
+                                                    "transition-colors duration-200",
+                                                    isSubActive
+                                                        ? "bg-primary text-primary-foreground font-medium"
+                                                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                                )}
+                                            >
+                                                {subItem.label}
+                                            </Link>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </>
+                )}
+            </li>
+        );
     };
 
     return (
@@ -120,11 +249,10 @@ export default function Sidebar() {
                 )}
             >
                 <div className="flex flex-col h-full">
-                    {/* Logo Section - Sin separador */}
+                    {/* Logo Section */}
                     <div className="relative mb-4">
                         <Logo collapsed={isCollapsed} />
 
-                        {/* Close button (mobile) - Posición absoluta */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -134,7 +262,6 @@ export default function Sidebar() {
                             <X className="h-5 w-5" />
                         </Button>
 
-                        {/* Collapse button (desktop) - Solo cuando NO está colapsado */}
                         {!isCollapsed && (
                             <Button
                                 variant="ghost"
@@ -165,96 +292,15 @@ export default function Sidebar() {
                     <nav className="flex-1 overflow-y-auto px-3">
                         <ul className="space-y-1">
                             {menuItems.map((item) => {
-                                const Icon = item.icon;
-                                const hasSubItems = item.subItems && item.subItems.length > 0;
-                                const isExpanded = isSubmenuExpanded(item.label);
-                                const isActive = isMenuItemActive(item);
-
-                                return (
-                                    <li key={item.label}>
-                                        {/* Main menu item */}
-                                        {item.path ? (
-                                            // Regular link
-                                            <Link
-                                                to={item.path}
-                                                onClick={closeMobileSidebar}
-                                                className={cn(
-                                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg",
-                                                    "transition-colors duration-200 font-medium",
-                                                    isCollapsed && "justify-center",
-                                                    isActive
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                                                )}
-                                            >
-                                                <Icon className="h-5 w-5 shrink-0" />
-                                                {!isCollapsed && <span>{item.label}</span>}
-                                            </Link>
-                                        ) : (
-                                            // Menu with submenu
-                                            <>
-                                                <button
-                                                    onClick={() => !isCollapsed && toggleSubmenu(item.label)}
-                                                    className={cn(
-                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg",
-                                                        "transition-colors duration-200 font-medium",
-                                                        isCollapsed && "justify-center",
-                                                        isActive
-                                                            ? "bg-primary/10 text-primary"
-                                                            : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                                                    )}
-                                                >
-                                                    <Icon className="h-5 w-5 shrink-0" />
-                                                    {!isCollapsed && (
-                                                        <>
-                                                            <span className="flex-1 text-left">{item.label}</span>
-                                                            {hasSubItems && (
-                                                                isExpanded ? (
-                                                                    <ChevronUp className="h-4 w-4" />
-                                                                ) : (
-                                                                    <ChevronDown className="h-4 w-4" />
-                                                                )
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </button>
-
-                                                {/* Submenu items */}
-                                                {hasSubItems && !isCollapsed && isExpanded && (
-                                                    <ul className="mt-1 ml-8 space-y-1">
-                                                        {item.subItems!.map((subItem) => {
-                                                            const isSubActive = currentPath === subItem.path;
-                                                            return (
-                                                                <li key={subItem.path}>
-                                                                    <Link
-                                                                        to={subItem.path}
-                                                                        onClick={closeMobileSidebar}
-                                                                        className={cn(
-                                                                            "block px-3 py-2 rounded-lg text-sm",
-                                                                            "transition-colors duration-200",
-                                                                            isSubActive
-                                                                                ? "bg-primary text-primary-foreground font-medium"
-                                                                                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                                                                        )}
-                                                                    >
-                                                                        {subItem.label}
-                                                                    </Link>
-                                                                </li>
-                                                            );
-                                                        })}
-                                                    </ul>
-                                                )}
-                                            </>
-                                        )}
-                                    </li>
-                                );
+                                const access = resolveAccess(item);
+                                if (access === 'hidden') return null;
+                                return renderMenuItem(item, access);
                             })}
                         </ul>
                     </nav>
 
                     {/* Footer */}
                     <div className="border-t">
-                        {/* Branch Switcher */}
                         {!isCollapsed && (
                             <div className="p-2">
                                 <BranchSwitcher />

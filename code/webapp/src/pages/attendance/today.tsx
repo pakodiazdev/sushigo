@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requirePermission } from '@/lib/route-guards'
 import { RefreshCw, DoorClosed } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
@@ -18,6 +19,7 @@ import {
 import { useTodayAttendancePage, currentTimeLabel } from './-use-today-attendance-page'
 
 export const Route = createFileRoute('/attendance/today')({
+  beforeLoad: requirePermission('employees.view'),
   component: TodayAttendancePage,
 })
 

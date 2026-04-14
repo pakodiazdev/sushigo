@@ -1,10 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { requireRole } from '@/lib/route-guards';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 
 export const Route = createFileRoute('/Configuracion')({
+    beforeLoad: requireRole('super-admin'),
     component: ConfiguracionPage,
 });
 
