@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 
-export const Route = createFileRoute('/Reportes')({
+export const Route = createFileRoute('/reportes')({
     component: ReportesPage,
 });
 

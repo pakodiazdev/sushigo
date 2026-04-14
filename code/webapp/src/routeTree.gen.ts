@@ -12,17 +12,17 @@ import { Route as rootRouteImport } from './pages/__root'
 import { Route as UnauthorizedRouteImport } from './pages/unauthorized'
 import { Route as StockDashboardRouteImport } from './pages/stock-dashboard'
 import { Route as ResetPasswordRouteImport } from './pages/reset-password'
+import { Route as ReportesRouteImport } from './pages/reportes'
+import { Route as ProductosRouteImport } from './pages/productos'
+import { Route as OrdenesRouteImport } from './pages/ordenes'
 import { Route as LogoutRouteImport } from './pages/logout'
 import { Route as LoginRouteImport } from './pages/login'
 import { Route as InventoryRouteImport } from './pages/inventory'
 import { Route as ForgotPasswordRouteImport } from './pages/forgot-password'
 import { Route as EmployeesRouteImport } from './pages/employees'
 import { Route as ConfiguracionRouteImport } from './pages/configuracion'
+import { Route as ClientesRouteImport } from './pages/clientes'
 import { Route as CashRouteImport } from './pages/cash'
-import { Route as ReportesRouteImport } from './pages/Reportes'
-import { Route as ProductosRouteImport } from './pages/Productos'
-import { Route as OrdenesRouteImport } from './pages/Ordenes'
-import { Route as ClientesRouteImport } from './pages/Clientes'
 import { Route as IndexRouteImport } from './pages/index'
 import { Route as InventoryIndexRouteImport } from './pages/inventory.index'
 import { Route as CashIndexRouteImport } from './pages/cash/index'
@@ -47,6 +47,21 @@ const StockDashboardRoute = StockDashboardRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportesRoute = ReportesRouteImport.update({
+  id: '/reportes',
+  path: '/reportes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductosRoute = ProductosRouteImport.update({
+  id: '/productos',
+  path: '/productos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdenesRoute = OrdenesRouteImport.update({
+  id: '/ordenes',
+  path: '/ordenes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogoutRoute = LogoutRouteImport.update({
@@ -79,29 +94,14 @@ const ConfiguracionRoute = ConfiguracionRouteImport.update({
   path: '/configuracion',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientesRoute = ClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CashRoute = CashRouteImport.update({
   id: '/cash',
   path: '/cash',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportesRoute = ReportesRouteImport.update({
-  id: '/Reportes',
-  path: '/Reportes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProductosRoute = ProductosRouteImport.update({
-  id: '/Productos',
-  path: '/Productos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrdenesRoute = OrdenesRouteImport.update({
-  id: '/Ordenes',
-  path: '/Ordenes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClientesRoute = ClientesRouteImport.update({
-  id: '/Clientes',
-  path: '/Clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -157,17 +157,17 @@ const AttendanceTodayRoute = AttendanceTodayRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/Clientes': typeof ClientesRoute
-  '/Ordenes': typeof OrdenesRoute
-  '/Productos': typeof ProductosRoute
-  '/Reportes': typeof ReportesRoute
   '/cash': typeof CashRouteWithChildren
+  '/clientes': typeof ClientesRoute
   '/configuracion': typeof ConfiguracionRoute
   '/employees': typeof EmployeesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/inventory': typeof InventoryRouteWithChildren
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/ordenes': typeof OrdenesRoute
+  '/productos': typeof ProductosRoute
+  '/reportes': typeof ReportesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
@@ -183,15 +183,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/Clientes': typeof ClientesRoute
-  '/Ordenes': typeof OrdenesRoute
-  '/Productos': typeof ProductosRoute
-  '/Reportes': typeof ReportesRoute
+  '/clientes': typeof ClientesRoute
   '/configuracion': typeof ConfiguracionRoute
   '/employees': typeof EmployeesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/ordenes': typeof OrdenesRoute
+  '/productos': typeof ProductosRoute
+  '/reportes': typeof ReportesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
@@ -208,17 +208,17 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/Clientes': typeof ClientesRoute
-  '/Ordenes': typeof OrdenesRoute
-  '/Productos': typeof ProductosRoute
-  '/Reportes': typeof ReportesRoute
   '/cash': typeof CashRouteWithChildren
+  '/clientes': typeof ClientesRoute
   '/configuracion': typeof ConfiguracionRoute
   '/employees': typeof EmployeesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/inventory': typeof InventoryRouteWithChildren
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/ordenes': typeof OrdenesRoute
+  '/productos': typeof ProductosRoute
+  '/reportes': typeof ReportesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
@@ -236,17 +236,17 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/Clientes'
-    | '/Ordenes'
-    | '/Productos'
-    | '/Reportes'
     | '/cash'
+    | '/clientes'
     | '/configuracion'
     | '/employees'
     | '/forgot-password'
     | '/inventory'
     | '/login'
     | '/logout'
+    | '/ordenes'
+    | '/productos'
+    | '/reportes'
     | '/reset-password'
     | '/stock-dashboard'
     | '/unauthorized'
@@ -262,15 +262,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/Clientes'
-    | '/Ordenes'
-    | '/Productos'
-    | '/Reportes'
+    | '/clientes'
     | '/configuracion'
     | '/employees'
     | '/forgot-password'
     | '/login'
     | '/logout'
+    | '/ordenes'
+    | '/productos'
+    | '/reportes'
     | '/reset-password'
     | '/stock-dashboard'
     | '/unauthorized'
@@ -286,17 +286,17 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/Clientes'
-    | '/Ordenes'
-    | '/Productos'
-    | '/Reportes'
     | '/cash'
+    | '/clientes'
     | '/configuracion'
     | '/employees'
     | '/forgot-password'
     | '/inventory'
     | '/login'
     | '/logout'
+    | '/ordenes'
+    | '/productos'
+    | '/reportes'
     | '/reset-password'
     | '/stock-dashboard'
     | '/unauthorized'
@@ -313,17 +313,17 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ClientesRoute: typeof ClientesRoute
-  OrdenesRoute: typeof OrdenesRoute
-  ProductosRoute: typeof ProductosRoute
-  ReportesRoute: typeof ReportesRoute
   CashRoute: typeof CashRouteWithChildren
+  ClientesRoute: typeof ClientesRoute
   ConfiguracionRoute: typeof ConfiguracionRoute
   EmployeesRoute: typeof EmployeesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   InventoryRoute: typeof InventoryRouteWithChildren
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  OrdenesRoute: typeof OrdenesRoute
+  ProductosRoute: typeof ProductosRoute
+  ReportesRoute: typeof ReportesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   StockDashboardRoute: typeof StockDashboardRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
@@ -351,6 +351,27 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reportes': {
+      id: '/reportes'
+      path: '/reportes'
+      fullPath: '/reportes'
+      preLoaderRoute: typeof ReportesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/productos': {
+      id: '/productos'
+      path: '/productos'
+      fullPath: '/productos'
+      preLoaderRoute: typeof ProductosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ordenes': {
+      id: '/ordenes'
+      path: '/ordenes'
+      fullPath: '/ordenes'
+      preLoaderRoute: typeof OrdenesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logout': {
@@ -395,39 +416,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clientes': {
+      id: '/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof ClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cash': {
       id: '/cash'
       path: '/cash'
       fullPath: '/cash'
       preLoaderRoute: typeof CashRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/Reportes': {
-      id: '/Reportes'
-      path: '/Reportes'
-      fullPath: '/Reportes'
-      preLoaderRoute: typeof ReportesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/Productos': {
-      id: '/Productos'
-      path: '/Productos'
-      fullPath: '/Productos'
-      preLoaderRoute: typeof ProductosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/Ordenes': {
-      id: '/Ordenes'
-      path: '/Ordenes'
-      fullPath: '/Ordenes'
-      preLoaderRoute: typeof OrdenesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/Clientes': {
-      id: '/Clientes'
-      path: '/Clientes'
-      fullPath: '/Clientes'
-      preLoaderRoute: typeof ClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -539,17 +539,17 @@ const InventoryRouteWithChildren = InventoryRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ClientesRoute: ClientesRoute,
-  OrdenesRoute: OrdenesRoute,
-  ProductosRoute: ProductosRoute,
-  ReportesRoute: ReportesRoute,
   CashRoute: CashRouteWithChildren,
+  ClientesRoute: ClientesRoute,
   ConfiguracionRoute: ConfiguracionRoute,
   EmployeesRoute: EmployeesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   InventoryRoute: InventoryRouteWithChildren,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  OrdenesRoute: OrdenesRoute,
+  ProductosRoute: ProductosRoute,
+  ReportesRoute: ReportesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   StockDashboardRoute: StockDashboardRoute,
   UnauthorizedRoute: UnauthorizedRoute,
