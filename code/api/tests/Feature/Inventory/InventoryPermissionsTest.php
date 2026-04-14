@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -251,7 +252,7 @@ class InventoryPermissionsTest extends TestCase
             'last_name' => 'Manager',
             'email' => 'inv.manager@sushigo.com',
             'roles' => ['inventory-manager'],
-            'branch_id' => \App\Models\Branch::factory()->create()->id,
+            'branch_id' => Branch::factory()->create()->id,
             'start_date' => '2026-01-01',
         ]);
 
