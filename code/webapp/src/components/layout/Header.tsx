@@ -1,4 +1,4 @@
-import { Menu, Moon, Sun, Bell, Search, User, LogOut, Settings, UserCircle, ChevronDown } from 'lucide-react';
+import { Menu, Moon, Sun, Bell, Search, User, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useAuthStore } from '@/stores/auth.store';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import logoImage from '@/assets/sushigo-logo.png';
 import { useState, useRef, useEffect } from 'react';
+import { useCanAccess } from '@/hooks/use-can-access';
 
 export default function Header() {
     const { theme, toggleTheme } = useTheme();
@@ -15,6 +16,7 @@ export default function Header() {
     const { user } = useAuthStore();
     const router = useRouter();
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const canAccessConfig = useCanAccess({ role: 'super-admin' });
     const mobileMenuRef = useRef<HTMLDivElement>(null);
     const desktopMenuRef = useRef<HTMLDivElement>(null);
 
@@ -130,25 +132,17 @@ export default function Header() {
                                     <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
                                 </div>
 
-                                <DropdownMenuItem
-                                    icon={<UserCircle className="h-4 w-4" />}
-                                    onClick={() => {
-                                        setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/configuracion' });
-                                    }}
-                                >
-                                    Mi Perfil
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                    icon={<Settings className="h-4 w-4" />}
-                                    onClick={() => {
-                                        setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/configuracion' });
-                                    }}
-                                >
-                                    Configuración
-                                </DropdownMenuItem>
+                                {canAccessConfig && (
+                                    <DropdownMenuItem
+                                        icon={<Settings className="h-4 w-4" />}
+                                        onClick={() => {
+                                            setIsUserMenuOpen(false);
+                                            router.navigate({ to: '/configuracion' });
+                                        }}
+                                    >
+                                        Configuración
+                                    </DropdownMenuItem>
+                                )}
 
                                 <DropdownMenuSeparator />
 
@@ -178,25 +172,17 @@ export default function Header() {
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent open={isUserMenuOpen} align="right">
-                                <DropdownMenuItem
-                                    icon={<UserCircle className="h-4 w-4" />}
-                                    onClick={() => {
-                                        setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/configuracion' });
-                                    }}
-                                >
-                                    Mi Perfil
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                    icon={<Settings className="h-4 w-4" />}
-                                    onClick={() => {
-                                        setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/configuracion' });
-                                    }}
-                                >
-                                    Configuración
-                                </DropdownMenuItem>
+                                {canAccessConfig && (
+                                    <DropdownMenuItem
+                                        icon={<Settings className="h-4 w-4" />}
+                                        onClick={() => {
+                                            setIsUserMenuOpen(false);
+                                            router.navigate({ to: '/configuracion' });
+                                        }}
+                                    >
+                                        Configuración
+                                    </DropdownMenuItem>
+                                )}
 
                                 <DropdownMenuSeparator />
 

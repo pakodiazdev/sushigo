@@ -95,7 +95,7 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.'],
+        'admin' => ['users.', 'employees.', 'leaves.', 'items.', 'inventory_locations.', 'stock.'],
         'inventory-manager' => ['items.', 'inventory_locations.', 'stock.'],
         'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.'],
         'cook' => self::BASIC_USER_VIEW,
