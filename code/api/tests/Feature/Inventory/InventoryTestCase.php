@@ -12,6 +12,8 @@ use App\Models\UomConversion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 abstract class InventoryTestCase extends TestCase
@@ -36,11 +38,29 @@ abstract class InventoryTestCase extends TestCase
     {
         parent::setUp();
 
+        // Bootstrap inventory permissions and assign them to the test user.
+        // Routes now require explicit permission guards — unauthenticated or
+        // unpermissioned requests receive 401/403 respectively.
+        $inventoryPermissions = [
+            'items.view', 'items.create', 'items.update', 'items.delete',
+            'inventory_locations.view', 'inventory_locations.manage',
+            'stock.view', 'stock.manage',
+        ];
+
+        foreach ($inventoryPermissions as $name) {
+            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'api']);
+        }
+
+        $inventoryManagerRole = Role::firstOrCreate(['name' => 'inventory-manager', 'guard_name' => 'api']);
+        $inventoryManagerRole->syncPermissions($inventoryPermissions);
+
         // Create test user
         $this->user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@sushigo.com',
         ]);
+
+        $this->user->assignRole('inventory-manager');
 
         // Create branch
         $this->branch = Branch::create([

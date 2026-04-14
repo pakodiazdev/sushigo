@@ -154,40 +154,31 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    // Items (Public read, protected write)
-    Route::prefix('items')->group(function () {
-        Route::get('/', ListItemsController::class)->name('items.list');
-        Route::get('/{id}', ShowItemController::class)->name('items.show');
-
-        Route::middleware('auth:api')->group(function () {
-            Route::post('/', CreateItemController::class)->name('items.create');
-            Route::put('/{id}', UpdateItemController::class)->name('items.update');
-            Route::delete('/{id}', DeleteItemController::class)->name('items.delete');
-        });
+    // Items (Protected read + write — requires items.view / items.create / items.update / items.delete)
+    Route::middleware('auth:api')->prefix('items')->group(function () {
+        Route::get('/', ListItemsController::class)->name('items.list')->middleware('permission:items.view');
+        Route::get('/{id}', ShowItemController::class)->name('items.show')->middleware('permission:items.view');
+        Route::post('/', CreateItemController::class)->name('items.create')->middleware('permission:items.create');
+        Route::put('/{id}', UpdateItemController::class)->name('items.update')->middleware('permission:items.update');
+        Route::delete('/{id}', DeleteItemController::class)->name('items.delete')->middleware('permission:items.delete');
     });
 
-    // Item Variants (Public read, protected write)
-    Route::prefix('item-variants')->group(function () {
-        Route::get('/', ListItemVariantsController::class)->name('item-variants.list');
-        Route::get('/{id}', ShowItemVariantController::class)->name('item-variants.show');
-
-        Route::middleware('auth:api')->group(function () {
-            Route::post('/', CreateItemVariantController::class)->name('item-variants.create');
-            Route::put('/{id}', UpdateItemVariantController::class)->name('item-variants.update');
-            Route::delete('/{id}', DeleteItemVariantController::class)->name('item-variants.delete');
-        });
+    // Item Variants (Protected read + write — inherits items.* permissions)
+    Route::middleware('auth:api')->prefix('item-variants')->group(function () {
+        Route::get('/', ListItemVariantsController::class)->name('item-variants.list')->middleware('permission:items.view');
+        Route::get('/{id}', ShowItemVariantController::class)->name('item-variants.show')->middleware('permission:items.view');
+        Route::post('/', CreateItemVariantController::class)->name('item-variants.create')->middleware('permission:items.create');
+        Route::put('/{id}', UpdateItemVariantController::class)->name('item-variants.update')->middleware('permission:items.update');
+        Route::delete('/{id}', DeleteItemVariantController::class)->name('item-variants.delete')->middleware('permission:items.delete');
     });
 
-    // Inventory Locations (Public read, protected write)
-    Route::prefix('inventory-locations')->group(function () {
-        Route::get('/', ListInventoryLocationsController::class)->name('inventory-locations.list');
-        Route::get('/{id}', ShowInventoryLocationController::class)->name('inventory-locations.show');
-
-        Route::middleware('auth:api')->group(function () {
-            Route::post('/', CreateInventoryLocationController::class)->name('inventory-locations.create');
-            Route::put('/{id}', UpdateInventoryLocationController::class)->name('inventory-locations.update');
-            Route::delete('/{id}', DeleteInventoryLocationController::class)->name('inventory-locations.delete');
-        });
+    // Inventory Locations (Protected read + write)
+    Route::middleware('auth:api')->prefix('inventory-locations')->group(function () {
+        Route::get('/', ListInventoryLocationsController::class)->name('inventory-locations.list')->middleware('permission:inventory_locations.view');
+        Route::get('/{id}', ShowInventoryLocationController::class)->name('inventory-locations.show')->middleware('permission:inventory_locations.view');
+        Route::post('/', CreateInventoryLocationController::class)->name('inventory-locations.create')->middleware('permission:inventory_locations.manage');
+        Route::put('/{id}', UpdateInventoryLocationController::class)->name('inventory-locations.update')->middleware('permission:inventory_locations.manage');
+        Route::delete('/{id}', DeleteInventoryLocationController::class)->name('inventory-locations.delete')->middleware('permission:inventory_locations.manage');
     });
 
     // Operating Units (Public read, protected write)
@@ -212,17 +203,17 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    // Stock Query Endpoints (Public read)
-    Route::prefix('stock')->group(function () {
-        Route::get('/', ListStockController::class)->name('stock.list');
-        Route::get('/by-location/{id}', StockByLocationController::class)->name('stock.by-location');
-        Route::get('/by-variant/{id}', StockByVariantController::class)->name('stock.by-variant');
+    // Stock Query Endpoints (Protected read — requires stock.view)
+    Route::middleware('auth:api')->prefix('stock')->group(function () {
+        Route::get('/', ListStockController::class)->name('stock.list')->middleware('permission:stock.view');
+        Route::get('/by-location/{id}', StockByLocationController::class)->name('stock.by-location')->middleware('permission:stock.view');
+        Route::get('/by-variant/{id}', StockByVariantController::class)->name('stock.by-variant')->middleware('permission:stock.view');
     });
 
-    // Inventory Operations (Protected)
+    // Inventory Operations (Protected write — requires stock.manage)
     Route::middleware('auth:api')->prefix('inventory')->group(function () {
-        Route::post('opening-balance', RegisterOpeningBalanceController::class)->name('inventory.opening-balance');
-        Route::post('stock-out', RegisterStockOutController::class)->name('inventory.stock-out');
+        Route::post('opening-balance', RegisterOpeningBalanceController::class)->name('inventory.opening-balance')->middleware('permission:stock.manage');
+        Route::post('stock-out', RegisterStockOutController::class)->name('inventory.stock-out')->middleware('permission:stock.manage');
     });
 
     // Employees (All Protected)

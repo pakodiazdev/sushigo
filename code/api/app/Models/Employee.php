@@ -31,9 +31,12 @@ class Employee extends Model
 
     const ROLE_SUPER_ADMIN = 'super-admin';
 
+    const ROLE_INVENTORY_MANAGER = 'inventory-manager';
+
     /**
      * All assignable position roles.
      * admin and super-admin can now be assigned to employees.
+     * inventory-manager is a job title with its own permission scope (items, locations, stock).
      */
     const POSITION_ROLES = [
         self::ROLE_MANAGER,
@@ -43,6 +46,7 @@ class Employee extends Model
         self::ROLE_ACTING_MANAGER,
         self::ROLE_ADMIN,
         self::ROLE_SUPER_ADMIN,
+        self::ROLE_INVENTORY_MANAGER,
     ];
 
     /**
