@@ -1,13 +1,13 @@
 import { useCanAccess } from '@/hooks/use-can-access'
 
 interface CanAccessProps {
-  permission?: string
-  role?: 'admin' | 'super-admin'
+  readonly permission?: string
+  readonly role?: 'admin' | 'super-admin'
   /** 'hidden' = remove from DOM (default). 'disabled' = render greyed-out wrapper. */
-  mode?: 'hidden' | 'disabled'
-  children: React.ReactNode
+  readonly mode?: 'hidden' | 'disabled'
+  readonly children: React.ReactNode
   /** Rendered when access is denied in 'hidden' mode. */
-  fallback?: React.ReactNode
+  readonly fallback?: React.ReactNode
 }
 
 /**
