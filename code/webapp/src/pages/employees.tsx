@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requirePermission } from '@/lib/route-guards'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { DataGrid } from '@/components/ui/data-grid'
@@ -6,6 +7,7 @@ import { EmployeeForm, EmployeeFilters, getEmployeeColumns } from '@/components/
 import { useEmployeesSearch, type EmployeesSearch } from '@/hooks/use-employees-search'
 
 export const Route = createFileRoute('/employees')({
+  beforeLoad: requirePermission('employees.view'),
   component: EmployeesPage,
   validateSearch: (search: Record<string, unknown>): EmployeesSearch => ({
     page: Number(search.page) || undefined,
