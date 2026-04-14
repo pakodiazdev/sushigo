@@ -4,6 +4,9 @@
  * Validates that requirePermission() and requireRole() redirect to /unauthorized
  * when the user lacks access, and pass through when access is granted.
  * Uses getState() (non-reactive) so no React context needed.
+ *
+ * requireRole now uses checkIsAdmin/checkIsSuperAdmin computed from persisted
+ * user.roles to avoid a rehydration race condition.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { requirePermission, requireRole } from '@/lib/route-guards'
@@ -11,11 +14,15 @@ import { requirePermission, requireRole } from '@/lib/route-guards'
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockGetState = vi.fn()
+const mockCheckIsAdmin = vi.fn()
+const mockCheckIsSuperAdmin = vi.fn()
 
 vi.mock('@/stores/auth.store', () => ({
   useAuthStore: {
     getState: () => mockGetState(),
   },
+  checkIsAdmin: (user: unknown) => mockCheckIsAdmin(user),
+  checkIsSuperAdmin: (user: unknown) => mockCheckIsSuperAdmin(user),
 }))
 
 // redirect must return something throwable
@@ -27,18 +34,27 @@ vi.mock('@tanstack/react-router', () => ({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+interface SetupOptions {
+  isAuthenticated?: boolean
+  isAdmin?: boolean
+  isSuperAdmin?: boolean
+  permissions?: string[]
+}
+
 function setupState({
   isAuthenticated = true,
   isAdmin = false,
   isSuperAdmin = false,
   permissions = [] as string[],
-} = {}) {
+}: SetupOptions = {}) {
+  const user = isAuthenticated ? { roles: [], permissions: [] } : null
   mockGetState.mockReturnValue({
     isAuthenticated,
-    isAdmin,
-    isSuperAdmin,
+    user,
     can: (p: string) => isAdmin || isSuperAdmin || permissions.includes(p),
   })
+  mockCheckIsAdmin.mockReturnValue(isAdmin)
+  mockCheckIsSuperAdmin.mockReturnValue(isSuperAdmin)
 }
 
 // ─── requirePermission ────────────────────────────────────────────────────────
@@ -51,32 +67,27 @@ describe('requirePermission', () => {
 
   it('does not redirect when user has the required permission', () => {
     setupState({ permissions: ['employees.view'] })
-    const guard = requirePermission('employees.view')
-    expect(() => guard()).not.toThrow()
+    expect(() => requirePermission('employees.view')()).not.toThrow()
   })
 
   it('redirects to /unauthorized when permission is missing', () => {
     setupState({ permissions: [] })
-    const guard = requirePermission('employees.view')
-    expect(() => guard()).toThrow('redirect:/unauthorized')
+    expect(() => requirePermission('employees.view')()).toThrow('redirect:/unauthorized')
   })
 
-  it('does not redirect when user is admin (bypass)', () => {
+  it('does not redirect when user is admin (bypass via can())', () => {
     setupState({ isAdmin: true })
-    const guard = requirePermission('employees.view')
-    expect(() => guard()).not.toThrow()
+    expect(() => requirePermission('employees.view')()).not.toThrow()
   })
 
-  it('does not redirect when user is super-admin (bypass)', () => {
+  it('does not redirect when user is super-admin (bypass via can())', () => {
     setupState({ isAdmin: true, isSuperAdmin: true })
-    const guard = requirePermission('any.permission')
-    expect(() => guard()).not.toThrow()
+    expect(() => requirePermission('any.permission')()).not.toThrow()
   })
 
   it('redirects to /login when user is unauthenticated', () => {
     setupState({ isAuthenticated: false })
-    const guard = requirePermission('employees.view')
-    expect(() => guard()).toThrow('redirect:/login')
+    expect(() => requirePermission('employees.view')()).toThrow('redirect:/login')
   })
 
   it('guards items.view permission correctly', () => {
@@ -102,37 +113,40 @@ describe('requireRole', () => {
 
   it('does not redirect when user is super-admin and role is super-admin', () => {
     setupState({ isAdmin: true, isSuperAdmin: true })
-    const guard = requireRole('super-admin')
-    expect(() => guard()).not.toThrow()
+    expect(() => requireRole('super-admin')()).not.toThrow()
   })
 
   it('redirects to /unauthorized when user is admin but role requires super-admin', () => {
     setupState({ isAdmin: true, isSuperAdmin: false })
-    const guard = requireRole('super-admin')
-    expect(() => guard()).toThrow('redirect:/unauthorized')
+    expect(() => requireRole('super-admin')()).toThrow('redirect:/unauthorized')
   })
 
   it('redirects to /unauthorized when user has no roles and super-admin required', () => {
     setupState({ isAdmin: false, isSuperAdmin: false })
-    const guard = requireRole('super-admin')
-    expect(() => guard()).toThrow('redirect:/unauthorized')
+    expect(() => requireRole('super-admin')()).toThrow('redirect:/unauthorized')
   })
 
   it('does not redirect when user is admin and role is admin', () => {
     setupState({ isAdmin: true })
-    const guard = requireRole('admin')
-    expect(() => guard()).not.toThrow()
+    expect(() => requireRole('admin')()).not.toThrow()
   })
 
   it('redirects to /unauthorized when user is not admin and role is admin', () => {
     setupState({ isAdmin: false })
-    const guard = requireRole('admin')
-    expect(() => guard()).toThrow('redirect:/unauthorized')
+    expect(() => requireRole('admin')()).toThrow('redirect:/unauthorized')
   })
 
   it('redirects to /login when unauthenticated', () => {
     setupState({ isAuthenticated: false })
-    const guard = requireRole('super-admin')
-    expect(() => guard()).toThrow('redirect:/login')
+    expect(() => requireRole('super-admin')()).toThrow('redirect:/login')
+  })
+
+  it('computes role from user object (not from stale isAdmin boolean)', () => {
+    // Simulates the rehydration race condition fix:
+    // even if isAdmin boolean were stale (false), checkIsAdmin(user) is called
+    setupState({ isAdmin: true, isSuperAdmin: true })
+    requireRole('super-admin')()
+    // Verify checkIsSuperAdmin was called with the user object
+    expect(mockCheckIsSuperAdmin).toHaveBeenCalledWith(expect.any(Object))
   })
 })
