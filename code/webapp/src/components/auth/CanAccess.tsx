@@ -39,10 +39,14 @@ export function CanAccess({
 
   if (mode === 'disabled') {
     return (
+      // inert prevents both mouse and keyboard interaction (HTML spec).
+      // pointer-events-none + cursor-not-allowed give visual feedback.
+      // aria-disabled="true" communicates the state to screen readers.
       <span
         className="opacity-50 pointer-events-none cursor-not-allowed inline-block"
         title="Sin acceso"
         aria-disabled="true"
+        inert={true}
       >
         {children}
       </span>

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 
-export const Route = createFileRoute('/Configuracion')({
+export const Route = createFileRoute('/configuracion')({
     beforeLoad: requireRole('super-admin'),
     component: ConfiguracionPage,
 });

@@ -31,6 +31,10 @@ export function requirePermission(permission: string) {
  * does via `can()`) to avoid a race condition where `isAdmin`/`isSuperAdmin`
  * booleans are still `false` after rehydration until the queueMicrotask fires.
  *
+ * - Authenticated users without the role → redirect to `/unauthorized`
+ * - Unauthenticated users → redirect to `/login`
+ * - `super-admin` satisfies both `'admin'` and `'super-admin'` checks.
+ *
  * Usage:
  *   export const Route = createFileRoute('/configuracion')({
  *     beforeLoad: requireRole('super-admin'),
