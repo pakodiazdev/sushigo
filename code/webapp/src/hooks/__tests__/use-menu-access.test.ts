@@ -50,7 +50,7 @@ beforeEach(() => {
 describe('useMenuAccess — items with no restrictions', () => {
   it('always shows Dashboard (no requiredPermission, no requiredRole)', () => {
     setupUser()
-    expect(resolve({ icon: {} as never, label: 'Dashboard' })).toBe('show')
+    expect(resolve({})).toBe('show')
   })
 
   it('always shows Dashboard for any user including unauthenticated', () => {
