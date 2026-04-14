@@ -2,72 +2,47 @@
 
 namespace Tests\Feature\Api\V1\Inventory;
 
-use App\Models\InventoryLocation;
 use App\Models\Item;
-use App\Models\ItemVariant;
-use App\Models\OperatingUnit;
 use App\Models\Stock;
 use App\Models\StockMovementLine;
-use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
+use Tests\Feature\Inventory\InventoryTestCase;
 
-class StockOutTest extends TestCase
+/**
+ * Tests for the stock-out endpoint (POST /api/v1/inventory/stock-out).
+ *
+ * Extends InventoryTestCase which sets up:
+ *  - An inventory-manager user with stock.manage + all inventory permissions
+ *  - A branch, operating unit, and inventory location
+ *  - UoMs: KG (base) and GR (with KG→GR conversion)
+ *  - Passport auth as the inventory-manager user
+ */
+class StockOutTest extends InventoryTestCase
 {
-    use RefreshDatabase;
+    protected Item $item;
 
-    protected User $user;
-
-    protected InventoryLocation $location;
-
-    protected ItemVariant $variant;
-
-    protected UnitOfMeasure $baseUom;
-
-    protected UnitOfMeasure $transactionUom;
+    protected \App\Models\ItemVariant $variant;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->seed();
-
-        $this->user = User::first();
-        Passport::actingAs($this->user);
-
-        // Create test data
-        $this->baseUom = UnitOfMeasure::where('code', 'KG')->first();
-        $this->transactionUom = UnitOfMeasure::where('code', 'GR')->first();
-
-        $operatingUnit = OperatingUnit::first();
-        $this->location = InventoryLocation::where('operating_unit_id', $operatingUnit->id)->first();
-
-        $item = Item::create([
+        $this->item = $this->createItem([
             'sku' => 'ITM-TEST-001',
             'name' => 'Test Item',
-            'code' => 'TEST-001',
             'type' => 'INSUMO',
-            'description' => 'Test item for stock out',
         ]);
 
-        $this->variant = ItemVariant::create([
-            'item_id' => $item->id,
-            'sku' => 'VAR-TEST-001',
+        $this->variant = $this->createItemVariant($this->item, [
             'code' => 'VTEST-001',
             'name' => 'Test Variant',
-            'uom_id' => $this->baseUom->id,
-            'min_stock_level' => 0,
-            'max_stock_level' => 1000,
             'avg_unit_cost' => 50.0000,
             'last_unit_cost' => 50.0000,
             'sale_price' => 75.0000,
         ]);
 
-        // Create initial stock
+        // Create initial stock (100 KG on hand)
         Stock::create([
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
@@ -83,7 +58,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'qty' => 10,
-            'uom_id' => $this->baseUom->id,
+            'uom_id' => $this->uomKg->id,
             'reason' => 'SALE',
             'sale_price' => 75.00,
             'reference' => 'SALE-001',
@@ -134,7 +109,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'qty' => 5,
-            'uom_id' => $this->baseUom->id,
+            'uom_id' => $this->uomKg->id,
             'reason' => 'CONSUMPTION',
             'reference' => 'CONS-001',
             'notes' => 'Test consumption',
@@ -164,7 +139,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'qty' => 150, // More than available (100)
-            'uom_id' => $this->baseUom->id,
+            'uom_id' => $this->uomKg->id,
             'reason' => 'SALE',
             'sale_price' => 75.00,
         ]);
@@ -180,10 +155,10 @@ class StockOutTest extends TestCase
     #[Test]
     public function it_handles_uom_conversion_for_sales()
     {
-        // Ensure conversion exists: GR to KG (1000 GR = 1 KG)
+        // Ensure GR→KG conversion exists (1000 GR = 1 KG → factor = 0.001)
         UomConversion::firstOrCreate([
-            'from_uom_id' => $this->transactionUom->id,
-            'to_uom_id' => $this->baseUom->id,
+            'from_uom_id' => $this->uomGr->id,
+            'to_uom_id' => $this->uomKg->id,
         ], [
             'factor' => 0.001,
             'tolerance_percent' => 1.0,
@@ -194,7 +169,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'qty' => 5000, // 5000 GR = 5 KG
-            'uom_id' => $this->transactionUom->id,
+            'uom_id' => $this->uomGr->id,
             'reason' => 'SALE',
             'sale_price' => 0.075, // Price per gram
             'reference' => 'SALE-002',
@@ -208,14 +183,11 @@ class StockOutTest extends TestCase
         $this->assertEquals(5.0000, (float) $line->base_qty); // Converted to KG
         $this->assertEquals(0.001, (float) $line->conversion_factor);
 
-        // Verify profit calculation (sale price should be converted to base UOM)
-        // Sale price per GR = 0.075, so per KG = 0.075 / 0.001 = 75
-        // Profit margin = 75 - 50 = 25 per KG
-        // Profit total = 5 KG * 25 = 125
-        $this->assertEquals(0.075, (float) $line->sale_price); // Price per GR
+        // Profit: sale_price per GR = 0.075 → per KG = 75 → margin = 75-50 = 25 → total = 5*25 = 125
+        $this->assertEquals(0.075, (float) $line->sale_price);
         $this->assertEquals(375.0000, (float) $line->sale_total); // 5000 * 0.075
-        $this->assertEquals(25.0000, (float) $line->profit_margin); // 75 - 50 (converted to base)
-        $this->assertEquals(125.0000, (float) $line->profit_total); // 5 * 25
+        $this->assertEquals(25.0000, (float) $line->profit_margin);
+        $this->assertEquals(125.0000, (float) $line->profit_total);
 
         // Verify stock was decremented in base UOM
         $stock = Stock::where('inventory_location_id', $this->location->id)
@@ -246,7 +218,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'qty' => 10,
-            'uom_id' => $this->baseUom->id,
+            'uom_id' => $this->uomKg->id,
             'reason' => 'INVALID_REASON',
         ]);
 
@@ -261,7 +233,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'qty' => 0,
-            'uom_id' => $this->baseUom->id,
+            'uom_id' => $this->uomKg->id,
             'reason' => 'SALE',
         ]);
 
@@ -276,7 +248,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => 99999,
             'item_variant_id' => $this->variant->id,
             'qty' => 10,
-            'uom_id' => $this->baseUom->id,
+            'uom_id' => $this->uomKg->id,
             'reason' => 'SALE',
         ]);
 
@@ -291,7 +263,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'qty' => 10,
-            'uom_id' => $this->baseUom->id,
+            'uom_id' => $this->uomKg->id,
             'reason' => 'SALE',
             'sale_price' => 50.00, // Same as avg_unit_cost
         ]);
@@ -312,7 +284,7 @@ class StockOutTest extends TestCase
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'qty' => 10,
-            'uom_id' => $this->baseUom->id,
+            'uom_id' => $this->uomKg->id,
             'reason' => 'SALE',
             'sale_price' => 30.00, // Less than avg_unit_cost (50)
         ]);

@@ -72,6 +72,20 @@ class PermissionSeeder extends LockedSeeder
             'leaves.request',
             'leaves.approve',
             'leaves.reject',
+
+            // Inventario — Ítems y variantes
+            'items.view',
+            'items.create',
+            'items.update',
+            'items.delete',
+
+            // Inventario — Ubicaciones
+            'inventory_locations.view',
+            'inventory_locations.manage',
+
+            // Inventario — Stock y movimientos
+            'stock.view',
+            'stock.manage',
         ];
 
         foreach ($permissions as $permission) {
@@ -101,7 +115,7 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        // admin (position role): full user + employee + leave management
+        // admin (position role): full user + employee + leave + inventory management
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
         if ($adminRole) {
             $adminRole->syncPermissions(
@@ -109,7 +123,25 @@ class PermissionSeeder extends LockedSeeder
                     ->where(function ($q) {
                         $q->where('name', 'like', 'users.%')
                             ->orWhere('name', 'like', 'employees.%')
-                            ->orWhere('name', 'like', 'leaves.%');
+                            ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'items.%')
+                            ->orWhere('name', 'like', 'inventory_locations.%')
+                            ->orWhere('name', 'like', 'stock.%');
+                    })
+                    ->get()
+            );
+        }
+
+        // inventory-manager: full inventory management (items, locations, stock)
+        // Note: does NOT include employees.* or users.* — inventory is their only scope
+        $inventoryManagerRole = Role::where('name', 'inventory-manager')->where('guard_name', 'api')->first();
+        if ($inventoryManagerRole) {
+            $inventoryManagerRole->syncPermissions(
+                Permission::where('guard_name', 'api')
+                    ->where(function ($q) {
+                        $q->where('name', 'like', 'items.%')
+                            ->orWhere('name', 'like', 'inventory_locations.%')
+                            ->orWhere('name', 'like', 'stock.%');
                     })
                     ->get()
             );

@@ -10,6 +10,14 @@ class PermissionSeeder extends LockedSeeder
 {
     private const EMPLOYEES_PATTERN = 'employees.%';
 
+    private const ITEMS_PATTERN = 'items.%';
+
+    private const INVENTORY_LOCATIONS_PATTERN = 'inventory_locations.%';
+
+    private const STOCK_PATTERN = 'stock.%';
+
+    private const GROUP_INVENTARIO = 'Inventario';
+
     private const GROUP_CUENTAS_BANCARIAS = 'Cuentas bancarias';
 
     private const GROUP_SESIONES_DE_CAJA = 'Sesiones de caja';
@@ -87,6 +95,20 @@ class PermissionSeeder extends LockedSeeder
             'leaves.request' => ['label' => 'Solicitar ausencia',          'group' => 'Ausencias'],
             'leaves.approve' => ['label' => 'Aprobar ausencia',            'group' => 'Ausencias'],
             'leaves.reject' => ['label' => 'Rechazar ausencia',           'group' => 'Ausencias'],
+
+            // Inventario — Ítems y variantes
+            'items.view' => ['label' => 'Ver ítems y variantes',       'group' => self::GROUP_INVENTARIO],
+            'items.create' => ['label' => 'Crear ítem / variante',      'group' => self::GROUP_INVENTARIO],
+            'items.update' => ['label' => 'Editar ítem / variante',     'group' => self::GROUP_INVENTARIO],
+            'items.delete' => ['label' => 'Eliminar ítem / variante',   'group' => self::GROUP_INVENTARIO],
+
+            // Inventario — Ubicaciones
+            'inventory_locations.view' => ['label' => 'Ver ubicaciones de inventario',    'group' => self::GROUP_INVENTARIO],
+            'inventory_locations.manage' => ['label' => 'Gestionar ubicaciones de inventario', 'group' => self::GROUP_INVENTARIO],
+
+            // Inventario — Stock y movimientos
+            'stock.view' => ['label' => 'Ver stock y movimientos',   'group' => self::GROUP_INVENTARIO],
+            'stock.manage' => ['label' => 'Registrar movimientos de stock', 'group' => self::GROUP_INVENTARIO],
         ];
 
         foreach ($permissions as $name => $meta) {
@@ -102,7 +124,7 @@ class PermissionSeeder extends LockedSeeder
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
 
-        // admin: user + employee + leave management
+        // admin: user + employee + leave + inventory management
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
         if ($adminRole) {
             $adminRole->syncPermissions(
@@ -110,20 +132,25 @@ class PermissionSeeder extends LockedSeeder
                     ->where(function ($q) {
                         $q->where('name', 'like', 'users.%')
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
-                            ->orWhere('name', 'like', 'leaves.%');
+                            ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', self::ITEMS_PATTERN)
+                            ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
+                            ->orWhere('name', 'like', self::STOCK_PATTERN);
                     })
                     ->get()
             );
         }
 
-        // inventory-manager: inventory + employee management
+        // inventory-manager: full inventory management (items, locations, stock)
+        // Note: does NOT include employees.* or users.* — inventory is their only scope
         $inventoryManagerRole = Role::where('name', 'inventory-manager')->where('guard_name', 'api')->first();
         if ($inventoryManagerRole) {
             $inventoryManagerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
-                        $q->where('name', 'like', self::EMPLOYEES_PATTERN)
-                            ->orWhere('name', 'like', 'users.%');
+                        $q->where('name', 'like', self::ITEMS_PATTERN)
+                            ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
+                            ->orWhere('name', 'like', self::STOCK_PATTERN);
                     })
                     ->get()
             );
