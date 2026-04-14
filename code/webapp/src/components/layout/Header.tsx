@@ -134,7 +134,7 @@ export default function Header() {
                                     icon={<UserCircle className="h-4 w-4" />}
                                     onClick={() => {
                                         setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/Configuracion' });
+                                        router.navigate({ to: '/configuracion' });
                                     }}
                                 >
                                     Mi Perfil
@@ -144,7 +144,7 @@ export default function Header() {
                                     icon={<Settings className="h-4 w-4" />}
                                     onClick={() => {
                                         setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/Configuracion' });
+                                        router.navigate({ to: '/configuracion' });
                                     }}
                                 >
                                     Configuración
@@ -182,7 +182,7 @@ export default function Header() {
                                     icon={<UserCircle className="h-4 w-4" />}
                                     onClick={() => {
                                         setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/Configuracion' });
+                                        router.navigate({ to: '/configuracion' });
                                     }}
                                 >
                                     Mi Perfil
@@ -192,7 +192,7 @@ export default function Header() {
                                     icon={<Settings className="h-4 w-4" />}
                                     onClick={() => {
                                         setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/Configuracion' });
+                                        router.navigate({ to: '/configuracion' });
                                     }}
                                 >
                                     Configuración
