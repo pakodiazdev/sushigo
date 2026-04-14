@@ -4,20 +4,20 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 
-export const Route = createFileRoute('/Clientes')({
-    component: ClientesPage,
+export const Route = createFileRoute('/ordenes')({
+    component: OrdenesPage,
 });
 
-export function ClientesPage() {
+export function OrdenesPage() {
     return (
         <PageContainer>
             <PageHeader
-                title="Clientes"
-                description="Gestiona tu base de datos de clientes"
+                title="Órdenes"
+                description="Gestiona todas las órdenes de tus clientes"
             >
                 <Button className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Nuevo Cliente
+                    Nueva Órden
                 </Button>
             </PageHeader>
 
