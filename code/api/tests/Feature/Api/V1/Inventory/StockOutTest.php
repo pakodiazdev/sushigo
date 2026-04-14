@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1\Inventory;
 
 use App\Models\Item;
+use App\Models\ItemVariant;
 use App\Models\Stock;
 use App\Models\StockMovementLine;
 use App\Models\UomConversion;
@@ -22,7 +23,7 @@ class StockOutTest extends InventoryTestCase
 {
     protected Item $item;
 
-    protected \App\Models\ItemVariant $variant;
+    protected ItemVariant $variant;
 
     protected function setUp(): void
     {

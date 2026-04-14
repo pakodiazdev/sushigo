@@ -52,9 +52,9 @@ interface MenuItem {
 | Clientes        | —                           | always     |
 | Empleados       | `employees.view`            | `hidden`   |
 | Asistencia      | `employees.view`            | `hidden`   |
-| Inventario      | `requiredRole: 'admin'`     | `hidden`   |
+| Inventario      | `items.view`                | `hidden`   |
 | Caja            | `cash_registers.view`       | `hidden`   |
-| Stock Dashboard | `requiredRole: 'admin'`     | `hidden`   |
+| Stock Dashboard | `stock.view`                | `hidden`   |
 | Configuración   | `requiredRole: 'super-admin'` | `hidden` |
 
 ### 2. `useMenuAccess` hook
@@ -139,7 +139,7 @@ export const Route = createFileRoute('/configuracion')({
 - [ ] 📱 Apply guards to existing routes:
   - `/employees` → `requirePermission('employees.view')`
   - `/attendance/*` → `requirePermission('employees.view')`
-  - `/inventory/*` → `requireRole('admin')`
+  - `/inventory/*` → `requirePermission('items.view')` (covers admin + inventory-manager)
   - `/cash/*` → `requirePermission('cash_registers.view')`
   - `/configuracion` → `requireRole('super-admin')`
 
