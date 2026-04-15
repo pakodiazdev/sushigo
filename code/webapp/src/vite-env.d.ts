@@ -12,6 +12,24 @@ interface ImportMetaEnv {
      * Controls whether the Dev Debugger starts hidden on boot.
      */
     readonly VITE_DEV_DEBUGGER_START_HIDDEN?: 'true' | 'false'
+    /**
+     * Enables the dev-debug quick login feature in DevDebugger.
+     * Must be exactly 'true' to activate. Any other value or absence = disabled.
+     * @see doc/tasks/backlog/101-dev-debug-login.md
+     */
+    readonly VITE_LOGIN_WITH_DEVDEBUG?: 'true' | 'false'
+    /**
+     * Comma-separated list of environments where dev-debug login is allowed.
+     * Example: 'dev,devtest'
+     * @see doc/tasks/backlog/101-dev-debug-login.md
+     */
+    readonly VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS?: string
+    /**
+     * Current application environment, used to validate against VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS.
+     * Example: 'dev' | 'devtest' | 'production'
+     * @see doc/tasks/backlog/101-dev-debug-login.md
+     */
+    readonly VITE_APP_ENV?: string
 }
 
 interface ImportMeta {
