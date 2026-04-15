@@ -15,10 +15,10 @@ export function isDevLoginEnabled(): boolean {
 
     const allowedEnvs = (import.meta.env.VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS ?? '')
         .split(',')
-        .map((e: string) => e.trim())
+        .map((e: string) => e.trim().toLowerCase())
         .filter(Boolean)
 
-    const currentEnv = import.meta.env.VITE_APP_ENV ?? ''
+    const currentEnv = (import.meta.env.VITE_APP_ENV ?? '').toLowerCase()
 
     return allowedEnvs.includes(currentEnv)
 }
