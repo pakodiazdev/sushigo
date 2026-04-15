@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
     Bug,
     User,
@@ -35,6 +36,7 @@ export function DevDebugger() {
         setDevLoginPermissionSearch,
         devLoginPermissionFilter,
         setDevLoginPermissionFilter,
+        devLoginAllPermissions,
         devLoginPermissionSuggestions,
         devLoginFilteredUsers,
         devUsers,
@@ -47,6 +49,15 @@ export function DevDebugger() {
         refreshQueries,
         handleDevLogin,
     } = useDevDebugger()
+
+    const [permissionInputFocused, setPermissionInputFocused] = useState(false)
+
+    const permissionDropdownItems =
+        devLoginPermissionSearch.length > 0
+            ? devLoginPermissionSuggestions
+            : permissionInputFocused
+              ? devLoginAllPermissions
+              : []
 
     if (isHidden) {
         return null
@@ -265,16 +276,20 @@ export function DevDebugger() {
                                             placeholder="Buscar permiso..."
                                             value={devLoginPermissionSearch}
                                             onChange={(e) => setDevLoginPermissionSearch(e.target.value)}
+                                            onFocus={() => setPermissionInputFocused(true)}
+                                            onBlur={() => setPermissionInputFocused(false)}
                                             className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
                                         />
-                                        {devLoginPermissionSuggestions.length > 0 && (
+                                        {permissionDropdownItems.length > 0 && (
                                             <ul className="absolute z-10 mt-0.5 w-full max-h-36 overflow-y-auto bg-gray-800 border border-gray-600 rounded shadow-lg">
-                                                {devLoginPermissionSuggestions.map((perm) => (
+                                                {permissionDropdownItems.map((perm) => (
                                                     <li key={perm}>
                                                         <button
+                                                            onMouseDown={(e) => e.preventDefault()}
                                                             onClick={() => {
                                                                 setDevLoginPermissionFilter(perm)
                                                                 setDevLoginPermissionSearch('')
+                                                                setPermissionInputFocused(false)
                                                             }}
                                                             className="w-full text-left text-[10px] px-2 py-1 text-gray-200 hover:bg-teal-600/30 hover:text-teal-200 truncate"
                                                         >
