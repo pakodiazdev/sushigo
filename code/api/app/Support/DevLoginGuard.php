@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use RuntimeException;
+use App\Exceptions\DevLoginMisconfigurationException;
 
 class DevLoginGuard
 {
@@ -22,7 +22,7 @@ class DevLoginGuard
         );
 
         if (in_array('production', $allowedEnvs, strict: true)) {
-            throw new RuntimeException(
+            throw new DevLoginMisconfigurationException(
                 'DEV_LOGIN_ALLOWED_ENVIRONMENTS must not contain "production". This is a critical misconfiguration.'
             );
         }
