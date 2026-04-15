@@ -17,7 +17,7 @@ return [
     |
     */
 
-    'enabled' => (bool) env('LOGIN_WITH_DEVDEBUG', false),
+    'enabled' => env('LOGIN_WITH_DEVDEBUG', false) === true,
 
     'allowed_environments' => env('DEV_LOGIN_ALLOWED_ENVIRONMENTS', 'dev,devtest'),
 ];

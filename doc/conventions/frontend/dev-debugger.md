@@ -34,9 +34,9 @@ It is never shipped in a production build — the condition is evaluated at buil
 
 ## Keyboard Shortcut
 
-| OS | Shortcut |
-|---|---|
-| macOS | `Cmd + Shift + D` |
+| OS              | Shortcut           |
+| --------------- | ------------------ |
+| macOS           | `Cmd + Shift + D`  |
 | Windows / Linux | `Ctrl + Shift + D` |
 
 The shortcut toggles the panel visible/hidden. When revealed after being hidden, it always opens in expanded mode. The shortcut is ignored when the cursor is inside an input, textarea, or contenteditable element.
@@ -124,11 +124,11 @@ The feature employs **defense in depth**: two independent validation layers, eac
 
 Implemented in `App\Support\DevLoginGuard::validate()` and called at the start of both `GET /v1/dev/users` and `POST /v1/dev/login`.
 
-| Condition | Variable | Failure behavior |
-|---|---|---|
-| Feature flag explicitly enabled | `LOGIN_WITH_DEVDEBUG=true` | Returns **404** |
-| Current `APP_ENV` is in the allowed list | `DEV_LOGIN_ALLOWED_ENVIRONMENTS` (csv) | Returns **404** |
-| `production` in the allowed list | — | **Throws `RuntimeException`** |
+| Condition                                | Variable                               | Failure behavior              |
+| ---------------------------------------- | -------------------------------------- | ----------------------------- |
+| Feature flag explicitly enabled          | `LOGIN_WITH_DEVDEBUG=true`             | Returns **404**               |
+| Current `APP_ENV` is in the allowed list | `DEV_LOGIN_ALLOWED_ENVIRONMENTS` (csv) | Returns **404**               |
+| `production` in the allowed list         | —                                      | **Throws `RuntimeException`** |
 
 Endpoints return **404** (not 401 or 403) when disabled. From the perspective of a caller, the endpoints do not exist.
 
@@ -155,34 +155,34 @@ If `production` appeared in the allowed list it would mean a misconfiguration sl
 
 ### Production deployment checklist
 
-| Check | Expected value |
-|---|---|
-| `LOGIN_WITH_DEVDEBUG` | `false` (or unset) |
-| `DEV_LOGIN_ALLOWED_ENVIRONMENTS` | must not contain `production` |
-| `APP_ENV` | `production` |
-| Routes registered? | No — environment guard prevents it |
-| Bundle contains `DevDebugger`? | No — `import.meta.env.DEV` is `false` at build time |
+| Check                            | Expected value                                      |
+| -------------------------------- | --------------------------------------------------- |
+| `LOGIN_WITH_DEVDEBUG`            | `false` (or unset)                                  |
+| `DEV_LOGIN_ALLOWED_ENVIRONMENTS` | must not contain `production`                       |
+| `APP_ENV`                        | `production`                                        |
+| Routes registered?               | No — environment guard prevents it                  |
+| Bundle contains `DevDebugger`?   | No — `import.meta.env.DEV` is `false` at build time |
 
 ---
 
 ## File Map
 
-| File | Purpose |
-|---|---|
-| `src/components/dev/DevDebugger.tsx` | Main component — UI, drag, sections, Dev Login |
-| `src/components/dev/dev-login-enabled.ts` | `isDevLoginEnabled()` — frontend guard helper |
-| `src/services/dev-api.ts` | `listDevUsers()` + `loginAs()` — API calls |
-| `app/Support/DevLoginGuard.php` | Backend guard — double validation + RuntimeException |
-| `config/devlogin.php` | Laravel config reading `LOGIN_WITH_DEVDEBUG` + allowed envs |
-| `app/Http/Controllers/Api/V1/Dev/ListDevUsersController.php` | `GET /v1/dev/users` |
-| `app/Http/Controllers/Api/V1/Dev/DevLoginController.php` | `POST /v1/dev/login` |
+| File                                                         | Purpose                                                     |
+| ------------------------------------------------------------ | ----------------------------------------------------------- |
+| `src/components/dev/DevDebugger.tsx`                         | Main component — UI, drag, sections, Dev Login              |
+| `src/components/dev/dev-login-enabled.ts`                    | `isDevLoginEnabled()` — frontend guard helper               |
+| `src/services/dev-api.ts`                                    | `listDevUsers()` + `loginAs()` — API calls                  |
+| `app/Support/DevLoginGuard.php`                              | Backend guard — double validation + RuntimeException        |
+| `config/devlogin.php`                                        | Laravel config reading `LOGIN_WITH_DEVDEBUG` + allowed envs |
+| `app/Http/Controllers/Api/V1/Dev/ListDevUsersController.php` | `GET /v1/dev/users`                                         |
+| `app/Http/Controllers/Api/V1/Dev/DevLoginController.php`     | `POST /v1/dev/login`                                        |
 
 ---
 
 ## Tests
 
-| Suite | File | Cases |
-|---|---|---|
-| PHPUnit Feature | `tests/Feature/Dev/DevLoginTest.php` | 6 — guard conditions, user list, token, RuntimeException |
-| Vitest | `src/components/dev/__tests__/dev-login-enabled.test.ts` | 6 — flag states, env mismatch, whitespace, empty list |
-| Cypress E2E | `cypress/e2e/dev-debug-login.cy.ts` | 3 — section visibility, login happy path, local search |
+| Suite           | File                                                     | Cases                                                    |
+| --------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| PHPUnit Feature | `tests/Feature/Dev/DevLoginTest.php`                     | 6 — guard conditions, user list, token, RuntimeException |
+| Vitest          | `src/components/dev/__tests__/dev-login-enabled.test.ts` | 6 — flag states, env mismatch, whitespace, empty list    |
+| Cypress E2E     | `cypress/e2e/dev-debug-login.cy.ts`                      | 3 — section visibility, login happy path, local search   |

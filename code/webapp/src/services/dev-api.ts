@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client';
+import { isApiError } from '@/lib/api-error';
 import type { AuthResponse } from './auth.service';
 
 export interface DevUser {
@@ -17,9 +18,11 @@ export async function listDevUsers(): Promise<DevUser[] | null> {
     try {
         const response = await apiClient.get<DevUsersResponse>('/dev/users');
         return response.data.data;
-    } catch {
-        // Feature disabled or unavailable — fail silently
-        return null;
+    } catch (error) {
+        if (isApiError(error) && error.response?.status === 404) {
+            return null; // Feature disabled — fail silently
+        }
+        throw error;
     }
 }
 
@@ -27,8 +30,10 @@ export async function loginAs(userId: number): Promise<AuthResponse['data'] | nu
     try {
         const response = await apiClient.post<AuthResponse>('/dev/login', { user_id: userId });
         return response.data.data;
-    } catch {
-        // Feature disabled or unavailable — fail silently
-        return null;
+    } catch (error) {
+        if (isApiError(error) && error.response?.status === 404) {
+            return null; // Feature disabled — fail silently
+        }
+        throw error;
     }
 }

@@ -16,11 +16,11 @@ The endpoints and the UI are only available when **both** conditions are met sim
 
 ### Layer 1 — Backend (source of truth)
 
-| Condition | Variable | Behavior on failure |
-|---|---|---|
-| Feature flag enabled | `LOGIN_WITH_DEVDEBUG=true` | Returns 404 (appears non-existent) |
-| Environment allowed | `APP_ENV` in `DEV_LOGIN_ALLOWED_ENVIRONMENTS` (csv) | Returns 404 (appears non-existent) |
-| Safety guard | `DEV_LOGIN_ALLOWED_ENVIRONMENTS` contains `production` | **Throws exception** — critical misconfiguration |
+| Condition            | Variable                                               | Behavior on failure                              |
+| -------------------- | ------------------------------------------------------ | ------------------------------------------------ |
+| Feature flag enabled | `LOGIN_WITH_DEVDEBUG=true`                             | Returns 404 (appears non-existent)               |
+| Environment allowed  | `APP_ENV` in `DEV_LOGIN_ALLOWED_ENVIRONMENTS` (csv)    | Returns 404 (appears non-existent)               |
+| Safety guard         | `DEV_LOGIN_ALLOWED_ENVIRONMENTS` contains `production` | **Throws exception** — critical misconfiguration |
 
 **Español:** Los endpoints solo están activos si el flag está en `true` **y** el entorno actual está en la lista permitida. Si `production` aparece en esa lista, se lanza una excepción explícita — nunca se silencia.
 
@@ -28,11 +28,11 @@ The endpoints and the UI are only available when **both** conditions are met sim
 
 The same variables are exposed to the frontend via Vite (`VITE_` prefix). The DevDebugger evaluates both **before** making any API call:
 
-| Vite variable | Default | Purpose |
-|---|---|---|
-| `VITE_LOGIN_WITH_DEVDEBUG` | `false` | Feature flag — must be exactly `true` |
-| `VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS` | `dev,devtest` | Allowed environments (csv) |
-| `VITE_APP_ENV` | `production` | Current environment — compared against the list |
+| Vite variable                         | Default       | Purpose                                         |
+| ------------------------------------- | ------------- | ----------------------------------------------- |
+| `VITE_LOGIN_WITH_DEVDEBUG`            | `false`       | Feature flag — must be exactly `true`           |
+| `VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS` | `dev,devtest` | Allowed environments (csv)                      |
+| `VITE_APP_ENV`                        | `production`  | Current environment — compared against the list |
 
 If either condition fails on the frontend → the section is not rendered and no API call is made.
 The backend remains the source of truth (the 404 is the final safety net).
