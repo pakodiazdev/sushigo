@@ -36,10 +36,13 @@ vi.mock('@tanstack/react-query', () => ({
       getAll: () => mockQueries,
     }),
   }),
+  useQuery: () => ({
+    data: undefined,
+    isLoading: false,
+  }),
 }))
 
 async function loadDevDebugger(startHidden = 'false') {
-  vi.resetModules()
   vi.stubEnv('VITE_DEV_DEBUGGER_START_HIDDEN', startHidden)
   const module = await import('@/components/dev/DevDebugger')
   return module.DevDebugger

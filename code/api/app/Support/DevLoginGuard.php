@@ -17,7 +17,7 @@ class DevLoginGuard
     public static function validate(): void
     {
         $allowedEnvs = array_map(
-            'trim',
+            fn ($e) => strtolower(trim($e)),
             explode(',', (string) config('devlogin.allowed_environments', ''))
         );
 
@@ -33,7 +33,7 @@ class DevLoginGuard
             abort(404);
         }
 
-        $currentEnv = app()->environment();
+        $currentEnv = strtolower(app()->environment());
 
         if (! in_array($currentEnv, $allowedEnvs, strict: true)) {
             abort(404);

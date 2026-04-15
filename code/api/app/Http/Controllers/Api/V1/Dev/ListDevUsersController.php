@@ -21,10 +21,7 @@ class ListDevUsersController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'roles' => $user->roles->map(fn ($role) => [
-                    'id' => $role->id,
-                    'name' => $role->name,
-                ]),
+                'roles' => $user->roles->pluck('name')->values(),
             ]),
         ]);
     }
