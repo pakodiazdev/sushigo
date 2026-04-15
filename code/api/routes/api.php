@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\V1\Auth\VerifyResetTokenController;
+use App\Http\Controllers\Api\V1\Dev\DevLoginController;
+use App\Http\Controllers\Api\V1\Dev\ListDevUsersController;
 use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\CreateWageController;
@@ -89,6 +91,12 @@ if (app()->environment('testing', 'local', 'dev', 'devtest')) {
 
             return response()->json(['link' => $link]);
         })->name('reset-link');
+    });
+
+    // ── Dev debug login routes ────────────────────────────────────────────
+    Route::prefix('v1/dev')->name('dev.')->group(function () {
+        Route::get('users', ListDevUsersController::class)->name('users');
+        Route::post('login', DevLoginController::class)->name('login');
     });
 }
 

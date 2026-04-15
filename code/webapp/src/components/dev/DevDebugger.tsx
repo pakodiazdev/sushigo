@@ -8,10 +8,16 @@ import {
     ChevronDown,
     ChevronUp,
     RefreshCw,
+    LogIn,
+    Search,
+    Loader2,
     type LucideIcon
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import type { User as AuthUser } from '@/types/auth'
+import { isDevLoginEnabled } from './dev-login-enabled'
+import { listDevUsers, loginAs, type DevUser } from '@/services/dev-api'
 
 interface DebuggerState {
     position: { x: number; y: number }
@@ -19,6 +25,7 @@ interface DebuggerState {
         user: boolean
         roles: boolean
         queries: boolean
+        devLogin: boolean
     }
 }
 
@@ -32,6 +39,7 @@ function getDefaultState(): DebuggerState {
             user: true,
             roles: false,
             queries: false,
+            devLogin: true,
         }
     }
 }
@@ -71,7 +79,7 @@ function isEditableElement(target: EventTarget | null): boolean {
 }
 
 export function DevDebugger() {
-    const { user, isAuthenticated, isAdmin, token } = useAuthStore()
+    const { user, isAuthenticated, isAdmin, token, initializeAfterReset } = useAuthStore()
     const queryClient = useQueryClient()
     const dragRef = useRef<HTMLDivElement>(null)
     const [isDragging, setIsDragging] = useState(false)
@@ -79,6 +87,26 @@ export function DevDebugger() {
     const [isHidden, setIsHidden] = useState(SHOULD_START_HIDDEN)
     const [isMinimized, setIsMinimized] = useState(false)
     const [state, setState] = useState<DebuggerState>(loadDebuggerState)
+    const [devLoginSearch, setDevLoginSearch] = useState('')
+    const [loggingInUserId, setLoggingInUserId] = useState<number | null>(null)
+
+    const devLoginEnabled = isDevLoginEnabled()
+    const { data: devUsers, isLoading: isLoadingDevUsers } = useQuery({
+        queryKey: ['dev-users'],
+        queryFn: listDevUsers,
+        enabled: !isAuthenticated && devLoginEnabled,
+        staleTime: Infinity,
+    })
+
+    const handleDevLogin = async (devUser: DevUser) => {
+        setLoggingInUserId(devUser.id)
+        const result = await loginAs(devUser.id)
+        if (result) {
+            await initializeAfterReset(result.user as AuthUser, result.token)
+            window.location.reload()
+        }
+        setLoggingInUserId(null)
+    }
 
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
@@ -335,6 +363,69 @@ export function DevDebugger() {
                         <p className="text-xs text-gray-400">No autenticado</p>
                     )}
                 </Section>
+
+                {!isAuthenticated && devLoginEnabled && (
+                    <Section
+                        icon={LogIn}
+                        title="Dev Login"
+                        isExpanded={state.expandedSections.devLogin}
+                        onToggle={() => toggleSection('devLogin')}
+                        badge={devUsers?.length}
+                    >
+                        <div className="space-y-2">
+                            <div className="relative">
+                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar usuario..."
+                                    value={devLoginSearch}
+                                    onChange={(e) => setDevLoginSearch(e.target.value)}
+                                    className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                            {isLoadingDevUsers && (
+                                <div className="space-y-1">
+                                    {[1, 2, 3].map((i) => (
+                                        <div key={i} className="h-8 bg-gray-700 rounded animate-pulse" />
+                                    ))}
+                                </div>
+                            )}
+                            {devUsers && (() => {
+                                const q = devLoginSearch.toLowerCase()
+                                const filtered = devUsers.filter(
+                                    (u) =>
+                                        u.name.toLowerCase().includes(q) ||
+                                        u.email.toLowerCase().includes(q)
+                                )
+                                return filtered.length === 0 ? (
+                                    <p className="text-xs text-gray-400">Sin resultados</p>
+                                ) : (
+                                    <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
+                                        {filtered.map((devUser) => (
+                                            <button
+                                                key={devUser.id}
+                                                data-testid="dev-login-user"
+                                                onClick={() => handleDevLogin(devUser)}
+                                                disabled={loggingInUserId !== null}
+                                                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-left"
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="text-xs text-white truncate">{devUser.name}</p>
+                                                    <p className="text-xs text-gray-400 truncate">{devUser.email}</p>
+                                                </div>
+                                                {loggingInUserId === devUser.id ? (
+                                                    <Loader2 className="h-3 w-3 text-blue-400 shrink-0 animate-spin" />
+                                                ) : (
+                                                    <LogIn className="h-3 w-3 text-blue-400 shrink-0" />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )
+                            })()}
+                        </div>
+                    </Section>
+                )}
 
                 <Section
                     icon={RefreshCw}
