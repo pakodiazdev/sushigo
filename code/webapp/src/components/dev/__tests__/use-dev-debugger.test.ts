@@ -252,7 +252,7 @@ describe('useDevDebugger', () => {
             const authResult = {
                 token: 'tok-xyz',
                 token_type: 'Bearer',
-                user: { id: 3, name: 'Staff', email: 's@t.com' },
+                user: { id: 3, name: 'Staff', email: 's@t.com', email_verified_at: null, created_at: '', updated_at: '' },
             }
             mockLoginAs.mockResolvedValueOnce(authResult)
 
@@ -304,8 +304,8 @@ describe('useDevDebugger', () => {
 
     describe('shortcutLabel', () => {
         it('returns Cmd+Shift+D on macOS', () => {
-            Object.defineProperty(navigator, 'platform', {
-                value: 'MacIntel',
+            Object.defineProperty(navigator, 'userAgent', {
+                value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
                 writable: true,
                 configurable: true,
             })

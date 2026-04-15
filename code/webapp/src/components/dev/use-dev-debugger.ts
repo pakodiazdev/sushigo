@@ -15,7 +15,7 @@ export interface DebuggerState {
     }
 }
 
-export type { DevUser }
+export type { DevUser } from '@/services/dev-api'
 
 const STORAGE_KEY = 'dev_debugger_state'
 
@@ -93,7 +93,7 @@ export function useDevDebugger() {
         const result = await loginAs(devUser.id)
         if (result) {
             await initializeAfterReset(result.user as AuthUser, result.token)
-            window.location.reload()
+            globalThis.location.reload()
         }
         setLoggingInUserId(null)
     }
@@ -125,10 +125,10 @@ export function useDevDebugger() {
             })
         }
 
-        window.addEventListener('keydown', handleKeyDown)
+        globalThis.addEventListener('keydown', handleKeyDown)
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown)
+            globalThis.removeEventListener('keydown', handleKeyDown)
         }
     }, [])
 
@@ -203,7 +203,7 @@ export function useDevDebugger() {
     const cacheStats = getQueryCacheStats()
 
     const shortcutLabel =
-        typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac')
+        typeof navigator !== 'undefined' && /mac/i.test(navigator.userAgent)
             ? 'Cmd+Shift+D'
             : 'Ctrl+Shift+D'
 
