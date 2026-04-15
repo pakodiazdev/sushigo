@@ -213,7 +213,7 @@ export function useDevDebugger() {
 
     // All unique roles across all users (for the role filter pills)
     const devLoginAllRoles = devUsers
-        ? [...new Set(devUsers.flatMap((u) => u.roles))].sort()
+        ? [...new Set(devUsers.flatMap((u) => u.roles))].sort((a, b) => a.localeCompare(b))
         : []
 
     // Combined filter: text search AND role filter
