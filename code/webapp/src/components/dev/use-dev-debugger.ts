@@ -78,6 +78,7 @@ export function useDevDebugger() {
     const [isMinimized, setIsMinimized] = useState(false)
     const [state, setState] = useState<DebuggerState>(loadDebuggerState)
     const [devLoginSearch, setDevLoginSearch] = useState('')
+    const [devLoginRoleFilter, setDevLoginRoleFilter] = useState<string | null>(null)
     const [loggingInUserId, setLoggingInUserId] = useState<number | null>(null)
 
     const devLoginEnabled = isDevLoginEnabled()
@@ -210,6 +211,22 @@ export function useDevDebugger() {
     // Dev Login section is visible while loading or when users are available (null = feature disabled)
     const devLoginSectionVisible = !isAuthenticated && devLoginEnabled && (isLoadingDevUsers || !!devUsers)
 
+    // All unique roles across all users (for the role filter pills)
+    const devLoginAllRoles = devUsers
+        ? [...new Set(devUsers.flatMap((u) => u.roles))].sort()
+        : []
+
+    // Combined filter: text search AND role filter
+    const devLoginFilteredUsers = devUsers
+        ? devUsers.filter((u) => {
+              const q = devLoginSearch.toLowerCase()
+              const matchesText =
+                  !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+              const matchesRole = !devLoginRoleFilter || u.roles.includes(devLoginRoleFilter)
+              return matchesText && matchesRole
+          })
+        : []
+
     return {
         dragRef,
         isHidden,
@@ -224,6 +241,10 @@ export function useDevDebugger() {
         token,
         devLoginEnabled,
         devLoginSectionVisible,
+        devLoginAllRoles,
+        devLoginRoleFilter,
+        setDevLoginRoleFilter,
+        devLoginFilteredUsers,
         devUsers,
         isLoadingDevUsers,
         cacheStats,

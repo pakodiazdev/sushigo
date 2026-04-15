@@ -113,9 +113,11 @@ VITE_APP_ENV=production
 - [x] 🔧 Section renders: search field + scrollable user list (name + email)
   - Uses `useQuery` from TanStack Query — fetches full list once
   - Search field filters the list **locally** (no backend calls on type)
-  - Each item is clickable → calls `loginAs` → stores token in auth store via `initializeAfterReset` → `window.location.reload()`
+  - Each item is clickable → calls `loginAs` → stores token in auth store via `initializeAfterReset` → `globalThis.location.reload()`
 - [x] 🔧 If endpoint returns 404, section is not shown (silent — no error displayed)
 - [x] 🔧 Loading states: skeleton while loading the list, spinner on the item during login
+- [ ] 🎨 Each user card shows **role badges** — one colored badge per role, with a distinctive color per role name
+- [ ] 🔧 Add **role filter** — a row of toggleable role buttons above the user list; tapping a role shows only users with that role (cumulative with the text search)
 
 ### Tests
 
@@ -139,6 +141,9 @@ VITE_APP_ENV=production
 - [ ] Frontend makes no API calls if `isDevLoginEnabled()` is `false`
 - [ ] If `production` appears in the allowed environments list → explicit runtime exception
 - [ ] Feature is disabled by default (`LOGIN_WITH_DEVDEBUG=false` / `VITE_LOGIN_WITH_DEVDEBUG=false`)
+- [ ] Each user card shows a colored badge for each of their roles
+- [ ] Role filter row is visible above the list; selecting a role hides users without that role
+- [ ] Text search and role filter work cumulatively (AND logic)
 
 ---
 
