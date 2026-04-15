@@ -28,6 +28,10 @@ export function DevDebugger() {
         isAdmin,
         token,
         devLoginSectionVisible,
+        devLoginAllRoles,
+        devLoginRoleFilter,
+        setDevLoginRoleFilter,
+        devLoginFilteredUsers,
         devUsers,
         isLoadingDevUsers,
         cacheStats,
@@ -207,6 +211,23 @@ export function DevDebugger() {
                                     className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 />
                             </div>
+                            {devLoginAllRoles.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                    {devLoginAllRoles.map((role) => (
+                                        <button
+                                            key={role}
+                                            onClick={() =>
+                                                setDevLoginRoleFilter(
+                                                    devLoginRoleFilter === role ? null : role,
+                                                )
+                                            }
+                                            className={`text-[10px] px-1.5 py-0.5 rounded border transition-opacity ${getRoleColor(role, devLoginAllRoles)} ${devLoginRoleFilter && devLoginRoleFilter !== role ? 'opacity-40' : 'opacity-100'}`}
+                                        >
+                                            {role}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                             {isLoadingDevUsers && (
                                 <div className="space-y-1">
                                     {[1, 2, 3].map((i) => (
@@ -214,18 +235,12 @@ export function DevDebugger() {
                                     ))}
                                 </div>
                             )}
-                            {devUsers && (() => {
-                                const q = devLoginSearch.toLowerCase()
-                                const filtered = devUsers.filter(
-                                    (u) =>
-                                        u.name.toLowerCase().includes(q) ||
-                                        u.email.toLowerCase().includes(q),
-                                )
-                                return filtered.length === 0 ? (
+                            {devUsers && (
+                                devLoginFilteredUsers.length === 0 ? (
                                     <p className="text-xs text-gray-400">Sin resultados</p>
                                 ) : (
-                                    <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
-                                        {filtered.map((devUser) => (
+                                    <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
+                                        {devLoginFilteredUsers.map((devUser) => (
                                             <button
                                                 key={devUser.id}
                                                 data-testid="dev-login-user"
@@ -233,9 +248,21 @@ export function DevDebugger() {
                                                 disabled={loggingInUserId !== null}
                                                 className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-left"
                                             >
-                                                <div className="min-w-0">
+                                                <div className="min-w-0 space-y-0.5">
                                                     <p className="text-xs text-white truncate">{devUser.name}</p>
                                                     <p className="text-xs text-gray-400 truncate">{devUser.email}</p>
+                                                    {devUser.roles.length > 0 && (
+                                                        <div className="flex flex-wrap gap-0.5">
+                                                            {devUser.roles.map((role) => (
+                                                                <span
+                                                                    key={role}
+                                                                    className={`text-[9px] px-1 py-0 rounded border ${getRoleColor(role, devLoginAllRoles)}`}
+                                                                >
+                                                                    {role}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 {loggingInUserId === devUser.id ? (
                                                     <Loader2 className="h-3 w-3 text-blue-400 shrink-0 animate-spin" />
@@ -246,7 +273,7 @@ export function DevDebugger() {
                                         ))}
                                     </div>
                                 )
-                            })()}
+                            )}
                         </div>
                     </Section>
                 )}
@@ -279,6 +306,29 @@ export function DevDebugger() {
             </div>
         </div>
     )
+}
+
+const ROLE_COLORS: Record<string, string> = {
+    'super-admin': 'bg-red-500/20 text-red-300 border-red-500/40',
+    admin: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
+    'inventory-manager': 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+    cashier: 'bg-green-500/20 text-green-300 border-green-500/40',
+    manager: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    staff: 'bg-teal-500/20 text-teal-300 border-teal-500/40',
+}
+
+const ROLE_FALLBACK_COLORS = [
+    'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
+    'bg-pink-500/20 text-pink-300 border-pink-500/40',
+    'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
+    'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+]
+
+function getRoleColor(role: string, allRoles: string[]): string {
+    const known = ROLE_COLORS[role]
+    if (known) return known
+    const index = allRoles.indexOf(role) % ROLE_FALLBACK_COLORS.length
+    return ROLE_FALLBACK_COLORS[index] ?? ROLE_FALLBACK_COLORS[0] ?? 'bg-gray-500/20 text-gray-300 border-gray-500/40'
 }
 
 interface SectionProps {

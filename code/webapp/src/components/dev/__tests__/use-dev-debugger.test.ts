@@ -246,6 +246,100 @@ describe('useDevDebugger', () => {
         })
     })
 
+    describe('devLoginAllRoles', () => {
+        it('returns empty array when devUsers is undefined', () => {
+            mockDevLoginEnabled = true
+            mockIsAuthenticated = false
+            const { result } = renderDebugger()
+            expect(result.current.devLoginAllRoles).toEqual([])
+        })
+
+        it('returns sorted unique roles across all users', () => {
+            mockDevLoginEnabled = true
+            mockIsAuthenticated = false
+            mockDevUsers = [
+                { id: 1, name: 'A', email: 'a@t.com', roles: ['admin', 'inventory-manager'] },
+                { id: 2, name: 'B', email: 'b@t.com', roles: ['admin'] },
+                { id: 3, name: 'C', email: 'c@t.com', roles: ['cashier'] },
+            ]
+            const { result } = renderDebugger()
+            expect(result.current.devLoginAllRoles).toEqual(['admin', 'cashier', 'inventory-manager'])
+        })
+    })
+
+    describe('devLoginRoleFilter', () => {
+        it('starts as null', () => {
+            const { result } = renderDebugger()
+            expect(result.current.devLoginRoleFilter).toBeNull()
+        })
+
+        it('updates when setDevLoginRoleFilter is called', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginRoleFilter('admin') })
+            expect(result.current.devLoginRoleFilter).toBe('admin')
+        })
+
+        it('can be cleared back to null', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginRoleFilter('admin') })
+            act(() => { result.current.setDevLoginRoleFilter(null) })
+            expect(result.current.devLoginRoleFilter).toBeNull()
+        })
+    })
+
+    describe('devLoginFilteredUsers', () => {
+        beforeEach(() => {
+            mockDevLoginEnabled = true
+            mockIsAuthenticated = false
+            mockDevUsers = [
+                { id: 1, name: 'Alice Admin', email: 'alice@t.com', roles: ['admin'] },
+                { id: 2, name: 'Bob Inventory', email: 'bob@t.com', roles: ['inventory-manager'] },
+                { id: 3, name: 'Carlos Admin', email: 'carlos@t.com', roles: ['admin', 'cashier'] },
+            ]
+        })
+
+        it('returns empty array when devUsers is null', () => {
+            mockDevUsers = undefined
+            const { result } = renderDebugger()
+            expect(result.current.devLoginFilteredUsers).toEqual([])
+        })
+
+        it('returns all users when no filters are active', () => {
+            const { result } = renderDebugger()
+            expect(result.current.devLoginFilteredUsers).toHaveLength(3)
+        })
+
+        it('filters by text search (name)', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginSearch('alice') })
+            expect(result.current.devLoginFilteredUsers).toHaveLength(1)
+            expect(result.current.devLoginFilteredUsers[0]?.name).toBe('Alice Admin')
+        })
+
+        it('filters by text search (email)', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginSearch('bob@') })
+            expect(result.current.devLoginFilteredUsers).toHaveLength(1)
+            expect(result.current.devLoginFilteredUsers[0]?.name).toBe('Bob Inventory')
+        })
+
+        it('filters by role', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginRoleFilter('admin') })
+            expect(result.current.devLoginFilteredUsers).toHaveLength(2)
+        })
+
+        it('applies text search and role filter cumulatively (AND)', () => {
+            const { result } = renderDebugger()
+            act(() => {
+                result.current.setDevLoginRoleFilter('admin')
+                result.current.setDevLoginSearch('carlos')
+            })
+            expect(result.current.devLoginFilteredUsers).toHaveLength(1)
+            expect(result.current.devLoginFilteredUsers[0]?.name).toBe('Carlos Admin')
+        })
+    })
+
     describe('handleDevLogin', () => {
         it('calls loginAs and initializeAfterReset on success, then reloads', async () => {
             const devUser = { id: 3, name: 'Staff', email: 's@t.com', roles: ['inventory-manager'] }
