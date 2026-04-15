@@ -201,31 +201,37 @@ export function DevDebugger() {
                         badge={devUsers?.length}
                     >
                         <div className="space-y-2">
-                            <div className="relative">
-                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar usuario..."
-                                    value={devLoginSearch}
-                                    onChange={(e) => setDevLoginSearch(e.target.value)}
-                                    className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Usuario</p>
+                                <div className="relative">
+                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar usuario..."
+                                        value={devLoginSearch}
+                                        onChange={(e) => setDevLoginSearch(e.target.value)}
+                                        className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                </div>
                             </div>
                             {devLoginAllRoles.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                    {devLoginAllRoles.map((role) => (
-                                        <button
-                                            key={role}
-                                            onClick={() =>
-                                                setDevLoginRoleFilter(
-                                                    devLoginRoleFilter === role ? null : role,
-                                                )
-                                            }
-                                            className={`text-[10px] px-1.5 py-0.5 rounded border transition-opacity ${getRoleColor(role, devLoginAllRoles)} ${devLoginRoleFilter && devLoginRoleFilter !== role ? 'opacity-40' : 'opacity-100'}`}
-                                        >
-                                            {role}
-                                        </button>
-                                    ))}
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Rol</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {devLoginAllRoles.map((role) => (
+                                            <button
+                                                key={role}
+                                                onClick={() =>
+                                                    setDevLoginRoleFilter(
+                                                        devLoginRoleFilter === role ? null : role,
+                                                    )
+                                                }
+                                                className={`text-[10px] px-1.5 py-0.5 rounded border transition-opacity ${getRoleColor(role, devLoginAllRoles)} ${devLoginRoleFilter && devLoginRoleFilter !== role ? 'opacity-40' : 'opacity-100'}`}
+                                            >
+                                                {role}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                             {isLoadingDevUsers && (
