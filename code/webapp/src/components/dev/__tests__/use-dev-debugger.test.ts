@@ -10,7 +10,7 @@ const mockInvalidateQueries = vi.fn()
 let mockIsAuthenticated = false
 let mockIsAdmin = false
 let mockDevLoginEnabled = false
-let mockDevUsers: Array<{ id: number; name: string; email: string; roles: string[] }> | undefined = undefined
+let mockDevUsers: Array<{ id: number; name: string; email: string; roles: string[]; permissions: string[] }> | undefined = undefined
 let mockIsLoadingDevUsers = false
 
 vi.mock('@/stores/auth.store', () => ({
@@ -196,7 +196,7 @@ describe('useDevDebugger', () => {
         it('is false when user is already authenticated', () => {
             mockIsAuthenticated = true
             mockDevLoginEnabled = true
-            mockDevUsers = [{ id: 1, name: 'A', email: 'a@t.com', roles: ['admin'] }]
+            mockDevUsers = [{ id: 1, name: 'A', email: 'a@t.com', roles: ['admin'], permissions: [] }]
 
             const { result } = renderDebugger()
 
@@ -206,7 +206,7 @@ describe('useDevDebugger', () => {
         it('is false when dev login is not enabled', () => {
             mockIsAuthenticated = false
             mockDevLoginEnabled = false
-            mockDevUsers = [{ id: 1, name: 'A', email: 'a@t.com', roles: ['admin'] }]
+            mockDevUsers = [{ id: 1, name: 'A', email: 'a@t.com', roles: ['admin'], permissions: [] }]
 
             const { result } = renderDebugger()
 
@@ -227,7 +227,7 @@ describe('useDevDebugger', () => {
         it('is true when not authenticated, enabled, and users are loaded', () => {
             mockIsAuthenticated = false
             mockDevLoginEnabled = true
-            mockDevUsers = [{ id: 1, name: 'A', email: 'a@t.com', roles: ['admin'] }]
+            mockDevUsers = [{ id: 1, name: 'A', email: 'a@t.com', roles: ['admin'], permissions: [] }]
 
             const { result } = renderDebugger()
 
@@ -258,9 +258,9 @@ describe('useDevDebugger', () => {
             mockDevLoginEnabled = true
             mockIsAuthenticated = false
             mockDevUsers = [
-                { id: 1, name: 'A', email: 'a@t.com', roles: ['admin', 'inventory-manager'] },
-                { id: 2, name: 'B', email: 'b@t.com', roles: ['admin'] },
-                { id: 3, name: 'C', email: 'c@t.com', roles: ['cashier'] },
+                { id: 1, name: 'A', email: 'a@t.com', roles: ['admin', 'inventory-manager'], permissions: [] },
+                { id: 2, name: 'B', email: 'b@t.com', roles: ['admin'], permissions: [] },
+                { id: 3, name: 'C', email: 'c@t.com', roles: ['cashier'], permissions: [] },
             ]
             const { result } = renderDebugger()
             expect(result.current.devLoginAllRoles).toEqual(['admin', 'cashier', 'inventory-manager'])
@@ -292,9 +292,9 @@ describe('useDevDebugger', () => {
             mockDevLoginEnabled = true
             mockIsAuthenticated = false
             mockDevUsers = [
-                { id: 1, name: 'Alice Admin', email: 'alice@t.com', roles: ['admin'] },
-                { id: 2, name: 'Bob Inventory', email: 'bob@t.com', roles: ['inventory-manager'] },
-                { id: 3, name: 'Carlos Admin', email: 'carlos@t.com', roles: ['admin', 'cashier'] },
+                { id: 1, name: 'Alice Admin', email: 'alice@t.com', roles: ['admin'], permissions: ['items.view', 'items.create'] },
+                { id: 2, name: 'Bob Inventory', email: 'bob@t.com', roles: ['inventory-manager'], permissions: ['items.view', 'stock.view'] },
+                { id: 3, name: 'Carlos Admin', email: 'carlos@t.com', roles: ['admin', 'cashier'], permissions: ['items.view', 'cash.view'] },
             ]
         })
 
@@ -338,11 +338,100 @@ describe('useDevDebugger', () => {
             expect(result.current.devLoginFilteredUsers).toHaveLength(1)
             expect(result.current.devLoginFilteredUsers[0]?.name).toBe('Carlos Admin')
         })
+
+        it('filters by permission', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginPermissionFilter('stock.view') })
+            expect(result.current.devLoginFilteredUsers).toHaveLength(1)
+            expect(result.current.devLoginFilteredUsers[0]?.name).toBe('Bob Inventory')
+        })
+
+        it('applies text search, role filter AND permission filter cumulatively', () => {
+            const { result } = renderDebugger()
+            act(() => {
+                result.current.setDevLoginRoleFilter('admin')
+                result.current.setDevLoginPermissionFilter('items.create')
+            })
+            // Only Alice has role=admin AND permission=items.create
+            expect(result.current.devLoginFilteredUsers).toHaveLength(1)
+            expect(result.current.devLoginFilteredUsers[0]?.name).toBe('Alice Admin')
+        })
+    })
+
+    describe('devLoginAllPermissions', () => {
+        it('returns empty array when devUsers is undefined', () => {
+            const { result } = renderDebugger()
+            expect(result.current.devLoginAllPermissions).toEqual([])
+        })
+
+        it('returns sorted unique permissions across all users', () => {
+            mockDevLoginEnabled = true
+            mockIsAuthenticated = false
+            mockDevUsers = [
+                { id: 1, name: 'A', email: 'a@t.com', roles: ['admin'], permissions: ['items.view', 'items.create'] },
+                { id: 2, name: 'B', email: 'b@t.com', roles: [], permissions: ['items.view', 'stock.view'] },
+            ]
+            const { result } = renderDebugger()
+            expect(result.current.devLoginAllPermissions).toEqual(['items.create', 'items.view', 'stock.view'])
+        })
+    })
+
+    describe('devLoginPermissionFilter', () => {
+        it('starts as null', () => {
+            const { result } = renderDebugger()
+            expect(result.current.devLoginPermissionFilter).toBeNull()
+        })
+
+        it('updates when setDevLoginPermissionFilter is called', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginPermissionFilter('items.view') })
+            expect(result.current.devLoginPermissionFilter).toBe('items.view')
+        })
+
+        it('can be cleared back to null', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginPermissionFilter('items.view') })
+            act(() => { result.current.setDevLoginPermissionFilter(null) })
+            expect(result.current.devLoginPermissionFilter).toBeNull()
+        })
+    })
+
+    describe('devLoginPermissionSuggestions', () => {
+        beforeEach(() => {
+            mockDevLoginEnabled = true
+            mockIsAuthenticated = false
+            mockDevUsers = [
+                { id: 1, name: 'A', email: 'a@t.com', roles: [], permissions: ['items.view', 'items.create', 'stock.view'] },
+            ]
+        })
+
+        it('returns empty array when search is empty', () => {
+            const { result } = renderDebugger()
+            expect(result.current.devLoginPermissionSuggestions).toEqual([])
+        })
+
+        it('returns matching permissions when search has text', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginPermissionSearch('items') })
+            expect(result.current.devLoginPermissionSuggestions).toEqual(['items.create', 'items.view'])
+        })
+
+        it('is case-insensitive', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginPermissionSearch('STOCK') })
+            expect(result.current.devLoginPermissionSuggestions).toEqual(['stock.view'])
+        })
+
+        it('returns empty array when no permissions match', () => {
+            const { result } = renderDebugger()
+            act(() => { result.current.setDevLoginPermissionSearch('nonexistent') })
+            expect(result.current.devLoginPermissionSuggestions).toEqual([])
+        })
     })
 
     describe('handleDevLogin', () => {
         it('calls loginAs and initializeAfterReset on success, then reloads', async () => {
-            const devUser = { id: 3, name: 'Staff', email: 's@t.com', roles: ['inventory-manager'] }
+            const devUser = { id: 3, name: 'Staff', email: 's@t.com', roles: ['inventory-manager'], permissions: [] }
             const authResult = {
                 token: 'tok-xyz',
                 token_type: 'Bearer',
@@ -370,7 +459,7 @@ describe('useDevDebugger', () => {
         })
 
         it('does not call initializeAfterReset when loginAs returns null', async () => {
-            const devUser = { id: 99, name: 'Gone', email: 'g@t.com', roles: [] }
+            const devUser = { id: 99, name: 'Gone', email: 'g@t.com', roles: [], permissions: [] }
             mockLoginAs.mockResolvedValueOnce(null)
 
             const { result } = renderDebugger()
@@ -383,13 +472,26 @@ describe('useDevDebugger', () => {
         })
 
         it('clears loggingInUserId after the request completes', async () => {
-            const devUser = { id: 7, name: 'U', email: 'u@t.com', roles: [] }
+            const devUser = { id: 7, name: 'U', email: 'u@t.com', roles: [], permissions: [] }
             mockLoginAs.mockResolvedValueOnce(null)
 
             const { result } = renderDebugger()
 
             await act(async () => {
                 await result.current.handleDevLogin(devUser)
+            })
+
+            expect(result.current.loggingInUserId).toBeNull()
+        })
+
+        it('clears loggingInUserId even when loginAs throws (try/finally)', async () => {
+            const devUser = { id: 5, name: 'E', email: 'e@t.com', roles: [], permissions: [] }
+            mockLoginAs.mockRejectedValueOnce(new Error('Network Error'))
+
+            const { result } = renderDebugger()
+
+            await act(async () => {
+                await result.current.handleDevLogin(devUser).catch(() => undefined)
             })
 
             expect(result.current.loggingInUserId).toBeNull()

@@ -79,6 +79,8 @@ export function useDevDebugger() {
     const [state, setState] = useState<DebuggerState>(loadDebuggerState)
     const [devLoginSearch, setDevLoginSearch] = useState('')
     const [devLoginRoleFilter, setDevLoginRoleFilter] = useState<string | null>(null)
+    const [devLoginPermissionSearch, setDevLoginPermissionSearch] = useState('')
+    const [devLoginPermissionFilter, setDevLoginPermissionFilter] = useState<string | null>(null)
     const [loggingInUserId, setLoggingInUserId] = useState<number | null>(null)
 
     const devLoginEnabled = isDevLoginEnabled()
@@ -91,12 +93,15 @@ export function useDevDebugger() {
 
     const handleDevLogin = async (devUser: DevUser) => {
         setLoggingInUserId(devUser.id)
-        const result = await loginAs(devUser.id)
-        if (result) {
-            await initializeAfterReset(result.user as AuthUser, result.token)
-            globalThis.location.reload()
+        try {
+            const result = await loginAs(devUser.id)
+            if (result) {
+                await initializeAfterReset(result.user as AuthUser, result.token)
+                globalThis.location.reload()
+            }
+        } finally {
+            setLoggingInUserId(null)
         }
-        setLoggingInUserId(null)
     }
 
     useEffect(() => {
@@ -216,14 +221,29 @@ export function useDevDebugger() {
         ? [...new Set(devUsers.flatMap((u) => u.roles))].sort((a, b) => a.localeCompare(b))
         : []
 
-    // Combined filter: text search AND role filter
+    // All unique permissions across all users (for the permission autocomplete filter)
+    const devLoginAllPermissions = devUsers
+        ? [...new Set(devUsers.flatMap((u) => u.permissions))].sort((a, b) => a.localeCompare(b))
+        : []
+
+    // Autocomplete suggestions: permissions matching the search input
+    const devLoginPermissionSuggestions =
+        devLoginPermissionSearch.length > 0
+            ? devLoginAllPermissions.filter((p) =>
+                  p.toLowerCase().includes(devLoginPermissionSearch.toLowerCase()),
+              )
+            : []
+
+    // Combined filter: text search AND role filter AND permission filter
     const devLoginFilteredUsers = devUsers
         ? devUsers.filter((u) => {
               const q = devLoginSearch.toLowerCase()
               const matchesText =
                   !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
               const matchesRole = !devLoginRoleFilter || u.roles.includes(devLoginRoleFilter)
-              return matchesText && matchesRole
+              const matchesPermission =
+                  !devLoginPermissionFilter || u.permissions.includes(devLoginPermissionFilter)
+              return matchesText && matchesRole && matchesPermission
           })
         : []
 
@@ -244,6 +264,12 @@ export function useDevDebugger() {
         devLoginAllRoles,
         devLoginRoleFilter,
         setDevLoginRoleFilter,
+        devLoginPermissionSearch,
+        setDevLoginPermissionSearch,
+        devLoginPermissionFilter,
+        setDevLoginPermissionFilter,
+        devLoginAllPermissions,
+        devLoginPermissionSuggestions,
         devLoginFilteredUsers,
         devUsers,
         isLoadingDevUsers,

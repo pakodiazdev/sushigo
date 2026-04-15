@@ -68,7 +68,7 @@ class DevLoginTest extends TestCase
             ->assertJsonStructure([
                 'status',
                 'data' => [
-                    '*' => ['id', 'name', 'email', 'roles'],
+                    '*' => ['id', 'name', 'email', 'roles', 'permissions'],
                 ],
             ]);
 

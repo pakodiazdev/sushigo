@@ -31,6 +31,11 @@ export function DevDebugger() {
         devLoginAllRoles,
         devLoginRoleFilter,
         setDevLoginRoleFilter,
+        devLoginPermissionSearch,
+        setDevLoginPermissionSearch,
+        devLoginPermissionFilter,
+        setDevLoginPermissionFilter,
+        devLoginPermissionSuggestions,
         devLoginFilteredUsers,
         devUsers,
         isLoadingDevUsers,
@@ -234,6 +239,54 @@ export function DevDebugger() {
                                     </div>
                                 </div>
                             )}
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Permiso</p>
+                                {devLoginPermissionFilter ? (
+                                    <div className="flex items-center gap-1">
+                                        <span className="flex-1 text-[10px] px-1.5 py-0.5 rounded border bg-teal-500/20 text-teal-300 border-teal-500/40 truncate">
+                                            {devLoginPermissionFilter}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                setDevLoginPermissionFilter(null)
+                                                setDevLoginPermissionSearch('')
+                                            }}
+                                            className="text-gray-400 hover:text-white text-[11px] px-1 leading-none"
+                                            aria-label="Quitar filtro de permiso"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar permiso..."
+                                            value={devLoginPermissionSearch}
+                                            onChange={(e) => setDevLoginPermissionSearch(e.target.value)}
+                                            className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                        />
+                                        {devLoginPermissionSuggestions.length > 0 && (
+                                            <ul className="absolute z-10 mt-0.5 w-full max-h-36 overflow-y-auto bg-gray-800 border border-gray-600 rounded shadow-lg">
+                                                {devLoginPermissionSuggestions.map((perm) => (
+                                                    <li key={perm}>
+                                                        <button
+                                                            onClick={() => {
+                                                                setDevLoginPermissionFilter(perm)
+                                                                setDevLoginPermissionSearch('')
+                                                            }}
+                                                            className="w-full text-left text-[10px] px-2 py-1 text-gray-200 hover:bg-teal-600/30 hover:text-teal-200 truncate"
+                                                        >
+                                                            {perm}
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             {isLoadingDevUsers && (
                                 <div className="space-y-1">
                                     {[1, 2, 3].map((i) => (

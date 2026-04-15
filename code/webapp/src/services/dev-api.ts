@@ -7,6 +7,7 @@ export interface DevUser {
     name: string;
     email: string;
     roles: string[];
+    permissions: string[];
 }
 
 interface DevUsersResponse {
