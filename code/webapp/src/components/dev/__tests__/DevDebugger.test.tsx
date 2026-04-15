@@ -19,6 +19,10 @@ let mockQueries: Array<{
   isStale: () => boolean
 }> = []
 const invalidateQueries = vi.fn()
+const mockInitializeAfterReset = vi.fn()
+
+let mockDevUsersQueryData: unknown = undefined
+let mockIsLoadingDevUsers = false
 
 vi.mock('@/stores/auth.store', () => ({
   useAuthStore: () => ({
@@ -26,6 +30,7 @@ vi.mock('@/stores/auth.store', () => ({
     isAuthenticated: mockIsAuthenticated,
     isAdmin: mockIsAdmin,
     token: mockToken,
+    initializeAfterReset: mockInitializeAfterReset,
   }),
 }))
 
@@ -37,10 +42,18 @@ vi.mock('@tanstack/react-query', () => ({
     }),
   }),
   useQuery: () => ({
-    data: undefined,
-    isLoading: false,
+    data: mockDevUsersQueryData,
+    isLoading: mockIsLoadingDevUsers,
   }),
 }))
+
+vi.mock('@/services/dev-api', () => ({
+  listDevUsers: vi.fn(),
+  loginAs: vi.fn(),
+}))
+
+import { loginAs } from '@/services/dev-api'
+const mockLoginAs = vi.mocked(loginAs)
 
 async function loadDevDebugger(startHidden = 'false') {
   vi.stubEnv('VITE_DEV_DEBUGGER_START_HIDDEN', startHidden)
@@ -56,6 +69,8 @@ describe('DevDebugger', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
+    mockDevUsersQueryData = undefined
+    mockIsLoadingDevUsers = false
     mockUser = {
       id: 1,
       name: 'Admin User',
@@ -136,7 +151,7 @@ describe('DevDebugger', () => {
     expect(screen.queryByText('Dev Debugger')).toBeNull()
   })
 
-  it('refreshes queries and toggles collapsible sections', async () => {
+  it('refreshes queries and toggles collapsible sections including user section', async () => {
     const DevDebugger = await loadDevDebugger('false')
     renderFresh(DevDebugger)
 
@@ -146,6 +161,10 @@ describe('DevDebugger', () => {
     expect(document.body.textContent).not.toContain('isAdmin (store)')
     fireEvent.click(screen.getByText('Roles y Permisos'))
     expect(document.body.textContent).toContain('isAdmin (store)')
+
+    // Collapse the user section (covers the onToggle arrow fn on that Section)
+    fireEvent.click(screen.getByText('Usuario'))
+    expect(document.body.textContent).not.toContain('Nombre:')
 
     expect(document.body.textContent).not.toContain('Total:')
     fireEvent.click(screen.getByText('Query Cache'))
@@ -175,16 +194,84 @@ describe('DevDebugger', () => {
     expect(document.body.textContent).toContain('Nombre:')
   })
 
-  it('renders unauthenticated state when there is no active user', async () => {
+  it('renders the dev login section when the feature is enabled and users are available', async () => {
     mockUser = null
     mockIsAuthenticated = false
     mockIsAdmin = false
     mockToken = null
+    mockDevUsersQueryData = [
+      { id: 1, name: 'Admin', email: 'admin@test.com', roles: ['admin'] },
+      { id: 2, name: 'Staff', email: 'staff@test.com', roles: ['inventory-manager'] },
+    ]
+    vi.stubEnv('VITE_LOGIN_WITH_DEVDEBUG', 'true')
+    vi.stubEnv('VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS', 'testing')
+    vi.stubEnv('VITE_APP_ENV', 'testing')
 
     const DevDebugger = await loadDevDebugger('false')
     renderFresh(DevDebugger)
 
-    expect(screen.getAllByText('No autenticado').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Cmd\+Shift\+D|Ctrl\+Shift\+D/)).toBeTruthy()
+    expect(document.body.textContent).toContain('Dev Login')
+    expect(document.body.textContent).toContain('Admin')
+    expect(document.body.textContent).toContain('admin@test.com')
+  })
+
+  it('filters dev users by search and shows no-results message', async () => {
+    mockUser = null
+    mockIsAuthenticated = false
+    mockToken = null
+    mockDevUsersQueryData = [
+      { id: 1, name: 'Admin User', email: 'admin@test.com', roles: ['admin'] },
+    ]
+    vi.stubEnv('VITE_LOGIN_WITH_DEVDEBUG', 'true')
+    vi.stubEnv('VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS', 'testing')
+    vi.stubEnv('VITE_APP_ENV', 'testing')
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    const searchInput = screen.getByPlaceholderText('Buscar usuario...')
+    fireEvent.change(searchInput, { target: { value: 'xyz-not-found' } })
+
+    expect(document.body.textContent).toContain('Sin resultados')
+  })
+
+  it('shows loading skeleton when dev users are being fetched', async () => {
+    mockUser = null
+    mockIsAuthenticated = false
+    mockToken = null
+    mockIsLoadingDevUsers = true
+    mockDevUsersQueryData = undefined
+    vi.stubEnv('VITE_LOGIN_WITH_DEVDEBUG', 'true')
+    vi.stubEnv('VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS', 'testing')
+    vi.stubEnv('VITE_APP_ENV', 'testing')
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    expect(document.body.textContent).toContain('Dev Login')
+    // Loading skeleton: 3 pulse divs should be present
+    const pulseDivs = document.querySelectorAll('.animate-pulse')
+    expect(pulseDivs.length).toBeGreaterThan(0)
+  })
+
+  it('calls handleDevLogin when a dev user button is clicked', async () => {
+    mockUser = null
+    mockIsAuthenticated = false
+    mockToken = null
+    mockDevUsersQueryData = [
+      { id: 3, name: 'Ops User', email: 'ops@test.com', roles: ['inventory-manager'] },
+    ]
+    vi.stubEnv('VITE_LOGIN_WITH_DEVDEBUG', 'true')
+    vi.stubEnv('VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS', 'testing')
+    vi.stubEnv('VITE_APP_ENV', 'testing')
+    mockLoginAs.mockResolvedValue(null)
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    const userButton = screen.getByTestId('dev-login-user')
+    fireEvent.click(userButton)
+
+    expect(mockLoginAs).toHaveBeenCalledWith(3)
   })
 })

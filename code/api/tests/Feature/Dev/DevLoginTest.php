@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Dev;
 
+use App\Exceptions\DevLoginMisconfigurationException;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -120,7 +121,7 @@ class DevLoginTest extends TestCase
 
         $this->withoutExceptionHandling();
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(DevLoginMisconfigurationException::class);
 
         $this->getJson('/api/v1/dev/users');
     }
