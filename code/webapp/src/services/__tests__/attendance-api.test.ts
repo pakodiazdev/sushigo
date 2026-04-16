@@ -225,6 +225,69 @@ describe('attendanceApi.checkOut', () => {
   })
 })
 
+// ── attendanceApi.overtimeDecision ──────────────────────────────────────────
+
+describe('attendanceApi.overtimeDecision', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls PATCH /attendances/{id}/overtime-decision with authorize payload', async () => {
+    const mockResponse = {
+      data: {
+        status: 200,
+        data: { id: 'att-123', overtime_authorized: true, overtime_authorized_at: '2026-04-01T22:00:00Z' },
+      },
+    }
+    vi.mocked(apiClient.patch).mockResolvedValueOnce(mockResponse as never)
+
+    const result = await attendanceApi.overtimeDecision('att-123', { authorize: true })
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/att-123/overtime-decision', { authorize: true })
+    expect(result).toEqual(mockResponse)
+  })
+
+  it('interpolates the attendanceId into the URL', async () => {
+    await attendanceApi.overtimeDecision('my-att-id', { authorize: false })
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/my-att-id/overtime-decision', { authorize: false })
+  })
+
+  it('sends authorize: false for reject decision', async () => {
+    await attendanceApi.overtimeDecision('att-456', { authorize: false })
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/att-456/overtime-decision', { authorize: false })
+  })
+})
+
+// ── attendanceApi.markDayStatus ──────────────────────────────────────────────
+
+describe('attendanceApi.markDayStatus', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls POST /attendances/day-status with employee_id, date and day_status', async () => {
+    const mockResponse = { data: { status: 200, data: { id: 'att-789', day_status: 'ABSENCE' } } }
+    vi.mocked(apiClient.post).mockResolvedValueOnce(mockResponse as never)
+
+    const payload = { employee_id: 'emp-001', date: '2026-04-02', day_status: 'ABSENCE' as const }
+    const result = await attendanceApi.markDayStatus(payload)
+
+    expect(apiClient.post).toHaveBeenCalledWith('/attendances/day-status', payload)
+    expect(result).toEqual(mockResponse)
+  })
+
+  it('sends the exact payload provided', async () => {
+    await attendanceApi.markDayStatus({ employee_id: 'emp-xyz', date: '2026-01-15', day_status: 'ABSENCE' })
+
+    expect(apiClient.post).toHaveBeenCalledWith('/attendances/day-status', {
+      employee_id: 'emp-xyz',
+      date: '2026-01-15',
+      day_status: 'ABSENCE',
+    })
+  })
+})
+
 // ── attendanceApi.closeDay ───────────────────────────────────────────────────
 
 describe('attendanceApi.closeDay', () => {

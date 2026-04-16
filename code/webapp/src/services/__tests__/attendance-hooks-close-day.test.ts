@@ -192,6 +192,20 @@ describe('useCloseDay', () => {
     )
   })
 
+  it('shows leaves and day_offs in success toast when non-zero', async () => {
+    vi.mocked(attendanceApi.closeDay).mockResolvedValueOnce({
+      data: { status: 200, data: { lunch_returns: 0, check_outs: 0, absences: 0, leaves: 2, day_offs: 1, overtime_pending: [] } },
+    } as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useCloseDay(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ branch_id: 1, close_time: '22:00' })
+    })
+
+    expect(mockShowSuccess).toHaveBeenCalledWith('2 permisos, 1 descansos', 'Día cerrado')
+  })
+
   it('shows success toast without parts when zero changes', async () => {
     vi.mocked(attendanceApi.closeDay).mockResolvedValueOnce({
       data: { status: 200, data: { lunch_returns: 0, check_outs: 0, absences: 0 } },

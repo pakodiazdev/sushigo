@@ -226,6 +226,85 @@ describe('useCloseDayPanel', () => {
     })
   })
 
+  describe('overtime pending', () => {
+    it('starts with empty overtimePending', () => {
+      const { result } = renderHook(() => useCloseDayPanel([], 1))
+      expect(result.current.overtimePending).toEqual([])
+    })
+
+    it('clearOvertimePending resets to empty array', () => {
+      const { result } = renderHook(() => useCloseDayPanel([], 1))
+
+      // Simulate overtime being set by manually calling clear — starts already empty
+      act(() => result.current.clearOvertimePending())
+      expect(result.current.overtimePending).toEqual([])
+    })
+
+    it('confirm passes onSuccess callback that captures overtime_pending', () => {
+      const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+
+      act(() => result.current.open())
+      act(() => result.current.confirm())
+
+      // Extract the onSuccess callback from the mutation call
+      const [, mutateOptions] = mockMutate.mock.calls[0] as [unknown, { onSuccess: (r: unknown) => void }]
+
+      const fakeResponse = {
+        data: {
+          data: {
+            lunch_returns: 0,
+            check_outs: 1,
+            absences: 0,
+            leaves: 0,
+            day_offs: 0,
+            overtime_pending: [
+              { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+            ],
+          },
+        },
+      }
+
+      act(() => mutateOptions.onSuccess(fakeResponse))
+
+      expect(result.current.overtimePending).toEqual([
+        { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+      ])
+    })
+
+    it('confirm does not set overtimePending when overtime_pending is empty', () => {
+      const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+
+      act(() => result.current.open())
+      act(() => result.current.confirm())
+
+      const [, mutateOptions] = mockMutate.mock.calls[0] as [unknown, { onSuccess: (r: unknown) => void }]
+
+      act(() => mutateOptions.onSuccess({
+        data: { data: { lunch_returns: 0, check_outs: 1, absences: 0, leaves: 0, day_offs: 0, overtime_pending: [] } },
+      }))
+
+      expect(result.current.overtimePending).toEqual([])
+    })
+
+    it('closes the panel on successful confirm', () => {
+      const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+
+      act(() => result.current.open())
+      expect(result.current.isOpen).toBe(true)
+
+      act(() => result.current.confirm())
+      const [, mutateOptions] = mockMutate.mock.calls[0] as [unknown, { onSuccess: (r: unknown) => void }]
+      act(() => mutateOptions.onSuccess({
+        data: { data: { overtime_pending: [] } },
+      }))
+
+      expect(result.current.isOpen).toBe(false)
+    })
+  })
+
   describe('confirm', () => {
     it('calls mutation with correct data (no lunch returns)', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('returned') })]

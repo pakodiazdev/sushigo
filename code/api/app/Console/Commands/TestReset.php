@@ -7,6 +7,7 @@ use Database\Seeders\Fakes\FakeEmployeesSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
 use Database\Seeders\Testing\AttendanceTodayLeaveSeeder;
 use Database\Seeders\Testing\CloseDayHappyPathSeeder;
+use Database\Seeders\Testing\CloseDayOvertimeSeeder;
 use Database\Seeders\Testing\CloseDayPendingLunchSeeder;
 use Database\Seeders\Testing\CoreTestSeeder;
 use Illuminate\Console\Command;
@@ -44,6 +45,10 @@ class TestReset extends Command
         'close-day-pending' => [
             AttendanceTestSeeder::class,
             CloseDayPendingLunchSeeder::class,
+        ],
+        'close-day-overtime' => [
+            AttendanceTestSeeder::class,
+            CloseDayOvertimeSeeder::class,
         ],
         'fakes-employees' => [
             FakeEmployeesSeeder::class,
