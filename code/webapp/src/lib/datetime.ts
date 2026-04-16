@@ -1,7 +1,5 @@
 import { getFrontendTimezone } from './timezone'
 
-const pad = (n: number) => String(n).padStart(2, '0')
-
 /**
  * Get current time in business timezone as "HH:mm".
  * Uses centralized timezone resolver for proper timezone handling.

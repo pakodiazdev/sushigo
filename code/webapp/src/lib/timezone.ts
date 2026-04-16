@@ -141,3 +141,76 @@ export function fromDatetimeLocalValue(datetimeLocalValue: string): string {
         return datetimeLocalValue;
     }
 }
+
+/**
+ * Get timezone offset string in format ±HH:MM for current frontend timezone.
+ * Uses a reference date to calculate the offset.
+ *
+ * @param referenceDate - Date to use for offset calculation (default: now)
+ * @returns Offset string like "-06:00" or "+05:30"
+ */
+export function getTimezoneOffsetString(referenceDate: Date = new Date()): string {
+    const timezone = getFrontendTimezone();
+
+    // Use Intl to get the offset by comparing formatted times
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        timeZoneName: 'longOffset',
+    });
+
+    const parts = formatter.formatToParts(referenceDate);
+    const tzPart = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
+
+    // longOffset returns "GMT-06:00" or "GMT+05:30", extract the offset part
+    const match = tzPart.match(/GMT([+-]\d{2}:\d{2})/);
+    if (match?.[1]) {
+        return match[1];
+    }
+
+    // Fallback: calculate from Date object offset (local machine timezone)
+    const offsetMinutes = referenceDate.getTimezoneOffset();
+    const sign = offsetMinutes <= 0 ? '+' : '-';
+    const absOffset = Math.abs(offsetMinutes);
+    const hours = String(Math.floor(absOffset / 60)).padStart(2, '0');
+    const minutes = String(absOffset % 60).padStart(2, '0');
+    return `${sign}${hours}:${minutes}`;
+}
+
+/**
+ * Create an ISO 8601 datetime string with timezone offset from HH:mm time.
+ * Uses today's date in the frontend timezone.
+ *
+ * @param hhmm - Time string in "HH:mm" format
+ * @returns ISO 8601 string with timezone offset (e.g., "2026-04-16T09:30:00-06:00")
+ * @throws TypeError if time format is invalid
+ */
+export function timeToIsoWithOffset(hhmm: string): string {
+    if (!hhmm?.includes(':')) {
+        throw new TypeError(`Invalid time value: "${hhmm}"`);
+    }
+
+    const [hoursStr, minutesStr] = hhmm.split(':');
+    const hours = Number(hoursStr);
+    const minutes = Number(minutesStr);
+
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+        throw new TypeError(`Invalid time value: "${hhmm}"`);
+    }
+
+    const timezone = getFrontendTimezone();
+    const now = new Date();
+
+    // Get today's date components in the target timezone
+    const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+    const todayDate = dateFormatter.format(now); // YYYY-MM-DD
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const offset = getTimezoneOffsetString(now);
+
+    return `${todayDate}T${pad(hours)}:${pad(minutes)}:00${offset}`;
+}

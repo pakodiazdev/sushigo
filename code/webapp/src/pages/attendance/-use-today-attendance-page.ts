@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
+import { todayDateCdmx, currentTimeLabel } from '@/lib/datetime'
+import { timeToIsoWithOffset } from '@/lib/timezone'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
 
@@ -26,44 +28,27 @@ export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
   return { total: rows.length, pending, checkedIn, done, withOvertime }
 }
 
-// Re-export from shared utility for backwards compatibility with today.tsx import
-export { currentTimeLabel } from '@/lib/datetime'
-
-/** CDMX timezone offset — hardcoded to UTC-6 (standard time). DST is not handled. */
-const CDMX_OFFSET_HOURS = -6
+// Re-export from shared utilities for backwards compatibility
+export { currentTimeLabel }
 
 /**
- * Today's date in CDMX timezone (YYYY-MM-DD).
+ * Today's date in business timezone (YYYY-MM-DD).
+ * Uses centralized timezone resolver from datetime.ts.
  * Exported for testing.
  */
 export function todayCdmxDate(): string {
-  const now = new Date()
-  const cdmxTime = new Date(now.getTime() + CDMX_OFFSET_HOURS * 60 * 60 * 1000)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${cdmxTime.getUTCFullYear()}-${pad(cdmxTime.getUTCMonth() + 1)}-${pad(cdmxTime.getUTCDate())}`
+  return todayDateCdmx()
 }
 
 /**
- * ISO 8601 / RFC 3339 from a "HH:mm" string using today's date in CDMX timezone.
- * Hardcodes -06:00 offset (CDMX standard time) because this is a business app
- * that always operates in the CDMX timezone — the backend normalizes to UTC via
- * Carbon::parse($value)->utc(). See CLAUDE.md § DateTime Standard.
+ * ISO 8601 / RFC 3339 from a "HH:mm" string using today's date in business timezone.
+ * Uses centralized timezone resolver with proper offset calculation.
+ * The backend normalizes to UTC via Carbon::parse($value)->utc().
+ * See CLAUDE.md § DateTime Standard.
  * (exported for testing)
  */
 export function timeToIso(hhmm: string): string {
-  if (!hhmm?.includes(':')) {
-    throw new TypeError(`Invalid time value: "${hhmm}"`)
-  }
-  const [hours = 0, minutes = 0] = hhmm.split(':').map(Number)
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-    throw new TypeError(`Invalid time value: "${hhmm}"`)
-  }
-  // Get today's date in CDMX timezone using manual offset
-  const now = new Date()
-  const cdmxTime = new Date(now.getTime() + CDMX_OFFSET_HOURS * 60 * 60 * 1000)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  // Always use CDMX offset (-06:00)
-  return `${cdmxTime.getUTCFullYear()}-${pad(cdmxTime.getUTCMonth() + 1)}-${pad(cdmxTime.getUTCDate())}T${pad(hours)}:${pad(minutes)}:00-06:00`
+  return timeToIsoWithOffset(hhmm)
 }
 
 export interface UseTodayAttendancePageResult {
