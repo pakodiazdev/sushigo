@@ -5,7 +5,7 @@ import { getAttendancePhase } from '@/types/attendance'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
 
-interface PendingAttendanceData {
+export interface PendingAttendanceData {
   employee: TodayAttendanceEmployee
   attendanceId: string
 }
@@ -102,6 +102,7 @@ export interface UseTodayAttendancePageResult {
   confirmCheckOut: (time: string) => void
   // Overtime decision action (individual)
   pendingOvertimeDecision: PendingAttendanceData | null
+  pendingOvertimeMinutes: number
   isRecordingOvertimeDecision: boolean
   openOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeOvertimeDecision: () => void
@@ -230,6 +231,10 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     )
   }, [pendingOvertimeDecision, overtimeDecisionMutation, closeOvertimeDecision])
 
+  const pendingOvertimeMinutes = pendingOvertimeDecision
+    ? (data.find(r => r.attendance?.id === pendingOvertimeDecision.attendanceId)?.attendance?.overtime_minutes ?? 0)
+    : 0
+
   // ── Bulk overtime queue (after bulk day close) ───────────────────────────────
   const [bulkOvertimeQueue, setBulkOvertimeQueue] = useState<OvertimePendingEntry[]>([])
 
@@ -298,6 +303,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     confirmCheckOut,
     // Overtime decision (individual)
     pendingOvertimeDecision,
+    pendingOvertimeMinutes,
     isRecordingOvertimeDecision: overtimeDecisionMutation.isPending,
     openOvertimeDecision,
     closeOvertimeDecision,
