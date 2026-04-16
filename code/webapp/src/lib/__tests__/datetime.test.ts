@@ -1,5 +1,10 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { currentTimeLabel, todayDateCdmx } from '../datetime'
+
+// Mock the timezone module to use CDMX timezone for deterministic tests
+vi.mock('../timezone', () => ({
+  getFrontendTimezone: () => 'America/Mexico_City',
+}))
 
 describe('currentTimeLabel', () => {
   afterEach(() => {

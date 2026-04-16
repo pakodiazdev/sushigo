@@ -8,21 +8,16 @@ import {
     type ClockMode,
 } from '@/services/clock-api';
 
-interface ApplicationClockStore {
+interface ApplicationClockState {
     // State
     clockState: ClockState | null;
     isLoading: boolean;
     isAvailable: boolean; // Whether clock simulation feature is enabled
     error: string | null;
     lastFetched: Date | null;
+}
 
-    // Computed (derived from clockState)
-    mode: ClockMode;
-    isSimulated: boolean;
-    applicationNowUtc: string | null;
-    businessDate: string | null;
-    businessTimezone: string | null;
-
+interface ApplicationClockActions {
     // Actions
     fetchClock: () => Promise<void>;
     setClockTime: (datetime: string) => Promise<boolean>;
@@ -31,30 +26,31 @@ interface ApplicationClockStore {
     clearError: () => void;
 }
 
-export const useApplicationClockStore = create<ApplicationClockStore>((set, get) => ({
+type ApplicationClockStore = ApplicationClockState & ApplicationClockActions;
+
+// Selectors for computed/derived state
+export const selectMode = (state: ApplicationClockState): ClockMode =>
+    state.clockState?.mode ?? 'system';
+
+export const selectIsSimulated = (state: ApplicationClockState): boolean =>
+    state.clockState?.mode === 'simulated';
+
+export const selectApplicationNowUtc = (state: ApplicationClockState): string | null =>
+    state.clockState?.application_now_utc ?? null;
+
+export const selectBusinessDate = (state: ApplicationClockState): string | null =>
+    state.clockState?.business_date ?? null;
+
+export const selectBusinessTimezone = (state: ApplicationClockState): string | null =>
+    state.clockState?.business_timezone ?? null;
+
+export const useApplicationClockStore = create<ApplicationClockStore>((set) => ({
     // Initial state
     clockState: null,
     isLoading: false,
     isAvailable: false,
     error: null,
     lastFetched: null,
-
-    // Computed getters
-    get mode() {
-        return get().clockState?.mode ?? 'system';
-    },
-    get isSimulated() {
-        return get().clockState?.mode === 'simulated';
-    },
-    get applicationNowUtc() {
-        return get().clockState?.application_now_utc ?? null;
-    },
-    get businessDate() {
-        return get().clockState?.business_date ?? null;
-    },
-    get businessTimezone() {
-        return get().clockState?.business_timezone ?? null;
-    },
 
     // Actions
     fetchClock: async () => {
@@ -162,19 +158,19 @@ export const useApplicationClockStore = create<ApplicationClockStore>((set, get)
  * Returns the application's current UTC time if available.
  */
 export function useApplicationNow(): string | null {
-    return useApplicationClockStore((state) => state.applicationNowUtc);
+    return useApplicationClockStore(selectApplicationNowUtc);
 }
 
 /**
  * Hook to check if clock is in simulated mode.
  */
 export function useIsClockSimulated(): boolean {
-    return useApplicationClockStore((state) => state.isSimulated);
+    return useApplicationClockStore(selectIsSimulated);
 }
 
 /**
  * Hook to get business date (Y-m-d in business timezone).
  */
 export function useBusinessDate(): string | null {
-    return useApplicationClockStore((state) => state.businessDate);
+    return useApplicationClockStore(selectBusinessDate);
 }
