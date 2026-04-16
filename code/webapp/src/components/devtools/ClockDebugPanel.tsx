@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Clock, Play, RotateCcw, FastForward, Rewind, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApplicationClockStore } from '@/stores/clock.store';
-import { formatDateTimeInFrontendTz } from '@/lib/timezone';
 
 /**
  * Debug panel for controlling Application Clock simulation.
@@ -24,12 +23,15 @@ export function ClockDebugPanel() {
 
     const [customDatetime, setCustomDatetime] = useState('');
 
-    // Don't render if feature is not available
-    if (!isAvailable && !isLoading) {
-        // Try to fetch once to check availability
-        if (!clockState) {
+    // Fetch clock state on mount to check availability
+    useEffect(() => {
+        if (!clockState && !isLoading) {
             fetchClock();
         }
+    }, [clockState, isLoading, fetchClock]);
+
+    // Don't render if feature is not available
+    if (!isAvailable && !isLoading) {
         return null;
     }
 
@@ -49,11 +51,13 @@ export function ClockDebugPanel() {
         await resetClockToSystem();
     };
 
+    // Format time in the business timezone (not browser local)
     const formatBusinessTime = (isoString: string | undefined) => {
-        if (!isoString) return '--:--:--';
-        return formatDateTimeInFrontendTz(isoString, {
+        if (!isoString || !clockState?.business_timezone) return '--:--:--';
+        return new Date(isoString).toLocaleString('es-MX', {
             dateStyle: 'medium',
             timeStyle: 'medium',
+            timeZone: clockState.business_timezone,
         });
     };
 

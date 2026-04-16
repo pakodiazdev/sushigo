@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Traits\HasPublicId;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -66,12 +67,12 @@ class EmploymentPeriod extends Model
     /**
      * Calculate the duration of this employment period in days.
      *
-     * @param  \DateTimeInterface|null  $referenceDate  Date to use as "today" for active periods.
-     *                                                  When null (default), uses system now().
-     *                                                  Callers with access to ApplicationClock should pass
-     *                                                  $clock->todayInBusinessTz() for testable business logic.
+     * @param  DateTimeInterface|null  $referenceDate  Date to use as "today" for active periods.
+     *                                                 When null (default), uses system now().
+     *                                                 Callers with access to ApplicationClock should pass
+     *                                                 $clock->todayInBusinessTz() for testable business logic.
      */
-    public function durationInDays(?\DateTimeInterface $referenceDate = null): int
+    public function durationInDays(?DateTimeInterface $referenceDate = null): int
     {
         $end = $this->end_date ?? ($referenceDate ?? now());
 

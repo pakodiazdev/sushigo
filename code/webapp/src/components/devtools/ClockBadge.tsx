@@ -48,6 +48,7 @@ export function ClockBadge() {
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false,
+                timeZone: clockState.business_timezone,
             });
             setDateInput(businessDate);
             setTimeInput(businessTime);

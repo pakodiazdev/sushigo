@@ -91,7 +91,7 @@ class ScheduleDayOverride extends Model
      */
     public function scopeNotExpired(Builder $query, DateTimeInterface|string $referenceDate): Builder
     {
-        $dateString = $referenceDate instanceof \DateTimeInterface
+        $dateString = $referenceDate instanceof DateTimeInterface
             ? $referenceDate->format('Y-m-d')
             : $referenceDate;
 
