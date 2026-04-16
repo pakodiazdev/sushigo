@@ -110,7 +110,7 @@ export interface CloseDayResponse {
   absences: number
   leaves: number
   day_offs: number
-  overtime_pending: OvertimePendingEntry[]
+  overtime_pending?: OvertimePendingEntry[]
 }
 
 // #endregion

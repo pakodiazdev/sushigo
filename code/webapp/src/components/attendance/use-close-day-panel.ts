@@ -190,10 +190,8 @@ export function useCloseDayPanel(
       {
         onSuccess: (result) => {
           close()
-          const pending = result.data.data.overtime_pending
-          if (pending.length > 0) {
-            setOvertimePending(pending)
-          }
+          const pending = result.data.data.overtime_pending ?? []
+          setOvertimePending(pending)
         },
       },
     )

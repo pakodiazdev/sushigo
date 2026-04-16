@@ -236,14 +236,14 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const currentBulkOvertime = bulkOvertimeQueue[0] ?? null
 
   const enqueueBulkOvertime = useCallback((entries: OvertimePendingEntry[]) => {
-    setBulkOvertimeQueue(entries)
+    setBulkOvertimeQueue(queue => [...queue, ...entries])
   }, [])
 
   const confirmBulkOvertimeDecision = useCallback((authorize: boolean) => {
     if (!currentBulkOvertime) return
     overtimeDecisionMutation.mutate(
       { attendance_id: currentBulkOvertime.attendance_id, authorize },
-      { onSettled: () => setBulkOvertimeQueue(q => q.slice(1)) },
+      { onSuccess: () => setBulkOvertimeQueue(q => q.slice(1)) },
     )
   }, [currentBulkOvertime, overtimeDecisionMutation])
 
