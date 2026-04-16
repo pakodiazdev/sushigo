@@ -34,7 +34,7 @@ vi.mock('@/services/attendance-api', () => ({
     lunchStart: vi.fn(),
     lunchReturn: vi.fn(),
     checkOut: vi.fn(),
-    overtimeDecision: vi.fn(),
+    overtimeDecision: vi.fn().mockResolvedValue({ data: { status: 200, data: {} } }),
     closeDay: vi.fn(),
     markDayStatus: vi.fn(),
   },
@@ -634,6 +634,135 @@ describe('useTodayAttendancePage', () => {
         attendance: { id: 'att-1', check_in: '2026-04-01T13:00:00Z' } as TodayAttendanceRow['attendance'],
       })
       expect(result.current.getPhase(checkedInRow)).toBe('checked-in')
+    })
+  })
+
+  // ── Bulk overtime queue ──────────────────────────────────────────────────────
+
+  describe('bulk overtime queue', () => {
+    it('currentBulkOvertime is null when queue is empty', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      expect(result.current.currentBulkOvertime).toBeNull()
+    })
+
+    it('enqueueBulkOvertime sets currentBulkOvertime to first entry', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const entries = [
+        { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+        { attendance_id: 'att-002', employee_name: 'María García', overtime_minutes: 20 },
+      ]
+
+      act(() => {
+        result.current.enqueueBulkOvertime(entries)
+      })
+
+      expect(result.current.currentBulkOvertime).toEqual(entries[0])
+    })
+
+    it('closeBulkOvertimeDecision clears the entire queue', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.enqueueBulkOvertime([
+          { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+        ])
+      })
+
+      act(() => {
+        result.current.closeBulkOvertimeDecision()
+      })
+
+      expect(result.current.currentBulkOvertime).toBeNull()
+    })
+
+    it('confirmBulkOvertimeDecision does nothing when queue is empty', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.confirmBulkOvertimeDecision(true)
+      })
+
+      expect(attendanceApi.overtimeDecision).not.toHaveBeenCalled()
+    })
+
+    it('confirmBulkOvertimeDecision calls API with the current entry attendance_id', async () => {
+      vi.mocked(attendanceApi.overtimeDecision).mockResolvedValueOnce({
+        data: { status: 200, data: {} },
+      } as never)
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.enqueueBulkOvertime([
+          { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+        ])
+      })
+
+      await act(async () => {
+        result.current.confirmBulkOvertimeDecision(true)
+      })
+
+      await waitFor(() => {
+        expect(attendanceApi.overtimeDecision).toHaveBeenCalledWith('att-001', { authorize: true })
+      })
+    })
+
+    it('confirmBulkOvertimeDecision advances queue after API settles', async () => {
+      vi.mocked(attendanceApi.overtimeDecision).mockResolvedValue({
+        data: { status: 200, data: {} },
+      } as never)
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const entries = [
+        { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+        { attendance_id: 'att-002', employee_name: 'María García', overtime_minutes: 20 },
+      ]
+
+      act(() => {
+        result.current.enqueueBulkOvertime(entries)
+      })
+
+      // First entry is shown
+      expect(result.current.currentBulkOvertime).toEqual(entries[0])
+
+      // Confirm first decision
+      await act(async () => {
+        result.current.confirmBulkOvertimeDecision(false)
+      })
+
+      // Queue advances to second entry
+      await waitFor(() => {
+        expect(result.current.currentBulkOvertime).toEqual(entries[1])
+      })
+    })
+
+    it('currentBulkOvertime becomes null after last entry is confirmed', async () => {
+      vi.mocked(attendanceApi.overtimeDecision).mockResolvedValue({
+        data: { status: 200, data: {} },
+      } as never)
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.enqueueBulkOvertime([
+          { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+        ])
+      })
+
+      await act(async () => {
+        result.current.confirmBulkOvertimeDecision(true)
+      })
+
+      await waitFor(() => {
+        expect(result.current.currentBulkOvertime).toBeNull()
+      })
     })
   })
 
