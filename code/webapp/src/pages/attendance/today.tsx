@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
 import { RefreshCw, DoorClosed } from 'lucide-react'
@@ -56,12 +57,17 @@ export function TodayAttendancePage() {
     openCheckOut,
     closeCheckOut,
     confirmCheckOut,
-    // Overtime decision
+    // Overtime decision (individual)
     pendingOvertimeDecision,
     isRecordingOvertimeDecision,
     openOvertimeDecision,
     closeOvertimeDecision,
     confirmOvertimeDecision,
+    // Bulk overtime queue
+    currentBulkOvertime,
+    enqueueBulkOvertime,
+    confirmBulkOvertimeDecision,
+    closeBulkOvertimeDecision,
     // Mark day status
     markDayStatus,
   } = useTodayAttendancePage()
@@ -69,9 +75,36 @@ export function TodayAttendancePage() {
   const closeDayPanel = useCloseDayPanel(rows, branchId)
   const maxTime = currentTimeLabel()
 
+  // Feed bulk overtime decisions from the close-day panel into the queue
+  const { overtimePending, clearOvertimePending } = closeDayPanel
+  useEffect(() => {
+    if (overtimePending.length > 0) {
+      enqueueBulkOvertime(overtimePending)
+      clearOvertimePending()
+    }
+  }, [overtimePending, enqueueBulkOvertime, clearOvertimePending])
+
   const pendingOvertimeMinutes = pendingOvertimeDecision
     ? (rows.find(r => r.attendance?.id === pendingOvertimeDecision.attendanceId)?.attendance?.overtime_minutes ?? 0)
     : 0
+
+  // Unified overtime dialog props — individual flow takes priority over bulk queue
+  const isOvertimeDialogOpen = !!pendingOvertimeDecision || !!currentBulkOvertime
+  const overtimeDialogEmployeeName = pendingOvertimeDecision
+    ? `${pendingOvertimeDecision.employee.first_name} ${pendingOvertimeDecision.employee.last_name}`
+    : (currentBulkOvertime?.employee_name ?? '')
+  const overtimeDialogMinutes = pendingOvertimeDecision
+    ? pendingOvertimeMinutes
+    : (currentBulkOvertime?.overtime_minutes ?? 0)
+  const handleOvertimeAuthorize = pendingOvertimeDecision
+    ? () => confirmOvertimeDecision(true)
+    : () => confirmBulkOvertimeDecision(true)
+  const handleOvertimeReject = pendingOvertimeDecision
+    ? () => confirmOvertimeDecision(false)
+    : () => confirmBulkOvertimeDecision(false)
+  const handleOvertimeClose = pendingOvertimeDecision
+    ? closeOvertimeDecision
+    : closeBulkOvertimeDecision
 
   if (!hasBranch) {
     return (
@@ -206,19 +239,15 @@ export function TodayAttendancePage() {
         isLoading={isCheckingOut}
       />
 
-      {/* Overtime Decision Dialog */}
+      {/* Overtime Decision Dialog — handles both individual and bulk day close flows */}
       <OvertimeDecisionDialog
-        isOpen={!!pendingOvertimeDecision}
-        employeeName={
-          pendingOvertimeDecision
-            ? `${pendingOvertimeDecision.employee.first_name} ${pendingOvertimeDecision.employee.last_name}`
-            : ''
-        }
-        overtimeMinutes={pendingOvertimeMinutes}
+        isOpen={isOvertimeDialogOpen}
+        employeeName={overtimeDialogEmployeeName}
+        overtimeMinutes={overtimeDialogMinutes}
         isLoading={isRecordingOvertimeDecision}
-        onAuthorize={() => confirmOvertimeDecision(true)}
-        onReject={() => confirmOvertimeDecision(false)}
-        onClose={closeOvertimeDecision}
+        onAuthorize={handleOvertimeAuthorize}
+        onReject={handleOvertimeReject}
+        onClose={handleOvertimeClose}
       />
 
       {/* Close Day Panel */}

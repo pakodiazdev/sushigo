@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
-import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
 
 interface PendingAttendanceData {
@@ -100,12 +100,17 @@ export interface UseTodayAttendancePageResult {
   openCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeCheckOut: () => void
   confirmCheckOut: (time: string) => void
-  // Overtime decision action
+  // Overtime decision action (individual)
   pendingOvertimeDecision: PendingAttendanceData | null
   isRecordingOvertimeDecision: boolean
   openOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeOvertimeDecision: () => void
   confirmOvertimeDecision: (authorize: boolean) => void
+  // Bulk overtime queue (from bulk day close)
+  currentBulkOvertime: OvertimePendingEntry | null
+  enqueueBulkOvertime: (entries: OvertimePendingEntry[]) => void
+  confirmBulkOvertimeDecision: (authorize: boolean) => void
+  closeBulkOvertimeDecision: () => void
   // Mark day status action
   isMarkingDayStatus: boolean
   markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
@@ -225,6 +230,27 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     )
   }, [pendingOvertimeDecision, overtimeDecisionMutation, closeOvertimeDecision])
 
+  // ── Bulk overtime queue (after bulk day close) ───────────────────────────────
+  const [bulkOvertimeQueue, setBulkOvertimeQueue] = useState<OvertimePendingEntry[]>([])
+
+  const currentBulkOvertime = bulkOvertimeQueue[0] ?? null
+
+  const enqueueBulkOvertime = useCallback((entries: OvertimePendingEntry[]) => {
+    setBulkOvertimeQueue(entries)
+  }, [])
+
+  const confirmBulkOvertimeDecision = useCallback((authorize: boolean) => {
+    if (!currentBulkOvertime) return
+    overtimeDecisionMutation.mutate(
+      { attendance_id: currentBulkOvertime.attendance_id, authorize },
+      { onSettled: () => setBulkOvertimeQueue(q => q.slice(1)) },
+    )
+  }, [currentBulkOvertime, overtimeDecisionMutation])
+
+  const closeBulkOvertimeDecision = useCallback(() => {
+    setBulkOvertimeQueue([])
+  }, [])
+
   // ── Mark day status ───────────────────────────────────────────────────────────
   const markDayStatus = useCallback(
     (employee: TodayAttendanceEmployee, status: 'ABSENCE') => {
@@ -270,12 +296,17 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     openCheckOut,
     closeCheckOut,
     confirmCheckOut,
-    // Overtime decision
+    // Overtime decision (individual)
     pendingOvertimeDecision,
     isRecordingOvertimeDecision: overtimeDecisionMutation.isPending,
     openOvertimeDecision,
     closeOvertimeDecision,
     confirmOvertimeDecision,
+    // Bulk overtime queue
+    currentBulkOvertime,
+    enqueueBulkOvertime,
+    confirmBulkOvertimeDecision,
+    closeBulkOvertimeDecision,
     // Mark day status
     isMarkingDayStatus: markDayStatusMutation.isPending,
     markDayStatus,

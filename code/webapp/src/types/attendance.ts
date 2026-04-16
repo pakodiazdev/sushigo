@@ -98,12 +98,19 @@ export interface CloseDayRequest {
   lunch_returns?: CloseDayLunchReturn[]
 }
 
+export interface OvertimePendingEntry {
+  attendance_id: string
+  employee_name: string
+  overtime_minutes: number
+}
+
 export interface CloseDayResponse {
   lunch_returns: number
   check_outs: number
   absences: number
   leaves: number
   day_offs: number
+  overtime_pending: OvertimePendingEntry[]
 }
 
 // #endregion

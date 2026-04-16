@@ -183,8 +183,52 @@ class CloseDayApiTest extends TestCase
                     'absences',
                     'leaves',
                     'day_offs',
+                    'overtime_pending',
                 ],
             ]);
+    }
+
+    #[Test]
+    public function returns_overtime_pending_when_employees_worked_extra_time(): void
+    {
+        // Employee returned from lunch; schedule ends at 17:00 — closing at 18:00 → 60 min overtime
+        ['employee' => $employee] = $this->makeReturnedEmployee();
+
+        $response = $this->postJson('/api/v1/attendances/close-day', [
+            'branch_id' => $this->branchId,
+            'close_time' => '18:00',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.check_outs', 1);
+
+        $data = $response->json('data.overtime_pending');
+        $this->assertCount(1, $data);
+        $this->assertSame(
+            "{$employee->first_name} {$employee->last_name}",
+            $data[0]['employee_name'],
+        );
+        $this->assertSame(60, $data[0]['overtime_minutes']);
+        $this->assertNotEmpty($data[0]['attendance_id']);
+
+        // overtime_authorized_at is still null — decision was not recorded yet
+        $att = Attendance::where('employee_id', $employee->id)->first();
+        $this->assertNull($att->overtime_authorized_at);
+    }
+
+    #[Test]
+    public function returns_empty_overtime_pending_when_no_employee_has_overtime(): void
+    {
+        // Closing exactly at expected_end (17:00) → overtime_minutes = 0
+        $this->makeReturnedEmployee();
+
+        $response = $this->postJson('/api/v1/attendances/close-day', [
+            'branch_id' => $this->branchId,
+            'close_time' => '17:00',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.overtime_pending', []);
     }
 
     #[Test]
