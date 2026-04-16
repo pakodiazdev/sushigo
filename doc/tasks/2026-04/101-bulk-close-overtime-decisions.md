@@ -45,37 +45,37 @@ for all bulk-closed employees, making overtime payment decisions impossible to t
 
 ## ✅ Backend Tasks
 
-- [ ] 🔧 **`CloseDayAction`** — after batch check-outs (step 2), query attendances with
+- [x] 🔧 **`CloseDayAction`** — after batch check-outs (step 2), query attendances with
   `overtime_minutes > 0` AND `overtime_authorized_at IS NULL`; collect them as
   `overtime_pending: [{attendance_id, employee_name, overtime_minutes}]`
-- [ ] 🌐 **`CloseDayController` / response** — include `overtime_pending` array in the
+- [x] 🌐 **`CloseDayController` / response** — include `overtime_pending` array in the
   success response (additive, non-breaking change)
-- [ ] 🧪 **`CloseDayTest`** — add test case: when one or more employees have overtime,
+- [x] 🧪 **`CloseDayTest`** — add test case: when one or more employees have overtime,
   `overtime_pending` is present in the response with the correct entries
 
 ## ✅ Frontend Tasks
 
-- [ ] 📝 **`src/types/attendance.ts`** — add `OvertimePendingEntry` type and extend
+- [x] 📝 **`src/types/attendance.ts`** — add `OvertimePendingEntry` type and extend
   `CloseDayResponse` to include `overtime_pending?: OvertimePendingEntry[]`
-- [ ] 🔧 **`src/services/attendance-api.ts`** — update `closeDay()` return type
-- [ ] 🔧 **`use-close-day-panel.ts`** — expose `overtimePending: OvertimePendingEntry[]`
+- [x] 🔧 **`src/services/attendance-api.ts`** — update `closeDay()` return type
+- [x] 🔧 **`use-close-day-panel.ts`** — expose `overtimePending: OvertimePendingEntry[]`
   from mutation `onSuccess`; add `clearOvertimePending()` helper
-- [ ] 🔧 **`-use-today-attendance-page.ts`** — after bulk close succeeds, if
+- [x] 🔧 **`-use-today-attendance-page.ts`** — after bulk close succeeds, if
   `overtimePending.length > 0`, feed entries into the existing overtime decision queue
   (`openOvertimeDecision` / `confirmOvertimeDecision` infrastructure)
-- [ ] 📱 **`CloseDayPanel.tsx`** — no structural changes needed; the post-panel dialog
+- [x] 📱 **`CloseDayPanel.tsx`** — no structural changes needed; the post-panel dialog
   queue reuses the existing `OvertimeDecisionDialog` component already on the page
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] When closing a day where at least one employee has overtime, the `OvertimeDecisionDialog`
+- [x] When closing a day where at least one employee has overtime, the `OvertimeDecisionDialog`
   appears sequentially for each affected employee after the panel closes
-- [ ] Manager can authorize or reject overtime for each employee — same as individual flow
-- [ ] When no employee has overtime, the bulk close finishes without showing any dialog (no regression)
-- [ ] `overtime_authorized_at` is set for all employees with overtime after the bulk close + queue
-- [ ] Existing individual check-out overtime flow is unaffected
+- [x] Manager can authorize or reject overtime for each employee — same as individual flow
+- [x] When no employee has overtime, the bulk close finishes without showing any dialog (no regression)
+- [x] `overtime_authorized_at` is set for all employees with overtime after the bulk close + queue
+- [x] Existing individual check-out overtime flow is unaffected
 
 ---
 
