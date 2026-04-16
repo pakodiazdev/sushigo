@@ -50,8 +50,8 @@ Excluded (this task):
 - [x] 🔧 Create centralized frontend timezone resolver (`getFrontendTimezone()`), defaulting to browser timezone.
 - [x] 🔧 Add topbar indicator for clock mode (`system` vs `simulated`).
 - [x] 🔧 Add debug controls for set/shift/reset in allowed environments.
-- [ ] 🔧 Route datetime parse/render utilities through centralized timezone resolver.
-- [ ] 🧪 Add tests for store behavior and UI mode rendering.
+- [x] 🔧 Route datetime parse/render utilities through centralized timezone resolver.
+- [x] 🧪 Add tests for store behavior and UI mode rendering.
 
 ### Phase 3 - Critical Domain Migration (Attendance/Payroll)
 
@@ -62,26 +62,26 @@ Excluded (this task):
 - [x] 🔧 `OperatingUnit::scopeActiveEvents()` - Add required `$referenceDate` parameter (callers inject clock)
 - [x] 🔧 `ScheduleDayOverride::scopeNotExpired()` - Add required `$referenceDate` parameter
 
-**Pending:**
-- [ ] 🔧 Replace business "now" usage in attendance page flows (frontend) with Application Clock data.
-- [ ] 🔧 Refactor `code/webapp/src/lib/datetime.ts` consumers that drive business logic.
+**Frontend migrations completed:**
+- [x] 🔧 Replace business "now" usage in attendance page flows (frontend) with Application Clock data.
+- [x] 🔧 Refactor `code/webapp/src/lib/datetime.ts` consumers that drive business logic.
 - [ ] 🧪 Update E2E scenarios to validate simulated-time behavior end-to-end.
 
 ### Phase 4 - Hardening
 
-- [ ] 📝 Add backend/frontend conventions for Application Clock usage.
-- [ ] 🔧 Add static checks (lint/script) to flag forbidden clock usage in business paths.
-- [ ] 🧪 Add regression test cases for timezone-sensitive cutoffs and day boundaries.
+- [x] 📝 Add backend/frontend conventions for Application Clock usage.
+- [x] 🔧 Add static checks (lint/script) to flag forbidden clock usage in business paths.
+- [x] 🧪 Add regression test cases for timezone-sensitive cutoffs and day boundaries.
 
 ---
 
 ## 🎯 Acceptance Criteria
 
 - [x] Backend exposes a single Application Clock service used by business-time rules.
-- [ ] Frontend business decisions consume backend-provided clock values.
+- [x] Frontend business decisions consume backend-provided clock values.
 - [x] Time simulation works in `local/devtest/testing` and is blocked in production.
-- [ ] Attendance critical flows (check-in/out, close-day, overtime) behave consistently with simulated time.
-- [ ] New code conventions are documented and adopted.
+- [x] Attendance critical flows (check-in/out, close-day, overtime) behave consistently with simulated time.
+- [x] New code conventions are documented and adopted.
 
 ---
 
