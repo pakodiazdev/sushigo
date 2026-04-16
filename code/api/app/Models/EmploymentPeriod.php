@@ -63,9 +63,17 @@ class EmploymentPeriod extends Model
         return $query->where('is_active', true);
     }
 
-    public function durationInDays(): int
+    /**
+     * Calculate the duration of this employment period in days.
+     *
+     * @param  \DateTimeInterface|null  $referenceDate  Date to use as "today" for active periods.
+     *                                                  When null (default), uses system now().
+     *                                                  Callers with access to ApplicationClock should pass
+     *                                                  $clock->todayInBusinessTz() for testable business logic.
+     */
+    public function durationInDays(?\DateTimeInterface $referenceDate = null): int
     {
-        $end = $this->end_date ?? now();
+        $end = $this->end_date ?? ($referenceDate ?? now());
 
         return (int) $this->start_date->diffInDays($end);
     }

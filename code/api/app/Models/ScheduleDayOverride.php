@@ -83,17 +83,21 @@ class ScheduleDayOverride extends Model
     }
 
     /**
-     * Return overrides that have not yet expired (active today or in the future).
+     * Return overrides that have not yet expired (active on reference date or in the future).
      *
      * Useful for displaying upcoming overrides alongside the base schedule.
+     *
+     * @param  DateTimeInterface|string  $referenceDate  The date to compare against (use ApplicationClock::todayInBusinessTz())
      */
-    public function scopeNotExpired(Builder $query): Builder
+    public function scopeNotExpired(Builder $query, DateTimeInterface|string $referenceDate): Builder
     {
-        $today = now()->toDateString();
+        $dateString = $referenceDate instanceof \DateTimeInterface
+            ? $referenceDate->format('Y-m-d')
+            : $referenceDate;
 
-        return $query->where(function (Builder $q) use ($today) {
+        return $query->where(function (Builder $q) use ($dateString) {
             $q->whereNull('effective_to')
-                ->orWhere('effective_to', '>=', $today);
+                ->orWhere('effective_to', '>=', $dateString);
         });
     }
 

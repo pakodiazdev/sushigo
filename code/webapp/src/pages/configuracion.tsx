@@ -4,6 +4,7 @@ import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
+import { ClockDebugPanel } from '@/components/devtools/ClockDebugPanel';
 
 export const Route = createFileRoute('/configuracion')({
     beforeLoad: requireRole('super-admin'),
@@ -23,8 +24,13 @@ export function ConfiguracionPage() {
                 </Button>
             </PageHeader>
 
-            <div className="mt-6 p-8 text-center border-2 border-dashed rounded-lg border-sushigo-cream/50">
-                <p className="text-muted-foreground">Página en construcción</p>
+            <div className="mt-6 grid gap-6">
+                {/* Clock Debug Panel - only shows if feature is available */}
+                <ClockDebugPanel />
+
+                <div className="p-8 text-center border-2 border-dashed rounded-lg border-sushigo-cream/50">
+                    <p className="text-muted-foreground">Más opciones de configuración próximamente</p>
+                </div>
             </div>
         </PageContainer>
     );

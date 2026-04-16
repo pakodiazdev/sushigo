@@ -98,6 +98,15 @@ if (app()->environment('testing', 'local', 'dev', 'devtest')) {
         Route::get('users', ListDevUsersController::class)->name('users');
         Route::post('login', DevLoginController::class)->name('login');
     });
+
+    // ── Devtools clock simulation routes ──────────────────────────────────
+    // Protected by ClockSimulationGuard (env check + feature flag)
+    Route::prefix('v1/devtools/clock')->name('devtools.clock.')->group(function () {
+        Route::get('/', \App\Http\Controllers\Api\V1\Devtools\GetClockController::class)->name('get');
+        Route::post('set', \App\Http\Controllers\Api\V1\Devtools\SetClockController::class)->name('set');
+        Route::post('shift', \App\Http\Controllers\Api\V1\Devtools\ShiftClockController::class)->name('shift');
+        Route::post('reset', \App\Http\Controllers\Api\V1\Devtools\ResetClockController::class)->name('reset');
+    });
 }
 
 // V1 API Routes

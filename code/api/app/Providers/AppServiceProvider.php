@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Contracts\PasswordResetTokenRecorder;
 use App\Services\Testing\FileTokenRecorder;
 use App\Services\Testing\NullTokenRecorder;
+use App\Support\Clock\ApplicationClock;
+use App\Support\Clock\DatabaseApplicationClock;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
         } else {
             $this->app->singleton(PasswordResetTokenRecorder::class, NullTokenRecorder::class);
         }
+
+        // Application Clock: single source of truth for business time
+        $this->app->singleton(ApplicationClock::class, DatabaseApplicationClock::class);
     }
 
     /**

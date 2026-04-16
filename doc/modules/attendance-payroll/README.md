@@ -3,6 +3,8 @@
 ## Included files
 - `attendance-payroll-spec.es.md` — Module spec (Spanish)
 - `attendance-payroll-spec.en.md` — Module spec (English)
+- `attendance-payroll-application-clock.es.md` — Application Clock adoption for attendance/payroll (Spanish)
+- `attendance-payroll-application-clock.en.md` — Application Clock adoption for attendance/payroll (English)
 - `mvp-scope-attendance-payroll.es.md` — MVP scope (Spanish)
 - `mvp-scope-attendance-payroll.en.md` — MVP scope (English)
 - `domain-model.md` — **Domain model (frozen contract)**: ER diagrams, field dictionaries, UML class/state/sequence diagrams

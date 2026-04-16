@@ -6,6 +6,7 @@ import { useRouter } from '@tanstack/react-router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ClockBadge } from '@/components/devtools/ClockBadge';
 import logoImage from '@/assets/sushigo-logo.png';
 import { useState, useRef, useEffect } from 'react';
 import { useCanAccess } from '@/hooks/use-can-access';
@@ -82,6 +83,9 @@ export default function Header() {
 
                 {/* Right Section */}
                 <div className="flex items-center gap-2">
+                    {/* Clock Simulation Badge (devtools) */}
+                    <ClockBadge />
+
                     {/* Search Button (Mobile only) */}
                     <Button
                         variant="ghost"
