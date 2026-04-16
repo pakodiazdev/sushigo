@@ -27,7 +27,10 @@ class SetClockController extends Controller
             'datetime' => ['required', 'date'],
         ]);
 
-        $targetDatetime = CarbonImmutable::parse($validated['datetime'])->utc();
+        // Interpret the datetime in the business timezone, then convert to UTC
+        // The user inputs time in their local/business context (e.g., 13:00 Mexico City)
+        $businessTz = $clock->businessTimezone();
+        $targetDatetime = CarbonImmutable::parse($validated['datetime'], $businessTz)->utc();
 
         $state = ApplicationClockState::current();
         $state->update([

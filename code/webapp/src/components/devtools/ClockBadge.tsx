@@ -1,68 +1,199 @@
-import { useEffect } from 'react';
-import { Clock, AlertTriangle } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Clock, AlertTriangle, RotateCcw, Play, X, Settings } from 'lucide-react';
 import { useApplicationClockStore, selectIsSimulated } from '@/stores/clock.store';
 
 /**
  * Clock mode badge for the header.
  * Shows a warning indicator when clock is in simulated mode.
+ * Clickable to open clock configuration panel.
  * Only visible when clock simulation feature is available.
  */
 export function ClockBadge() {
     const clockState = useApplicationClockStore((state) => state.clockState);
     const isAvailable = useApplicationClockStore((state) => state.isAvailable);
+    const isLoading = useApplicationClockStore((state) => state.isLoading);
     const isSimulated = useApplicationClockStore(selectIsSimulated);
     const fetchClock = useApplicationClockStore((state) => state.fetchClock);
+    const setClockTime = useApplicationClockStore((state) => state.setClockTime);
+    const resetClockToSystem = useApplicationClockStore((state) => state.resetClockToSystem);
+
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [dateInput, setDateInput] = useState('');
+    const [timeInput, setTimeInput] = useState('');
+    const panelRef = useRef<HTMLDivElement>(null);
 
     // Fetch clock state on mount
     useEffect(() => {
         fetchClock();
     }, [fetchClock]);
 
+    // Close panel on click outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+                setIsPanelOpen(false);
+            }
+        }
+        if (isPanelOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [isPanelOpen]);
+
+    // Initialize inputs when panel opens
+    useEffect(() => {
+        if (isPanelOpen && clockState) {
+            const businessDate = clockState.business_date;
+            const businessTime = new Date(clockState.business_now).toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            });
+            setDateInput(businessDate);
+            setTimeInput(businessTime);
+        }
+    }, [isPanelOpen, clockState]);
+
     // Don't render if feature is not available
     if (!isAvailable || !clockState) {
         return null;
     }
 
-    // Don't show badge in system mode
-    if (!isSimulated) {
-        return null;
-    }
-
+    // Display time in the BUSINESS timezone (not browser local)
     const businessTime = new Date(clockState.business_now).toLocaleTimeString('es-MX', {
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: clockState.business_timezone,
     });
 
-    return (
-        <div className="relative group">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/20 border border-amber-500/50 text-amber-600 dark:text-amber-400 text-xs font-medium cursor-help">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                <Clock className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">SIMULATED</span>
-                <span className="sm:hidden">{businessTime}</span>
-            </div>
+    const handleSetTime = async () => {
+        if (!dateInput || !timeInput) return;
+        const datetime = `${dateInput} ${timeInput}:00`;
+        const success = await setClockTime(datetime);
+        if (success) {
+            setIsPanelOpen(false);
+        }
+    };
 
-            {/* Tooltip */}
-            <div className="invisible group-hover:visible absolute z-50 right-0 top-full mt-2 w-64 px-3 py-2 text-sm bg-popover border rounded-lg shadow-lg">
-                <p className="font-semibold text-amber-600 dark:text-amber-400 mb-2">
-                    ⚠️ Clock Simulation Active
-                </p>
-                <div className="space-y-1 text-sm">
-                    <p>
-                        <span className="text-muted-foreground">Business Time:</span>{' '}
-                        <span className="font-medium">{clockState.business_now}</span>
-                    </p>
-                    <p>
-                        <span className="text-muted-foreground">Business Date:</span>{' '}
-                        <span className="font-medium">{clockState.business_date}</span>
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                        Timezone: {clockState.business_timezone}
-                    </p>
+    const handleReset = async () => {
+        const success = await resetClockToSystem();
+        if (success) {
+            setIsPanelOpen(false);
+        }
+    };
+
+    const togglePanel = () => {
+        setIsPanelOpen(!isPanelOpen);
+    };
+
+    return (
+        <div className="relative" ref={panelRef}>
+            {/* Badge - clickable */}
+            <button
+                onClick={togglePanel}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                    isSimulated
+                        ? 'bg-amber-500/20 border border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30'
+                        : 'bg-blue-500/20 border border-blue-500/50 text-blue-600 dark:text-blue-400 hover:bg-blue-500/30'
+                }`}
+                title="Click to configure clock"
+            >
+                {isSimulated && <AlertTriangle className="h-3.5 w-3.5" />}
+                <Clock className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{isSimulated ? 'SIMULATED' : 'SYSTEM'}</span>
+                <span className="sm:hidden">{businessTime}</span>
+                <Settings className="h-3 w-3 opacity-60" />
+            </button>
+
+            {/* Configuration Panel */}
+            {isPanelOpen && (
+                <div className="absolute z-50 right-0 top-full mt-2 w-72 bg-popover border rounded-lg shadow-xl">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/50 rounded-t-lg">
+                        <h3 className="text-sm font-semibold flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Clock Configuration
+                        </h3>
+                        <button
+                            onClick={() => setIsPanelOpen(false)}
+                            className="p-1 hover:bg-muted rounded"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+
+                    {/* Current State */}
+                    <div className="px-3 py-2 border-b bg-muted/30">
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Current Mode:</span>
+                            <span
+                                className={`font-medium ${isSimulated ? 'text-amber-500' : 'text-green-500'}`}
+                            >
+                                {isSimulated ? '⚠️ Simulated' : '✓ System'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs mt-1">
+                            <span className="text-muted-foreground">Business Time:</span>
+                            <span className="font-mono">{clockState.business_now}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs mt-1">
+                            <span className="text-muted-foreground">Timezone:</span>
+                            <span className="font-mono text-muted-foreground">
+                                {clockState.business_timezone}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Set Time Form */}
+                    <div className="p-3 space-y-3">
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">
+                                Set Simulated Time
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="date"
+                                    value={dateInput}
+                                    onChange={(e) => setDateInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSetTime()}
+                                    className="flex-1 px-2 py-1.5 text-sm border rounded bg-background focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                    type="time"
+                                    value={timeInput}
+                                    onChange={(e) => setTimeInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSetTime()}
+                                    className="w-32 px-2 py-1.5 text-sm border rounded bg-background focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleSetTime}
+                                disabled={isLoading || !dateInput || !timeInput}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <Play className="h-3.5 w-3.5" />
+                                Set Time
+                            </button>
+                            <button
+                                onClick={handleReset}
+                                disabled={isLoading || !isSimulated}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Reset
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground text-center">
+                            ⚠️ Only for development/testing
+                        </p>
+                    </div>
                 </div>
-                {/* Arrow */}
-                <span className="absolute right-4 bottom-full border-8 border-transparent border-b-popover" />
-            </div>
+            )}
         </div>
     );
 }
