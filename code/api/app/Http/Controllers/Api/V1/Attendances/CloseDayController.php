@@ -37,7 +37,22 @@ use App\Http\Responses\Common\ResponseEntity;
  *                 type="object",
  *                 @OA\Property(property="lunch_returns", type="integer", example=2),
  *                 @OA\Property(property="check_outs", type="integer", example=5),
- *                 @OA\Property(property="absences", type="integer", example=1)
+ *                 @OA\Property(property="absences", type="integer", example=1),
+ *                 @OA\Property(property="leaves", type="integer", example=0),
+ *                 @OA\Property(property="day_offs", type="integer", example=1),
+ *                 @OA\Property(
+ *                     property="overtime_pending",
+ *                     type="array",
+ *                     description="Employees who worked overtime and have no authorization decision yet",
+ *
+ *                     @OA\Items(
+ *                         type="object",
+ *
+ *                         @OA\Property(property="attendance_id", type="string", example="01J..."),
+ *                         @OA\Property(property="employee_name", type="string", example="Ana López"),
+ *                         @OA\Property(property="overtime_minutes", type="integer", example=35)
+ *                     )
+ *                 )
  *             )
  *         )
  *     ),

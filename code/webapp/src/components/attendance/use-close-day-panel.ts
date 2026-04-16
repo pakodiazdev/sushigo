@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useCloseDay } from '@/services/attendance-hooks'
 import { getAttendancePhase, formatTime } from '@/types/attendance'
-import type { TodayAttendanceRow, CloseDayLunchReturn } from '@/types/attendance'
+import type { TodayAttendanceRow, CloseDayLunchReturn, OvertimePendingEntry } from '@/types/attendance'
 import { currentTimeLabel } from '@/lib/datetime'
 
 export interface LunchReturnEntry {
@@ -40,6 +40,9 @@ export interface UseCloseDayPanelResult {
   // Action
   confirm: () => void
   isSubmitting: boolean
+  // Overtime decisions pending after bulk close
+  overtimePending: OvertimePendingEntry[]
+  clearOvertimePending: () => void
 }
 
 /**
@@ -72,6 +75,7 @@ export function useCloseDayPanel(
   const [isOpen, setIsOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState<CloseDayStep>('lunch-returns')
   const [closeTime, setCloseTime] = useState(currentTimeLabel)
+  const [overtimePending, setOvertimePending] = useState<OvertimePendingEntry[]>([])
   const closeDayMutation = useCloseDay()
 
   // Entries for lunch returns: employees at-lunch (lunch_start but no lunch_end)
@@ -165,6 +169,10 @@ export function useCloseDayPanel(
     setCurrentStep('lunch-returns')
   }, [])
 
+  const clearOvertimePending = useCallback(() => {
+    setOvertimePending([])
+  }, [])
+
   const confirm = useCallback(() => {
     if (!branchId) return
 
@@ -179,7 +187,15 @@ export function useCloseDayPanel(
         close_time: closeTime,
         lunch_returns: lunchReturns.length > 0 ? lunchReturns : undefined,
       },
-      { onSuccess: () => close() },
+      {
+        onSuccess: (result) => {
+          close()
+          const pending = result.data.data.overtime_pending
+          if (pending.length > 0) {
+            setOvertimePending(pending)
+          }
+        },
+      },
     )
   }, [branchId, closeTime, entriesWithOverrides, closeDayMutation, close])
 
@@ -198,5 +214,7 @@ export function useCloseDayPanel(
     summary,
     confirm,
     isSubmitting: closeDayMutation.isPending,
+    overtimePending,
+    clearOvertimePending,
   }
 }

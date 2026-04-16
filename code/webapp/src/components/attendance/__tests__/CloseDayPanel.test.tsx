@@ -28,6 +28,8 @@ function makePanel(overrides: Partial<UseCloseDayPanelResult> = {}): UseCloseDay
     summary: { checkOuts: [], absences: [] },
     confirm: vi.fn(),
     isSubmitting: false,
+    overtimePending: [],
+    clearOvertimePending: vi.fn(),
     ...overrides,
   }
 }

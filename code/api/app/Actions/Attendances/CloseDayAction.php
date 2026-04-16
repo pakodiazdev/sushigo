@@ -44,7 +44,14 @@ class CloseDayAction
      *     close_time: string,
      *     lunch_returns?: array<int, array{attendance_id: string, lunch_end: string}>
      * }  $data  Validated request data
-     * @return array{lunch_returns: int, check_outs: int, absences: int, leaves: int, day_offs: int}
+     * @return array{
+     *     lunch_returns: int,
+     *     check_outs: int,
+     *     absences: int,
+     *     leaves: int,
+     *     day_offs: int,
+     *     overtime_pending: array<int, array{attendance_id: string, employee_name: string, overtime_minutes: int}>
+     * }
      */
     public function __invoke(array $data): array
     {
@@ -57,7 +64,7 @@ class CloseDayAction
         $closeTimeLocal = Carbon::parse("{$today} {$data['close_time']}", $businessTz);
         $closeTimeIso = $closeTimeLocal->toIso8601String();
 
-        $counts = ['lunch_returns' => 0, 'check_outs' => 0, 'absences' => 0, 'leaves' => 0, 'day_offs' => 0];
+        $counts = ['lunch_returns' => 0, 'check_outs' => 0, 'absences' => 0, 'leaves' => 0, 'day_offs' => 0, 'overtime_pending' => []];
 
         DB::transaction(function () use ($data, $branchId, $today, $dayOfWeek, $closeTimeIso, &$counts) {
             // Resolve active employee IDs for this branch (used in all 3 steps)
@@ -114,6 +121,22 @@ class CloseDayAction
                     // Skip if guard fails — non-blocking
                 }
             }
+
+            // Collect attendances that now have overtime with no decision recorded yet.
+            // These will be returned so the caller can prompt the manager for each one.
+            $counts['overtime_pending'] = Attendance::whereIn('employee_id', $activeEmployeeIds)
+                ->whereDate('date', $today)
+                ->where('overtime_minutes', '>', 0)
+                ->whereNull('overtime_authorized_at')
+                ->with('employee')
+                ->get()
+                ->map(fn (Attendance $a) => [
+                    'attendance_id' => $a->public_id,
+                    'employee_name' => "{$a->employee->first_name} {$a->employee->last_name}",
+                    'overtime_minutes' => $a->overtime_minutes,
+                ])
+                ->values()
+                ->all();
 
             // Step 3: Classify employees with no attendance record today
             $employeesWithAttendance = Attendance::whereIn('employee_id', $activeEmployeeIds)
