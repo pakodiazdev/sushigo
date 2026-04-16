@@ -77,7 +77,7 @@ describe('useApplicationClockStore', () => {
         it('sets isLoading true while fetching', async () => {
             mockGetClock.mockImplementation(() => new Promise(() => {})) // Never resolves
 
-            const fetchPromise = useApplicationClockStore.getState().fetchClock()
+            void useApplicationClockStore.getState().fetchClock()
 
             expect(useApplicationClockStore.getState().isLoading).toBe(true)
 

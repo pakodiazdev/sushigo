@@ -68,7 +68,7 @@ describe('ClockBadge', () => {
 
         render(<ClockBadge />)
 
-        expect(screen.getByText('SIMULATED')).toBeInTheDocument()
+        expect(screen.getByText('SIMULATED')).toBeDefined()
     })
 
     it('shows clock simulation active warning in tooltip', () => {
@@ -82,9 +82,9 @@ describe('ClockBadge', () => {
 
         render(<ClockBadge />)
 
-        expect(screen.getByText('⚠️ Clock Simulation Active')).toBeInTheDocument()
-        expect(screen.getByText('2026-01-15T10:30:00-06:00')).toBeInTheDocument()
-        expect(screen.getByText('2026-01-15')).toBeInTheDocument()
+        expect(screen.getByText('⚠️ Clock Simulation Active')).toBeDefined()
+        expect(screen.getByText('2026-01-15T10:30:00-06:00')).toBeDefined()
+        expect(screen.getByText('2026-01-15')).toBeDefined()
     })
 
     it('calls fetchClock on mount', () => {

@@ -40,6 +40,15 @@ vi.mock('@/services/attendance-api', () => ({
   },
 }))
 
+// Mock timezone to always return America/Mexico_City for deterministic tests
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual('@/lib/timezone')
+  return {
+    ...actual,
+    getFrontendTimezone: () => 'America/Mexico_City',
+  }
+})
+
 import { attendanceApi } from '@/services/attendance-api'
 import { useAuthStore } from '@/stores/auth.store'
 
