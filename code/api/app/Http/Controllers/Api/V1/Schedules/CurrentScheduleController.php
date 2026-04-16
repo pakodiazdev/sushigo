@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Schedule\ScheduleResource;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -37,6 +38,10 @@ use Illuminate\Http\JsonResponse;
  */
 class CurrentScheduleController extends Controller
 {
+    public function __construct(
+        private readonly ApplicationClock $clock
+    ) {}
+
     public function __invoke(Employee $employee): ScheduleResource|JsonResponse
     {
         $activePeriod = $employee->employmentPeriods()->active()->first();
@@ -48,7 +53,7 @@ class CurrentScheduleController extends Controller
             ], 404);
         }
 
-        $schedule = EmployeeSchedule::effective(now())
+        $schedule = EmployeeSchedule::effective($this->clock->nowInBusinessTz())
             ->where('employment_period_id', $activePeriod->id)
             ->with('scheduleDays', 'employmentPeriod.scheduleDayOverrides', 'employmentPeriod.branch')
             ->first();

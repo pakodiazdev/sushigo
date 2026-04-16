@@ -114,16 +114,18 @@ class OperatingUnit extends Model
     }
 
     /**
-     * Scope to filter active events (within date range)
+     * Scope to filter active events (within date range).
+     *
+     * @param  \DateTimeInterface  $referenceDate  The date to compare against (use ApplicationClock::todayInBusinessTz())
      */
-    public function scopeActiveEvents($query)
+    public function scopeActiveEvents($query, \DateTimeInterface $referenceDate)
     {
         return $query->where('type', self::TYPE_EVENT_TEMP)
             ->where('is_active', true)
-            ->where('start_date', '<=', now())
-            ->where(function ($q) {
+            ->where('start_date', '<=', $referenceDate)
+            ->where(function ($q) use ($referenceDate) {
                 $q->whereNull('end_date')
-                    ->orWhere('end_date', '>=', now());
+                    ->orWhere('end_date', '>=', $referenceDate);
             });
     }
 

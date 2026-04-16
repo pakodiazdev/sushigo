@@ -6,7 +6,7 @@ use App\Enums\AuditAction;
 use App\Models\Attendance;
 use App\Models\AttendanceAuditLog;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -27,6 +27,10 @@ use Illuminate\Validation\ValidationException;
  */
 class RecordOvertimeDecisionAction
 {
+    public function __construct(
+        private readonly ApplicationClock $clock
+    ) {}
+
     /**
      * @param  Attendance  $attendance  Already-loaded attendance record
      * @param  array{authorize: bool}  $data  Validated request data
@@ -39,7 +43,7 @@ class RecordOvertimeDecisionAction
         $this->guardHasOvertime($attendance);
 
         $authorize = (bool) $data['authorize'];
-        $now = Carbon::now()->utc();
+        $now = $this->clock->nowUtc();
 
         // Atomic update: only affects rows where no decision has been recorded yet.
         // If 0 rows are affected, a concurrent request already recorded the decision.
