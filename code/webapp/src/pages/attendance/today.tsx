@@ -18,6 +18,61 @@ import {
   useCloseDayPanel,
 } from '@/components/attendance'
 import { useTodayAttendancePage, currentTimeLabel } from './-use-today-attendance-page'
+import type { PendingAttendanceData } from './-use-today-attendance-page'
+import type { TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
+
+// ── Module-level helpers (keep complexity out of the component) ───────────────
+
+/** Full name from a check-in pending employee (direct TodayAttendanceEmployee). */
+function checkInName(employee: TodayAttendanceEmployee | null): string {
+  if (!employee) return ''
+  return `${employee.first_name} ${employee.last_name}`
+}
+
+/** Full name from a pending attendance action (has nested .employee). */
+function pendingName(pending: PendingAttendanceData | null): string {
+  if (!pending) return ''
+  return `${pending.employee.first_name} ${pending.employee.last_name}`
+}
+
+interface OvertimeDialogState {
+  isOpen: boolean
+  employeeName: string
+  overtimeMinutes: number
+  onAuthorize: () => void
+  onReject: () => void
+  onClose: () => void
+}
+
+/** Resolve overtime dialog props — individual flow takes priority over bulk queue. */
+function resolveOvertimeDialog(
+  individual: PendingAttendanceData | null,
+  bulk: OvertimePendingEntry | null,
+  individualMinutes: number,
+  confirmIndividual: (auth: boolean) => void,
+  closeIndividual: () => void,
+  confirmBulk: (auth: boolean) => void,
+  closeBulk: () => void,
+): OvertimeDialogState {
+  if (individual) {
+    return {
+      isOpen: true,
+      employeeName: `${individual.employee.first_name} ${individual.employee.last_name}`,
+      overtimeMinutes: individualMinutes,
+      onAuthorize: () => confirmIndividual(true),
+      onReject: () => confirmIndividual(false),
+      onClose: closeIndividual,
+    }
+  }
+  return {
+    isOpen: !!bulk,
+    employeeName: bulk?.employee_name ?? '',
+    overtimeMinutes: bulk?.overtime_minutes ?? 0,
+    onAuthorize: () => confirmBulk(true),
+    onReject: () => confirmBulk(false),
+    onClose: closeBulk,
+  }
+}
 
 export const Route = createFileRoute('/attendance/today')({
   beforeLoad: requirePermission('employees.view'),
@@ -59,6 +114,7 @@ export function TodayAttendancePage() {
     confirmCheckOut,
     // Overtime decision (individual)
     pendingOvertimeDecision,
+    pendingOvertimeMinutes,
     isRecordingOvertimeDecision,
     openOvertimeDecision,
     closeOvertimeDecision,
@@ -84,27 +140,15 @@ export function TodayAttendancePage() {
     }
   }, [overtimePending, enqueueBulkOvertime, clearOvertimePending])
 
-  const pendingOvertimeMinutes = pendingOvertimeDecision
-    ? (rows.find(r => r.attendance?.id === pendingOvertimeDecision.attendanceId)?.attendance?.overtime_minutes ?? 0)
-    : 0
-
-  // Unified overtime dialog props — individual flow takes priority over bulk queue
-  const isOvertimeDialogOpen = !!pendingOvertimeDecision || !!currentBulkOvertime
-  const overtimeDialogEmployeeName = pendingOvertimeDecision
-    ? `${pendingOvertimeDecision.employee.first_name} ${pendingOvertimeDecision.employee.last_name}`
-    : (currentBulkOvertime?.employee_name ?? '')
-  const overtimeDialogMinutes = pendingOvertimeDecision
-    ? pendingOvertimeMinutes
-    : (currentBulkOvertime?.overtime_minutes ?? 0)
-  const handleOvertimeAuthorize = pendingOvertimeDecision
-    ? () => confirmOvertimeDecision(true)
-    : () => confirmBulkOvertimeDecision(true)
-  const handleOvertimeReject = pendingOvertimeDecision
-    ? () => confirmOvertimeDecision(false)
-    : () => confirmBulkOvertimeDecision(false)
-  const handleOvertimeClose = pendingOvertimeDecision
-    ? closeOvertimeDecision
-    : closeBulkOvertimeDecision
+  const overtimeDialog = resolveOvertimeDialog(
+    pendingOvertimeDecision,
+    currentBulkOvertime,
+    pendingOvertimeMinutes,
+    confirmOvertimeDecision,
+    closeOvertimeDecision,
+    confirmBulkOvertimeDecision,
+    closeBulkOvertimeDecision,
+  )
 
   if (!hasBranch) {
     return (
@@ -169,11 +213,7 @@ export function TodayAttendancePage() {
         onClose={closeCheckIn}
         onConfirm={confirmCheckIn}
         title="Registrar entrada"
-        employeeName={
-          pendingCheckInEmployee
-            ? `${pendingCheckInEmployee.first_name} ${pendingCheckInEmployee.last_name}`
-            : ''
-        }
+        employeeName={checkInName(pendingCheckInEmployee)}
         confirmLabel="Confirmar entrada"
         initialTime={maxTime}
         maxTime={maxTime}
@@ -188,11 +228,7 @@ export function TodayAttendancePage() {
         onClose={closeLunchStart}
         onConfirm={confirmLunchStart}
         title="Salir a comer"
-        employeeName={
-          pendingLunchStart
-            ? `${pendingLunchStart.employee.first_name} ${pendingLunchStart.employee.last_name}`
-            : ''
-        }
+        employeeName={pendingName(pendingLunchStart)}
         confirmLabel="Confirmar salida"
         initialTime={maxTime}
         maxTime={maxTime}
@@ -207,11 +243,7 @@ export function TodayAttendancePage() {
         onClose={closeLunchReturn}
         onConfirm={confirmLunchReturn}
         title="Regresar de comida"
-        employeeName={
-          pendingLunchReturn
-            ? `${pendingLunchReturn.employee.first_name} ${pendingLunchReturn.employee.last_name}`
-            : ''
-        }
+        employeeName={pendingName(pendingLunchReturn)}
         confirmLabel="Confirmar regreso"
         initialTime={maxTime}
         maxTime={maxTime}
@@ -226,11 +258,7 @@ export function TodayAttendancePage() {
         onClose={closeCheckOut}
         onConfirm={confirmCheckOut}
         title="Registrar salida"
-        employeeName={
-          pendingCheckOut
-            ? `${pendingCheckOut.employee.first_name} ${pendingCheckOut.employee.last_name}`
-            : ''
-        }
+        employeeName={pendingName(pendingCheckOut)}
         confirmLabel="Confirmar salida"
         initialTime={maxTime}
         maxTime={maxTime}
@@ -241,13 +269,8 @@ export function TodayAttendancePage() {
 
       {/* Overtime Decision Dialog — handles both individual and bulk day close flows */}
       <OvertimeDecisionDialog
-        isOpen={isOvertimeDialogOpen}
-        employeeName={overtimeDialogEmployeeName}
-        overtimeMinutes={overtimeDialogMinutes}
+        {...overtimeDialog}
         isLoading={isRecordingOvertimeDecision}
-        onAuthorize={handleOvertimeAuthorize}
-        onReject={handleOvertimeReject}
-        onClose={handleOvertimeClose}
       />
 
       {/* Close Day Panel */}
