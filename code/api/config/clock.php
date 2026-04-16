@@ -29,7 +29,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | The timezone used for business operations (e.g., "today" calculations).
+    | This is sourced from the same environment variable used by app config
+    | to avoid competing timezone settings for the same concept.
     |
     */
-    'business_timezone' => env('APP_BUSINESS_TIMEZONE', 'America/Mexico_City'),
+    'business_timezone' => env('BUSINESS_TIMEZONE', 'America/Mexico_City'),
 ];
