@@ -52,12 +52,12 @@ export function DevDebugger() {
 
     const [permissionInputFocused, setPermissionInputFocused] = useState(false)
 
-    const permissionDropdownItems =
-        devLoginPermissionSearch.length > 0
-            ? devLoginPermissionSuggestions
-            : permissionInputFocused
-              ? devLoginAllPermissions
-              : []
+    let permissionDropdownItems: string[] = []
+    if (devLoginPermissionSearch.length > 0) {
+        permissionDropdownItems = devLoginPermissionSuggestions
+    } else if (permissionInputFocused) {
+        permissionDropdownItems = devLoginAllPermissions
+    }
 
     if (isHidden) {
         return null
