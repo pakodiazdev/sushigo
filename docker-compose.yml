@@ -28,6 +28,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
       - POSTGRES_DB=${POSTGRES_DB:-mydb}
       - POSTGRES_PORT=5432
+      - CLOCK_SIMULATION_ENABLED=${CLOCK_SIMULATION_ENABLED:-true}
     extra_hosts:
       - "sushigo.local:127.0.0.1"
     depends_on:
