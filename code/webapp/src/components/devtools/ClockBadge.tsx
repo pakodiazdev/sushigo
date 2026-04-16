@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
-import { useApplicationClockStore } from '@/stores/clock.store';
+import { useApplicationClockStore, selectIsSimulated } from '@/stores/clock.store';
 
 /**
  * Clock mode badge for the header.
@@ -8,12 +8,10 @@ import { useApplicationClockStore } from '@/stores/clock.store';
  * Only visible when clock simulation feature is available.
  */
 export function ClockBadge() {
-    const {
-        clockState,
-        isAvailable,
-        isSimulated,
-        fetchClock,
-    } = useApplicationClockStore();
+    const clockState = useApplicationClockStore((state) => state.clockState);
+    const isAvailable = useApplicationClockStore((state) => state.isAvailable);
+    const isSimulated = useApplicationClockStore(selectIsSimulated);
+    const fetchClock = useApplicationClockStore((state) => state.fetchClock);
 
     // Fetch clock state on mount
     useEffect(() => {
