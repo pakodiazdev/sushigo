@@ -147,13 +147,14 @@ export function ClockBadge() {
 
                     {/* Set Time Form */}
                     <div className="p-3 space-y-3">
-                        <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground">
+                        <fieldset className="space-y-2">
+                            <legend className="text-xs font-medium text-muted-foreground">
                                 Set Simulated Time
-                            </label>
+                            </legend>
                             <div className="flex gap-2">
                                 <input
                                     type="date"
+                                    aria-label="Simulated date"
                                     value={dateInput}
                                     onChange={(e) => setDateInput(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSetTime()}
@@ -161,13 +162,14 @@ export function ClockBadge() {
                                 />
                                 <input
                                     type="time"
+                                    aria-label="Simulated time"
                                     value={timeInput}
                                     onChange={(e) => setTimeInput(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSetTime()}
                                     className="w-32 px-2 py-1.5 text-sm border rounded bg-background focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
-                        </div>
+                        </fieldset>
 
                         {/* Action Buttons */}
                         <div className="flex gap-2">

@@ -12,13 +12,12 @@
 /**
  * Get the current frontend timezone for displaying dates/times.
  *
+ * Note: In the future, this may check user profile preference first
+ * before falling back to browser timezone.
+ *
  * @returns IANA timezone identifier (e.g., 'America/Mexico_City')
  */
 export function getFrontendTimezone(): string {
-    // TODO: In the future, check user profile preference first
-    // const userPreference = getUserTimezonePreference();
-    // if (userPreference) return userPreference;
-
     // Default: browser timezone
     return getBrowserTimezone();
 }
@@ -38,6 +37,11 @@ export function getBrowserTimezone(): string {
 }
 
 /**
+ * Default options for formatDateInFrontendTz.
+ */
+const DEFAULT_DATE_OPTIONS: Intl.DateTimeFormatOptions = { dateStyle: 'medium' };
+
+/**
  * Format a UTC ISO string to a localized date string.
  *
  * @param utcIsoString - ISO 8601 UTC datetime string
@@ -46,7 +50,7 @@ export function getBrowserTimezone(): string {
  */
 export function formatDateInFrontendTz(
     utcIsoString: string,
-    options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' }
+    options: Intl.DateTimeFormatOptions = DEFAULT_DATE_OPTIONS
 ): string {
     try {
         const date = new Date(utcIsoString);
@@ -63,6 +67,11 @@ export function formatDateInFrontendTz(
 }
 
 /**
+ * Default options for formatTimeInFrontendTz.
+ */
+const DEFAULT_TIME_OPTIONS: Intl.DateTimeFormatOptions = { timeStyle: 'short' };
+
+/**
  * Format a UTC ISO string to a localized time string.
  *
  * @param utcIsoString - ISO 8601 UTC datetime string
@@ -71,7 +80,7 @@ export function formatDateInFrontendTz(
  */
 export function formatTimeInFrontendTz(
     utcIsoString: string,
-    options: Intl.DateTimeFormatOptions = { timeStyle: 'short' }
+    options: Intl.DateTimeFormatOptions = DEFAULT_TIME_OPTIONS
 ): string {
     try {
         const date = new Date(utcIsoString);
@@ -88,6 +97,11 @@ export function formatTimeInFrontendTz(
 }
 
 /**
+ * Default options for formatDateTimeInFrontendTz.
+ */
+const DEFAULT_DATETIME_OPTIONS: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' };
+
+/**
  * Format a UTC ISO string to a localized datetime string.
  *
  * @param utcIsoString - ISO 8601 UTC datetime string
@@ -96,7 +110,7 @@ export function formatTimeInFrontendTz(
  */
 export function formatDateTimeInFrontendTz(
     utcIsoString: string,
-    options: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' }
+    options: Intl.DateTimeFormatOptions = DEFAULT_DATETIME_OPTIONS
 ): string {
     try {
         const date = new Date(utcIsoString);
@@ -171,7 +185,8 @@ export function getTimezoneOffsetString(referenceDate: Date = new Date()): strin
     const tzPart = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
 
     // longOffset returns "GMT-06:00" or "GMT+05:30", extract the offset part
-    const match = tzPart.match(/GMT([+-]\d{2}:\d{2})/);
+    const offsetRegex = /GMT([+-]\d{2}:\d{2})/;
+    const match = offsetRegex.exec(tzPart);
     if (match?.[1]) {
         return match[1];
     }
