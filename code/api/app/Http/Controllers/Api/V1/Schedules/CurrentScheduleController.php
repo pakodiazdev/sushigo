@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Support\Clock\ApplicationClock;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * @OA\Get(
@@ -42,7 +43,7 @@ class CurrentScheduleController extends Controller
         private readonly ApplicationClock $clock
     ) {}
 
-    public function __invoke(Employee $employee): ScheduleResource|JsonResponse
+    public function __invoke(Request $request, Employee $employee): ScheduleResource|JsonResponse
     {
         $activePeriod = $employee->employmentPeriods()->active()->first();
 
@@ -66,9 +67,9 @@ class CurrentScheduleController extends Controller
             ], 404);
         }
 
-        // Pass the reference date to the resource for consistent override filtering
-        return (new ScheduleResource($schedule))->additional([
-            'reference_date' => $this->clock->todayInBusinessTz(),
-        ]);
+        // Pass the reference date via request attributes (internal use only, not exposed in JSON)
+        $request->attributes->set('reference_date', $this->clock->todayInBusinessTz());
+
+        return new ScheduleResource($schedule);
     }
 }
