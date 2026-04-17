@@ -11,6 +11,7 @@ use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\ScheduleDay;
 use App\Models\ScheduleDayOverride;
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -117,7 +118,8 @@ class RegisterCheckInAction
      */
     private function guardNotInFuture(Carbon $checkInLocal): void
     {
-        $nowLocal = Carbon::now($checkInLocal->timezone);
+        $clock = app(ApplicationClock::class);
+        $nowLocal = $clock->nowInBusinessTz()->setTimezone($checkInLocal->timezone);
         $toleranceMinutes = 5;
 
         if ($checkInLocal->isAfter($nowLocal->copy()->addMinutes($toleranceMinutes))) {

@@ -17,7 +17,8 @@ import {
   SkeletonGrid,
   useCloseDayPanel,
 } from '@/components/attendance'
-import { useTodayAttendancePage, currentTimeLabel } from './-use-today-attendance-page'
+import { useTodayAttendancePage } from './-use-today-attendance-page'
+import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
 import type { PendingAttendanceData } from './-use-today-attendance-page'
 import type { TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 
@@ -128,8 +129,8 @@ export function TodayAttendancePage() {
     markDayStatus,
   } = useTodayAttendancePage()
 
-  const closeDayPanel = useCloseDayPanel(rows, branchId)
-  const maxTime = currentTimeLabel()
+  const maxTime = useApplicationTimeLabel()
+  const closeDayPanel = useCloseDayPanel(rows, branchId, maxTime)
 
   // Feed bulk overtime decisions from the close-day panel into the queue
   const { overtimePending, clearOvertimePending } = closeDayPanel
