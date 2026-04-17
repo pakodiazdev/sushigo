@@ -1,12 +1,11 @@
-import { useState, FormEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { FormEvent } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useToast } from '@/components/ui/toast-provider'
-import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
+import { useFormState, validators } from '@/hooks/use-form-state'
+import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
 import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
 
@@ -16,96 +15,62 @@ interface ItemFormProps {
   onCancel: () => void
 }
 
+interface ItemFormData {
+  sku: string
+  name: string
+  description: string
+  type: 'INSUMO' | 'PRODUCTO' | 'ACTIVO'
+  is_stocked: boolean
+  is_perishable: boolean
+  is_active: boolean
+}
+
 export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
-  const { showSuccess, showError } = useToast()
-  const [formData, setFormData] = useState({
-    sku: item?.sku || '',
-    name: item?.name || '',
-    description: item?.description || '',
-    type: item?.type || 'INSUMO' as const,
-    is_stocked: item?.is_stocked ?? true,
-    is_perishable: item?.is_perishable ?? false,
-    is_active: item?.is_active ?? true,
-  })
+  const isEditing = !!item
 
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => itemApi.create(data),
-    onSuccess: () => {
-      showSuccess(
-        'Item created successfully',
-        'Item Created'
-      )
-      onSuccess()
+  const { formData, setField, errors, validate } = useFormState<ItemFormData>({
+    initialData: {
+      sku: item?.sku || '',
+      name: item?.name || '',
+      description: item?.description || '',
+      type: item?.type || 'INSUMO',
+      is_stocked: item?.is_stocked ?? true,
+      is_perishable: item?.is_perishable ?? false,
+      is_active: item?.is_active ?? true,
     },
-    onError: (error: unknown) => {
-      if (hasApiValidationErrors(error)) {
-        setErrors(getApiValidationErrors(error))
-      }
-      showError(
-        getApiErrorMessage(error, 'Failed to create item'),
-        'Error'
-      )
+    validationRules: {
+      sku: {
+        required: true,
+        validate: validators.minLength(2, 'SKU must be at least 2 characters'),
+      },
+      name: {
+        required: true,
+        validate: validators.minLength(3, 'Name must be at least 3 characters'),
+      },
+      type: { required: true },
     },
   })
 
-  const updateMutation = useMutation({
-    mutationFn: (data: typeof formData) =>
-      itemApi.update(item!.id, data),
-    onSuccess: () => {
-      showSuccess(
-        'Item updated successfully',
-        'Item Updated'
-      )
-      onSuccess()
-    },
-    onError: (error: unknown) => {
-      if (hasApiValidationErrors(error)) {
-        setErrors(getApiValidationErrors(error))
-      }
-      showError(
-        getApiErrorMessage(error, 'Failed to update item'),
-        'Error'
-      )
-    },
+  const { execute, validationErrors, isPending } = useCreateUpdateMutation({
+    createFn: (data: ItemFormData) => itemApi.create(data),
+    updateFn: (data: ItemFormData) => itemApi.update(item!.id, data),
+    entityName: 'Item',
+    isEditing,
+    onSuccess,
   })
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.sku || formData.sku.length < 2) {
-      newErrors.sku = 'SKU must be at least 2 characters'
-    }
-    if (!formData.name || formData.name.length < 3) {
-      newErrors.name = 'Name must be at least 3 characters'
-    }
-    if (!formData.type) {
-      newErrors.type = 'Type is required'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  // Merge client and server validation errors
+  const allErrors = { ...errors, ...validationErrors }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
 
     if (!validate()) return
 
-    try {
-      if (item) {
-        await updateMutation.mutateAsync(formData)
-      } else {
-        await createMutation.mutateAsync(formData)
-      }
-    } catch (error) {
-      console.error('Form submission error:', error)
-    }
+    await execute(formData)
   }
 
-  const mutation = item ? updateMutation : createMutation
-  const isSubmitting = mutation.isPending
+  const isSubmitting = isPending
 
   return (
     <form onSubmit={handleSubmit} className="flex h-full flex-col">
@@ -113,41 +78,41 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
         <FormField
           label="SKU (Stock Keeping Unit)"
           required
-          error={errors.sku}
+          error={allErrors.sku}
           hint="Unique identifier for this item"
         >
           <Input
             value={formData.sku}
-            onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+            onChange={(e) => setField('sku', e.target.value.toUpperCase())}
             placeholder="e.g., SAL-001"
-            error={!!errors.sku}
-            disabled={!!item} // SKU can't be changed after creation
+            error={!!allErrors.sku}
+            disabled={isEditing} // SKU can't be changed after creation
           />
         </FormField>
 
         <FormField
           label="Item Name"
           required
-          error={errors.name}
+          error={allErrors.name}
         >
           <Input
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => setField('name', e.target.value)}
             placeholder="e.g., Fresh Salmon"
-            error={!!errors.name}
+            error={!!allErrors.name}
           />
         </FormField>
 
         <FormField
           label="Type"
           required
-          error={errors.type}
+          error={allErrors.type}
           hint="Classification type for this item"
         >
           <Select
             value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-            error={!!errors.type}
+            onChange={(e) => setField('type', e.target.value as ItemFormData['type'])}
+            error={!!allErrors.type}
           >
             <option value="INSUMO">Insumo (Input/Raw Material)</option>
             <option value="PRODUCTO">Producto (Finished Product)</option>
@@ -158,7 +123,7 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
         <FormField label="Description">
           <Textarea
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) => setField('description', e.target.value)}
             rows={3}
             placeholder="Additional description or notes"
           />
@@ -169,19 +134,19 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
 
           <Checkbox
             checked={formData.is_stocked}
-            onChange={(e) => setFormData({ ...formData, is_stocked: e.target.checked })}
+            onChange={(e) => setField('is_stocked', e.target.checked)}
             label="Track inventory for this item"
           />
 
           <Checkbox
             checked={formData.is_perishable}
-            onChange={(e) => setFormData({ ...formData, is_perishable: e.target.checked })}
+            onChange={(e) => setField('is_perishable', e.target.checked)}
             label="Perishable (has expiration date)"
           />
 
           <Checkbox
             checked={formData.is_active}
-            onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+            onChange={(e) => setField('is_active', e.target.checked)}
             label="Active"
           />
         </div>
@@ -199,19 +164,9 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {item ? 'Update' : 'Create'} Item
+            {isEditing ? 'Update' : 'Create'} Item
           </Button>
         </div>
-
-        {mutation.isError && (
-          <div className="mt-4 rounded-md bg-red-50 p-3">
-            <p className="text-sm text-red-800">
-              {mutation.error instanceof Error
-                ? mutation.error.message
-                : 'An error occurred while saving the item'}
-            </p>
-          </div>
-        )}
       </SlidePanel.Footer>
     </form>
   )

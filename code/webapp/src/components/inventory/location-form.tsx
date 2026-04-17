@@ -1,14 +1,13 @@
-import { useState, FormEvent } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { FormEvent } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useToast } from '@/components/ui/toast-provider'
-import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
+import { useFormState, validators } from '@/hooks/use-form-state'
+import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
+import { useOperatingUnitsSelect } from '@/hooks/use-inventory-queries'
 import { inventoryLocationApi } from '@/services/inventory-api'
-import { apiClient } from '@/lib/api-client'
 import type { InventoryLocation } from '@/types/inventory'
 import type { OperatingUnit } from '@/types/auth'
 
@@ -18,108 +17,63 @@ interface LocationFormProps {
   onCancel: () => void
 }
 
+type LocationType = 'MAIN' | 'KITCHEN' | 'BAR' | 'TEMP' | 'RETURN'
+
+interface LocationFormData {
+  operating_unit_id: number
+  name: string
+  type: LocationType
+  priority: number
+  is_primary: boolean
+  is_active: boolean
+  notes: string
+}
+
 export function LocationForm({ location, onSuccess, onCancel }: LocationFormProps) {
-  const { showSuccess, showError } = useToast()
-  const [formData, setFormData] = useState({
-    operating_unit_id: location?.operating_unit_id || 0,
-    name: location?.name || '',
-    type: location?.type || 'MAIN' as const,
-    priority: location?.priority || 100,
-    is_primary: location?.is_primary || false,
-    is_active: location?.is_active ?? true,
-    notes: location?.notes || '',
-  })
+  const isEditing = !!location
 
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  // Use shared query hook for operating units
+  const { data: operatingUnits } = useOperatingUnitsSelect()
 
-  // Fetch operating units for the select
-  const { data: operatingUnits } = useQuery({
-    queryKey: ['operating-units'],
-    queryFn: async () => {
-      const response = await apiClient.get('/operating-units')
-      return response.data.data
+  const { formData, setField, errors, validate } = useFormState<LocationFormData>({
+    initialData: {
+      operating_unit_id: location?.operating_unit_id || 0,
+      name: location?.name || '',
+      type: (location?.type || 'MAIN') as LocationType,
+      priority: location?.priority || 100,
+      is_primary: location?.is_primary || false,
+      is_active: location?.is_active ?? true,
+      notes: location?.notes || '',
+    },
+    validationRules: {
+      operating_unit_id: { required: true },
+      name: {
+        required: true,
+        validate: validators.minLength(3, 'El nombre debe tener al menos 3 caracteres'),
+      },
+      type: { required: true },
+      priority: {
+        validate: validators.range(0, 1000, 'La prioridad debe estar entre 0 y 1000'),
+      },
     },
   })
 
-  const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => inventoryLocationApi.create(data),
-    onSuccess: () => {
-      showSuccess(
-        'Ubicación creada exitosamente',
-        'Ubicación Creada'
-      )
-      onSuccess()
-    },
-    onError: (error: unknown) => {
-      if (hasApiValidationErrors(error)) {
-        setErrors(getApiValidationErrors(error))
-      }
-      showError(
-        getApiErrorMessage(error, 'Error al crear la ubicación'),
-        'Error'
-      )
-    },
+  const { execute, validationErrors, isPending } = useCreateUpdateMutation({
+    createFn: (data: LocationFormData) => inventoryLocationApi.create(data),
+    updateFn: (data: LocationFormData) => inventoryLocationApi.update(location!.id, data),
+    entityName: 'Ubicación',
+    isEditing,
+    onSuccess,
   })
 
-  const updateMutation = useMutation({
-    mutationFn: (data: typeof formData) =>
-      inventoryLocationApi.update(location!.id, data),
-    onSuccess: () => {
-      showSuccess(
-        'Ubicación actualizada exitosamente',
-        'Ubicación Actualizada'
-      )
-      onSuccess()
-    },
-    onError: (error: unknown) => {
-      if (hasApiValidationErrors(error)) {
-        setErrors(getApiValidationErrors(error))
-      }
-      showError(
-        getApiErrorMessage(error, 'Error al actualizar la ubicación'),
-        'Error'
-      )
-    },
-  })
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.operating_unit_id) {
-      newErrors.operating_unit_id = 'La unidad operativa es requerida'
-    }
-    if (!formData.name || formData.name.length < 3) {
-      newErrors.name = 'El nombre debe tener al menos 3 caracteres'
-    }
-    if (!formData.type) {
-      newErrors.type = 'El tipo de ubicación es requerido'
-    }
-    if (formData.priority < 0 || formData.priority > 1000) {
-      newErrors.priority = 'La prioridad debe estar entre 0 y 1000'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  // Merge client and server validation errors
+  const allErrors = { ...errors, ...validationErrors }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-
     if (!validate()) return
-
-    try {
-      if (location) {
-        await updateMutation.mutateAsync(formData)
-      } else {
-        await createMutation.mutateAsync(formData)
-      }
-    } catch (error) {
-      console.error('Form submission error:', error)
-    }
+    await execute(formData)
   }
-
-  const mutation = location ? updateMutation : createMutation
-  const isSubmitting = mutation.isPending
 
   return (
     <form onSubmit={handleSubmit} className="flex h-full flex-col">
@@ -127,12 +81,12 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         <FormField
           label="Unidad Operativa"
           required
-          error={errors.operating_unit_id}
+          error={allErrors.operating_unit_id}
         >
           <Select
             value={formData.operating_unit_id}
-            onChange={(e) => setFormData({ ...formData, operating_unit_id: Number(e.target.value) })}
-            error={!!errors.operating_unit_id}
+            onChange={(e) => setField('operating_unit_id', Number(e.target.value))}
+            error={!!allErrors.operating_unit_id}
           >
             <option value="0">Seleccione una unidad operativa</option>
             {operatingUnits?.map((unit: OperatingUnit) => (
@@ -146,25 +100,25 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         <FormField
           label="Nombre de la Ubicación"
           required
-          error={errors.name}
+          error={allErrors.name}
         >
           <Input
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => setField('name', e.target.value)}
             placeholder="ej., Almacén Principal"
-            error={!!errors.name}
+            error={!!allErrors.name}
           />
         </FormField>
 
         <FormField
           label="Tipo de Ubicación"
           required
-          error={errors.type}
+          error={allErrors.type}
         >
           <Select
             value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-            error={!!errors.type}
+            onChange={(e) => setField('type', e.target.value as LocationType)}
+            error={!!allErrors.type}
           >
             <option value="">Seleccione un tipo</option>
             <option value="MAIN">Almacén Principal</option>
@@ -178,22 +132,22 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         <FormField
           label="Prioridad"
           required
-          error={errors.priority}
+          error={allErrors.priority}
           hint="Valores más altos indican mayor prioridad (0-1000)"
         >
           <Input
             type="number"
             value={formData.priority}
-            onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
+            onChange={(e) => setField('priority', Number(e.target.value))}
             placeholder="100"
-            error={!!errors.priority}
+            error={!!allErrors.priority}
           />
         </FormField>
 
         <FormField label="Notas">
           <Textarea
             value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            onChange={(e) => setField('notes', e.target.value)}
             rows={3}
             placeholder="Notas adicionales o descripción"
           />
@@ -202,12 +156,12 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         <div className="space-y-3">
           <Checkbox
             checked={formData.is_primary}
-            onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })}
+            onChange={(e) => setField('is_primary', e.target.checked)}
             label="Ubicación principal para esta unidad operativa"
           />
           <Checkbox
             checked={formData.is_active}
-            onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+            onChange={(e) => setField('is_active', e.target.checked)}
             label="Activa"
           />
         </div>
@@ -219,27 +173,16 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
             type="button"
             variant="outline"
             onClick={onCancel}
-            disabled={isSubmitting}
+            disabled={isPending}
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {location ? 'Actualizar' : 'Crear'} Ubicación
+          <Button type="submit" disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditing ? 'Actualizar' : 'Crear'} Ubicación
           </Button>
         </div>
-
-        {mutation.isError && (
-          <div className="mt-4 rounded-md bg-red-50 p-3">
-            <p className="text-sm text-red-800">
-              {mutation.error instanceof Error
-                ? mutation.error.message
-                : 'Ocurrió un error al guardar la ubicación'}
-            </p>
-          </div>
-        )}
       </SlidePanel.Footer>
     </form>
   )
 }
-

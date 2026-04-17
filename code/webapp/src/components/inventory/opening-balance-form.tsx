@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
 import { Loader2, DollarSign, Package } from 'lucide-react'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
-import { useToast } from '@/components/ui/toast-provider'
-import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
-import { inventoryLocationApi, itemVariantApi, stockMovementApi } from '@/services/inventory-api'
-import { apiClient } from '@/lib/api-client'
+import { useFormState, validators } from '@/hooks/use-form-state'
+import { useFormMutation } from '@/hooks/use-form-mutation'
+import {
+  useInventoryLocationsSelect,
+  useItemVariantsSelect,
+  useUnitsOfMeasureSelect,
+} from '@/hooks/use-inventory-queries'
+import { stockMovementApi } from '@/services/inventory-api'
 import type { InventoryLocation, ItemVariant, UnitOfMeasure } from '@/types/inventory'
 
 interface OpeningBalanceFormProps {
@@ -18,51 +21,60 @@ interface OpeningBalanceFormProps {
   preselectedVariantId?: number
 }
 
+interface OpeningBalanceFormData {
+  inventory_location_id: number
+  item_variant_id: number
+  quantity: number
+  uom_id: number
+  unit_cost: number
+  notes: string
+}
+
 export function OpeningBalanceForm({
   onSuccess,
   onCancel,
   preselectedLocationId,
   preselectedVariantId,
 }: OpeningBalanceFormProps) {
-  const { showSuccess, showError } = useToast()
-  const [formData, setFormData] = useState({
-    inventory_location_id: preselectedLocationId || 0,
-    item_variant_id: preselectedVariantId || 0,
-    quantity: 0,
-    uom_id: 0,
-    unit_cost: 0,
-    notes: '',
-  })
-
-  const [errors, setErrors] = useState<Record<string, string>>({})
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null)
 
-  // Fetch locations
-  const { data: locationsData } = useQuery({
-    queryKey: ['inventory-locations-for-select'],
-    queryFn: () => inventoryLocationApi.list({ is_active: true, per_page: 100 }),
-  })
+  // Use shared query hooks
+  const { data: locations = [] } = useInventoryLocationsSelect()
+  const { data: variants = [] } = useItemVariantsSelect()
+  const { data: units = [] } = useUnitsOfMeasureSelect()
 
-  // Fetch variants
-  const { data: variantsData } = useQuery({
-    queryKey: ['item-variants-for-select'],
-    queryFn: () => itemVariantApi.list({ is_active: true, per_page: 200 }),
-  })
-
-  // Fetch units of measure
-  const { data: uomData } = useQuery({
-    queryKey: ['units-of-measure-for-select'],
-    queryFn: async () => {
-      const response = await apiClient.get('/units-of-measure', {
-        params: { is_active: true, per_page: 100 },
-      })
-      return response
+  const { formData, setField, errors, validate } = useFormState<OpeningBalanceFormData>({
+    initialData: {
+      inventory_location_id: preselectedLocationId || 0,
+      item_variant_id: preselectedVariantId || 0,
+      quantity: 0,
+      uom_id: 0,
+      unit_cost: 0,
+      notes: '',
+    },
+    validationRules: {
+      inventory_location_id: { required: true },
+      item_variant_id: { required: true },
+      quantity: {
+        validate: validators.greaterThan(0, 'Quantity must be greater than 0'),
+      },
+      uom_id: { required: true },
+      unit_cost: {
+        validate: validators.positive('Cost cannot be negative'),
+      },
     },
   })
 
-  const locations = locationsData?.data.data || []
-  const variants = variantsData?.data.data || []
-  const units = uomData?.data.data || []
+  const { execute, validationErrors, isPending } = useFormMutation({
+    mutationFn: (data: OpeningBalanceFormData) => stockMovementApi.openingBalance(data),
+    successMessage: 'Opening balance registered successfully',
+    successTitle: 'Stock Updated',
+    errorMessageFallback: 'Failed to register opening balance',
+    onSuccess,
+  })
+
+  // Merge client and server validation errors
+  const allErrors = { ...errors, ...validationErrors }
 
   // Update UoM when variant changes
   useEffect(() => {
@@ -70,58 +82,15 @@ export function OpeningBalanceForm({
       const variant = variants.find((v: ItemVariant) => v.id === formData.item_variant_id)
       if (variant) {
         setSelectedVariant(variant)
-        setFormData((prev) => ({ ...prev, uom_id: variant.uom_id }))
+        setField('uom_id', variant.uom_id)
       }
     }
-  }, [formData.item_variant_id, variants])
-
-  const mutation = useMutation({
-    mutationFn: (data: typeof formData) => stockMovementApi.openingBalance(data),
-    onSuccess: () => {
-      showSuccess(
-        'Opening balance registered successfully',
-        'Stock Updated'
-      )
-      onSuccess()
-    },
-    onError: (error: unknown) => {
-      if (hasApiValidationErrors(error)) {
-        setErrors(getApiValidationErrors(error))
-      }
-      showError(
-        getApiErrorMessage(error, 'Failed to register opening balance'),
-        'Error'
-      )
-    },
-  })
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.inventory_location_id || formData.inventory_location_id === 0) {
-      newErrors.inventory_location_id = 'Location is required'
-    }
-    if (!formData.item_variant_id || formData.item_variant_id === 0) {
-      newErrors.item_variant_id = 'Item variant is required'
-    }
-    if (formData.quantity <= 0) {
-      newErrors.quantity = 'Quantity must be greater than 0'
-    }
-    if (!formData.uom_id || formData.uom_id === 0) {
-      newErrors.uom_id = 'Unit of measure is required'
-    }
-    if (formData.unit_cost < 0) {
-      newErrors.unit_cost = 'Cost cannot be negative'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  }, [formData.item_variant_id, variants, setField])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (validate()) {
-      mutation.mutate(formData)
+      await execute(formData)
     }
   }
 
@@ -142,12 +111,10 @@ export function OpeningBalanceForm({
       <SlidePanel.Body>
         <form id="opening-balance-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Location Select */}
-          <FormField label="Location" required error={errors.inventory_location_id}>
+          <FormField label="Location" required error={allErrors.inventory_location_id}>
             <Select
               value={formData.inventory_location_id.toString()}
-              onChange={(e) =>
-                setFormData({ ...formData, inventory_location_id: parseInt(e.target.value) })
-              }
+              onChange={(e) => setField('inventory_location_id', parseInt(e.target.value))}
             >
               <option value="0">Select location...</option>
               {locations.map((location: InventoryLocation) => (
@@ -162,14 +129,12 @@ export function OpeningBalanceForm({
           <FormField
             label="Item Variant"
             required
-            error={errors.item_variant_id}
+            error={allErrors.item_variant_id}
             hint="Select the product variant to add"
           >
             <Select
               value={formData.item_variant_id.toString()}
-              onChange={(e) =>
-                setFormData({ ...formData, item_variant_id: parseInt(e.target.value) })
-              }
+              onChange={(e) => setField('item_variant_id', parseInt(e.target.value))}
             >
               <option value="0">Select variant...</option>
               {variants.map((variant: ItemVariant) => (
@@ -215,19 +180,17 @@ export function OpeningBalanceForm({
           <FormField
             label="Quantity"
             required
-            error={errors.quantity}
+            error={allErrors.quantity}
             hint="Amount to add to inventory"
           >
             <Input
               type="number"
               value={formData.quantity}
-              onChange={(e) =>
-                setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })
-              }
+              onChange={(e) => setField('quantity', parseFloat(e.target.value) || 0)}
               min="0"
               step="0.01"
               placeholder="0.00"
-              error={!!errors.quantity}
+              error={!!allErrors.quantity}
             />
           </FormField>
 
@@ -235,12 +198,12 @@ export function OpeningBalanceForm({
           <FormField
             label="Unit of Measure"
             required
-            error={errors.uom_id}
+            error={allErrors.uom_id}
             hint="Auto-filled from variant's default UoM"
           >
             <Select
               value={formData.uom_id.toString()}
-              onChange={(e) => setFormData({ ...formData, uom_id: parseInt(e.target.value) })}
+              onChange={(e) => setField('uom_id', parseInt(e.target.value))}
             >
               <option value="0">Select unit...</option>
               {units.map((uom: UnitOfMeasure) => (
@@ -255,19 +218,17 @@ export function OpeningBalanceForm({
           <FormField
             label="Unit Cost"
             required
-            error={errors.unit_cost}
+            error={allErrors.unit_cost}
             hint="Cost per unit of measure"
           >
             <Input
               type="number"
               value={formData.unit_cost}
-              onChange={(e) =>
-                setFormData({ ...formData, unit_cost: parseFloat(e.target.value) || 0 })
-              }
+              onChange={(e) => setField('unit_cost', parseFloat(e.target.value) || 0)}
               min="0"
               step="0.01"
               placeholder="0.00"
-              error={!!errors.unit_cost}
+              error={!!allErrors.unit_cost}
             />
           </FormField>
 
@@ -292,12 +253,12 @@ export function OpeningBalanceForm({
           {/* Notes */}
           <FormField
             label="Notes"
-            error={errors.notes}
+            error={allErrors.notes}
             hint="Optional reference or comments"
           >
             <Textarea
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              onChange={(e) => setField('notes', e.target.value)}
               rows={3}
               placeholder="e.g., Initial inventory count, Purchase order #12345..."
             />
@@ -313,10 +274,10 @@ export function OpeningBalanceForm({
           <Button
             type="submit"
             form="opening-balance-form"
-            disabled={mutation.isPending}
+            disabled={isPending}
             className="flex-1"
           >
-            {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Register Opening Balance
           </Button>
         </div>

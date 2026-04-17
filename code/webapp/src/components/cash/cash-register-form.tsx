@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
+import { useFormState } from '@/hooks/use-form-state'
 import { useCreateCashRegister, useUpdateCashRegister } from '@/services/cash-hooks'
 import { CashRegisterType, type CashRegister, type CashRegisterFormData, type OperatingUnit } from '@/types/cash'
 import { Loader2 } from 'lucide-react'
@@ -24,64 +24,46 @@ export function CashRegisterForm({
 }: CashRegisterFormProps) {
     const isEditing = !!register
 
-    const [formData, setFormData] = useState<CashRegisterFormData>({
-        code: register?.code || '',
-        name: register?.name || '',
-        branch_id: register?.branch_id || 1, // Default to branch 1 (backend will handle if needed)
-        operating_unit_id: register?.operating_unit_id || null,
-        type: register?.type || CashRegisterType.ON_PREMISE,
-        is_active: register?.is_active ?? true,
-        meta: register?.meta || undefined,
+    const { formData, setField, errors, validate } = useFormState<CashRegisterFormData>({
+        initialData: {
+            code: register?.code || '',
+            name: register?.name || '',
+            branch_id: register?.branch_id || 1,
+            operating_unit_id: register?.operating_unit_id || null,
+            type: register?.type || CashRegisterType.ON_PREMISE,
+            is_active: register?.is_active ?? true,
+            meta: register?.meta || undefined,
+        },
+        validationRules: {
+            code: { required: true },
+            name: { required: true },
+            branch_id: {
+                validate: (value) => {
+                    if (!value && isEditing) {
+                        return 'La sucursal es requerida'
+                    }
+                },
+            },
+            operating_unit_id: {
+                validate: (value, data) => {
+                    if (data?.type === CashRegisterType.EVENT && !value) {
+                        return 'La unidad operativa es requerida para cajas de eventos'
+                    }
+                },
+            },
+        },
     })
-
-    const [errors, setErrors] = useState<Record<string, string>>({})
-
-    useEffect(() => {
-        if (register) {
-            setFormData({
-                code: register.code,
-                name: register.name,
-                branch_id: register.branch_id,
-                operating_unit_id: register.operating_unit_id,
-                type: register.type,
-                is_active: register.is_active,
-                meta: register.meta || undefined,
-            })
-        }
-    }, [register])
 
     const createMutation = useCreateCashRegister()
     const updateMutation = useUpdateCashRegister()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setErrors({})
 
-        // Validation
-        const newErrors: Record<string, string> = {}
-
-        if (!formData.code.trim()) {
-            newErrors.code = 'El código es requerido'
-        }
-        if (!formData.name.trim()) {
-            newErrors.name = 'El nombre es requerido'
-        }
-        // branch_id will be set by backend to default branch
-        if (!formData.branch_id && isEditing) {
-            // Only validate if editing, backend sets default for new registers
-            newErrors.branch_id = 'La sucursal es requerida'
-        }
-        if (formData.type === CashRegisterType.EVENT && !formData.operating_unit_id) {
-            newErrors.operating_unit_id = 'La unidad operativa es requerida para cajas de eventos'
-        }
-
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors)
-            return
-        }
+        if (!validate()) return
 
         try {
-            if (isEditing) {
+            if (isEditing && register) {
                 await updateMutation.mutateAsync({
                     id: register.id,
                     data: formData,
@@ -93,18 +75,6 @@ export function CashRegisterForm({
             onClose()
         } catch (error) {
             console.error('Error submitting form:', error)
-        }
-    }
-
-    const handleChange = (field: keyof CashRegisterFormData, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
-        // Clear error when user types
-        if (errors[field]) {
-            setErrors(prev => {
-                const newErrors = { ...prev }
-                delete newErrors[field]
-                return newErrors
-            })
         }
     }
 
@@ -135,7 +105,7 @@ export function CashRegisterForm({
                             <Input
                                 type="text"
                                 value={formData.code}
-                                onChange={(e) => handleChange('code', e.target.value)}
+                                onChange={(e) => setField('code', e.target.value)}
                                 placeholder="REG-001"
                                 disabled={isEditing}
                                 error={!!errors.code}
@@ -150,7 +120,7 @@ export function CashRegisterForm({
                             <Input
                                 type="text"
                                 value={formData.name}
-                                onChange={(e) => handleChange('name', e.target.value)}
+                                onChange={(e) => setField('name', e.target.value)}
                                 placeholder="Caja Principal"
                                 error={!!errors.name}
                             />
@@ -165,7 +135,7 @@ export function CashRegisterForm({
                                 id="cash-register-type"
                                 name="type"
                                 value={formData.type}
-                                onChange={(e) => handleChange('type', e.target.value as CashRegisterType)}
+                                onChange={(e) => setField('type', e.target.value as CashRegisterType)}
                             >
                                 <option value={CashRegisterType.ON_PREMISE}>Local</option>
                                 <option value={CashRegisterType.DELIVERY}>Delivery</option>
@@ -184,7 +154,7 @@ export function CashRegisterForm({
                                     id="operating-unit"
                                     name="operating_unit_id"
                                     value={formData.operating_unit_id || ''}
-                                    onChange={(e) => handleChange('operating_unit_id', e.target.value ? parseInt(e.target.value) : null)}
+                                    onChange={(e) => setField('operating_unit_id', e.target.value ? parseInt(e.target.value) : null)}
                                 >
                                     <option value="">Selecciona un evento</option>
                                     {filteredOperatingUnits.map(ou => (
@@ -199,7 +169,7 @@ export function CashRegisterForm({
                         <FormField label="Estado">
                             <Checkbox
                                 checked={formData.is_active}
-                                onChange={(e) => handleChange('is_active', e.target.checked)}
+                                onChange={(e) => setField('is_active', e.target.checked)}
                                 label="Activa"
                             />
                         </FormField>
