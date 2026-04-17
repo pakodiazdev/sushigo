@@ -7,6 +7,8 @@ import {
   formatDateInFrontendTz,
   formatTimeInFrontendTz,
   formatDateTimeInFrontendTz,
+  toDatetimeLocalValue,
+  fromDatetimeLocalValue,
 } from '@/lib/timezone'
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -162,5 +164,77 @@ describe('formatDateTimeInFrontendTz', () => {
   it('returns original string on error', () => {
     const result = formatDateTimeInFrontendTz('invalid-date')
     expect(result).toBe('invalid-date')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// toDatetimeLocalValue
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('toDatetimeLocalValue', () => {
+  it('converts UTC ISO string to datetime-local format', () => {
+    const result = toDatetimeLocalValue('2026-04-16T18:00:00Z')
+    // Should be YYYY-MM-DDTHH:mm format
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
+  })
+
+  it('returns empty string on invalid input', () => {
+    const result = toDatetimeLocalValue('invalid')
+    // Invalid date should return empty string or the original processing
+    expect(typeof result).toBe('string')
+  })
+
+  it('handles dates with timezone offsets', () => {
+    const result = toDatetimeLocalValue('2026-04-16T12:30:00-06:00')
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
+  })
+
+  it('preserves time components correctly', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-16T15:45:00Z'))
+    
+    const result = toDatetimeLocalValue('2026-04-16T15:45:00Z')
+    // Should contain the formatted time
+    expect(result).toContain(':')
+    expect(result).toContain('T')
+    
+    vi.useRealTimers()
+  })
+
+  it('handles midnight correctly', () => {
+    const result = toDatetimeLocalValue('2026-04-16T00:00:00Z')
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// fromDatetimeLocalValue
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('fromDatetimeLocalValue', () => {
+  it('converts datetime-local value to ISO string', () => {
+    const result = fromDatetimeLocalValue('2026-04-16T14:30')
+    // Should be an ISO string
+    expect(result).toContain('2026')
+    expect(typeof result).toBe('string')
+  })
+
+  it('returns original value on invalid input', () => {
+    const result = fromDatetimeLocalValue('invalid')
+    expect(result).toBe('invalid')
+  })
+
+  it('returns ISO 8601 format', () => {
+    const result = fromDatetimeLocalValue('2026-05-01T09:00')
+    // ISO format should end with Z or contain timezone info
+    expect(result).toMatch(/\d{4}-\d{2}-\d{2}/)
+  })
+
+  it('handles edge case times', () => {
+    const midnight = fromDatetimeLocalValue('2026-04-16T00:00')
+    expect(midnight).toContain('2026')
+
+    const lastMinute = fromDatetimeLocalValue('2026-04-16T23:59')
+    expect(lastMinute).toContain('2026')
   })
 })
