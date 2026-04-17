@@ -18,6 +18,10 @@ use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\V1\Auth\VerifyResetTokenController;
 use App\Http\Controllers\Api\V1\Dev\DevLoginController;
 use App\Http\Controllers\Api\V1\Dev\ListDevUsersController;
+use App\Http\Controllers\Api\V1\Devtools\GetClockController;
+use App\Http\Controllers\Api\V1\Devtools\ResetClockController;
+use App\Http\Controllers\Api\V1\Devtools\SetClockController;
+use App\Http\Controllers\Api\V1\Devtools\ShiftClockController;
 use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\CreateWageController;
@@ -76,10 +80,6 @@ use App\Http\Controllers\Api\V1\UnitsOfMeasure\ListUnitsOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\ListUomConversionsController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\ShowUnitOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\UpdateUnitOfMeasureController;
-use App\Http\Controllers\Api\V1\Devtools\GetClockController;
-use App\Http\Controllers\Api\V1\Devtools\SetClockController;
-use App\Http\Controllers\Api\V1\Devtools\ShiftClockController;
-use App\Http\Controllers\Api\V1\Devtools\ResetClockController;
 use Illuminate\Support\Facades\Route;
 
 // ── Test-only routes (never exposed in production) ───────────────────────
