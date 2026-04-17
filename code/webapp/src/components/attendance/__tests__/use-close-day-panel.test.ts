@@ -14,11 +14,10 @@ vi.mock('@/services/attendance-hooks', () => ({
   }),
 }))
 
-vi.mock('@/lib/datetime', () => ({
-  currentTimeLabel: () => '22:00',
-}))
-
 import { useCloseDayPanel } from '../use-close-day-panel'
+
+// Default time used as the third argument for useCloseDayPanel
+const DEFAULT_TIME = '22:00'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -91,12 +90,12 @@ afterEach(() => {
 describe('useCloseDayPanel', () => {
   describe('panel state', () => {
     it('starts closed', () => {
-      const { result } = renderHook(() => useCloseDayPanel([], null))
+      const { result } = renderHook(() => useCloseDayPanel([], null, DEFAULT_TIME))
       expect(result.current.isOpen).toBe(false)
     })
 
     it('opens and closes', () => {
-      const { result } = renderHook(() => useCloseDayPanel([], 1))
+      const { result } = renderHook(() => useCloseDayPanel([], 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       expect(result.current.isOpen).toBe(true)
@@ -109,7 +108,7 @@ describe('useCloseDayPanel', () => {
   describe('step navigation', () => {
     it('starts on confirm step when no pending lunch returns', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       expect(result.current.currentStep).toBe('confirm')
@@ -118,7 +117,7 @@ describe('useCloseDayPanel', () => {
 
     it('starts on lunch-returns step when there are pending lunches', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('at-lunch') })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       expect(result.current.currentStep).toBe('lunch-returns')
@@ -127,7 +126,7 @@ describe('useCloseDayPanel', () => {
 
     it('navigates forward and backward', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('at-lunch') })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       expect(result.current.currentStep).toBe('lunch-returns')
@@ -149,7 +148,7 @@ describe('useCloseDayPanel', () => {
           schedule: makeSchedule({ lunch_duration_minutes: 60 }),
         }),
       ]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       expect(result.current.lunchReturnEntries).toHaveLength(1)
       expect(result.current.lunchReturnEntries[0]!.employeeName).toBe('Carlos Mendoza')
@@ -161,14 +160,14 @@ describe('useCloseDayPanel', () => {
         makeRow({ attendance: makeAttendanceData('pending') }),
         makeRow({ attendance: makeAttendanceData('done') }),
       ]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
       expect(result.current.lunchReturnEntries).toHaveLength(0)
     })
 
     it('allows updating lunch return time', () => {
       const attData = makeAttendanceData('at-lunch')
       const rows = [makeRow({ attendance: attData })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       const attId = result.current.lunchReturnEntries[0]!.attendanceId
 
@@ -184,7 +183,7 @@ describe('useCloseDayPanel', () => {
         makeRow({ attendance: makeAttendanceData('returned') }),
         makeRow({ attendance: makeAttendanceData('checked-in') }),
       ]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       expect(result.current.summary.checkOuts).toHaveLength(2)
       expect(result.current.summary.absences).toHaveLength(0)
@@ -195,7 +194,7 @@ describe('useCloseDayPanel', () => {
         makeRow({ attendance: makeAttendanceData('pending') }),
         makeRow({ attendance: makeAttendanceData('pending') }),
       ]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       expect(result.current.summary.checkOuts).toHaveLength(0)
       expect(result.current.summary.absences).toHaveLength(2)
@@ -203,7 +202,7 @@ describe('useCloseDayPanel', () => {
 
     it('excludes done employees from both lists', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('done') })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       expect(result.current.summary.checkOuts).toHaveLength(0)
       expect(result.current.summary.absences).toHaveLength(0)
@@ -212,13 +211,13 @@ describe('useCloseDayPanel', () => {
 
   describe('close time', () => {
     it('defaults to current time label', () => {
-      const { result } = renderHook(() => useCloseDayPanel([], 1))
+      const { result } = renderHook(() => useCloseDayPanel([], 1, DEFAULT_TIME))
       act(() => result.current.open())
       expect(result.current.closeTime).toBe('22:00')
     })
 
     it('allows setting close time', () => {
-      const { result } = renderHook(() => useCloseDayPanel([], 1))
+      const { result } = renderHook(() => useCloseDayPanel([], 1, DEFAULT_TIME))
       act(() => result.current.open())
 
       act(() => result.current.setCloseTime('17:30'))
@@ -228,12 +227,12 @@ describe('useCloseDayPanel', () => {
 
   describe('overtime pending', () => {
     it('starts with empty overtimePending', () => {
-      const { result } = renderHook(() => useCloseDayPanel([], 1))
+      const { result } = renderHook(() => useCloseDayPanel([], 1, DEFAULT_TIME))
       expect(result.current.overtimePending).toEqual([])
     })
 
     it('clearOvertimePending resets to empty array', () => {
-      const { result } = renderHook(() => useCloseDayPanel([], 1))
+      const { result } = renderHook(() => useCloseDayPanel([], 1, DEFAULT_TIME))
 
       // Simulate overtime being set by manually calling clear — starts already empty
       act(() => result.current.clearOvertimePending())
@@ -242,7 +241,7 @@ describe('useCloseDayPanel', () => {
 
     it('confirm passes onSuccess callback that captures overtime_pending', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       act(() => result.current.confirm())
@@ -274,7 +273,7 @@ describe('useCloseDayPanel', () => {
 
     it('confirm does not set overtimePending when overtime_pending is empty', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       act(() => result.current.confirm())
@@ -290,7 +289,7 @@ describe('useCloseDayPanel', () => {
 
     it('closes the panel on successful confirm', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       expect(result.current.isOpen).toBe(true)
@@ -308,7 +307,7 @@ describe('useCloseDayPanel', () => {
   describe('confirm', () => {
     it('calls mutation with correct data (no lunch returns)', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       act(() => result.current.setCloseTime('22:00'))
@@ -332,7 +331,7 @@ describe('useCloseDayPanel', () => {
           schedule: makeSchedule({ lunch_duration_minutes: 60 }),
         }),
       ]
-      const { result } = renderHook(() => useCloseDayPanel(rows, 1))
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
 
       act(() => result.current.open())
       act(() => result.current.confirm())
@@ -352,7 +351,7 @@ describe('useCloseDayPanel', () => {
     })
 
     it('does not call mutation when branchId is null', () => {
-      const { result } = renderHook(() => useCloseDayPanel([], null))
+      const { result } = renderHook(() => useCloseDayPanel([], null, DEFAULT_TIME))
       act(() => result.current.confirm())
       expect(mockMutate).not.toHaveBeenCalled()
     })

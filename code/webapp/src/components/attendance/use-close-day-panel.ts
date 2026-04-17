@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback } from 'react'
 import { useCloseDay } from '@/services/attendance-hooks'
 import { getAttendancePhase, formatTime } from '@/types/attendance'
 import type { TodayAttendanceRow, CloseDayLunchReturn, OvertimePendingEntry } from '@/types/attendance'
-import { currentTimeLabel } from '@/lib/datetime'
 
 export interface LunchReturnEntry {
   attendanceId: string
@@ -47,16 +46,20 @@ export interface UseCloseDayPanelResult {
 
 /**
  * Compute the pre-calculated lunch return time: lunch_start + lunch_duration_minutes.
- * Returns the HH:mm string, or falls back to current time if data is missing.
+ * Returns the HH:mm string, or falls back to provided fallback time if data is missing.
  */
-function computeExpectedReturn(lunchStartIso: string, lunchDurationMinutes: number | null): string {
+function computeExpectedReturn(
+  lunchStartIso: string,
+  lunchDurationMinutes: number | null,
+  fallbackTime: string,
+): string {
   if (!lunchDurationMinutes || !lunchStartIso) {
-    return currentTimeLabel()
+    return fallbackTime
   }
 
   // Parse the lunch_start ISO to extract the local CDMX time, then add duration
   const displayTime = formatTime(lunchStartIso)
-  if (displayTime === '—') return currentTimeLabel()
+  if (displayTime === '—') return fallbackTime
 
   const [hStr, mStr] = displayTime.split(':')
   const h = Number(hStr)
@@ -71,10 +74,11 @@ function computeExpectedReturn(lunchStartIso: string, lunchDurationMinutes: numb
 export function useCloseDayPanel(
   rows: TodayAttendanceRow[],
   branchId: number | null,
+  currentTime: string,
 ): UseCloseDayPanelResult {
   const [isOpen, setIsOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState<CloseDayStep>('lunch-returns')
-  const [closeTime, setCloseTime] = useState(currentTimeLabel)
+  const [closeTime, setCloseTime] = useState(currentTime)
   const [overtimePending, setOvertimePending] = useState<OvertimePendingEntry[]>([])
   const closeDayMutation = useCloseDay()
 
@@ -91,6 +95,7 @@ export function useCloseDayPanel(
       const preCalc = computeExpectedReturn(
         lunchStart,
         row.schedule?.lunch_duration_minutes ?? null,
+        currentTime,
       )
 
       entries.push({
@@ -103,7 +108,7 @@ export function useCloseDayPanel(
       })
     }
     return entries
-  }, [rows])
+  }, [rows, currentTime])
 
   // Track user overrides for lunch return times
   const [lunchReturnOverrides, setLunchReturnOverrides] = useState<Record<string, string>>({})
@@ -153,9 +158,9 @@ export function useCloseDayPanel(
   const open = useCallback(() => {
     setIsOpen(true)
     setCurrentStep(hasPendingLunchReturns ? 'lunch-returns' : 'confirm')
-    setCloseTime(currentTimeLabel())
+    setCloseTime(currentTime)
     setLunchReturnOverrides({})
-  }, [hasPendingLunchReturns])
+  }, [hasPendingLunchReturns, currentTime])
 
   const close = useCallback(() => {
     setIsOpen(false)
