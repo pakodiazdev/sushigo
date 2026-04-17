@@ -2,10 +2,13 @@ import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { getAttendancePhase } from '@/types/attendance'
-import { todayDateCdmx, currentTimeLabel } from '@/lib/datetime'
+import { todayDateCdmx } from '@/lib/datetime'
 import { timeToIsoWithOffset } from '@/lib/timezone'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
+
+// Re-export from shared utilities for backwards compatibility
+export { currentTimeLabel } from '@/lib/datetime'
 
 export interface PendingAttendanceData {
   employee: TodayAttendanceEmployee
@@ -27,9 +30,6 @@ export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
 
   return { total: rows.length, pending, checkedIn, done, withOvertime }
 }
-
-// Re-export from shared utilities for backwards compatibility
-export { currentTimeLabel }
 
 /**
  * Today's date in business timezone (YYYY-MM-DD).
