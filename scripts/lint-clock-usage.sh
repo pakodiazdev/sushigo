@@ -29,18 +29,8 @@ echo ""
 
 echo "📦 Backend (PHP)..."
 
-# Allowed paths (infrastructure, not business logic):
-#   - Migrations, Seeders, Tests
-#   - ApplicationClock implementations themselves
-#   - Middleware/Providers (infrastructure)
-BACKEND_EXCLUDE_PATTERNS=(
-    "database/migrations"
-    "database/seeders"
-    "tests/"
-    "Support/Clock/"
-    "Middleware/"
-    "Providers/"
-)
+# We search only in business paths (Actions, Services, Controllers)
+# Infrastructure paths are naturally excluded.
 
 BACKEND_FORBIDDEN_PATTERNS=(
     'Carbon::now()'
@@ -49,11 +39,9 @@ BACKEND_FORBIDDEN_PATTERNS=(
     "new DateTime('now')"
 )
 
-# Build grep exclude pattern
-BACKEND_EXCLUDE=""
-for pattern in "${BACKEND_EXCLUDE_PATTERNS[@]}"; do
-    BACKEND_EXCLUDE="$BACKEND_EXCLUDE --exclude-dir=$(basename "$pattern")"
-done
+# Note: We search only in business paths (Actions, Services, Controllers)
+# which already excludes infrastructure paths like migrations, seeders,
+# tests, middleware, etc. No need for --exclude-dir.
 
 for forbidden in "${BACKEND_FORBIDDEN_PATTERNS[@]}"; do
     # Search in Actions, Services, Controllers (business paths)

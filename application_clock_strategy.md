@@ -83,11 +83,11 @@ Usa una hora base + tiempo transcurrido
 
 ## 7. 🗄️ Modelo de datos
 
-Tabla: system_clock_state
+Tabla: application_clock_state
 
 - mode (system | simulated)
-- base_datetime (UTC)
-- started_real_datetime (UTC)
+- base_datetime_utc (UTC)
+- started_real_datetime_utc (UTC)
 - timezone
 - updated_at
 
@@ -101,10 +101,10 @@ now = base_datetime + (real_now - started_real_datetime)
 
 ## 9. 🔌 Endpoints
 
-GET /api/devtools/clock  
-POST /api/devtools/clock/set  
-POST /api/devtools/clock/reset  
-POST /api/devtools/clock/shift  
+GET /api/v1/devtools/clock  
+POST /api/v1/devtools/clock/set  
+POST /api/v1/devtools/clock/reset  
+POST /api/v1/devtools/clock/shift  
 
 ---
 
