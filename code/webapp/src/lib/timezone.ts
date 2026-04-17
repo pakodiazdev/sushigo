@@ -50,6 +50,9 @@ export function formatDateInFrontendTz(
 ): string {
     try {
         const date = new Date(utcIsoString);
+        if (Number.isNaN(date.getTime())) {
+            return utcIsoString;
+        }
         return date.toLocaleDateString('es-MX', {
             ...options,
             timeZone: getFrontendTimezone(),
@@ -72,6 +75,9 @@ export function formatTimeInFrontendTz(
 ): string {
     try {
         const date = new Date(utcIsoString);
+        if (Number.isNaN(date.getTime())) {
+            return utcIsoString;
+        }
         return date.toLocaleTimeString('es-MX', {
             ...options,
             timeZone: getFrontendTimezone(),
@@ -94,6 +100,9 @@ export function formatDateTimeInFrontendTz(
 ): string {
     try {
         const date = new Date(utcIsoString);
+        if (Number.isNaN(date.getTime())) {
+            return utcIsoString;
+        }
         return date.toLocaleString('es-MX', {
             ...options,
             timeZone: getFrontendTimezone(),

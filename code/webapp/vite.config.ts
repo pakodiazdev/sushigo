@@ -41,8 +41,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     pool: 'threads',
-    maxWorkers: 4,
-    minWorkers: 1,
+    maxWorkers: 2,
+    minWorkers: 2,
     testTimeout: 30000,
     hookTimeout: 30000,
     coverage: {

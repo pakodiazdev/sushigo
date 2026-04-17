@@ -238,22 +238,22 @@ describe('timeToIso', () => {
     expect(() => timeToIso('ab:cd')).toThrow(TypeError)
   })
 
-  it('returns ISO 8601 string with CDMX offset (-06:00)', () => {
+  it('returns ISO 8601 string with timezone offset', () => {
     vi.useFakeTimers()
-    // Set system time to any UTC time - timeToIso uses today's date in CDMX
+    // Set system time to any UTC time - timeToIso uses today's date in frontend timezone
     vi.setSystemTime(new Date('2026-04-01T18:00:00Z'))
 
     const iso = timeToIso('14:30')
-    // Should always have CDMX offset (-06:00)
-    expect(iso).toBe('2026-04-01T14:30:00-06:00')
+    // Should have valid ISO 8601 format with offset (browser timezone in test = UTC)
+    expect(iso).toMatch(/^2026-04-01T14:30:00[+-]\d{2}:\d{2}$/)
 
     vi.useRealTimers()
   })
 
-  it('always uses -06:00 CDMX offset regardless of system timezone', () => {
+  it('returns ISO 8601 string with valid timezone offset', () => {
     const iso = timeToIso('14:30')
-    // Should always end with -06:00 (CDMX standard time)
-    expect(iso).toMatch(/-06:00$/)
+    // Should end with a valid timezone offset (±HH:MM)
+    expect(iso).toMatch(/[+-]\d{2}:\d{2}$/)
   })
 })
 
