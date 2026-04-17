@@ -76,6 +76,10 @@ use App\Http\Controllers\Api\V1\UnitsOfMeasure\ListUnitsOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\ListUomConversionsController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\ShowUnitOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\UpdateUnitOfMeasureController;
+use App\Http\Controllers\Api\V1\Devtools\GetClockController;
+use App\Http\Controllers\Api\V1\Devtools\SetClockController;
+use App\Http\Controllers\Api\V1\Devtools\ShiftClockController;
+use App\Http\Controllers\Api\V1\Devtools\ResetClockController;
 use Illuminate\Support\Facades\Route;
 
 // ── Test-only routes (never exposed in production) ───────────────────────
@@ -102,10 +106,10 @@ if (app()->environment('testing', 'local', 'dev', 'devtest')) {
     // ── Devtools clock simulation routes ──────────────────────────────────
     // Protected by ClockSimulationGuard (env check + feature flag)
     Route::prefix('v1/devtools/clock')->name('devtools.clock.')->group(function () {
-        Route::get('/', \App\Http\Controllers\Api\V1\Devtools\GetClockController::class)->name('get');
-        Route::post('set', \App\Http\Controllers\Api\V1\Devtools\SetClockController::class)->name('set');
-        Route::post('shift', \App\Http\Controllers\Api\V1\Devtools\ShiftClockController::class)->name('shift');
-        Route::post('reset', \App\Http\Controllers\Api\V1\Devtools\ResetClockController::class)->name('reset');
+        Route::get('/', GetClockController::class)->name('get');
+        Route::post('set', SetClockController::class)->name('set');
+        Route::post('shift', ShiftClockController::class)->name('shift');
+        Route::post('reset', ResetClockController::class)->name('reset');
     });
 }
 

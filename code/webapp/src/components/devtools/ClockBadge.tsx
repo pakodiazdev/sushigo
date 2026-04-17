@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
 import { Clock, AlertTriangle, RotateCcw, Play, X, Settings } from 'lucide-react';
-import { useApplicationClockStore, selectIsSimulated } from '@/stores/clock.store';
+import { useClockBadge } from './use-clock-badge';
 
 /**
  * Clock mode badge for the header.
@@ -9,83 +8,28 @@ import { useApplicationClockStore, selectIsSimulated } from '@/stores/clock.stor
  * Only visible when clock simulation feature is available.
  */
 export function ClockBadge() {
-    const clockState = useApplicationClockStore((state) => state.clockState);
-    const isAvailable = useApplicationClockStore((state) => state.isAvailable);
-    const isLoading = useApplicationClockStore((state) => state.isLoading);
-    const isSimulated = useApplicationClockStore(selectIsSimulated);
-    const fetchClock = useApplicationClockStore((state) => state.fetchClock);
-    const setClockTime = useApplicationClockStore((state) => state.setClockTime);
-    const resetClockToSystem = useApplicationClockStore((state) => state.resetClockToSystem);
-
-    const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [dateInput, setDateInput] = useState('');
-    const [timeInput, setTimeInput] = useState('');
-    const panelRef = useRef<HTMLDivElement>(null);
-
-    // Fetch clock state on mount
-    useEffect(() => {
-        fetchClock();
-    }, [fetchClock]);
-
-    // Close panel on click outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-                setIsPanelOpen(false);
-            }
-        }
-        if (isPanelOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
-        }
-    }, [isPanelOpen]);
-
-    // Initialize inputs when panel opens
-    useEffect(() => {
-        if (isPanelOpen && clockState) {
-            const businessDate = clockState.business_date;
-            const businessTime = new Date(clockState.business_now).toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-                timeZone: clockState.business_timezone,
-            });
-            setDateInput(businessDate);
-            setTimeInput(businessTime);
-        }
-    }, [isPanelOpen, clockState]);
+    const {
+        clockState,
+        isAvailable,
+        isLoading,
+        isSimulated,
+        isPanelOpen,
+        dateInput,
+        timeInput,
+        panelRef,
+        businessTime,
+        setDateInput,
+        setTimeInput,
+        handleSetTime,
+        handleReset,
+        togglePanel,
+        closePanel,
+    } = useClockBadge();
 
     // Don't render if feature is not available
     if (!isAvailable || !clockState) {
         return null;
     }
-
-    // Display time in the BUSINESS timezone (not browser local)
-    const businessTime = new Date(clockState.business_now).toLocaleTimeString('es-MX', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: clockState.business_timezone,
-    });
-
-    const handleSetTime = async () => {
-        if (!dateInput || !timeInput) return;
-        const datetime = `${dateInput} ${timeInput}:00`;
-        const success = await setClockTime(datetime);
-        if (success) {
-            setIsPanelOpen(false);
-        }
-    };
-
-    const handleReset = async () => {
-        const success = await resetClockToSystem();
-        if (success) {
-            setIsPanelOpen(false);
-        }
-    };
-
-    const togglePanel = () => {
-        setIsPanelOpen(!isPanelOpen);
-    };
 
     return (
         <div className="relative" ref={panelRef}>
@@ -116,7 +60,7 @@ export function ClockBadge() {
                             Clock Configuration
                         </h3>
                         <button
-                            onClick={() => setIsPanelOpen(false)}
+                            onClick={closePanel}
                             className="p-1 hover:bg-muted rounded"
                         >
                             <X className="h-4 w-4" />
