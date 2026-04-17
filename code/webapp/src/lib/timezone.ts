@@ -134,18 +134,19 @@ export function formatDateTimeInFrontendTz(
  * @returns Local datetime string in YYYY-MM-DDTHH:mm format
  */
 export function toDatetimeLocalValue(utcIsoString: string): string {
-    try {
-        const date = new Date(utcIsoString);
-        // Format for datetime-local: YYYY-MM-DDTHH:mm
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch {
+    const date = new Date(utcIsoString);
+    // new Date('invalid') doesn't throw - it creates an Invalid Date
+    // where getTime() returns NaN. We must check explicitly.
+    if (Number.isNaN(date.getTime())) {
         return '';
     }
+    // Format for datetime-local: YYYY-MM-DDTHH:mm
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 /**
@@ -156,13 +157,13 @@ export function toDatetimeLocalValue(utcIsoString: string): string {
  * @returns ISO 8601 string with timezone offset
  */
 export function fromDatetimeLocalValue(datetimeLocalValue: string): string {
-    try {
-        // Parse as local time and return with offset
-        const date = new Date(datetimeLocalValue);
-        return date.toISOString();
-    } catch {
+    // Parse as local time and return with offset
+    const date = new Date(datetimeLocalValue);
+    // new Date('invalid') doesn't throw - it creates an Invalid Date
+    if (Number.isNaN(date.getTime())) {
         return datetimeLocalValue;
     }
+    return date.toISOString();
 }
 
 /**

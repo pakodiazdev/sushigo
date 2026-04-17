@@ -180,8 +180,14 @@ describe('toDatetimeLocalValue', () => {
 
   it('returns empty string on invalid input', () => {
     const result = toDatetimeLocalValue('invalid')
-    // Invalid date should return empty string or the original processing
-    expect(typeof result).toBe('string')
+    // Invalid date should return empty string (not NaN-filled string)
+    expect(result).toBe('')
+  })
+
+  it('returns empty string for various invalid inputs', () => {
+    expect(toDatetimeLocalValue('')).toBe('')
+    expect(toDatetimeLocalValue('not-a-date')).toBe('')
+    expect(toDatetimeLocalValue('foo bar')).toBe('')
   })
 
   it('handles dates with timezone offsets', () => {
