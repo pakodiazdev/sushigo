@@ -49,15 +49,15 @@ class ScheduleResource extends BaseResource
             'workday_type' => $this->workday_type,
             'working_days_per_week' => $this->working_days_per_week,
             'days' => ScheduleDayResource::collection($this->whenLoaded('scheduleDays')),
-            'active_overrides' => $this->whenLoaded('employmentPeriod', function () {
+            'active_overrides' => $this->whenLoaded('employmentPeriod', function () use ($request) {
                 if (! $this->employmentPeriod->relationLoaded('scheduleDayOverrides')) {
                     return [];
                 }
 
-                // Use the reference date passed from the controller (ApplicationClock-aware)
-                // to ensure consistency with simulated clock mode. Falls back to branch
-                // timezone-aware now() if not provided (e.g., when resource is used elsewhere).
-                $referenceDate = $this->additional['reference_date'] ?? null;
+                // Use the reference date passed via request attributes from the controller
+                // (ApplicationClock-aware) to ensure consistency with simulated clock mode.
+                // Falls back to branch timezone-aware now() if not provided.
+                $referenceDate = $request->attributes->get('reference_date');
 
                 if (! $referenceDate) {
                     // Fallback: use branch timezone for consistency with evening hours
