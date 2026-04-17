@@ -40,6 +40,11 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    pool: 'threads',
+    maxWorkers: 4,
+    minWorkers: 1,
+    testTimeout: 30000,
+    hookTimeout: 30000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
