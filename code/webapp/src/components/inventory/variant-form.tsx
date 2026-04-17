@@ -1,15 +1,13 @@
-import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
-import { useToast } from '@/components/ui/toast-provider'
-import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
-import { itemVariantApi, itemApi } from '@/services/inventory-api'
-import { apiClient } from '@/lib/api-client'
-import type { ItemVariant, UnitOfMeasure } from '@/types/inventory'
+import { useFormState, validators } from '@/hooks/use-form-state'
+import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
+import { useItemsSelect, useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
+import { itemVariantApi } from '@/services/inventory-api'
+import type { ItemVariant, UnitOfMeasure, Item } from '@/types/inventory'
 
 interface VariantFormProps {
   variant?: ItemVariant | null
@@ -18,102 +16,79 @@ interface VariantFormProps {
   preselectedItemId?: number
 }
 
+interface VariantFormData {
+  item_id: number
+  code: string
+  name: string
+  uom_id: number
+  min_stock: number
+  max_stock: number
+  avg_unit_cost: number
+  last_unit_cost: number
+  is_active: boolean
+}
+
 export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }: VariantFormProps) {
-  const { showSuccess, showError } = useToast()
   const isEditing = !!variant
 
-  const [formData, setFormData] = useState({
-    item_id: variant?.item_id || preselectedItemId || 0,
-    code: variant?.code || '',
-    name: variant?.name || '',
-    uom_id: variant?.uom_id || 0,
-    min_stock: variant?.min_stock || 0,
-    max_stock: variant?.max_stock || 100,
-    avg_unit_cost: variant?.avg_unit_cost || 0,
-    last_unit_cost: variant?.last_unit_cost || 0,
-    is_active: variant?.is_active ?? true,
-  })
+  // Use shared query hooks
+  const { data: items = [] } = useItemsSelect()
+  const { data: units = [] } = useUnitsOfMeasureSelect()
 
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  // Fetch items for select
-  const { data: itemsData } = useQuery({
-    queryKey: ['items-for-select'],
-    queryFn: () => itemApi.list({ is_active: true, per_page: 100 }),
-  })
-
-  // Fetch units of measure
-  const { data: uomData } = useQuery({
-    queryKey: ['units-of-measure'],
-    queryFn: async () => {
-      const response = await apiClient.get('/units-of-measure', {
-        params: { is_active: true, per_page: 100 }
-      })
-      return response
+  const { formData, setField, errors, validate } = useFormState<VariantFormData>({
+    initialData: {
+      item_id: variant?.item_id || preselectedItemId || 0,
+      code: variant?.code || '',
+      name: variant?.name || '',
+      uom_id: variant?.uom_id || 0,
+      min_stock: variant?.min_stock || 0,
+      max_stock: variant?.max_stock || 100,
+      avg_unit_cost: variant?.avg_unit_cost || 0,
+      last_unit_cost: variant?.last_unit_cost || 0,
+      is_active: variant?.is_active ?? true,
+    },
+    validationRules: {
+      item_id: { required: true },
+      code: {
+        required: true,
+        validate: validators.minLength(2, 'Code must be at least 2 characters'),
+      },
+      name: {
+        required: true,
+        validate: validators.minLength(2, 'Name must be at least 2 characters'),
+      },
+      uom_id: { required: true },
+      min_stock: {
+        validate: validators.positive('Min stock cannot be negative'),
+      },
+      max_stock: {
+        validate: (value, data) => {
+          if (typeof value === 'number' && typeof data.min_stock === 'number' && value < data.min_stock) {
+            return 'Max stock must be greater than min stock'
+          }
+        },
+      },
+      last_unit_cost: {
+        validate: validators.positive('Cost cannot be negative'),
+      },
     },
   })
 
-  const items = itemsData?.data.data || []
-  const units = uomData?.data.data || []
-
-  const mutation = useMutation({
-    mutationFn: (data: typeof formData) => {
-      if (isEditing && variant) {
-        return itemVariantApi.update(variant.id, data)
-      }
-      return itemVariantApi.create(data)
-    },
-    onSuccess: () => {
-      showSuccess(
-        `Variant ${isEditing ? 'updated' : 'created'} successfully`,
-        isEditing ? 'Variant Updated' : 'Variant Created'
-      )
-      onSuccess()
-    },
-    onError: (error: unknown) => {
-      if (hasApiValidationErrors(error)) {
-        setErrors(getApiValidationErrors(error))
-      }
-      showError(
-        getApiErrorMessage(error, `Failed to ${isEditing ? 'update' : 'create'} variant`),
-        'Error'
-      )
-    },
+  const { execute, validationErrors, isPending } = useCreateUpdateMutation({
+    createFn: (data: VariantFormData) => itemVariantApi.create(data),
+    updateFn: (data: VariantFormData) => itemVariantApi.update(variant!.id, data),
+    entityName: 'Variant',
+    isEditing,
+    onSuccess,
   })
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.item_id || formData.item_id === 0) {
-      newErrors.item_id = 'Item is required'
-    }
-    if (!formData.code || formData.code.length < 2) {
-      newErrors.code = 'Code must be at least 2 characters'
-    }
-    if (!formData.name || formData.name.length < 2) {
-      newErrors.name = 'Name must be at least 2 characters'
-    }
-    if (!formData.uom_id || formData.uom_id === 0) {
-      newErrors.uom_id = 'Unit of measure is required'
-    }
-    if (formData.min_stock < 0) {
-      newErrors.min_stock = 'Min stock cannot be negative'
-    }
-    if (formData.max_stock < formData.min_stock) {
-      newErrors.max_stock = 'Max stock must be greater than min stock'
-    }
-    if (formData.last_unit_cost < 0) {
-      newErrors.last_unit_cost = 'Cost cannot be negative'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  // Merge client and server validation errors
+  const allErrors = { ...errors, ...validationErrors }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (validate()) {
-      mutation.mutate(formData)
+      await execute(formData)
     }
   }
 
@@ -131,15 +106,15 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           <FormField
             label="Item"
             required
-            error={errors.item_id}
+            error={allErrors.item_id}
           >
             <Select
               value={formData.item_id.toString()}
-              onChange={(e) => setFormData({ ...formData, item_id: parseInt(e.target.value) })}
+              onChange={(e) => setField('item_id', parseInt(e.target.value))}
               disabled={isEditing}
             >
               <option value="0">Select an item...</option>
-              {items.map((item) => (
+              {items.map((item: Item) => (
                 <option key={item.id} value={item.id}>
                   {item.sku} - {item.name}
                 </option>
@@ -151,14 +126,14 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           <FormField
             label="Variant Code"
             required
-            error={errors.code}
+            error={allErrors.code}
             hint="Unique code for this variant (e.g., SKU-001-L, PROD-KG)"
           >
             <Input
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+              onChange={(e) => setField('code', e.target.value.toUpperCase())}
               placeholder="e.g., PROD-KG"
-              error={!!errors.code}
+              error={!!allErrors.code}
             />
           </FormField>
 
@@ -166,14 +141,14 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           <FormField
             label="Variant Name"
             required
-            error={errors.name}
+            error={allErrors.name}
             hint="Descriptive name (e.g., Large, 1 Kilogram, 500ml)"
           >
             <Input
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => setField('name', e.target.value)}
               placeholder="e.g., 1 Kilogram"
-              error={!!errors.name}
+              error={!!allErrors.name}
             />
           </FormField>
 
@@ -181,11 +156,11 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           <FormField
             label="Unit of Measure"
             required
-            error={errors.uom_id}
+            error={allErrors.uom_id}
           >
             <Select
               value={formData.uom_id.toString()}
-              onChange={(e) => setFormData({ ...formData, uom_id: parseInt(e.target.value) })}
+              onChange={(e) => setField('uom_id', parseInt(e.target.value))}
             >
               <option value="0">Select unit...</option>
               {units.map((uom: UnitOfMeasure) => (
@@ -201,30 +176,30 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             <FormField
               label="Min Stock Level"
               required
-              error={errors.min_stock}
+              error={allErrors.min_stock}
             >
               <Input
                 type="number"
                 value={formData.min_stock}
-                onChange={(e) => setFormData({ ...formData, min_stock: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setField('min_stock', parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.01"
-                error={!!errors.min_stock}
+                error={!!allErrors.min_stock}
               />
             </FormField>
 
             <FormField
               label="Max Stock Level"
               required
-              error={errors.max_stock}
+              error={allErrors.max_stock}
             >
               <Input
                 type="number"
                 value={formData.max_stock}
-                onChange={(e) => setFormData({ ...formData, max_stock: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setField('max_stock', parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.01"
-                error={!!errors.max_stock}
+                error={!!allErrors.max_stock}
               />
             </FormField>
           </div>
@@ -233,17 +208,17 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           <FormField
             label="Last Unit Cost"
             required
-            error={errors.last_unit_cost}
+            error={allErrors.last_unit_cost}
             hint="Most recent purchase cost per unit"
           >
             <Input
               type="number"
               value={formData.last_unit_cost}
-              onChange={(e) => setFormData({ ...formData, last_unit_cost: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setField('last_unit_cost', parseFloat(e.target.value) || 0)}
               min="0"
               step="0.01"
               placeholder="0.00"
-              error={!!errors.last_unit_cost}
+              error={!!allErrors.last_unit_cost}
             />
           </FormField>
 
@@ -251,7 +226,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           <FormField label="">
             <Checkbox
               checked={formData.is_active}
-              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+              onChange={(e) => setField('is_active', e.target.checked)}
               label="Active"
             />
           </FormField>
@@ -271,10 +246,10 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           <Button
             type="submit"
             form="variant-form"
-            disabled={mutation.isPending}
+            disabled={isPending}
             className="flex-1"
           >
-            {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isEditing ? 'Update' : 'Create'}
           </Button>
         </div>
