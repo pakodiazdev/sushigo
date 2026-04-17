@@ -70,7 +70,7 @@ class EmploymentPeriod extends Model
      * @param  DateTimeInterface|null  $referenceDate  Date to use as "today" for active periods.
      *                                                 When null (default), uses system now().
      *                                                 Callers with access to ApplicationClock should pass
-     *                                                 $clock->todayInBusinessTz() for testable business logic.
+     *                                                 $clock->nowInBusinessTz() for testable business logic.
      */
     public function durationInDays(?DateTimeInterface $referenceDate = null): int
     {

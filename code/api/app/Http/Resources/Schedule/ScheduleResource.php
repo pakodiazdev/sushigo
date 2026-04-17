@@ -54,15 +54,19 @@ class ScheduleResource extends BaseResource
                     return [];
                 }
 
-                // Use the branch's configured timezone so overrides that are still
-                // active today (local calendar date) are not prematurely excluded
-                // during evening hours when UTC has already rolled over to the next day.
-                // Falls back to UTC if branch data is not loaded.
-                $timezone = $this->employmentPeriod->branch?->timezone ?? 'UTC';
-                $today = now($timezone)->toDateString();
+                // Use the reference date passed from the controller (ApplicationClock-aware)
+                // to ensure consistency with simulated clock mode. Falls back to branch
+                // timezone-aware now() if not provided (e.g., when resource is used elsewhere).
+                $referenceDate = $this->additional['reference_date'] ?? null;
+
+                if (! $referenceDate) {
+                    // Fallback: use branch timezone for consistency with evening hours
+                    $timezone = $this->employmentPeriod->branch?->timezone ?? 'UTC';
+                    $referenceDate = now($timezone)->toDateString();
+                }
 
                 $notExpired = $this->employmentPeriod->scheduleDayOverrides->filter(
-                    fn ($o) => is_null($o->effective_to) || $o->effective_to->toDateString() >= $today
+                    fn ($o) => is_null($o->effective_to) || $o->effective_to->toDateString() >= $referenceDate
                 )->values();
 
                 // The overrides come from the parent's eager-loaded collection, so

@@ -66,6 +66,9 @@ class CurrentScheduleController extends Controller
             ], 404);
         }
 
-        return new ScheduleResource($schedule);
+        // Pass the reference date to the resource for consistent override filtering
+        return (new ScheduleResource($schedule))->additional([
+            'reference_date' => $this->clock->todayInBusinessTz(),
+        ]);
     }
 }
