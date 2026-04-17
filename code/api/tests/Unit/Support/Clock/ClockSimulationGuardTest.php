@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\Support\Clock;
 
+use App\Exceptions\ClockSimulationMisconfigurationException;
 use App\Support\Clock\ClockSimulationGuard;
 use Illuminate\Support\Facades\Config;
-use RuntimeException;
 use Tests\TestCase;
 
 class ClockSimulationGuardTest extends TestCase
@@ -49,12 +49,12 @@ class ClockSimulationGuardTest extends TestCase
         ClockSimulationGuard::validate();
     }
 
-    public function test_validate_throws_runtime_exception_when_production_in_allowed_envs(): void
+    public function test_validate_throws_misconfiguration_exception_when_production_in_allowed_envs(): void
     {
         Config::set('clock.simulation_enabled', true);
         Config::set('clock.allowed_environments', 'local,production');
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(ClockSimulationMisconfigurationException::class);
         $this->expectExceptionMessage('must not contain "production"');
 
         ClockSimulationGuard::validate();
