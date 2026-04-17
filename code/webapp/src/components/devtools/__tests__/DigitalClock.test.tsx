@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup, act } from '@testing-library/react';
+import { render, cleanup, act } from '@testing-library/react';
 import { DigitalClock } from '../DigitalClock';
 
 // Mock clock state
