@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Loader2, TrendingUp, AlertCircle, Package } from 'lucide-react'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { useToast } from '@/components/ui/toast-provider'
-import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
-import { inventoryLocationApi, itemVariantApi, stockMovementApi, stockApi } from '@/services/inventory-api'
-import { apiClient } from '@/lib/api-client'
-import type { InventoryLocation, ItemVariant, Stock } from '@/types/inventory'
+import { useFormState, validators } from '@/hooks/use-form-state'
+import { useFormMutation } from '@/hooks/use-form-mutation'
+import {
+  useInventoryLocationsSelect,
+  useItemVariantsSelect,
+  useUnitsOfMeasureSelect,
+} from '@/hooks/use-inventory-queries'
+import { stockMovementApi, stockApi } from '@/services/inventory-api'
+import type { InventoryLocation, ItemVariant, Stock, UnitOfMeasure } from '@/types/inventory'
 
 interface StockOutFormProps {
   onSuccess: () => void
@@ -18,47 +23,55 @@ interface StockOutFormProps {
   preselectedVariantId?: number
 }
 
+interface StockOutFormData {
+  location_id: number
+  variant_id: number
+  qty: number
+  uom_id: number
+  reason: 'SALE' | 'CONSUMPTION'
+  sale_price: number
+  notes: string
+}
+
 export function StockOutForm({
   onSuccess,
   onCancel,
   preselectedLocationId,
   preselectedVariantId,
 }: StockOutFormProps) {
-  const { showSuccess, showError, showWarning } = useToast()
-  const [formData, setFormData] = useState({
-    location_id: preselectedLocationId || 0,
-    variant_id: preselectedVariantId || 0,
-    qty: 0,
-    uom_id: 0,
-    reason: 'SALE' as 'SALE' | 'CONSUMPTION',
-    sale_price: 0,
-    notes: '',
-  })
-
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const { showWarning } = useToast()
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null)
   const [variantStocks, setVariantStocks] = useState<Stock[]>([])
 
-  // Fetch locations
-  const { data: locationsData } = useQuery({
-    queryKey: ['inventory-locations-for-select'],
-    queryFn: () => inventoryLocationApi.list({ is_active: true, per_page: 100 }),
-  })
+  // Use shared query hooks
+  const { data: locations = [] } = useInventoryLocationsSelect()
+  const { data: variants = [] } = useItemVariantsSelect()
+  const { data: units = [] } = useUnitsOfMeasureSelect()
 
-  // Fetch variants
-  const { data: variantsData } = useQuery({
-    queryKey: ['item-variants-for-select'],
-    queryFn: () => itemVariantApi.list({ is_active: true, per_page: 200 }),
-  })
-
-  // Fetch units of measure
-  const { data: uomData } = useQuery({
-    queryKey: ['units-of-measure-for-select'],
-    queryFn: async () => {
-      const response = await apiClient.get('/units-of-measure', {
-        params: { is_active: true, per_page: 100 },
-      })
-      return response
+  const { formData, setField, errors, validate } = useFormState<StockOutFormData>({
+    initialData: {
+      location_id: preselectedLocationId || 0,
+      variant_id: preselectedVariantId || 0,
+      qty: 0,
+      uom_id: 0,
+      reason: 'SALE',
+      sale_price: 0,
+      notes: '',
+    },
+    validationRules: {
+      location_id: { required: true },
+      variant_id: { required: true },
+      qty: {
+        validate: validators.greaterThan(0, 'Quantity must be greater than 0'),
+      },
+      uom_id: { required: true },
+      sale_price: {
+        validate: (value, data) => {
+          if (data.reason === 'SALE' && (typeof value !== 'number' || value <= 0)) {
+            return 'Sale price is required for sales'
+          }
+        },
+      },
     },
   })
 
@@ -68,10 +81,6 @@ export function StockOutForm({
     queryFn: () => stockApi.byVariant(formData.variant_id),
     enabled: formData.variant_id > 0,
   })
-
-  const locations = locationsData?.data.data || []
-  const variants = variantsData?.data.data || []
-  const units = uomData?.data.data || []
 
   // Sort locations by priority (descending) and name
   const sortedLocations = [...locations].sort((a: InventoryLocation, b: InventoryLocation) => {
@@ -87,10 +96,10 @@ export function StockOutForm({
       const variant = variants.find((v: ItemVariant) => v.id === formData.variant_id)
       if (variant) {
         setSelectedVariant(variant)
-        setFormData((prev) => ({ ...prev, uom_id: variant.uom_id }))
+        setField('uom_id', variant.uom_id)
       }
     }
-  }, [formData.variant_id, variants])
+  }, [formData.variant_id, variants, setField])
 
   // Update stocks array when data arrives
   useEffect(() => {
@@ -104,71 +113,6 @@ export function StockOutForm({
     (s) => s.inventory_location_id === formData.location_id
   ) || null
 
-  const mutation = useMutation({
-    mutationFn: (data: typeof formData) => stockMovementApi.stockOut(data),
-    onSuccess: () => {
-      const isSale = formData.reason === 'SALE'
-      const profitAmount = isSale ? totalRevenue - totalCost : 0
-
-      if (isSale && profitAmount < 0) {
-        showWarning(
-          `Stock out registered, but sale resulted in negative profit: $${Math.abs(profitAmount).toFixed(2)}`,
-          'Sale at Loss'
-        )
-      } else {
-        showSuccess(
-          `Stock ${isSale ? 'sale' : 'consumption'} registered successfully`,
-          'Stock Updated'
-        )
-      }
-      onSuccess()
-    },
-    onError: (error: unknown) => {
-      if (hasApiValidationErrors(error)) {
-        setErrors(getApiValidationErrors(error))
-      }
-      showError(
-        getApiErrorMessage(error, 'Failed to register stock out'),
-        'Error'
-      )
-    },
-  })
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.location_id || formData.location_id === 0) {
-      newErrors.location_id = 'Location is required'
-    }
-    if (!formData.variant_id || formData.variant_id === 0) {
-      newErrors.variant_id = 'Item variant is required'
-    }
-    if (formData.qty <= 0) {
-      newErrors.qty = 'Quantity must be greater than 0'
-    }
-    if (!formData.uom_id || formData.uom_id === 0) {
-      newErrors.uom_id = 'Unit of measure is required'
-    }
-    if (formData.reason === 'SALE' && formData.sale_price <= 0) {
-      newErrors.sale_price = 'Sale price is required for sales'
-    }
-
-    // Check available stock
-    if (locationStock && formData.qty > locationStock.available) {
-      newErrors.qty = `Only ${locationStock.available} units available`
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (validate()) {
-      mutation.mutate(formData)
-    }
-  }
-
   // Calculate profit (only for sales)
   const unitCost = selectedVariant?.last_unit_cost || 0
   const totalCost = formData.qty * unitCost
@@ -178,6 +122,43 @@ export function StockOutForm({
 
   const hasLowStock = !!(locationStock && locationStock.available < (selectedVariant?.min_stock || 0))
   const hasInsufficientStock = !!(locationStock && formData.qty > locationStock.available)
+
+  const { execute, validationErrors, isPending } = useFormMutation({
+    mutationFn: (data: StockOutFormData) => stockMovementApi.stockOut(data),
+    successMessage: 'Stock out registered successfully',
+    errorMessageFallback: 'Failed to register stock out',
+    onSuccess: () => {
+      const isSale = formData.reason === 'SALE'
+      const profitAmt = isSale ? totalRevenue - totalCost : 0
+
+      if (isSale && profitAmt < 0) {
+        showWarning(
+          `Stock out registered, but sale resulted in negative profit: $${Math.abs(profitAmt).toFixed(2)}`,
+          'Sale at Loss'
+        )
+      }
+      onSuccess()
+    },
+  })
+
+  // Merge client and server validation errors
+  const allErrors = { ...errors, ...validationErrors }
+
+  // Custom validation for stock availability
+  const validateWithStock = () => {
+    const isValid = validate()
+    if (locationStock && formData.qty > locationStock.available) {
+      return false
+    }
+    return isValid
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (validateWithStock()) {
+      await execute(formData)
+    }
+  }
 
   return (
     <>
@@ -193,15 +174,13 @@ export function StockOutForm({
       <SlidePanel.Body>
         <form id="stock-out-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Location Select */}
-          <FormField label="Location" required error={errors.location_id}>
+          <FormField label="Location" required error={allErrors.location_id}>
             <Select
               value={formData.location_id.toString()}
-              onChange={(e) =>
-                setFormData({ ...formData, location_id: parseInt(e.target.value) })
-              }
+              onChange={(e) => setField('location_id', parseInt(e.target.value))}
             >
               <option value="0">Select location...</option>
-              {sortedLocations.map((location: any) => (
+              {sortedLocations.map((location: InventoryLocation) => (
                 <option key={location.id} value={location.id}>
                   {location.name} ({location.type})
                 </option>
@@ -213,17 +192,15 @@ export function StockOutForm({
           <FormField
             label="Item Variant"
             required
-            error={errors.variant_id}
+            error={allErrors.variant_id}
             hint="Select the product variant to remove"
           >
             <Select
               value={formData.variant_id.toString()}
-              onChange={(e) =>
-                setFormData({ ...formData, variant_id: parseInt(e.target.value) })
-              }
+              onChange={(e) => setField('variant_id', parseInt(e.target.value))}
             >
               <option value="0">Select variant...</option>
-              {variants.map((variant: any) => (
+              {variants.map((variant: ItemVariant) => (
                 <option key={variant.id} value={variant.id}>
                   {variant.code} - {variant.name}
                   {variant.item && ` (${variant.item.sku})`}
@@ -295,17 +272,17 @@ export function StockOutForm({
           <FormField
             label="Quantity"
             required
-            error={errors.qty}
+            error={allErrors.qty || (hasInsufficientStock ? `Only ${locationStock?.available || 0} units available` : undefined)}
             hint="Amount to remove from inventory"
           >
             <Input
               type="number"
               value={formData.qty}
-              onChange={(e) => setFormData({ ...formData, qty: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setField('qty', parseFloat(e.target.value) || 0)}
               min="0"
               step="0.01"
               placeholder="0.00"
-              error={!!errors.qty}
+              error={!!allErrors.qty || hasInsufficientStock}
             />
           </FormField>
 
@@ -313,15 +290,15 @@ export function StockOutForm({
           <FormField
             label="Unit of Measure"
             required
-            error={errors.uom_id}
+            error={allErrors.uom_id}
             hint="Auto-filled from variant's default UoM"
           >
             <Select
               value={formData.uom_id.toString()}
-              onChange={(e) => setFormData({ ...formData, uom_id: parseInt(e.target.value) })}
+              onChange={(e) => setField('uom_id', parseInt(e.target.value))}
             >
               <option value="0">Select unit...</option>
-              {units.map((uom: any) => (
+              {units.map((uom: UnitOfMeasure) => (
                 <option key={uom.id} value={uom.id}>
                   {uom.name} ({uom.symbol}) - {uom.type}
                 </option>
@@ -330,12 +307,10 @@ export function StockOutForm({
           </FormField>
 
           {/* Reason */}
-          <FormField label="Reason" required error={errors.reason}>
+          <FormField label="Reason" required error={allErrors.reason}>
             <Select
               value={formData.reason}
-              onChange={(e) =>
-                setFormData({ ...formData, reason: e.target.value as 'SALE' | 'CONSUMPTION' })
-              }
+              onChange={(e) => setField('reason', e.target.value as 'SALE' | 'CONSUMPTION')}
             >
               <option value="SALE">Sale (revenue generating)</option>
               <option value="CONSUMPTION">Consumption (internal use)</option>
@@ -347,19 +322,17 @@ export function StockOutForm({
             <FormField
               label="Sale Price per Unit"
               required
-              error={errors.sale_price}
+              error={allErrors.sale_price}
               hint="Selling price per unit of measure"
             >
               <Input
                 type="number"
                 value={formData.sale_price}
-                onChange={(e) =>
-                  setFormData({ ...formData, sale_price: parseFloat(e.target.value) || 0 })
-                }
+                onChange={(e) => setField('sale_price', parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                error={!!errors.sale_price}
+                error={!!allErrors.sale_price}
               />
             </FormField>
           )}
@@ -425,10 +398,10 @@ export function StockOutForm({
             )}
 
           {/* Notes */}
-          <FormField label="Notes" error={errors.notes} hint="Optional reference or comments">
+          <FormField label="Notes" error={allErrors.notes} hint="Optional reference or comments">
             <Textarea
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              onChange={(e) => setField('notes', e.target.value)}
               rows={3}
               placeholder="e.g., Sale order #12345, Kitchen consumption..."
             />
@@ -444,10 +417,10 @@ export function StockOutForm({
           <Button
             type="submit"
             form="stock-out-form"
-            disabled={mutation.isPending || hasInsufficientStock}
+            disabled={isPending || hasInsufficientStock}
             className="flex-1"
           >
-            {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Register Stock Out
           </Button>
         </div>
