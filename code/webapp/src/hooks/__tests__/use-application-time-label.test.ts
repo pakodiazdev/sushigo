@@ -5,11 +5,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useApplicationTimeLabel, getApplicationTimeLabel } from '../use-application-time-label'
 
-// Mock the clock store using two separate vi.fn() references.
-// The store function is passed directly (not called) in the factory to avoid
-// TypeScript's "not callable" error on Mock<Procedure | Constructable> union types.
-const mockGetState = vi.fn()
-const mockClockStore = Object.assign(vi.fn(), { getState: mockGetState })
+// vi.mock is hoisted to the top of the file by Vitest, so variables declared with
+// const/let are in the TDZ when the factory runs. vi.hoisted() executes before
+// hoisted mocks, making mockGetState and mockClockStore available in the factory.
+const { mockGetState, mockClockStore } = vi.hoisted(() => {
+    const mockGetState = vi.fn()
+    const mockClockStore = Object.assign(vi.fn(), { getState: mockGetState })
+    return { mockGetState, mockClockStore }
+})
 
 vi.mock('@/stores/clock.store', () => ({
     useApplicationClockStore: mockClockStore,
