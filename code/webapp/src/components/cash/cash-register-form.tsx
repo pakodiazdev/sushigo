@@ -1,11 +1,33 @@
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useFormState } from '@/hooks/use-form-state'
 import { useCreateCashRegister, useUpdateCashRegister } from '@/services/cash-hooks'
-import { CashRegisterType, type CashRegister, type CashRegisterFormData, type OperatingUnit } from '@/types/cash'
-import { Loader2 } from 'lucide-react'
+import { CashRegisterType, type CashRegister, type OperatingUnit } from '@/types/cash'
+
+const cashRegisterSchema = z.object({
+    code: z.string().min(1, 'Este campo es requerido'),
+    name: z.string().min(1, 'Este campo es requerido'),
+    branch_id: z.number().min(1, 'La sucursal es requerida'),
+    operating_unit_id: z.number().nullable(),
+    type: z.nativeEnum(CashRegisterType),
+    is_active: z.boolean(),
+    meta: z.record(z.string(), z.unknown()).optional(),
+}).refine((data) => {
+    if (data.type === CashRegisterType.EVENT && !data.operating_unit_id) {
+        return false
+    }
+    return true
+}, {
+    message: 'La unidad operativa es requerida para cajas de eventos',
+    path: ['operating_unit_id'],
+})
+
+type CashRegisterFormValues = z.infer<typeof cashRegisterSchema>
 
 interface CashRegisterFormProps {
     register?: CashRegister | null
@@ -24,8 +46,15 @@ export function CashRegisterForm({
 }: CashRegisterFormProps) {
     const isEditing = !!register
 
-    const { formData, setField, errors, validate } = useFormState<CashRegisterFormData>({
-        initialData: {
+    const {
+        register: _registerField,
+        handleSubmit,
+        watch,
+        setValue,
+        formState: { errors },
+    } = useForm<CashRegisterFormValues>({
+        resolver: zodResolver(cashRegisterSchema),
+        defaultValues: {
             code: register?.code || '',
             name: register?.name || '',
             branch_id: register?.branch_id || 1,
@@ -34,34 +63,20 @@ export function CashRegisterForm({
             is_active: register?.is_active ?? true,
             meta: register?.meta || undefined,
         },
-        validationRules: {
-            code: { required: true },
-            name: { required: true },
-            branch_id: {
-                validate: (value) => {
-                    if (!value && isEditing) {
-                        return 'La sucursal es requerida'
-                    }
-                },
-            },
-            operating_unit_id: {
-                validate: (value, data) => {
-                    if (data?.type === CashRegisterType.EVENT && !value) {
-                        return 'La unidad operativa es requerida para cajas de eventos'
-                    }
-                },
-            },
-        },
     })
 
     const createMutation = useCreateCashRegister()
     const updateMutation = useUpdateCashRegister()
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    // Watch values for controlled inputs
+    const code = watch('code')
+    const name = watch('name')
+    const branchId = watch('branch_id')
+    const operatingUnitId = watch('operating_unit_id')
+    const type = watch('type')
+    const isActive = watch('is_active')
 
-        if (!validate()) return
-
+    const onSubmit = async (formData: CashRegisterFormValues) => {
         try {
             if (isEditing && register) {
                 await updateMutation.mutateAsync({
@@ -80,7 +95,7 @@ export function CashRegisterForm({
 
     // Filter operating units by selected branch and only EVENT type
     const filteredOperatingUnits = operatingUnits.filter(
-        ou => ou.branch_id === formData.branch_id && ou.type === 'EVENT_TEMP'
+        ou => ou.branch_id === branchId && ou.type === 'EVENT_TEMP'
     )
 
     const isLoading = createMutation.isPending || updateMutation.isPending
@@ -93,19 +108,19 @@ export function CashRegisterForm({
             description={isEditing ? 'Actualiza los datos de la caja registradora' : 'Crea una nueva caja registradora'}
             noPadding
         >
-            <form onSubmit={handleSubmit} className="flex h-full flex-col">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
                 {/* Content - Scrollable */}
                 <div className="flex-1 overflow-y-auto px-6 py-6">
                     <div className="space-y-6">
                         <FormField
                             label="Código"
-                            error={errors.code}
+                            error={errors.code?.message}
                             required
                         >
                             <Input
                                 type="text"
-                                value={formData.code}
-                                onChange={(e) => setField('code', e.target.value)}
+                                value={code}
+                                onChange={(e) => setValue('code', e.target.value)}
                                 placeholder="REG-001"
                                 disabled={isEditing}
                                 error={!!errors.code}
@@ -114,13 +129,13 @@ export function CashRegisterForm({
 
                         <FormField
                             label="Nombre"
-                            error={errors.name}
+                            error={errors.name?.message}
                             required
                         >
                             <Input
                                 type="text"
-                                value={formData.name}
-                                onChange={(e) => setField('name', e.target.value)}
+                                value={name}
+                                onChange={(e) => setValue('name', e.target.value)}
                                 placeholder="Caja Principal"
                                 error={!!errors.name}
                             />
@@ -128,14 +143,14 @@ export function CashRegisterForm({
 
                         <FormField
                             label="Tipo de Caja"
-                            error={errors.type}
+                            error={errors.type?.message}
                             required
                         >
                             <Select
                                 id="cash-register-type"
                                 name="type"
-                                value={formData.type}
-                                onChange={(e) => setField('type', e.target.value as CashRegisterType)}
+                                value={type}
+                                onChange={(e) => setValue('type', e.target.value as CashRegisterType)}
                             >
                                 <option value={CashRegisterType.ON_PREMISE}>Local</option>
                                 <option value={CashRegisterType.DELIVERY}>Delivery</option>
@@ -143,18 +158,18 @@ export function CashRegisterForm({
                             </Select>
                         </FormField>
 
-                        {formData.type === CashRegisterType.EVENT && (
+                        {type === CashRegisterType.EVENT && (
                             <FormField
                                 label="Evento"
-                                error={errors.operating_unit_id}
+                                error={errors.operating_unit_id?.message}
                                 required
                                 hint="Selecciona el evento al que pertenece esta caja"
                             >
                                 <Select
                                     id="operating-unit"
                                     name="operating_unit_id"
-                                    value={formData.operating_unit_id || ''}
-                                    onChange={(e) => setField('operating_unit_id', e.target.value ? parseInt(e.target.value) : null)}
+                                    value={operatingUnitId || ''}
+                                    onChange={(e) => setValue('operating_unit_id', e.target.value ? parseInt(e.target.value) : null)}
                                 >
                                     <option value="">Selecciona un evento</option>
                                     {filteredOperatingUnits.map(ou => (
@@ -168,8 +183,8 @@ export function CashRegisterForm({
 
                         <FormField label="Estado">
                             <Checkbox
-                                checked={formData.is_active}
-                                onChange={(e) => setField('is_active', e.target.checked)}
+                                checked={isActive}
+                                onChange={(e) => setValue('is_active', e.target.checked)}
                                 label="Activa"
                             />
                         </FormField>

@@ -1,32 +1,33 @@
-import { FormEvent } from 'react'
 import { Loader2 } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useFormState, validators } from '@/hooks/use-form-state'
 import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
 import { useOperatingUnitsSelect } from '@/hooks/use-inventory-queries'
 import { inventoryLocationApi } from '@/services/inventory-api'
 import type { InventoryLocation } from '@/types/inventory'
 import type { OperatingUnit } from '@/types/auth'
 
+const locationSchema = z.object({
+  operating_unit_id: z.number().min(1, 'Este campo es requerido'),
+  name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
+  type: z.enum(['MAIN', 'KITCHEN', 'BAR', 'TEMP', 'RETURN']),
+  priority: z.number().min(0).max(1000, 'La prioridad debe estar entre 0 y 1000'),
+  is_primary: z.boolean(),
+  is_active: z.boolean(),
+  notes: z.string(),
+})
+
+type LocationFormValues = z.infer<typeof locationSchema>
+
 interface LocationFormProps {
   location?: InventoryLocation | null
   onSuccess: () => void
   onCancel: () => void
-}
-
-type LocationType = 'MAIN' | 'KITCHEN' | 'BAR' | 'TEMP' | 'RETURN'
-
-interface LocationFormData {
-  operating_unit_id: number
-  name: string
-  type: LocationType
-  priority: number
-  is_primary: boolean
-  is_active: boolean
-  notes: string
 }
 
 export function LocationForm({ location, onSuccess, onCancel }: LocationFormProps) {
@@ -35,48 +36,53 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
   // Use shared query hook for operating units
   const { data: operatingUnits } = useOperatingUnitsSelect()
 
-  const { formData, setField, errors, validate } = useFormState<LocationFormData>({
-    initialData: {
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<LocationFormValues>({
+    resolver: zodResolver(locationSchema),
+    defaultValues: {
       operating_unit_id: location?.operating_unit_id || 0,
       name: location?.name || '',
-      type: (location?.type || 'MAIN') as LocationType,
+      type: (location?.type || 'MAIN') as LocationFormValues['type'],
       priority: location?.priority || 100,
       is_primary: location?.is_primary || false,
       is_active: location?.is_active ?? true,
       notes: location?.notes || '',
     },
-    validationRules: {
-      operating_unit_id: { required: true },
-      name: {
-        required: true,
-        validate: validators.minLength(3, 'El nombre debe tener al menos 3 caracteres'),
-      },
-      type: { required: true },
-      priority: {
-        validate: validators.range(0, 1000, 'La prioridad debe estar entre 0 y 1000'),
-      },
-    },
   })
 
   const { execute, validationErrors, isPending } = useCreateUpdateMutation({
-    createFn: (data: LocationFormData) => inventoryLocationApi.create(data),
-    updateFn: (data: LocationFormData) => inventoryLocationApi.update(location!.id, data),
+    createFn: (data: LocationFormValues) => inventoryLocationApi.create(data),
+    updateFn: (data: LocationFormValues) => inventoryLocationApi.update(location!.id, data),
     entityName: 'Ubicación',
     isEditing,
     onSuccess,
   })
 
   // Merge client and server validation errors
-  const allErrors = { ...errors, ...validationErrors }
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    if (!validate()) return
-    await execute(formData)
+  const allErrors = {
+    operating_unit_id: errors.operating_unit_id?.message || validationErrors.operating_unit_id,
+    name: errors.name?.message || validationErrors.name,
+    type: errors.type?.message || validationErrors.type,
+    priority: errors.priority?.message || validationErrors.priority,
   }
 
+  const onSubmit = async (data: LocationFormValues) => {
+    await execute(data)
+  }
+
+  // Watch values for controlled inputs
+  const operatingUnitId = watch('operating_unit_id')
+  const locationType = watch('type')
+  const isPrimary = watch('is_primary')
+  const isActive = watch('is_active')
+
   return (
-    <form onSubmit={handleSubmit} className="flex h-full flex-col">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-6">
         <FormField
           label="Unidad Operativa"
@@ -84,8 +90,8 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
           error={allErrors.operating_unit_id}
         >
           <Select
-            value={formData.operating_unit_id}
-            onChange={(e) => setField('operating_unit_id', Number(e.target.value))}
+            value={operatingUnitId}
+            onChange={(e) => setValue('operating_unit_id', Number(e.target.value))}
             error={!!allErrors.operating_unit_id}
           >
             <option value="0">Seleccione una unidad operativa</option>
@@ -103,8 +109,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
           error={allErrors.name}
         >
           <Input
-            value={formData.name}
-            onChange={(e) => setField('name', e.target.value)}
+            {...register('name')}
             placeholder="ej., Almacén Principal"
             error={!!allErrors.name}
           />
@@ -116,8 +121,8 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
           error={allErrors.type}
         >
           <Select
-            value={formData.type}
-            onChange={(e) => setField('type', e.target.value as LocationType)}
+            value={locationType}
+            onChange={(e) => setValue('type', e.target.value as LocationFormValues['type'])}
             error={!!allErrors.type}
           >
             <option value="">Seleccione un tipo</option>
@@ -137,8 +142,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
         >
           <Input
             type="number"
-            value={formData.priority}
-            onChange={(e) => setField('priority', Number(e.target.value))}
+            {...register('priority', { valueAsNumber: true })}
             placeholder="100"
             error={!!allErrors.priority}
           />
@@ -146,8 +150,7 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
 
         <FormField label="Notas">
           <Textarea
-            value={formData.notes}
-            onChange={(e) => setField('notes', e.target.value)}
+            {...register('notes')}
             rows={3}
             placeholder="Notas adicionales o descripción"
           />
@@ -155,13 +158,13 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
 
         <div className="space-y-3">
           <Checkbox
-            checked={formData.is_primary}
-            onChange={(e) => setField('is_primary', e.target.checked)}
+            checked={isPrimary}
+            onChange={(e) => setValue('is_primary', e.target.checked)}
             label="Ubicación principal para esta unidad operativa"
           />
           <Checkbox
-            checked={formData.is_active}
-            onChange={(e) => setField('is_active', e.target.checked)}
+            checked={isActive}
+            onChange={(e) => setValue('is_active', e.target.checked)}
             label="Activa"
           />
         </div>

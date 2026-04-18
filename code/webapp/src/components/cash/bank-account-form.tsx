@@ -1,10 +1,24 @@
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useFormState } from '@/hooks/use-form-state'
 import { useCreateBankAccount, useUpdateBankAccount } from '@/services/cash-hooks'
-import type { BankAccount, BankAccountFormData } from '@/types/cash'
-import { Loader2 } from 'lucide-react'
+import type { BankAccount } from '@/types/cash'
+
+const bankAccountSchema = z.object({
+    branch_id: z.number().min(1, 'Este campo es requerido'),
+    alias: z.string().min(1, 'Este campo es requerido'),
+    bank_name: z.string().min(1, 'Este campo es requerido'),
+    account_number_masked: z.string().regex(/^\d{4}$/, 'Debe ser exactamente 4 dígitos'),
+    clabe_masked: z.string().regex(/^(\d{3}-\d{4})?$/, 'Formato debe ser XXX-XXXX (3 dígitos, guión, 4 dígitos)').or(z.literal('')),
+    is_active: z.boolean(),
+    meta: z.record(z.string(), z.unknown()).optional(),
+})
+
+type BankAccountFormValues = z.infer<typeof bankAccountSchema>
 
 interface BankAccountFormProps {
     account?: BankAccount | null
@@ -35,8 +49,15 @@ export function BankAccountForm({
 }: BankAccountFormProps) {
     const isEditing = !!account
 
-    const { formData, setField, errors, validate } = useFormState<BankAccountFormData>({
-        initialData: {
+    const {
+        register,
+        handleSubmit,
+        watch,
+        setValue,
+        formState: { errors },
+    } = useForm<BankAccountFormValues>({
+        resolver: zodResolver(bankAccountSchema),
+        defaultValues: {
             branch_id: account?.branch_id || 0,
             alias: account?.alias || '',
             bank_name: account?.bank_name || '',
@@ -45,36 +66,18 @@ export function BankAccountForm({
             is_active: account?.is_active ?? true,
             meta: account?.meta || undefined,
         },
-        validationRules: {
-            branch_id: { required: true },
-            alias: { required: true },
-            bank_name: { required: true },
-            account_number_masked: {
-                required: true,
-                validate: (value) => {
-                    if (typeof value === 'string' && !/^\d{4}$/.test(value)) {
-                        return 'Debe ser exactamente 4 dígitos'
-                    }
-                },
-            },
-            clabe_masked: {
-                validate: (value) => {
-                    if (typeof value === 'string' && value && !/^\d{3}-\d{4}$/.test(value)) {
-                        return 'Formato debe ser XXX-XXXX (3 dígitos, guión, 4 dígitos)'
-                    }
-                },
-            },
-        },
     })
 
     const createMutation = useCreateBankAccount()
     const updateMutation = useUpdateBankAccount()
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    // Watch values for controlled inputs
+    const branchId = watch('branch_id')
+    const bankName = watch('bank_name')
+    const clabeMasked = watch('clabe_masked')
+    const isActive = watch('is_active')
 
-        if (!validate()) return
-
+    const onSubmit = async (formData: BankAccountFormValues) => {
         try {
             if (isEditing && account) {
                 await updateMutation.mutateAsync({
@@ -100,7 +103,7 @@ export function BankAccountForm({
             formatted = `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}`
         }
 
-        setField('clabe_masked', formatted)
+        setValue('clabe_masked', formatted)
     }
 
     const isLoading = createMutation.isPending || updateMutation.isPending
@@ -112,15 +115,15 @@ export function BankAccountForm({
             title={isEditing ? 'Editar Cuenta Bancaria' : 'Nueva Cuenta Bancaria'}
             description={isEditing ? 'Actualiza los datos de la cuenta' : 'Crea una nueva cuenta bancaria'}
         >
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                     label="Sucursal"
-                    error={errors.branch_id}
+                    error={errors.branch_id?.message}
                     required
                 >
                     <Select
-                        value={formData.branch_id || ''}
-                        onChange={(e) => setField('branch_id', parseInt(e.target.value))}
+                        value={branchId || ''}
+                        onChange={(e) => setValue('branch_id', parseInt(e.target.value))}
                     >
                         <option value="">Selecciona una sucursal</option>
                         {branches.map(branch => (
@@ -133,14 +136,13 @@ export function BankAccountForm({
 
                 <FormField
                     label="Alias"
-                    error={errors.alias}
+                    error={errors.alias?.message}
                     required
                     hint="Nombre descriptivo de la cuenta (ej. Cuenta Principal, Cuenta Eventos)"
                 >
                     <input
                         type="text"
-                        value={formData.alias}
-                        onChange={(e) => setField('alias', e.target.value)}
+                        {...register('alias')}
                         className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md"
                         placeholder="Cuenta Principal"
                     />
@@ -148,12 +150,12 @@ export function BankAccountForm({
 
                 <FormField
                     label="Banco"
-                    error={errors.bank_name}
+                    error={errors.bank_name?.message}
                     required
                 >
                     <Select
-                        value={formData.bank_name}
-                        onChange={(e) => setField('bank_name', e.target.value)}
+                        value={bankName}
+                        onChange={(e) => setValue('bank_name', e.target.value)}
                     >
                         <option value="">Selecciona un banco</option>
                         {BANKS.map(bank => (
@@ -166,14 +168,15 @@ export function BankAccountForm({
 
                 <FormField
                     label="Últimos 4 Dígitos de Cuenta"
-                    error={errors.account_number_masked}
+                    error={errors.account_number_masked?.message}
                     required
                     hint="Por seguridad, solo almacenamos los últimos 4 dígitos"
                 >
                     <input
                         type="text"
-                        value={formData.account_number_masked}
-                        onChange={(e) => setField('account_number_masked', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        {...register('account_number_masked', {
+                            onChange: (e) => setValue('account_number_masked', e.target.value.replace(/\D/g, '').slice(0, 4)),
+                        })}
                         className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md font-mono"
                         placeholder="1234"
                         maxLength={4}
@@ -182,12 +185,12 @@ export function BankAccountForm({
 
                 <FormField
                     label="CLABE Enmascarada (Opcional)"
-                    error={errors.clabe_masked}
+                    error={errors.clabe_masked?.message}
                     hint="Formato: XXX-XXXX (primeros 3 + últimos 4 dígitos)"
                 >
                     <input
                         type="text"
-                        value={formData.clabe_masked}
+                        value={clabeMasked}
                         onChange={(e) => handleClabeChange(e.target.value)}
                         className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md font-mono"
                         placeholder="012-3456"
@@ -197,8 +200,8 @@ export function BankAccountForm({
 
                 <FormField label="Estado">
                     <Checkbox
-                        checked={formData.is_active}
-                        onChange={(e) => setField('is_active', e.target.checked)}
+                        checked={isActive}
+                        onChange={(e) => setValue('is_active', e.target.checked)}
                         label="Activa"
                     />
                 </FormField>

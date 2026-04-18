@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Loader2, DollarSign, Package } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
-import { useFormState, validators } from '@/hooks/use-form-state'
 import { useFormMutation } from '@/hooks/use-form-mutation'
 import {
   useInventoryLocationsSelect,
@@ -14,20 +16,22 @@ import {
 import { stockMovementApi } from '@/services/inventory-api'
 import type { InventoryLocation, ItemVariant, UnitOfMeasure } from '@/types/inventory'
 
+const openingBalanceSchema = z.object({
+  inventory_location_id: z.number().min(1, 'This field is required'),
+  item_variant_id: z.number().min(1, 'This field is required'),
+  quantity: z.number().gt(0, 'Quantity must be greater than 0'),
+  uom_id: z.number().min(1, 'This field is required'),
+  unit_cost: z.number().min(0, 'Cost cannot be negative'),
+  notes: z.string(),
+})
+
+type OpeningBalanceFormValues = z.infer<typeof openingBalanceSchema>
+
 interface OpeningBalanceFormProps {
   onSuccess: () => void
   onCancel: () => void
   preselectedLocationId?: number
   preselectedVariantId?: number
-}
-
-interface OpeningBalanceFormData {
-  inventory_location_id: number
-  item_variant_id: number
-  quantity: number
-  uom_id: number
-  unit_cost: number
-  notes: string
 }
 
 export function OpeningBalanceForm({
@@ -43,8 +47,15 @@ export function OpeningBalanceForm({
   const { data: variants = [] } = useItemVariantsSelect()
   const { data: units = [] } = useUnitsOfMeasureSelect()
 
-  const { formData, setField, errors, validate } = useFormState<OpeningBalanceFormData>({
-    initialData: {
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<OpeningBalanceFormValues>({
+    resolver: zodResolver(openingBalanceSchema),
+    defaultValues: {
       inventory_location_id: preselectedLocationId || 0,
       item_variant_id: preselectedVariantId || 0,
       quantity: 0,
@@ -52,21 +63,10 @@ export function OpeningBalanceForm({
       unit_cost: 0,
       notes: '',
     },
-    validationRules: {
-      inventory_location_id: { required: true },
-      item_variant_id: { required: true },
-      quantity: {
-        validate: validators.greaterThan(0, 'Quantity must be greater than 0'),
-      },
-      uom_id: { required: true },
-      unit_cost: {
-        validate: validators.positive('Cost cannot be negative'),
-      },
-    },
   })
 
   const { execute, validationErrors, isPending } = useFormMutation({
-    mutationFn: (data: OpeningBalanceFormData) => stockMovementApi.openingBalance(data),
+    mutationFn: (data: OpeningBalanceFormValues) => stockMovementApi.openingBalance(data),
     successMessage: 'Opening balance registered successfully',
     successTitle: 'Stock Updated',
     errorMessageFallback: 'Failed to register opening balance',
@@ -74,28 +74,39 @@ export function OpeningBalanceForm({
   })
 
   // Merge client and server validation errors
-  const allErrors = { ...errors, ...validationErrors }
+  const allErrors = {
+    inventory_location_id: errors.inventory_location_id?.message || validationErrors.inventory_location_id,
+    item_variant_id: errors.item_variant_id?.message || validationErrors.item_variant_id,
+    quantity: errors.quantity?.message || validationErrors.quantity,
+    uom_id: errors.uom_id?.message || validationErrors.uom_id,
+    unit_cost: errors.unit_cost?.message || validationErrors.unit_cost,
+    notes: errors.notes?.message || validationErrors.notes,
+  }
+
+  // Watch values for controlled inputs and calculations
+  const itemVariantId = watch('item_variant_id')
+  const inventoryLocationId = watch('inventory_location_id')
+  const uomId = watch('uom_id')
+  const quantity = watch('quantity')
+  const unitCost = watch('unit_cost')
 
   // Update UoM when variant changes
   useEffect(() => {
-    if (formData.item_variant_id && variants.length > 0) {
-      const variant = variants.find((v: ItemVariant) => v.id === formData.item_variant_id)
+    if (itemVariantId && variants.length > 0) {
+      const variant = variants.find((v: ItemVariant) => v.id === itemVariantId)
       if (variant) {
         setSelectedVariant(variant)
-        setField('uom_id', variant.uom_id)
+        setValue('uom_id', variant.uom_id)
       }
     }
-  }, [formData.item_variant_id, variants, setField])
+  }, [itemVariantId, variants, setValue])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (validate()) {
-      await execute(formData)
-    }
+  const onSubmit = async (data: OpeningBalanceFormValues) => {
+    await execute(data)
   }
 
   // Calculate total cost
-  const totalCost = formData.quantity * formData.unit_cost
+  const totalCost = quantity * unitCost
 
   return (
     <>
@@ -109,12 +120,12 @@ export function OpeningBalanceForm({
       </SlidePanel.Header>
 
       <SlidePanel.Body>
-        <form id="opening-balance-form" onSubmit={handleSubmit} className="space-y-4">
+        <form id="opening-balance-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Location Select */}
           <FormField label="Location" required error={allErrors.inventory_location_id}>
             <Select
-              value={formData.inventory_location_id.toString()}
-              onChange={(e) => setField('inventory_location_id', parseInt(e.target.value))}
+              value={(inventoryLocationId ?? 0).toString()}
+              onChange={(e) => setValue('inventory_location_id', parseInt(e.target.value))}
             >
               <option value="0">Select location...</option>
               {locations.map((location: InventoryLocation) => (
@@ -133,8 +144,8 @@ export function OpeningBalanceForm({
             hint="Select the product variant to add"
           >
             <Select
-              value={formData.item_variant_id.toString()}
-              onChange={(e) => setField('item_variant_id', parseInt(e.target.value))}
+              value={(itemVariantId ?? 0).toString()}
+              onChange={(e) => setValue('item_variant_id', parseInt(e.target.value))}
             >
               <option value="0">Select variant...</option>
               {variants.map((variant: ItemVariant) => (
@@ -185,8 +196,7 @@ export function OpeningBalanceForm({
           >
             <Input
               type="number"
-              value={formData.quantity}
-              onChange={(e) => setField('quantity', parseFloat(e.target.value) || 0)}
+              {...register('quantity', { valueAsNumber: true })}
               min="0"
               step="0.01"
               placeholder="0.00"
@@ -202,8 +212,8 @@ export function OpeningBalanceForm({
             hint="Auto-filled from variant's default UoM"
           >
             <Select
-              value={formData.uom_id.toString()}
-              onChange={(e) => setField('uom_id', parseInt(e.target.value))}
+              value={(uomId ?? 0).toString()}
+              onChange={(e) => setValue('uom_id', parseInt(e.target.value))}
             >
               <option value="0">Select unit...</option>
               {units.map((uom: UnitOfMeasure) => (
@@ -223,8 +233,7 @@ export function OpeningBalanceForm({
           >
             <Input
               type="number"
-              value={formData.unit_cost}
-              onChange={(e) => setField('unit_cost', parseFloat(e.target.value) || 0)}
+              {...register('unit_cost', { valueAsNumber: true })}
               min="0"
               step="0.01"
               placeholder="0.00"
@@ -233,7 +242,7 @@ export function OpeningBalanceForm({
           </FormField>
 
           {/* Total Cost Calculation */}
-          {formData.quantity > 0 && formData.unit_cost > 0 && (
+          {quantity > 0 && unitCost > 0 && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -245,7 +254,7 @@ export function OpeningBalanceForm({
                 </span>
               </div>
               <div className="text-xs text-muted-foreground mt-2">
-                {formData.quantity} × ${formData.unit_cost.toFixed(2)} per unit
+                {quantity} × ${unitCost.toFixed(2)} per unit
               </div>
             </div>
           )}
@@ -257,8 +266,7 @@ export function OpeningBalanceForm({
             hint="Optional reference or comments"
           >
             <Textarea
-              value={formData.notes}
-              onChange={(e) => setField('notes', e.target.value)}
+              {...register('notes')}
               rows={3}
               placeholder="e.g., Initial inventory count, Purchase order #12345..."
             />
