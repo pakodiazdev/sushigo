@@ -752,6 +752,50 @@ describe('useTodayAttendancePage', () => {
       })
     })
 
+    it('enqueueBulkOvertime appends entries on successive calls (does not replace)', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.enqueueBulkOvertime([
+          { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+        ])
+      })
+
+      act(() => {
+        result.current.enqueueBulkOvertime([
+          { attendance_id: 'att-002', employee_name: 'María García', overtime_minutes: 20 },
+        ])
+      })
+
+      // First entry is still the current one (not replaced by the second call)
+      expect(result.current.currentBulkOvertime?.attendance_id).toBe('att-001')
+    })
+
+    it('does not advance queue when API call fails', async () => {
+      vi.mocked(attendanceApi.overtimeDecision).mockRejectedValueOnce(new Error('Network error'))
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.enqueueBulkOvertime([
+          { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+          { attendance_id: 'att-002', employee_name: 'María García', overtime_minutes: 20 },
+        ])
+      })
+
+      await act(async () => {
+        result.current.confirmBulkOvertimeDecision(true)
+      })
+
+      await waitFor(() => {
+        expect(attendanceApi.overtimeDecision).toHaveBeenCalled()
+      })
+
+      // Queue should still be on att-001 (not advanced) after failure
+      expect(result.current.currentBulkOvertime?.attendance_id).toBe('att-001')
+    })
+
     it('currentBulkOvertime becomes null after last entry is confirmed', async () => {
       vi.mocked(attendanceApi.overtimeDecision).mockResolvedValue({
         data: { status: 200, data: {} },

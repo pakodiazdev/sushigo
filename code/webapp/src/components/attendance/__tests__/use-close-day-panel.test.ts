@@ -271,6 +271,25 @@ describe('useCloseDayPanel', () => {
       ])
     })
 
+    it('does not crash when overtime_pending is absent from response', () => {
+      const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
+      const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
+
+      act(() => result.current.open())
+      act(() => result.current.confirm())
+
+      const [, mutateOptions] = mockMutate.mock.calls[0] as [unknown, { onSuccess: (r: unknown) => void }]
+
+      // Backend version that doesn't return overtime_pending at all
+      expect(() =>
+        act(() => mutateOptions.onSuccess({
+          data: { data: { lunch_returns: 0, check_outs: 1, absences: 0, leaves: 0, day_offs: 0 } },
+        }))
+      ).not.toThrow()
+
+      expect(result.current.overtimePending).toEqual([])
+    })
+
     it('confirm does not set overtimePending when overtime_pending is empty', () => {
       const rows = [makeRow({ attendance: makeAttendanceData('returned') })]
       const { result } = renderHook(() => useCloseDayPanel(rows, 1, DEFAULT_TIME))
