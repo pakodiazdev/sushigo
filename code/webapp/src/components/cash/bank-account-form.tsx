@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -54,6 +55,7 @@ export function BankAccountForm({
         handleSubmit,
         watch,
         setValue,
+        reset,
         formState: { errors },
     } = useForm<BankAccountFormValues>({
         resolver: zodResolver(bankAccountSchema),
@@ -67,6 +69,19 @@ export function BankAccountForm({
             meta: account?.meta || undefined,
         },
     })
+
+    // Sync form values when account prop changes (always-mounted panel)
+    useEffect(() => {
+        reset({
+            branch_id: account?.branch_id || 0,
+            alias: account?.alias || '',
+            bank_name: account?.bank_name || '',
+            account_number_masked: account?.account_number_masked || '',
+            clabe_masked: account?.clabe_masked || '',
+            is_active: account?.is_active ?? true,
+            meta: account?.meta || undefined,
+        })
+    }, [account, reset])
 
     const createMutation = useCreateBankAccount()
     const updateMutation = useUpdateBankAccount()

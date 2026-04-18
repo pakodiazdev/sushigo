@@ -169,4 +169,94 @@ describe('BankAccountForm', () => {
             expect(requiredIndicators.length).toBeGreaterThanOrEqual(0)
         })
     })
+
+    describe('CLABE formatting', () => {
+        it('auto-formats CLABE with dash after 3 digits', () => {
+            const { container } = render(<BankAccountForm {...defaultProps} />)
+            const clabeInput = container.querySelector('input[placeholder="012-3456"]') as HTMLInputElement
+            fireEvent.change(clabeInput, { target: { value: '1234567' } })
+            expect(clabeInput.value).toBe('123-4567')
+        })
+
+        it('does not add dash when input is 3 digits or fewer', () => {
+            const { container } = render(<BankAccountForm {...defaultProps} />)
+            const clabeInput = container.querySelector('input[placeholder="012-3456"]') as HTMLInputElement
+            fireEvent.change(clabeInput, { target: { value: '123' } })
+            expect(clabeInput.value).toBe('123')
+        })
+
+        it('strips non-numeric characters from CLABE', () => {
+            const { container } = render(<BankAccountForm {...defaultProps} />)
+            const clabeInput = container.querySelector('input[placeholder="012-3456"]') as HTMLInputElement
+            fireEvent.change(clabeInput, { target: { value: 'abc1234567' } })
+            expect(clabeInput.value).toBe('123-4567')
+        })
+    })
+
+    describe('reset on prop change', () => {
+        it('updates form values when account prop changes', async () => {
+            const account1 = {
+                id: 1, branch_id: 1, alias: 'First Account', bank_name: 'BBVA',
+                account_number_masked: '1111', clabe_masked: '', is_active: true,
+                meta: {}, created_at: '', updated_at: '',
+            }
+            const account2 = {
+                id: 2, branch_id: 2, alias: 'Second Account', bank_name: 'SANTANDER',
+                account_number_masked: '2222', clabe_masked: '', is_active: false,
+                meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { rerender, getByPlaceholderText } = render(
+                <BankAccountForm {...defaultProps} account={account1} />
+            )
+            expect((getByPlaceholderText('Cuenta Principal') as HTMLInputElement).value).toBe('First Account')
+
+            rerender(<BankAccountForm {...defaultProps} account={account2} />)
+            await waitFor(() => {
+                expect((getByPlaceholderText('Cuenta Principal') as HTMLInputElement).value).toBe('Second Account')
+            })
+        })
+
+        it('resets to empty values when account becomes null', async () => {
+            const account = {
+                id: 1, branch_id: 1, alias: 'Some Account', bank_name: 'BBVA',
+                account_number_masked: '1234', clabe_masked: '', is_active: true,
+                meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { rerender, getByPlaceholderText } = render(
+                <BankAccountForm {...defaultProps} account={account} />
+            )
+
+            rerender(<BankAccountForm {...defaultProps} account={null} />)
+            await waitFor(() => {
+                expect((getByPlaceholderText('Cuenta Principal') as HTMLInputElement).value).toBe('')
+            })
+        })
+    })
+
+    describe('edit mode', () => {
+        it('calls updateMutation when submitting in edit mode', async () => {
+            const account = {
+                id: 1, branch_id: 1, alias: 'Test Account', bank_name: 'BBVA',
+                account_number_masked: '1234', clabe_masked: '', is_active: true,
+                meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { container } = render(<BankAccountForm {...defaultProps} account={account} />)
+            const selects = container.querySelectorAll('select')
+            fireEvent.change(selects[0]!, { target: { value: '1' } })
+            fireEvent.change(selects[1]!, { target: { value: 'BBVA' } })
+
+            const form = container.querySelector('form')
+            fireEvent.submit(form!)
+
+            await waitFor(() => {
+                expect(mockUpdateMutation.mutateAsync).toHaveBeenCalledWith({
+                    id: 1,
+                    data: expect.objectContaining({ alias: 'Test Account' }),
+                })
+            })
+        })
+    })
 })
