@@ -1,10 +1,35 @@
-// @vitest-environment jsdom
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, fireEvent, cleanup, screen } from '@testing-library/react'
-import React from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, fireEvent, cleanup } from '@testing-library/react'
 import { OpeningBalanceForm } from '../opening-balance-form'
 
+// Mock react-hook-form
+vi.mock('react-hook-form', () => ({
+    useForm: () => ({
+        register: () => ({}),
+        handleSubmit: (fn: (data: unknown) => void) => (e: React.FormEvent) => {
+            e.preventDefault()
+            fn({})
+        },
+        watch: (field: string) => {
+            const values: Record<string, unknown> = {
+                location_id: 1,
+                variant_id: 1,
+                uom_id: 1,
+                qty: 10,
+                unit_cost: 5,
+                notes: '',
+            }
+            return values[field]
+        },
+        setValue: vi.fn(),
+        formState: { errors: {} },
+    }),
+}))
+
+// Mock useFormMutation hook
 vi.mock('@/hooks/use-form-mutation', () => ({
     useFormMutation: () => ({
         execute: vi.fn().mockResolvedValue({}),
@@ -13,20 +38,7 @@ vi.mock('@/hooks/use-form-mutation', () => ({
     }),
 }))
 
-vi.mock('@/components/ui/toast-provider', () => ({
-    useToast: () => ({
-        showSuccess: vi.fn(),
-        showError: vi.fn(),
-        showWarning: vi.fn(),
-    }),
-}))
-
-vi.mock('@/services/inventory-api', () => ({
-    stockMovementApi: {
-        openingBalance: vi.fn().mockResolvedValue({}),
-    },
-}))
-
+// Mock inventory queries
 vi.mock('@/hooks/use-inventory-queries', () => ({
     useInventoryLocationsSelect: () => ({
         data: [
@@ -44,7 +56,7 @@ vi.mock('@/hooks/use-inventory-queries', () => ({
                 uom_id: 1,
                 uom: { name: 'Kilogram', symbol: 'kg' },
                 item: { sku: 'SAL-001', name: 'Salt' },
-                last_unit_cost: 5.00,
+                last_unit_cost: 5.0,
                 min_stock: 10,
             },
             {
@@ -54,7 +66,7 @@ vi.mock('@/hooks/use-inventory-queries', () => ({
                 uom_id: 2,
                 uom: { name: 'Kilogram', symbol: 'kg' },
                 item: { sku: 'SUG-001', name: 'Sugar' },
-                last_unit_cost: 3.50,
+                last_unit_cost: 3.5,
                 min_stock: 5,
             },
         ],
@@ -69,33 +81,31 @@ vi.mock('@/hooks/use-inventory-queries', () => ({
     }),
 }))
 
-vi.mock('@/components/ui/slide-panel', () => ({
-    SlidePanel: {
-        Header: ({ children }: { children: React.ReactNode }) =>
-            React.createElement('div', { 'data-testid': 'slide-panel-header' }, children),
-        Body: ({ children }: { children: React.ReactNode }) =>
-            React.createElement('div', { 'data-testid': 'slide-panel-body' }, children),
-        Footer: ({ children }: { children: React.ReactNode }) =>
-            React.createElement('div', { 'data-testid': 'slide-panel-footer' }, children),
+// Mock inventory API
+vi.mock('@/services/inventory-api', () => ({
+    stockMovementApi: {
+        openingBalance: vi.fn().mockResolvedValue({}),
     },
 }))
 
-const formProps = {
+// Mock SlidePanel components
+vi.mock('@/components/ui/slide-panel', () => ({
+    SlidePanel: {
+        Header: ({ children }: { children: React.ReactNode }) => (
+            <div data-testid="slide-panel-header">{children}</div>
+        ),
+        Body: ({ children }: { children: React.ReactNode }) => (
+            <div data-testid="slide-panel-body">{children}</div>
+        ),
+        Footer: ({ children }: { children: React.ReactNode }) => (
+            <div data-testid="slide-panel-footer">{children}</div>
+        ),
+    },
+}))
+
+const defaultProps = {
     onSuccess: vi.fn(),
     onCancel: vi.fn(),
-}
-
-function renderForm(props = formProps) {
-    const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    })
-    return render(
-        React.createElement(
-            QueryClientProvider,
-            { client: queryClient },
-            React.createElement(OpeningBalanceForm, props),
-        ),
-    )
 }
 
 describe('OpeningBalanceForm', () => {
@@ -109,65 +119,65 @@ describe('OpeningBalanceForm', () => {
 
     describe('rendering', () => {
         it('renders the form', () => {
-            const { container } = renderForm()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
             expect(container.querySelector('form')).toBeDefined()
         })
 
         it('renders the header with title', () => {
-            renderForm()
-            expect(screen.getByRole('heading', { name: 'Register Opening Balance' })).toBeDefined()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
+            expect(container.querySelector('h2')?.textContent).toBe('Register Opening Balance')
         })
 
         it('renders location select with options', () => {
-            renderForm()
-            expect(screen.getByText('Select location...')).toBeDefined()
-            expect(screen.getByText('Main Warehouse (WAREHOUSE)')).toBeDefined()
+            const { getByText } = render(<OpeningBalanceForm {...defaultProps} />)
+            expect(getByText('Select location...')).toBeDefined()
+            expect(getByText('Main Warehouse (WAREHOUSE)')).toBeDefined()
         })
 
         it('renders item variant select with options', () => {
-            renderForm()
-            expect(screen.getByText('Select variant...')).toBeDefined()
-            expect(screen.getByText('VAR-001 - Salt 500g (SAL-001)')).toBeDefined()
+            const { getByText } = render(<OpeningBalanceForm {...defaultProps} />)
+            expect(getByText('Select variant...')).toBeDefined()
+            expect(getByText('VAR-001 - Salt 500g (SAL-001)')).toBeDefined()
         })
 
         it('renders unit of measure select', () => {
-            renderForm()
-            expect(screen.getByText('Select unit...')).toBeDefined()
+            const { getByText } = render(<OpeningBalanceForm {...defaultProps} />)
+            expect(getByText('Select unit...')).toBeDefined()
         })
 
         it('renders quantity input', () => {
-            const { container } = renderForm()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
             expect(container.querySelectorAll('input[type="number"]').length).toBeGreaterThanOrEqual(1)
         })
 
         it('renders cancel button', () => {
-            renderForm()
-            expect(screen.getByText('Cancel')).toBeDefined()
+            const { getByText } = render(<OpeningBalanceForm {...defaultProps} />)
+            expect(getByText('Cancel')).toBeDefined()
         })
 
         it('renders submit button', () => {
-            renderForm()
-            expect(screen.getByRole('button', { name: 'Register Opening Balance' })).toBeDefined()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
+            expect(container.querySelector('button[type="submit"]')?.textContent).toBe('Register Opening Balance')
         })
     })
 
     describe('form interactions', () => {
         it('calls onCancel when cancel button is clicked', () => {
             const onCancel = vi.fn()
-            renderForm({ ...formProps, onCancel })
-            fireEvent.click(screen.getByText('Cancel'))
+            const { getByText } = render(<OpeningBalanceForm {...defaultProps} onCancel={onCancel} />)
+            fireEvent.click(getByText('Cancel'))
             expect(onCancel).toHaveBeenCalledTimes(1)
         })
 
         it('allows selecting a location', () => {
-            const { container } = renderForm()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
             const selects = container.querySelectorAll('select')
             fireEvent.change(selects[0], { target: { value: '1' } })
             expect(selects[0]).toBeDefined()
         })
 
         it('allows entering quantity', () => {
-            const { container } = renderForm()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
             const input = container.querySelectorAll('input[type="number"]')[0]
             fireEvent.change(input, { target: { value: '100' } })
             expect((input as HTMLInputElement).value).toBe('100')
@@ -176,45 +186,49 @@ describe('OpeningBalanceForm', () => {
 
     describe('preselection props', () => {
         it('accepts preselectedLocationId prop', () => {
-            const { container } = renderForm({ ...formProps, preselectedLocationId: 1 })
+            const { container } = render(
+                <OpeningBalanceForm {...defaultProps} preselectedLocationId={1} />
+            )
             expect(container.querySelector('form')).toBeDefined()
         })
 
         it('accepts preselectedVariantId prop', () => {
-            const { container } = renderForm({ ...formProps, preselectedVariantId: 1 })
+            const { container } = render(
+                <OpeningBalanceForm {...defaultProps} preselectedVariantId={1} />
+            )
             expect(container.querySelector('form')).toBeDefined()
         })
     })
 
     describe('form structure', () => {
         it('has correct form id', () => {
-            const { container } = renderForm()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
             expect(container.querySelector('#opening-balance-form')).toBeDefined()
         })
 
         it('renders all required field labels', () => {
-            renderForm()
-            expect(screen.getByText('Location')).toBeDefined()
-            expect(screen.getByText('Item Variant')).toBeDefined()
-            expect(screen.getByText('Quantity')).toBeDefined()
+            const { getByText } = render(<OpeningBalanceForm {...defaultProps} />)
+            expect(getByText('Location')).toBeDefined()
+            expect(getByText('Item Variant')).toBeDefined()
+            expect(getByText('Quantity')).toBeDefined()
         })
 
         it('renders slide panel sections', () => {
-            renderForm()
-            expect(screen.getByTestId('slide-panel-header')).toBeDefined()
-            expect(screen.getByTestId('slide-panel-body')).toBeDefined()
-            expect(screen.getByTestId('slide-panel-footer')).toBeDefined()
+            const { getByTestId } = render(<OpeningBalanceForm {...defaultProps} />)
+            expect(getByTestId('slide-panel-header')).toBeDefined()
+            expect(getByTestId('slide-panel-body')).toBeDefined()
+            expect(getByTestId('slide-panel-footer')).toBeDefined()
         })
     })
 
     describe('accessibility', () => {
         it('form has submit button with correct type', () => {
-            const { container } = renderForm()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
             expect(container.querySelector('button[type="submit"]')).toBeDefined()
         })
 
         it('cancel button has type button', () => {
-            const { container } = renderForm()
+            const { container } = render(<OpeningBalanceForm {...defaultProps} />)
             expect(container.querySelector('button[type="button"]')).toBeDefined()
         })
     })
