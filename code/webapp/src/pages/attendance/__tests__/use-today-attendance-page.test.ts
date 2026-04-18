@@ -753,6 +753,9 @@ describe('useTodayAttendancePage', () => {
     })
 
     it('enqueueBulkOvertime appends entries on successive calls (does not replace)', async () => {
+      vi.mocked(attendanceApi.overtimeDecision).mockResolvedValue({
+        data: { status: 200, data: {} },
+      } as never)
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
@@ -768,8 +771,17 @@ describe('useTodayAttendancePage', () => {
         ])
       })
 
-      // First entry is still the current one (not replaced by the second call)
+      // First entry is still current (second call appended, not replaced)
       expect(result.current.currentBulkOvertime?.attendance_id).toBe('att-001')
+
+      // Confirm first decision — queue should advance to att-002
+      await act(async () => {
+        result.current.confirmBulkOvertimeDecision(true)
+      })
+
+      await waitFor(() => {
+        expect(result.current.currentBulkOvertime?.attendance_id).toBe('att-002')
+      })
     })
 
     it('does not advance queue when API call fails', async () => {
@@ -788,12 +800,14 @@ describe('useTodayAttendancePage', () => {
         result.current.confirmBulkOvertimeDecision(true)
       })
 
+      // Wait for mutation to fully settle (isPending → false) before asserting queue state
       await waitFor(() => {
-        expect(attendanceApi.overtimeDecision).toHaveBeenCalled()
+        expect(result.current.isRecordingOvertimeDecision).toBe(false)
       })
 
-      // Queue should still be on att-001 (not advanced) after failure
+      // Queue must not have advanced — att-001 is retryable, att-002 not yet processed
       expect(result.current.currentBulkOvertime?.attendance_id).toBe('att-001')
+      expect(attendanceApi.overtimeDecision).toHaveBeenCalledTimes(1)
     })
 
     it('currentBulkOvertime becomes null after last entry is confirmed', async () => {
