@@ -169,7 +169,7 @@ export function CashRegisterForm({
                                     id="operating-unit"
                                     name="operating_unit_id"
                                     value={operatingUnitId || ''}
-                                    onChange={(e) => setValue('operating_unit_id', e.target.value ? parseInt(e.target.value) : null)}
+                                    onChange={(e) => setValue('operating_unit_id', e.target.value ? Number.parseInt(e.target.value) : null)}
                                 >
                                     <option value="">Selecciona un evento</option>
                                     {filteredOperatingUnits.map(ou => (

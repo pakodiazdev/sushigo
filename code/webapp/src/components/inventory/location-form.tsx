@@ -57,8 +57,8 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
 
   const { execute, validationErrors, isPending } = useFormMutation({
     mutationFn: (data: LocationFormValues) =>
-      isEditing
-        ? inventoryLocationApi.update(location!.id, data)
+      isEditing && location
+        ? inventoryLocationApi.update(location.id, data)
         : inventoryLocationApi.create(data),
     successMessage: isEditing ? 'Ubicación actualizada exitosamente' : 'Ubicación creada exitosamente',
     successTitle: isEditing ? 'Ubicación Actualizada' : 'Ubicación Creada',
