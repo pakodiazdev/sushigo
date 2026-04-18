@@ -170,4 +170,71 @@ describe('CashTerminalForm', () => {
             expect(formFields).toBeDefined()
         })
     })
+
+    describe('reset on prop change', () => {
+        it('updates form values when terminal prop changes', async () => {
+            const terminal1 = {
+                id: 1, branch_id: 1, name: 'Terminal A', provider: 'CLIP',
+                account_ref: 'REF-A', last_four: '1111', is_active: true,
+                meta: {}, created_at: '', updated_at: '',
+            }
+            const terminal2 = {
+                id: 2, branch_id: 2, name: 'Terminal B', provider: 'STRIPE',
+                account_ref: 'REF-B', last_four: '2222', is_active: false,
+                meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { rerender, getByPlaceholderText } = render(
+                <CashTerminalForm {...defaultProps} terminal={terminal1} />
+            )
+            expect((getByPlaceholderText('Terminal Principal') as HTMLInputElement).value).toBe('Terminal A')
+
+            rerender(<CashTerminalForm {...defaultProps} terminal={terminal2} />)
+            await waitFor(() => {
+                expect((getByPlaceholderText('Terminal Principal') as HTMLInputElement).value).toBe('Terminal B')
+            })
+        })
+
+        it('resets to empty values when terminal becomes null', async () => {
+            const terminal = {
+                id: 1, branch_id: 1, name: 'Terminal A', provider: 'CLIP',
+                account_ref: 'REF-A', last_four: '1111', is_active: true,
+                meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { rerender, getByPlaceholderText } = render(
+                <CashTerminalForm {...defaultProps} terminal={terminal} />
+            )
+
+            rerender(<CashTerminalForm {...defaultProps} terminal={null} />)
+            await waitFor(() => {
+                expect((getByPlaceholderText('Terminal Principal') as HTMLInputElement).value).toBe('')
+            })
+        })
+    })
+
+    describe('edit mode', () => {
+        it('calls updateMutation when submitting in edit mode', async () => {
+            const terminal = {
+                id: 1, branch_id: 1, name: 'Terminal A', provider: 'CLIP',
+                account_ref: 'REF-001', last_four: '1234', is_active: true,
+                meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { container } = render(<CashTerminalForm {...defaultProps} terminal={terminal} />)
+            const selects = container.querySelectorAll('select')
+            fireEvent.change(selects[0]!, { target: { value: '1' } })
+            fireEvent.change(selects[1]!, { target: { value: 'CLIP' } })
+
+            const form = container.querySelector('form')
+            fireEvent.submit(form!)
+
+            await waitFor(() => {
+                expect(mockUpdateMutation.mutateAsync).toHaveBeenCalledWith({
+                    id: 1,
+                    data: expect.objectContaining({ name: 'Terminal A' }),
+                })
+            })
+        })
+    })
 })

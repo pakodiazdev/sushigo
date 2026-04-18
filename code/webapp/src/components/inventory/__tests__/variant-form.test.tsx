@@ -5,7 +5,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { VariantForm } from '../variant-form'
 
-// Mock useFormState hook
+const mockVariantExecute = vi.hoisted(() => vi.fn().mockResolvedValue({}))
+
+// Mock useFormState hook (legacy — kept for compatibility)
 vi.mock('@/hooks/use-form-state', () => ({
   useFormState: () => ({
     formData: {
@@ -32,7 +34,7 @@ vi.mock('@/hooks/use-form-state', () => ({
 // Mock useCreateUpdateMutation hook
 vi.mock('@/hooks/use-form-mutation', () => ({
   useCreateUpdateMutation: () => ({
-    execute: vi.fn().mockResolvedValue({}),
+    execute: mockVariantExecute,
     validationErrors: {},
     isPending: false,
   }),
@@ -255,6 +257,48 @@ describe('VariantForm', () => {
     it('renders SlidePanel.Footer component', () => {
       const { getByTestId } = render(<VariantForm {...defaultProps} />)
       expect(getByTestId('slide-panel-footer')).toBeDefined()
+    })
+  })
+
+  describe('form submission', () => {
+    it('calls execute and triggers zod refine on valid submission (create)', async () => {
+      const { getByPlaceholderText, container } = render(<VariantForm {...defaultProps} />)
+
+      const selects = container.querySelectorAll('select')
+      fireEvent.change(selects[0]!, { target: { value: '1' } }) // item_id
+      fireEvent.change(selects[1]!, { target: { value: '1' } }) // uom_id
+
+      fireEvent.change(getByPlaceholderText('e.g., PROD-KG'), { target: { value: 'PR-001' } })
+      fireEvent.change(getByPlaceholderText('e.g., 1 Kilogram'), { target: { value: 'Salt 1kg' } })
+
+      const form = container.querySelector('form#variant-form')
+      fireEvent.submit(form!)
+
+      await waitFor(() => expect(mockVariantExecute).toHaveBeenCalled())
+    })
+
+    it('calls execute on valid submission (update)', async () => {
+      const variant = {
+        id: 1,
+        item_id: 1,
+        code: 'PR-001',
+        name: 'Salt 1kg',
+        uom_id: 1,
+        min_stock: 0,
+        max_stock: 100,
+        avg_unit_cost: 5.0,
+        last_unit_cost: 5.0,
+        is_active: true,
+        created_at: '',
+        updated_at: '',
+      }
+
+      const { container } = render(<VariantForm {...defaultProps} variant={variant} />)
+
+      const form = container.querySelector('form#variant-form')
+      fireEvent.submit(form!)
+
+      await waitFor(() => expect(mockVariantExecute).toHaveBeenCalledTimes(1))
     })
   })
 })

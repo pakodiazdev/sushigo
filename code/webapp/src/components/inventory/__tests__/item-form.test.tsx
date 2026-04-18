@@ -5,10 +5,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { ItemForm } from '../item-form'
 
+const mockExecute = vi.hoisted(() => vi.fn().mockResolvedValue({}))
+
 // Mock useCreateUpdateMutation hook
 vi.mock('@/hooks/use-form-mutation', () => ({
     useCreateUpdateMutation: () => ({
-        execute: vi.fn().mockResolvedValue({}),
+        execute: mockExecute,
         validationErrors: {},
         isPending: false,
     }),
@@ -214,6 +216,41 @@ describe('ItemForm', () => {
         it('renders SlidePanel.Footer component', () => {
             const { getByTestId } = render(<ItemForm {...defaultProps} />)
             expect(getByTestId('slide-panel-footer')).toBeDefined()
+        })
+    })
+
+    describe('form submission', () => {
+        it('calls execute on valid form submission (create)', async () => {
+            const { getByPlaceholderText, container } = render(<ItemForm {...defaultProps} />)
+
+            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+
+            fireEvent.submit(container.querySelector('form')!)
+
+            await waitFor(() => expect(mockExecute).toHaveBeenCalled())
+        })
+
+        it('calls execute on valid form submission (update)', async () => {
+            const item = {
+                id: 1,
+                sku: 'SAL-001',
+                name: 'Salt Item',
+                description: '',
+                type: 'INSUMO' as const,
+                is_stocked: true,
+                is_perishable: false,
+                is_active: true,
+                is_manufactured: false,
+                created_at: '',
+                updated_at: '',
+            }
+
+            const { container } = render(<ItemForm {...defaultProps} item={item} />)
+
+            fireEvent.submit(container.querySelector('form')!)
+
+            await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(1))
         })
     })
 })
