@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup } from '@testing-library/react'
 import React from 'react'
 
-// Create STABLE mock references OUTSIDE the mock to prevent infinite re-renders
+// Create STABLE mock references OUTSIDE the mock
 const mockRegister = vi.fn(() => ({}))
 const mockSetValue = vi.fn()
 const mockHandleSubmit = vi.fn((fn: (data: unknown) => void) => (e: React.FormEvent) => {
@@ -37,13 +37,12 @@ vi.mock('react-hook-form', () => ({
 }))
 
 // Mock @tanstack/react-query with stable references
-const mockRefetch = vi.fn()
 const mockQueryResult = {
-    data: { data: { data: [] } },
+    data: null,
     isLoading: false,
     isError: false,
     error: null,
-    refetch: mockRefetch,
+    refetch: vi.fn(),
     isFetching: false,
 }
 
@@ -51,16 +50,13 @@ vi.mock('@tanstack/react-query', () => ({
     useQuery: () => mockQueryResult,
 }))
 
-// Mock useFormMutation hook with stable references
-const mockExecute = vi.fn().mockResolvedValue({})
-const mockMutationResult = {
-    execute: mockExecute,
-    validationErrors: {},
-    isPending: false,
-}
-
+// Mock useFormMutation hook
 vi.mock('@/hooks/use-form-mutation', () => ({
-    useFormMutation: () => mockMutationResult,
+    useFormMutation: () => ({
+        execute: vi.fn().mockResolvedValue({}),
+        validationErrors: {},
+        isPending: false,
+    }),
 }))
 
 // Mock inventory queries
@@ -90,18 +86,13 @@ vi.mock('@/services/inventory-api', () => ({
     stockApi: { byVariant: vi.fn().mockResolvedValue({ data: { data: [] } }) },
 }))
 
-// Mock toast provider with stable references
-const mockShowWarning = vi.fn()
-const mockShowError = vi.fn()
-const mockShowSuccess = vi.fn()
-const mockToast = {
-    showWarning: mockShowWarning,
-    showError: mockShowError,
-    showSuccess: mockShowSuccess,
-}
-
+// Mock toast provider
 vi.mock('@/components/ui/toast-provider', () => ({
-    useToast: () => mockToast,
+    useToast: () => ({
+        showWarning: vi.fn(),
+        showError: vi.fn(),
+        showSuccess: vi.fn(),
+    }),
 }))
 
 // Mock SlidePanel
@@ -265,5 +256,89 @@ describe('StockOutForm', () => {
     it('renders placeholder option for variant select', () => {
         const { getByText } = render(<StockOutForm {...defaultProps} />)
         expect(getByText('Select variant...')).toBeDefined()
+    })
+
+    it('calls watch for uom_id', () => {
+        render(<StockOutForm {...defaultProps} />)
+        expect(mockWatch).toHaveBeenCalledWith('uom_id')
+    })
+
+    it('calls watch for qty', () => {
+        render(<StockOutForm {...defaultProps} />)
+        expect(mockWatch).toHaveBeenCalledWith('qty')
+    })
+
+    it('calls watch for sale_price', () => {
+        render(<StockOutForm {...defaultProps} />)
+        expect(mockWatch).toHaveBeenCalledWith('sale_price')
+    })
+
+    it('registers qty field', () => {
+        render(<StockOutForm {...defaultProps} />)
+        expect(mockRegister).toHaveBeenCalledWith('qty', { valueAsNumber: true })
+    })
+
+    it('registers sale_price field', () => {
+        render(<StockOutForm {...defaultProps} />)
+        expect(mockRegister).toHaveBeenCalledWith('sale_price', { valueAsNumber: true })
+    })
+
+    it('registers notes field', () => {
+        render(<StockOutForm {...defaultProps} />)
+        expect(mockRegister).toHaveBeenCalledWith('notes')
+    })
+
+    it('calls setValue when location select changes', () => {
+        const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
+        const selects = getAllByRole('combobox')
+        fireEvent.change(selects[0], { target: { value: '1' } })
+        expect(mockSetValue).toHaveBeenCalledWith('location_id', 1)
+    })
+
+    it('calls setValue when variant select changes', () => {
+        const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
+        const selects = getAllByRole('combobox')
+        fireEvent.change(selects[1], { target: { value: '1' } })
+        expect(mockSetValue).toHaveBeenCalledWith('variant_id', 1)
+    })
+
+    it('calls setValue when uom select changes', () => {
+        const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
+        const selects = getAllByRole('combobox')
+        fireEvent.change(selects[2], { target: { value: '1' } })
+        expect(mockSetValue).toHaveBeenCalledWith('uom_id', 1)
+    })
+
+    it('calls setValue when reason select changes', () => {
+        const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
+        const selects = getAllByRole('combobox')
+        fireEvent.change(selects[3], { target: { value: 'CONSUMPTION' } })
+        expect(mockSetValue).toHaveBeenCalledWith('reason', 'CONSUMPTION')
+    })
+
+    it('renders quantity hint', () => {
+        const { getByText } = render(<StockOutForm {...defaultProps} />)
+        expect(getByText(/amount to remove from inventory/i)).toBeDefined()
+    })
+
+    it('renders UoM hint', () => {
+        const { getByText } = render(<StockOutForm {...defaultProps} />)
+        expect(getByText(/auto-filled from variant/i)).toBeDefined()
+    })
+
+    it('renders selling price hint', () => {
+        const { getByText } = render(<StockOutForm {...defaultProps} />)
+        expect(getByText(/selling price per unit/i)).toBeDefined()
+    })
+
+    it('renders notes placeholder', () => {
+        const { container } = render(<StockOutForm {...defaultProps} />)
+        const textarea = container.querySelector('textarea')
+        expect(textarea).toBeDefined()
+    })
+
+    it('renders select unit placeholder', () => {
+        const { getByText } = render(<StockOutForm {...defaultProps} />)
+        expect(getByText('Select unit...')).toBeDefined()
     })
 })
