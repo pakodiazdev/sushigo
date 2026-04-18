@@ -172,15 +172,22 @@ describe('OpeningBalanceForm', () => {
         it('allows selecting a location', () => {
             const { container } = render(<OpeningBalanceForm {...defaultProps} />)
             const selects = container.querySelectorAll('select')
-            fireEvent.change(selects[0], { target: { value: '1' } })
-            expect(selects[0]).toBeDefined()
+            expect(selects.length).toBeGreaterThan(0)
+            if (selects[0]) {
+                fireEvent.change(selects[0], { target: { value: '1' } })
+                expect(selects[0]).toBeDefined()
+            }
         })
 
         it('allows entering quantity', () => {
             const { container } = render(<OpeningBalanceForm {...defaultProps} />)
-            const input = container.querySelectorAll('input[type="number"]')[0]
-            fireEvent.change(input, { target: { value: '100' } })
-            expect((input as HTMLInputElement).value).toBe('100')
+            const inputs = container.querySelectorAll('input[type="number"]')
+            expect(inputs.length).toBeGreaterThan(0)
+            const input = inputs[0]
+            if (input) {
+                fireEvent.change(input, { target: { value: '100' } })
+                expect((input as HTMLInputElement).value).toBe('100')
+            }
         })
     })
 
