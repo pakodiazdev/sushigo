@@ -1,10 +1,24 @@
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useFormState } from '@/hooks/use-form-state'
 import { useCreateCashTerminal, useUpdateCashTerminal } from '@/services/cash-hooks'
-import type { CashTerminal, CashTerminalFormData } from '@/types/cash'
-import { Loader2 } from 'lucide-react'
+import type { CashTerminal } from '@/types/cash'
+
+const cashTerminalSchema = z.object({
+    branch_id: z.number().min(1, 'Este campo es requerido'),
+    name: z.string().min(1, 'Este campo es requerido'),
+    provider: z.string().min(1, 'Este campo es requerido'),
+    account_ref: z.string().min(1, 'Este campo es requerido'),
+    last_four: z.string().regex(/^\d{4}$/, 'Debe ser exactamente 4 dígitos'),
+    is_active: z.boolean(),
+    meta: z.record(z.string(), z.unknown()).optional(),
+})
+
+type CashTerminalFormValues = z.infer<typeof cashTerminalSchema>
 
 interface CashTerminalFormProps {
     terminal?: CashTerminal | null
@@ -34,8 +48,15 @@ export function CashTerminalForm({
 }: CashTerminalFormProps) {
     const isEditing = !!terminal
 
-    const { formData, setField, errors, validate } = useFormState<CashTerminalFormData>({
-        initialData: {
+    const {
+        register,
+        handleSubmit,
+        watch,
+        setValue,
+        formState: { errors },
+    } = useForm<CashTerminalFormValues>({
+        resolver: zodResolver(cashTerminalSchema),
+        defaultValues: {
             branch_id: terminal?.branch_id || 0,
             name: terminal?.name || '',
             provider: terminal?.provider || '',
@@ -44,30 +65,18 @@ export function CashTerminalForm({
             is_active: terminal?.is_active ?? true,
             meta: terminal?.meta || undefined,
         },
-        validationRules: {
-            branch_id: { required: true },
-            name: { required: true },
-            provider: { required: true },
-            account_ref: { required: true },
-            last_four: {
-                required: true,
-                validate: (value) => {
-                    if (typeof value === 'string' && !/^\d{4}$/.test(value)) {
-                        return 'Debe ser exactamente 4 dígitos'
-                    }
-                },
-            },
-        },
     })
 
     const createMutation = useCreateCashTerminal()
     const updateMutation = useUpdateCashTerminal()
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    // Watch values for controlled inputs
+    const branchId = watch('branch_id')
+    const provider = watch('provider')
+    const lastFour = watch('last_four')
+    const isActive = watch('is_active')
 
-        if (!validate()) return
-
+    const onSubmit = async (formData: CashTerminalFormValues) => {
         try {
             if (isEditing && terminal) {
                 await updateMutation.mutateAsync({
@@ -93,15 +102,15 @@ export function CashTerminalForm({
             title={isEditing ? 'Editar Terminal' : 'Nueva Terminal'}
             description={isEditing ? 'Actualiza los datos de la terminal' : 'Crea una nueva terminal de pago'}
         >
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                     label="Sucursal"
-                    error={errors.branch_id}
+                    error={errors.branch_id?.message}
                     required
                 >
                     <Select
-                        value={formData.branch_id || ''}
-                        onChange={(e) => setField('branch_id', parseInt(e.target.value))}
+                        value={branchId || ''}
+                        onChange={(e) => setValue('branch_id', parseInt(e.target.value))}
                     >
                         <option value="">Selecciona una sucursal</option>
                         {branches.map(branch => (
@@ -114,14 +123,13 @@ export function CashTerminalForm({
 
                 <FormField
                     label="Nombre"
-                    error={errors.name}
+                    error={errors.name?.message}
                     required
                     hint="Nombre descriptivo de la terminal (ej. Terminal Principal, TPV Caja 1)"
                 >
                     <input
                         type="text"
-                        value={formData.name}
-                        onChange={(e) => setField('name', e.target.value)}
+                        {...register('name')}
                         className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md"
                         placeholder="Terminal Principal"
                     />
@@ -129,17 +137,17 @@ export function CashTerminalForm({
 
                 <FormField
                     label="Proveedor"
-                    error={errors.provider}
+                    error={errors.provider?.message}
                     required
                 >
                     <Select
-                        value={formData.provider}
-                        onChange={(e) => setField('provider', e.target.value)}
+                        value={provider}
+                        onChange={(e) => setValue('provider', e.target.value)}
                     >
                         <option value="">Selecciona un proveedor</option>
-                        {PROVIDERS.map(provider => (
-                            <option key={provider.value} value={provider.value}>
-                                {provider.label}
+                        {PROVIDERS.map(providerItem => (
+                            <option key={providerItem.value} value={providerItem.value}>
+                                {providerItem.label}
                             </option>
                         ))}
                     </Select>
@@ -147,14 +155,13 @@ export function CashTerminalForm({
 
                 <FormField
                     label="Referencia de Cuenta"
-                    error={errors.account_ref}
+                    error={errors.account_ref?.message}
                     required
                     hint="Número de afiliación o ID de la terminal"
                 >
                     <input
                         type="text"
-                        value={formData.account_ref}
-                        onChange={(e) => setField('account_ref', e.target.value)}
+                        {...register('account_ref')}
                         className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md"
                         placeholder="12345678"
                     />
@@ -162,14 +169,14 @@ export function CashTerminalForm({
 
                 <FormField
                     label="Últimos 4 Dígitos"
-                    error={errors.last_four}
+                    error={errors.last_four?.message}
                     required
                     hint="Últimos 4 dígitos de la terminal para identificación"
                 >
                     <input
                         type="text"
-                        value={formData.last_four}
-                        onChange={(e) => setField('last_four', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        value={lastFour}
+                        onChange={(e) => setValue('last_four', e.target.value.replace(/\D/g, '').slice(0, 4))}
                         className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md font-mono"
                         placeholder="1234"
                         maxLength={4}
@@ -178,8 +185,8 @@ export function CashTerminalForm({
 
                 <FormField label="Estado">
                     <Checkbox
-                        checked={formData.is_active}
-                        onChange={(e) => setField('is_active', e.target.checked)}
+                        checked={isActive}
+                        onChange={(e) => setValue('is_active', e.target.checked)}
                         label="Activa"
                     />
                 </FormField>

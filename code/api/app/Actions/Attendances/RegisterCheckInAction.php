@@ -32,6 +32,10 @@ use Illuminate\Validation\ValidationException;
  */
 class RegisterCheckInAction
 {
+    public function __construct(
+        private readonly ApplicationClock $clock
+    ) {}
+
     /**
      * @param  array{employee_id: string, check_in: string}  $data
      *
@@ -118,8 +122,7 @@ class RegisterCheckInAction
      */
     private function guardNotInFuture(Carbon $checkInLocal): void
     {
-        $clock = app(ApplicationClock::class);
-        $nowLocal = $clock->nowInBusinessTz()->setTimezone($checkInLocal->timezone);
+        $nowLocal = $this->clock->nowInBusinessTz()->setTimezone($checkInLocal->timezone);
         $toleranceMinutes = 5;
 
         if ($checkInLocal->isAfter($nowLocal->copy()->addMinutes($toleranceMinutes))) {
