@@ -5,31 +5,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { LocationForm } from '../location-form'
 
-// Mock useFormState hook
-vi.mock('@/hooks/use-form-state', () => ({
-  useFormState: () => ({
-    formData: {
-      operating_unit_id: 0,
-      name: '',
-      type: 'MAIN',
-      priority: 100,
-      is_primary: false,
-      is_active: true,
-      notes: '',
-    },
-    setField: vi.fn(),
-    errors: {},
-    validate: vi.fn().mockReturnValue(true),
-  }),
-  validators: {
-    minLength: () => () => undefined,
-    range: () => () => undefined,
-  },
-}))
-
-// Mock useCreateUpdateMutation hook
+// Mock useFormMutation hook
 vi.mock('@/hooks/use-form-mutation', () => ({
-  useCreateUpdateMutation: () => ({
+  useFormMutation: () => ({
     execute: vi.fn().mockResolvedValue({}),
     validationErrors: {},
     isPending: false,
