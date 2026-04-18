@@ -51,7 +51,7 @@ export function StockOutForm({
   preselectedLocationId,
   preselectedVariantId,
 }: StockOutFormProps) {
-  const { showWarning } = useToast()
+  const { showWarning, showSuccess } = useToast()
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null)
   const [variantStocks, setVariantStocks] = useState<Stock[]>([])
 
@@ -137,7 +137,7 @@ export function StockOutForm({
 
   const { execute, validationErrors, isPending } = useFormMutation({
     mutationFn: (data: StockOutFormValues) => stockMovementApi.stockOut(data),
-    successMessage: 'Stock out registered successfully',
+    // No successMessage — toast logic is conditional and handled in onSuccess
     errorMessageFallback: 'Failed to register stock out',
     onSuccess: () => {
       const isSale = reason === 'SALE'
@@ -147,6 +147,11 @@ export function StockOutForm({
         showWarning(
           `Stock out registered, but sale resulted in negative profit: $${Math.abs(profitAmt).toFixed(2)}`,
           'Sale at Loss'
+        )
+      } else {
+        showSuccess(
+          isSale ? 'Stock sale registered successfully' : 'Stock consumption registered successfully',
+          'Success'
         )
       }
       onSuccess()

@@ -291,28 +291,28 @@ describe('StockOutForm', () => {
     it('calls setValue when location select changes', () => {
         const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
         const selects = getAllByRole('combobox')
-        fireEvent.change(selects[0], { target: { value: '1' } })
+        fireEvent.change(selects[0]!, { target: { value: '1' } })
         expect(mockSetValue).toHaveBeenCalledWith('location_id', 1)
     })
 
     it('calls setValue when variant select changes', () => {
         const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
         const selects = getAllByRole('combobox')
-        fireEvent.change(selects[1], { target: { value: '1' } })
+        fireEvent.change(selects[1]!, { target: { value: '1' } })
         expect(mockSetValue).toHaveBeenCalledWith('variant_id', 1)
     })
 
     it('calls setValue when uom select changes', () => {
         const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
         const selects = getAllByRole('combobox')
-        fireEvent.change(selects[2], { target: { value: '1' } })
+        fireEvent.change(selects[2]!, { target: { value: '1' } })
         expect(mockSetValue).toHaveBeenCalledWith('uom_id', 1)
     })
 
     it('calls setValue when reason select changes', () => {
         const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
         const selects = getAllByRole('combobox')
-        fireEvent.change(selects[3], { target: { value: 'CONSUMPTION' } })
+        fireEvent.change(selects[3]!, { target: { value: 'CONSUMPTION' } })
         expect(mockSetValue).toHaveBeenCalledWith('reason', 'CONSUMPTION')
     })
 

@@ -14,39 +14,39 @@ import { currentTimeLabel } from '@/lib/datetime'
  * @returns Current time in "HH:mm" format from Application Clock
  */
 export function useApplicationTimeLabel(): string {
-    const applicationNowUtc = useApplicationClockStore(selectApplicationNowUtc)
+  const applicationNowUtc = useApplicationClockStore(selectApplicationNowUtc)
 
-    // If we have Application Clock data, use it
-    if (applicationNowUtc) {
-        return formatUtcToTimeLabel(applicationNowUtc)
-    }
+  // If we have Application Clock data, use it
+  if (applicationNowUtc) {
+    return formatUtcToTimeLabel(applicationNowUtc)
+  }
 
-    // Fallback to browser time using shared datetime helper
-    return currentTimeLabel()
+  // Fallback to browser time using shared datetime helper
+  return currentTimeLabel()
 }
 
 /**
  * Format a UTC ISO string to "HH:mm" in the frontend timezone.
  */
 function formatUtcToTimeLabel(utcIsoString: string): string {
-    const date = new Date(utcIsoString)
-    if (Number.isNaN(date.getTime())) {
-        return currentTimeLabel()
-    }
+  const date = new Date(utcIsoString)
+  if (Number.isNaN(date.getTime())) {
+    return currentTimeLabel()
+  }
 
-    const timezone = getFrontendTimezone()
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: timezone,
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        hourCycle: 'h23',
-    })
+  const timezone = getFrontendTimezone()
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    hourCycle: 'h23',
+  })
 
-    const parts = formatter.formatToParts(date)
-    const hours = parts.find((p) => p.type === 'hour')?.value ?? '00'
-    const minutes = parts.find((p) => p.type === 'minute')?.value ?? '00'
-    return `${hours}:${minutes}`
+  const parts = formatter.formatToParts(date)
+  const hours = parts.find((p) => p.type === 'hour')?.value ?? '00'
+  const minutes = parts.find((p) => p.type === 'minute')?.value ?? '00'
+  return `${hours}:${minutes}`
 }
 
 /**
@@ -59,12 +59,12 @@ function formatUtcToTimeLabel(utcIsoString: string): string {
  * @returns Current time in "HH:mm" format
  */
 export function getApplicationTimeLabel(): string {
-    const state = useApplicationClockStore.getState()
-    const applicationNowUtc = state.clockState?.application_now_utc
+  const state = useApplicationClockStore.getState()
+  const applicationNowUtc = state.clockState?.application_now_utc
 
-    if (applicationNowUtc) {
-        return formatUtcToTimeLabel(applicationNowUtc)
-    }
+  if (applicationNowUtc) {
+    return formatUtcToTimeLabel(applicationNowUtc)
+  }
 
-    return currentTimeLabel()
+  return currentTimeLabel()
 }

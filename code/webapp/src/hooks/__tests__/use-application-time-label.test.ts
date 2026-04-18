@@ -5,17 +5,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useApplicationTimeLabel, getApplicationTimeLabel } from '../use-application-time-label'
 
-// Mock the clock store - create a function with getState attached
-const mockClockStore = vi.fn() as ReturnType<typeof vi.fn> & {
-    getState: ReturnType<typeof vi.fn>
-}
-mockClockStore.getState = vi.fn()
+// Mock the clock store using two separate vi.fn() references.
+// The store function is passed directly (not called) in the factory to avoid
+// TypeScript's "not callable" error on Mock<Procedure | Constructable> union types.
+const mockGetState = vi.fn()
+const mockClockStore = Object.assign(vi.fn(), { getState: mockGetState })
 
 vi.mock('@/stores/clock.store', () => ({
-    useApplicationClockStore: Object.assign(
-        (selector: unknown) => mockClockStore(selector),
-        { getState: () => mockClockStore.getState() }
-    ),
+    useApplicationClockStore: mockClockStore,
     selectApplicationNowUtc: (state: { clockState?: { application_now_utc?: string } }) =>
         state.clockState?.application_now_utc,
 }))
@@ -127,7 +124,7 @@ describe('getApplicationTimeLabel', () => {
 
     it('should return time when clock state has application_now_utc', () => {
         // Mock getState to return clock state with time
-        mockClockStore.getState.mockReturnValue({
+        mockGetState.mockReturnValue({
             clockState: { application_now_utc: '2026-04-17T18:00:00Z' }
         })
 
@@ -136,7 +133,7 @@ describe('getApplicationTimeLabel', () => {
     })
 
     it('should return fallback time when clock state is null', () => {
-        mockClockStore.getState.mockReturnValue({
+        mockGetState.mockReturnValue({
             clockState: null
         })
 
@@ -145,7 +142,7 @@ describe('getApplicationTimeLabel', () => {
     })
 
     it('should return fallback time when application_now_utc is undefined', () => {
-        mockClockStore.getState.mockReturnValue({
+        mockGetState.mockReturnValue({
             clockState: {}
         })
 
@@ -154,7 +151,7 @@ describe('getApplicationTimeLabel', () => {
     })
 
     it('should return fallback time when clockState is undefined', () => {
-        mockClockStore.getState.mockReturnValue({})
+        mockGetState.mockReturnValue({})
 
         const result = getApplicationTimeLabel()
         expect(result).toBe('12:34')
