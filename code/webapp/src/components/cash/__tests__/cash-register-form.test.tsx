@@ -155,4 +155,67 @@ describe('CashRegisterForm', () => {
             expect(selectElements.length).toBeGreaterThan(0)
         })
     })
+
+    describe('reset on prop change', () => {
+        it('updates form values when register prop changes', async () => {
+            const register1 = {
+                id: 1, code: 'CAJA-001', name: 'Register A', branch_id: 1,
+                operating_unit_id: null, type: CashRegisterType.ON_PREMISE,
+                is_active: true, meta: {}, created_at: '', updated_at: '',
+            }
+            const register2 = {
+                id: 2, code: 'CAJA-002', name: 'Register B', branch_id: 1,
+                operating_unit_id: null, type: CashRegisterType.DELIVERY,
+                is_active: false, meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { rerender, getByPlaceholderText } = render(
+                <CashRegisterForm {...defaultProps} register={register1} />
+            )
+            expect((getByPlaceholderText('Caja Principal') as HTMLInputElement).value).toBe('Register A')
+
+            rerender(<CashRegisterForm {...defaultProps} register={register2} />)
+            await waitFor(() => {
+                expect((getByPlaceholderText('Caja Principal') as HTMLInputElement).value).toBe('Register B')
+            })
+        })
+
+        it('resets to empty values when register becomes null', async () => {
+            const register = {
+                id: 1, code: 'CAJA-001', name: 'Register A', branch_id: 1,
+                operating_unit_id: null, type: CashRegisterType.ON_PREMISE,
+                is_active: true, meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { rerender, getByPlaceholderText } = render(
+                <CashRegisterForm {...defaultProps} register={register} />
+            )
+
+            rerender(<CashRegisterForm {...defaultProps} register={null} />)
+            await waitFor(() => {
+                expect((getByPlaceholderText('Caja Principal') as HTMLInputElement).value).toBe('')
+            })
+        })
+    })
+
+    describe('edit mode', () => {
+        it('calls updateMutation when submitting in edit mode', async () => {
+            const register = {
+                id: 1, code: 'CAJA-001', name: 'Register A', branch_id: 1,
+                operating_unit_id: null, type: CashRegisterType.ON_PREMISE,
+                is_active: true, meta: {}, created_at: '', updated_at: '',
+            }
+
+            const { container } = render(<CashRegisterForm {...defaultProps} register={register} />)
+            const form = container.querySelector('form')
+            fireEvent.submit(form!)
+
+            await waitFor(() => {
+                expect(mockUpdateMutation.mutateAsync).toHaveBeenCalledWith({
+                    id: 1,
+                    data: expect.objectContaining({ name: 'Register A' }),
+                })
+            })
+        })
+    })
 })

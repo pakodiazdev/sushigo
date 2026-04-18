@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -51,6 +52,7 @@ export function CashRegisterForm({
         handleSubmit,
         watch,
         setValue,
+        reset,
         formState: { errors },
     } = useForm<CashRegisterFormValues>({
         resolver: zodResolver(cashRegisterSchema),
@@ -64,6 +66,19 @@ export function CashRegisterForm({
             meta: register?.meta || undefined,
         },
     })
+
+    // Sync form values when register prop changes (always-mounted panel)
+    useEffect(() => {
+        reset({
+            code: register?.code || '',
+            name: register?.name || '',
+            branch_id: register?.branch_id || 1,
+            operating_unit_id: register?.operating_unit_id || null,
+            type: register?.type || CashRegisterType.ON_PREMISE,
+            is_active: register?.is_active ?? true,
+            meta: register?.meta || undefined,
+        })
+    }, [register, reset])
 
     const createMutation = useCreateCashRegister()
     const updateMutation = useUpdateCashRegister()
