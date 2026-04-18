@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -53,6 +54,7 @@ export function CashTerminalForm({
         handleSubmit,
         watch,
         setValue,
+        reset,
         formState: { errors },
     } = useForm<CashTerminalFormValues>({
         resolver: zodResolver(cashTerminalSchema),
@@ -66,6 +68,19 @@ export function CashTerminalForm({
             meta: terminal?.meta || undefined,
         },
     })
+
+    // Sync form values when terminal prop changes (always-mounted panel)
+    useEffect(() => {
+        reset({
+            branch_id: terminal?.branch_id || 0,
+            name: terminal?.name || '',
+            provider: terminal?.provider || '',
+            account_ref: terminal?.account_ref || '',
+            last_four: terminal?.last_four || '',
+            is_active: terminal?.is_active ?? true,
+            meta: terminal?.meta || undefined,
+        })
+    }, [terminal, reset])
 
     const createMutation = useCreateCashTerminal()
     const updateMutation = useUpdateCashTerminal()
