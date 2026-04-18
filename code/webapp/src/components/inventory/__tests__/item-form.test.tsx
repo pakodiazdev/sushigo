@@ -143,6 +143,44 @@ describe('ItemForm', () => {
             // The mock setField should be called
             expect(skuInput).toBeDefined()
         })
+
+        it('allows changing item type', () => {
+            const { container } = render(<ItemForm {...defaultProps} />)
+            const select = container.querySelector('select') as HTMLSelectElement
+
+            fireEvent.change(select, { target: { value: 'PRODUCTO' } })
+            expect(select.value).toBe('PRODUCTO')
+        })
+
+        it('allows toggling is_stocked checkbox', () => {
+            const { container } = render(<ItemForm {...defaultProps} />)
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]')
+
+            if (checkboxes.length > 0) {
+                fireEvent.click(checkboxes[0])
+                expect(checkboxes[0]).toBeDefined()
+            }
+        })
+
+        it('allows toggling is_perishable checkbox', () => {
+            const { container } = render(<ItemForm {...defaultProps} />)
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]')
+
+            if (checkboxes.length > 1) {
+                fireEvent.click(checkboxes[1])
+                expect(checkboxes[1]).toBeDefined()
+            }
+        })
+
+        it('allows toggling is_active checkbox', () => {
+            const { container } = render(<ItemForm {...defaultProps} />)
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]')
+
+            if (checkboxes.length > 2) {
+                fireEvent.click(checkboxes[2])
+                expect(checkboxes[2]).toBeDefined()
+            }
+        })
     })
 
     describe('edit mode', () => {

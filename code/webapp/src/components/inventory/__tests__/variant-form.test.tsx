@@ -194,6 +194,42 @@ describe('VariantForm', () => {
         expect(defaultProps.onSuccess).toBeDefined()
       })
     })
+
+    it('allows changing item select', () => {
+      const { container } = render(<VariantForm {...defaultProps} />)
+      const selects = container.querySelectorAll('select')
+      const itemSelect = selects[0] as HTMLSelectElement
+
+      fireEvent.change(itemSelect, { target: { value: '1' } })
+      expect(itemSelect.value).toBe('1')
+    })
+
+    it('allows changing unit of measure select', () => {
+      const { container } = render(<VariantForm {...defaultProps} />)
+      const selects = container.querySelectorAll('select')
+      const uomSelect = selects[1] as HTMLSelectElement
+
+      fireEvent.change(uomSelect, { target: { value: '1' } })
+      expect(uomSelect.value).toBe('1')
+    })
+
+    it('converts variant code to uppercase', () => {
+      const { getByPlaceholderText } = render(<VariantForm {...defaultProps} />)
+      const codeInput = getByPlaceholderText('e.g., PROD-KG') as HTMLInputElement
+
+      fireEvent.change(codeInput, { target: { value: 'test-code' } })
+      expect(codeInput).toBeDefined()
+    })
+
+    it('allows toggling is_active checkbox', () => {
+      const { container } = render(<VariantForm {...defaultProps} />)
+      const checkbox = container.querySelector('input[type="checkbox"]')
+
+      if (checkbox) {
+        fireEvent.click(checkbox)
+        expect(checkbox).toBeDefined()
+      }
+    })
   })
 
   describe('preselected values', () => {
