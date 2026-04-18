@@ -6,8 +6,8 @@ import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } fr
 export interface FormMutationConfig<TData, TVariables> {
   /** The mutation function to execute */
   mutationFn: (variables: TVariables) => Promise<TData>
-  /** Success message to display */
-  successMessage: string
+  /** Success message to display. If omitted, no success toast is shown automatically. */
+  successMessage?: string
   /** Success title for the toast */
   successTitle?: string
   /** Error message prefix if the API doesn't return one */
@@ -71,7 +71,9 @@ export function useFormMutation<TData = unknown, TVariables = unknown>(
     mutationFn: config.mutationFn,
     onSuccess: (data, variables) => {
       clearValidationErrors()
-      showSuccess(config.successMessage, config.successTitle || 'Success')
+      if (config.successMessage) {
+        showSuccess(config.successMessage, config.successTitle || 'Success')
+      }
       config.onSuccess?.(data, variables)
     },
     onError: (error: unknown) => {
