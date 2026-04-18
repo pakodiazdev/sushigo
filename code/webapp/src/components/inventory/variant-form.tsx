@@ -1,31 +1,38 @@
 import { Loader2 } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
-import { useFormState, validators } from '@/hooks/use-form-state'
 import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
 import { useItemsSelect, useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
 import { itemVariantApi } from '@/services/inventory-api'
 import type { ItemVariant, UnitOfMeasure, Item } from '@/types/inventory'
+
+const variantSchema = z.object({
+  item_id: z.number().min(1, 'This field is required'),
+  code: z.string().min(2, 'Code must be at least 2 characters'),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  uom_id: z.number().min(1, 'This field is required'),
+  min_stock: z.number().min(0, 'Min stock cannot be negative'),
+  max_stock: z.number().min(0, 'Max stock cannot be negative'),
+  avg_unit_cost: z.number(),
+  last_unit_cost: z.number().min(0, 'Cost cannot be negative'),
+  is_active: z.boolean(),
+}).refine((data) => data.max_stock >= data.min_stock, {
+  message: 'Max stock must be greater than min stock',
+  path: ['max_stock'],
+})
+
+type VariantFormValues = z.infer<typeof variantSchema>
 
 interface VariantFormProps {
   variant?: ItemVariant | null
   onSuccess: () => void
   onCancel: () => void
   preselectedItemId?: number
-}
-
-interface VariantFormData {
-  item_id: number
-  code: string
-  name: string
-  uom_id: number
-  min_stock: number
-  max_stock: number
-  avg_unit_cost: number
-  last_unit_cost: number
-  is_active: boolean
 }
 
 export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }: VariantFormProps) {
@@ -35,8 +42,15 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
   const { data: items = [] } = useItemsSelect()
   const { data: units = [] } = useUnitsOfMeasureSelect()
 
-  const { formData, setField, errors, validate } = useFormState<VariantFormData>({
-    initialData: {
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<VariantFormValues>({
+    resolver: zodResolver(variantSchema),
+    defaultValues: {
       item_id: variant?.item_id || preselectedItemId || 0,
       code: variant?.code || '',
       name: variant?.name || '',
@@ -47,50 +61,35 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
       last_unit_cost: variant?.last_unit_cost || 0,
       is_active: variant?.is_active ?? true,
     },
-    validationRules: {
-      item_id: { required: true },
-      code: {
-        required: true,
-        validate: validators.minLength(2, 'Code must be at least 2 characters'),
-      },
-      name: {
-        required: true,
-        validate: validators.minLength(2, 'Name must be at least 2 characters'),
-      },
-      uom_id: { required: true },
-      min_stock: {
-        validate: validators.positive('Min stock cannot be negative'),
-      },
-      max_stock: {
-        validate: (value, data) => {
-          if (typeof value === 'number' && typeof data.min_stock === 'number' && value < data.min_stock) {
-            return 'Max stock must be greater than min stock'
-          }
-        },
-      },
-      last_unit_cost: {
-        validate: validators.positive('Cost cannot be negative'),
-      },
-    },
   })
 
   const { execute, validationErrors, isPending } = useCreateUpdateMutation({
-    createFn: (data: VariantFormData) => itemVariantApi.create(data),
-    updateFn: (data: VariantFormData) => itemVariantApi.update(variant!.id, data),
+    createFn: (data: VariantFormValues) => itemVariantApi.create(data),
+    updateFn: (data: VariantFormValues) => itemVariantApi.update(variant!.id, data),
     entityName: 'Variant',
     isEditing,
     onSuccess,
   })
 
   // Merge client and server validation errors
-  const allErrors = { ...errors, ...validationErrors }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (validate()) {
-      await execute(formData)
-    }
+  const allErrors = {
+    item_id: errors.item_id?.message || validationErrors.item_id,
+    code: errors.code?.message || validationErrors.code,
+    name: errors.name?.message || validationErrors.name,
+    uom_id: errors.uom_id?.message || validationErrors.uom_id,
+    min_stock: errors.min_stock?.message || validationErrors.min_stock,
+    max_stock: errors.max_stock?.message || validationErrors.max_stock,
+    last_unit_cost: errors.last_unit_cost?.message || validationErrors.last_unit_cost,
   }
+
+  const onSubmit = async (data: VariantFormValues) => {
+    await execute(data)
+  }
+
+  // Watch values for controlled inputs
+  const itemId = watch('item_id')
+  const uomId = watch('uom_id')
+  const isActive = watch('is_active')
 
   return (
     <>
@@ -101,7 +100,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
       </SlidePanel.Header>
 
       <SlidePanel.Body>
-        <form id="variant-form" onSubmit={handleSubmit} className="space-y-4">
+        <form id="variant-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Item Select */}
           <FormField
             label="Item"
@@ -109,8 +108,8 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             error={allErrors.item_id}
           >
             <Select
-              value={formData.item_id.toString()}
-              onChange={(e) => setField('item_id', parseInt(e.target.value))}
+              value={itemId.toString()}
+              onChange={(e) => setValue('item_id', parseInt(e.target.value))}
               disabled={isEditing}
             >
               <option value="0">Select an item...</option>
@@ -130,8 +129,9 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             hint="Unique code for this variant (e.g., SKU-001-L, PROD-KG)"
           >
             <Input
-              value={formData.code}
-              onChange={(e) => setField('code', e.target.value.toUpperCase())}
+              {...register('code', {
+                onChange: (e) => setValue('code', e.target.value.toUpperCase()),
+              })}
               placeholder="e.g., PROD-KG"
               error={!!allErrors.code}
             />
@@ -145,8 +145,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             hint="Descriptive name (e.g., Large, 1 Kilogram, 500ml)"
           >
             <Input
-              value={formData.name}
-              onChange={(e) => setField('name', e.target.value)}
+              {...register('name')}
               placeholder="e.g., 1 Kilogram"
               error={!!allErrors.name}
             />
@@ -159,8 +158,8 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             error={allErrors.uom_id}
           >
             <Select
-              value={formData.uom_id.toString()}
-              onChange={(e) => setField('uom_id', parseInt(e.target.value))}
+              value={uomId.toString()}
+              onChange={(e) => setValue('uom_id', parseInt(e.target.value))}
             >
               <option value="0">Select unit...</option>
               {units.map((uom: UnitOfMeasure) => (
@@ -180,8 +179,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             >
               <Input
                 type="number"
-                value={formData.min_stock}
-                onChange={(e) => setField('min_stock', parseFloat(e.target.value) || 0)}
+                {...register('min_stock', { valueAsNumber: true })}
                 min="0"
                 step="0.01"
                 error={!!allErrors.min_stock}
@@ -195,8 +193,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             >
               <Input
                 type="number"
-                value={formData.max_stock}
-                onChange={(e) => setField('max_stock', parseFloat(e.target.value) || 0)}
+                {...register('max_stock', { valueAsNumber: true })}
                 min="0"
                 step="0.01"
                 error={!!allErrors.max_stock}
@@ -213,8 +210,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           >
             <Input
               type="number"
-              value={formData.last_unit_cost}
-              onChange={(e) => setField('last_unit_cost', parseFloat(e.target.value) || 0)}
+              {...register('last_unit_cost', { valueAsNumber: true })}
               min="0"
               step="0.01"
               placeholder="0.00"
@@ -225,8 +221,8 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           {/* Active Status */}
           <FormField label="">
             <Checkbox
-              checked={formData.is_active}
-              onChange={(e) => setField('is_active', e.target.checked)}
+              checked={isActive}
+              onChange={(e) => setValue('is_active', e.target.checked)}
               label="Active"
             />
           </FormField>

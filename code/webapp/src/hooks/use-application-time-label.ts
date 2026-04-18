@@ -1,5 +1,6 @@
 import { useApplicationClockStore, selectApplicationNowUtc } from '@/stores/clock.store'
 import { getFrontendTimezone } from '@/lib/timezone'
+import { currentTimeLabel } from '@/lib/datetime'
 
 /**
  * Hook that returns the current time from the Application Clock as "HH:mm".
@@ -20,8 +21,8 @@ export function useApplicationTimeLabel(): string {
         return formatUtcToTimeLabel(applicationNowUtc)
     }
 
-    // Fallback to browser time (same as original currentTimeLabel)
-    return getBrowserTimeLabel()
+    // Fallback to browser time using shared datetime helper
+    return currentTimeLabel()
 }
 
 /**
@@ -30,7 +31,7 @@ export function useApplicationTimeLabel(): string {
 function formatUtcToTimeLabel(utcIsoString: string): string {
     const date = new Date(utcIsoString)
     if (Number.isNaN(date.getTime())) {
-        return getBrowserTimeLabel()
+        return currentTimeLabel()
     }
 
     const timezone = getFrontendTimezone()
@@ -39,28 +40,10 @@ function formatUtcToTimeLabel(utcIsoString: string): string {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        hourCycle: 'h23',
     })
 
     const parts = formatter.formatToParts(date)
-    const hours = parts.find((p) => p.type === 'hour')?.value ?? '00'
-    const minutes = parts.find((p) => p.type === 'minute')?.value ?? '00'
-    return `${hours}:${minutes}`
-}
-
-/**
- * Get current browser time as "HH:mm" (fallback when Application Clock isn't available).
- */
-function getBrowserTimeLabel(): string {
-    const now = new Date()
-    const timezone = getFrontendTimezone()
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: timezone,
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-    })
-
-    const parts = formatter.formatToParts(now)
     const hours = parts.find((p) => p.type === 'hour')?.value ?? '00'
     const minutes = parts.find((p) => p.type === 'minute')?.value ?? '00'
     return `${hours}:${minutes}`
@@ -83,5 +66,5 @@ export function getApplicationTimeLabel(): string {
         return formatUtcToTimeLabel(applicationNowUtc)
     }
 
-    return getBrowserTimeLabel()
+    return currentTimeLabel()
 }

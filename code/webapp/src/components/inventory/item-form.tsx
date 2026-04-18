@@ -1,13 +1,26 @@
-import { FormEvent } from 'react'
 import { Loader2 } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useFormState, validators } from '@/hooks/use-form-state'
 import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
 import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
+
+const itemSchema = z.object({
+  sku: z.string().min(2, 'SKU must be at least 2 characters'),
+  name: z.string().min(3, 'Name must be at least 3 characters'),
+  description: z.string(),
+  type: z.enum(['INSUMO', 'PRODUCTO', 'ACTIVO']),
+  is_stocked: z.boolean(),
+  is_perishable: z.boolean(),
+  is_active: z.boolean(),
+})
+
+type ItemFormValues = z.infer<typeof itemSchema>
 
 interface ItemFormProps {
   item?: Item | null
@@ -15,21 +28,18 @@ interface ItemFormProps {
   onCancel: () => void
 }
 
-interface ItemFormData {
-  sku: string
-  name: string
-  description: string
-  type: 'INSUMO' | 'PRODUCTO' | 'ACTIVO'
-  is_stocked: boolean
-  is_perishable: boolean
-  is_active: boolean
-}
-
 export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
   const isEditing = !!item
 
-  const { formData, setField, errors, validate } = useFormState<ItemFormData>({
-    initialData: {
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<ItemFormValues>({
+    resolver: zodResolver(itemSchema),
+    defaultValues: {
       sku: item?.sku || '',
       name: item?.name || '',
       description: item?.description || '',
@@ -38,42 +48,37 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
       is_perishable: item?.is_perishable ?? false,
       is_active: item?.is_active ?? true,
     },
-    validationRules: {
-      sku: {
-        required: true,
-        validate: validators.minLength(2, 'SKU must be at least 2 characters'),
-      },
-      name: {
-        required: true,
-        validate: validators.minLength(3, 'Name must be at least 3 characters'),
-      },
-      type: { required: true },
-    },
   })
 
   const { execute, validationErrors, isPending } = useCreateUpdateMutation({
-    createFn: (data: ItemFormData) => itemApi.create(data),
-    updateFn: (data: ItemFormData) => itemApi.update(item!.id, data),
+    createFn: (data: ItemFormValues) => itemApi.create(data),
+    updateFn: (data: ItemFormValues) => itemApi.update(item!.id, data),
     entityName: 'Item',
     isEditing,
     onSuccess,
   })
 
   // Merge client and server validation errors
-  const allErrors = { ...errors, ...validationErrors }
+  const allErrors = {
+    sku: errors.sku?.message || validationErrors.sku,
+    name: errors.name?.message || validationErrors.name,
+    type: errors.type?.message || validationErrors.type,
+  }
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-
-    if (!validate()) return
-
-    await execute(formData)
+  const onSubmit = async (data: ItemFormValues) => {
+    await execute(data)
   }
 
   const isSubmitting = isPending
 
+  // Watch values for controlled checkboxes
+  const isStocked = watch('is_stocked')
+  const isPerishable = watch('is_perishable')
+  const isActive = watch('is_active')
+  const formType = watch('type')
+
   return (
-    <form onSubmit={handleSubmit} className="flex h-full flex-col">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-6">
         <FormField
           label="SKU (Stock Keeping Unit)"
@@ -82,11 +87,12 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
           hint="Unique identifier for this item"
         >
           <Input
-            value={formData.sku}
-            onChange={(e) => setField('sku', e.target.value.toUpperCase())}
+            {...register('sku', {
+              onChange: (e) => setValue('sku', e.target.value.toUpperCase()),
+            })}
             placeholder="e.g., SAL-001"
             error={!!allErrors.sku}
-            disabled={isEditing} // SKU can't be changed after creation
+            disabled={isEditing}
           />
         </FormField>
 
@@ -96,8 +102,7 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
           error={allErrors.name}
         >
           <Input
-            value={formData.name}
-            onChange={(e) => setField('name', e.target.value)}
+            {...register('name')}
             placeholder="e.g., Fresh Salmon"
             error={!!allErrors.name}
           />
@@ -110,8 +115,8 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
           hint="Classification type for this item"
         >
           <Select
-            value={formData.type}
-            onChange={(e) => setField('type', e.target.value as ItemFormData['type'])}
+            value={formType}
+            onChange={(e) => setValue('type', e.target.value as ItemFormValues['type'])}
             error={!!allErrors.type}
           >
             <option value="INSUMO">Insumo (Input/Raw Material)</option>
@@ -122,8 +127,7 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
 
         <FormField label="Description">
           <Textarea
-            value={formData.description}
-            onChange={(e) => setField('description', e.target.value)}
+            {...register('description')}
             rows={3}
             placeholder="Additional description or notes"
           />
@@ -133,20 +137,20 @@ export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
           <h4 className="text-sm font-medium text-gray-900">Item Properties</h4>
 
           <Checkbox
-            checked={formData.is_stocked}
-            onChange={(e) => setField('is_stocked', e.target.checked)}
+            checked={isStocked}
+            onChange={(e) => setValue('is_stocked', e.target.checked)}
             label="Track inventory for this item"
           />
 
           <Checkbox
-            checked={formData.is_perishable}
-            onChange={(e) => setField('is_perishable', e.target.checked)}
+            checked={isPerishable}
+            onChange={(e) => setValue('is_perishable', e.target.checked)}
             label="Perishable (has expiration date)"
           />
 
           <Checkbox
-            checked={formData.is_active}
-            onChange={(e) => setField('is_active', e.target.checked)}
+            checked={isActive}
+            onChange={(e) => setValue('is_active', e.target.checked)}
             label="Active"
           />
         </div>
