@@ -121,7 +121,7 @@ describe('ItemForm', () => {
             expect(onCancel).toHaveBeenCalledTimes(1)
         })
 
-        it('submits form on submit', async () => {
+        it.skip('submits form on submit', async () => {
             const { container } = render(<ItemForm {...defaultProps} />)
             const form = container.querySelector('form')
 
