@@ -52,6 +52,14 @@ describe('CloseDayPanel', () => {
       expect(input.value).toBe('17:30')
     })
 
+    it('calls setCloseTime when time input changes', () => {
+      const panel = makePanel()
+      const { container } = render(<CloseDayPanel panel={panel} />)
+      const input = container.querySelector('input[type="time"]') as HTMLInputElement
+      fireEvent.change(input, { target: { value: '18:30' } })
+      expect(panel.setCloseTime).toHaveBeenCalledWith('18:30')
+    })
+
     it('renders Confirmar cierre button', () => {
       const panel = makePanel()
       const { getByText } = render(<CloseDayPanel panel={panel} />)
