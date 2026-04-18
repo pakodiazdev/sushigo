@@ -189,7 +189,7 @@ export function StockOutForm({
           <FormField label="Location" required error={allErrors.location_id}>
             <Select
               value={(locationId ?? 0).toString()}
-              onChange={(e) => setValue('location_id', parseInt(e.target.value))}
+              onChange={(e) => setValue('location_id', Number.parseInt(e.target.value))}
             >
               <option value="0">Select location...</option>
               {sortedLocations.map((location: InventoryLocation) => (
@@ -209,7 +209,7 @@ export function StockOutForm({
           >
             <Select
               value={(variantId ?? 0).toString()}
-              onChange={(e) => setValue('variant_id', parseInt(e.target.value))}
+              onChange={(e) => setValue('variant_id', Number.parseInt(e.target.value))}
             >
               <option value="0">Select variant...</option>
               {variants.map((variant: ItemVariant) => (
@@ -306,7 +306,7 @@ export function StockOutForm({
           >
             <Select
               value={(uomId ?? 0).toString()}
-              onChange={(e) => setValue('uom_id', parseInt(e.target.value))}
+              onChange={(e) => setValue('uom_id', Number.parseInt(e.target.value))}
             >
               <option value="0">Select unit...</option>
               {units.map((uom: UnitOfMeasure) => (

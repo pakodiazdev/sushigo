@@ -125,7 +125,7 @@ export function OpeningBalanceForm({
           <FormField label="Location" required error={allErrors.inventory_location_id}>
             <Select
               value={(inventoryLocationId ?? 0).toString()}
-              onChange={(e) => setValue('inventory_location_id', parseInt(e.target.value))}
+              onChange={(e) => setValue('inventory_location_id', Number.parseInt(e.target.value))}
             >
               <option value="0">Select location...</option>
               {locations.map((location: InventoryLocation) => (
@@ -145,7 +145,7 @@ export function OpeningBalanceForm({
           >
             <Select
               value={(itemVariantId ?? 0).toString()}
-              onChange={(e) => setValue('item_variant_id', parseInt(e.target.value))}
+              onChange={(e) => setValue('item_variant_id', Number.parseInt(e.target.value))}
             >
               <option value="0">Select variant...</option>
               {variants.map((variant: ItemVariant) => (
@@ -213,7 +213,7 @@ export function OpeningBalanceForm({
           >
             <Select
               value={(uomId ?? 0).toString()}
-              onChange={(e) => setValue('uom_id', parseInt(e.target.value))}
+              onChange={(e) => setValue('uom_id', Number.parseInt(e.target.value))}
             >
               <option value="0">Select unit...</option>
               {units.map((uom: UnitOfMeasure) => (
