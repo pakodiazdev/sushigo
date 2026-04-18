@@ -157,7 +157,7 @@ describe('ItemForm', () => {
             const checkboxes = container.querySelectorAll('input[type="checkbox"]')
 
             if (checkboxes.length > 0) {
-                fireEvent.click(checkboxes[0])
+                fireEvent.click(checkboxes[0]!)
                 expect(checkboxes[0]).toBeDefined()
             }
         })
@@ -167,7 +167,7 @@ describe('ItemForm', () => {
             const checkboxes = container.querySelectorAll('input[type="checkbox"]')
 
             if (checkboxes.length > 1) {
-                fireEvent.click(checkboxes[1])
+                fireEvent.click(checkboxes[1]!)
                 expect(checkboxes[1]).toBeDefined()
             }
         })
@@ -177,7 +177,7 @@ describe('ItemForm', () => {
             const checkboxes = container.querySelectorAll('input[type="checkbox"]')
 
             if (checkboxes.length > 2) {
-                fireEvent.click(checkboxes[2])
+                fireEvent.click(checkboxes[2]!)
                 expect(checkboxes[2]).toBeDefined()
             }
         })

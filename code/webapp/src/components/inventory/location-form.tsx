@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
+import { useFormMutation } from '@/hooks/use-form-mutation'
 import { useOperatingUnitsSelect } from '@/hooks/use-inventory-queries'
 import { inventoryLocationApi } from '@/services/inventory-api'
 import type { InventoryLocation } from '@/types/inventory'
@@ -55,12 +55,15 @@ export function LocationForm({ location, onSuccess, onCancel }: LocationFormProp
     },
   })
 
-  const { execute, validationErrors, isPending } = useCreateUpdateMutation({
-    createFn: (data: LocationFormValues) => inventoryLocationApi.create(data),
-    updateFn: (data: LocationFormValues) => inventoryLocationApi.update(location!.id, data),
-    entityName: 'Ubicación',
-    isEditing,
-    onSuccess,
+  const { execute, validationErrors, isPending } = useFormMutation({
+    mutationFn: (data: LocationFormValues) =>
+      isEditing
+        ? inventoryLocationApi.update(location!.id, data)
+        : inventoryLocationApi.create(data),
+    successMessage: isEditing ? 'Ubicación actualizada exitosamente' : 'Ubicación creada exitosamente',
+    successTitle: isEditing ? 'Ubicación Actualizada' : 'Ubicación Creada',
+    errorMessageFallback: isEditing ? 'Error al actualizar la ubicación' : 'Error al crear la ubicación',
+    onSuccess: () => onSuccess(),
   })
 
   // Merge client and server validation errors

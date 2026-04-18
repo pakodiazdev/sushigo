@@ -63,7 +63,7 @@ describe('Inventory Query Hooks', () => {
 
       vi.mocked(inventoryApi.inventoryLocationApi.list).mockResolvedValue({
         data: { data: mockLocations },
-      } as any)
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.inventoryLocationApi.list>>)
 
       const { result } = renderHook(() => useInventoryLocationsSelect(), { wrapper })
 
@@ -86,7 +86,7 @@ describe('Inventory Query Hooks', () => {
 
       vi.mocked(inventoryApi.inventoryLocationApi.list).mockResolvedValue({
         data: { data: mockLocations },
-      } as any)
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.inventoryLocationApi.list>>)
 
       const { result } = renderHook(() => useInventoryLocationsSelect(), { wrapper })
 
@@ -116,7 +116,7 @@ describe('Inventory Query Hooks', () => {
 
       vi.mocked(inventoryApi.itemApi.list).mockResolvedValue({
         data: { data: mockItems },
-      } as any)
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.itemApi.list>>)
 
       const { result } = renderHook(() => useItemsSelect(), { wrapper })
 
@@ -130,7 +130,7 @@ describe('Inventory Query Hooks', () => {
     it('should return empty array when no data', async () => {
       vi.mocked(inventoryApi.itemApi.list).mockResolvedValue({
         data: { data: null },
-      } as any)
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.itemApi.list>>)
 
       const { result } = renderHook(() => useItemsSelect(), { wrapper })
 
@@ -151,7 +151,7 @@ describe('Inventory Query Hooks', () => {
 
       vi.mocked(inventoryApi.itemVariantApi.list).mockResolvedValue({
         data: { data: mockVariants },
-      } as any)
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.itemVariantApi.list>>)
 
       const { result } = renderHook(() => useItemVariantsSelect(), { wrapper })
 
