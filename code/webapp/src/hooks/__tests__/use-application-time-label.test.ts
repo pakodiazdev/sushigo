@@ -5,10 +5,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useApplicationTimeLabel, getApplicationTimeLabel } from '../use-application-time-label'
 
-// Mock the clock store
-const mockClockStore = vi.fn()
+// Mock the clock store - create a function with getState attached
+const mockClockStore = vi.fn() as ReturnType<typeof vi.fn> & {
+    getState: ReturnType<typeof vi.fn>
+}
+mockClockStore.getState = vi.fn()
+
 vi.mock('@/stores/clock.store', () => ({
-    useApplicationClockStore: (selector: unknown) => mockClockStore(selector),
+    useApplicationClockStore: Object.assign(
+        (selector: unknown) => mockClockStore(selector),
+        { getState: () => mockClockStore.getState() }
+    ),
     selectApplicationNowUtc: (state: { clockState?: { application_now_utc?: string } }) =>
         state.clockState?.application_now_utc,
 }))
@@ -118,7 +125,38 @@ describe('getApplicationTimeLabel', () => {
         expect(typeof getApplicationTimeLabel).toBe('function')
     })
 
-    // Note: getApplicationTimeLabel reads directly from store.getState()
-    // which is harder to test without more complex mocking.
-    // The main logic is shared with useApplicationTimeLabel which is tested above.
+    it('should return time when clock state has application_now_utc', () => {
+        // Mock getState to return clock state with time
+        mockClockStore.getState.mockReturnValue({
+            clockState: { application_now_utc: '2026-04-17T18:00:00Z' }
+        })
+
+        const result = getApplicationTimeLabel()
+        expect(result).toBe('12:00')
+    })
+
+    it('should return fallback time when clock state is null', () => {
+        mockClockStore.getState.mockReturnValue({
+            clockState: null
+        })
+
+        const result = getApplicationTimeLabel()
+        expect(result).toBe('12:34')
+    })
+
+    it('should return fallback time when application_now_utc is undefined', () => {
+        mockClockStore.getState.mockReturnValue({
+            clockState: {}
+        })
+
+        const result = getApplicationTimeLabel()
+        expect(result).toBe('12:34')
+    })
+
+    it('should return fallback time when clockState is undefined', () => {
+        mockClockStore.getState.mockReturnValue({})
+
+        const result = getApplicationTimeLabel()
+        expect(result).toBe('12:34')
+    })
 })
