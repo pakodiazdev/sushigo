@@ -123,7 +123,7 @@ export function BankAccountForm({
                 >
                     <Select
                         value={branchId || ''}
-                        onChange={(e) => setValue('branch_id', parseInt(e.target.value))}
+                        onChange={(e) => setValue('branch_id', Number.parseInt(e.target.value))}
                     >
                         <option value="">Selecciona una sucursal</option>
                         {branches.map(branch => (

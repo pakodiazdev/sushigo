@@ -109,7 +109,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           >
             <Select
               value={itemId.toString()}
-              onChange={(e) => setValue('item_id', parseInt(e.target.value))}
+              onChange={(e) => setValue('item_id', Number.parseInt(e.target.value))}
               disabled={isEditing}
             >
               <option value="0">Select an item...</option>
@@ -159,7 +159,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           >
             <Select
               value={uomId.toString()}
-              onChange={(e) => setValue('uom_id', parseInt(e.target.value))}
+              onChange={(e) => setValue('uom_id', Number.parseInt(e.target.value))}
             >
               <option value="0">Select unit...</option>
               {units.map((uom: UnitOfMeasure) => (
