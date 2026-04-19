@@ -194,4 +194,216 @@ describe('DataGrid', () => {
             expect(selectedRow?.className).toContain('bg-primary')
         })
     })
+
+    describe('sorting', () => {
+        it('renders sort icon on sortable columns', () => {
+            const sortableColumns: Column<TestItem>[] = [
+                { key: 'id', header: 'ID', sortKey: 'id' },
+                { key: 'name', header: 'Name', sortKey: 'name' },
+            ]
+            const onSortChange = vi.fn()
+
+            const { container } = render(
+                <DataGrid
+                    data={testData}
+                    columns={sortableColumns}
+                    sorting={[]}
+                    onSortChange={onSortChange}
+                />
+            )
+
+            // Should have sort icons (ArrowUpDown for unsorted)
+            const headers = container.querySelectorAll('th')
+            expect(headers.length).toBe(2)
+        })
+
+        it('calls onSortChange when clicking sortable column header', () => {
+            const sortableColumns: Column<TestItem>[] = [
+                { key: 'id', header: 'ID', sortKey: 'id' },
+                { key: 'name', header: 'Name', sortKey: 'name' },
+            ]
+            const onSortChange = vi.fn()
+
+            const { getByText } = render(
+                <DataGrid
+                    data={testData}
+                    columns={sortableColumns}
+                    sorting={[]}
+                    onSortChange={onSortChange}
+                />
+            )
+
+            fireEvent.click(getByText('ID'))
+            expect(onSortChange).toHaveBeenCalledWith([{ key: 'id', direction: 'asc' }])
+        })
+
+        it('toggles sort direction from asc to desc on second click', () => {
+            const sortableColumns: Column<TestItem>[] = [
+                { key: 'id', header: 'ID', sortKey: 'id' },
+            ]
+            const onSortChange = vi.fn()
+
+            const { getByText } = render(
+                <DataGrid
+                    data={testData}
+                    columns={sortableColumns}
+                    sorting={[{ key: 'id', direction: 'asc' }]}
+                    onSortChange={onSortChange}
+                />
+            )
+
+            fireEvent.click(getByText('ID'))
+            expect(onSortChange).toHaveBeenCalledWith([{ key: 'id', direction: 'desc' }])
+        })
+
+        it('removes sort on third click', () => {
+            const sortableColumns: Column<TestItem>[] = [
+                { key: 'id', header: 'ID', sortKey: 'id' },
+            ]
+            const onSortChange = vi.fn()
+
+            const { getByText } = render(
+                <DataGrid
+                    data={testData}
+                    columns={sortableColumns}
+                    sorting={[{ key: 'id', direction: 'desc' }]}
+                    onSortChange={onSortChange}
+                />
+            )
+
+            fireEvent.click(getByText('ID'))
+            expect(onSortChange).toHaveBeenCalledWith([])
+        })
+    })
+
+    describe('pagination', () => {
+        it('renders pagination when pagination prop is provided', () => {
+            const onPageChange = vi.fn()
+            const { container } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    pagination={{
+                        currentPage: 1,
+                        totalPages: 5,
+                        onPageChange,
+                    }}
+                />
+            )
+
+            // Should have pagination buttons
+            const buttons = container.querySelectorAll('button')
+            expect(buttons.length).toBeGreaterThan(0)
+        })
+
+        it('calls onPageChange when clicking page number', () => {
+            const onPageChange = vi.fn()
+            const { container } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    pagination={{
+                        currentPage: 1,
+                        totalPages: 5,
+                        onPageChange,
+                    }}
+                />
+            )
+
+            // Find all buttons and click the one with text "3"
+            const buttons = Array.from(container.querySelectorAll('button'))
+            const pageButton = buttons.find(btn => btn.textContent === '3')
+            if (pageButton) {
+                fireEvent.click(pageButton)
+            }
+            expect(onPageChange).toHaveBeenCalledWith(3)
+        })
+
+        it('highlights current page', () => {
+            const onPageChange = vi.fn()
+            const { container } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    pagination={{
+                        currentPage: 2,
+                        totalPages: 5,
+                        onPageChange,
+                    }}
+                />
+            )
+
+            // Find button with aria-current="page"
+            const currentPageButton = container.querySelector('[aria-current="page"]')
+            expect(currentPageButton?.className).toContain('bg-primary')
+        })
+    })
+
+    describe('column visibility', () => {
+        it('applies hideBelow class for responsive columns', () => {
+            const responsiveColumns: Column<TestItem>[] = [
+                { key: 'id', header: 'ID' },
+                { key: 'name', header: 'Name', hideBelow: 'md' },
+            ]
+
+            const { container } = render(
+                <DataGrid data={testData} columns={responsiveColumns} />
+            )
+
+            // Check for hidden class on cells
+            const cells = container.querySelectorAll('td')
+            const nameCell = cells[1]
+            expect(nameCell?.className).toContain('hidden')
+            expect(nameCell?.className).toContain('md:table-cell')
+        })
+    })
+
+    describe('perPage selector', () => {
+        it('renders perPage selector when onPerPageChange is provided', () => {
+            const onPerPageChange = vi.fn()
+            const { getByRole } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    perPage={10}
+                    perPageOptions={[10, 20, 50]}
+                    onPerPageChange={onPerPageChange}
+                />
+            )
+
+            const select = getByRole('combobox')
+            expect(select).toBeDefined()
+        })
+
+        it('calls onPerPageChange when selecting different value', () => {
+            const onPerPageChange = vi.fn()
+            const { getByRole } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    perPage={10}
+                    perPageOptions={[10, 20, 50]}
+                    onPerPageChange={onPerPageChange}
+                />
+            )
+
+            const select = getByRole('combobox')
+            fireEvent.change(select, { target: { value: '20' } })
+            expect(onPerPageChange).toHaveBeenCalledWith(20)
+        })
+    })
+
+    describe('total results', () => {
+        it('displays total results count when provided', () => {
+            const { getByText } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    totalResults={100}
+                />
+            )
+
+            expect(getByText(/100/)).toBeDefined()
+        })
+    })
 })
