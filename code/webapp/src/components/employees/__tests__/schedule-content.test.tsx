@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, fireEvent, act, cleanup } from '@testing-library/react'
+import { render, cleanup } from '@testing-library/react'
 import { ScheduleContent } from '@/components/employees/schedule-content'
 import type { EmployeeSchedule, ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 
@@ -83,12 +83,7 @@ function buildOverrideMock() {
 }
 
 function buildBaseMock(overrides: Partial<ReturnType<typeof useScheduleContent>> = {}) {
-  const tabCls = (mode: 'config' | 'week') =>
-    `tab ${mode}`
-
   return {
-    viewMode: 'config' as const,
-    setViewMode: vi.fn(),
     override: buildOverrideMock(),
     weekStart: new Date('2026-03-30'),
     prevWeek: vi.fn(),
@@ -105,7 +100,6 @@ function buildBaseMock(overrides: Partial<ReturnType<typeof useScheduleContent>>
     pendingHours: 0 as number | null,
     overridesForDow: [] as ScheduleDayOverride[],
     handleOverrideSelect: vi.fn(),
-    tabCls,
     ...overrides,
   }
 }
@@ -186,41 +180,7 @@ describe('ScheduleContent', () => {
     })
   })
 
-  describe('view tabs', () => {
-    it('renders Configuración and Vista semanal tabs', () => {
-      const { getByText } = render(
-        <ScheduleContent schedule={MOCK_SCHEDULE} employeeId="emp-1" periodId="period-1" />
-      )
-      expect(getByText('Configuración')).toBeDefined()
-      expect(getByText('Vista semanal')).toBeDefined()
-    })
-
-    it('clicking Vista semanal tab calls setViewMode with "week"', async () => {
-      const setViewMode = vi.fn()
-      vi.mocked(useScheduleContent).mockReturnValue(
-        buildBaseMock({ setViewMode }) as ReturnType<typeof useScheduleContent>
-      )
-      const { getByText } = render(
-        <ScheduleContent schedule={MOCK_SCHEDULE} employeeId="emp-1" periodId="period-1" />
-      )
-      await act(async () => { fireEvent.click(getByText('Vista semanal')) })
-      expect(setViewMode).toHaveBeenCalledWith('week')
-    })
-
-    it('clicking Configuración tab calls setViewMode with "config"', async () => {
-      const setViewMode = vi.fn()
-      vi.mocked(useScheduleContent).mockReturnValue(
-        buildBaseMock({ viewMode: 'week', setViewMode }) as ReturnType<typeof useScheduleContent>
-      )
-      const { getByText } = render(
-        <ScheduleContent schedule={MOCK_SCHEDULE} employeeId="emp-1" periodId="period-1" />
-      )
-      await act(async () => { fireEvent.click(getByText('Configuración')) })
-      expect(setViewMode).toHaveBeenCalledWith('config')
-    })
-  })
-
-  describe('config view', () => {
+  describe('config view (default)', () => {
     it('renders the schedule table when viewMode is config', () => {
       const { container } = render(
         <ScheduleContent schedule={MOCK_SCHEDULE} employeeId="emp-1" periodId="period-1" />
@@ -283,22 +243,16 @@ describe('ScheduleContent', () => {
   })
 
   describe('week view', () => {
-    it('renders WeeklyCalendar when viewMode is week', () => {
-      vi.mocked(useScheduleContent).mockReturnValue(
-        buildBaseMock({ viewMode: 'week' }) as ReturnType<typeof useScheduleContent>
-      )
+    it('renders WeeklyCalendar when viewMode prop is week', () => {
       const { container } = render(
-        <ScheduleContent schedule={MOCK_SCHEDULE} employeeId="emp-1" periodId="period-1" />
+        <ScheduleContent schedule={MOCK_SCHEDULE} employeeId="emp-1" periodId="period-1" viewMode="week" />
       )
       expect(container.querySelector('[data-testid="weekly-calendar"]')).not.toBeNull()
     })
 
-    it('does not render the config table when viewMode is week', () => {
-      vi.mocked(useScheduleContent).mockReturnValue(
-        buildBaseMock({ viewMode: 'week' }) as ReturnType<typeof useScheduleContent>
-      )
+    it('does not render the config table when viewMode prop is week', () => {
       const { container } = render(
-        <ScheduleContent schedule={MOCK_SCHEDULE} employeeId="emp-1" periodId="period-1" />
+        <ScheduleContent schedule={MOCK_SCHEDULE} employeeId="emp-1" periodId="period-1" viewMode="week" />
       )
       expect(container.querySelector('table')).toBeNull()
     })

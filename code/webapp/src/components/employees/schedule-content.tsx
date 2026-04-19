@@ -14,12 +14,11 @@ interface ScheduleContentProps {
   readonly schedule: EmployeeSchedule
   readonly employeeId: string
   readonly periodId: string | null
+  readonly viewMode?: 'config' | 'week'
 }
 
-export function ScheduleContent({ schedule, employeeId, periodId }: ScheduleContentProps) {
+export function ScheduleContent({ schedule, employeeId, periodId, viewMode = 'config' }: ScheduleContentProps) {
   const {
-    viewMode,
-    setViewMode,
     override,
     weekStart,
     prevWeek,
@@ -35,7 +34,6 @@ export function ScheduleContent({ schedule, employeeId, periodId }: ScheduleCont
     pendingHours,
     overridesForDow,
     handleOverrideSelect,
-    tabCls,
   } = useScheduleContent(schedule, employeeId, periodId)
 
   return (
@@ -58,12 +56,6 @@ export function ScheduleContent({ schedule, employeeId, periodId }: ScheduleCont
         <span className="text-muted-foreground">
           Desde {new Date(schedule.effective_from + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
-      </div>
-
-      {/* View tabs */}
-      <div className="flex border-b">
-        <button className={tabCls('config')} onClick={() => setViewMode('config')}>Configuración</button>
-        <button className={tabCls('week')} onClick={() => setViewMode('week')}>Vista semanal</button>
       </div>
 
       {viewMode === 'config' ? (
@@ -178,7 +170,7 @@ export function ScheduleContent({ schedule, employeeId, periodId }: ScheduleCont
           dow={overrideListDow}
           dayLabel={DAY_LABELS[overrideListDow] ?? ''}
           overrides={overridesForDow}
-          onSelect={handleOverrideSelect}
+          onSelect={(o) => handleOverrideSelect(o)}
           onClose={closeOverrideList}
         />
       )}
