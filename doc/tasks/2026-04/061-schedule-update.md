@@ -25,7 +25,7 @@ Como Admin, al hacer clic en "Nuevo horario" para reemplazar el horario de un em
   - `effective_from` → next Monday
   - `expected_start` → from first working day in current schedule
   - `expected_lunch_start` → from first working day
-  - `lunch_duration_minutes` → from first working day  
+  - `lunch_duration_minutes` → from first working day
   - `expected_end` → from first working day
   - `dow_X_off` → from current schedule days
 - [x] 📱 Pass `schedule` prop from `ScheduleDialog` to `CreateScheduleForm`
