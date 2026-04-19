@@ -26,6 +26,7 @@ class DevelopmentSeeder extends Seeder
             AdminEmployeeSeeder::class,
             EmployeeSeeder::class,
             EmployeeScheduleSeeder::class,
+            ScheduleHistorySeeder::class,
             \Database\Seeders\UnitOfMeasureSeeder::class,
             \Database\Seeders\UomConversionSeeder::class,
             AttendanceAuditLogSeeder::class,
