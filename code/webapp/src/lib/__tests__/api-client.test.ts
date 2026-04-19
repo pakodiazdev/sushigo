@@ -9,21 +9,28 @@ interface InterceptorHandler<T> {
     rejected: (error: unknown) => Promise<never>
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type InterceptorHandlers<T> = { handlers: InterceptorHandler<T>[] }
 
+// Type for axios client with interceptors
+interface AxiosClientWithInterceptors {
+    interceptors: {
+        request: InterceptorHandlers<{ headers: Record<string, string> }>
+        response: InterceptorHandlers<unknown>
+    }
+}
+
 // Helper to get request interceptor with proper typing
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getRequestInterceptor(apiClient: any): InterceptorHandler<{ headers: Record<string, string> }> {
-    const handler = (apiClient.interceptors.request as unknown as InterceptorHandlers<{ headers: Record<string, string> }>).handlers[0]
+function getRequestInterceptor(apiClient: unknown): InterceptorHandler<{ headers: Record<string, string> }> {
+    const client = apiClient as AxiosClientWithInterceptors
+    const handler = client.interceptors.request.handlers[0]
     if (!handler) throw new Error('No request interceptor found')
     return handler
 }
 
 // Helper to get response interceptor with proper typing
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getResponseInterceptor(apiClient: any): InterceptorHandler<unknown> {
-    const handler = (apiClient.interceptors.response as unknown as InterceptorHandlers<unknown>).handlers[0]
+function getResponseInterceptor(apiClient: unknown): InterceptorHandler<unknown> {
+    const client = apiClient as AxiosClientWithInterceptors
+    const handler = client.interceptors.response.handlers[0]
     if (!handler) throw new Error('No response interceptor found')
     return handler
 }
