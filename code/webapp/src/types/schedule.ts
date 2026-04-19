@@ -42,6 +42,22 @@ export interface EmployeeSchedule {
   updated_at: string
 }
 
+/**
+ * Schedule history item with overrides filtered by the schedule's effective date range.
+ * Used in the "Historial" tab of the schedule dialog.
+ */
+export interface EmployeeScheduleHistoryItem {
+  id: string // ULID
+  effective_from: string  // 'YYYY-MM-DD'
+  effective_to: string | null
+  workday_type: WorkdayType
+  working_days_per_week: number
+  days: ScheduleDay[]
+  overrides: ScheduleDayOverride[]  // Overrides filtered by schedule's date range
+  created_at: string
+  updated_at: string
+}
+
 // ── Form types ────────────────────────────────────────────────────────────────
 
 export interface ScheduleDayFormValues {

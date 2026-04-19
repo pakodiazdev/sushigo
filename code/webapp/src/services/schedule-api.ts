@@ -1,6 +1,10 @@
 import { apiClient } from '@/lib/api-client'
-import type { EmployeeSchedule, ScheduleDayOverride, CreateScheduleFormValues } from '@/types/schedule'
+import type { EmployeeSchedule, EmployeeScheduleHistoryItem, ScheduleDayOverride, CreateScheduleFormValues } from '@/types/schedule'
 import type { EntityResponse } from '@/types/employee'
+
+interface ScheduleHistoryResponse {
+  data: EmployeeScheduleHistoryItem[]
+}
 
 export function addMinutesToTime(time: string, minutes: number): string {
   const parts = time.split(':').map(Number)
@@ -70,6 +74,11 @@ export const scheduleApi = {
   getCurrent: (employeeId: string) =>
     apiClient.get<EntityResponse<EmployeeSchedule>>(
       `/employees/${employeeId}/current-schedule`
+    ),
+
+  getHistory: (periodId: string) =>
+    apiClient.get<ScheduleHistoryResponse>(
+      `/employment-periods/${periodId}/schedules`
     ),
 
   createPayload: (periodId: string, payload: CreateSchedulePayload) =>

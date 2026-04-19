@@ -69,6 +69,7 @@ use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitCon
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleDayOverrideController;
 use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
+use App\Http\Controllers\Api\V1\Schedules\ListSchedulesController;
 use App\Http\Controllers\Api\V1\Stock\ListStockController;
 use App\Http\Controllers\Api\V1\Stock\StockByLocationController;
 use App\Http\Controllers\Api\V1\Stock\StockByVariantController;
@@ -262,6 +263,9 @@ Route::prefix('v1')->group(function () {
 
     // Employment Periods — Schedules (All Protected)
     Route::middleware('auth:api')->prefix('employment-periods')->name('employment-periods.')->group(function () {
+        Route::get('/{employmentPeriod}/schedules', ListSchedulesController::class)
+            ->name('schedules.index')
+            ->middleware('permission:employees.view');
         Route::post('/{employmentPeriod}/schedules', CreateScheduleController::class)
             ->name('schedules.create')
             ->middleware('permission:employees.update');
