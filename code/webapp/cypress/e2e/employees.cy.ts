@@ -233,12 +233,12 @@ describe('Nuevo horario pre-llenado', () => {
     cy.contains('Horario laboral', { timeout: 10_000 }).should('be.visible')
 
     // ── 4. Verificar que el formulario está pre-llenado ────────────────────────
-    
+
     // La fecha debe ser el próximo lunes (o hoy si es lunes)
     cy.get('input[name="effective_from"]').should(($input) => {
       const value = $input.val() as string
       expect(value).to.match(/^\d{4}-\d{2}-\d{2}$/)  // formato YYYY-MM-DD
-      
+
       // Verificar que la fecha es un lunes
       const date = new Date(value + 'T00:00:00')
       expect(date.getDay()).to.equal(1)  // 1 = Monday

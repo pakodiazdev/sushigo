@@ -11,11 +11,11 @@ import type { EmployeeSchedule } from '@/types/schedule'
 
 const schema = z
   .object({
-    effective_from:          z.string().min(1, 'La fecha de vigencia es requerida'),
-    expected_start:          z.string().min(1, 'La hora de entrada es requerida'),
-    expected_lunch_start:    z.string().optional(),
-    lunch_duration_minutes:  z.string().optional(),
-    expected_end:            z.string().min(1, 'La hora de salida es requerida'),
+    effective_from: z.string().min(1, 'La fecha de vigencia es requerida'),
+    expected_start: z.string().min(1, 'La hora de entrada es requerida'),
+    expected_lunch_start: z.string().optional(),
+    lunch_duration_minutes: z.string().optional(),
+    expected_end: z.string().min(1, 'La hora de salida es requerida'),
     // One boolean per ISO day of week (1=Mon … 7=Sun)
     dow_1_off: z.boolean(),
     dow_2_off: z.boolean(),
@@ -27,7 +27,7 @@ const schema = z
   })
   .refine(
     (d) => !d.dow_1_off || !d.dow_2_off || !d.dow_3_off || !d.dow_4_off ||
-            !d.dow_5_off || !d.dow_6_off || !d.dow_7_off,
+      !d.dow_5_off || !d.dow_6_off || !d.dow_7_off,
     {
       message: 'Debe haber al menos un día laborable',
       path: ['dow_7_off'],
@@ -74,7 +74,7 @@ function extractDefaultsFromSchedule(schedule: EmployeeSchedule): Partial<Create
   // Sort days by day_of_week and find the first working day to extract times
   const sortedDays = [...schedule.days].sort((a, b) => a.day_of_week - b.day_of_week)
   const workingDay = sortedDays.find(d => !d.is_day_off)
-  
+
   return {
     effective_from: getNextMonday(),
     expected_start: workingDay?.expected_start ?? '13:00',
@@ -102,32 +102,32 @@ function addMinutesToTime(time: string, minutes: number): string {
 }
 
 export function buildPayload(values: CreateScheduleSimpleValues) {
-  const lunchStart   = values.expected_lunch_start || null
+  const lunchStart = values.expected_lunch_start || null
   const lunchMinutes = values.lunch_duration_minutes ? Number(values.lunch_duration_minutes) : null
-  const lunchEnd     = lunchStart && lunchMinutes ? addMinutesToTime(lunchStart, lunchMinutes) : null
+  const lunchEnd = lunchStart && lunchMinutes ? addMinutesToTime(lunchStart, lunchMinutes) : null
 
   const restDayCount = DOW_KEYS.filter((k) => values[k]).length
-  const workingDays  = 7 - restDayCount
+  const workingDays = 7 - restDayCount
 
   const days = DOW_KEYS.map((key, idx) => {
-    const dow    = idx + 1
-    const isOff  = values[key]
+    const dow = idx + 1
+    const isOff = values[key]
     const effectiveLunchMinutes: number | null = (!isOff && lunchStart) ? lunchMinutes : null
     return {
-      day_of_week:            dow,
-      is_day_off:             isOff,
-      expected_start:         isOff ? null : values.expected_start,
-      expected_lunch_start:   isOff ? null : lunchStart,
-      expected_lunch_end:     isOff ? null : lunchEnd,
+      day_of_week: dow,
+      is_day_off: isOff,
+      expected_start: isOff ? null : values.expected_start,
+      expected_lunch_start: isOff ? null : lunchStart,
+      expected_lunch_end: isOff ? null : lunchEnd,
       lunch_duration_minutes: effectiveLunchMinutes,
-      expected_end:           isOff ? null : values.expected_end,
+      expected_end: isOff ? null : values.expected_end,
     }
   })
 
   return {
-    effective_from:         values.effective_from,
-    workday_type:           'FULL' as const,
-    working_days_per_week:  workingDays,
+    effective_from: values.effective_from,
+    workday_type: 'FULL' as const,
+    working_days_per_week: workingDays,
     days,
   }
 }
@@ -145,11 +145,11 @@ export function useCreateScheduleInline(
 
   // Build default values: from current schedule if exists, otherwise sensible defaults
   const baseDefaults: CreateScheduleSimpleValues = {
-    effective_from:         '',
-    expected_start:         '13:00',
-    expected_lunch_start:   '',
+    effective_from: '',
+    expected_start: '13:00',
+    expected_lunch_start: '',
     lunch_duration_minutes: '',
-    expected_end:           '22:00',
+    expected_end: '22:00',
     dow_1_off: false,
     dow_2_off: false,
     dow_3_off: false,
@@ -190,8 +190,8 @@ export function useCreateScheduleInline(
     form,
     onSubmit,
     isPending: mutation.isPending,
-    isError:   mutation.isError,
-    dowKeys:   DOW_KEYS,
+    isError: mutation.isError,
+    dowKeys: DOW_KEYS,
     dayLabels: DAY_LABELS,
     lunchOptions: LUNCH_DURATION_OPTIONS,
   }
