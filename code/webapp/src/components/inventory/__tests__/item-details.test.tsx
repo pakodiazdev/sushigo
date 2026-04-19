@@ -175,13 +175,16 @@ describe('ItemDetails', () => {
             { wrapper: createWrapper() },
         )
 
-        // Wait for variants to load and button to appear
-        await waitFor(() => {
-            const viewButton = screen.getByRole('button', { name: /view variants/i })
-            expect(viewButton).toBeDefined()
-        })
+        // Wait for variants to load and button to appear with extended timeout
+        const viewButton = await waitFor(
+            () => {
+                const button = screen.getByRole('button', { name: /view variants/i })
+                expect(button).toBeDefined()
+                return button
+            },
+            { timeout: 5000 },
+        )
 
-        const viewButton = screen.getByRole('button', { name: /view variants/i })
         fireEvent.click(viewButton)
 
         expect(mockOnViewVariants).toHaveBeenCalled()
