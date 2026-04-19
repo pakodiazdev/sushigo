@@ -8,8 +8,6 @@ import { useToast } from '@/components/ui/toast-provider'
 import { itemApi, itemVariantApi, inventoryLocationApi } from '@/services/inventory-api'
 import { apiClient } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
-import { getApiErrorMessage, getApiValidationErrors } from '@/lib/api-error'
-import type { UnitOfMeasure, InventoryLocation } from '@/types/inventory'
 
 interface ProductWizardProps {
     onSuccess: () => void
@@ -119,13 +117,12 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
             setCreatedItemId(response.data.data.id)
             showSuccess('Producto creado exitosamente', 'Paso 1 Completo')
         },
-        onError: (error: unknown) => {
-            const validationErrors = getApiValidationErrors(error)
-            if (validationErrors) {
-                setErrors(validationErrors)
+        onError: (error: any) => {
+            if (error.response?.data?.errors) {
+                setErrors(error.response.data.errors)
             }
             showError(
-                getApiErrorMessage(error, 'Error al crear producto'),
+                error.response?.data?.message || 'Error al crear producto',
                 'Error'
             )
         },
@@ -139,13 +136,12 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
             setCreatedVariantId(response.data.data.id)
             showSuccess('Variante creada exitosamente', 'Paso 2 Completo')
         },
-        onError: (error: unknown) => {
-            const validationErrors = getApiValidationErrors(error)
-            if (validationErrors) {
-                setErrors(validationErrors)
+        onError: (error: any) => {
+            if (error.response?.data?.errors) {
+                setErrors(error.response.data.errors)
             }
             showError(
-                getApiErrorMessage(error, 'Error al crear variante'),
+                error.response?.data?.message || 'Error al crear variante',
                 'Error'
             )
         },
@@ -168,7 +164,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
         }) => apiClient.post('/inventory/opening-balance', balance),
     })
 
-    const updateItemData = (field: keyof WizardData['item'], value: string | boolean) => {
+    const updateItemData = (field: keyof WizardData['item'], value: any) => {
         setWizardData((prev) => ({
             ...prev,
             item: { ...prev.item, [field]: value },
@@ -176,7 +172,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
         setErrors((prev) => ({ ...prev, [field]: '' }))
     }
 
-    const updateVariantData = (field: keyof WizardData['variant'], value: string | number | boolean) => {
+    const updateVariantData = (field: keyof WizardData['variant'], value: any) => {
         setWizardData((prev) => ({
             ...prev,
             variant: { ...prev.variant, [field]: value },
@@ -194,7 +190,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
         }))
     }
 
-    const updateConversion = (index: number, field: string, value: number) => {
+    const updateConversion = (index: number, field: string, value: any) => {
         setWizardData((prev) => ({
             ...prev,
             conversions: prev.conversions.map((conv, i) =>
@@ -225,7 +221,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
         }))
     }
 
-    const updateOpeningBalance = (index: number, field: string, value: number) => {
+    const updateOpeningBalance = (index: number, field: string, value: any) => {
         setWizardData((prev) => ({
             ...prev,
             openingBalances: prev.openingBalances.map((balance, i) =>
@@ -353,7 +349,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                         wizardData.conversions.map((conv) => createConversionMutation.mutateAsync(conv))
                     )
                     showSuccess('Conversiones creadas exitosamente', 'Paso 3 Completo')
-                } catch (_error: unknown) {
+                } catch (_error: any) {
                     showError('Error al crear conversiones', 'Error')
                     return
                 }
@@ -394,9 +390,9 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                 'Wizard Completado'
             )
             onSuccess()
-        } catch (error: unknown) {
+        } catch (error: any) {
             showError(
-                getApiErrorMessage(error, 'Error al registrar existencias'),
+                error.response?.data?.message || 'Error al registrar existencias',
                 'Error'
             )
         }
@@ -598,7 +594,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                                 error={!!errors.uom_id}
                             >
                                 <option value="0">Seleccione una unidad</option>
-                                {units.map((uom: UnitOfMeasure) => (
+                                {units.map((uom: any) => (
                                     <option key={uom.id} value={uom.id}>
                                         {uom.name} ({uom.symbol})
                                     </option>
@@ -697,7 +693,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                                                     }
                                                 >
                                                     <option value="0">Seleccione</option>
-                                                    {units.map((uom: UnitOfMeasure) => (
+                                                    {units.map((uom: any) => (
                                                         <option key={uom.id} value={uom.id}>
                                                             {uom.name} ({uom.symbol})
                                                         </option>
@@ -713,7 +709,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                                                     }
                                                 >
                                                     <option value="0">Seleccione</option>
-                                                    {units.map((uom: UnitOfMeasure) => (
+                                                    {units.map((uom: any) => (
                                                         <option key={uom.id} value={uom.id}>
                                                             {uom.name} ({uom.symbol})
                                                         </option>
@@ -794,7 +790,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                                         }
                                     >
                                         <option value="0">Seleccione ubicación</option>
-                                        {locations.map((loc: InventoryLocation) => (
+                                        {locations.map((loc: any) => (
                                             <option key={loc.id} value={loc.id}>
                                                 {loc.name} ({loc.type})
                                             </option>
@@ -831,7 +827,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                                             }
                                         >
                                             <option value="0">Seleccione</option>
-                                            {units.map((uom: UnitOfMeasure) => (
+                                            {units.map((uom: any) => (
                                                 <option key={uom.id} value={uom.id}>
                                                     {uom.name} ({uom.symbol})
                                                 </option>
