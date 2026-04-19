@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import type { EmployeeSchedule, ScheduleDayOverride } from '@/types/schedule'
 import { useCreateDayOverride } from './use-create-day-override'
 import { useWeeklyCalendar } from './use-weekly-calendar'
@@ -9,7 +8,6 @@ export function useScheduleContent(
   employeeId: string,
   periodId: string | null,
 ) {
-  const [viewMode, setViewMode] = useState<'config' | 'week'>('config')
   const override = useCreateDayOverride(employeeId, periodId)
   const { weekStart, prevWeek, nextWeek, jumpToDate, overrideListDow, openOverrideList, closeOverrideList } =
     useWeeklyCalendar()
@@ -54,22 +52,13 @@ export function useScheduleContent(
       ? []
       : (schedule.active_overrides ?? []).filter((o) => o.day_of_week === overrideListDow)
 
-  const handleOverrideSelect = (o: ScheduleDayOverride) => {
+  const handleOverrideSelect = (o: ScheduleDayOverride, onJumpToWeekView?: () => void) => {
     closeOverrideList()
     jumpToDate(o.effective_from)
-    setViewMode('week')
+    onJumpToWeekView?.()
   }
 
-  const tabCls = (mode: 'config' | 'week') =>
-    `px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
-      viewMode === mode
-        ? 'border-primary text-primary'
-        : 'border-transparent text-muted-foreground hover:text-foreground'
-    }`
-
   return {
-    viewMode,
-    setViewMode,
     override,
     weekStart,
     prevWeek,
@@ -86,6 +75,5 @@ export function useScheduleContent(
     pendingHours,
     overridesForDow,
     handleOverrideSelect,
-    tabCls,
   }
 }

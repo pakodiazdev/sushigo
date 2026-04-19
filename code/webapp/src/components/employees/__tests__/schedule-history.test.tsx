@@ -5,7 +5,7 @@ import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ScheduleHistorySection } from '@/components/employees/schedule-history-section'
 import { ScheduleHistoryItem } from '@/components/employees/schedule-history-item'
-import type { EmployeeScheduleHistoryItem, ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
+import type { EmployeeScheduleHistoryItem, ScheduleDay } from '@/types/schedule'
 
 // Mock the schedule API
 const mockGetHistory = vi.fn()
@@ -187,101 +187,83 @@ describe('ScheduleHistoryItem', () => {
   })
 
   it('renders schedule date range', () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isFirst={false} />)
+    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isActive={false} />)
 
     // Check that the date range is displayed
     expect(screen.getByText(/01 ene 2025/)).toBeDefined()
     expect(screen.getByText(/31 dic 2025/)).toBeDefined()
   })
 
-  it('shows "Actual" badge when isFirst is true', () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isFirst={true} />)
+  it('shows "ACTIVO" badge when isActive is true', () => {
+    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isActive={true} />)
 
-    expect(screen.getByText('Actual')).toBeDefined()
+    expect(screen.getByText('ACTIVO')).toBeDefined()
   })
 
-  it('does not show "Actual" badge when isFirst is false', () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isFirst={false} />)
+  it('does not show "ACTIVO" badge when isActive is false', () => {
+    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isActive={false} />)
 
-    expect(screen.queryByText('Actual')).toBeNull()
+    expect(screen.queryByText('ACTIVO')).toBeNull()
   })
 
-  it('shows workday type badge', () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isFirst={false} />)
+  it('shows exception count in header when overrides exist', () => {
+    render(<ScheduleHistoryItem schedule={mockHistoryItem2} isActive={false} />)
 
-    expect(screen.getByText('Completa')).toBeDefined()
+    expect(screen.getByText('1 excepción')).toBeDefined()
   })
 
-  it('shows partial workday type badge for PARTIAL', () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem2} isFirst={false} />)
+  it('expands to show compact summary when clicked', async () => {
+    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isActive={false} />)
 
-    expect(screen.getByText('Parcial')).toBeDefined()
-  })
+    // Click the header button to expand
+    const expandBtn = screen.getAllByRole('button')[0] as HTMLElement
+    await act(async () => { fireEvent.click(expandBtn) })
 
-  it('shows working days per week', () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isFirst={false} />)
-
-    expect(screen.getByText('5 días')).toBeDefined()
-  })
-
-  it('expands to show day details when clicked', async () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isFirst={false} />)
-
-    // Initially collapsed - day names should not be visible in table
-    expect(screen.queryByRole('table')).toBeNull()
-
-    // Click the header button to expand (first button in the component)
-    const buttons = screen.getAllByRole('button')
-    await act(async () => { fireEvent.click(buttons[0]) })
-
-    // Now day names should be visible
+    // Now should show the compact summary line
     await waitFor(() => {
-      expect(screen.getByText('Lunes')).toBeDefined()
-      expect(screen.getByText('Martes')).toBeDefined()
+      expect(screen.getByText(/L-V/)).toBeDefined()
     })
   })
 
-  it('shows overrides count when expanded', async () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem2} isFirst={false} />)
+  it('shows overrides section when expanded', async () => {
+    render(<ScheduleHistoryItem schedule={mockHistoryItem2} isActive={false} />)
 
     // Click the header button to expand
-    const buttons = screen.getAllByRole('button')
-    await act(async () => { fireEvent.click(buttons[0]) })
+    const expandBtn = screen.getAllByRole('button')[0] as HTMLElement
+    await act(async () => { fireEvent.click(expandBtn) })
 
     await waitFor(() => {
       expect(screen.getByText('Excepciones (1)')).toBeDefined()
-      expect(screen.getByText(/Día festivo/)).toBeDefined()
     })
   })
 
   it('shows "Descanso" for day-off overrides', async () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem2} isFirst={false} />)
+    render(<ScheduleHistoryItem schedule={mockHistoryItem2} isActive={false} />)
 
     // Click the header button to expand
-    const buttons = screen.getAllByRole('button')
-    await act(async () => { fireEvent.click(buttons[0]) })
+    const expandBtn = screen.getAllByRole('button')[0] as HTMLElement
+    await act(async () => { fireEvent.click(expandBtn) })
 
     await waitFor(() => {
-      // May appear multiple times (table + override)
       expect(screen.getAllByText('Descanso').length).toBeGreaterThan(0)
     })
   })
 
   it('collapses when clicked again', async () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isFirst={false} />)
+    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isActive={false} />)
 
-    const buttons = screen.getAllByRole('button')
+    const expandBtn = screen.getAllByRole('button')[0] as HTMLElement
 
     // Expand
-    await act(async () => { fireEvent.click(buttons[0]) })
+    await act(async () => { fireEvent.click(expandBtn) })
     await waitFor(() => {
-      expect(screen.getByText('Lunes')).toBeDefined()
+      expect(screen.getByText(/L-V/)).toBeDefined()
     })
 
     // Collapse
-    await act(async () => { fireEvent.click(buttons[0]) })
+    await act(async () => { fireEvent.click(expandBtn) })
     await waitFor(() => {
-      expect(screen.queryByRole('table')).toBeNull()
+      expect(screen.queryByText(/L-V/)).toBeNull()
     })
   })
 })

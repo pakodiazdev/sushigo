@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, CalendarRange } from 'lucide-react'
-import type { EmployeeScheduleHistoryItem, ScheduleDay } from '@/types/schedule'
+import { ChevronDown, ChevronRight, Zap } from 'lucide-react'
+import type { EmployeeScheduleHistoryItem, ScheduleDayOverride } from '@/types/schedule'
 import { DAY_LABELS } from '@/types/schedule'
-import { calcDayHours, formatHours } from './schedule-section-utils'
+import { buildCompactSummaryLine } from './schedule-section-utils'
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-MX', {
@@ -13,44 +13,37 @@ function formatDate(dateStr: string): string {
 }
 
 function formatDateRange(from: string, to: string | null): string {
-  if (!to) return `${formatDate(from)} — presente`
-  return `${formatDate(from)} — ${formatDate(to)}`
+  const fromFormatted = formatDate(from)
+  if (!to) return `${fromFormatted} → hoy`
+  return `${fromFormatted} → ${formatDate(to)}`
 }
 
-function DayRow({ day }: { readonly day: ScheduleDay }) {
-  if (day.is_day_off) {
-    return (
-      <tr className="border-t text-xs">
-        <td className="py-1.5 pl-2">{DAY_LABELS[day.day_of_week]}</td>
-        <td colSpan={4} className="text-muted-foreground">Descanso</td>
-      </tr>
-    )
-  }
-
-  return (
-    <tr className="border-t text-xs">
-      <td className="py-1.5 pl-2">{DAY_LABELS[day.day_of_week]}</td>
-      <td>{day.expected_start ?? '—'}</td>
-      <td>{day.expected_lunch_start ?? '—'}</td>
-      <td>{day.lunch_duration_minutes ? `${day.lunch_duration_minutes} min` : '—'}</td>
-      <td>{day.expected_end ?? '—'}</td>
-      <td className="pr-2 text-right tabular-nums">
-        {formatHours(calcDayHours(day.expected_start, day.expected_end, day.lunch_duration_minutes))}
-      </td>
-    </tr>
-  )
+function formatOverrideDate(o: ScheduleDayOverride): string {
+  const from = formatDate(o.effective_from)
+  if (o.effective_to === null) return `desde ${from}`
+  if (o.effective_from === o.effective_to) return from
+  return `${from} – ${formatDate(o.effective_to)}`
 }
 
 interface ScheduleHistoryItemProps {
   readonly schedule: EmployeeScheduleHistoryItem
-  readonly isFirst: boolean
+  readonly isActive: boolean
 }
 
-export function ScheduleHistoryItem({ schedule, isFirst }: ScheduleHistoryItemProps) {
+export function ScheduleHistoryItem({ schedule, isActive }: ScheduleHistoryItemProps) {
   const [expanded, setExpanded] = useState(false)
 
-  // Sort days by day_of_week
-  const sortedDays = [...schedule.days].sort((a, b) => a.day_of_week - b.day_of_week)
+  const overrideCount = schedule.overrides.length
+  const compactSummary = buildCompactSummaryLine(schedule.days)
+
+  // Sort overrides: permanent (no effective_to) first, then by effective_from
+  const sortedOverrides = [...schedule.overrides].sort((a, b) => {
+    const aIsPermanent = a.effective_to === null
+    const bIsPermanent = b.effective_to === null
+    if (aIsPermanent && !bIsPermanent) return -1
+    if (!aIsPermanent && bIsPermanent) return 1
+    return a.effective_from.localeCompare(b.effective_from)
+  })
 
   return (
     <div className="rounded border bg-card">
@@ -66,70 +59,58 @@ export function ScheduleHistoryItem({ schedule, isFirst }: ScheduleHistoryItemPr
           ) : (
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           )}
-          <CalendarRange className="h-4 w-4 text-muted-foreground" />
+          {isActive && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              ACTIVO
+            </span>
+          )}
           <span className="text-sm">
             {formatDateRange(schedule.effective_from, schedule.effective_to)}
           </span>
-          {isFirst && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-              Actual
-            </span>
-          )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="rounded-full border px-2 py-0.5">
-            {schedule.workday_type === 'FULL' ? 'Completa' : 'Parcial'}
+        {overrideCount > 0 && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Zap className="h-3 w-3" />
+            {overrideCount} {overrideCount === 1 ? 'excepción' : 'excepciones'}
           </span>
-          <span>{schedule.working_days_per_week} días</span>
-        </div>
+        )}
       </button>
 
-      {/* Expanded detail — 7-day grid */}
+      {/* Expanded detail */}
       {expanded && (
-        <div className="border-t px-3 py-2">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs font-medium text-muted-foreground">
-                <th className="py-1 pl-2 text-left">Día</th>
-                <th className="py-1 text-left">Entrada</th>
-                <th className="py-1 text-left">Comida</th>
-                <th className="py-1 text-left">Duración</th>
-                <th className="py-1 text-left">Salida</th>
-                <th className="py-1 pr-2 text-right">Hrs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedDays.map((day) => (
-                <DayRow key={day.day_of_week} day={day} />
-              ))}
-            </tbody>
-          </table>
+        <div className="border-t px-3 py-3">
+          {/* Compact one-line summary */}
+          {compactSummary && (
+            <p className="mb-3 text-sm text-muted-foreground">{compactSummary}</p>
+          )}
 
           {/* Overrides section */}
-          {schedule.overrides.length > 0 && (
-            <div className="mt-3 border-t pt-2">
-              <p className="mb-1 text-xs font-medium text-muted-foreground">
-                Excepciones ({schedule.overrides.length})
+          {sortedOverrides.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                Excepciones ({sortedOverrides.length})
               </p>
-              <ul className="space-y-1 text-xs">
-                {schedule.overrides.map((o) => (
-                  <li key={o.id} className="flex items-center gap-2">
-                    <span className="font-medium">{DAY_LABELS[o.day_of_week]}</span>
-                    <span className="text-muted-foreground">
-                      {o.effective_to
-                        ? `${formatDate(o.effective_from)} — ${formatDate(o.effective_to)}`
-                        : formatDate(o.effective_from)}
-                    </span>
-                    {o.is_day_off && (
-                      <span className="rounded-full bg-orange-100 px-1.5 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                        Descanso
+              <ul className="space-y-1.5">
+                {sortedOverrides.map((o) => {
+                  const isPermanent = o.effective_to === null
+                  return (
+                    <li key={o.id} className="flex items-center gap-2 text-xs">
+                      <span className={isPermanent ? 'text-muted-foreground' : 'text-amber-600 dark:text-amber-400'}>
+                        {isPermanent ? '●' : '⚡'}
                       </span>
-                    )}
-                    {o.note && (
-                      <span className="truncate text-muted-foreground italic">"{o.note}"</span>
-                    )}
-                  </li>
-                ))}
+                      <span className="font-medium">{DAY_LABELS[o.day_of_week]}</span>
+                      <span className="text-muted-foreground">—</span>
+                      {o.is_day_off ? (
+                        <span className="text-muted-foreground">Descanso</span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {o.expected_start ?? ''} – {o.expected_end ?? ''}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">{formatOverrideDate(o)}</span>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           )}
