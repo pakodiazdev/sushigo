@@ -12,13 +12,15 @@ export interface CreateScheduleFormProps {
   readonly hasExistingSchedule: boolean
   /** Current schedule to pre-fill the form with existing values. */
   readonly currentSchedule?: EmployeeSchedule | null
+  /** Start date of the active employment period (for first-time schedule creation). */
+  readonly periodStartDate?: string
   readonly onSuccess: () => void
   readonly onCancel: () => void
 }
 
-export function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, currentSchedule, onSuccess, onCancel }: CreateScheduleFormProps) {
+export function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, currentSchedule, periodStartDate, onSuccess, onCancel }: CreateScheduleFormProps) {
   const { form, onSubmit, isPending, dowKeys, dayLabels, lunchOptions } =
-    useCreateScheduleInline(employeeId, periodId, onSuccess, currentSchedule)
+    useCreateScheduleInline(employeeId, periodId, onSuccess, currentSchedule, periodStartDate)
 
   const { register, formState: { errors }, watch } = form
 

@@ -324,4 +324,25 @@ describe('useCreateScheduleInline', () => {
     expect(result.current.form.getValues('dow_2_off')).toBe(false)
     expect(result.current.form.getValues('dow_6_off')).toBe(true) // defaults to true
   })
+
+  it('uses periodStartDate for first-time schedule instead of getNextMonday', () => {
+    const periodStart = '2025-05-01'
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn(), null, periodStart),
+      { wrapper: createWrapper() }
+    )
+    expect(result.current.form.getValues('effective_from')).toBe(periodStart)
+  })
+
+  it('uses getNextMonday when periodStartDate is not provided for first-time schedule', () => {
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn(), null, undefined),
+      { wrapper: createWrapper() }
+    )
+    // Should be a future Monday (format YYYY-MM-DD)
+    const effectiveFrom = result.current.form.getValues('effective_from')
+    expect(effectiveFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    const effectiveDate = new Date(effectiveFrom + 'T00:00:00')
+    expect(effectiveDate.getDay()).toBe(1) // Monday
+  })
 })
