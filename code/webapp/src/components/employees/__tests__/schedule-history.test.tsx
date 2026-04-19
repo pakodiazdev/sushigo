@@ -107,45 +107,46 @@ describe('ScheduleHistorySection', () => {
   it('shows loading state while fetching history', async () => {
     mockGetHistory.mockReturnValue(new Promise(() => {})) // Never resolves
 
-    render(
-      <ScheduleHistorySection periodId="period-1" currentScheduleId={currentScheduleId} />,
-      { wrapper: createWrapper() }
-    )
-
-    expect(screen.getByText('Cargando historial...')).toBeDefined()
-  })
-
-  it('renders nothing when no past schedules exist', async () => {
-    mockGetHistory.mockResolvedValue({ data: { data: [] } })
-
     const { container } = render(
       <ScheduleHistorySection periodId="period-1" currentScheduleId={currentScheduleId} />,
       { wrapper: createWrapper() }
     )
 
+    // Loading shows animated pulse divs
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+  })
+
+  it('renders empty message when no schedules exist', async () => {
+    mockGetHistory.mockResolvedValue({ data: { data: [] } })
+
+    render(
+      <ScheduleHistorySection periodId="period-1" currentScheduleId={currentScheduleId} />,
+      { wrapper: createWrapper() }
+    )
+
     await waitFor(() => {
-      expect(container.firstChild).toBeNull()
+      expect(screen.getByText('No hay horarios registrados.')).toBeDefined()
     })
   })
 
-  it('filters out current schedule from history', async () => {
+  it('marks current schedule as ACTIVO', async () => {
     const historyWithCurrent: EmployeeScheduleHistoryItem = {
       ...mockHistoryItem1,
       id: currentScheduleId, // Same as current
     }
     mockGetHistory.mockResolvedValue({ data: { data: [historyWithCurrent] } })
 
-    const { container } = render(
+    render(
       <ScheduleHistorySection periodId="period-1" currentScheduleId={currentScheduleId} />,
       { wrapper: createWrapper() }
     )
 
     await waitFor(() => {
-      expect(container.firstChild).toBeNull()
+      expect(screen.getByText('ACTIVO')).toBeDefined()
     })
   })
 
-  it('shows schedule history when past schedules exist', async () => {
+  it('shows schedule history when schedules exist', async () => {
     mockGetHistory.mockResolvedValue({ data: { data: [mockHistoryItem1, mockHistoryItem2] } })
 
     render(
@@ -154,7 +155,9 @@ describe('ScheduleHistorySection', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Historial de horarios (2)')).toBeDefined()
+      // Should show date ranges for both schedules
+      expect(screen.getByText(/01 ene 2025/)).toBeDefined()
+      expect(screen.getByText(/01 ene 2024/)).toBeDefined()
     })
   })
 
@@ -212,20 +215,26 @@ describe('ScheduleHistoryItem', () => {
     expect(screen.getByText('1 excepción')).toBeDefined()
   })
 
-  it('expands to show compact summary when clicked', async () => {
+  it('shows compact summary in header', () => {
     render(<ScheduleHistoryItem schedule={mockHistoryItem1} isActive={false} />)
 
-    // Click the header button to expand
+    // Compact summary is always visible in header
+    expect(screen.getByText(/L-V/)).toBeDefined()
+  })
+
+  it('does not expand when no overrides exist', async () => {
+    const { container } = render(<ScheduleHistoryItem schedule={mockHistoryItem1} isActive={false} />)
+
+    // Click the header button
     const expandBtn = screen.getAllByRole('button')[0] as HTMLElement
     await act(async () => { fireEvent.click(expandBtn) })
 
-    // Now should show the compact summary line
-    await waitFor(() => {
-      expect(screen.getByText(/L-V/)).toBeDefined()
-    })
+    // No expanded content (border-t div) should appear since there are no overrides
+    // The schedule has no overrides so clicking should not expand anything
+    expect(container.querySelector('.border-t')).toBeNull()
   })
 
-  it('shows overrides section when expanded', async () => {
+  it('shows overrides when expanded', async () => {
     render(<ScheduleHistoryItem schedule={mockHistoryItem2} isActive={false} />)
 
     // Click the header button to expand
@@ -233,7 +242,8 @@ describe('ScheduleHistoryItem', () => {
     await act(async () => { fireEvent.click(expandBtn) })
 
     await waitFor(() => {
-      expect(screen.getByText('Excepciones (1)')).toBeDefined()
+      // Should show override day (Monday = Lunes)
+      expect(screen.getByText('Lunes')).toBeDefined()
     })
   })
 
@@ -250,20 +260,20 @@ describe('ScheduleHistoryItem', () => {
   })
 
   it('collapses when clicked again', async () => {
-    render(<ScheduleHistoryItem schedule={mockHistoryItem1} isActive={false} />)
+    const { container } = render(<ScheduleHistoryItem schedule={mockHistoryItem2} isActive={false} />)
 
     const expandBtn = screen.getAllByRole('button')[0] as HTMLElement
 
     // Expand
     await act(async () => { fireEvent.click(expandBtn) })
     await waitFor(() => {
-      expect(screen.getByText(/L-V/)).toBeDefined()
+      expect(container.querySelector('.border-t')).not.toBeNull()
     })
 
     // Collapse
     await act(async () => { fireEvent.click(expandBtn) })
     await waitFor(() => {
-      expect(screen.queryByText(/L-V/)).toBeNull()
+      expect(container.querySelector('.border-t')).toBeNull()
     })
   })
 })
