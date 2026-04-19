@@ -1,5 +1,7 @@
 # 🐛 Task #090: Indefinite Exceptions Should Affect Schedule Summary
 
+**GitHub Issue:** [#121](https://github.com/pakodiazdev/sushigo/issues/121)
+
 ## 📖 Story
 
 **English:**
