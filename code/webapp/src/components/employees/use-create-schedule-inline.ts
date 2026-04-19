@@ -68,11 +68,12 @@ export function getNextMonday(): string {
 
 /**
  * Extracts default form values from an existing schedule.
- * Uses the first working day as the reference for work hours.
+ * Uses the first working day (by day_of_week order) as the reference for work hours.
  */
 function extractDefaultsFromSchedule(schedule: EmployeeSchedule): Partial<CreateScheduleSimpleValues> {
-  // Find the first working day to extract times
-  const workingDay = schedule.days.find(d => !d.is_day_off)
+  // Sort days by day_of_week and find the first working day to extract times
+  const sortedDays = [...schedule.days].sort((a, b) => a.day_of_week - b.day_of_week)
+  const workingDay = sortedDays.find(d => !d.is_day_off)
   
   return {
     effective_from: getNextMonday(),

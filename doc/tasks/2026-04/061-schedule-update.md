@@ -19,26 +19,26 @@ Como Admin, al hacer clic en "Nuevo horario" para reemplazar el horario de un em
 
 ## ✅ Frontend Tasks
 
-- [ ] 🔧 Add `getNextMonday()` helper — returns next Monday (or today if Monday) in YYYY-MM-DD
-- [ ] 📝 Extend `CreateScheduleFormProps` to accept `currentSchedule?: EmployeeSchedule`
-- [ ] 📝 Modify `useCreateScheduleInline` to extract initial values from current schedule:
+- [x] 🔧 Add `getNextMonday()` helper — returns next Monday (or today if Monday) in YYYY-MM-DD
+- [x] 📝 Extend `CreateScheduleFormProps` to accept `currentSchedule?: EmployeeSchedule`
+- [x] 📝 Modify `useCreateScheduleInline` to extract initial values from current schedule:
   - `effective_from` → next Monday
   - `expected_start` → from first working day in current schedule
   - `expected_lunch_start` → from first working day
   - `lunch_duration_minutes` → from first working day  
   - `expected_end` → from first working day
   - `dow_X_off` → from current schedule days
-- [ ] 📱 Pass `schedule` prop from `ScheduleDialog` to `CreateScheduleForm`
-- [ ] 🧪 Cypress happy path: click "Nuevo horario", verify form is pre-filled, save
+- [x] 📱 Pass `schedule` prop from `ScheduleDialog` to `CreateScheduleForm`
+- [x] 🧪 Cypress happy path: click "Nuevo horario", verify form is pre-filled, save
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Form date defaults to next Monday (or today if it's Monday)
-- [ ] Work hours pre-filled from current schedule's first working day
-- [ ] Rest days pre-filled matching current schedule
-- [ ] Cypress test validates the happy path flow
+- [x] Form date defaults to next Monday (or today if it's Monday)
+- [x] Work hours pre-filled from current schedule's first working day
+- [x] Rest days pre-filled matching current schedule
+- [x] Cypress test validates the happy path flow
 
 ---
 
