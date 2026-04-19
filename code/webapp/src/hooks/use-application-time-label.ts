@@ -44,8 +44,10 @@ function formatUtcToTimeLabel(utcIsoString: string): string {
   })
 
   const parts = formatter.formatToParts(date)
-  const hours = parts.find((p) => p.type === 'hour')?.value ?? '00'
+  let hours = parts.find((p) => p.type === 'hour')?.value ?? '00'
   const minutes = parts.find((p) => p.type === 'minute')?.value ?? '00'
+  // Normalize '24' to '00' (some environments return 24 for midnight with h23)
+  if (hours === '24') hours = '00'
   return `${hours}:${minutes}`
 }
 
