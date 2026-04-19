@@ -3,7 +3,6 @@
 namespace App\Http\Resources\Schedule;
 
 use App\Http\Resources\BaseResource;
-use Carbon\Carbon;
 
 /**
  * @OA\Schema(
@@ -55,12 +54,24 @@ class ScheduleHistoryResource extends BaseResource
                 }
 
                 $scheduleStart = $this->effective_from?->toDateString();
-                $scheduleEnd = $this->effective_to?->toDateString() ?? Carbon::now()->toDateString();
+                $scheduleEnd = $this->effective_to?->toDateString();
 
                 // Filter overrides whose effective_from falls within this schedule's active range
+                // For active schedules (no end date), include all overrides starting from schedule start
+                // including future-dated ones
                 $filteredOverrides = $this->employmentPeriod->scheduleDayOverrides->filter(
-                    fn ($o) => $o->effective_from?->toDateString() >= $scheduleStart
-                        && $o->effective_from?->toDateString() <= $scheduleEnd
+                    function ($o) use ($scheduleStart, $scheduleEnd) {
+                        $overrideStart = $o->effective_from?->toDateString();
+                        if ($overrideStart < $scheduleStart) {
+                            return false;
+                        }
+                        // If schedule has an end date, override must start on or before it
+                        if ($scheduleEnd !== null && $overrideStart > $scheduleEnd) {
+                            return false;
+                        }
+
+                        return true;
+                    }
                 )->values();
 
                 // Set the employmentPeriod relation so the resource can include employment_period_id
