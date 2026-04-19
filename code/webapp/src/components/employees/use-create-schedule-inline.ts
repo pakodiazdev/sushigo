@@ -79,9 +79,9 @@ function extractDefaultsFromSchedule(schedule: EmployeeSchedule): Partial<Create
     effective_from: getNextMonday(),
     expected_start: workingDay?.expected_start ?? '13:00',
     expected_lunch_start: workingDay?.expected_lunch_start ?? '',
-    lunch_duration_minutes: workingDay?.lunch_duration_minutes != null
-      ? String(workingDay.lunch_duration_minutes)
-      : '',
+    lunch_duration_minutes: workingDay?.lunch_duration_minutes == null
+      ? ''
+      : String(workingDay.lunch_duration_minutes),
     expected_end: workingDay?.expected_end ?? '22:00',
     dow_1_off: schedule.days.find(d => d.day_of_week === 1)?.is_day_off ?? false,
     dow_2_off: schedule.days.find(d => d.day_of_week === 2)?.is_day_off ?? false,
