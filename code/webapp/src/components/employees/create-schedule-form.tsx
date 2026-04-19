@@ -4,20 +4,21 @@ import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/ui/form-fields'
 import { useCreateScheduleInline } from './use-create-schedule-inline'
 import type { CreateScheduleSimpleValues } from './use-create-schedule-inline'
+import type { EmployeeSchedule } from '@/types/schedule'
 
 export interface CreateScheduleFormProps {
   readonly employeeId: string
   readonly periodId: string | null
   readonly hasExistingSchedule: boolean
-  /** Pre-filled value for the "Vigente desde" date field (YYYY-MM-DD). */
-  readonly initialEffectiveFrom?: string
+  /** Current schedule to pre-fill the form with existing values. */
+  readonly currentSchedule?: EmployeeSchedule | null
   readonly onSuccess: () => void
   readonly onCancel: () => void
 }
 
-export function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, initialEffectiveFrom, onSuccess, onCancel }: CreateScheduleFormProps) {
+export function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, currentSchedule, onSuccess, onCancel }: CreateScheduleFormProps) {
   const { form, onSubmit, isPending, dowKeys, dayLabels, lunchOptions } =
-    useCreateScheduleInline(employeeId, periodId, onSuccess, initialEffectiveFrom)
+    useCreateScheduleInline(employeeId, periodId, onSuccess, currentSchedule)
 
   const { register, formState: { errors }, watch } = form
 

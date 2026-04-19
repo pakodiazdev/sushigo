@@ -101,6 +101,30 @@ describe('buildPayload', () => {
 
 // ── useCreateScheduleInline hook ──────────────────────────────────────────────
 
+import type { EmployeeSchedule } from '@/types/schedule'
+import { getNextMonday } from '@/components/employees/use-create-schedule-inline'
+
+const mockSchedule: EmployeeSchedule = {
+  id: 'sched-123',
+  employment_period_id: 'period-1',
+  effective_from: '2026-01-01',
+  effective_to: null,
+  workday_type: 'FULL',
+  working_days_per_week: 6,
+  created_at: '2026-01-01T00:00:00+00:00',
+  updated_at: '2026-01-01T00:00:00+00:00',
+  days: [
+    { day_of_week: 1, is_day_off: false, expected_start: '14:00', expected_end: '23:00', expected_lunch_start: '18:00', expected_lunch_end: '18:30', lunch_duration_minutes: 30 },
+    { day_of_week: 2, is_day_off: false, expected_start: '14:00', expected_end: '23:00', expected_lunch_start: '18:00', expected_lunch_end: '18:30', lunch_duration_minutes: 30 },
+    { day_of_week: 3, is_day_off: false, expected_start: '14:00', expected_end: '23:00', expected_lunch_start: '18:00', expected_lunch_end: '18:30', lunch_duration_minutes: 30 },
+    { day_of_week: 4, is_day_off: false, expected_start: '14:00', expected_end: '23:00', expected_lunch_start: '18:00', expected_lunch_end: '18:30', lunch_duration_minutes: 30 },
+    { day_of_week: 5, is_day_off: false, expected_start: '14:00', expected_end: '23:00', expected_lunch_start: '18:00', expected_lunch_end: '18:30', lunch_duration_minutes: 30 },
+    { day_of_week: 6, is_day_off: false, expected_start: '14:00', expected_end: '23:00', expected_lunch_start: '18:00', expected_lunch_end: '18:30', lunch_duration_minutes: 30 },
+    { day_of_week: 7, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+  ],
+  active_overrides: [],
+}
+
 describe('useCreateScheduleInline', () => {
   it('initializes with correct defaults', () => {
     const { result } = renderHook(
@@ -113,12 +137,36 @@ describe('useCreateScheduleInline', () => {
     expect(result.current.dowKeys).toHaveLength(7)
   })
 
-  it('uses initialEffectiveFrom when provided', () => {
+  it('pre-fills form with values from currentSchedule', () => {
     const { result } = renderHook(
-      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn(), '2026-03-15'),
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn(), mockSchedule),
       { wrapper: createWrapper() }
     )
-    expect(result.current.form.getValues('effective_from')).toBe('2026-03-15')
+    // Should use next Monday as effective_from
+    expect(result.current.form.getValues('effective_from')).toBe(getNextMonday())
+    // Should use times from first working day
+    expect(result.current.form.getValues('expected_start')).toBe('14:00')
+    expect(result.current.form.getValues('expected_end')).toBe('23:00')
+    expect(result.current.form.getValues('expected_lunch_start')).toBe('18:00')
+    expect(result.current.form.getValues('lunch_duration_minutes')).toBe('30')
+    // Should copy rest days from schedule
+    expect(result.current.form.getValues('dow_7_off')).toBe(true) // Sunday off
+    expect(result.current.form.getValues('dow_1_off')).toBe(false) // Monday working
+  })
+
+  it('uses default values when no currentSchedule', () => {
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn()),
+      { wrapper: createWrapper() }
+    )
+    // Should default to next Monday
+    expect(result.current.form.getValues('effective_from')).toBe(getNextMonday())
+    // Default times
+    expect(result.current.form.getValues('expected_start')).toBe('13:00')
+    expect(result.current.form.getValues('expected_end')).toBe('22:00')
+    // Default rest days (Sat & Sun)
+    expect(result.current.form.getValues('dow_6_off')).toBe(true)
+    expect(result.current.form.getValues('dow_7_off')).toBe(true)
   })
 
   it('exposes dowKeys, dayLabels, lunchOptions', () => {

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-provider'
 import { scheduleApi } from '@/services/schedule-api'
 import { DAY_LABELS, LUNCH_DURATION_OPTIONS } from '@/types/schedule'
+import type { EmployeeSchedule } from '@/types/schedule'
 
 // ── Schema ─────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,51 @@ const DOW_KEYS: DowKey[] = [
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the next Monday in YYYY-MM-DD format.
+ * If today is Monday, returns today.
+ */
+export function getNextMonday(): string {
+  const today = new Date()
+  const dayOfWeek = today.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  // If today is Monday (1), daysUntilMonday = 0
+  // If today is Sunday (0), daysUntilMonday = 1
+  // If today is Tuesday (2), daysUntilMonday = 6
+  const daysUntilMonday = dayOfWeek === 1 ? 0 : (8 - dayOfWeek) % 7 || 7
+  const nextMonday = new Date(today)
+  nextMonday.setDate(today.getDate() + daysUntilMonday)
+  const y = nextMonday.getFullYear()
+  const m = String(nextMonday.getMonth() + 1).padStart(2, '0')
+  const d = String(nextMonday.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/**
+ * Extracts default form values from an existing schedule.
+ * Uses the first working day as the reference for work hours.
+ */
+function extractDefaultsFromSchedule(schedule: EmployeeSchedule): Partial<CreateScheduleSimpleValues> {
+  // Find the first working day to extract times
+  const workingDay = schedule.days.find(d => !d.is_day_off)
+  
+  return {
+    effective_from: getNextMonday(),
+    expected_start: workingDay?.expected_start ?? '13:00',
+    expected_lunch_start: workingDay?.expected_lunch_start ?? '',
+    lunch_duration_minutes: workingDay?.lunch_duration_minutes != null
+      ? String(workingDay.lunch_duration_minutes)
+      : '',
+    expected_end: workingDay?.expected_end ?? '22:00',
+    dow_1_off: schedule.days.find(d => d.day_of_week === 1)?.is_day_off ?? false,
+    dow_2_off: schedule.days.find(d => d.day_of_week === 2)?.is_day_off ?? false,
+    dow_3_off: schedule.days.find(d => d.day_of_week === 3)?.is_day_off ?? false,
+    dow_4_off: schedule.days.find(d => d.day_of_week === 4)?.is_day_off ?? false,
+    dow_5_off: schedule.days.find(d => d.day_of_week === 5)?.is_day_off ?? false,
+    dow_6_off: schedule.days.find(d => d.day_of_week === 6)?.is_day_off ?? true,
+    dow_7_off: schedule.days.find(d => d.day_of_week === 7)?.is_day_off ?? true,
+  }
+}
 
 function addMinutesToTime(time: string, minutes: number): string {
   const parts = time.split(':').map(Number)
@@ -91,27 +137,34 @@ export function useCreateScheduleInline(
   employeeId: string,
   periodId: string | null,
   onSuccess: () => void,
-  initialEffectiveFrom?: string,
+  currentSchedule?: EmployeeSchedule | null,
 ) {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
 
+  // Build default values: from current schedule if exists, otherwise sensible defaults
+  const baseDefaults: CreateScheduleSimpleValues = {
+    effective_from:         '',
+    expected_start:         '13:00',
+    expected_lunch_start:   '',
+    lunch_duration_minutes: '',
+    expected_end:           '22:00',
+    dow_1_off: false,
+    dow_2_off: false,
+    dow_3_off: false,
+    dow_4_off: false,
+    dow_5_off: false,
+    dow_6_off: true,  // Saturday off by default
+    dow_7_off: true,  // Sunday off by default
+  }
+
+  const defaultValues = currentSchedule
+    ? { ...baseDefaults, ...extractDefaultsFromSchedule(currentSchedule) }
+    : { ...baseDefaults, effective_from: getNextMonday() }
+
   const form = useForm<CreateScheduleSimpleValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      effective_from:         initialEffectiveFrom ?? '',
-      expected_start:         '13:00',
-      expected_lunch_start:   '',
-      lunch_duration_minutes: '',
-      expected_end:           '22:00',
-      dow_1_off: false,
-      dow_2_off: false,
-      dow_3_off: false,
-      dow_4_off: false,
-      dow_5_off: false,
-      dow_6_off: true,  // Saturday off by default
-      dow_7_off: true,  // Sunday off by default
-    },
+    defaultValues,
   })
 
   const mutation = useMutation({

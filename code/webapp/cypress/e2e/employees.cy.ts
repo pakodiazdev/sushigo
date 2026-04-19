@@ -195,3 +195,79 @@ describe('Login nuevo empleado', () => {
     cy.contains('Dashboard', { timeout: 10_000 }).should('exist')
   })
 })
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 3. Pre-llenado del formulario de nuevo horario (#061)
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('Nuevo horario pre-llenado', () => {
+  beforeEach(() => {
+    cy.login(adminEmail, adminPassword)
+    cy.url().should('not.include', '/login', { timeout: 10_000 })
+    cy.visit('/employees')
+    cy.url().should('include', '/employees', { timeout: 10_000 })
+    cy.closeDevDebugger()
+  })
+
+  it('pre-llena el formulario con valores del horario actual y fecha próximo lunes', () => {
+    // ── 1. Seleccionar empleado Carlos Mendoza (EMP-001) que tiene horario ────
+    cy.contains('tr', 'EMP-001', { timeout: 10_000 }).click()
+
+    // Esperar que abra el slide de detalle
+    cy.contains('Carlos Mendoza', { timeout: 10_000 }).should('be.visible')
+
+    // ── 2. Abrir diálogo de horario ────────────────────────────────────────────
+    cy.contains('button', /Ver horario/i, { timeout: 10_000 }).click()
+
+    // Esperar que el modal de "Horario activo" aparezca
+    cy.contains('Horario activo', { timeout: 10_000 }).should('be.visible')
+
+    // Verificar que hay un horario existente (entrada 13:00, salida 22:00)
+    cy.contains('13:00').should('be.visible')
+    cy.contains('22:00').should('be.visible')
+
+    // ── 3. Click en "Nuevo horario" ────────────────────────────────────────────
+    cy.contains('button', 'Nuevo horario').click()
+
+    // El formulario de creación debe aparecer
+    cy.contains('Horario laboral', { timeout: 10_000 }).should('be.visible')
+
+    // ── 4. Verificar que el formulario está pre-llenado ────────────────────────
+    
+    // La fecha debe ser el próximo lunes (o hoy si es lunes)
+    cy.get('input[name="effective_from"]').should(($input) => {
+      const value = $input.val() as string
+      expect(value).to.match(/^\d{4}-\d{2}-\d{2}$/)  // formato YYYY-MM-DD
+      
+      // Verificar que la fecha es un lunes
+      const date = new Date(value + 'T00:00:00')
+      expect(date.getDay()).to.equal(1)  // 1 = Monday
+    })
+
+    // Entrada debe ser 13:00 (del horario actual)
+    cy.get('input[name="expected_start"]').should('have.value', '13:00')
+
+    // Salida debe ser 22:00 (del horario actual)
+    cy.get('input[name="expected_end"]').should('have.value', '22:00')
+
+    // Días de descanso: Domingo (dow_7) debe estar marcado
+    // El horario actual es Mon-Sat trabaja, Sun descansa
+    cy.get('input[name="dow_7_off"]').should('be.checked')
+
+    // ── 5. Modificar algo y guardar ────────────────────────────────────────────
+    // Cambiar hora de entrada a 14:00
+    cy.get('input[name="expected_start"]').clear({ force: true }).type('14:00', { force: true })
+
+    // Guardar
+    cy.contains('button', 'Guardar horario').click({ force: true })
+
+    // Esperar confirmación de guardado
+    cy.contains('Horario creado correctamente', { timeout: 10_000 }).should('be.visible')
+
+    // El formulario debe cerrarse y mostrar el horario activo de nuevo
+    cy.contains('Horario activo', { timeout: 10_000 }).should('be.visible')
+
+    // Verificar que el nuevo horario refleja la entrada 14:00
+    cy.contains('14:00').should('be.visible')
+  })
+})

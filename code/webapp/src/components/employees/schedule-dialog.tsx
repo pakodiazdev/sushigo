@@ -28,11 +28,6 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
 
   if (!visible) return null
 
-  // Pre-fill effective_from from active period when creating a first schedule.
-  const initialEffectiveFrom = ctx.schedule
-    ? undefined
-    : employee.employment_periods?.find((p) => p.is_active)?.start_date
-
   const content = (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
       <button type="button" aria-label="Cerrar" className={`absolute inset-0 w-full border-0 bg-black/50 p-0 ${backdropCls}`} onClick={close} />
@@ -74,7 +69,7 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
               employeeId={employee.id}
               periodId={ctx.periodId}
               hasExistingSchedule={!!ctx.schedule}
-              initialEffectiveFrom={initialEffectiveFrom}
+              currentSchedule={ctx.schedule}
               onSuccess={ctx.onScheduleCreated}
               onCancel={ctx.showSchedule}
             />
