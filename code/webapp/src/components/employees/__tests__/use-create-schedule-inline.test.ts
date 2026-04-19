@@ -50,6 +50,46 @@ function makeValues(overrides: Partial<CreateScheduleSimpleValues> = {}): Create
   }
 }
 
+// ── getNextMonday ─────────────────────────────────────────────────────────────
+
+describe('getNextMonday', () => {
+  it('returns today when today is Monday', () => {
+    // Mock Monday (day 1)
+    const mockMonday = new Date('2026-04-20T12:00:00') // April 20, 2026 is Monday
+    vi.setSystemTime(mockMonday)
+    expect(getNextMonday()).toBe('2026-04-20')
+    vi.useRealTimers()
+  })
+
+  it('returns next Monday when today is Sunday', () => {
+    const mockSunday = new Date('2026-04-19T12:00:00') // April 19, 2026 is Sunday
+    vi.setSystemTime(mockSunday)
+    expect(getNextMonday()).toBe('2026-04-20')
+    vi.useRealTimers()
+  })
+
+  it('returns next Monday when today is Tuesday', () => {
+    const mockTuesday = new Date('2026-04-21T12:00:00') // April 21, 2026 is Tuesday
+    vi.setSystemTime(mockTuesday)
+    expect(getNextMonday()).toBe('2026-04-27')
+    vi.useRealTimers()
+  })
+
+  it('returns next Monday when today is Saturday', () => {
+    const mockSaturday = new Date('2026-04-18T12:00:00') // April 18, 2026 is Saturday
+    vi.setSystemTime(mockSaturday)
+    expect(getNextMonday()).toBe('2026-04-20')
+    vi.useRealTimers()
+  })
+
+  it('returns next Monday when today is Wednesday', () => {
+    const mockWednesday = new Date('2026-04-22T12:00:00') // April 22, 2026 is Wednesday
+    vi.setSystemTime(mockWednesday)
+    expect(getNextMonday()).toBe('2026-04-27')
+    vi.useRealTimers()
+  })
+})
+
 // ── buildPayload ──────────────────────────────────────────────────────────────
 
 describe('buildPayload', () => {
@@ -220,5 +260,68 @@ describe('useCreateScheduleInline', () => {
     const { scheduleApi } = await import('@/services/schedule-api')
     expect(scheduleApi.createPayload).toHaveBeenCalled()
     expect(onSuccess).toHaveBeenCalled()
+  })
+
+  it('pre-fills defaults when schedule has no working days', () => {
+    const allDaysOffSchedule: EmployeeSchedule = {
+      ...mockSchedule,
+      days: [
+        { day_of_week: 1, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 2, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 3, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 4, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 5, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 6, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 7, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+      ],
+    }
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn(), allDaysOffSchedule),
+      { wrapper: createWrapper() }
+    )
+    // Should fall back to defaults since no working day
+    expect(result.current.form.getValues('expected_start')).toBe('13:00')
+    expect(result.current.form.getValues('expected_end')).toBe('22:00')
+  })
+
+  it('handles schedule with no lunch data', () => {
+    const noLunchSchedule: EmployeeSchedule = {
+      ...mockSchedule,
+      days: [
+        { day_of_week: 1, is_day_off: false, expected_start: '09:00', expected_end: '17:00', expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 2, is_day_off: false, expected_start: '09:00', expected_end: '17:00', expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 3, is_day_off: false, expected_start: '09:00', expected_end: '17:00', expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 4, is_day_off: false, expected_start: '09:00', expected_end: '17:00', expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 5, is_day_off: false, expected_start: '09:00', expected_end: '17:00', expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 6, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+        { day_of_week: 7, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+      ],
+    }
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn(), noLunchSchedule),
+      { wrapper: createWrapper() }
+    )
+    expect(result.current.form.getValues('expected_start')).toBe('09:00')
+    expect(result.current.form.getValues('expected_lunch_start')).toBe('')
+    expect(result.current.form.getValues('lunch_duration_minutes')).toBe('')
+  })
+
+  it('handles schedule with missing day entries (uses defaults)', () => {
+    const partialSchedule: EmployeeSchedule = {
+      ...mockSchedule,
+      days: [
+        { day_of_week: 1, is_day_off: false, expected_start: '10:00', expected_end: '19:00', expected_lunch_start: '13:00', expected_lunch_end: '14:00', lunch_duration_minutes: 60 },
+        { day_of_week: 7, is_day_off: true, expected_start: null, expected_end: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null },
+      ],
+    }
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn(), partialSchedule),
+      { wrapper: createWrapper() }
+    )
+    // Should use times from day 1 (only working day)
+    expect(result.current.form.getValues('expected_start')).toBe('10:00')
+    // Missing days should default (dow_2_off through dow_6_off should be false by default)
+    expect(result.current.form.getValues('dow_2_off')).toBe(false)
+    expect(result.current.form.getValues('dow_6_off')).toBe(true) // defaults to true
   })
 })
