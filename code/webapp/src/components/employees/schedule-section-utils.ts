@@ -102,3 +102,69 @@ export function overrideDateLabel(o: ScheduleDayOverride): string {
     .toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
   return `${from} – ${to}`
 }
+
+// ── Compact summary for dialog header ─────────────────────────────────────────
+
+const DOW_SHORT_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as const
+
+/**
+ * Build a compact one-line summary of the schedule.
+ * Format: "🕐 L-V · 1:00 PM – 10:00 PM · 🍽 1h · 🏠 Sáb-Dom"
+ */
+export function buildCompactSummaryLine(days: ScheduleDay[]): string {
+  const working = days.filter((d) => !d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
+  const resting = days.filter((d) => d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
+
+  if (working.length === 0) return ''
+
+  const parts: string[] = []
+
+  // Day range
+  const dayRange = computeDayRangeLabelInternal(working, resting)
+  const ref = working[0]!
+  const startT = formatTime(ref.expected_start)
+  const endT = formatTime(ref.expected_end)
+  parts.push(`🕐 ${dayRange} · ${startT} – ${endT}`)
+
+  // Lunch duration
+  if (ref.lunch_duration_minutes) {
+    const mins = ref.lunch_duration_minutes
+    const durLabel = mins % 60 === 0 ? `${mins / 60}h` : `${mins}min`
+    parts.push(`🍽 ${durLabel}`)
+  }
+
+  // Rest days
+  if (resting.length > 0) {
+    const restLabel = resting.map((d) => DOW_SHORT_NAMES[d.day_of_week - 1]).join('-')
+    parts.push(`🏠 ${restLabel}`)
+  }
+
+  return parts.join(' · ')
+}
+
+// Internal helper with same logic as computeDayRangeLabel
+function computeDayRangeLabelInternal(working: ScheduleDay[], resting: ScheduleDay[]): string {
+  const DOW_ABBR = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const
+  const DOW_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] as const
+
+  if (working.length === 7) return 'L-D'
+  if (working.length === 1) return DOW_NAMES[working[0]!.day_of_week - 1]!
+
+  const isConsecutive = working.every(
+    (d, i) => i === 0 || d.day_of_week === working[i - 1]!.day_of_week + 1,
+  )
+  if (isConsecutive) {
+    return `${DOW_ABBR[working[0]!.day_of_week - 1]}-${DOW_ABBR[working[working.length - 1]!.day_of_week - 1]}`
+  }
+
+  const isRestConsecutive = resting.every(
+    (d, i) => i === 0 || d.day_of_week === resting[i - 1]!.day_of_week + 1,
+  )
+  if (isRestConsecutive) {
+    const firstWork = working[0]!
+    const lastWork = working[working.length - 1]!
+    return `${DOW_ABBR[firstWork.day_of_week - 1]}-${DOW_ABBR[lastWork.day_of_week - 1]}`
+  }
+
+  return working.map((d) => DOW_ABBR[d.day_of_week - 1]).join('')
+}

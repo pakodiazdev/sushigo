@@ -86,26 +86,6 @@ describe('useScheduleContent', () => {
         vi.clearAllMocks()
     })
 
-    it('initializes with config viewMode', () => {
-        const { result } = renderHook(() =>
-            useScheduleContent(baseSchedule, 'emp-01', 'period-01'),
-        )
-
-        expect(result.current.viewMode).toBe('config')
-    })
-
-    it('can toggle viewMode to week', () => {
-        const { result } = renderHook(() =>
-            useScheduleContent(baseSchedule, 'emp-01', 'period-01'),
-        )
-
-        act(() => {
-            result.current.setViewMode('week')
-        })
-
-        expect(result.current.viewMode).toBe('week')
-    })
-
     it('sorts days by day_of_week', () => {
         const unsortedSchedule: EmployeeSchedule = {
             ...baseSchedule,
@@ -270,7 +250,7 @@ describe('useScheduleContent', () => {
         expect(result.current.overridesForDow[0]?.day_of_week).toBe(3)
     })
 
-    it('handleOverrideSelect closes list and jumps to date', () => {
+    it('handleOverrideSelect closes list, jumps to date and calls callback', () => {
         const override: ScheduleDayOverride = {
             id: '1',
             employment_period_id: 'period-01',
@@ -288,25 +268,18 @@ describe('useScheduleContent', () => {
             updated_at: '2026-04-01T00:00:00Z',
         }
 
+        const onSelect = vi.fn()
+
         const { result } = renderHook(() =>
             useScheduleContent(baseSchedule, 'emp-01', 'period-01'),
         )
 
         act(() => {
-            result.current.handleOverrideSelect(override)
+            result.current.handleOverrideSelect(override, onSelect)
         })
 
         expect(mockWeeklyCalendar.closeOverrideList).toHaveBeenCalled()
         expect(mockWeeklyCalendar.jumpToDate).toHaveBeenCalledWith('2026-04-20')
-        expect(result.current.viewMode).toBe('week')
-    })
-
-    it('tabCls returns correct classes for active tab', () => {
-        const { result } = renderHook(() =>
-            useScheduleContent(baseSchedule, 'emp-01', 'period-01'),
-        )
-
-        expect(result.current.tabCls('config')).toContain('border-primary')
-        expect(result.current.tabCls('week')).toContain('border-transparent')
+        expect(onSelect).toHaveBeenCalled()
     })
 })
