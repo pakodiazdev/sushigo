@@ -139,6 +139,7 @@ export function useCreateScheduleInline(
   periodId: string | null,
   onSuccess: () => void,
   currentSchedule?: EmployeeSchedule | null,
+  periodStartDate?: string,
 ) {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
@@ -161,7 +162,7 @@ export function useCreateScheduleInline(
 
   const defaultValues = currentSchedule
     ? { ...baseDefaults, ...extractDefaultsFromSchedule(currentSchedule) }
-    : { ...baseDefaults, effective_from: getNextMonday() }
+    : { ...baseDefaults, effective_from: periodStartDate ?? getNextMonday() }
 
   const form = useForm<CreateScheduleSimpleValues>({
     resolver: zodResolver(schema),
