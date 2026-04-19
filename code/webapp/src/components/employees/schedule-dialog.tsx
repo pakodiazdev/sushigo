@@ -6,6 +6,7 @@ import type { useScheduleSection } from './use-schedule-section'
 import { useDialogAnimation } from './use-dialog-animation'
 import { CreateScheduleForm } from './create-schedule-form'
 import { ScheduleContent } from './schedule-content'
+import { ScheduleHistorySection } from './schedule-history-section'
 import { EmptySchedule, ScheduleSkeleton } from './schedule-section-state'
 
 type CtxType = ReturnType<typeof useScheduleSection>
@@ -80,7 +81,15 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
             />
           ) : (
             <>
-              <div className="p-5">{renderScheduleBody(ctx, employee)}</div>
+              <div className="max-h-[70vh] overflow-y-auto p-5">
+                {renderScheduleBody(ctx, employee)}
+                {ctx.schedule && (
+                  <ScheduleHistorySection
+                    periodId={ctx.periodId}
+                    currentScheduleId={ctx.schedule.id}
+                  />
+                )}
+              </div>
               {/* Footer */}
               <div className="flex items-center justify-between border-t px-5 py-3">
                 {ctx.periodId && !ctx.isLoading ? (
