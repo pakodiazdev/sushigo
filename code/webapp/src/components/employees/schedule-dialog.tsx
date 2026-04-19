@@ -70,6 +70,11 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
               periodId={ctx.periodId}
               hasExistingSchedule={!!ctx.schedule}
               currentSchedule={ctx.schedule}
+              periodStartDate={
+                ctx.schedule
+                  ? undefined
+                  : employee.employment_periods?.find((p) => p.is_active)?.start_date
+              }
               onSuccess={ctx.onScheduleCreated}
               onCancel={ctx.showSchedule}
             />
