@@ -49,6 +49,8 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
 
   if (!visible) return null
 
+  const viewMode = activeTab === 'week' ? 'week' : 'config' as const
+
   const tabCls = (tab: ScheduleTab) =>
     `px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
       activeTab === tab
@@ -138,7 +140,7 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
                     currentScheduleId={ctx.schedule.id}
                   />
                 ) : (
-                  renderScheduleBody(ctx, employee, activeTab === 'week' ? 'week' : 'config', () => setActiveTab('week'))
+                  renderScheduleBody(ctx, employee, viewMode, () => setActiveTab('week'))
                 )}
               </div>
 
