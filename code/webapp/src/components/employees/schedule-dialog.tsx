@@ -14,6 +14,17 @@ import { EmptySchedule, ScheduleSkeleton } from './schedule-section-state'
 type CtxType = ReturnType<typeof useScheduleSection>
 type ScheduleTab = 'config' | 'week' | 'history'
 
+function renderCreateButton(ctx: CtxType) {
+  if (!ctx.periodId || ctx.isLoading) return <span />
+  const label = ctx.schedule ? 'Nuevo horario' : 'Crear horario'
+  return (
+    <Button type="button" size="sm" onClick={ctx.showCreate}>
+      <Plus className="mr-1 h-4 w-4" />
+      {label}
+    </Button>
+  )
+}
+
 function renderScheduleBody(ctx: CtxType, employee: Employee, viewMode: 'config' | 'week', onSwitchToWeekView?: () => void) {
   if (ctx.isLoading) return <ScheduleSkeleton />
   if (ctx.isError) return <p className="text-sm text-muted-foreground">Error al cargar el horario.</p>
@@ -133,12 +144,7 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
 
               {/* Footer */}
               <div className="flex items-center justify-between border-t px-5 py-3">
-                {ctx.periodId && !ctx.isLoading ? (
-                  <Button type="button" size="sm" onClick={ctx.showCreate}>
-                    <Plus className="mr-1 h-4 w-4" />
-                    {ctx.schedule ? 'Nuevo horario' : 'Crear horario'}
-                  </Button>
-                ) : <span />}
+                {renderCreateButton(ctx)}
                 <Button type="button" variant="outline" size="sm" onClick={close}>Cerrar</Button>
               </div>
             </>
