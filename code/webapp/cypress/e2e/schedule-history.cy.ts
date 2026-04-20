@@ -1,0 +1,111 @@
+/**
+ * Schedule History — E2E tests
+ *
+ * Tests the schedule history tab in the schedule dialog, which shows
+ * the full history of schedules with their exceptions.
+ *
+ * DB reset strategy
+ * ─────────────────
+ * • before()     → cy.task('test:reset', 'attendance') ONCE per file.
+ * • beforeEach() → login + navigate to employee detail.
+ *
+ * For running only this file:
+ *   make cypress-spec SPEC=schedule-history
+ *   make cypress-debug SPEC=schedule-history
+ */
+
+import users from '../fixtures/users.json'
+
+const { email: adminEmail, password: adminPassword } = users.admin
+
+// ── Suite setup ─────────────────────────────────────────────────────────────
+
+before(() => {
+  cy.task('test:reset', 'attendance', { timeout: 60_000 })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 1. View schedule history
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('Schedule History', () => {
+  beforeEach(() => {
+    cy.login(adminEmail, adminPassword)
+    cy.url().should('not.include', '/login', { timeout: 10_000 })
+    cy.visit('/employees')
+    cy.url().should('include', '/employees', { timeout: 10_000 })
+    cy.closeDevDebugger()
+  })
+
+  it('shows schedule history with ACTIVO badge and date range', () => {
+    // ── 1. Find and click on an employee with schedule ───────────────────────
+    // EMP-001 is seeded with an active schedule (Mon-Sat 13:00-22:00)
+    cy.contains('tr', 'EMP-001', { timeout: 10_000 }).click()
+
+    // Wait for employee detail to load
+    cy.contains('Horario activo', { timeout: 10_000 }).should('be.visible')
+
+    // ── 2. Open schedule dialog ──────────────────────────────────────────────
+    cy.contains('button', 'Ver horario').click()
+
+    // Dialog should open with tabs
+    cy.contains('dialog', 'Horarios', { timeout: 5_000 }).should('be.visible')
+
+    // ── 3. Click on Historial tab ────────────────────────────────────────────
+    cy.contains('button', 'Historial').click()
+
+    // ── 4. Verify schedule history is displayed ──────────────────────────────
+    // Should show ACTIVO badge for the current schedule
+    cy.contains('ACTIVO', { timeout: 5_000 }).should('be.visible')
+
+    // Should show date range with "→ hoy" for active schedule
+    cy.contains('→ hoy').should('be.visible')
+
+    // Should show schedule summary line (L-S pattern from seeder)
+    cy.get('dialog').within(() => {
+      // The schedule summary shows time range
+      cy.contains(/1:00\s*PM|13:00/).should('exist')
+      cy.contains(/10:00\s*PM|22:00/).should('exist')
+    })
+
+    // ── 5. Close dialog ──────────────────────────────────────────────────────
+    cy.contains('button', 'Cerrar').click()
+    cy.contains('dialog', 'Horarios').should('not.exist')
+  })
+
+  it('shows empty state when employee has no schedule history', () => {
+    // Create a new employee without schedule to test empty state
+    cy.contains('button', 'Nuevo Empleado').click()
+
+    // Fill minimal data
+    cy.get('input[name="first_name"]').type('Test', { force: true })
+    cy.get('input[name="last_name"]').type('NoSchedule', { force: true })
+    cy.get('input[name="email"]').type('test.noschedule@sushigo.com', { force: true })
+
+    // Select a position
+    cy.contains('label', 'Cocinero').find('[role="switch"]').click({ force: true })
+
+    // Create employee
+    cy.contains('button', 'Crear').click()
+
+    // Wait for detail view
+    cy.contains('Test NoSchedule', { timeout: 10_000 }).should('be.visible')
+
+    // Should have "Agregar horario" button instead of "Ver horario"
+    cy.contains('button', 'Agregar horario').should('be.visible')
+
+    // Click to open dialog
+    cy.contains('button', 'Agregar horario').click()
+
+    // Dialog opens but there are no tabs (no schedule yet)
+    cy.contains('dialog', 'Horarios', { timeout: 5_000 }).should('be.visible')
+
+    // There should be no History tab visible when no schedule exists
+    cy.get('dialog').within(() => {
+      cy.contains('button', 'Historial').should('not.exist')
+    })
+
+    // Close dialog
+    cy.contains('button', 'Cerrar').click()
+  })
+})

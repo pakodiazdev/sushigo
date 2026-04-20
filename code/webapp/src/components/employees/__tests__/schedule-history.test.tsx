@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest'
 import { render, screen, waitFor, fireEvent, cleanup, act } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -15,8 +15,18 @@ vi.mock('@/services/schedule-api', () => ({
   },
 }))
 
-// Fire requestAnimationFrame callbacks synchronously
-vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { cb(0); return 0 })
+// Store original requestAnimationFrame to restore later
+const originalRAF = globalThis.requestAnimationFrame
+
+beforeAll(() => {
+  // Fire requestAnimationFrame callbacks synchronously
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { cb(0); return 0 })
+})
+
+afterAll(() => {
+  // Restore original requestAnimationFrame
+  globalThis.requestAnimationFrame = originalRAF
+})
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 

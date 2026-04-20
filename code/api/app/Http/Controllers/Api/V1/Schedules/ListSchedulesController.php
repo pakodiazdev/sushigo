@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V1\Schedules;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Schedule\ScheduleHistoryResource;
+use App\Http\Responses\Common\ResponseEntity;
 use App\Models\EmploymentPeriod;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * @OA\Get(
@@ -36,7 +36,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class ListSchedulesController extends Controller
 {
-    public function __invoke(EmploymentPeriod $employmentPeriod): AnonymousResourceCollection
+    public function __invoke(EmploymentPeriod $employmentPeriod): ResponseEntity
     {
         $schedules = $employmentPeriod
             ->employeeSchedules()
@@ -50,6 +50,8 @@ class ListSchedulesController extends Controller
         // Attach the employment period to each schedule so the resource can access overrides
         $schedules->each(fn ($schedule) => $schedule->setRelation('employmentPeriod', $employmentPeriod));
 
-        return ScheduleHistoryResource::collection($schedules);
+        return new ResponseEntity(
+            data: ScheduleHistoryResource::collection($schedules)->resolve()
+        );
     }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { CalendarDays, X, Plus, ArrowLeft, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,10 +14,10 @@ import { EmptySchedule, ScheduleSkeleton } from './schedule-section-state'
 type CtxType = ReturnType<typeof useScheduleSection>
 type ScheduleTab = 'config' | 'week' | 'history'
 
-function renderScheduleBody(ctx: CtxType, employee: Employee, viewMode: 'config' | 'week') {
+function renderScheduleBody(ctx: CtxType, employee: Employee, viewMode: 'config' | 'week', onSwitchToWeekView?: () => void) {
   if (ctx.isLoading) return <ScheduleSkeleton />
   if (ctx.isError) return <p className="text-sm text-muted-foreground">Error al cargar el horario.</p>
-  if (ctx.schedule) return <ScheduleContent schedule={ctx.schedule} employeeId={employee.id} periodId={ctx.periodId} viewMode={viewMode} />
+  if (ctx.schedule) return <ScheduleContent schedule={ctx.schedule} employeeId={employee.id} periodId={ctx.periodId} viewMode={viewMode} onSwitchToWeekView={onSwitchToWeekView} />
   return <EmptySchedule canCreate={!!ctx.periodId} />
 }
 
@@ -30,6 +30,11 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
   const { isOpen, close, view, isTransitioning } = ctx
   const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, close)
   const [activeTab, setActiveTab] = useState<ScheduleTab>('config')
+
+  // Reset to config tab whenever the dialog opens
+  useEffect(() => {
+    if (isOpen) setActiveTab('config')
+  }, [isOpen])
 
   if (!visible) return null
 
@@ -122,7 +127,7 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
                     currentScheduleId={ctx.schedule.id}
                   />
                 ) : (
-                  renderScheduleBody(ctx, employee, activeTab === 'week' ? 'week' : 'config')
+                  renderScheduleBody(ctx, employee, activeTab === 'week' ? 'week' : 'config', () => setActiveTab('week'))
                 )}
               </div>
 
