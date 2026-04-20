@@ -44,19 +44,17 @@ export function ExtraDayNegotiationDialog({
 }: Readonly<ExtraDayNegotiationDialogProps>) {
   const {
     salaryMode,
-    salaryAmount,
-    salaryPercent,
+    salaryAmountRaw,
+    salaryPercentRaw,
     primaMode,
-    primaPercent,
-    primaAmount,
+    primaPercentRaw,
+    primaAmountRaw,
     effectiveSalary,
     seventhDay,
     effectivePrima,
     total,
     setSalaryMode,
     setPrimaMode,
-    setPrimaPercent,
-    setPrimaAmount,
     handleSalaryPercentChange,
     handleSalaryAmountChange,
     handlePrimaPercentChange,
@@ -183,7 +181,7 @@ export function ExtraDayNegotiationDialog({
                     min="0"
                     max="200"
                     step="0.01"
-                    value={salaryPercent.toFixed(2)}
+                    value={salaryPercentRaw}
                     onChange={e => handleSalaryPercentChange(e.target.value)}
                     disabled={isPending || registeredDailyWage === null}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -195,7 +193,7 @@ export function ExtraDayNegotiationDialog({
                     type="number"
                     min="0"
                     step="0.01"
-                    value={salaryAmount.toFixed(2)}
+                    value={salaryAmountRaw}
                     onChange={e => handleSalaryAmountChange(e.target.value)}
                     disabled={isPending}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -217,8 +215,6 @@ export function ExtraDayNegotiationDialog({
                 checked={primaMode === 'legal'}
                 onChange={() => {
                   setPrimaMode('legal')
-                  setPrimaPercent(100)
-                  setPrimaAmount(effectiveSalary)
                 }}
                 disabled={isPending}
               />
@@ -249,7 +245,7 @@ export function ExtraDayNegotiationDialog({
                     min="0"
                     max="200"
                     step="0.01"
-                    value={primaPercent.toFixed(2)}
+                    value={primaPercentRaw}
                     onChange={e => handlePrimaPercentChange(e.target.value)}
                     disabled={isPending}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -261,7 +257,7 @@ export function ExtraDayNegotiationDialog({
                     type="number"
                     min="0"
                     step="0.01"
-                    value={primaAmount.toFixed(2)}
+                    value={primaAmountRaw}
                     onChange={e => handlePrimaAmountChange(e.target.value)}
                     disabled={isPending}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
