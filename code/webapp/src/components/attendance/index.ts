@@ -40,8 +40,9 @@ export { useCloseDayPanel } from './use-close-day-panel'
 export { ExtraDayNegotiationDialog } from './ExtraDayNegotiationDialog'
 export type { ExtraDayNegotiationDialogProps } from './ExtraDayNegotiationDialog'
 
-// Extra Day Express hook
+// Extra Day hooks
 export { useExtraDayExpress } from './use-extra-day-express'
+export { useExtraDayNegotiationDialog } from './use-extra-day-negotiation-dialog'
 
 // Register Leave Dialog
 export { RegisterLeaveDialog } from './RegisterLeaveDialog'

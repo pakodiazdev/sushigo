@@ -5,8 +5,8 @@ namespace App\Actions\NegotiatedExtraDay;
 use App\Enums\DayStatus;
 use App\Models\Attendance;
 use App\Models\Employee;
-use App\Models\EmploymentPeriod;
 use App\Models\NegotiatedExtraDay;
+use App\Support\Traits\ResolvesActiveEmploymentPeriod;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -24,6 +24,8 @@ use Illuminate\Validation\ValidationException;
  */
 class RegisterNegotiatedExtraDayAction
 {
+    use ResolvesActiveEmploymentPeriod;
+
     /**
      * @param  array{employee_id: string, date: string, agreed_daily_wage: float, prima_percent: float, notes: ?string}  $data
      *
@@ -77,30 +79,5 @@ class RegisterNegotiatedExtraDayAction
                 'date' => 'Ya existe un día extra registrado para esta fecha.',
             ]);
         }
-    }
-
-    /**
-     * Return the active employment period for the employee on the given date.
-     *
-     * @throws ValidationException
-     */
-    private function resolveActiveEmploymentPeriod(int $employeeId, string $date): EmploymentPeriod
-    {
-        $period = EmploymentPeriod::where('employee_id', $employeeId)
-            ->where('is_active', true)
-            ->whereDate('start_date', '<=', $date)
-            ->where(function ($q) use ($date) {
-                $q->whereNull('end_date')
-                    ->orWhereDate('end_date', '>=', $date);
-            })
-            ->first();
-
-        if (! $period) {
-            throw ValidationException::withMessages([
-                'employee_id' => 'El empleado no tiene un período de empleo activo para esta fecha.',
-            ]);
-        }
-
-        return $period;
     }
 }
