@@ -4,13 +4,22 @@ import type { EmployeeScheduleHistoryItem, ScheduleDayOverride } from '@/types/s
 import { DAY_LABELS } from '@/types/schedule'
 import { buildCompactSummaryLine } from './schedule-section-utils'
 
-function ExpandIcon({ expanded, hasOverrides }: { expanded: boolean; hasOverrides: boolean }) {
+interface ExpandIconProps {
+  readonly expanded: boolean
+  readonly hasOverrides: boolean
+}
+
+function ExpandIcon({ expanded, hasOverrides }: ExpandIconProps) {
   if (!hasOverrides) return <span className="w-4" />
   if (expanded) return <ChevronDown className="h-4 w-4 text-muted-foreground" />
   return <ChevronRight className="h-4 w-4 text-muted-foreground" />
 }
 
-function OverrideItem({ override }: { override: ScheduleDayOverride }) {
+interface OverrideItemProps {
+  readonly override: ScheduleDayOverride
+}
+
+function OverrideItem({ override }: OverrideItemProps) {
   const isPermanent = override.effective_to === null
   const iconClass = isPermanent ? 'text-muted-foreground' : 'text-amber-600 dark:text-amber-400'
   const icon = isPermanent ? '●' : '⚡'
