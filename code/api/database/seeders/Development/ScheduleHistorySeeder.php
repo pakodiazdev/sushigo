@@ -29,6 +29,33 @@ class ScheduleHistorySeeder extends OnceSeeder
 {
     private const TARGET_EMPLOYEE_CODE = 'ADM-001';
 
+    // Common time constants to avoid duplication
+    private const TIME_0900 = '09:00:00';
+
+    private const TIME_1000 = '10:00:00';
+
+    private const TIME_1300 = '13:00:00';
+
+    private const TIME_1400 = '14:00:00';
+
+    private const TIME_1430 = '14:30:00';
+
+    private const TIME_1700 = '17:00:00';
+
+    private const TIME_1730 = '17:30:00';
+
+    private const TIME_1800 = '18:00:00';
+
+    private const TIME_1830 = '18:30:00';
+
+    private const TIME_1900 = '19:00:00';
+
+    private const TIME_2000 = '20:00:00';
+
+    private const TIME_2200 = '22:00:00';
+
+    private const TIME_2300 = '23:00:00';
+
     public function run(): void
     {
         $employee = Employee::where('code', self::TARGET_EMPLOYEE_CODE)->first();
@@ -39,35 +66,63 @@ class ScheduleHistorySeeder extends OnceSeeder
             return;
         }
 
+        $period = $this->getActivePeriod($employee);
+        if (! $period) {
+            return;
+        }
+
+        if ($this->hasExistingHistory($period->id)) {
+            return;
+        }
+
+        $this->clearExistingSchedules($period->id);
+
+        $this->command->info("📋 Creating schedule history for {$employee->code} ({$employee->full_name})...");
+
+        $this->createScheduleHistory($period);
+        $this->seedOverrides($period->id);
+
+        $this->command->info("✅ Schedule history created for {$employee->code}: 4 schedules + overrides");
+    }
+
+    private function getActivePeriod(Employee $employee): ?EmploymentPeriod
+    {
         $period = EmploymentPeriod::where('employee_id', $employee->id)
             ->where('is_active', true)
             ->first();
 
         if (! $period) {
             $this->command->warn('⚠ No active employment period for '.self::TARGET_EMPLOYEE_CODE.', skipping');
-
-            return;
         }
 
-        // Check if we already have multiple schedules (history seeder already ran)
-        $existingCount = EmployeeSchedule::where('employment_period_id', $period->id)->count();
+        return $period;
+    }
+
+    private function hasExistingHistory(int $periodId): bool
+    {
+        $existingCount = EmployeeSchedule::where('employment_period_id', $periodId)->count();
+
         if ($existingCount > 1) {
             $this->command->info('⏭ Schedule history already exists for '.self::TARGET_EMPLOYEE_CODE." ({$existingCount} schedules), skipping");
 
-            return;
+            return true;
         }
 
-        // Delete existing schedules and recreate with history
+        return false;
+    }
+
+    private function clearExistingSchedules(int $periodId): void
+    {
         ScheduleDay::whereIn(
             'employee_schedule_id',
-            EmployeeSchedule::where('employment_period_id', $period->id)->pluck('id')
+            EmployeeSchedule::where('employment_period_id', $periodId)->pluck('id')
         )->delete();
-        EmployeeSchedule::where('employment_period_id', $period->id)->delete();
-        ScheduleDayOverride::where('employment_period_id', $period->id)->delete();
+        EmployeeSchedule::where('employment_period_id', $periodId)->delete();
+        ScheduleDayOverride::where('employment_period_id', $periodId)->delete();
+    }
 
-        $this->command->info("📋 Creating schedule history for {$employee->code} ({$employee->full_name})...");
-
-        // Define schedule periods
+    private function createScheduleHistory(EmploymentPeriod $period): void
+    {
         $now = now();
         $schedules = [
             // Schedule 1: Initial hire (2 years ago → 18 months ago)
@@ -76,10 +131,10 @@ class ScheduleHistorySeeder extends OnceSeeder
                 'effective_to' => $now->copy()->subMonths(18)->endOfMonth()->toDateString(),
                 'workday_type' => WorkdayType::FULL,
                 'working_days_per_week' => 6,
-                'shift' => ['09:00:00', '18:00:00'],    // 9 AM - 6 PM
-                'lunch' => ['13:00:00', '14:00:00'],   // 1 PM - 2 PM (1 hour)
+                'shift' => [self::TIME_0900, self::TIME_1800],  // 9 AM - 6 PM
+                'lunch' => [self::TIME_1300, self::TIME_1400],  // 1 PM - 2 PM (1 hour)
                 'lunch_minutes' => 60,
-                'rest_days' => [7],                     // Sunday only
+                'rest_days' => [7],                              // Sunday only
             ],
             // Schedule 2: Changed shift (18 months ago → 12 months ago)
             [
@@ -87,10 +142,10 @@ class ScheduleHistorySeeder extends OnceSeeder
                 'effective_to' => $now->copy()->subMonths(12)->endOfMonth()->toDateString(),
                 'workday_type' => WorkdayType::FULL,
                 'working_days_per_week' => 6,
-                'shift' => ['10:00:00', '19:00:00'],   // 10 AM - 7 PM
-                'lunch' => ['14:00:00', '14:30:00'],  // 2 PM - 2:30 PM (30 min)
+                'shift' => [self::TIME_1000, self::TIME_1900],  // 10 AM - 7 PM
+                'lunch' => [self::TIME_1400, self::TIME_1430],  // 2 PM - 2:30 PM (30 min)
                 'lunch_minutes' => 30,
-                'rest_days' => [7],                    // Sunday only
+                'rest_days' => [7],                              // Sunday only
             ],
             // Schedule 3: Part-time period (12 months ago → 6 months ago)
             [
@@ -98,57 +153,55 @@ class ScheduleHistorySeeder extends OnceSeeder
                 'effective_to' => $now->copy()->subMonths(6)->endOfMonth()->toDateString(),
                 'workday_type' => WorkdayType::PARTIAL,
                 'working_days_per_week' => 5,
-                'shift' => ['14:00:00', '20:00:00'],   // 2 PM - 8 PM (6 hours)
-                'lunch' => ['17:00:00', '17:30:00'],  // 5 PM - 5:30 PM (30 min)
+                'shift' => [self::TIME_1400, self::TIME_2000],  // 2 PM - 8 PM (6 hours)
+                'lunch' => [self::TIME_1700, self::TIME_1730],  // 5 PM - 5:30 PM (30 min)
                 'lunch_minutes' => 30,
-                'rest_days' => [6, 7],                 // Saturday & Sunday
+                'rest_days' => [6, 7],                           // Saturday & Sunday
             ],
             // Schedule 4: Current (6 months ago → now, open-ended)
             [
                 'effective_from' => $now->copy()->subMonths(6)->endOfMonth()->addDay()->toDateString(),
-                'effective_to' => null,                // Current, open-ended
+                'effective_to' => null,                          // Current, open-ended
                 'workday_type' => WorkdayType::FULL,
                 'working_days_per_week' => 6,
-                'shift' => ['13:00:00', '22:00:00'],   // 1 PM - 10 PM
-                'lunch' => ['17:00:00', '17:30:00'],  // 5 PM - 5:30 PM (30 min)
+                'shift' => [self::TIME_1300, self::TIME_2200],  // 1 PM - 10 PM
+                'lunch' => [self::TIME_1700, self::TIME_1730],  // 5 PM - 5:30 PM (30 min)
                 'lunch_minutes' => 30,
-                'rest_days' => [7],                    // Sunday only
+                'rest_days' => [7],                              // Sunday only
             ],
         ];
 
         foreach ($schedules as $index => $config) {
-            $schedule = EmployeeSchedule::create([
-                'employment_period_id' => $period->id,
-                'effective_from' => $config['effective_from'],
-                'effective_to' => $config['effective_to'],
-                'workday_type' => $config['workday_type'],
-                'working_days_per_week' => $config['working_days_per_week'],
+            $this->createScheduleWithDays($period, $config, $index);
+        }
+    }
+
+    private function createScheduleWithDays(EmploymentPeriod $period, array $config, int $index): void
+    {
+        $schedule = EmployeeSchedule::create([
+            'employment_period_id' => $period->id,
+            'effective_from' => $config['effective_from'],
+            'effective_to' => $config['effective_to'],
+            'workday_type' => $config['workday_type'],
+            'working_days_per_week' => $config['working_days_per_week'],
+        ]);
+
+        for ($dow = 1; $dow <= 7; $dow++) {
+            $isRestDay = in_array($dow, $config['rest_days']);
+            ScheduleDay::create([
+                'employee_schedule_id' => $schedule->id,
+                'day_of_week' => $dow,
+                'is_day_off' => $isRestDay,
+                'expected_start' => $isRestDay ? null : $config['shift'][0],
+                'expected_lunch_start' => $isRestDay ? null : $config['lunch'][0],
+                'expected_lunch_end' => $isRestDay ? null : $config['lunch'][1],
+                'lunch_duration_minutes' => $isRestDay ? null : $config['lunch_minutes'],
+                'expected_end' => $isRestDay ? null : $config['shift'][1],
             ]);
-
-            // Create 7 schedule days
-            for ($dow = 1; $dow <= 7; $dow++) {
-                $isRestDay = in_array($dow, $config['rest_days']);
-                ScheduleDay::create([
-                    'employee_schedule_id' => $schedule->id,
-                    'day_of_week' => $dow,
-                    'is_day_off' => $isRestDay,
-                    'expected_start' => $isRestDay ? null : $config['shift'][0],
-                    'expected_lunch_start' => $isRestDay ? null : $config['lunch'][0],
-                    'expected_lunch_end' => $isRestDay ? null : $config['lunch'][1],
-                    'lunch_duration_minutes' => $isRestDay ? null : $config['lunch_minutes'],
-                    'expected_end' => $isRestDay ? null : $config['shift'][1],
-                ]);
-            }
-
-            $status = $config['effective_to'] ? "cerrado ({$config['effective_to']})" : 'ACTIVO';
-            $scheduleNum = $index + 1;
-            $this->command->info("  ✓ Schedule #{$scheduleNum}: {$config['effective_from']} → {$status}");
         }
 
-        // Add some overrides to the current schedule for testing
-        $this->seedOverrides($period->id);
-
-        $this->command->info("✅ Schedule history created for {$employee->code}: 4 schedules + overrides");
+        $status = $config['effective_to'] ? "cerrado ({$config['effective_to']})" : 'ACTIVO';
+        $this->command->info('  ✓ Schedule #'.($index + 1).": {$config['effective_from']} → {$status}");
     }
 
     private function seedOverrides(int $periodId): void
@@ -159,21 +212,21 @@ class ScheduleHistorySeeder extends OnceSeeder
             // Permanent override: Monday changed to later shift (indefinite)
             [
                 'employment_period_id' => $periodId,
-                'day_of_week' => 1, // Monday
+                'day_of_week' => 1,
                 'effective_from' => $now->copy()->subMonths(2)->startOfMonth()->toDateString(),
-                'effective_to' => null, // Permanent
+                'effective_to' => null,
                 'is_day_off' => false,
-                'expected_start' => '14:00:00',      // Start 1 hour later
-                'expected_lunch_start' => '18:00:00',
-                'expected_lunch_end' => '18:30:00',
+                'expected_start' => self::TIME_1400,
+                'expected_lunch_start' => self::TIME_1800,
+                'expected_lunch_end' => self::TIME_1830,
                 'lunch_duration_minutes' => 30,
-                'expected_end' => '23:00:00',        // End 1 hour later
+                'expected_end' => self::TIME_2300,
                 'note' => 'Lunes con horario extendido',
             ],
             // Temporary override: Saturday off for a specific date (past)
             [
                 'employment_period_id' => $periodId,
-                'day_of_week' => 6, // Saturday
+                'day_of_week' => 6,
                 'effective_from' => $now->copy()->subWeeks(3)->startOfWeek()->addDays(5)->toDateString(),
                 'effective_to' => $now->copy()->subWeeks(3)->startOfWeek()->addDays(5)->toDateString(),
                 'is_day_off' => true,
@@ -187,15 +240,15 @@ class ScheduleHistorySeeder extends OnceSeeder
             // Temporary override: Friday with different hours (future range)
             [
                 'employment_period_id' => $periodId,
-                'day_of_week' => 5, // Friday
+                'day_of_week' => 5,
                 'effective_from' => $now->copy()->addWeeks(1)->startOfWeek()->addDays(4)->toDateString(),
                 'effective_to' => $now->copy()->addWeeks(2)->startOfWeek()->addDays(4)->toDateString(),
                 'is_day_off' => false,
-                'expected_start' => '10:00:00',
-                'expected_lunch_start' => '14:00:00',
-                'expected_lunch_end' => '14:30:00',
+                'expected_start' => self::TIME_1000,
+                'expected_lunch_start' => self::TIME_1400,
+                'expected_lunch_end' => self::TIME_1430,
                 'lunch_duration_minutes' => 30,
-                'expected_end' => '19:00:00',
+                'expected_end' => self::TIME_1900,
                 'note' => 'Viernes con horario especial',
             ],
         ];
