@@ -233,13 +233,12 @@ export function LeaveChip({ leave, nowMs = Date.now() }: Readonly<LeaveChipProps
 
 export interface EmployeeAttendanceCardProps {
     row: TodayAttendanceRow
-    onCheckIn: (employee: TodayAttendanceEmployee) => void
+    onCheckIn: (row: TodayAttendanceRow) => void
     onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
-    onExtraDay: (row: TodayAttendanceRow) => void
 }
 
 export function EmployeeAttendanceCard({
@@ -250,7 +249,6 @@ export function EmployeeAttendanceCard({
     onCheckOut,
     onOvertimeDecision,
     onMarkDayStatus,
-    onExtraDay,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
@@ -261,50 +259,39 @@ export function EmployeeAttendanceCard({
     const isFullDayLeave = leave?.time_mode === 'OPEN_ENDED'
 
     function renderPendingActions() {
-        if (isScheduledRestDay) {
-            return (
-                <>
+        if (isFullDayLeave) {
+            return null
+        }
+        return (
+            <>
+                {isScheduledRestDay && (
                     <div className="flex items-center gap-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2">
                         <BedDouble className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
                         <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
                             Descanso programado
                         </span>
                     </div>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
-                        onClick={() => onExtraDay(row)}
-                    >
-                        <LogIn className="h-3.5 w-3.5 mr-1.5" />
-                        Registrar entrada
-                    </Button>
-                </>
-            )
-        }
-        if (isFullDayLeave) {
-            return null
-        }
-        return (
-            <>
+                )}
                 <Button
                     size="sm"
                     className="w-full"
-                    onClick={() => onCheckIn(row.employee)}
+                    onClick={() => onCheckIn(row)}
                 >
                     <LogIn className="h-3.5 w-3.5 mr-1.5" />
                     Registrar entrada
                 </Button>
-                <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
-                    data-testid="btn-mark-falta"
-                    onClick={() => setConfirmFaltaOpen(true)}
-                >
-                    <UserX className="h-3.5 w-3.5 mr-1.5" />
-                    Marcar falta
-                </Button>
+                {!isScheduledRestDay && (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                        data-testid="btn-mark-falta"
+                        onClick={() => setConfirmFaltaOpen(true)}
+                    >
+                        <UserX className="h-3.5 w-3.5 mr-1.5" />
+                        Marcar falta
+                    </Button>
+                )}
             </>
         )
     }
