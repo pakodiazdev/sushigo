@@ -242,4 +242,87 @@ class ScheduleHistoryApiTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    #[Test]
+    public function excludes_overrides_starting_before_schedule_effective_from(): void
+    {
+        Passport::actingAs($this->admin);
+
+        EmployeeSchedule::factory()->create([
+            'employment_period_id' => $this->period->id,
+            'effective_from' => Carbon::parse('2026-03-01'),
+            'effective_to' => null,
+        ]);
+
+        // Override before schedule start (should be excluded)
+        ScheduleDayOverride::factory()->create([
+            'employment_period_id' => $this->period->id,
+            'day_of_week' => 1,
+            'effective_from' => Carbon::parse('2026-02-15'),
+            'effective_to' => Carbon::parse('2026-02-15'),
+            'note' => 'Before schedule',
+        ]);
+
+        $response = $this->getJson($this->url());
+
+        $response->assertStatus(200);
+        $this->assertCount(0, $response->json('data.0.overrides'));
+    }
+
+    #[Test]
+    public function includes_future_dated_overrides_for_active_schedule(): void
+    {
+        Passport::actingAs($this->admin);
+
+        Carbon::setTestNow(Carbon::parse('2026-04-01'));
+
+        EmployeeSchedule::factory()->create([
+            'employment_period_id' => $this->period->id,
+            'effective_from' => Carbon::parse('2026-03-01'),
+            'effective_to' => null,
+        ]);
+
+        // Future override (should be included for active schedule)
+        ScheduleDayOverride::factory()->create([
+            'employment_period_id' => $this->period->id,
+            'day_of_week' => 1,
+            'effective_from' => Carbon::parse('2026-06-15'),
+            'effective_to' => Carbon::parse('2026-06-15'),
+            'note' => 'Future override',
+        ]);
+
+        $response = $this->getJson($this->url());
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('data.0.overrides'));
+        $this->assertEquals('Future override', $response->json('data.0.overrides.0.note'));
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
+    public function excludes_overrides_after_schedule_end_date(): void
+    {
+        Passport::actingAs($this->admin);
+
+        EmployeeSchedule::factory()->create([
+            'employment_period_id' => $this->period->id,
+            'effective_from' => Carbon::parse('2026-01-01'),
+            'effective_to' => Carbon::parse('2026-02-28'),
+        ]);
+
+        // Override after schedule end (should be excluded)
+        ScheduleDayOverride::factory()->create([
+            'employment_period_id' => $this->period->id,
+            'day_of_week' => 1,
+            'effective_from' => Carbon::parse('2026-03-15'),
+            'effective_to' => Carbon::parse('2026-03-15'),
+            'note' => 'After schedule end',
+        ]);
+
+        $response = $this->getJson($this->url());
+
+        $response->assertStatus(200);
+        $this->assertCount(0, $response->json('data.0.overrides'));
+    }
 }
