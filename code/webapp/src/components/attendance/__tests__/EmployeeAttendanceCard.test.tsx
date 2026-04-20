@@ -360,15 +360,18 @@ describe('EmployeeAttendanceCard', () => {
         expect(onMarkDayStatus).not.toHaveBeenCalled()
     })
 
-    it('shows "Descanso programado" indicator for scheduled rest-day employees', () => {
+    it('shows "Descanso programado" indicator AND "Registrar entrada" button for rest-day employees', () => {
         const restDayRow: TodayAttendanceRow = { ...mockRow, schedule: restSchedule }
         const { container, queryByTestId } = render(
             <EmployeeAttendanceCard {...defaultProps} row={restDayRow} />
         )
 
+        // Shows the rest-day chip
         expect(container.innerHTML).toContain('Descanso programado')
+        // "Registrar entrada" is visible — clicking it opens the extra-day negotiation dialog
+        expect(container.innerHTML).toContain('Registrar entrada')
+        // "Marcar falta" is hidden on rest days (no absence to mark)
         expect(queryByTestId('btn-mark-falta')).toBeNull()
-        expect(container.innerHTML).not.toContain('Registrar entrada')
     })
 
     it('does not render action buttons for employees with attendance', () => {
