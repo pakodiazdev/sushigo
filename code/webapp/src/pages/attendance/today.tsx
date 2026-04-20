@@ -289,7 +289,7 @@ export function TodayAttendancePage() {
         <ExtraDayNegotiationDialog
           employee={extraDayRow.employee}
           date={todayDateCdmx()}
-          registeredDailyWage={null}
+          registeredDailyWage={extraDayRow.employee.daily_wage}
           isPending={isRegisteringExtraDay}
           onConfirm={confirmExtraDay}
           onCancel={closeExtraDay}

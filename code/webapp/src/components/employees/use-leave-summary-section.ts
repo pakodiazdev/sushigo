@@ -58,6 +58,7 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
             first_name: employee.first_name,
             last_name: employee.last_name,
             roles: [],
+            daily_wage: null,
         }
     }
 

@@ -97,6 +97,9 @@ class TodayAttendanceController extends Controller
                 ->with('leaveType')
                 ->reorder()
                 ->oldest('id'),
+            // Load the wage record effective today to compute the daily wage shown in the
+            // ExtraDayNegotiationDialog. Only the most recent effective record is needed.
+            'wageHistories' => fn ($q) => $q->effective($today)->latest('effective_from'),
         ])
             ->whereHas('employmentPeriods', function ($q) use ($branchId) {
                 $q->where('branch_id', $branchId)

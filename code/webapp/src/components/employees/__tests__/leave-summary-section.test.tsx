@@ -231,7 +231,7 @@ describe('LeaveSummarySection', () => {
     it('opens RegisterLeaveDialog when pendingLeaveEmployee is set', () => {
         currentHook = {
             ...currentHook,
-            pendingLeaveEmployee: { id: 'emp-1', code: 'E001', first_name: 'Ana', last_name: 'López', roles: [] },
+            pendingLeaveEmployee: { id: 'emp-1', code: 'E001', first_name: 'Ana', last_name: 'López', roles: [], daily_wage: null },
             showRegisterLeave: true,
         }
 
@@ -521,7 +521,7 @@ describe('LeaveSummarySection', () => {
     it('renders request leave dialog when showRequestLeave is true', () => {
         currentHook = {
             ...currentHook,
-            pendingLeaveEmployee: { id: 'emp-1', code: 'E001', first_name: 'Ana', last_name: 'López', roles: [] },
+            pendingLeaveEmployee: { id: 'emp-1', code: 'E001', first_name: 'Ana', last_name: 'López', roles: [], daily_wage: null },
             showRequestLeave: true,
         }
 
