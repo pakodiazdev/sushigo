@@ -119,8 +119,8 @@ export function buildCompactSummaryLine(days: ScheduleDay[]): string {
 
   const parts: string[] = []
 
-  // Day range
-  const dayRange = computeDayRangeLabelInternal(working, resting)
+  // Day range (reuse the computeDayRangeLabel function defined above)
+  const dayRange = computeDayRangeLabel(working, resting)
   const ref = working[0]!
   const startT = formatTime(ref.expected_start)
   const endT = formatTime(ref.expected_end)
@@ -140,31 +140,4 @@ export function buildCompactSummaryLine(days: ScheduleDay[]): string {
   }
 
   return parts.join(' · ')
-}
-
-// Internal helper with same logic as computeDayRangeLabel
-function computeDayRangeLabelInternal(working: ScheduleDay[], resting: ScheduleDay[]): string {
-  const DOW_ABBR = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const
-  const DOW_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] as const
-
-  if (working.length === 7) return 'L-D'
-  if (working.length === 1) return DOW_NAMES[working[0]!.day_of_week - 1]!
-
-  const isConsecutive = working.every(
-    (d, i) => i === 0 || d.day_of_week === working[i - 1]!.day_of_week + 1,
-  )
-  if (isConsecutive) {
-    return `${DOW_ABBR[working[0]!.day_of_week - 1]}-${DOW_ABBR[working[working.length - 1]!.day_of_week - 1]}`
-  }
-
-  const isRestConsecutive = resting.every(
-    (d, i) => i === 0 || d.day_of_week === resting[i - 1]!.day_of_week + 1,
-  )
-  if (isRestConsecutive) {
-    const firstWork = working[0]!
-    const lastWork = working[working.length - 1]!
-    return `${DOW_ABBR[firstWork.day_of_week - 1]}-${DOW_ABBR[lastWork.day_of_week - 1]}`
-  }
-
-  return working.map((d) => DOW_ABBR[d.day_of_week - 1]).join('')
 }
