@@ -20,19 +20,10 @@ const createMockSchedule = (
 ): EmployeeSchedule => ({
     id: '1',
     employment_period_id: 'period-01',
-    employment_period: {
-        id: 'period-01',
-        start_date: '2026-01-01',
-        end_date: null,
-        employee_id: 'emp-01',
-        employee: { id: 'emp-01', name: 'Test Employee' },
-        position: 'Waiter',
-        employment_type: 'full-time',
-        created_at: '2026-01-01T00:00:00Z',
-        updated_at: '2026-01-01T00:00:00Z',
-    },
     effective_from: '2026-01-01',
     effective_to: null,
+    workday_type: 'FULL',
+    working_days_per_week: 5,
     days: [
         {
             day_of_week: 1,
