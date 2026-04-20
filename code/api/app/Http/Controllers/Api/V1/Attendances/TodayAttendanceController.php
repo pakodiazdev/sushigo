@@ -15,6 +15,7 @@ use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\ScheduleDay;
+use App\Models\ScheduleDayOverride;
 use Carbon\Carbon;
 
 /**
@@ -186,7 +187,15 @@ class TodayAttendanceController extends Controller
             ->get()
             ->keyBy('employee_schedule_id');
 
-        // Step 4: Map back to employee IDs
+        // Step 3b: Get ScheduleDayOverrides effective today — override takes full precedence.
+        // Keyed by "{employment_period_id}:{day_of_week}" for O(1) lookup.
+        $overrides = ScheduleDayOverride::effective($today)
+            ->whereIn('employment_period_id', $periods->pluck('id'))
+            ->where('day_of_week', $dayOfWeekIso)
+            ->get()
+            ->keyBy(fn ($o) => "{$o->employment_period_id}:{$o->day_of_week}");
+
+        // Step 4: Map back to employee IDs, preferring override over base schedule day
         foreach ($employees as $employee) {
             $period = $periods[$employee->id] ?? null;
             if (! $period) {
@@ -198,7 +207,8 @@ class TodayAttendanceController extends Controller
                 continue;
             }
 
-            $result[$employee->id] = $scheduleDays[$schedule->id] ?? null;
+            $overrideKey = "{$period->id}:{$dayOfWeekIso}";
+            $result[$employee->id] = $overrides[$overrideKey] ?? $scheduleDays[$schedule->id] ?? null;
         }
 
         return $result;

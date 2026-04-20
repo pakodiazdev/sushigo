@@ -333,27 +333,41 @@ describe('useTodayAttendancePage', () => {
   // ── Check-in flow tests ──────────────────────────────────────────────────────
 
   describe('check-in flow', () => {
-    it('openCheckIn sets pending employee', async () => {
+    it('openCheckIn sets pending employee for normal day', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
-      const employee = makeEmployee()
+      const row = makeRow({ schedule: { day_of_week: 1, is_day_off: false, expected_start: '13:00', expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null, expected_end: '22:00' } })
 
       act(() => {
-        result.current.openCheckIn(employee)
+        result.current.openCheckIn(row)
       })
 
-      expect(result.current.pendingCheckInEmployee).toEqual(employee)
+      expect(result.current.pendingCheckInEmployee).toEqual(row.employee)
+    })
+
+    it('openCheckIn opens extra day dialog for rest day instead of check-in', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const row = makeRow({ schedule: { day_of_week: 1, is_day_off: true, expected_start: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null, expected_end: null } })
+
+      act(() => {
+        result.current.openCheckIn(row)
+      })
+
+      expect(result.current.pendingCheckInEmployee).toBeNull()
+      expect(result.current.extraDayRow).toEqual(row)
     })
 
     it('closeCheckIn clears pending employee', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
 
-      const employee = makeEmployee()
+      const row = makeRow()
 
       act(() => {
-        result.current.openCheckIn(employee)
+        result.current.openCheckIn(row)
       })
 
       act(() => {
@@ -380,10 +394,10 @@ describe('useTodayAttendancePage', () => {
 
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-      const employee = makeEmployee()
+      const row = makeRow()
 
       act(() => {
-        result.current.openCheckIn(employee)
+        result.current.openCheckIn(row)
       })
 
       await act(async () => {
@@ -406,10 +420,10 @@ describe('useTodayAttendancePage', () => {
 
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-      const employee = makeEmployee()
+      const row = makeRow()
 
       act(() => {
-        result.current.openCheckIn(employee)
+        result.current.openCheckIn(row)
       })
 
       await act(async () => {

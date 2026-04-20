@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { useExtraDayExpress } from '@/components/attendance/use-extra-day-express'
 import { getAttendancePhase } from '@/types/attendance'
-import { todayDateCdmx, currentTimeLabel } from '@/lib/datetime'
+import { todayDateCdmx } from '@/lib/datetime'
 import { timeToIsoWithOffset } from '@/lib/timezone'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
@@ -65,7 +65,7 @@ export interface UseTodayAttendancePageResult {
   // Check-in action
   pendingCheckInEmployee: TodayAttendanceEmployee | null
   isCheckingIn: boolean
-  openCheckIn: (employee: TodayAttendanceEmployee) => void
+  openCheckIn: (row: TodayAttendanceRow) => void
   closeCheckIn: () => void
   confirmCheckIn: (time: string) => void
   // Lunch-start action
@@ -124,12 +124,21 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
 
   const summary = computeSummary(data)
 
+  // ── Extra day express state (declared first — openCheckIn depends on it) ──────
+  const [extraDayRow, setExtraDayRow] = useState<TodayAttendanceRow | null>(null)
+
   // ── Check-in state ───────────────────────────────────────────────────────────
   const [pendingCheckInEmployee, setPendingCheckInEmployee] =
     useState<TodayAttendanceEmployee | null>(null)
 
-  const openCheckIn = useCallback((employee: TodayAttendanceEmployee) => {
-    setPendingCheckInEmployee(employee)
+  // If the row is a scheduled rest day, intercept and show the extra day
+  // negotiation dialog first; otherwise go straight to the time dialog.
+  const openCheckIn = useCallback((row: TodayAttendanceRow) => {
+    if (row.schedule?.is_day_off) {
+      setExtraDayRow(row)
+    } else {
+      setPendingCheckInEmployee(row.employee)
+    }
   }, [])
 
   const closeCheckIn = useCallback(() => {
@@ -262,7 +271,8 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   )
 
   // ── Extra day express ─────────────────────────────────────────────────────────
-  const [extraDayRow, setExtraDayRow] = useState<TodayAttendanceRow | null>(null)
+  // Note: extraDayRow state is declared at the top of the hook (before openCheckIn)
+  // because openCheckIn intercepts rest-day rows and opens this dialog directly.
 
   const openExtraDay = useCallback((row: TodayAttendanceRow) => {
     setExtraDayRow(row)
@@ -275,10 +285,11 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const confirmExtraDay = useCallback(
     (payload: { agreed_daily_wage: number; prima_percent: number; notes: string }) => {
       if (!extraDayRow) return
+      const employee = extraDayRow.employee
       const date = todayCdmxDate()
       extraDayMutation.mutate(
         {
-          employee_id: extraDayRow.employee.id,
+          employee_id: employee.id,
           date,
           agreed_daily_wage: payload.agreed_daily_wage,
           prima_percent: payload.prima_percent,
@@ -286,16 +297,16 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
         },
         {
           onSuccess: () => {
-            checkInMutation.mutate(
-              { employee_id: extraDayRow.employee.id, check_in: timeToIso(currentTimeLabel()) },
-              { onSettled: closeExtraDay },
-            )
+            // Extra day negotiated — close dialog and open the time picker
+            // so the manager can register the actual arrival time.
+            setExtraDayRow(null)
+            setPendingCheckInEmployee(employee)
           },
           onError: closeExtraDay,
         },
       )
     },
-    [extraDayRow, extraDayMutation, checkInMutation, closeExtraDay],
+    [extraDayRow, extraDayMutation, closeExtraDay],
   )
 
   return {
