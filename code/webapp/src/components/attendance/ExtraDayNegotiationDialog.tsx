@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { CheckCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useExtraDayNegotiationDialog } from './use-extra-day-negotiation-dialog'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
 
 // ── Schema ─────────────────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ export interface ExtraDayNegotiationDialogProps {
 /**
  * Dialog for negotiating and approving an extra day for an employee on a scheduled rest day.
  * Manager sets the daily wage and prima bonus, then approves — which creates the
- * NegotiatedExtraDay record and registers the check-in in one step.
+ * NegotiatedExtraDay record. After approval the time-picker dialog opens for the actual check-in.
  */
 export function ExtraDayNegotiationDialog({
   employee,
@@ -41,49 +42,33 @@ export function ExtraDayNegotiationDialog({
   onConfirm,
   onCancel,
 }: Readonly<ExtraDayNegotiationDialogProps>) {
-  // Salary mode: use the registered wage or a custom amount
-  const [salaryMode, setSalaryMode] = useState<'registered' | 'custom'>('registered')
-  const [salaryAmount, setSalaryAmount] = useState<number>(registeredDailyWage ?? 0)
-  const [salaryPercent, setSalaryPercent] = useState<number>(100)
-
-  // Prima mode: legal (100%) or negotiated
-  const [primaMode, setPrimaMode] = useState<'legal' | 'custom'>('legal')
-  const [primaPercent, setPrimaPercent] = useState<number>(100)
-  const [primaAmount, setPrimaAmount] = useState<number>(salaryAmount)
+  const {
+    salaryMode,
+    salaryAmount,
+    salaryPercent,
+    primaMode,
+    primaPercent,
+    primaAmount,
+    effectiveSalary,
+    seventhDay,
+    effectivePrima,
+    total,
+    setSalaryMode,
+    setPrimaMode,
+    setPrimaPercent,
+    setPrimaAmount,
+    handleSalaryPercentChange,
+    handleSalaryAmountChange,
+    handlePrimaPercentChange,
+    handlePrimaAmountChange,
+    formatCurrency,
+    finalPrimaPercent,
+  } = useExtraDayNegotiationDialog(registeredDailyWage)
 
   const { register, handleSubmit, formState: { errors } } = useForm<ExtraDayFormValues>({
     resolver: zodResolver(extraDaySchema),
     defaultValues: { notes: '' },
   })
-
-  // Effective salary = registered wage (if mode = registered) or custom amount
-  const effectiveSalary = salaryMode === 'registered'
-    ? (registeredDailyWage ?? 0)
-    : salaryAmount
-
-  // Seventh-day part (1/6 of the daily wage, automatic)
-  const seventhDay = effectiveSalary / 6
-
-  // Effective prima = 100% of salary (legal) or custom
-  const effectivePrima = primaMode === 'legal' ? effectiveSalary : primaAmount
-
-  const total = effectiveSalary + seventhDay + effectivePrima
-
-  // Sync salary percent↔amount when registered wage changes
-  useEffect(() => {
-    if (registeredDailyWage !== null) {
-      setSalaryAmount(registeredDailyWage)
-      setSalaryPercent(100)
-    }
-  }, [registeredDailyWage])
-
-  // Sync prima amount when effective salary changes
-  useEffect(() => {
-    if (primaMode === 'legal') {
-      setPrimaAmount(effectiveSalary)
-      setPrimaPercent(100)
-    }
-  }, [effectiveSalary, primaMode])
 
   // Escape key handler
   useEffect(() => {
@@ -100,42 +85,7 @@ export function ExtraDayNegotiationDialog({
     return () => { document.body.style.overflow = 'unset' }
   }, [])
 
-  function handleSalaryPercentChange(val: string) {
-    const pct = parseFloat(val) || 0
-    setSalaryPercent(pct)
-    if (registeredDailyWage !== null && registeredDailyWage > 0) {
-      setSalaryAmount(registeredDailyWage * pct / 100)
-    }
-  }
-
-  function handleSalaryAmountChange(val: string) {
-    const amt = parseFloat(val) || 0
-    setSalaryAmount(amt)
-    if (registeredDailyWage !== null && registeredDailyWage > 0) {
-      setSalaryPercent(amt / registeredDailyWage * 100)
-    }
-  }
-
-  function handlePrimaPercentChange(val: string) {
-    const pct = parseFloat(val) || 0
-    setPrimaPercent(pct)
-    setPrimaAmount(effectiveSalary * pct / 100)
-  }
-
-  function handlePrimaAmountChange(val: string) {
-    const amt = parseFloat(val) || 0
-    setPrimaAmount(amt)
-    if (effectiveSalary > 0) {
-      setPrimaPercent(amt / effectiveSalary * 100)
-    }
-  }
-
-  function formatCurrency(amount: number): string {
-    return `$${amount.toFixed(2)}`
-  }
-
   function onSubmit(formValues: ExtraDayFormValues) {
-    const finalPrimaPercent = primaMode === 'legal' ? 100 : primaPercent
     onConfirm({
       agreed_daily_wage: effectiveSalary,
       prima_percent: finalPrimaPercent,
@@ -200,7 +150,7 @@ export function ExtraDayNegotiationDialog({
                 value="registered"
                 checked={salaryMode === 'registered'}
                 onChange={() => setSalaryMode('registered')}
-                disabled={isPending}
+                disabled={isPending || registeredDailyWage === null}
               />
               <span className="text-sm">
                 Salario registrado{' '}
@@ -257,7 +207,7 @@ export function ExtraDayNegotiationDialog({
 
           {/* Prima section */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Prima dominical</p>
+            <p className="text-sm font-medium text-foreground">Prima por descanso trabajado</p>
 
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -332,7 +282,7 @@ export function ExtraDayNegotiationDialog({
               <span className="font-mono font-medium">{formatCurrency(seventhDay)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Prima dominical</span>
+              <span className="text-muted-foreground">Prima por descanso trabajado</span>
               <span className="font-mono font-medium">{formatCurrency(effectivePrima)}</span>
             </div>
             <div className="flex justify-between border-t border-border pt-1.5 mt-1.5">
@@ -364,10 +314,10 @@ export function ExtraDayNegotiationDialog({
             <Button
               type="submit"
               className="w-full"
-              disabled={isPending || effectiveSalary <= 0}
+              disabled={isPending || effectiveSalary < 0}
             >
               <CheckCircle className="h-4 w-4 mr-2" />
-              {isPending ? 'Registrando…' : 'Aprobar y registrar entrada'}
+              {isPending ? 'Registrando…' : 'Aprobar y continuar'}
             </Button>
             <Button
               type="button"

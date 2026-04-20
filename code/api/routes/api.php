@@ -303,7 +303,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Negotiated Extra Days Module (All Protected)
-    Route::middleware('auth:api')->prefix('negotiated-extra-days')->name('negotiated-extra-days.')->group(function () {
+    Route::middleware(['auth:api', 'permission:attendances.create'])->prefix('negotiated-extra-days')->name('negotiated-extra-days.')->group(function () {
         Route::post('/', RegisterNegotiatedExtraDayController::class)->name('store');
     });
 
