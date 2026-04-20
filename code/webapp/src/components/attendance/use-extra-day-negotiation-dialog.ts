@@ -9,7 +9,6 @@ export interface ExtraDayNegotiationDialogState {
   primaPercentRaw: string
   primaAmountRaw: string
   effectiveSalary: number
-  seventhDay: number
   effectivePrima: number
   total: number
   setSalaryMode: (mode: 'registered' | 'custom') => void
@@ -63,9 +62,10 @@ export function useExtraDayNegotiationDialog(
   const primaPercent = parseFloat(primaPercentRaw) || 0
 
   const effectiveSalary = salaryMode === 'registered' ? (registeredDailyWage ?? 0) : salaryAmount
-  const seventhDay      = effectiveSalary / 6
   const effectivePrima  = primaMode === 'legal' ? effectiveSalary : primaAmount
-  const total           = effectiveSalary + seventhDay + effectivePrima
+  // Nota: El 7° día (1/6) ya está incluido en el salario semanal del empleado.
+  // En un día de descanso trabajado, solo se paga salario + prima (no otro 1/6).
+  const total           = effectiveSalary + effectivePrima
 
   // Sync raw strings when registeredDailyWage prop changes (e.g. first load).
   useEffect(() => {
@@ -136,7 +136,6 @@ export function useExtraDayNegotiationDialog(
     primaPercentRaw,
     primaAmountRaw,
     effectiveSalary,
-    seventhDay,
     effectivePrima,
     total,
     setSalaryMode,

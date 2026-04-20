@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreateAdjustmentDialog } from '../create-adjustment-dialog'
 
@@ -146,5 +146,95 @@ describe('CreateAdjustmentDialog', () => {
         )
 
         expect(screen.getByRole('button', { name: /cancelar/i })).toBeDefined()
+    })
+
+    it('renders add line button', () => {
+        render(
+            <CreateAdjustmentDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        expect(screen.getByText(/Agregar Línea/i)).toBeDefined()
+    })
+
+    it('adds a new line when "Agregar Línea" is clicked', () => {
+        render(
+            <CreateAdjustmentDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        const addButton = screen.getByText(/Agregar Línea/i)
+        const initialAmountInputs = screen.getAllByPlaceholderText('0.00')
+        fireEvent.click(addButton)
+        const updatedAmountInputs = screen.getAllByPlaceholderText('0.00')
+        expect(updatedAmountInputs.length).toBe(initialAmountInputs.length + 1)
+    })
+
+    it('renders preselected session without session selector', () => {
+        render(
+            <CreateAdjustmentDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+                cashSessionId={1}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        // With preselected session, session selector should not be visible
+        expect(screen.queryByText('Sesión de Caja')).toBeNull()
+    })
+
+    it('shows source system field for EXTERNAL_IMPORT type by default', () => {
+        render(
+            <CreateAdjustmentDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        // EXTERNAL_IMPORT is default, so source system field should be visible
+        expect(screen.getByPlaceholderText(/POS, UBER_EATS, RAPPI/i)).toBeDefined()
+    })
+
+    it('submits form and calls onSuccess/onClose when valid', async () => {
+        const mockMutateAsync = vi.fn().mockResolvedValue({})
+        const { useCreateCashAdjustment } = await import('@/services/cash-hooks')
+        vi.mocked(useCreateCashAdjustment).mockReturnValue({
+            mutateAsync: mockMutateAsync,
+            isPending: false,
+        } as unknown as ReturnType<typeof useCreateCashAdjustment>)
+
+        render(
+            <CreateAdjustmentDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+                cashSessionId={1}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        const amountInput = screen.getByPlaceholderText('0.00')
+        fireEvent.change(amountInput, { target: { value: '100' } })
+
+        const submitButton = screen.getByRole('button', { name: /registrar/i })
+        await act(async () => {
+            fireEvent.click(submitButton)
+        })
+
+        expect(mockMutateAsync).toHaveBeenCalled()
+        expect(mockOnSuccess).toHaveBeenCalled()
+        expect(mockOnClose).toHaveBeenCalled()
     })
 })
