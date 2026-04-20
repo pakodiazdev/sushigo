@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\Leave;
+use App\Models\NegotiatedExtraDay;
 use App\Models\ScheduleDay;
 use App\Models\ScheduleDayOverride;
 use App\Support\Clock\ApplicationClock;
@@ -59,21 +60,43 @@ class RegisterCheckInAction
         $checkIn = $checkInLocal->clone()->utc();
 
         $this->guardNoApprovedLeave($employee->id, $date);
-        $this->guardNoDuplicateAttendance($employee->id, $date);
+
+        $hasApprovedExtraDay = NegotiatedExtraDay::where('employee_id', $employee->id)
+            ->where('date', $date)
+            ->where('status', NegotiatedExtraDay::STATUS_APPROVED)
+            ->exists();
+
+        // Guard duplicate attendance, but allow updating an EXTRA attendance that
+        // has no check-in yet (created by RegisterNegotiatedExtraDayAction).
+        $this->guardNoDuplicateAttendance($employee->id, $date, $hasApprovedExtraDay);
 
         $period = $this->resolveActiveEmploymentPeriod($employee->id, $date);
         $schedule = $this->resolveActiveSchedule($period->id, $date);
-        $scheduleDay = $this->resolveScheduleDay($schedule, $dayOfWeekIso, $period->id, $date);
 
-        $lateSeconds = $this->calculateLateSeconds($checkInLocal, $scheduleDay->expected_start);
+        $scheduleDay = $this->resolveScheduleDay(
+            $schedule,
+            $dayOfWeekIso,
+            $period->id,
+            $date,
+            $hasApprovedExtraDay,
+        );
 
-        $attendance = Attendance::create([
-            'employee_id' => $employee->id,
-            'date' => $date,
-            'check_in' => $checkIn,
-            'entry_late_seconds' => $lateSeconds,
-            'day_status' => DayStatus::WORKED,
-        ]);
+        $lateSeconds = $scheduleDay->is_day_off
+            ? 0
+            : $this->calculateLateSeconds($checkInLocal, $scheduleDay->expected_start);
+
+        $dayStatus = $hasApprovedExtraDay && $scheduleDay->is_day_off
+            ? DayStatus::EXTRA
+            : DayStatus::WORKED;
+
+        $attendance = Attendance::updateOrCreate(
+            ['employee_id' => $employee->id, 'date' => $date],
+            [
+                'check_in' => $checkIn,
+                'entry_late_seconds' => $lateSeconds,
+                'day_status' => $dayStatus,
+            ],
+        );
 
         return $attendance->load('employee');
     }
@@ -81,19 +104,30 @@ class RegisterCheckInAction
     /**
      * Throw a 422 if the employee already has an attendance record for this date.
      *
+     * When $hasApprovedExtraDay is true, an existing attendance with no check-in
+     * (created by RegisterNegotiatedExtraDayAction) is allowed — the check-in
+     * will update it via updateOrCreate.
+     *
      * @throws ValidationException
      */
-    private function guardNoDuplicateAttendance(int $employeeId, string $date): void
+    private function guardNoDuplicateAttendance(int $employeeId, string $date, bool $hasApprovedExtraDay = false): void
     {
-        $exists = Attendance::where('employee_id', $employeeId)
+        $existing = Attendance::where('employee_id', $employeeId)
             ->where('date', $date)
-            ->exists();
+            ->first();
 
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'check_in' => 'El empleado ya tiene asistencia registrada para este día.',
-            ]);
+        if (! $existing) {
+            return;
         }
+
+        // Allow check-in on an EXTRA attendance stub that has no check-in yet.
+        if ($hasApprovedExtraDay && $existing->day_status === DayStatus::EXTRA && $existing->check_in === null) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'check_in' => 'El empleado ya tiene asistencia registrada para este día.',
+        ]);
     }
 
     /**
@@ -183,6 +217,10 @@ class RegisterCheckInAction
      * ScheduleDay. This allows managers to mark a normally-off day as workable
      * (or vice-versa) for a specific date range without changing the base schedule.
      *
+     * When $allowDayOff is true (there is an approved NegotiatedExtraDay), the
+     * day-off guard is skipped and the rest-day config is returned so the caller
+     * can derive the correct DayStatus::EXTRA.
+     *
      * @throws ValidationException
      */
     private function resolveScheduleDay(
@@ -190,6 +228,7 @@ class RegisterCheckInAction
         int $dayOfWeekIso,
         int $periodId,
         string $date,
+        bool $allowDayOff = false,
     ): ScheduleDay|ScheduleDayOverride {
         // Override takes precedence — check it first.
         $override = ScheduleDayOverride::effective($date)
@@ -198,7 +237,7 @@ class RegisterCheckInAction
             ->first();
 
         if ($override) {
-            if ($override->is_day_off) {
+            if ($override->is_day_off && ! $allowDayOff) {
                 throw ValidationException::withMessages([
                     'check_in' => 'Este día está marcado como descanso en el horario del empleado.',
                 ]);
@@ -216,7 +255,7 @@ class RegisterCheckInAction
             ]);
         }
 
-        if ($scheduleDay->isDayOff()) {
+        if ($scheduleDay->isDayOff() && ! $allowDayOff) {
             throw ValidationException::withMessages([
                 'check_in' => 'Este día está marcado como descanso en el horario del empleado.',
             ]);
