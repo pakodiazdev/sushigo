@@ -29,6 +29,7 @@ function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRo
       last_name: 'Mendoza',
       code: 'EMP-001',
       roles: ['employee'],
+      daily_wage: null,
     },
     attendance: null,
     schedule: null,
@@ -143,7 +144,7 @@ describe('useCloseDayPanel', () => {
     it('computes entries for at-lunch employees', () => {
       const rows = [
         makeRow({
-          employee: { id: 'emp-001', first_name: 'Carlos', last_name: 'Mendoza', code: 'EMP-001', roles: ['employee'] },
+          employee: { id: 'emp-001', first_name: 'Carlos', last_name: 'Mendoza', code: 'EMP-001', roles: ['employee'], daily_wage: null },
           attendance: makeAttendanceData('at-lunch'),
           schedule: makeSchedule({ lunch_duration_minutes: 60 }),
         }),
