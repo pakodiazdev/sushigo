@@ -45,5 +45,3 @@ node_modules/
 .env
 !.env.example
 
-# Deprecated tasks — local history only
-doc/tasks/deprecated/
