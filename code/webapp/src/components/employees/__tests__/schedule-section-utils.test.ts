@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+    buildCompactSummaryLine,
     buildSummaryLines,
     calcDayHours,
     formatHours,
@@ -205,5 +206,113 @@ describe('overrideDateLabel', () => {
         expect(result).toMatch(/–/)
         expect(result).toContain('15')
         expect(result).toContain('20')
+    })
+})
+
+// ── buildCompactSummaryLine tests ─────────────────────────────────────────────
+
+describe('buildCompactSummaryLine', () => {
+    const createDay = (
+        dow: number,
+        isOff: boolean,
+        start?: string,
+        end?: string,
+        lunchMin?: number
+    ): ScheduleDay => ({
+        day_of_week: dow,
+        is_day_off: isOff,
+        expected_start: start ?? null,
+        expected_end: end ?? null,
+        expected_lunch_start: start ? '13:00' : null,
+        expected_lunch_end: start ? '14:00' : null,
+        lunch_duration_minutes: lunchMin ?? null,
+    })
+
+    it('returns empty string when all days are off', () => {
+        const days = [1, 2, 3, 4, 5, 6, 7].map((dow) => createDay(dow, true))
+        expect(buildCompactSummaryLine(days)).toBe('')
+    })
+
+    it('builds compact line with day range and times', () => {
+        const days = [
+            createDay(1, false, '09:00', '18:00', 60),
+            createDay(2, false, '09:00', '18:00', 60),
+            createDay(3, false, '09:00', '18:00', 60),
+            createDay(4, false, '09:00', '18:00', 60),
+            createDay(5, false, '09:00', '18:00', 60),
+            createDay(6, true),
+            createDay(7, true),
+        ]
+        const result = buildCompactSummaryLine(days)
+        expect(result).toContain('🕐')
+        expect(result).toContain('L-V')
+        expect(result).toContain('9:00')
+        expect(result).toContain('6:00')
+    })
+
+    it('includes lunch duration when configured', () => {
+        const days = [
+            createDay(1, false, '09:00', '18:00', 60),
+            createDay(2, true),
+            createDay(3, true),
+            createDay(4, true),
+            createDay(5, true),
+            createDay(6, true),
+            createDay(7, true),
+        ]
+        const result = buildCompactSummaryLine(days)
+        expect(result).toContain('🍽')
+        expect(result).toContain('1h')
+    })
+
+    it('formats 30-minute lunch as minutes', () => {
+        const days = [
+            createDay(1, false, '09:00', '14:00', 30),
+            createDay(2, true),
+            createDay(3, true),
+            createDay(4, true),
+            createDay(5, true),
+            createDay(6, true),
+            createDay(7, true),
+        ]
+        const result = buildCompactSummaryLine(days)
+        expect(result).toContain('🍽')
+        expect(result).toContain('30min')
+    })
+
+    it('includes rest days section', () => {
+        const days = [
+            createDay(1, false, '09:00', '18:00'),
+            createDay(2, false, '09:00', '18:00'),
+            createDay(3, false, '09:00', '18:00'),
+            createDay(4, false, '09:00', '18:00'),
+            createDay(5, false, '09:00', '18:00'),
+            createDay(6, true),
+            createDay(7, true),
+        ]
+        const result = buildCompactSummaryLine(days)
+        expect(result).toContain('🏠')
+        expect(result).toContain('Sáb')
+        expect(result).toContain('Dom')
+    })
+
+    it('omits lunch section when no lunch duration', () => {
+        const days = [
+            createDay(1, false, '09:00', '18:00'),
+            createDay(2, true),
+            createDay(3, true),
+            createDay(4, true),
+            createDay(5, true),
+            createDay(6, true),
+            createDay(7, true),
+        ]
+        const result = buildCompactSummaryLine(days)
+        expect(result).not.toContain('🍽')
+    })
+
+    it('omits rest days section when no rest days', () => {
+        const days = [1, 2, 3, 4, 5, 6, 7].map((dow) => createDay(dow, false, '10:00', '18:00'))
+        const result = buildCompactSummaryLine(days)
+        expect(result).not.toContain('🏠')
     })
 })
