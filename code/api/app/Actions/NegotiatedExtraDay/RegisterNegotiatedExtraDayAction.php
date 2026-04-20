@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\NegotiatedExtraDay;
 use App\Support\Traits\ResolvesActiveEmploymentPeriod;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -43,22 +44,29 @@ class RegisterNegotiatedExtraDayAction
         $primaPercent = (float) $data['prima_percent'];
         $primaAmount = $agreedDailyWage * $primaPercent / 100;
 
-        $extraDay = NegotiatedExtraDay::create([
-            'employee_id' => $employee->id,
-            'branch_id' => $period->branch_id,
-            'date' => $data['date'],
-            'agreed_daily_wage' => $agreedDailyWage,
-            'prima_percent' => $primaPercent,
-            'prima_amount' => $primaAmount,
-            'approved_by' => auth()->id(),
-            'status' => NegotiatedExtraDay::STATUS_APPROVED,
-            'notes' => $data['notes'] ?? null,
-        ]);
+        $extraDay = DB::transaction(function () use ($employee, $period, $data, $agreedDailyWage, $primaPercent, $primaAmount): NegotiatedExtraDay {
+            $extraDay = NegotiatedExtraDay::create([
+                'employee_id' => $employee->id,
+                'branch_id' => $period->branch_id,
+                'date' => $data['date'],
+                'agreed_daily_wage' => $agreedDailyWage,
+                'prima_percent' => $primaPercent,
+                'prima_amount' => $primaAmount,
+                'approved_by' => auth()->id(),
+                'status' => NegotiatedExtraDay::STATUS_APPROVED,
+                'notes' => $data['notes'] ?? null,
+            ]);
 
-        Attendance::updateOrCreate(
-            ['employee_id' => $employee->id, 'date' => $data['date']],
-            ['day_status' => DayStatus::EXTRA],
-        );
+            // Only create the EXTRA stub if no attendance exists yet for this date.
+            // An existing WORKED/ABSENCE record must not be silently overwritten —
+            // the check-in action will set the correct status when it runs.
+            Attendance::firstOrCreate(
+                ['employee_id' => $employee->id, 'date' => $data['date']],
+                ['day_status' => DayStatus::EXTRA],
+            );
+
+            return $extraDay;
+        });
 
         return $extraDay->load(['employee', 'branch', 'approvedBy']);
     }
