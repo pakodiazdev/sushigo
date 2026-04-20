@@ -132,7 +132,6 @@ export function TodayAttendancePage() {
     // Extra day express
     extraDayRow,
     isRegisteringExtraDay,
-    openExtraDay,
     closeExtraDay,
     confirmExtraDay,
   } = useTodayAttendancePage()
@@ -211,7 +210,6 @@ export function TodayAttendancePage() {
               onCheckOut={openCheckOut}
               onOvertimeDecision={openOvertimeDecision}
               onMarkDayStatus={markDayStatus}
-              onExtraDay={openExtraDay}
             />
           ))}
         </div>

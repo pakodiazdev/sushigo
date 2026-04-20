@@ -70,9 +70,15 @@ class EmployeeScheduleSeeder extends OnceSeeder
                 continue;
             }
 
-            // Pick template via round-robin
+            // Pick lunch template via round-robin (10 templates A–J)
             $templateKey = $templateKeys[$index % $templateCount];
             $lunchTimes = self::LUNCH_TEMPLATES[$templateKey];
+
+            // Rotate rest day across all 7 ISO days of the week (1=Mon … 7=Sun)
+            // so at least one employee is off on each day of the week.
+            $restDayDow = ($index % 7) + 1;
+            $restDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            $restDayLabel = $restDayNames[$restDayDow - 1];
 
             // Create the schedule using the factory's current() state
             // (effective_to = NULL, workday_type = FULL, working_days_per_week = 6)
@@ -83,8 +89,8 @@ class EmployeeScheduleSeeder extends OnceSeeder
                 'workday_type' => WorkdayType::FULL,
             ]);
 
-            // Create 7 schedule days: Mon–Sat working, Sun rest
-            foreach ($this->buildDays($schedule->id, $lunchTimes) as $dow => $dayConfig) {
+            // Create 7 schedule days with rotated rest day
+            foreach ($this->buildDays($schedule->id, $lunchTimes, $restDayDow) as $dow => $dayConfig) {
                 ScheduleDay::updateOrCreate(
                     ['employee_schedule_id' => $schedule->id, 'day_of_week' => $dow],
                     $dayConfig
@@ -93,7 +99,7 @@ class EmployeeScheduleSeeder extends OnceSeeder
 
             $this->command->info(
                 "✓ Schedule {$templateKey} created for {$period->employee->code} ".
-                "(lunch {$lunchTimes[0]}–{$lunchTimes[1]}, effective {$period->start_date})"
+                "(lunch {$lunchTimes[0]}–{$lunchTimes[1]}, rest: {$restDayLabel}, effective {$period->start_date})"
             );
             $created++;
         }
@@ -106,39 +112,42 @@ class EmployeeScheduleSeeder extends OnceSeeder
     /**
      * Build the 7 ScheduleDay configs for a schedule.
      *
+     * The rest day rotates across all 7 ISO days of the week so that at least
+     * one employee is off on each day — making every scenario (including extra
+     * day express) testable on any given day without manual setup.
+     *
      * @param  array{0:string,1:string}  $lunchTimes  [lunch_start, lunch_end]
+     * @param  int  $restDayDow  ISO day of week for the rest day (1=Mon … 7=Sun)
      * @return array<int, array> Keyed by day_of_week (1=Mon … 7=Sun)
      */
-    private function buildDays(int $scheduleId, array $lunchTimes): array
+    private function buildDays(int $scheduleId, array $lunchTimes, int $restDayDow = 7): array
     {
-        $workingDay = [
-            'employee_schedule_id' => $scheduleId,
-            'is_day_off' => false,
-            'expected_start' => self::SHIFT_START,
-            'expected_lunch_start' => $lunchTimes[0],
-            'expected_lunch_end' => $lunchTimes[1],
-            'expected_end' => self::SHIFT_END,
-            'lunch_duration_minutes' => 30,
-        ];
+        $days = [];
 
-        $restDay = [
-            'employee_schedule_id' => $scheduleId,
-            'is_day_off' => true,
-            'expected_start' => null,
-            'expected_lunch_start' => null,
-            'expected_lunch_end' => null,
-            'expected_end' => null,
-            'lunch_duration_minutes' => null,
-        ];
+        for ($dow = 1; $dow <= 7; $dow++) {
+            if ($dow === $restDayDow) {
+                $days[$dow] = [
+                    'employee_schedule_id' => $scheduleId,
+                    'is_day_off' => true,
+                    'expected_start' => null,
+                    'expected_lunch_start' => null,
+                    'expected_lunch_end' => null,
+                    'expected_end' => null,
+                    'lunch_duration_minutes' => null,
+                ];
+            } else {
+                $days[$dow] = [
+                    'employee_schedule_id' => $scheduleId,
+                    'is_day_off' => false,
+                    'expected_start' => self::SHIFT_START,
+                    'expected_lunch_start' => $lunchTimes[0],
+                    'expected_lunch_end' => $lunchTimes[1],
+                    'expected_end' => self::SHIFT_END,
+                    'lunch_duration_minutes' => 30,
+                ];
+            }
+        }
 
-        return [
-            1 => $workingDay,   // Monday
-            2 => $workingDay,   // Tuesday
-            3 => $workingDay,   // Wednesday
-            4 => $workingDay,   // Thursday
-            5 => $workingDay,   // Friday
-            6 => $workingDay,   // Saturday
-            7 => $restDay,      // Sunday — rest day
-        ];
+        return $days;
     }
 }
