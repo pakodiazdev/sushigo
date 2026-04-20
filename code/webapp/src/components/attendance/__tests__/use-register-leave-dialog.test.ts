@@ -39,6 +39,7 @@ const mockEmployee: TodayAttendanceEmployee = {
   first_name: 'Carlos',
   last_name: 'Mendoza',
   roles: [],
+  daily_wage: null,
 }
 
 const mockLeaveTypes: LeaveType[] = [

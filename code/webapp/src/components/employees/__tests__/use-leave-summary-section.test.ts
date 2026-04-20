@@ -192,6 +192,7 @@ describe('useLeaveSummarySection', () => {
             first_name: 'Ana',
             last_name: 'López',
             roles: [],
+            daily_wage: null,
         })
     })
 
@@ -236,6 +237,7 @@ describe('useLeaveSummarySection', () => {
             first_name: 'Ana',
             last_name: 'López',
             roles: [],
+            daily_wage: null,
         })
     })
 

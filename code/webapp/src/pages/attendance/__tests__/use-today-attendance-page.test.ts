@@ -67,13 +67,14 @@ function makeWrapper() {
 }
 
 /** Creates a test employee with all required fields */
-function makeEmployee(overrides: Partial<{ id: string; code: string; first_name: string; last_name: string; roles: string[] }> = {}) {
+function makeEmployee(overrides: Partial<{ id: string; code: string; first_name: string; last_name: string; roles: string[]; daily_wage: number | null }> = {}) {
   return {
     id: 'emp-001',
     code: 'EMP-001',
     first_name: 'Test',
     last_name: 'User',
     roles: [] as string[],
+    daily_wage: null as number | null,
     ...overrides,
   }
 }
@@ -87,6 +88,7 @@ function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRo
       first_name: 'Carlos',
       last_name: 'Mendoza',
       roles: [],
+      daily_wage: null,
     },
     attendance: null,
     schedule: null,
@@ -112,7 +114,7 @@ describe('computeSummary', () => {
   })
 
   it('counts pending employees (no attendance)', () => {
-    const rows = [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', first_name: 'María', last_name: 'García', roles: [] } })]
+    const rows = [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', first_name: 'María', last_name: 'García', roles: [], daily_wage: null } })]
     const result = computeSummary(rows)
     expect(result.pending).toBe(2)
     expect(result.checkedIn).toBe(0)
@@ -157,7 +159,7 @@ describe('computeSummary', () => {
         } as TodayAttendanceRow['attendance'],
       }),
       makeRow({
-        employee: { id: 'emp-002', code: 'EMP-002', first_name: 'Ana', last_name: 'López', roles: [] },
+        employee: { id: 'emp-002', code: 'EMP-002', first_name: 'Ana', last_name: 'López', roles: [], daily_wage: null },
         attendance: {
           id: 'att-2',
           check_in: '2026-04-01T13:00:00Z',

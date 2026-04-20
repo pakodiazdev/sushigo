@@ -65,6 +65,7 @@ const mockRow: TodayAttendanceRow = {
         first_name: 'John',
         last_name: 'Doe',
         roles: ['cajero'],
+        daily_wage: null,
     },
     attendance: null,
     schedule: null,
@@ -78,6 +79,7 @@ const mockRowWithAttendance: TodayAttendanceRow = {
         first_name: 'Jane',
         last_name: 'Smith',
         roles: ['mesero', 'cocina'],
+        daily_wage: null,
     },
     attendance: makeAttendance({
         id: '01HZATTEND000001',

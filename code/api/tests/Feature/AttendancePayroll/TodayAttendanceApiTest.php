@@ -181,6 +181,7 @@ class TodayAttendanceApiTest extends TestCase
                             'first_name',
                             'last_name',
                             'roles',
+                            'daily_wage',
                         ],
                         'attendance' => [
                             'id',
