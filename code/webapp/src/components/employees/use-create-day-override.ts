@@ -143,6 +143,7 @@ export function useCreateDayOverride(employeeId: string, periodId: string | null
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'current-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule-history', periodId] })
       setScopeOpen(false)
       setEditingDow(null)
       editForm.reset()
