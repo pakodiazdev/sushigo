@@ -17,8 +17,10 @@ import {
   SkeletonGrid,
   useCloseDayPanel,
 } from '@/components/attendance'
+import { ExtraDayNegotiationDialog } from '@/components/attendance/ExtraDayNegotiationDialog'
 import { useTodayAttendancePage } from './-use-today-attendance-page'
 import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
+import { todayDateCdmx } from '@/lib/datetime'
 import type { PendingAttendanceData } from './-use-today-attendance-page'
 import type { TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 
@@ -127,6 +129,12 @@ export function TodayAttendancePage() {
     closeBulkOvertimeDecision,
     // Mark day status
     markDayStatus,
+    // Extra day express
+    extraDayRow,
+    isRegisteringExtraDay,
+    openExtraDay,
+    closeExtraDay,
+    confirmExtraDay,
   } = useTodayAttendancePage()
 
   const maxTime = useApplicationTimeLabel()
@@ -203,6 +211,7 @@ export function TodayAttendancePage() {
               onCheckOut={openCheckOut}
               onOvertimeDecision={openOvertimeDecision}
               onMarkDayStatus={markDayStatus}
+              onExtraDay={openExtraDay}
             />
           ))}
         </div>
@@ -276,6 +285,18 @@ export function TodayAttendancePage() {
 
       {/* Close Day Panel */}
       <CloseDayPanel panel={closeDayPanel} />
+
+      {/* Extra Day Negotiation Dialog */}
+      {extraDayRow && (
+        <ExtraDayNegotiationDialog
+          employee={extraDayRow.employee}
+          date={todayDateCdmx()}
+          registeredDailyWage={null}
+          isPending={isRegisteringExtraDay}
+          onConfirm={confirmExtraDay}
+          onCancel={closeExtraDay}
+        />
+      )}
     </PageContainer>
   )
 }

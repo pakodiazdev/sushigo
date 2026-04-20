@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
+import { useExtraDayExpress } from '@/components/attendance/use-extra-day-express'
 import { getAttendancePhase } from '@/types/attendance'
-import { todayDateCdmx } from '@/lib/datetime'
+import { todayDateCdmx, currentTimeLabel } from '@/lib/datetime'
 import { timeToIsoWithOffset } from '@/lib/timezone'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
@@ -100,6 +101,12 @@ export interface UseTodayAttendancePageResult {
   // Mark day status action
   isMarkingDayStatus: boolean
   markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
+  // Extra day express action
+  extraDayRow: TodayAttendanceRow | null
+  isRegisteringExtraDay: boolean
+  openExtraDay: (row: TodayAttendanceRow) => void
+  closeExtraDay: () => void
+  confirmExtraDay: (payload: { agreed_daily_wage: number; prima_percent: number; notes: string }) => void
 }
 
 export function useTodayAttendancePage(): UseTodayAttendancePageResult {
@@ -113,6 +120,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const checkOutMutation = useCheckOut()
   const overtimeDecisionMutation = useOvertimeDecision()
   const markDayStatusMutation = useMarkDayStatus()
+  const extraDayMutation = useExtraDayExpress()
 
   const summary = computeSummary(data)
 
@@ -253,6 +261,43 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     [markDayStatusMutation],
   )
 
+  // ── Extra day express ─────────────────────────────────────────────────────────
+  const [extraDayRow, setExtraDayRow] = useState<TodayAttendanceRow | null>(null)
+
+  const openExtraDay = useCallback((row: TodayAttendanceRow) => {
+    setExtraDayRow(row)
+  }, [])
+
+  const closeExtraDay = useCallback(() => {
+    setExtraDayRow(null)
+  }, [])
+
+  const confirmExtraDay = useCallback(
+    (payload: { agreed_daily_wage: number; prima_percent: number; notes: string }) => {
+      if (!extraDayRow) return
+      const date = todayCdmxDate()
+      extraDayMutation.mutate(
+        {
+          employee_id: extraDayRow.employee.id,
+          date,
+          agreed_daily_wage: payload.agreed_daily_wage,
+          prima_percent: payload.prima_percent,
+          notes: payload.notes || undefined,
+        },
+        {
+          onSuccess: () => {
+            checkInMutation.mutate(
+              { employee_id: extraDayRow.employee.id, check_in: timeToIso(currentTimeLabel()) },
+              { onSettled: closeExtraDay },
+            )
+          },
+          onError: closeExtraDay,
+        },
+      )
+    },
+    [extraDayRow, extraDayMutation, checkInMutation, closeExtraDay],
+  )
+
   return {
     rows: data,
     summary,
@@ -301,5 +346,11 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     // Mark day status
     isMarkingDayStatus: markDayStatusMutation.isPending,
     markDayStatus,
+    // Extra day express
+    extraDayRow,
+    isRegisteringExtraDay: extraDayMutation.isPending,
+    openExtraDay,
+    closeExtraDay,
+    confirmExtraDay,
   }
 }
