@@ -83,7 +83,7 @@ class ScheduleHistorySeeder extends OnceSeeder
             ],
             // Schedule 2: Changed shift (18 months ago → 12 months ago)
             [
-                'effective_from' => $now->copy()->subMonths(18)->addDay()->startOfMonth()->toDateString(),
+                'effective_from' => $now->copy()->subMonths(18)->endOfMonth()->addDay()->toDateString(),
                 'effective_to' => $now->copy()->subMonths(12)->endOfMonth()->toDateString(),
                 'workday_type' => WorkdayType::FULL,
                 'working_days_per_week' => 6,
@@ -94,7 +94,7 @@ class ScheduleHistorySeeder extends OnceSeeder
             ],
             // Schedule 3: Part-time period (12 months ago → 6 months ago)
             [
-                'effective_from' => $now->copy()->subMonths(12)->addDay()->startOfMonth()->toDateString(),
+                'effective_from' => $now->copy()->subMonths(12)->endOfMonth()->addDay()->toDateString(),
                 'effective_to' => $now->copy()->subMonths(6)->endOfMonth()->toDateString(),
                 'workday_type' => WorkdayType::PARTIAL,
                 'working_days_per_week' => 5,
@@ -105,7 +105,7 @@ class ScheduleHistorySeeder extends OnceSeeder
             ],
             // Schedule 4: Current (6 months ago → now, open-ended)
             [
-                'effective_from' => $now->copy()->subMonths(6)->addDay()->startOfMonth()->toDateString(),
+                'effective_from' => $now->copy()->subMonths(6)->endOfMonth()->addDay()->toDateString(),
                 'effective_to' => null,                // Current, open-ended
                 'workday_type' => WorkdayType::FULL,
                 'working_days_per_week' => 6,

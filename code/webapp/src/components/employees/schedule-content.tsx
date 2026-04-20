@@ -15,9 +15,10 @@ interface ScheduleContentProps {
   readonly employeeId: string
   readonly periodId: string | null
   readonly viewMode?: 'config' | 'week'
+  readonly onSwitchToWeekView?: () => void
 }
 
-export function ScheduleContent({ schedule, employeeId, periodId, viewMode = 'config' }: ScheduleContentProps) {
+export function ScheduleContent({ schedule, employeeId, periodId, viewMode = 'config', onSwitchToWeekView }: ScheduleContentProps) {
   const {
     override,
     weekStart,
@@ -170,7 +171,7 @@ export function ScheduleContent({ schedule, employeeId, periodId, viewMode = 'co
           dow={overrideListDow}
           dayLabel={DAY_LABELS[overrideListDow] ?? ''}
           overrides={overridesForDow}
-          onSelect={(o) => handleOverrideSelect(o)}
+          onSelect={(o) => handleOverrideSelect(o, onSwitchToWeekView)}
           onClose={closeOverrideList}
         />
       )}

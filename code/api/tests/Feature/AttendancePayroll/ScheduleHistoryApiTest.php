@@ -149,7 +149,7 @@ class ScheduleHistoryApiTest extends TestCase
 
         $schedule->scheduleDays()->create([
             'day_of_week' => 1,
-            'is_working_day' => true,
+            'is_day_off' => false,
             'expected_start' => '09:00:00',
             'expected_end' => '18:00:00',
             'expected_lunch_start' => '14:00:00',
