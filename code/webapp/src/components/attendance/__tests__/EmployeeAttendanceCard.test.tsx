@@ -251,7 +251,6 @@ const defaultProps = {
     onCheckOut: vi.fn(),
     onOvertimeDecision: vi.fn(),
     onMarkDayStatus: vi.fn(),
-    onExtraDay: vi.fn(),
 }
 
 describe('EmployeeAttendanceCard', () => {
@@ -291,7 +290,7 @@ describe('EmployeeAttendanceCard', () => {
         const button = getByText('Registrar entrada')
         fireEvent.click(button)
 
-        expect(onCheckIn).toHaveBeenCalledWith(mockRow.employee)
+        expect(onCheckIn).toHaveBeenCalledWith(mockRow)
     })
 
     it('displays role badges', () => {
