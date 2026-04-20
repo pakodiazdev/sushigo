@@ -44,3 +44,6 @@ node_modules/
 # Environment files (keep .env.example)
 .env
 !.env.example
+
+# Deprecated tasks — local history only
+doc/tasks/deprecated/
