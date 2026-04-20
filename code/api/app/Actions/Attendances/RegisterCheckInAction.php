@@ -7,12 +7,12 @@ use App\Enums\LeaveStatus;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
-use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\NegotiatedExtraDay;
 use App\Models\ScheduleDay;
 use App\Models\ScheduleDayOverride;
 use App\Support\Clock\ApplicationClock;
+use App\Support\Traits\ResolvesActiveEmploymentPeriod;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -33,6 +33,8 @@ use Illuminate\Validation\ValidationException;
  */
 class RegisterCheckInAction
 {
+    use ResolvesActiveEmploymentPeriod;
+
     public function __construct(
         private readonly ApplicationClock $clock
     ) {}
@@ -166,29 +168,7 @@ class RegisterCheckInAction
         }
     }
 
-    /**     * Return the active employment period for the employee on the given date.
-     *
-     * @throws ValidationException
-     */
-    private function resolveActiveEmploymentPeriod(int $employeeId, string $date): EmploymentPeriod
-    {
-        $period = EmploymentPeriod::where('employee_id', $employeeId)
-            ->where('is_active', true)
-            ->whereDate('start_date', '<=', $date)
-            ->where(function ($q) use ($date) {
-                $q->whereNull('end_date')
-                    ->orWhereDate('end_date', '>=', $date);
-            })
-            ->first();
-
-        if (! $period) {
-            throw ValidationException::withMessages([
-                'employee_id' => 'El empleado no tiene un período de empleo activo para esta fecha.',
-            ]);
-        }
-
-        return $period;
-    }
+    // resolveActiveEmploymentPeriod provided by ResolvesActiveEmploymentPeriod trait
 
     /**
      * Return the EmployeeSchedule effective on the given date for the period.
