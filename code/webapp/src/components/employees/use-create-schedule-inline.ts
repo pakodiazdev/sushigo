@@ -176,6 +176,7 @@ export function useCreateScheduleInline(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'current-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule-history', periodId] })
       showSuccess('Horario creado correctamente')
       form.reset()
       onSuccess()
