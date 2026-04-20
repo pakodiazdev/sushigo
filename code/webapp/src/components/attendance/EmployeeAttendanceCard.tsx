@@ -239,6 +239,7 @@ export interface EmployeeAttendanceCardProps {
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
+    onExtraDay: (row: TodayAttendanceRow) => void
 }
 
 export function EmployeeAttendanceCard({
@@ -249,6 +250,7 @@ export function EmployeeAttendanceCard({
     onCheckOut,
     onOvertimeDecision,
     onMarkDayStatus,
+    onExtraDay,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
@@ -261,12 +263,23 @@ export function EmployeeAttendanceCard({
     function renderPendingActions() {
         if (isScheduledRestDay) {
             return (
-                <div className="flex items-center gap-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2">
-                    <BedDouble className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
-                    <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
-                        Descanso programado
-                    </span>
-                </div>
+                <>
+                    <div className="flex items-center gap-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2">
+                        <BedDouble className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
+                        <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
+                            Descanso programado
+                        </span>
+                    </div>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
+                        onClick={() => onExtraDay(row)}
+                    >
+                        <LogIn className="h-3.5 w-3.5 mr-1.5" />
+                        Registrar entrada
+                    </Button>
+                </>
             )
         }
         if (isFullDayLeave) {

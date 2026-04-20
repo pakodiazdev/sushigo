@@ -251,6 +251,7 @@ const defaultProps = {
     onCheckOut: vi.fn(),
     onOvertimeDecision: vi.fn(),
     onMarkDayStatus: vi.fn(),
+    onExtraDay: vi.fn(),
 }
 
 describe('EmployeeAttendanceCard', () => {
