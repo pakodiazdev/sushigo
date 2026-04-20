@@ -50,7 +50,6 @@ export function ExtraDayNegotiationDialog({
     primaPercentRaw,
     primaAmountRaw,
     effectiveSalary,
-    seventhDay,
     effectivePrima,
     total,
     setSalaryMode,
@@ -205,7 +204,7 @@ export function ExtraDayNegotiationDialog({
 
           {/* Prima section */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Prima por descanso trabajado</p>
+            <p className="text-sm font-medium text-foreground">Pago extra por trabajar en día de descanso</p>
 
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -219,8 +218,8 @@ export function ExtraDayNegotiationDialog({
                 disabled={isPending}
               />
               <span className="text-sm">
-                Legal{' '}
-                <span className="text-muted-foreground">(100% — {formatCurrency(effectiveSalary)})</span>
+                Según ley{' '}
+                <span className="text-muted-foreground">(100% adicional — {formatCurrency(effectiveSalary)})</span>
               </span>
             </label>
 
@@ -274,11 +273,7 @@ export function ExtraDayNegotiationDialog({
               <span className="font-mono font-medium">{formatCurrency(effectiveSalary)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">7° día (1/6)</span>
-              <span className="font-mono font-medium">{formatCurrency(seventhDay)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Prima por descanso trabajado</span>
+              <span className="text-muted-foreground">Pago extra por trabajar en descanso</span>
               <span className="font-mono font-medium">{formatCurrency(effectivePrima)}</span>
             </div>
             <div className="flex justify-between border-t border-border pt-1.5 mt-1.5">

@@ -73,6 +73,9 @@ class PermissionSeeder extends LockedSeeder
             'leaves.approve',
             'leaves.reject',
 
+            // Attendances
+            'attendances.create',
+
             // Inventario — Ítems y variantes
             'items.view',
             'items.create',
@@ -101,7 +104,7 @@ class PermissionSeeder extends LockedSeeder
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
 
-        // manager (position role): jefe de piso — can view/manage employees
+        // manager (position role): jefe de piso — can view/manage employees and attendances
         $managerRole = Role::where('name', 'manager')->where('guard_name', 'api')->first();
         if ($managerRole) {
             $managerRole->syncPermissions(
@@ -109,13 +112,14 @@ class PermissionSeeder extends LockedSeeder
                     ->where(function ($q) {
                         $q->whereIn('name', ['users.show', 'users.index'])
                             ->orWhere('name', 'like', 'employees.%')
-                            ->orWhere('name', 'like', 'leaves.%');
+                            ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'attendances.%');
                     })
                     ->get()
             );
         }
 
-        // admin (position role): full user + employee + leave + inventory management
+        // admin (position role): full user + employee + leave + attendance + inventory management
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
         if ($adminRole) {
             $adminRole->syncPermissions(
@@ -124,6 +128,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->where('name', 'like', 'users.%')
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'attendances.%')
                             ->orWhere('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%');

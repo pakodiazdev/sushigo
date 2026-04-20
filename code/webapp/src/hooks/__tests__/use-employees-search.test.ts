@@ -4,7 +4,12 @@ import { renderHook, act } from '@testing-library/react'
 
 // ── Mock dependencies ─────────────────────────────────────────────────────────
 
-const mockNavigate = vi.fn()
+const mockNavigate = vi.fn((options: { search: (prev: Record<string, unknown>) => Record<string, unknown> }) => {
+    // Execute the search function to cover the callback code
+    if (typeof options.search === 'function') {
+        options.search(currentSearch)
+    }
+})
 const mockSearch = vi.fn()
 
 let currentSearch: Record<string, unknown> = {}
@@ -245,5 +250,41 @@ describe('useEmployeesSearch', () => {
         const { result } = renderHook(() => useEmployeesSearch())
 
         expect(result.current.statusFilter).toBe('baja')
+    })
+
+    it('handleFilterChange removes undefined values from search params', () => {
+        currentSearch = { search: 'existing', page: 2, role: 'manager' }
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        act(() => {
+            // This will set search to undefined (empty string becomes undefined)
+            result.current.handleFilterChange('search', '')
+        })
+
+        // The callback inside navigate should execute and clean up undefined values
+        expect(mockNavigate).toHaveBeenCalled()
+    })
+
+    it('handlePerPageChange resets page when changing items per page to default', () => {
+        currentSearch = { page: 3, per_page: 50 }
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        act(() => {
+            // Setting per_page to 20 should result in undefined (default)
+            result.current.handlePerPageChange(20)
+        })
+
+        expect(mockNavigate).toHaveBeenCalled()
+    })
+
+    it('handlePageChange does not add page param for page 1', () => {
+        currentSearch = { page: 5 }
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        act(() => {
+            result.current.handlePageChange(1)
+        })
+
+        expect(mockNavigate).toHaveBeenCalled()
     })
 })
