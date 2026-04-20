@@ -119,35 +119,35 @@ Los datos se cargan con **una sola petición** cuando el usuario abre la tab por
 
 ## ✅ Backend Tasks
 
-- [ ] 🌐 `GET /api/v1/employment-periods/{id}/schedules` — devuelve todos los horarios del periodo
-- [ ] 🔧 Ordenados por `effective_from` DESC; cada horario incluye sus 7 días configurados
-- [ ] 🔧 Cada horario incluye solo las excepciones cuya fecha de inicio cae dentro de su rango activo — el backend hace el filtro, no el frontend
-- [ ] 🧪 Feature tests: múltiples horarios, lista vacía, excepciones asignadas al horario correcto, sin permiso retorna 403
+- [x] 🌐 `GET /api/v1/employment-periods/{id}/schedules` — devuelve todos los horarios del periodo
+- [x] 🔧 Ordenados por `effective_from` DESC; cada horario incluye sus 7 días configurados
+- [x] 🔧 Cada horario incluye solo las excepciones cuya fecha de inicio cae dentro de su rango activo — el backend hace el filtro, no el frontend
+- [x] 🧪 Feature tests: múltiples horarios, lista vacía, excepciones asignadas al horario correcto, sin permiso retorna 403
 
 ## ✅ Frontend Tasks
 
-- [ ] 🔧 El resumen de una línea reutiliza el componente de resumen existente con una variante compacta — toda la info en una sola línea
-- [ ] 🔧 El badge `⚡ +N` se agrega al final de la línea resumen cuando hay excepciones activas
-- [ ] 📝 Título del diálogo cambia de "Horario activo" a "Horarios"
-- [ ] 📱 Nueva tab "Historial" como tercera pestaña en el diálogo
-- [ ] 📝 Servicio: agregar llamada al nuevo endpoint de historial
-- [ ] 📱 Lista de horarios colapsada por defecto, expandible al hacer clic
-- [ ] 📱 Estados: carga (skeleton), error, vacío, poblado
+- [x] 🔧 El resumen de una línea reutiliza el componente de resumen existente con una variante compacta — toda la info en una sola línea
+- [x] 🔧 El badge `⚡ +N` se agrega al final de la línea resumen cuando hay excepciones activas
+- [x] 📝 Título del diálogo cambia de "Horario activo" a "Horarios"
+- [x] 📱 Nueva tab "Historial" como tercera pestaña en el diálogo
+- [x] 📝 Servicio: agregar llamada al nuevo endpoint de historial
+- [x] 📱 Lista de horarios colapsada por defecto, expandible al hacer clic
+- [x] 📱 Estados: carga (skeleton), error, vacío, poblado
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Título del diálogo muestra "Horarios"
-- [ ] La línea resumen aparece debajo de la barra del título cuando hay horario activo
-- [ ] Toda la info cabe en una línea; badge `⚡ +N` visible cuando hay excepciones activas
-- [ ] La tab "Historial" aparece como tercera pestaña
-- [ ] Al abrir la tab se hace una sola petición; no se hace ninguna petición antes
-- [ ] Las filas aparecen colapsadas; el horario activo se identifica con badge ACTIVO
-- [ ] Al expandir una fila se ve el resumen del horario y sus excepciones
-- [ ] Excepciones permanentes aparecen antes que las temporales
-- [ ] Las tabs "Configuración" y "Vista Semanal" funcionan igual que antes
-- [ ] El resumen multilínea del card de detalle de empleado no cambia
+- [x] Título del diálogo muestra "Horarios"
+- [x] La línea resumen aparece debajo de la barra del título cuando hay horario activo
+- [x] Toda la info cabe en una línea; badge `⚡ +N` visible cuando hay excepciones activas
+- [x] La tab "Historial" aparece como tercera pestaña
+- [x] Al abrir la tab se hace una sola petición; no se hace ninguna petición antes
+- [x] Las filas aparecen colapsadas; el horario activo se identifica con badge ACTIVO
+- [x] Al expandir una fila se ve el resumen del horario y sus excepciones
+- [x] Excepciones permanentes aparecen antes que las temporales
+- [x] Las tabs "Configuración" y "Vista Semanal" funcionan igual que antes
+- [x] El resumen multilínea del card de detalle de empleado no cambia
 
 ---
 
