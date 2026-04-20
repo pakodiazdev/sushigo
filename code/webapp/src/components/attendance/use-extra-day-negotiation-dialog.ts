@@ -2,19 +2,18 @@ import { useState, useEffect } from 'react'
 
 export interface ExtraDayNegotiationDialogState {
   salaryMode: 'registered' | 'custom'
-  salaryAmount: number
-  salaryPercent: number
+  /** Raw string bound directly to the input — prevents cursor-jump on controlled inputs. */
+  salaryAmountRaw: string
+  salaryPercentRaw: string
   primaMode: 'legal' | 'custom'
-  primaPercent: number
-  primaAmount: number
+  primaPercentRaw: string
+  primaAmountRaw: string
   effectiveSalary: number
   seventhDay: number
   effectivePrima: number
   total: number
   setSalaryMode: (mode: 'registered' | 'custom') => void
   setPrimaMode: (mode: 'legal' | 'custom') => void
-  setPrimaPercent: (pct: number) => void
-  setPrimaAmount: (amt: number) => void
   handleSalaryPercentChange: (val: string) => void
   handleSalaryAmountChange: (val: string) => void
   handlePrimaPercentChange: (val: string) => void
@@ -29,6 +28,13 @@ export interface ExtraDayNegotiationDialogState {
  * Owns all salary/prima state, derived totals and change handlers.
  * When registeredDailyWage is null, defaults to custom mode so the
  * submit button is immediately usable.
+ *
+ * ## Why raw string state?
+ * Storing numbers and binding `value={n.toFixed(2)}` causes React to replace
+ * the input value on every keystroke, which resets the cursor to the end of
+ * the string.  By storing the raw string the user typed and only formatting
+ * (toFixed) the *companion* cross-field value, the active input stays as-is
+ * while the paired field still shows a clean formatted number.
  */
 export function useExtraDayNegotiationDialog(
   registeredDailyWage: number | null,
@@ -38,70 +44,83 @@ export function useExtraDayNegotiationDialog(
   const [salaryMode, setSalaryMode] = useState<'registered' | 'custom'>(
     registeredDailyWage != null ? 'registered' : 'custom',
   )
-  const [salaryAmount, setSalaryAmount] = useState<number>(registeredDailyWage ?? 0)
-  const [salaryPercent, setSalaryPercent] = useState<number>(100)
+
+  // Raw strings bound to the inputs — never formatted on the field being edited.
+  const [salaryPercentRaw, setSalaryPercentRaw] = useState('100.00')
+  const [salaryAmountRaw, setSalaryAmountRaw] = useState(
+    () => (registeredDailyWage ?? 0).toFixed(2),
+  )
 
   const [primaMode, setPrimaMode] = useState<'legal' | 'custom'>('legal')
-  const [primaPercent, setPrimaPercent] = useState<number>(100)
-  const [primaAmount, setPrimaAmount] = useState<number>(registeredDailyWage ?? 0)
+  const [primaPercentRaw, setPrimaPercentRaw] = useState('100.00')
+  const [primaAmountRaw, setPrimaAmountRaw] = useState(
+    () => (registeredDailyWage ?? 0).toFixed(2),
+  )
 
-  // Effective salary = registered wage (if mode = registered) or custom amount
+  // Derived numeric values used for computations and summary display.
+  const salaryAmount = parseFloat(salaryAmountRaw) || 0
+  const primaAmount  = parseFloat(primaAmountRaw)  || 0
+  const primaPercent = parseFloat(primaPercentRaw) || 0
+
   const effectiveSalary = salaryMode === 'registered' ? (registeredDailyWage ?? 0) : salaryAmount
+  const seventhDay      = effectiveSalary / 6
+  const effectivePrima  = primaMode === 'legal' ? effectiveSalary : primaAmount
+  const total           = effectiveSalary + seventhDay + effectivePrima
 
-  // Seventh-day part (1/6 of the daily wage, automatic per LFT)
-  const seventhDay = effectiveSalary / 6
-
-  // Effective prima = 100% of salary (legal) or custom
-  const effectivePrima = primaMode === 'legal' ? effectiveSalary : primaAmount
-
-  const total = effectiveSalary + seventhDay + effectivePrima
-
-  // Sync salary state when registeredDailyWage prop changes
+  // Sync raw strings when registeredDailyWage prop changes (e.g. first load).
   useEffect(() => {
     if (registeredDailyWage !== null) {
-      setSalaryAmount(registeredDailyWage)
-      setSalaryPercent(100)
+      setSalaryAmountRaw(registeredDailyWage.toFixed(2))
+      setSalaryPercentRaw('100.00')
       setSalaryMode('registered')
     }
   }, [registeredDailyWage])
 
-  // Sync prima amount when effective salary changes
+  // Sync prima raw strings when effective salary changes while in 'legal' mode.
   useEffect(() => {
     if (primaMode === 'legal') {
-      setPrimaAmount(effectiveSalary)
-      setPrimaPercent(100)
+      setPrimaAmountRaw(effectiveSalary.toFixed(2))
+      setPrimaPercentRaw('100.00')
     }
   }, [effectiveSalary, primaMode])
 
+  // ── Salary handlers ──────────────────────────────────────────────────────────
+
   function handleSalaryPercentChange(val: string) {
-    const pct = parseFloat(val) || 0
-    setSalaryPercent(pct)
+    // Keep the raw string the user typed — no toFixed here.
+    setSalaryPercentRaw(val)
     if (registeredDailyWage !== null && registeredDailyWage > 0) {
-      setSalaryAmount((registeredDailyWage * pct) / 100)
+      const pct = parseFloat(val) || 0
+      // Cross-field: format the companion amount nicely.
+      setSalaryAmountRaw(((registeredDailyWage * pct) / 100).toFixed(2))
     }
   }
 
   function handleSalaryAmountChange(val: string) {
-    const amt = parseFloat(val) || 0
-    setSalaryAmount(amt)
+    setSalaryAmountRaw(val)
     if (registeredDailyWage !== null && registeredDailyWage > 0) {
-      setSalaryPercent((amt / registeredDailyWage) * 100)
+      const amt = parseFloat(val) || 0
+      setSalaryPercentRaw(((amt / registeredDailyWage) * 100).toFixed(2))
     }
   }
 
+  // ── Prima handlers ───────────────────────────────────────────────────────────
+
   function handlePrimaPercentChange(val: string) {
+    setPrimaPercentRaw(val)
     const pct = parseFloat(val) || 0
-    setPrimaPercent(pct)
-    setPrimaAmount((effectiveSalary * pct) / 100)
+    setPrimaAmountRaw(((effectiveSalary * pct) / 100).toFixed(2))
   }
 
   function handlePrimaAmountChange(val: string) {
-    const amt = parseFloat(val) || 0
-    setPrimaAmount(amt)
+    setPrimaAmountRaw(val)
     if (effectiveSalary > 0) {
-      setPrimaPercent((amt / effectiveSalary) * 100)
+      const amt = parseFloat(val) || 0
+      setPrimaPercentRaw(((amt / effectiveSalary) * 100).toFixed(2))
     }
   }
+
+  // ── Misc ─────────────────────────────────────────────────────────────────────
 
   function formatCurrency(amount: number): string {
     return `$${amount.toFixed(2)}`
@@ -111,19 +130,17 @@ export function useExtraDayNegotiationDialog(
 
   return {
     salaryMode,
-    salaryAmount,
-    salaryPercent,
+    salaryAmountRaw,
+    salaryPercentRaw,
     primaMode,
-    primaPercent,
-    primaAmount,
+    primaPercentRaw,
+    primaAmountRaw,
     effectiveSalary,
     seventhDay,
     effectivePrima,
     total,
     setSalaryMode,
     setPrimaMode,
-    setPrimaPercent,
-    setPrimaAmount,
     handleSalaryPercentChange,
     handleSalaryAmountChange,
     handlePrimaPercentChange,
