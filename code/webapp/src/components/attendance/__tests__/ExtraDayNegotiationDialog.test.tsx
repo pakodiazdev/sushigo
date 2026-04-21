@@ -83,7 +83,7 @@ describe('ExtraDayNegotiationDialog — cancel', () => {
   it('calls onCancel when cancel button is clicked', () => {
     const onCancel = vi.fn()
     const { getAllByText } = render(<ExtraDayNegotiationDialog {...makeProps({ onCancel })} />)
-    fireEvent.click(getAllByText('Cancelar')[0])
+    fireEvent.click(getAllByText('Cancelar')[0]!)
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
@@ -181,13 +181,13 @@ describe('ExtraDayNegotiationDialog — isPending', () => {
 
   it('disables the submit button when isPending', () => {
     const { getByText } = render(<ExtraDayNegotiationDialog {...makeProps({ isPending: true })} />)
-    const btn = getByText('Registrando…').closest('button')
+    const btn = getByText('Registrando…').closest('button') as HTMLButtonElement | null
     expect(btn?.disabled).toBe(true)
   })
 
   it('disables cancel button when isPending', () => {
     const { getAllByText } = render(<ExtraDayNegotiationDialog {...makeProps({ isPending: true })} />)
-    const cancelBtn = getAllByText('Cancelar')[0].closest('button')
+    const cancelBtn = getAllByText('Cancelar')[0]!.closest('button') as HTMLButtonElement | null
     expect(cancelBtn?.disabled).toBe(true)
   })
 })
