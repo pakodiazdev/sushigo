@@ -18,7 +18,7 @@ use App\Models\EmployeeRequest;
  *     @OA\Property(property="status", type="string", enum={"PENDING", "APPROVED", "REJECTED"}, example="PENDING"),
  *     @OA\Property(property="payload", type="object"),
  *     @OA\Property(property="requestable", type="object", nullable=true,
- *        @OA\Property(property="id", type="integer", example=1),
+ *        @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public_id of the concrete entity"),
  *        @OA\Property(property="type", type="string", example="App\\Models\\NegotiatedExtraDay")
  *     ),
  *     @OA\Property(property="requested_by", type="string", example="Admin User"),
@@ -40,7 +40,7 @@ class EmployeeRequestResource extends BaseResource
             'status' => $this->status->value,
             'payload' => $this->payload,
             'requestable' => $this->requestable ? [
-                'id' => $this->requestable->id,
+                'id' => $this->requestable->public_id,
                 'type' => $this->requestable_type,
             ] : null,
             'requested_by' => $this->requestedBy->name,
