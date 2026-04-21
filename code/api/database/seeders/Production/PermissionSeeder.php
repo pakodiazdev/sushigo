@@ -73,6 +73,11 @@ class PermissionSeeder extends LockedSeeder
             'leaves.approve',
             'leaves.reject',
 
+            // Employee Requests
+            'employee-requests.view',
+            'employee-requests.create',
+            'employee-requests.approve',
+
             // Attendances
             'attendances.view',
             'attendances.create',
@@ -114,6 +119,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->whereIn('name', ['users.show', 'users.index'])
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', 'attendances.%');
                     })
                     ->get()
@@ -129,6 +135,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->where('name', 'like', 'users.%')
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', 'attendances.%')
                             ->orWhere('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
