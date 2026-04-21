@@ -131,10 +131,13 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const [pendingCheckInEmployee, setPendingCheckInEmployee] =
     useState<TodayAttendanceEmployee | null>(null)
 
-  // If the row is a scheduled rest day, intercept and show the extra day
-  // negotiation dialog first; otherwise go straight to the time dialog.
+  // If the row is a scheduled rest day AND no extra-day agreement exists yet,
+  // intercept and show the negotiation dialog first.
+  // If day_status === 'EXTRA' the agreement was already approved (e.g. the
+  // manager cancelled the time-picker after negotiating), so skip straight to
+  // the time dialog.
   const openCheckIn = useCallback((row: TodayAttendanceRow) => {
-    if (row.schedule?.is_day_off) {
+    if (row.schedule?.is_day_off && row.attendance?.day_status !== 'EXTRA') {
       setExtraDayRow(row)
     } else {
       setPendingCheckInEmployee(row.employee)
