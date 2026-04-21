@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useExtraDayNegotiationDialog } from '../use-extra-day-negotiation-dialog'
+import { useExtraDayNegotiationDialog, formatCurrency } from '../use-extra-day-negotiation-dialog'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -259,12 +259,10 @@ describe('sync prima when effectiveSalary changes in legal mode', () => {
 
 describe('formatCurrency', () => {
   it('formats a number with dollar sign and 2 decimals', () => {
-    const { result } = render(200)
-    expect(result.current.formatCurrency(1234.5)).toBe('$1234.50')
+    expect(formatCurrency(1234.5)).toBe('$1234.50')
   })
 
   it('formats zero', () => {
-    const { result } = render(null)
-    expect(result.current.formatCurrency(0)).toBe('$0.00')
+    expect(formatCurrency(0)).toBe('$0.00')
   })
 })
