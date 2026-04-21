@@ -98,10 +98,17 @@ En la vista personal del empleado su horario semanal muestra los días de descan
 
 ---
 
-## 🔗 Referencias
+## 🔗 Dependencias
 
+### Requiere (debe completarse antes)
+- [ ] **#126** — EmployeeRequest base entity (API + modelo base)
+- [ ] **#127** — Solicitudes navegación y shell (punto de entrada del formulario)
+
+### Desbloquea (puede iniciarse después)
+- [ ] **#125** — Solicitudes listado + filtros (necesita solicitudes reales para mostrar)
+
+### Referencias
 - **Viene de:** #059
-- **Depende de:** Vista del empleado con rol reducido en la webapp
 - **Relacionado:** #122 (exprés), #123 (Manager anticipa), #125 (inbox aprobaciones)
 
 ---
