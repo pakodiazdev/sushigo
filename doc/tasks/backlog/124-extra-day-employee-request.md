@@ -95,6 +95,9 @@ En la vista personal del empleado su horario semanal muestra los días de descan
 - [ ] El Manager recibe notificación de la solicitud
 - [ ] El empleado ve el resultado (aprobado/rechazado) con la nota del Manager
 - [ ] Si es aprobada el check-in ese día es automático sin diálogo
+- [ ] El empleado puede cancelar su propia solicitud mientras esté en estado `PENDING`
+- [ ] Al cancelar, la solicitud pasa a estado `CANCELLED` y desaparece del inbox del Manager
+- [ ] No se puede cancelar una solicitud ya `APPROVED` o `REJECTED` desde la vista del empleado
 
 ---
 

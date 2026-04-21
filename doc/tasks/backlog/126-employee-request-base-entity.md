@@ -89,10 +89,12 @@ NegotiatedExtraDay / Leave / VacationRequest / ...
   - `create(data, autoApprove: bool)` — crea el request y opcionalmente auto-aprueba
   - `approve(EmployeeRequest, User)` — aprueba, crea entidad concreta, asigna requestable
   - `reject(EmployeeRequest, User, reason)` — rechaza
+  - `cancel(EmployeeRequest, User)` — cancela (solo si PENDING; lanza excepción si ya APPROVED/REJECTED)
 - Endpoints:
   - `POST /employee-requests` — crear solicitud
   - `PATCH /employee-requests/{id}/approve` — aprobar
   - `PATCH /employee-requests/{id}/reject` — rechazar
+  - `PATCH /employee-requests/{id}/cancel` — cancelar (solo el solicitante, solo si PENDING)
   - `GET /employee-requests` — listar (con filtros de tipo/status/empleado)
 
 ### Permisos necesarios
@@ -100,6 +102,7 @@ NegotiatedExtraDay / Leave / VacationRequest / ...
 - `employee-requests.view`
 - `employee-requests.create`
 - `employee-requests.approve`
+- `employee-requests.cancel` (solicitante cancela su propio PENDING)
 
 ---
 
@@ -111,6 +114,8 @@ NegotiatedExtraDay / Leave / VacationRequest / ...
 - [ ] `EmployeeRequestService` maneja creación, auto-aprobación y aprobación manual
 - [ ] Al aprobar se crea la entidad concreta desde el payload y se asigna `requestable_type/id`
 - [ ] Al rechazar solo cambia el status — no se crea ninguna entidad concreta
+- [ ] El solicitante puede cancelar su propia solicitud `PENDING` → pasa a `CANCELLED`, no se crea entidad concreta
+- [ ] Cancelar una solicitud `APPROVED` elimina la entidad concreta en la misma transacción (preserva invariante "existencia = aprobado")
 - [ ] API endpoints documentados en Swagger
 - [ ] PHPUnit: happy path (crear + aprobar), rechazo, duplicado, permisos
 - [ ] SonarCloud ≥ 80% en código nuevo
