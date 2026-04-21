@@ -558,7 +558,7 @@ Employee requests → EmployeeRequest{PENDING} → inbox → Manager approves �
 | `branch_id`   | bigint FK     | NO   | —       | Branch where they worked.                           | RF-39        |
 | `salary_day`  | decimal(10,2) | NO   | —       | Salary component (agreed daily wage).               | RF-39, RN-10 |
 | `prima`       | decimal(10,2) | NO   | —       | Rest-day premium component.                         | RF-39, RN-10 |
-| `seventh_day` | decimal(10,2) | NO   | —       | Seventh-day component (1/6 of salary_day).          | RF-39        |
+| `seventh_day` | decimal(10,2) | NO   | —       | Seventh-day component (séptimo día): 1/6 of weekly salary. For 6-day schedules this equals `salary_day` (weekly = salary_day × 6, so weekly / 6 = salary_day). | RF-39        |
 | `agreed_pay`  | decimal(10,2) | NO   | —       | Total agreed pay (= salary_day + prima + seventh_day). | RF-39, RN-10 |
 | `request_id`  | bigint FK     | NO   | —       | Originating request (→ `employee_requests`).        | RF-39, RN-09 |
 | `notes`       | text          | YES  | NULL    | Notes/observations.                                 | RF-39        |
