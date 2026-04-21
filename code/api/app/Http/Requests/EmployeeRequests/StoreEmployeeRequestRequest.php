@@ -13,7 +13,7 @@ use Illuminate\Validation\Validator;
  *   required={"employee_id", "type", "payload"},
  *
  *   @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
- *   @OA\Property(property="type", type="string", enum={"EXTRA_DAY", "LEAVE", "VACATION", "SCHEDULE_CHANGE"}, example="EXTRA_DAY"),
+ *   @OA\Property(property="type", type="string", enum={"EXTRA_DAY"}, example="EXTRA_DAY"),
  *   @OA\Property(property="auto_approve", type="boolean", example=false),
  *   @OA\Property(property="notes", type="string", nullable=true, maxLength=1000, example="Solicitud registrada por gerente"),
  *   @OA\Property(
@@ -45,7 +45,7 @@ class StoreEmployeeRequestRequest extends FormRequest
                 'string',
                 Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
             ],
-            'type' => ['required', Rule::in(array_map(fn (EmployeeRequestType $t) => $t->value, EmployeeRequestType::cases()))],
+            'type' => ['required', Rule::in([EmployeeRequestType::EXTRA_DAY->value])],
             'auto_approve' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payload' => ['required', 'array'],
@@ -78,7 +78,8 @@ class StoreEmployeeRequestRequest extends FormRequest
             ];
 
             foreach ($requiredFields as $field) {
-                if (! array_key_exists($field, (array) $this->input('payload'))) {
+                $value = data_get($this->input('payload'), $field);
+                if ($value === null || $value === '') {
                     $v->errors()->add("payload.{$field}", "El campo payload.{$field} es requerido para solicitudes EXTRA_DAY.");
                 }
             }

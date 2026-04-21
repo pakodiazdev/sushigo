@@ -5,7 +5,7 @@
 **Base:** attendance-payroll-spec v0.8 + mvp-scope
 **Status:** Active domain contract
 
-**Changelog v1.1 (2026-04-21):** Added `EmployeeRequest` as the unified approval wrapper for all employee requests. Concrete entities (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) are now created only upon approval — keeping the DB semantically clean. Approval lifecycle fields (`status`, `approved_by`, `approved_at`) removed from concrete entities and centralized in `EmployeeRequest`. Added subdomain 1.7 (Requests ER), section 2.24 (employee_requests dict), and sequence 6.5 (request lifecycle).
+**Changelog v1.1 (2026-04-21):** Added `EmployeeRequest` as the unified approval wrapper for all employee requests. Concrete entities (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) are now created only upon approval — keeping the DB semantically clean. Approval lifecycle fields (`status`, `approved_by`, `approved_at`) removed from concrete entities and centralized in `EmployeeRequest`. Added subdomain 1.7 (Requests ER), section 2.23 (employee_requests dict), and sequence 6.4 (request lifecycle).
 
 ---
 
@@ -181,7 +181,7 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         enum type "EXTRA_DAY|LEAVE|VACATION|..."
-        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        enum status "PENDING|APPROVED|REJECTED"
         string requestable_type "nullable - set on approval"
         bigint requestable_id "nullable - set on approval"
         json payload "type-specific data"
@@ -377,7 +377,7 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         enum type "EXTRA_DAY|LEAVE|VACATION|SCHEDULE_CHANGE"
-        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        enum status "PENDING|APPROVED|REJECTED"
         string requestable_type "nullable - set on approval"
         bigint requestable_id "nullable - set on approval"
         json payload "type-specific data while pending"
@@ -548,24 +548,25 @@ Employee requests → EmployeeRequest{PENDING} → inbox → Manager approves �
 
 ### 2.9 `negotiated_extra_days` — Negotiated Extra Days
 
-> **v1.1:** Records exist only in approved state. Approval lifecycle (`status`, `approved_by`, `approved_at`) is managed by `EmployeeRequest`. `agreed_pay` was split into three components for payroll line-item breakdown.
+> **v1.1:** `request_id` (nullable FK) added for traceability. Column renaming (`salary_day`, `prima`, `seventh_day`) and removal of approval lifecycle fields (`approved_by`, `status`) are deferred to a future task.
 
-| Field         | Type          | Null | Default | Description                                         | FR           |
-| ------------- | ------------- | ---- | ------- | --------------------------------------------------- | ------------ |
-| `id`          | bigint        | NO   | auto    | PK                                                  | —            |
-| `employee_id` | bigint FK     | NO   | —       | Employee.                                           | RF-38        |
-| `date`        | date          | NO   | —       | Extra day date.                                     | RF-39        |
-| `branch_id`   | bigint FK     | NO   | —       | Branch where they worked.                           | RF-39        |
-| `salary_day`  | decimal(10,2) | NO   | —       | Salary component (agreed daily wage).               | RF-39, RN-10 |
-| `prima`       | decimal(10,2) | NO   | —       | Rest-day premium component.                         | RF-39, RN-10 |
-| `seventh_day` | decimal(10,2) | NO   | —       | Seventh-day component (séptimo día): 1/6 of weekly salary. For 6-day schedules this equals `salary_day` (weekly = salary_day × 6, so weekly / 6 = salary_day). | RF-39        |
-| `agreed_pay`  | decimal(10,2) | NO   | —       | Total agreed pay (= salary_day + prima + seventh_day). | RF-39, RN-10 |
-| `request_id`  | bigint FK     | NO   | —       | Originating request (→ `employee_requests`).        | RF-39, RN-09 |
-| `notes`       | text          | YES  | NULL    | Notes/observations.                                 | RF-39        |
-| `created_at`  | timestamp     | NO   | now     | —                                                   | —            |
-| `updated_at`  | timestamp     | NO   | now     | —                                                   | —            |
+| Field               | Type          | Null | Default  | Description                                                   | FR           |
+| ------------------- | ------------- | ---- | -------- | ------------------------------------------------------------- | ------------ |
+| `id`                | bigint        | NO   | auto     | PK                                                            | —            |
+| `employee_id`       | bigint FK     | NO   | —        | Employee.                                                     | RF-38        |
+| `date`              | date          | NO   | —        | Extra day date.                                               | RF-39        |
+| `branch_id`         | bigint FK     | NO   | —        | Branch where they worked.                                     | RF-39        |
+| `agreed_daily_wage` | decimal(10,4) | NO   | —        | Agreed daily wage.                                            | RF-39        |
+| `prima_percent`     | decimal(7,4)  | NO   | —        | Rest-day premium percentage on the daily wage.                | RF-39        |
+| `prima_amount`      | decimal(10,4) | NO   | —        | Premium amount (= agreed_daily_wage × prima_percent / 100).   | RF-39        |
+| `approved_by`       | bigint FK     | NO   | —        | User who approved (→ `users`).                               | RF-39        |
+| `status`            | varchar       | NO   | APPROVED | Status (always APPROVED; record exists only when approved).   | RF-39        |
+| `request_id`        | bigint FK     | YES  | NULL     | Originating request (→ `employee_requests`). Nullable; populated on new creations. | RF-39, RN-09 |
+| `notes`             | text          | YES  | NULL     | Notes/observations.                                           | RF-39        |
+| `created_at`        | timestamp     | NO   | now      | —                                                             | —            |
+| `updated_at`        | timestamp     | NO   | now      | —                                                             | —            |
 
-**Constraints:** UNIQUE(`employee_id`, `date`). INDEX(`request_id`).
+**Constraints:** UNIQUE(`employee_id`, `date`) WHERE deleted_at IS NULL (partial). INDEX(`request_id`).
 
 ---
 
@@ -621,7 +622,7 @@ Employee requests → EmployeeRequest{PENDING} → inbox → Manager approves �
 
 ### 2.12 `leaves` — Leave Records (Full Day, Range, or Partial Hours)
 
-> **v1.1:** Records exist only in approved state. Approval lifecycle (`status`, `requested_by`, `approved_by`, `approved_at`) is managed by `EmployeeRequest`. `request_id` provides traceability to the originating request.
+> **v1.1:** Integration with `EmployeeRequest` (`request_id` field and removal of approval lifecycle fields) is deferred to a future task. The table retains its current approval lifecycle.
 
 | Field                     | Type          | Null | Default | Description                                                                                                                         | FR     |
 | ------------------------- | ------------- | ---- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------ |
@@ -638,7 +639,10 @@ Employee requests → EmployeeRequest{PENDING} → inbox → Manager approves �
 | `actual_start_time`       | time          | YES  | NULL    | Actual departure recorded from Today view.                                                                                          | RF-25a |
 | `actual_end_time`         | time          | YES  | NULL    | Actual return recorded from Today view. NULL if employee did not return.                                                            | RF-25a |
 | `actual_duration_minutes` | integer       | YES  | NULL    | Minutes away from work. Computed from actual times; falls back to scheduled times. Used for payroll deduction.                      | RF-25a |
-| `request_id`              | bigint FK     | NO   | —       | Originating request (→ `employee_requests`).                                                                                        | RF-25  |
+| `status`                  | enum          | NO   | PENDING | Status: PENDING, APPROVED, REJECTED, CANCELLED.                                                                                     | RF-25  |
+| `requested_by`            | bigint FK     | NO   | —       | User who submitted the request (→ `users`).                                                                                        | RF-25  |
+| `approved_by`             | bigint FK     | YES  | NULL    | User who approved/rejected (→ `users`).                                                                                           | RF-25  |
+| `approved_at`             | datetime      | YES  | NULL    | Approval or rejection timestamp.                                                                                                    | RF-25  |
 | `notes`                   | text          | YES  | NULL    | Notes / justification.                                                                                                              | RF-25  |
 | `created_at`              | timestamp     | NO   | now     | —                                                                                                                                   | —      |
 | `updated_at`              | timestamp     | NO   | now     | —                                                                                                                                   | —      |
@@ -685,18 +689,20 @@ Employee requests → EmployeeRequest{PENDING} → inbox → Manager approves �
 
 ---
 
-### 2.15 `vacation_requests` — Approved Vacation Periods
+### 2.15 `vacation_requests` — Vacation Requests
 
-> **v1.1:** Records exist only in approved state. Approval lifecycle is managed by `EmployeeRequest`. Renamed conceptually from "request" to "approved vacation period" — the name is kept for DB compatibility.
+> **v1.1:** Integration with `EmployeeRequest` (`request_id` field and removal of approval lifecycle fields) is deferred to a future task.
 
 | Field         | Type         | Null | Default | Description                                          | FR    |
 | ------------- | ------------ | ---- | ------- | ---------------------------------------------------- | ----- |
 | `id`          | bigint       | NO   | auto    | PK                                                   | —     |
 | `employee_id` | bigint FK    | NO   | —       | Employee.                                            | RF-27 |
-| `start_date`  | date         | NO   | —       | Start date.                                          | RF-27 |
-| `end_date`    | date         | NO   | —       | End date.                                            | RF-27 |
-| `days_count`  | decimal(5,2) | NO   | —       | Vacation days approved.                              | RF-27 |
-| `request_id`  | bigint FK    | NO   | —       | Originating request (→ `employee_requests`).         | RF-27 |
+| `start_date`  | date         | NO   | —       | Requested start date.                                | RF-27 |
+| `end_date`    | date         | NO   | —       | Requested end date.                                  | RF-27 |
+| `days_count`  | decimal(5,2) | NO   | —       | Vacation days requested.                             | RF-27 |
+| `status`      | varchar      | NO   | pending | Request status.                                      | RF-27 |
+| `approved_by` | bigint FK    | YES  | NULL    | Approver employee/user, if approved or rejected.     | RF-27 |
+| `approved_at` | timestamp    | YES  | NULL    | Approval/rejection timestamp.                        | RF-27 |
 | `notes`       | text         | YES  | NULL    | Notes.                                               | RF-27 |
 | `created_at`  | timestamp    | NO   | now     | —                                                    | —     |
 | `updated_at`  | timestamp    | NO   | now     | —                                                    | —     |
