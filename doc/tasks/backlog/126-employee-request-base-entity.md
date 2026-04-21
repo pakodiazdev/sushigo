@@ -60,7 +60,7 @@ NegotiatedExtraDay / Leave / VacationRequest / ...
   "prima_pct": 100,
   "salary_day": 200.00,
   "prima": 200.00,
-  "seventh_day": 200.00,
+  "seventh_day": 200.00,    // 1/6 of weekly salary = salary_day (for 6-day schedules)
   "total": 600.00,
   "branch_id": 1
 }
