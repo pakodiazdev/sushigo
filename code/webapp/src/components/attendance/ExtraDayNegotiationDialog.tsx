@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { CheckCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useExtraDayNegotiationDialog } from './use-extra-day-negotiation-dialog'
+import { useExtraDayNegotiationDialog, formatCurrency } from './use-extra-day-negotiation-dialog'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
 
 // ── Schema ─────────────────────────────────────────────────────────────────────
@@ -58,7 +58,6 @@ export function ExtraDayNegotiationDialog({
     handleSalaryAmountChange,
     handlePrimaPercentChange,
     handlePrimaAmountChange,
-    formatCurrency,
     finalPrimaPercent,
   } = useExtraDayNegotiationDialog(registeredDailyWage)
 
@@ -152,9 +151,9 @@ export function ExtraDayNegotiationDialog({
               <span className="text-sm">
                 Salario registrado{' '}
                 <span className="text-muted-foreground">
-                  {registeredDailyWage !== null
-                    ? `(${formatCurrency(registeredDailyWage)})`
-                    : '(no configurado)'}
+                  {registeredDailyWage === null
+                    ? '(no configurado)'
+                    : `(${formatCurrency(registeredDailyWage)})`}
                 </span>
               </span>
             </label>
@@ -174,8 +173,9 @@ export function ExtraDayNegotiationDialog({
             {salaryMode === 'custom' && (
               <div className="flex gap-2 ml-6">
                 <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">% del salario</label>
+                  <label htmlFor="salary-percent-input" className="text-xs text-muted-foreground mb-1 block">% del salario</label>
                   <input
+                    id="salary-percent-input"
                     type="number"
                     min="0"
                     max="200"
@@ -187,8 +187,9 @@ export function ExtraDayNegotiationDialog({
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">Monto ($)</label>
+                  <label htmlFor="salary-amount-input" className="text-xs text-muted-foreground mb-1 block">Monto ($)</label>
                   <input
+                    id="salary-amount-input"
                     type="number"
                     min="0"
                     step="0.01"
@@ -238,8 +239,9 @@ export function ExtraDayNegotiationDialog({
             {primaMode === 'custom' && (
               <div className="flex gap-2 ml-6">
                 <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">% de prima</label>
+                  <label htmlFor="prima-percent-input" className="text-xs text-muted-foreground mb-1 block">% de prima</label>
                   <input
+                    id="prima-percent-input"
                     type="number"
                     min="0"
                     max="200"
@@ -251,8 +253,9 @@ export function ExtraDayNegotiationDialog({
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">Monto ($)</label>
+                  <label htmlFor="prima-amount-input" className="text-xs text-muted-foreground mb-1 block">Monto ($)</label>
                   <input
+                    id="prima-amount-input"
                     type="number"
                     min="0"
                     step="0.01"

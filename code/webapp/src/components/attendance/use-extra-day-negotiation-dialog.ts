@@ -21,6 +21,10 @@ export interface ExtraDayNegotiationDialogState {
   finalPrimaPercent: number
 }
 
+export function formatCurrency(amount: number): string {
+  return `$${amount.toFixed(2)}`
+}
+
 /**
  * Logic hook for ExtraDayNegotiationDialog.
  *
@@ -41,7 +45,7 @@ export function useExtraDayNegotiationDialog(
   // Default to 'custom' when no registered wage is available so the dialog
   // is usable immediately (effectiveSalary > 0 enables the submit button).
   const [salaryMode, setSalaryMode] = useState<'registered' | 'custom'>(
-    registeredDailyWage != null ? 'registered' : 'custom',
+    registeredDailyWage === null ? 'custom' : 'registered',
   )
 
   // Raw strings bound to the inputs — never formatted on the field being edited.
@@ -57,9 +61,9 @@ export function useExtraDayNegotiationDialog(
   )
 
   // Derived numeric values used for computations and summary display.
-  const salaryAmount = parseFloat(salaryAmountRaw) || 0
-  const primaAmount  = parseFloat(primaAmountRaw)  || 0
-  const primaPercent = parseFloat(primaPercentRaw) || 0
+  const salaryAmount = Number.parseFloat(salaryAmountRaw) || 0
+  const primaAmount  = Number.parseFloat(primaAmountRaw)  || 0
+  const primaPercent = Number.parseFloat(primaPercentRaw) || 0
 
   const effectiveSalary = salaryMode === 'registered' ? (registeredDailyWage ?? 0) : salaryAmount
   const effectivePrima  = primaMode === 'legal' ? effectiveSalary : primaAmount
@@ -90,7 +94,7 @@ export function useExtraDayNegotiationDialog(
     // Keep the raw string the user typed — no toFixed here.
     setSalaryPercentRaw(val)
     if (registeredDailyWage !== null && registeredDailyWage > 0) {
-      const pct = parseFloat(val) || 0
+      const pct = Number.parseFloat(val) || 0
       // Cross-field: format the companion amount nicely.
       setSalaryAmountRaw(((registeredDailyWage * pct) / 100).toFixed(2))
     }
@@ -99,7 +103,7 @@ export function useExtraDayNegotiationDialog(
   function handleSalaryAmountChange(val: string) {
     setSalaryAmountRaw(val)
     if (registeredDailyWage !== null && registeredDailyWage > 0) {
-      const amt = parseFloat(val) || 0
+      const amt = Number.parseFloat(val) || 0
       setSalaryPercentRaw(((amt / registeredDailyWage) * 100).toFixed(2))
     }
   }
@@ -108,22 +112,16 @@ export function useExtraDayNegotiationDialog(
 
   function handlePrimaPercentChange(val: string) {
     setPrimaPercentRaw(val)
-    const pct = parseFloat(val) || 0
+    const pct = Number.parseFloat(val) || 0
     setPrimaAmountRaw(((effectiveSalary * pct) / 100).toFixed(2))
   }
 
   function handlePrimaAmountChange(val: string) {
     setPrimaAmountRaw(val)
     if (effectiveSalary > 0) {
-      const amt = parseFloat(val) || 0
+      const amt = Number.parseFloat(val) || 0
       setPrimaPercentRaw(((amt / effectiveSalary) * 100).toFixed(2))
     }
-  }
-
-  // ── Misc ─────────────────────────────────────────────────────────────────────
-
-  function formatCurrency(amount: number): string {
-    return `$${amount.toFixed(2)}`
   }
 
   const finalPrimaPercent = primaMode === 'legal' ? 100 : primaPercent
