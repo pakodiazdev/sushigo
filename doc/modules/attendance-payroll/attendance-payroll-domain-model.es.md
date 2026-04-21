@@ -1,9 +1,11 @@
 # 📐 Modelo de Dominio — Attendance & Payroll (SushiGo)
 
-**Versión:** 1.0
-**Fecha:** 2026-02-09
+**Versión:** 1.1
+**Fecha:** 2026-04-21
 **Base:** attendance-payroll-spec v0.8 + mvp-scope
-**Estado:** Contrato de dominio congelado
+**Estado:** Contrato de dominio activo
+
+**Changelog v1.1 (2026-04-21):** Se agrega `EmployeeRequest` como wrapper unificado de aprobación para todas las solicitudes de empleados. Las entidades concretas (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) solo se crean al aprobarse — la DB queda semánticamente limpia. Los campos de ciclo de aprobación (`status`, `approved_by`, `approved_at`) se centralizan en `EmployeeRequest`. Se agrega subdominio 1.7 (ER Solicitudes), sección 2.24 (diccionario employee_requests) y secuencia 6.5 (ciclo de vida de solicitud).
 
 ---
 
@@ -161,6 +163,7 @@ erDiagram
     Attendance ||--o{ OvertimeBankMovement : "attendance_id"
 
     NegotiatedExtraDay }|--|| Branch : "branch_id"
+    NegotiatedExtraDay }|--|| EmployeeRequest : "request_id"
 
     Attendance {
         bigint id PK
@@ -205,8 +208,27 @@ erDiagram
         bigint employee_id FK
         date date
         bigint branch_id FK
-        decimal agreed_pay "10,2"
-        bigint approved_by FK "→ users"
+        decimal salary_day "10,2 salario del día"
+        decimal prima "10,2 prima por descanso"
+        decimal seventh_day "10,2 séptimo día 1/6"
+        decimal agreed_pay "10,2 total acordado"
+        bigint request_id FK "→ employee_requests"
+        text notes "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    EmployeeRequest {
+        bigint id PK
+        bigint employee_id FK
+        enum type "EXTRA_DAY|LEAVE|VACATION|..."
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        string requestable_type "nullable - se asigna al aprobar"
+        bigint requestable_id "nullable - se asigna al aprobar"
+        json payload "datos específicos mientras está pendiente"
+        bigint requested_by FK "→ users"
+        bigint approved_by FK "nullable → users"
+        datetime approved_at "nullable"
         text notes "nullable"
         timestamp created_at
         timestamp updated_at
@@ -240,6 +262,8 @@ erDiagram
     Employee ||--|{ VacationRequest : "employee_id"
 
     Leave }|--|| LeaveType : "leave_type_id"
+    Leave }|--|| EmployeeRequest : "request_id"
+    VacationRequest }|--|| EmployeeRequest : "request_id"
 
     LeaveType {
         bigint id PK
@@ -260,9 +284,7 @@ erDiagram
         bigint leave_type_id FK
         date start_date
         date end_date
-        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
-        bigint approved_by FK "nullable → users"
-        datetime approved_at "nullable"
+        bigint request_id FK "→ employee_requests"
         text notes "nullable"
         timestamp created_at
         timestamp updated_at
@@ -294,9 +316,7 @@ erDiagram
         date start_date
         date end_date
         decimal days_count "5,2"
-        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
-        bigint approved_by FK "nullable → users"
-        datetime approved_at "nullable"
+        bigint request_id FK "→ employee_requests"
         text notes "nullable"
         timestamp created_at
         timestamp updated_at
@@ -402,6 +422,50 @@ erDiagram
         timestamp created_at
     }
 ```
+
+### 1.7 Subdominio: Solicitudes (Employee Requests — Flujo de Aprobación)
+
+> **Decisión de diseño:** `EmployeeRequest` es el wrapper unificado de aprobación para todas las solicitudes. Las entidades concretas se crean **únicamente al aprobarse** — si un registro existe en `negotiated_extra_days`, `leaves` o `vacation_requests`, está aprobado por definición.
+
+```mermaid
+erDiagram
+    Employee ||--|{ EmployeeRequest : "employee_id"
+    EmployeeRequest ||--o| NegotiatedExtraDay : "requestable (EXTRA_DAY)"
+    EmployeeRequest ||--o| Leave : "requestable (LEAVE)"
+    EmployeeRequest ||--o| VacationRequest : "requestable (VACATION)"
+
+    EmployeeRequest {
+        bigint id PK
+        bigint employee_id FK
+        enum type "EXTRA_DAY|LEAVE|VACATION|SCHEDULE_CHANGE"
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        string requestable_type "nullable - se asigna al aprobar"
+        bigint requestable_id "nullable - se asigna al aprobar"
+        json payload "datos específicos mientras pendiente"
+        bigint requested_by FK "→ users"
+        bigint approved_by FK "nullable → users"
+        datetime approved_at "nullable"
+        text notes "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+```
+
+**Ciclo de vida:**
+
+```
+Manager registra → EmployeeRequest{APPROVED} → entidad concreta creada en la misma transacción
+Empleado solicita → EmployeeRequest{PENDING} → inbox → Manager aprueba → entidad concreta creada
+                                                       → Manager rechaza → no se crea entidad
+```
+
+**Estructura del payload por tipo:**
+
+| type | campos del payload |
+|---|---|
+| `EXTRA_DAY` | `date`, `branch_id`, `salary_pct`, `prima_pct`, `salary_day`, `prima_amount`, `seventh_day`, `total` |
+| `LEAVE` | `leave_type_id`, `start_date`, `end_date`, `pay_percentage`, `time_mode`, … |
+| `VACATION` | `start_date`, `end_date`, `days_count` |
 
 ---
 
@@ -560,7 +624,9 @@ erDiagram
 
 ---
 
-### 2.9 `negotiated_extra_days` — Días Extra Negociados
+### 2.9 `negotiated_extra_days` — Días Extra Negociados (Aprobados)
+
+> **v1.1:** Los registros solo existen en estado aprobado. El ciclo de aprobación (`status`, `approved_by`, `approved_at`) se gestiona en `EmployeeRequest`. `agreed_pay` se desglosa en tres componentes para las líneas de nómina.
 
 | Campo | Tipo | Null | Default | Descripción | RF |
 |-------|------|------|---------|-------------|-----|
@@ -568,13 +634,16 @@ erDiagram
 | `employee_id` | bigint FK | NO | — | Empleado. | RF-38 |
 | `date` | date | NO | — | Fecha del día extra. | RF-39 |
 | `branch_id` | bigint FK | NO | — | Sucursal donde trabajó. | RF-39 |
-| `agreed_pay` | decimal(10,2) | NO | — | Pago acordado. | RF-39, RN-10 |
-| `approved_by` | bigint FK | NO | — | Quién aprobó (→ `users`). | RF-39, RN-09 |
+| `salary_day` | decimal(10,2) | NO | — | Componente salario del día acordado. | RF-39, RN-10 |
+| `prima` | decimal(10,2) | NO | — | Componente prima por día de descanso. | RF-39, RN-10 |
+| `seventh_day` | decimal(10,2) | NO | — | Componente séptimo día (1/6 del salary_day). | RF-39 |
+| `agreed_pay` | decimal(10,2) | NO | — | Total acordado (= salary_day + prima + seventh_day). | RF-39, RN-10 |
+| `request_id` | bigint FK | NO | — | Solicitud de origen (→ `employee_requests`). | RF-39, RN-09 |
 | `notes` | text | SÍ | NULL | Notas/observaciones. | RF-39 |
 | `created_at` | timestamp | NO | now | — | — |
 | `updated_at` | timestamp | NO | now | — | — |
 
-**Constraints:** UNIQUE(`employee_id`, `date`).
+**Constraints:** UNIQUE(`employee_id`, `date`). INDEX(`request_id`).
 
 ---
 
@@ -619,7 +688,9 @@ erDiagram
 
 ---
 
-### 2.12 `leaves` — Permisos (Día Completo o Rango)
+### 2.12 `leaves` — Permisos Aprobados (Día Completo o Rango)
+
+> **v1.1:** Los registros solo existen en estado aprobado. El ciclo de aprobación se gestiona en `EmployeeRequest`. `request_id` da trazabilidad a la solicitud de origen.
 
 | Campo | Tipo | Null | Default | Descripción | RF |
 |-------|------|------|---------|-------------|-----|
@@ -628,9 +699,7 @@ erDiagram
 | `leave_type_id` | bigint FK | NO | — | Tipo de permiso del catálogo. | RF-25 |
 | `start_date` | date | NO | — | Fecha inicio. | RF-25 |
 | `end_date` | date | NO | — | Fecha fin (= start_date si un solo día). | RF-25 |
-| `status` | enum | NO | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. | RF-25 |
-| `approved_by` | bigint FK | SÍ | NULL | Quién aprobó (→ `users`). | RF-25 |
-| `approved_at` | datetime | SÍ | NULL | Cuándo se aprobó. | RF-25 |
+| `request_id` | bigint FK | NO | — | Solicitud de origen (→ `employee_requests`). | RF-25 |
 | `notes` | text | SÍ | NULL | Notas. | RF-25 |
 | `created_at` | timestamp | NO | now | — | — |
 | `updated_at` | timestamp | NO | now | — | — |
@@ -671,7 +740,9 @@ erDiagram
 
 ---
 
-### 2.15 `vacation_requests` — Solicitudes de Vacaciones
+### 2.15 `vacation_requests` — Vacaciones Aprobadas
+
+> **v1.1:** Los registros solo existen en estado aprobado. El ciclo de aprobación se gestiona en `EmployeeRequest`. El nombre de tabla se mantiene por compatibilidad pero conceptualmente representa un periodo de vacaciones aprobado.
 
 | Campo | Tipo | Null | Default | Descripción | RF |
 |-------|------|------|---------|-------------|-----|
@@ -679,10 +750,8 @@ erDiagram
 | `employee_id` | bigint FK | NO | — | Empleado. | RF-27 |
 | `start_date` | date | NO | — | Fecha inicio. | RF-27 |
 | `end_date` | date | NO | — | Fecha fin. | RF-27 |
-| `days_count` | decimal(5,2) | NO | — | Días solicitados. | RF-27 |
-| `status` | enum | NO | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. | RF-27 |
-| `approved_by` | bigint FK | SÍ | NULL | Quién aprobó (→ `users`). | RF-27 |
-| `approved_at` | datetime | SÍ | NULL | Cuándo. | RF-27 |
+| `days_count` | decimal(5,2) | NO | — | Días de vacaciones aprobados. | RF-27 |
+| `request_id` | bigint FK | NO | — | Solicitud de origen (→ `employee_requests`). | RF-27 |
 | `notes` | text | SÍ | NULL | Notas. | RF-27 |
 | `created_at` | timestamp | NO | now | — | — |
 | `updated_at` | timestamp | NO | now | — | — |
@@ -823,6 +892,35 @@ total_pay = base_pay
 
 ---
 
+### 2.24 `employee_requests` — Solicitud de Empleado (Wrapper de Aprobación)
+
+> Entidad unificada de aprobación. Guarda la solicitud en estado pendiente (payload JSON) hasta que el manager aprueba o rechaza. Al aprobar, se crea la entidad concreta y se asignan `requestable_type / requestable_id`.
+
+| Campo | Tipo | Null | Default | Descripción | RF |
+|-------|------|------|---------|-------------|-----|
+| `id` | bigint | NO | auto | PK | — |
+| `employee_id` | bigint FK | NO | — | Empleado al que corresponde la solicitud (→ `employees`). | RF-38 |
+| `type` | enum | NO | — | `EXTRA_DAY`, `LEAVE`, `VACATION`, `SCHEDULE_CHANGE`. | — |
+| `status` | enum | NO | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. | RN-09 |
+| `requestable_type` | varchar(100) | SÍ | NULL | Clase del modelo polimórfico. Se asigna al aprobar (ej: `NegotiatedExtraDay`). | — |
+| `requestable_id` | bigint | SÍ | NULL | FK a la entidad concreta. Se asigna al aprobar. | — |
+| `payload` | json | NO | — | Datos específicos del tipo mientras está pendiente. Los consume el handler al aprobar. | — |
+| `requested_by` | bigint FK | NO | — | Usuario que creó la solicitud (→ `users`). | RF-38 |
+| `approved_by` | bigint FK | SÍ | NULL | Usuario que aprobó o rechazó (→ `users`). NULL = auto-aprobado. | RN-09 |
+| `approved_at` | datetime | SÍ | NULL | Cuándo se aprobó o rechazó. | — |
+| `notes` | text | SÍ | NULL | Notas / justificación. | — |
+| `created_at` | timestamp | NO | now | — | — |
+| `updated_at` | timestamp | NO | now | — | — |
+
+**Constraints:** INDEX(`employee_id`, `status`). INDEX(`requestable_type`, `requestable_id`). INDEX(`type`, `status`).
+
+**Reglas de negocio:**
+- Cuando `requested_by = manager` y `type = EXTRA_DAY`: el status se establece como `APPROVED` al crear (auto-aprobación). La entidad concreta se crea en la misma transacción.
+- `requestable_type` y `requestable_id` son NULL mientras `status = PENDING` o `REJECTED`. Se asignan solo al `APPROVED`.
+- Rechazar una solicitud nunca crea una entidad concreta.
+
+---
+
 ### 2.23 `attendance_audit_logs` — Auditoría de Cambios
 
 | Campo | Tipo | Null | Default | Descripción | RF |
@@ -848,11 +946,12 @@ total_pay = base_pay
 | **EmployeeRole** | `MANAGER`, `COOK`, `KITCHEN_ASSISTANT`, `DELIVERY_DRIVER` | `employees.role` |
 | **WorkdayType** | `FULL`, `PARTIAL` | `employee_schedules.workday_type` |
 | **DayStatus** | `WORKED`, `DAY_OFF`, `LEAVE`, `VACATION`, `HOLIDAY`, `ABSENCE`, `EXTRA` | `attendances.day_status` |
+| **RequestType** | `EXTRA_DAY`, `LEAVE`, `VACATION`, `SCHEDULE_CHANGE` | `employee_requests.type` |
+| **RequestStatus** | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED` | `employee_requests.status` |
 | **PartialLeaveType** | `ARRIVE_LATE`, `LEAVE_EARLY`, `TAKE_TIME` | `partial_leaves.type` |
 | **OvertimeMovementType** | `EARNED`, `USED`, `PAID`, `ADJUSTMENT` | `overtime_bank_movements.movement_type` |
 | **OvertimeOrigin** | `AUTO`, `MANUAL` | `overtime_bank_movements.origin` |
 | **OvertimeValuationMethod** | `LFT_PROPORTIONAL`, `AGREED_RATE` | `overtime_pay_configs.method`, `overtime_bank_movements.valuation_method` |
-| **LeaveStatus** | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED` | `leaves.status`, `vacation_requests.status` |
 | **PayPeriodStatus** | `OPEN`, `CLOSED`, `REOPENED` | `pay_periods.status` |
 | **PayConcept** | `BASE_PAY`, `LATE_DEDUCTION`, `UNPAID_LEAVE`, `OVERTIME`, `EXTRA_DAY`, `PUNCTUALITY_BONUS`, `HOLIDAY`, `OTHER` | `pay_period_lines.concept` |
 | **AuditAction** | `CREATE`, `UPDATE`, `DELETE` | `attendance_audit_logs.action` |
@@ -1012,11 +1111,33 @@ classDiagram
         +int employee_id
         +date date
         +int branch_id
+        +decimal salary_day
+        +decimal prima
+        +decimal seventh_day
         +decimal agreed_pay
-        +int approved_by
+        +int request_id
         +string notes
         --
+        +totalPay() decimal
+    }
+
+    class EmployeeRequest {
+        +int id
+        +int employee_id
+        +RequestType type
+        +RequestStatus status
+        +string requestable_type
+        +int requestable_id
+        +json payload
+        +int requested_by
+        +int approved_by
+        +datetime approved_at
+        --
+        +isPending() bool
         +isApproved() bool
+        +approve(userId) void
+        +reject(userId) void
+        +requestable() Model
     }
 
     class OvertimeBankMovement {
@@ -1043,6 +1164,8 @@ classDiagram
     Employee "1" --> "*" PartialLeave
     Employee "1" --> "*" NegotiatedExtraDay
     Employee "1" --> "*" OvertimeBankMovement
+    Employee "1" --> "*" EmployeeRequest
+    EmployeeRequest "1" --> "0..1" NegotiatedExtraDay : requestable
 ```
 
 ### 4.3 Clases de Dominio — Cierre de Nómina
@@ -1204,13 +1327,25 @@ stateDiagram-v2
     CLOSED --> [*] : Periodo finalizado
 ```
 
-### 5.2 Ciclo de vida de una Solicitud (Leave / VacationRequest)
+### 5.2 Ciclo de vida de EmployeeRequest
+
+> Aplica a todos los tipos: `EXTRA_DAY`, `LEAVE`, `VACATION`, `SCHEDULE_CHANGE`.
+> La entidad concreta (NegotiatedExtraDay, Leave, etc.) se crea **únicamente en APPROVED**.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING : Empleado/Manager crea solicitud
+    [*] --> PENDING : Empleado envía solicitud
+    [*] --> APPROVED : Manager registra en nombre del empleado (auto-aprobación)
+    note right of APPROVED
+        Entidad concreta creada
+        en la misma transacción.
+    end note
 
     PENDING --> APPROVED : Manager/Admin aprueba
+    note right of PENDING
+        Aparece en el inbox del Manager.
+        payload guarda los datos.
+    end note
     PENDING --> REJECTED : Manager/Admin rechaza
     PENDING --> CANCELLED : Solicitante cancela
 
@@ -1422,6 +1557,47 @@ sequenceDiagram
     UI-->>M: Confirmación de cierre exitoso
 ```
 
+### 6.5 EmployeeRequest — Creación y Aprobación
+
+```mermaid
+sequenceDiagram
+    actor A as Actor (Empleado o Manager)
+    participant UI as Formulario de Solicitud
+    participant API as EmployeeRequestController
+    participant Svc as EmployeeRequestService
+    participant Handler as RequestHandler (ej: ExtraDayRequestHandler)
+    participant DB as Database
+
+    A->>UI: Llena formulario (fecha, salario%, prima%)
+    UI->>API: POST /employee-requests { type, employee_id, payload }
+    API->>Svc: create(data, autoApprove: bool)
+
+    alt autoApprove = true (Manager registra en nombre del empleado)
+        Svc->>DB: INSERT employee_requests { status: APPROVED, approved_by: manager }
+        Svc->>Handler: handle(employeeRequest)
+        Handler->>Handler: Construir entidad desde payload
+        Handler->>DB: INSERT negotiated_extra_days (o Leave, etc.)
+        Handler-->>Svc: entidad concreta
+        Svc->>DB: UPDATE employee_requests { requestable_type, requestable_id }
+        API-->>UI: 201 Created (aprobado + entidad creada)
+    else autoApprove = false (Empleado solicita)
+        Svc->>DB: INSERT employee_requests { status: PENDING }
+        API-->>UI: 201 Created (pendiente — en inbox del Manager)
+    end
+
+    note over API,DB: Flujo de aprobación separado (cuando está pendiente)
+
+    actor M as Manager
+    M->>UI: Abre inbox, aprueba solicitud
+    UI->>API: PATCH /employee-requests/{id}/approve
+    API->>Svc: approve(employeeRequest, manager)
+    Svc->>Handler: handle(employeeRequest)
+    Handler->>DB: INSERT entidad concreta
+    Handler-->>Svc: entidad concreta
+    Svc->>DB: UPDATE employee_requests { status: APPROVED, approved_by, approved_at, requestable_* }
+    API-->>UI: 200 OK
+```
+
 ### 6.4 Registro de Permiso Parcial
 
 ```mermaid
@@ -1466,6 +1642,8 @@ sequenceDiagram
 |-------|-----------|-------------|
 | `employees` | UNIQUE(`code`) | Código de empleado único en el sistema. |
 | `attendances` | UNIQUE(`employee_id`, `date`) | Un registro de asistencia por empleado por día. |
+| `employee_requests` | INDEX(`employee_id`, `status`) | Consultas rápidas de inbox por empleado y estado. |
+| `employee_requests` | INDEX(`requestable_type`, `requestable_id`) | Lookup polimórfico inverso. |
 | `negotiated_extra_days` | UNIQUE(`employee_id`, `date`) | Un día extra por empleado por fecha. |
 | `schedule_days` | UNIQUE(`employee_schedule_id`, `day_of_week`) | Una configuración por día de semana por horario. |
 | `vacation_entitlements` | UNIQUE(`employee_id`, `year`) | Un registro de derecho vacacional por empleado por año. |
@@ -1535,8 +1713,10 @@ sequenceDiagram
 | 21 | PayPeriodEmployee | `pay_period_employees` | Nómina |
 | 22 | PayPeriodLine | `pay_period_lines` | Nómina |
 | 23 | AttendanceAuditLog | `attendance_audit_logs` | Auditoría |
+| 24 | EmployeeRequest | `employee_requests` | Solicitudes |
 
 ---
 
 > **Trazabilidad:** Cada campo del diccionario referencia el RF/RN/DC que lo origina.
 > **Convenciones:** Nombres de tabla en snake_case plural, modelos PascalCase singular, FKs `{modelo}_id`, timestamps automáticos, soft deletes donde aplique, JSON `meta` para extensibilidad.
+> **Nota v1.1:** Las entidades concretas de solicitud (`negotiated_extra_days`, `leaves`, `vacation_requests`) son semánticamente "aprobadas" por su existencia — no se necesita filtrar por estado en esas tablas.

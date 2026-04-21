@@ -1,9 +1,11 @@
 # 📐 Domain Model — Attendance & Payroll (SushiGo)
 
-**Version:** 1.0
-**Date:** 2026-02-09
+**Version:** 1.1
+**Date:** 2026-04-21
 **Base:** attendance-payroll-spec v0.8 + mvp-scope
-**Status:** Frozen domain contract
+**Status:** Active domain contract
+
+**Changelog v1.1 (2026-04-21):** Added `EmployeeRequest` as the unified approval wrapper for all employee requests. Concrete entities (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) are now created only upon approval — keeping the DB semantically clean. Approval lifecycle fields (`status`, `approved_by`, `approved_at`) removed from concrete entities and centralized in `EmployeeRequest`. Added subdomain 1.7 (Requests ER), section 2.24 (employee_requests dict), and sequence 6.5 (request lifecycle).
 
 ---
 
@@ -16,6 +18,8 @@
 5. [State Diagrams](#5-state-diagrams)
 6. [Sequence Diagrams](#6-sequence-diagrams)
 7. [Integrity Rules and Constraints](#7-integrity-rules-and-constraints)
+
+> **Subdomains:** 1.1 Employees & Config · 1.2 Daily Operations · 1.3 Leaves, Vacations & Holidays · 1.4 Payroll Close · 1.5 Punctuality Config · 1.6 Audit · **1.7 Requests (new)**
 
 ---
 
@@ -138,6 +142,7 @@ erDiagram
     Attendance ||--o{ OvertimeBankMovement : "attendance_id"
 
     NegotiatedExtraDay }|--|| Branch : "branch_id"
+    NegotiatedExtraDay }|--|| EmployeeRequest : "request_id"
 
     Attendance {
         bigint id PK
@@ -164,8 +169,25 @@ erDiagram
         bigint employee_id FK
         date date
         bigint branch_id FK
-        decimal agreed_pay
-        bigint approved_by FK
+        decimal salary_day "10,2"
+        decimal prima "10,2"
+        decimal seventh_day "10,2"
+        decimal agreed_pay "10,2 total"
+        bigint request_id FK "→ employee_requests"
+        text notes "nullable"
+    }
+
+    EmployeeRequest {
+        bigint id PK
+        bigint employee_id FK
+        enum type "EXTRA_DAY|LEAVE|VACATION|..."
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        string requestable_type "nullable - set on approval"
+        bigint requestable_id "nullable - set on approval"
+        json payload "type-specific data"
+        bigint requested_by FK
+        bigint approved_by FK "nullable"
+        datetime approved_at "nullable"
         text notes "nullable"
     }
 
@@ -195,6 +217,8 @@ erDiagram
     Employee ||--|{ VacationRequest : "employee_id"
 
     Leave }|--|| LeaveType : "leave_type_id"
+    Leave }|--|| EmployeeRequest : "request_id"
+    VacationRequest }|--|| EmployeeRequest : "request_id"
 
     LeaveType {
         bigint id PK
@@ -221,10 +245,7 @@ erDiagram
         time actual_start_time "nullable"
         time actual_end_time "nullable"
         integer actual_duration_minutes "nullable"
-        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
-        bigint requested_by FK
-        bigint approved_by FK "nullable"
-        datetime approved_at "nullable"
+        bigint request_id FK "→ employee_requests"
         text notes "nullable"
     }
 
@@ -250,9 +271,7 @@ erDiagram
         date start_date
         date end_date
         decimal days_count
-        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
-        bigint approved_by FK "nullable"
-        datetime approved_at "nullable"
+        bigint request_id FK "→ employee_requests"
         text notes "nullable"
     }
 ```
@@ -342,6 +361,50 @@ erDiagram
         text reason "nullable"
     }
 ```
+
+### 1.7 Subdomain: Requests (Employee Requests & Approval Workflow)
+
+> **Design decision:** `EmployeeRequest` is the unified approval wrapper for all employee requests. Concrete entities are created **only upon approval** — if a record exists in `negotiated_extra_days`, `leaves`, or `vacation_requests`, it is approved by definition. No status filtering needed on those tables.
+
+```mermaid
+erDiagram
+    Employee ||--|{ EmployeeRequest : "employee_id"
+    EmployeeRequest ||--o| NegotiatedExtraDay : "requestable (EXTRA_DAY)"
+    EmployeeRequest ||--o| Leave : "requestable (LEAVE)"
+    EmployeeRequest ||--o| VacationRequest : "requestable (VACATION)"
+
+    EmployeeRequest {
+        bigint id PK
+        bigint employee_id FK
+        enum type "EXTRA_DAY|LEAVE|VACATION|SCHEDULE_CHANGE"
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        string requestable_type "nullable - set on approval"
+        bigint requestable_id "nullable - set on approval"
+        json payload "type-specific data while pending"
+        bigint requested_by FK "→ users"
+        bigint approved_by FK "nullable → users"
+        datetime approved_at "nullable"
+        text notes "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+```
+
+**Lifecycle:**
+
+```
+Manager registers → EmployeeRequest{APPROVED} → concrete entity created immediately
+Employee requests → EmployeeRequest{PENDING} → inbox → Manager approves → concrete entity created
+                                                      → Manager rejects  → no entity created
+```
+
+**payload JSON shape by type:**
+
+| type | payload fields |
+|---|---|
+| `EXTRA_DAY` | `date`, `branch_id`, `salary_pct`, `prima_pct`, `salary_day`, `prima_amount`, `seventh_day`, `total` |
+| `LEAVE` | `leave_type_id`, `start_date`, `end_date`, `pay_percentage`, `time_mode`, … |
+| `VACATION` | `start_date`, `end_date`, `days_count` |
 
 ---
 
@@ -485,19 +548,24 @@ erDiagram
 
 ### 2.9 `negotiated_extra_days` — Negotiated Extra Days
 
-| Field         | Type          | Null | Default | Description               | FR           |
-| ------------- | ------------- | ---- | ------- | ------------------------- | ------------ |
-| `id`          | bigint        | NO   | auto    | PK                        | —            |
-| `employee_id` | bigint FK     | NO   | —       | Employee.                 | RF-38        |
-| `date`        | date          | NO   | —       | Extra day date.           | RF-39        |
-| `branch_id`   | bigint FK     | NO   | —       | Branch where they worked. | RF-39        |
-| `agreed_pay`  | decimal(10,2) | NO   | —       | Agreed pay.               | RF-39, RN-10 |
-| `approved_by` | bigint FK     | NO   | —       | Who approved (→ `users`). | RF-39, RN-09 |
-| `notes`       | text          | YES  | NULL    | Notes/observations.       | RF-39        |
-| `created_at`  | timestamp     | NO   | now     | —                         | —            |
-| `updated_at`  | timestamp     | NO   | now     | —                         | —            |
+> **v1.1:** Records exist only in approved state. Approval lifecycle (`status`, `approved_by`, `approved_at`) is managed by `EmployeeRequest`. `agreed_pay` was split into three components for payroll line-item breakdown.
 
-**Constraints:** UNIQUE(`employee_id`, `date`).
+| Field         | Type          | Null | Default | Description                                         | FR           |
+| ------------- | ------------- | ---- | ------- | --------------------------------------------------- | ------------ |
+| `id`          | bigint        | NO   | auto    | PK                                                  | —            |
+| `employee_id` | bigint FK     | NO   | —       | Employee.                                           | RF-38        |
+| `date`        | date          | NO   | —       | Extra day date.                                     | RF-39        |
+| `branch_id`   | bigint FK     | NO   | —       | Branch where they worked.                           | RF-39        |
+| `salary_day`  | decimal(10,2) | NO   | —       | Salary component (agreed daily wage).               | RF-39, RN-10 |
+| `prima`       | decimal(10,2) | NO   | —       | Rest-day premium component.                         | RF-39, RN-10 |
+| `seventh_day` | decimal(10,2) | NO   | —       | Seventh-day component (1/6 of salary_day).          | RF-39        |
+| `agreed_pay`  | decimal(10,2) | NO   | —       | Total agreed pay (= salary_day + prima + seventh_day). | RF-39, RN-10 |
+| `request_id`  | bigint FK     | NO   | —       | Originating request (→ `employee_requests`).        | RF-39, RN-09 |
+| `notes`       | text          | YES  | NULL    | Notes/observations.                                 | RF-39        |
+| `created_at`  | timestamp     | NO   | now     | —                                                   | —            |
+| `updated_at`  | timestamp     | NO   | now     | —                                                   | —            |
+
+**Constraints:** UNIQUE(`employee_id`, `date`). INDEX(`request_id`).
 
 ---
 
@@ -551,36 +619,35 @@ erDiagram
 
 ---
 
-### 2.12 `leaves` — Leave Requests (Full Day, Range, or Partial Hours)
+### 2.12 `leaves` — Leave Records (Full Day, Range, or Partial Hours)
 
-| Field                     | Type          | Null | Default   | Description                                                                                                                         | FR     |
-| ------------------------- | ------------- | ---- | --------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `id`                      | bigint        | NO   | auto      | PK                                                                                                                                  | —      |
-| `employee_id`             | bigint FK     | NO   | —         | Employee.                                                                                                                           | RF-25  |
-| `leave_type_id`           | bigint FK     | NO   | —         | Leave type from catalog.                                                                                                            | RF-25  |
-| `start_date`              | date          | NO   | —         | Start date (= end_date for partial/hourly leaves).                                                                                  | RF-25  |
-| `end_date`                | date          | NO   | —         | End date (= start_date if single day or partial).                                                                                   | RF-25  |
-| `pay_percentage`          | decimal(5,2)  | YES  | NULL      | Pay % override for this instance (0–100). NULL = use `leave_types.default_pay_percentage`. Only for `FIXED_PERCENTAGE` types.       | RF-25  |
-| `rest_day_factor`         | enum          | YES  | NULL      | Rest-day impact override: `FULL`, `PROPORTIONAL`, or `NONE`. NULL = use `leave_types.default_rest_day_factor`.                      | RF-25  |
-| `time_mode`               | enum          | YES  | NULL      | `SCHEDULED` or `OPEN_ENDED`. Required for `PROPORTIONAL_HOURS` types. `SCHEDULED` = known start+end; `OPEN_ENDED` = start only.    | RF-25a |
-| `scheduled_start_time`    | time          | YES  | NULL      | Planned departure time. Required when `time_mode` is set.                                                                           | RF-25a |
-| `scheduled_end_time`      | time          | YES  | NULL      | Planned return time. NULL when `time_mode = OPEN_ENDED`.                                                                            | RF-25a |
-| `actual_start_time`       | time          | YES  | NULL      | Actual departure recorded from Today view after approval.                                                                           | RF-25a |
-| `actual_end_time`         | time          | YES  | NULL      | Actual return recorded from Today view. NULL if employee did not return.                                                            | RF-25a |
-| `actual_duration_minutes` | integer       | YES  | NULL      | Minutes away from work. Computed from actual times if recorded; falls back to scheduled times. Used for payroll deduction.          | RF-25a |
-| `status`                  | enum          | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`.                                                                                     | RF-25  |
-| `requested_by`            | bigint FK     | NO   | —         | User who registered the leave (→ `users`).                                                                                          | RF-25  |
-| `approved_by`             | bigint FK     | YES  | NULL      | User who approved/rejected (→ `users`).                                                                                             | RF-25  |
-| `approved_at`             | datetime      | YES  | NULL      | When approved or rejected.                                                                                                          | RF-25  |
-| `notes`                   | text          | YES  | NULL      | Notes / justification.                                                                                                              | RF-25  |
-| `created_at`              | timestamp     | NO   | now       | —                                                                                                                                   | —      |
-| `updated_at`              | timestamp     | NO   | now       | —                                                                                                                                   | —      |
+> **v1.1:** Records exist only in approved state. Approval lifecycle (`status`, `requested_by`, `approved_by`, `approved_at`) is managed by `EmployeeRequest`. `request_id` provides traceability to the originating request.
+
+| Field                     | Type          | Null | Default | Description                                                                                                                         | FR     |
+| ------------------------- | ------------- | ---- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `id`                      | bigint        | NO   | auto    | PK                                                                                                                                  | —      |
+| `employee_id`             | bigint FK     | NO   | —       | Employee.                                                                                                                           | RF-25  |
+| `leave_type_id`           | bigint FK     | NO   | —       | Leave type from catalog.                                                                                                            | RF-25  |
+| `start_date`              | date          | NO   | —       | Start date (= end_date for partial/hourly leaves).                                                                                  | RF-25  |
+| `end_date`                | date          | NO   | —       | End date (= start_date if single day or partial).                                                                                   | RF-25  |
+| `pay_percentage`          | decimal(5,2)  | YES  | NULL    | Pay % override for this instance (0–100). NULL = use `leave_types.default_pay_percentage`. Only for `FIXED_PERCENTAGE` types.       | RF-25  |
+| `rest_day_factor`         | enum          | YES  | NULL    | Rest-day impact override: `FULL`, `PROPORTIONAL`, or `NONE`. NULL = use `leave_types.default_rest_day_factor`.                      | RF-25  |
+| `time_mode`               | enum          | YES  | NULL    | `SCHEDULED` or `OPEN_ENDED`. Required for `PROPORTIONAL_HOURS` types. `SCHEDULED` = known start+end; `OPEN_ENDED` = start only.    | RF-25a |
+| `scheduled_start_time`    | time          | YES  | NULL    | Planned departure time. Required when `time_mode` is set.                                                                           | RF-25a |
+| `scheduled_end_time`      | time          | YES  | NULL    | Planned return time. NULL when `time_mode = OPEN_ENDED`.                                                                            | RF-25a |
+| `actual_start_time`       | time          | YES  | NULL    | Actual departure recorded from Today view.                                                                                          | RF-25a |
+| `actual_end_time`         | time          | YES  | NULL    | Actual return recorded from Today view. NULL if employee did not return.                                                            | RF-25a |
+| `actual_duration_minutes` | integer       | YES  | NULL    | Minutes away from work. Computed from actual times; falls back to scheduled times. Used for payroll deduction.                      | RF-25a |
+| `request_id`              | bigint FK     | NO   | —       | Originating request (→ `employee_requests`).                                                                                        | RF-25  |
+| `notes`                   | text          | YES  | NULL    | Notes / justification.                                                                                                              | RF-25  |
+| `created_at`              | timestamp     | NO   | now     | —                                                                                                                                   | —      |
+| `updated_at`              | timestamp     | NO   | now     | —                                                                                                                                   | —      |
 
 **Business rules:**
 - `pay_percentage` and `rest_day_factor` on the instance always override the type defaults when not NULL.
-- For `PROPORTIONAL_HOURS` leaves: payroll deduction = `actual_duration_minutes / scheduled_work_minutes × daily_wage`. `rest_day_factor` determines if the proportional rest day is also reduced.
-- For `FIXED_PERCENTAGE` leaves: payroll = `pay_percentage / 100 × daily_wage` per day in range. `rest_day_factor` determines rest-day contribution.
-- `actual_start_time` and `actual_end_time` are filled from the Today attendance view; they do not block approval.
+- For `PROPORTIONAL_HOURS` leaves: payroll deduction = `actual_duration_minutes / scheduled_work_minutes × daily_wage`.
+- For `FIXED_PERCENTAGE` leaves: payroll = `pay_percentage / 100 × daily_wage` per day in range.
+- `actual_start_time` and `actual_end_time` are filled from the Today attendance view.
 
 ---
 
@@ -618,21 +685,21 @@ erDiagram
 
 ---
 
-### 2.15 `vacation_requests` — Vacation Requests
+### 2.15 `vacation_requests` — Approved Vacation Periods
 
-| Field         | Type         | Null | Default   | Description                                     | FR    |
-| ------------- | ------------ | ---- | --------- | ----------------------------------------------- | ----- |
-| `id`          | bigint       | NO   | auto      | PK                                              | —     |
-| `employee_id` | bigint FK    | NO   | —         | Employee.                                       | RF-27 |
-| `start_date`  | date         | NO   | —         | Start date.                                     | RF-27 |
-| `end_date`    | date         | NO   | —         | End date.                                       | RF-27 |
-| `days_count`  | decimal(5,2) | NO   | —         | Days requested.                                 | RF-27 |
-| `status`      | enum         | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. | RF-27 |
-| `approved_by` | bigint FK    | YES  | NULL      | Who approved (→ `users`).                       | RF-27 |
-| `approved_at` | datetime     | YES  | NULL      | When.                                           | RF-27 |
-| `notes`       | text         | YES  | NULL      | Notes.                                          | RF-27 |
-| `created_at`  | timestamp    | NO   | now       | —                                               | —     |
-| `updated_at`  | timestamp    | NO   | now       | —                                               | —     |
+> **v1.1:** Records exist only in approved state. Approval lifecycle is managed by `EmployeeRequest`. Renamed conceptually from "request" to "approved vacation period" — the name is kept for DB compatibility.
+
+| Field         | Type         | Null | Default | Description                                          | FR    |
+| ------------- | ------------ | ---- | ------- | ---------------------------------------------------- | ----- |
+| `id`          | bigint       | NO   | auto    | PK                                                   | —     |
+| `employee_id` | bigint FK    | NO   | —       | Employee.                                            | RF-27 |
+| `start_date`  | date         | NO   | —       | Start date.                                          | RF-27 |
+| `end_date`    | date         | NO   | —       | End date.                                            | RF-27 |
+| `days_count`  | decimal(5,2) | NO   | —       | Vacation days approved.                              | RF-27 |
+| `request_id`  | bigint FK    | NO   | —       | Originating request (→ `employee_requests`).         | RF-27 |
+| `notes`       | text         | YES  | NULL    | Notes.                                               | RF-27 |
+| `created_at`  | timestamp    | NO   | now     | —                                                    | —     |
+| `updated_at`  | timestamp    | NO   | now     | —                                                    | —     |
 
 ---
 
@@ -770,6 +837,35 @@ total_pay = base_pay
 
 ---
 
+### 2.24 `employee_requests` — Employee Request & Approval Wrapper
+
+> Unified approval entity. Holds the request in pending state (payload JSON) until the manager approves or rejects. On approval, the concrete entity is created and `requestable_type / requestable_id` are assigned.
+
+| Field              | Type         | Null | Default   | Description                                                              | RF    |
+| ------------------ | ------------ | ---- | --------- | ------------------------------------------------------------------------ | ----- |
+| `id`               | bigint       | NO   | auto      | PK                                                                       | —     |
+| `employee_id`      | bigint FK    | NO   | —         | Employee the request is for (→ `employees`).                             | RF-38 |
+| `type`             | enum         | NO   | —         | `EXTRA_DAY`, `LEAVE`, `VACATION`, `SCHEDULE_CHANGE`.                     | —     |
+| `status`           | enum         | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`.                          | RN-09 |
+| `requestable_type` | varchar(100) | YES  | NULL      | Polymorphic model class. Set on approval (e.g. `NegotiatedExtraDay`).    | —     |
+| `requestable_id`   | bigint       | YES  | NULL      | FK to concrete entity. Set on approval.                                  | —     |
+| `payload`          | json         | NO   | —         | Type-specific data while pending. Consumed by handler on approval.       | —     |
+| `requested_by`     | bigint FK    | NO   | —         | User who created the request (→ `users`).                                | RF-38 |
+| `approved_by`      | bigint FK    | YES  | NULL      | User who approved or rejected (→ `users`). NULL = auto-approved by system. | RN-09 |
+| `approved_at`      | datetime     | YES  | NULL      | When approved or rejected.                                               | —     |
+| `notes`            | text         | YES  | NULL      | Notes / justification.                                                   | —     |
+| `created_at`       | timestamp    | NO   | now       | —                                                                        | —     |
+| `updated_at`       | timestamp    | NO   | now       | —                                                                        | —     |
+
+**Constraints:** INDEX(`employee_id`, `status`). INDEX(`requestable_type`, `requestable_id`). INDEX(`type`, `status`).
+
+**Business rules:**
+- When `requested_by = manager` and `type = EXTRA_DAY`: status is set to `APPROVED` at creation (auto-approval). Concrete entity is created in the same transaction.
+- `requestable_type` and `requestable_id` are NULL while `status = PENDING` or `REJECTED`. Set only on `APPROVED`.
+- Rejecting a request never creates a concrete entity.
+
+---
+
 ### 2.23 `attendance_audit_logs` — Change Audit Log
 
 | Field            | Type         | Null | Default | Description                                                  | FR    |
@@ -792,19 +888,20 @@ total_pay = base_pay
 
 | Enum                        | Values                                                                                                          | Used in                                                                   |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **EmployeeRole**            | `MANAGER`, `COOK`, `KITCHEN_ASSISTANT`, `DELIVERY_DRIVER`                                                       | `employees.role`                                                          |
-| **WorkdayType**             | `FULL`, `PARTIAL`                                                                                               | `employee_schedules.workday_type`                                         |
-| **DayStatus**               | `WORKED`, `DAY_OFF`, `LEAVE`, `VACATION`, `HOLIDAY`, `ABSENCE`, `EXTRA`                                         | `attendances.day_status`                                                  |
-| **LeaveCalculationMode**    | `FIXED_PERCENTAGE`, `PROPORTIONAL_HOURS`                                                                        | `leave_types.calculation_mode`                                            |
-| **RestDayFactor**           | `FULL`, `PROPORTIONAL`, `NONE`                                                                                  | `leave_types.default_rest_day_factor`, `leaves.rest_day_factor`           |
-| **LeaveTimeMode**           | `SCHEDULED`, `OPEN_ENDED`                                                                                       | `leaves.time_mode`                                                        |
-| **LeaveStatus**             | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`                                                                  | `leaves.status`, `vacation_requests.status`                               |
-| **OvertimeMovementType**    | `EARNED`, `USED`, `PAID`, `ADJUSTMENT`                                                                          | `overtime_bank_movements.movement_type`                                   |
-| **OvertimeOrigin**          | `AUTO`, `MANUAL`                                                                                                | `overtime_bank_movements.origin`                                          |
-| **OvertimeValuationMethod** | `LFT_PROPORTIONAL`, `AGREED_RATE`                                                                               | `overtime_pay_configs.method`, `overtime_bank_movements.valuation_method` |
-| **PayPeriodStatus**         | `OPEN`, `CLOSED`, `REOPENED`                                                                                    | `pay_periods.status`                                                      |
-| **PayConcept**              | `BASE_PAY`, `LATE_DEDUCTION`, `LEAVE_DEDUCTION`, `OVERTIME`, `EXTRA_DAY`, `PUNCTUALITY_BONUS`, `HOLIDAY`, `OTHER` | `pay_period_lines.concept`                                                |
-| **AuditAction**             | `CREATE`, `UPDATE`, `DELETE`                                                                                    | `attendance_audit_logs.action`                                            |
+| **EmployeeRole**            | `MANAGER`, `COOK`, `KITCHEN_ASSISTANT`, `DELIVERY_DRIVER`                                                          | `employees.role`                                                          |
+| **WorkdayType**             | `FULL`, `PARTIAL`                                                                                                  | `employee_schedules.workday_type`                                         |
+| **DayStatus**               | `WORKED`, `DAY_OFF`, `LEAVE`, `VACATION`, `HOLIDAY`, `ABSENCE`, `EXTRA`                                            | `attendances.day_status`                                                  |
+| **RequestType**             | `EXTRA_DAY`, `LEAVE`, `VACATION`, `SCHEDULE_CHANGE`                                                                | `employee_requests.type`                                                  |
+| **RequestStatus**           | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`                                                                     | `employee_requests.status`                                                |
+| **LeaveCalculationMode**    | `FIXED_PERCENTAGE`, `PROPORTIONAL_HOURS`                                                                           | `leave_types.calculation_mode`                                            |
+| **RestDayFactor**           | `FULL`, `PROPORTIONAL`, `NONE`                                                                                     | `leave_types.default_rest_day_factor`, `leaves.rest_day_factor`           |
+| **LeaveTimeMode**           | `SCHEDULED`, `OPEN_ENDED`                                                                                          | `leaves.time_mode`                                                        |
+| **OvertimeMovementType**    | `EARNED`, `USED`, `PAID`, `ADJUSTMENT`                                                                             | `overtime_bank_movements.movement_type`                                   |
+| **OvertimeOrigin**          | `AUTO`, `MANUAL`                                                                                                   | `overtime_bank_movements.origin`                                          |
+| **OvertimeValuationMethod** | `LFT_PROPORTIONAL`, `AGREED_RATE`                                                                                  | `overtime_pay_configs.method`, `overtime_bank_movements.valuation_method` |
+| **PayPeriodStatus**         | `OPEN`, `CLOSED`, `REOPENED`                                                                                       | `pay_periods.status`                                                      |
+| **PayConcept**              | `BASE_PAY`, `LATE_DEDUCTION`, `LEAVE_DEDUCTION`, `OVERTIME`, `EXTRA_DAY`, `PUNCTUALITY_BONUS`, `HOLIDAY`, `OTHER`  | `pay_period_lines.concept`                                                |
+| **AuditAction**             | `CREATE`, `UPDATE`, `DELETE`                                                                                       | `attendance_audit_logs.action`                                            |
 
 ---
 
@@ -961,11 +1058,33 @@ classDiagram
         +int employee_id
         +date date
         +int branch_id
+        +decimal salary_day
+        +decimal prima
+        +decimal seventh_day
         +decimal agreed_pay
-        +int approved_by
+        +int request_id
         +string notes
         --
+        +totalPay() decimal
+    }
+
+    class EmployeeRequest {
+        +int id
+        +int employee_id
+        +RequestType type
+        +RequestStatus status
+        +string requestable_type
+        +int requestable_id
+        +json payload
+        +int requested_by
+        +int approved_by
+        +datetime approved_at
+        --
+        +isPending() bool
         +isApproved() bool
+        +approve(userId) void
+        +reject(userId) void
+        +requestable() Model
     }
 
     class OvertimeBankMovement {
@@ -992,6 +1111,8 @@ classDiagram
     Employee "1" --> "*" PartialLeave
     Employee "1" --> "*" NegotiatedExtraDay
     Employee "1" --> "*" OvertimeBankMovement
+    Employee "1" --> "*" EmployeeRequest
+    EmployeeRequest "1" --> "0..1" NegotiatedExtraDay : requestable
 ```
 
 ### 4.3 Domain Classes — Payroll Close
@@ -1153,13 +1274,25 @@ stateDiagram-v2
     CLOSED --> [*] : Period finalized
 ```
 
-### 5.2 Request Lifecycle (Leave / VacationRequest)
+### 5.2 EmployeeRequest Lifecycle
+
+> Applies to all request types: `EXTRA_DAY`, `LEAVE`, `VACATION`, `SCHEDULE_CHANGE`.
+> The concrete entity (NegotiatedExtraDay, Leave, etc.) is created **only on APPROVED**.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING : Employee/Manager creates request
+    [*] --> PENDING : Employee submits request
+    [*] --> APPROVED : Manager registers on behalf (auto-approval)
+    note right of APPROVED
+        Concrete entity created
+        in the same transaction.
+    end note
 
     PENDING --> APPROVED : Manager/Admin approves
+    note right of PENDING
+        Appears in manager inbox.
+        payload holds the data.
+    end note
     PENDING --> REJECTED : Manager/Admin rejects
     PENDING --> CANCELLED : Requester cancels
 
@@ -1371,6 +1504,47 @@ sequenceDiagram
     UI-->>M: Successful close confirmation
 ```
 
+### 6.5 EmployeeRequest — Creation and Approval
+
+```mermaid
+sequenceDiagram
+    actor A as Actor (Employee or Manager)
+    participant UI as Request Form
+    participant API as EmployeeRequestController
+    participant Svc as EmployeeRequestService
+    participant Handler as RequestHandler (e.g. ExtraDayRequestHandler)
+    participant DB as Database
+
+    A->>UI: Fills request form (date, salary%, prima%)
+    UI->>API: POST /employee-requests { type, employee_id, payload }
+    API->>Svc: create(data, autoApprove: bool)
+
+    alt autoApprove = true (Manager registers on behalf)
+        Svc->>DB: INSERT employee_requests { status: APPROVED, approved_by: manager }
+        Svc->>Handler: handle(employeeRequest)
+        Handler->>Handler: Build entity from payload
+        Handler->>DB: INSERT negotiated_extra_days (or Leave, etc.)
+        Handler-->>Svc: concrete entity
+        Svc->>DB: UPDATE employee_requests { requestable_type, requestable_id }
+        API-->>UI: 201 Created (approved + entity created)
+    else autoApprove = false (Employee requests)
+        Svc->>DB: INSERT employee_requests { status: PENDING }
+        API-->>UI: 201 Created (pending — in manager inbox)
+    end
+
+    note over API,DB: Separate approval flow (when pending)
+
+    actor M as Manager
+    M->>UI: Opens inbox, approves request
+    UI->>API: PATCH /employee-requests/{id}/approve
+    API->>Svc: approve(employeeRequest, manager)
+    Svc->>Handler: handle(employeeRequest)
+    Handler->>DB: INSERT concrete entity
+    Handler-->>Svc: concrete entity
+    Svc->>DB: UPDATE employee_requests { status: APPROVED, approved_by, approved_at, requestable_* }
+    API-->>UI: 200 OK
+```
+
 ### 6.4 Partial Leave Registration
 
 ```mermaid
@@ -1415,6 +1589,8 @@ sequenceDiagram
 | ----------------------- | ------------------------------------------------- | ------------------------------------------------------ |
 | `employees`             | UNIQUE(`code`)                                    | Employee code unique system-wide.                      |
 | `attendances`           | UNIQUE(`employee_id`, `date`)                     | One attendance record per employee per day.            |
+| `employee_requests`     | INDEX(`employee_id`, `status`)                    | Fast inbox queries by employee and status.             |
+| `employee_requests`     | INDEX(`requestable_type`, `requestable_id`)       | Polymorphic reverse lookup.                            |
 | `negotiated_extra_days` | UNIQUE(`employee_id`, `date`)                     | One extra day per employee per date.                   |
 | `schedule_days`         | UNIQUE(`employee_schedule_id`, `day_of_week`)     | One configuration per day of week per schedule.        |
 | `vacation_entitlements` | UNIQUE(`employee_id`, `year`)                     | One vacation entitlement record per employee per year. |
@@ -1484,8 +1660,10 @@ sequenceDiagram
 | 21  | PayPeriodEmployee     | `pay_period_employees`     | Payroll          |
 | 22  | PayPeriodLine         | `pay_period_lines`         | Payroll          |
 | 23  | AttendanceAuditLog    | `attendance_audit_logs`    | Audit            |
+| 24  | EmployeeRequest       | `employee_requests`        | Requests         |
 
 ---
 
 > **Traceability:** Each field in the dictionary references the FR/BR/DC that originated it.
 > **Conventions:** Table names in snake_case plural, models in PascalCase singular, FKs `{model}_id`, automatic timestamps, soft deletes where applicable, JSON `meta` for extensibility.
+> **v1.1 note:** Concrete request entities (`negotiated_extra_days`, `leaves`, `vacation_requests`) are semantically "approved" by their existence — no status filter needed on those tables.

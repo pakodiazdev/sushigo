@@ -119,10 +119,18 @@ Este inbox es el **punto central de aprobaciones** — en el futuro también rec
 
 ---
 
-## 🔗 Referencias
+## 🔗 Dependencias
 
+### Requiere (debe completarse antes)
+- [ ] **#126** — EmployeeRequest base entity (API + listado de solicitudes)
+- [ ] **#127** — Solicitudes navegación y shell (la página donde vive el listado)
+- [ ] **#124** — Extra day employee request (necesita solicitudes reales que mostrar)
+
+### Desbloquea (puede iniciarse después)
+> Es el último eslabón de este flujo — no bloquea otras tareas.
+
+### Referencias
 - **Viene de:** #059
-- **Depende de:** #124 (solicitud del empleado)
 - **Relacionado:** #122 (exprés), #123 (Manager anticipa)
 
 ---

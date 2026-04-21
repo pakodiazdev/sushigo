@@ -88,8 +88,16 @@ Después de guardar aparece un chip con el día acordado:
 
 ---
 
-## 🔗 Referencias
+## 🔗 Dependencias
 
+### Requiere (debe completarse antes)
+- [ ] **#126** — EmployeeRequest base entity (API + modelo base)
+- [ ] **#127** — Solicitudes navegación y shell (punto de entrada del formulario)
+
+### Desbloquea (puede iniciarse después)
+> Sin dependencias directas — el check-in automático (#059) ya existe.
+
+### Referencias
 - **Viene de:** #059
 - **Relacionado:** #122 (exprés), #124 (empleado solicita), #125 (inbox aprobaciones)
 
