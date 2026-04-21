@@ -79,6 +79,9 @@ class CoreTestSeeder extends Seeder
         'leaves.request',
         'leaves.approve',
         'leaves.reject',
+        'employee-requests.view',
+        'employee-requests.create',
+        'employee-requests.approve',
         'items.view',
         'items.create',
         'items.update',
@@ -97,9 +100,9 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.', 'items.', 'inventory_locations.', 'stock.', 'attendances.'],
+        'admin' => ['users.', 'employees.', 'leaves.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.'],
         'inventory-manager' => ['items.', 'inventory_locations.', 'stock.'],
-        'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'attendances.'],
+        'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'employee-requests.', 'attendances.'],
         'cook' => self::BASIC_USER_VIEW,
         'kitchen-assistant' => self::BASIC_USER_VIEW,
         'delivery-driver' => self::BASIC_USER_VIEW,
