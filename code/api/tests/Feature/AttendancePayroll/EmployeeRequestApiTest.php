@@ -181,6 +181,253 @@ class EmployeeRequestApiTest extends TestCase
             ->assertStatus(403);
     }
 
+    #[Test]
+    public function it_lists_employee_requests_with_pagination(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        // Create multiple requests
+        for ($i = 0; $i < 3; $i++) {
+            $this->postJson('/api/v1/employee-requests', [
+                'employee_id' => $employee->public_id,
+                'type' => EmployeeRequestType::EXTRA_DAY->value,
+                'payload' => $this->extraDayPayload(),
+            ])->assertStatus(201);
+        }
+
+        $response = $this->getJson('/api/v1/employee-requests?per_page=2');
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 3)
+            ->assertJsonPath('meta.per_page', 2)
+            ->assertJsonCount(2, 'data');
+    }
+
+    #[Test]
+    public function it_lists_employee_requests_filtered_by_employee_id(): void
+    {
+        $employee1 = $this->makeEmployeeWithActivePeriod();
+        $employee2 = $this->makeEmployeeWithActivePeriod();
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee1->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee2->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $response = $this->getJson("/api/v1/employee-requests?employee_id={$employee1->public_id}");
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.employee_id', $employee1->public_id);
+    }
+
+    #[Test]
+    public function it_lists_employee_requests_filtered_by_status(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        // Create one request and approve it
+        $approvedResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+        $approvedId = $approvedResponse->json('data.id');
+        $this->patchJson("/api/v1/employee-requests/{$approvedId}/approve")->assertOk();
+
+        // Create another request and leave it pending
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $response = $this->getJson('/api/v1/employee-requests?status='.EmployeeRequestStatus::APPROVED->value);
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.status', EmployeeRequestStatus::APPROVED->value);
+    }
+
+    #[Test]
+    public function it_lists_employee_requests_filtered_by_type(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $response = $this->getJson('/api/v1/employee-requests?type='.EmployeeRequestType::EXTRA_DAY->value);
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.type', EmployeeRequestType::EXTRA_DAY->value);
+    }
+
+    #[Test]
+    public function it_enforces_view_permission_on_list(): void
+    {
+        $noPermissionUser = User::factory()->createOne();
+        assert($noPermissionUser instanceof User);
+        Passport::actingAs($noPermissionUser);
+
+        $this->getJson('/api/v1/employee-requests')
+            ->assertStatus(403);
+    }
+
+    #[Test]
+    public function it_validates_required_fields_on_create(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $response = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            // Missing 'type' and 'payload'
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('type')
+            ->assertJsonValidationErrorFor('payload');
+    }
+
+    #[Test]
+    public function it_validates_employee_exists_on_create(): void
+    {
+        $response = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => 'invalid-id',
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('employee_id');
+    }
+
+    #[Test]
+    public function it_validates_invalid_type_on_create(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $response = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => 'invalid-type',
+            'payload' => $this->extraDayPayload(),
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('type');
+    }
+
+    #[Test]
+    public function it_validates_payload_required_fields(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $response = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => [
+                'date' => self::DATE,
+                // Missing other required fields
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('payload.salary_pct')
+            ->assertJsonValidationErrorFor('payload.prima_pct');
+    }
+
+    #[Test]
+    public function it_validates_invalid_date_format_in_payload(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $response = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => array_merge($this->extraDayPayload(), [
+                'date' => 'invalid-date',
+            ]),
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('payload.date');
+    }
+
+    #[Test]
+    public function it_returns_404_when_rejecting_nonexistent_request(): void
+    {
+        $response = $this->patchJson('/api/v1/employee-requests/nonexistent-id/reject', [
+            'reason' => 'Test reason',
+        ]);
+
+        $response->assertStatus(404);
+    }
+
+    #[Test]
+    public function it_returns_404_when_approving_nonexistent_request(): void
+    {
+        $response = $this->patchJson('/api/v1/employee-requests/nonexistent-id/approve');
+
+        $response->assertStatus(404);
+    }
+
+    #[Test]
+    public function it_prevents_approving_already_approved_request(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        // First approval
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/approve")->assertOk();
+
+        // Try to approve again
+        $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve");
+
+        $response->assertStatus(422);
+    }
+
+    #[Test]
+    public function it_prevents_rejecting_already_approved_request(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        // Approve first
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/approve")->assertOk();
+
+        // Try to reject
+        $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/reject", [
+            'reason' => 'Too late',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
     private function extraDayPayload(): array
     {
         return [
