@@ -22,6 +22,10 @@ use App\Http\Controllers\Api\V1\Devtools\GetClockController;
 use App\Http\Controllers\Api\V1\Devtools\ResetClockController;
 use App\Http\Controllers\Api\V1\Devtools\SetClockController;
 use App\Http\Controllers\Api\V1\Devtools\ShiftClockController;
+use App\Http\Controllers\Api\V1\EmployeeRequests\ApproveEmployeeRequestController;
+use App\Http\Controllers\Api\V1\EmployeeRequests\CreateEmployeeRequestController;
+use App\Http\Controllers\Api\V1\EmployeeRequests\ListEmployeeRequestsController;
+use App\Http\Controllers\Api\V1\EmployeeRequests\RejectEmployeeRequestController;
 use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\CreateWageController;
@@ -286,6 +290,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/requests', RegisterLeaveRequestController::class)->name('register-request')->middleware('permission:leaves.request');
         Route::patch('/{id}/approve', ApproveLeaveController::class)->name('approve')->middleware('permission:leaves.approve');
         Route::patch('/{id}/reject', RejectLeaveController::class)->name('reject')->middleware('permission:leaves.reject');
+    });
+
+    // Employee Requests Module (All Protected)
+    Route::middleware('auth:api')->prefix('employee-requests')->name('employee-requests.')->group(function () {
+        Route::get('/', ListEmployeeRequestsController::class)->name('index')->middleware('permission:employee-requests.view');
+        Route::post('/', CreateEmployeeRequestController::class)->name('store')->middleware('permission:employee-requests.create');
+        Route::patch('/{id}/approve', ApproveEmployeeRequestController::class)->name('approve')->middleware('permission:employee-requests.approve');
+        Route::patch('/{id}/reject', RejectEmployeeRequestController::class)->name('reject')->middleware('permission:employee-requests.approve');
     });
 
     // Attendances Module (All Protected)

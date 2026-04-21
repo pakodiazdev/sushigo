@@ -16,6 +16,7 @@ class NegotiatedExtraDay extends Model
 
     protected $fillable = [
         'employee_id',
+        'request_id',
         'branch_id',
         'date',
         'agreed_daily_wage',
@@ -38,6 +39,11 @@ class NegotiatedExtraDay extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function employeeRequest(): BelongsTo
+    {
+        return $this->belongsTo(EmployeeRequest::class, 'request_id');
     }
 
     public function branch(): BelongsTo
