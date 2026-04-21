@@ -163,7 +163,7 @@ erDiagram
     Attendance ||--o{ OvertimeBankMovement : "attendance_id"
 
     NegotiatedExtraDay }|--|| Branch : "branch_id"
-    NegotiatedExtraDay }|--|| EmployeeRequest : "request_id"
+    NegotiatedExtraDay ||--|| EmployeeRequest : "request_id"
 
     Attendance {
         bigint id PK
@@ -262,8 +262,8 @@ erDiagram
     Employee ||--|{ VacationRequest : "employee_id"
 
     Leave }|--|| LeaveType : "leave_type_id"
-    Leave }|--|| EmployeeRequest : "request_id"
-    VacationRequest }|--|| EmployeeRequest : "request_id"
+    Leave ||--|| EmployeeRequest : "request_id"
+    VacationRequest ||--|| EmployeeRequest : "request_id"
 
     LeaveType {
         bigint id PK
@@ -463,7 +463,7 @@ Empleado solicita → EmployeeRequest{PENDING} → inbox → Manager aprueba →
 
 | type | campos del payload |
 |---|---|
-| `EXTRA_DAY` | `date`, `branch_id`, `salary_pct`, `prima_pct`, `salary_day`, `prima_amount`, `seventh_day`, `total` |
+| `EXTRA_DAY` | `date`, `branch_id`, `salary_pct`, `prima_pct`, `salary_day`, `prima`, `seventh_day`, `total` |
 | `LEAVE` | `leave_type_id`, `start_date`, `end_date`, `pay_percentage`, `time_mode`, … |
 | `VACATION` | `start_date`, `end_date`, `days_count` |
 
@@ -892,7 +892,7 @@ total_pay = base_pay
 
 ---
 
-### 2.24 `employee_requests` — Solicitud de Empleado (Wrapper de Aprobación)
+### 2.23 `employee_requests` — Solicitud de Empleado (Wrapper de Aprobación)
 
 > Entidad unificada de aprobación. Guarda la solicitud en estado pendiente (payload JSON) hasta que el manager aprueba o rechaza. Al aprobar, se crea la entidad concreta y se asignan `requestable_type / requestable_id`.
 
@@ -906,7 +906,7 @@ total_pay = base_pay
 | `requestable_id` | bigint | SÍ | NULL | FK a la entidad concreta. Se asigna al aprobar. | — |
 | `payload` | json | NO | — | Datos específicos del tipo mientras está pendiente. Los consume el handler al aprobar. | — |
 | `requested_by` | bigint FK | NO | — | Usuario que creó la solicitud (→ `users`). | RF-38 |
-| `approved_by` | bigint FK | SÍ | NULL | Usuario que aprobó o rechazó (→ `users`). NULL = auto-aprobado. | RN-09 |
+| `approved_by` | bigint FK | SÍ | NULL | Usuario que aprobó o rechazó (→ `users`). En auto-aprobación por manager, se asigna el id del manager (= `requested_by`). | RN-09 |
 | `approved_at` | datetime | SÍ | NULL | Cuándo se aprobó o rechazó. | — |
 | `notes` | text | SÍ | NULL | Notas / justificación. | — |
 | `created_at` | timestamp | NO | now | — | — |
@@ -921,7 +921,7 @@ total_pay = base_pay
 
 ---
 
-### 2.23 `attendance_audit_logs` — Auditoría de Cambios
+### 2.24 `attendance_audit_logs` — Auditoría de Cambios
 
 | Campo | Tipo | Null | Default | Descripción | RF |
 |-------|------|------|---------|-------------|-----|
@@ -1166,6 +1166,8 @@ classDiagram
     Employee "1" --> "*" OvertimeBankMovement
     Employee "1" --> "*" EmployeeRequest
     EmployeeRequest "1" --> "0..1" NegotiatedExtraDay : requestable
+    EmployeeRequest "1" --> "0..1" Leave : requestable
+    EmployeeRequest "1" --> "0..1" VacationRequest : requestable
 ```
 
 ### 4.3 Clases de Dominio — Cierre de Nómina
@@ -1573,7 +1575,7 @@ sequenceDiagram
     API->>Svc: create(data, autoApprove: bool)
 
     alt autoApprove = true (Manager registra en nombre del empleado)
-        Svc->>DB: INSERT employee_requests { status: APPROVED, approved_by: manager }
+        Svc->>DB: INSERT employee_requests { status: APPROVED, approved_by: manager, approved_at: now() }
         Svc->>Handler: handle(employeeRequest)
         Handler->>Handler: Construir entidad desde payload
         Handler->>DB: INSERT negotiated_extra_days (o Leave, etc.)
