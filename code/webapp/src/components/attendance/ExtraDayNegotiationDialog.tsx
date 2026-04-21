@@ -1,20 +1,13 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { CheckCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useExtraDayNegotiationDialog, formatCurrency } from './use-extra-day-negotiation-dialog'
+import {
+  useExtraDayNegotiationDialog,
+  formatCurrency,
+} from './use-extra-day-negotiation-dialog'
+import type { ExtraDayFormValues } from './use-extra-day-negotiation-dialog'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
-
-// ── Schema ─────────────────────────────────────────────────────────────────────
-
-const extraDaySchema = z.object({
-  notes: z.string().max(500, 'Máximo 500 caracteres').optional(),
-})
-
-type ExtraDayFormValues = z.infer<typeof extraDaySchema>
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -43,6 +36,9 @@ export function ExtraDayNegotiationDialog({
   onCancel,
 }: Readonly<ExtraDayNegotiationDialogProps>) {
   const {
+    register,
+    handleSubmit,
+    errors,
     salaryMode,
     salaryAmountRaw,
     salaryPercentRaw,
@@ -60,11 +56,6 @@ export function ExtraDayNegotiationDialog({
     handlePrimaAmountChange,
     finalPrimaPercent,
   } = useExtraDayNegotiationDialog(registeredDailyWage)
-
-  const { register, handleSubmit, formState: { errors } } = useForm<ExtraDayFormValues>({
-    resolver: zodResolver(extraDaySchema),
-    defaultValues: { notes: '' },
-  })
 
   // Escape key handler
   useEffect(() => {
@@ -181,7 +172,9 @@ export function ExtraDayNegotiationDialog({
                     max="200"
                     step="0.01"
                     value={salaryPercentRaw}
-                    onChange={e => handleSalaryPercentChange(e.target.value)}
+                    {...register('salary_percent', {
+                      onChange: e => handleSalaryPercentChange(e.target.value),
+                    })}
                     disabled={isPending || registeredDailyWage === null}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
@@ -194,7 +187,9 @@ export function ExtraDayNegotiationDialog({
                     min="0"
                     step="0.01"
                     value={salaryAmountRaw}
-                    onChange={e => handleSalaryAmountChange(e.target.value)}
+                    {...register('salary_amount', {
+                      onChange: e => handleSalaryAmountChange(e.target.value),
+                    })}
                     disabled={isPending}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
@@ -213,9 +208,7 @@ export function ExtraDayNegotiationDialog({
                 name="prima_mode"
                 value="legal"
                 checked={primaMode === 'legal'}
-                onChange={() => {
-                  setPrimaMode('legal')
-                }}
+                onChange={() => setPrimaMode('legal')}
                 disabled={isPending}
               />
               <span className="text-sm">
@@ -247,7 +240,9 @@ export function ExtraDayNegotiationDialog({
                     max="200"
                     step="0.01"
                     value={primaPercentRaw}
-                    onChange={e => handlePrimaPercentChange(e.target.value)}
+                    {...register('prima_percent', {
+                      onChange: e => handlePrimaPercentChange(e.target.value),
+                    })}
                     disabled={isPending}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
@@ -260,7 +255,9 @@ export function ExtraDayNegotiationDialog({
                     min="0"
                     step="0.01"
                     value={primaAmountRaw}
-                    onChange={e => handlePrimaAmountChange(e.target.value)}
+                    {...register('prima_amount', {
+                      onChange: e => handlePrimaAmountChange(e.target.value),
+                    })}
                     disabled={isPending}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
