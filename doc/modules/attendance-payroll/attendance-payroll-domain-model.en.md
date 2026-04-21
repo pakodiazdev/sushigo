@@ -863,6 +863,7 @@ total_pay = base_pay
 - When `requested_by = manager` and `type = EXTRA_DAY`: status is set to `APPROVED` at creation (auto-approval). Concrete entity is created in the same transaction.
 - `requestable_type` and `requestable_id` are NULL while `status = PENDING` or `REJECTED`. Set only on `APPROVED`.
 - Rejecting a request never creates a concrete entity.
+- **Cancelling an APPROVED request deletes the associated concrete entity (requestable) and nullifies `requestable_type`/`requestable_id` in the same transaction.** This preserves the "existence = approved" invariant on concrete entity tables. An audit log entry must be created.
 
 ---
 
@@ -1506,7 +1507,7 @@ sequenceDiagram
     UI-->>M: Successful close confirmation
 ```
 
-### 6.5 EmployeeRequest — Creation and Approval
+### 6.4 EmployeeRequest — Creation and Approval
 
 ```mermaid
 sequenceDiagram
@@ -1547,7 +1548,7 @@ sequenceDiagram
     API-->>UI: 200 OK
 ```
 
-### 6.4 Partial Leave Registration
+### 6.5 Partial Leave Registration
 
 ```mermaid
 sequenceDiagram
