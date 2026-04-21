@@ -13,13 +13,14 @@ return new class extends Migration
             $table->string('public_id', 26)->unique();
             $table->foreignId('employee_id')->constrained('employees');
             $table->enum('type', ['EXTRA_DAY', 'LEAVE', 'VACATION', 'SCHEDULE_CHANGE']);
-            $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'])->default('PENDING');
+            $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED'])->default('PENDING');
             $table->nullableMorphs('requestable');
             $table->json('payload');
             $table->foreignId('requested_by')->constrained('users');
             $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->dateTime('approved_at')->nullable();
             $table->text('notes')->nullable();
+            $table->text('rejection_reason')->nullable();
             $table->timestamps();
 
             $table->index(['employee_id', 'type', 'status']);
