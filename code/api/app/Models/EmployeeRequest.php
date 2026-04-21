@@ -25,6 +25,7 @@ class EmployeeRequest extends Model
         'approved_by',
         'approved_at',
         'notes',
+        'rejection_reason',
     ];
 
     protected $casts = [
