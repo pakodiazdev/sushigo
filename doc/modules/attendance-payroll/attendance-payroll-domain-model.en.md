@@ -142,7 +142,7 @@ erDiagram
     Attendance ||--o{ OvertimeBankMovement : "attendance_id"
 
     NegotiatedExtraDay }|--|| Branch : "branch_id"
-    NegotiatedExtraDay }|--|| EmployeeRequest : "request_id"
+    NegotiatedExtraDay ||--|| EmployeeRequest : "request_id"
 
     Attendance {
         bigint id PK
@@ -217,8 +217,8 @@ erDiagram
     Employee ||--|{ VacationRequest : "employee_id"
 
     Leave }|--|| LeaveType : "leave_type_id"
-    Leave }|--|| EmployeeRequest : "request_id"
-    VacationRequest }|--|| EmployeeRequest : "request_id"
+    Leave ||--|| EmployeeRequest : "request_id"
+    VacationRequest ||--|| EmployeeRequest : "request_id"
 
     LeaveType {
         bigint id PK
@@ -402,7 +402,7 @@ Employee requests → EmployeeRequest{PENDING} → inbox → Manager approves �
 
 | type | payload fields |
 |---|---|
-| `EXTRA_DAY` | `date`, `branch_id`, `salary_pct`, `prima_pct`, `salary_day`, `prima_amount`, `seventh_day`, `total` |
+| `EXTRA_DAY` | `date`, `branch_id`, `salary_pct`, `prima_pct`, `salary_day`, `prima`, `seventh_day`, `total` |
 | `LEAVE` | `leave_type_id`, `start_date`, `end_date`, `pay_percentage`, `time_mode`, … |
 | `VACATION` | `start_date`, `end_date`, `days_count` |
 
@@ -837,7 +837,7 @@ total_pay = base_pay
 
 ---
 
-### 2.24 `employee_requests` — Employee Request & Approval Wrapper
+### 2.23 `employee_requests` — Employee Request & Approval Wrapper
 
 > Unified approval entity. Holds the request in pending state (payload JSON) until the manager approves or rejects. On approval, the concrete entity is created and `requestable_type / requestable_id` are assigned.
 
@@ -851,7 +851,7 @@ total_pay = base_pay
 | `requestable_id`   | bigint       | YES  | NULL      | FK to concrete entity. Set on approval.                                  | —     |
 | `payload`          | json         | NO   | —         | Type-specific data while pending. Consumed by handler on approval.       | —     |
 | `requested_by`     | bigint FK    | NO   | —         | User who created the request (→ `users`).                                | RF-38 |
-| `approved_by`      | bigint FK    | YES  | NULL      | User who approved or rejected (→ `users`). NULL = auto-approved by system. | RN-09 |
+| `approved_by`      | bigint FK    | YES  | NULL      | User who approved or rejected (→ `users`). On manager auto-approval, set to the manager's user id (= `requested_by`). | RN-09 |
 | `approved_at`      | datetime     | YES  | NULL      | When approved or rejected.                                               | —     |
 | `notes`            | text         | YES  | NULL      | Notes / justification.                                                   | —     |
 | `created_at`       | timestamp    | NO   | now       | —                                                                        | —     |
@@ -866,7 +866,7 @@ total_pay = base_pay
 
 ---
 
-### 2.23 `attendance_audit_logs` — Change Audit Log
+### 2.24 `attendance_audit_logs` — Change Audit Log
 
 | Field            | Type         | Null | Default | Description                                                  | FR    |
 | ---------------- | ------------ | ---- | ------- | ------------------------------------------------------------ | ----- |
@@ -1113,6 +1113,8 @@ classDiagram
     Employee "1" --> "*" OvertimeBankMovement
     Employee "1" --> "*" EmployeeRequest
     EmployeeRequest "1" --> "0..1" NegotiatedExtraDay : requestable
+    EmployeeRequest "1" --> "0..1" Leave : requestable
+    EmployeeRequest "1" --> "0..1" VacationRequest : requestable
 ```
 
 ### 4.3 Domain Classes — Payroll Close
@@ -1520,7 +1522,7 @@ sequenceDiagram
     API->>Svc: create(data, autoApprove: bool)
 
     alt autoApprove = true (Manager registers on behalf)
-        Svc->>DB: INSERT employee_requests { status: APPROVED, approved_by: manager }
+        Svc->>DB: INSERT employee_requests { status: APPROVED, approved_by: manager, approved_at: now() }
         Svc->>Handler: handle(employeeRequest)
         Handler->>Handler: Build entity from payload
         Handler->>DB: INSERT negotiated_extra_days (or Leave, etc.)
