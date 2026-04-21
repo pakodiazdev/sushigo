@@ -918,6 +918,7 @@ total_pay = base_pay
 - Cuando `requested_by = manager` y `type = EXTRA_DAY`: el status se establece como `APPROVED` al crear (auto-aprobación). La entidad concreta se crea en la misma transacción.
 - `requestable_type` y `requestable_id` son NULL mientras `status = PENDING` o `REJECTED`. Se asignan solo al `APPROVED`.
 - Rechazar una solicitud nunca crea una entidad concreta.
+- **Cancelar una solicitud en estado APPROVED elimina la entidad concreta asociada (requestable) y anula `requestable_type`/`requestable_id` en la misma transacción.** Esto preserva el invariante "existencia = aprobado" en las tablas de entidades concretas. Debe crearse una entrada en el log de auditoría.
 
 ---
 
@@ -1559,7 +1560,7 @@ sequenceDiagram
     UI-->>M: Confirmación de cierre exitoso
 ```
 
-### 6.5 EmployeeRequest — Creación y Aprobación
+### 6.4 EmployeeRequest — Creación y Aprobación
 
 ```mermaid
 sequenceDiagram
@@ -1600,7 +1601,7 @@ sequenceDiagram
     API-->>UI: 200 OK
 ```
 
-### 6.4 Registro de Permiso Parcial
+### 6.5 Registro de Permiso Parcial
 
 ```mermaid
 sequenceDiagram
