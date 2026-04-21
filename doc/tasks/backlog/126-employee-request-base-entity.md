@@ -28,8 +28,10 @@ Diseñado durante el análisis del #123. Todas las solicitudes de empleados sigu
 ```
 id · employee_id · type (enum) · status
 requestable_type (nullable) · requestable_id (nullable) · payload (JSON)
-requested_by · approved_by (nullable) · approved_at (nullable) · notes
+requested_by · approved_by (nullable) · approved_at (nullable) · notes · rejection_reason
 ```
+
+> `notes` pertenece al solicitante (se preserva siempre). `rejection_reason` es la justificación del manager al rechazar.
 
 ### Relación con entidades concretas
 
@@ -86,9 +88,9 @@ NegotiatedExtraDay / Leave / VacationRequest / ...
   - `ExtraDayRequestHandler`
   - `LeaveRequestHandler` (futuro)
 - `EmployeeRequestService`:
-  - `create(data, autoApprove: bool)` — crea el request y opcionalmente auto-aprueba
+  - `create(data, autoApprove: bool)` — crea el request; si `autoApprove=true`, requiere permiso `employee-requests.approve` (además de `employee-requests.create`) y aprueba en la misma transacción
   - `approve(EmployeeRequest, User)` — aprueba, crea entidad concreta, asigna requestable
-  - `reject(EmployeeRequest, User, reason)` — rechaza
+  - `reject(EmployeeRequest, User, reason)` — rechaza; guarda el motivo en `rejection_reason`, no toca `notes`
   - `cancel(EmployeeRequest, User)` — cancela (solo si PENDING; lanza excepción si ya APPROVED/REJECTED)
 - Endpoints:
   - `POST /employee-requests` — crear solicitud
@@ -113,7 +115,8 @@ NegotiatedExtraDay / Leave / VacationRequest / ...
 - [ ] `RequestHandler` interface + `ExtraDayRequestHandler` implementado
 - [ ] `EmployeeRequestService` maneja creación, auto-aprobación y aprobación manual
 - [ ] Al aprobar se crea la entidad concreta desde el payload y se asigna `requestable_type/id`
-- [ ] Al rechazar solo cambia el status — no se crea ninguna entidad concreta
+- [ ] Al rechazar solo cambia el status y se guarda el motivo en `rejection_reason` — no se crea entidad concreta ni se modifican las `notes` del solicitante
+- [ ] `auto_approve=true` requiere permiso `employee-requests.approve` además de `employee-requests.create` — devuelve 403 si no
 - [ ] El solicitante puede cancelar su propia solicitud `PENDING` → pasa a `CANCELLED`, no se crea entidad concreta
 - [ ] Cancelar una solicitud `APPROVED` elimina la entidad concreta en la misma transacción (preserva invariante "existencia = aprobado")
 - [ ] API endpoints documentados en Swagger
