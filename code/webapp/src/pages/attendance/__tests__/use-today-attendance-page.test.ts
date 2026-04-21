@@ -49,6 +49,13 @@ vi.mock('@/lib/timezone', async () => {
   }
 })
 
+const mockNegotiatedRegister = vi.fn()
+vi.mock('@/services/negotiated-extra-day-api', () => ({
+  negotiatedExtraDayApi: {
+    register: (...args: unknown[]) => mockNegotiatedRegister(...args),
+  },
+}))
+
 import { attendanceApi } from '@/services/attendance-api'
 import { useAuthStore } from '@/stores/auth.store'
 
@@ -846,6 +853,152 @@ describe('useTodayAttendancePage', () => {
       await waitFor(() => {
         expect(result.current.currentBulkOvertime).toBeNull()
       })
+    })
+  })
+
+  // ── Extra day express flow ───────────────────────────────────────────────────
+
+  describe('extra day flow', () => {
+    const restDaySchedule = {
+      day_of_week: 7,
+      is_day_off: true,
+      expected_start: null,
+      expected_lunch_start: null,
+      expected_lunch_end: null,
+      lunch_duration_minutes: null,
+      expected_end: null,
+    }
+
+    const mockExtraDay = {
+      id: 'ned-001',
+      employee_id: 'emp-001',
+      branch_id: 1,
+      date: '2026-04-20',
+      agreed_daily_wage: 200,
+      prima_percent: 100,
+      prima_amount: 200,
+      approved_by: 'usr-001',
+      status: 'APPROVED' as const,
+      notes: null,
+    }
+
+    it('openExtraDay sets extraDayRow', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const row = makeRow()
+      act(() => { result.current.openExtraDay(row) })
+
+      expect(result.current.extraDayRow).toEqual(row)
+    })
+
+    it('closeExtraDay clears extraDayRow', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const row = makeRow()
+      act(() => { result.current.openExtraDay(row) })
+      act(() => { result.current.closeExtraDay() })
+
+      expect(result.current.extraDayRow).toBeNull()
+    })
+
+    it('confirmExtraDay does nothing when extraDayRow is null', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.confirmExtraDay({ agreed_daily_wage: 200, prima_percent: 100, notes: '' })
+      })
+
+      expect(mockNegotiatedRegister).not.toHaveBeenCalled()
+    })
+
+    it('confirmExtraDay calls negotiatedExtraDayApi.register with correct payload', async () => {
+      mockNegotiatedRegister.mockResolvedValueOnce(mockExtraDay)
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const row = makeRow()
+      act(() => { result.current.openExtraDay(row) })
+
+      await act(async () => {
+        result.current.confirmExtraDay({ agreed_daily_wage: 200, prima_percent: 100, notes: '' })
+      })
+
+      await waitFor(() =>
+        expect(mockNegotiatedRegister).toHaveBeenCalledWith(
+          expect.objectContaining({
+            employee_id: 'emp-001',
+            agreed_daily_wage: 200,
+            prima_percent: 100,
+          }),
+        ),
+      )
+    })
+
+    it('confirmExtraDay clears extraDayRow and opens check-in dialog on success', async () => {
+      mockNegotiatedRegister.mockResolvedValueOnce(mockExtraDay)
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const row = makeRow()
+      act(() => { result.current.openExtraDay(row) })
+
+      await act(async () => {
+        result.current.confirmExtraDay({ agreed_daily_wage: 200, prima_percent: 100, notes: '' })
+      })
+
+      await waitFor(() => {
+        expect(result.current.extraDayRow).toBeNull()
+        expect(result.current.pendingCheckInEmployee).toEqual(row.employee)
+      })
+    })
+
+    it('confirmExtraDay closes extra day dialog on API error', async () => {
+      mockNegotiatedRegister.mockRejectedValueOnce(new Error('Network error'))
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const row = makeRow()
+      act(() => { result.current.openExtraDay(row) })
+
+      await act(async () => {
+        result.current.confirmExtraDay({ agreed_daily_wage: 200, prima_percent: 100, notes: '' })
+      })
+
+      await waitFor(() => {
+        expect(result.current.extraDayRow).toBeNull()
+        expect(result.current.pendingCheckInEmployee).toBeNull()
+      })
+    })
+
+    it('openCheckIn intercepts rest-day row and sets extraDayRow instead', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const row = makeRow({ schedule: restDaySchedule })
+      act(() => { result.current.openCheckIn(row) })
+
+      expect(result.current.extraDayRow).toEqual(row)
+      expect(result.current.pendingCheckInEmployee).toBeNull()
+    })
+
+    it('isRegisteringExtraDay is true while mutation is in flight', async () => {
+      let resolve!: (v: unknown) => void
+      mockNegotiatedRegister.mockReturnValueOnce(new Promise(r => { resolve = r }))
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const row = makeRow()
+      act(() => { result.current.openExtraDay(row) })
+
+      act(() => {
+        result.current.confirmExtraDay({ agreed_daily_wage: 200, prima_percent: 100, notes: '' })
+      })
+
+      await waitFor(() => expect(result.current.isRegisteringExtraDay).toBe(true))
+      await act(async () => { resolve(mockExtraDay) })
     })
   })
 
