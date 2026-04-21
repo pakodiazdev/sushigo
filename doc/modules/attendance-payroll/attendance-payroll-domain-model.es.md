@@ -1,9 +1,11 @@
 # 📐 Modelo de Dominio — Attendance & Payroll (SushiGo)
 
-**Versión:** 1.1
+**Versión:** 1.2
 **Fecha:** 2026-04-21
 **Base:** attendance-payroll-spec v0.8 + mvp-scope
 **Estado:** Contrato de dominio activo
+
+**Changelog v1.2 (2026-04-21):** Se agrega columna `rejection_reason` a `employee_requests` para separar el motivo de rechazo del manager de las `notes` originales del solicitante. Se corrige el enum `status` a `PENDING`, `APPROVED`, `REJECTED` únicamente — `CANCELLED` queda diferido. Se agrega guardia de permiso: `auto_approve=true` requiere `employee-requests.approve` además de `employee-requests.create`.
 
 **Changelog v1.1 (2026-04-21):** Se agrega `EmployeeRequest` como wrapper unificado de aprobación para todas las solicitudes de empleados. Las entidades concretas (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) solo se crean al aprobarse — la DB queda semánticamente limpia. Los campos de ciclo de aprobación (`status`, `approved_by`, `approved_at`) se centralizan en `EmployeeRequest`. Se agrega subdominio 1.7 (ER Solicitudes), sección 2.23 (diccionario employee_requests) y secuencia 6.4 (ciclo de vida de solicitud).
 
@@ -446,6 +448,7 @@ erDiagram
         bigint approved_by FK "nullable → users"
         datetime approved_at "nullable"
         text notes "nullable"
+        text rejection_reason "nullable"
         timestamp created_at
         timestamp updated_at
     }
@@ -915,23 +918,24 @@ total_pay = base_pay
 | `id` | bigint | NO | auto | PK | — |
 | `employee_id` | bigint FK | NO | — | Empleado al que corresponde la solicitud (→ `employees`). | RF-38 |
 | `type` | enum | NO | — | `EXTRA_DAY`, `LEAVE`, `VACATION`, `SCHEDULE_CHANGE`. | — |
-| `status` | enum | NO | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. | RN-09 |
+| `status` | enum | NO | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`. (`CANCELLED` diferido a tarea futura.) | RN-09 |
 | `requestable_type` | varchar(100) | SÍ | NULL | Clase del modelo polimórfico. Se asigna al aprobar (ej: `NegotiatedExtraDay`). | — |
 | `requestable_id` | bigint | SÍ | NULL | FK a la entidad concreta. Se asigna al aprobar. | — |
 | `payload` | json | NO | — | Datos específicos del tipo mientras está pendiente. Los consume el handler al aprobar. | — |
 | `requested_by` | bigint FK | NO | — | Usuario que creó la solicitud (→ `users`). | RF-38 |
 | `approved_by` | bigint FK | SÍ | NULL | Usuario que aprobó o rechazó (→ `users`). En auto-aprobación por manager, se asigna el id del manager (= `requested_by`). | RN-09 |
 | `approved_at` | datetime | SÍ | NULL | Cuándo se aprobó o rechazó. | — |
-| `notes` | text | SÍ | NULL | Notas / justificación. | — |
+| `notes` | text | SÍ | NULL | Notas / justificación del solicitante. **Nunca sobreescritas por el flujo de rechazo.** | — |
+| `rejection_reason` | text | SÍ | NULL | Motivo de rechazo del manager. Se popula solo en estado `REJECTED`. Null en `PENDING` y `APPROVED`. | — |
 | `created_at` | timestamp | NO | now | — | — |
 | `updated_at` | timestamp | NO | now | — | — |
 
 **Constraints:** INDEX(`employee_id`, `status`). INDEX(`requestable_type`, `requestable_id`). INDEX(`type`, `status`).
 
 **Reglas de negocio:**
-- Cuando `requested_by = manager` y `type = EXTRA_DAY`: el status se establece como `APPROVED` al crear (auto-aprobación). La entidad concreta se crea en la misma transacción.
+- Cuando `requested_by = manager` y `type = EXTRA_DAY`: el status se establece como `APPROVED` al crear (auto-aprobación). El caller debe tener **ambos** permisos `employee-requests.create` y `employee-requests.approve`. La entidad concreta se crea en la misma transacción.
 - `requestable_type` y `requestable_id` son NULL mientras `status = PENDING` o `REJECTED`. Se asignan solo al `APPROVED`.
-- Rechazar una solicitud nunca crea una entidad concreta.
+- Rechazar una solicitud nunca crea una entidad concreta. El motivo del manager se guarda en `rejection_reason`; las `notes` originales del solicitante **no se modifican**.
 - **Cancelar una solicitud en estado APPROVED elimina la entidad concreta asociada (requestable) y anula `requestable_type`/`requestable_id` en la misma transacción.** Esto preserva el invariante "existencia = aprobado" en las tablas de entidades concretas. Debe crearse una entrada en el log de auditoría.
 
 ---

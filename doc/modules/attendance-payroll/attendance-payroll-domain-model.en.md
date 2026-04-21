@@ -1,9 +1,11 @@
 # 📐 Domain Model — Attendance & Payroll (SushiGo)
 
-**Version:** 1.1
+**Version:** 1.2
 **Date:** 2026-04-21
 **Base:** attendance-payroll-spec v0.8 + mvp-scope
 **Status:** Active domain contract
+
+**Changelog v1.2 (2026-04-21):** Added `rejection_reason` column to `employee_requests` to separate the manager's rejection note from the requester's original `notes`. Fixed `status` enum to `PENDING`, `APPROVED`, `REJECTED` only — `CANCELLED` is deferred. Added permission guard: `auto_approve=true` requires `employee-requests.approve` in addition to `employee-requests.create`.
 
 **Changelog v1.1 (2026-04-21):** Added `EmployeeRequest` as the unified approval wrapper for all employee requests. Concrete entities (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) are now created only upon approval — keeping the DB semantically clean. Approval lifecycle fields (`status`, `approved_by`, `approved_at`) removed from concrete entities and centralized in `EmployeeRequest`. Added subdomain 1.7 (Requests ER), section 2.23 (employee_requests dict), and sequence 6.4 (request lifecycle).
 
@@ -385,6 +387,7 @@ erDiagram
         bigint approved_by FK "nullable → users"
         datetime approved_at "nullable"
         text notes "nullable"
+        text rejection_reason "nullable"
         timestamp created_at
         timestamp updated_at
     }
@@ -852,23 +855,24 @@ total_pay = base_pay
 | `id`               | bigint       | NO   | auto      | PK                                                                       | —     |
 | `employee_id`      | bigint FK    | NO   | —         | Employee the request is for (→ `employees`).                             | RF-38 |
 | `type`             | enum         | NO   | —         | `EXTRA_DAY`, `LEAVE`, `VACATION`, `SCHEDULE_CHANGE`.                     | —     |
-| `status`           | enum         | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`.                          | RN-09 |
+| `status`           | enum         | NO   | `PENDING` | `PENDING`, `APPROVED`, `REJECTED`. (`CANCELLED` deferred to future task.) | RN-09 |
 | `requestable_type` | varchar(100) | YES  | NULL      | Polymorphic model class. Set on approval (e.g. `NegotiatedExtraDay`).    | —     |
 | `requestable_id`   | bigint       | YES  | NULL      | FK to concrete entity. Set on approval.                                  | —     |
 | `payload`          | json         | NO   | —         | Type-specific data while pending. Consumed by handler on approval.       | —     |
 | `requested_by`     | bigint FK    | NO   | —         | User who created the request (→ `users`).                                | RF-38 |
 | `approved_by`      | bigint FK    | YES  | NULL      | User who approved or rejected (→ `users`). On manager auto-approval, set to the manager's user id (= `requested_by`). | RN-09 |
 | `approved_at`      | datetime     | YES  | NULL      | When approved or rejected.                                               | —     |
-| `notes`            | text         | YES  | NULL      | Notes / justification.                                                   | —     |
+| `notes`            | text         | YES  | NULL      | Requester's notes / justification. **Never overwritten by the rejection flow.** | —     |
+| `rejection_reason` | text         | YES  | NULL      | Manager's reason for rejection. Populated only on `REJECTED` status. Null on `PENDING` and `APPROVED`. | —     |
 | `created_at`       | timestamp    | NO   | now       | —                                                                        | —     |
 | `updated_at`       | timestamp    | NO   | now       | —                                                                        | —     |
 
 **Constraints:** INDEX(`employee_id`, `status`). INDEX(`requestable_type`, `requestable_id`). INDEX(`type`, `status`).
 
 **Business rules:**
-- When `requested_by = manager` and `type = EXTRA_DAY`: status is set to `APPROVED` at creation (auto-approval). Concrete entity is created in the same transaction.
+- When `requested_by = manager` and `type = EXTRA_DAY`: status is set to `APPROVED` at creation (auto-approval). Caller must have **both** `employee-requests.create` and `employee-requests.approve` permissions. Concrete entity is created in the same transaction.
 - `requestable_type` and `requestable_id` are NULL while `status = PENDING` or `REJECTED`. Set only on `APPROVED`.
-- Rejecting a request never creates a concrete entity.
+- Rejecting a request never creates a concrete entity. The manager's reason is stored in `rejection_reason`; the requester's original `notes` are **not modified**.
 - **Cancelling an APPROVED request deletes the associated concrete entity (requestable) and nullifies `requestable_type`/`requestable_id` in the same transaction.** This preserves the "existence = approved" invariant on concrete entity tables. An audit log entry must be created.
 
 ---
