@@ -29,6 +29,10 @@ class EmployeeRequestService
             ]);
         }
 
+        if ($autoApprove && ! $requestedBy->can('employee-requests.approve')) {
+            abort(403, 'No tienes permiso para auto-aprobar solicitudes.');
+        }
+
         return DB::transaction(function () use ($data, $autoApprove, $requestedBy): EmployeeRequest {
             $employee = Employee::query()->where('public_id', $data['employee_id'])->firstOrFail();
 
@@ -95,7 +99,7 @@ class EmployeeRequestService
                 'status' => EmployeeRequestStatus::REJECTED,
                 'approved_by' => $approver->id,
                 'approved_at' => now(),
-                'notes' => $reason ?? $employeeRequest->notes,
+                'rejection_reason' => $reason,
             ]);
 
             return $employeeRequest->load(['employee', 'requestable', 'requestedBy', 'approvedBy']);

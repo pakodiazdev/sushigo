@@ -25,6 +25,7 @@ use App\Models\EmployeeRequest;
  *     @OA\Property(property="approved_by", type="string", nullable=true, example="Manager User"),
  *     @OA\Property(property="approved_at", type="string", format="date-time", nullable=true, example="2026-04-21T15:05:30+00:00"),
  *     @OA\Property(property="notes", type="string", nullable=true, example="Aprobación manual"),
+ *     @OA\Property(property="rejection_reason", type="string", nullable=true, example="No procede por política interna"),
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2026-04-21T14:00:00+00:00")
  * )
  */
@@ -46,6 +47,7 @@ class EmployeeRequestResource extends BaseResource
             'approved_by' => $this->approvedBy?->name,
             'approved_at' => $this->approved_at?->toIso8601String(),
             'notes' => $this->notes,
+            'rejection_reason' => $this->rejection_reason,
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

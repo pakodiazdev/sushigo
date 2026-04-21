@@ -113,16 +113,46 @@ class EmployeeRequestApiTest extends TestCase
 
         $rejectResponse->assertOk()
             ->assertJsonPath('data.status', EmployeeRequestStatus::REJECTED->value)
-            ->assertJsonPath('data.requestable', null);
+            ->assertJsonPath('data.requestable', null)
+            ->assertJsonPath('data.rejection_reason', 'No procede por política interna.')
+            ->assertJsonPath('data.notes', null);
 
         $this->assertDatabaseHas('employee_requests', [
             'public_id' => $requestId,
             'status' => EmployeeRequestStatus::REJECTED->value,
+            'rejection_reason' => 'No procede por política interna.',
         ]);
 
         $this->assertDatabaseMissing('negotiated_extra_days', [
             'employee_id' => $employee->id,
             'date' => self::DATE,
+        ]);
+    }
+
+    #[Test]
+    public function it_prevents_auto_approve_without_approve_permission(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createOnlyRole = Role::create(['name' => 'create-only', 'guard_name' => 'api']);
+        $createOnlyRole->givePermissionTo('employee-requests.create');
+
+        $createOnlyUser = User::factory()->createOne();
+        assert($createOnlyUser instanceof User);
+        $createOnlyUser->assignRole('create-only');
+        Passport::actingAs($createOnlyUser);
+
+        $response = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+            'auto_approve' => true,
+        ]);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseMissing('employee_requests', [
+            'status' => EmployeeRequestStatus::APPROVED->value,
         ]);
     }
 
