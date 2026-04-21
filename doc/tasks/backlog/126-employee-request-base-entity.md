@@ -36,7 +36,7 @@ requested_by · approved_by (nullable) · approved_at (nullable) · notes
 ```
 EmployeeRequest{pending}
         ↓  al aprobar
-NegotiatedExtraDay / Leave / VacationPeriod / ...
+NegotiatedExtraDay / Leave / VacationRequest / ...
   ← requestable_type + requestable_id se asignan aquí
   ← la entidad concreta guarda request_id para trazabilidad
 ```
@@ -47,7 +47,7 @@ NegotiatedExtraDay / Leave / VacationPeriod / ...
 |---|---|
 | `EXTRA_DAY` | `NegotiatedExtraDay` |
 | `LEAVE` | `Leave` |
-| `VACATION` | `VacationPeriod` |
+| `VACATION` | `VacationRequest` |
 | `SCHEDULE_CHANGE` | `ScheduleChangeRequest` (futuro) |
 
 ### Estructura del `payload` JSON por tipo
@@ -59,7 +59,7 @@ NegotiatedExtraDay / Leave / VacationPeriod / ...
   "salary_pct": 100,
   "prima_pct": 100,
   "salary_day": 200.00,
-  "prima_amount": 200.00,
+  "prima": 200.00,
   "seventh_day": 200.00,
   "total": 600.00,
   "branch_id": 1
