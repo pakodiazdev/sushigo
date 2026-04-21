@@ -51,7 +51,7 @@ class ExtraDayRequestHandler implements RequestHandler
             'date' => $date,
             'agreed_daily_wage' => (float) $payload['salary_day'],
             'prima_percent' => (float) $payload['prima_pct'],
-            'prima_amount' => (float) $payload['prima'],
+            'prima_amount' => (float) $payload['salary_day'] * (float) $payload['prima_pct'] / 100,
             'approved_by' => $approvedBy,
             'status' => NegotiatedExtraDay::STATUS_APPROVED,
             'notes' => $employeeRequest->notes,
