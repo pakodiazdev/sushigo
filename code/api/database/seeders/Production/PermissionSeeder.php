@@ -74,6 +74,7 @@ class PermissionSeeder extends LockedSeeder
             'leaves.reject',
 
             // Attendances
+            'attendances.view',
             'attendances.create',
 
             // Inventario — Ítems y variantes

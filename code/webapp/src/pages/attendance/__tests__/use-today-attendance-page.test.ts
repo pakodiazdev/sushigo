@@ -369,6 +369,38 @@ describe('useTodayAttendancePage', () => {
       expect(result.current.extraDayRow).toEqual(row)
     })
 
+    it('openCheckIn skips negotiation and opens check-in when day_status is EXTRA', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      // Agreement already approved — skip negotiation
+      const row = makeRow({
+        schedule: { day_of_week: 7, is_day_off: true, expected_start: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null, expected_end: null },
+        attendance: {
+          id: 'att-extra-001',
+          check_in: null,
+          lunch_start: null,
+          lunch_end: null,
+          check_out: null,
+          day_status: 'EXTRA',
+          entry_late_seconds: 0,
+          entry_late_minutes: 0,
+          is_entry_deductible: false,
+          overtime_minutes: 0,
+          overtime_authorized: false,
+          overtime_authorized_at: null,
+          requires_overtime_decision: false,
+        },
+      })
+
+      act(() => {
+        result.current.openCheckIn(row)
+      })
+
+      expect(result.current.extraDayRow).toBeNull()
+      expect(result.current.pendingCheckInEmployee).toEqual(row.employee)
+    })
+
     it('closeCheckIn clears pending employee', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
