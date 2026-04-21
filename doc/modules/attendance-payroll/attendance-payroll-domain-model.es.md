@@ -5,7 +5,7 @@
 **Base:** attendance-payroll-spec v0.8 + mvp-scope
 **Estado:** Contrato de dominio activo
 
-**Changelog v1.1 (2026-04-21):** Se agrega `EmployeeRequest` como wrapper unificado de aprobación para todas las solicitudes de empleados. Las entidades concretas (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) solo se crean al aprobarse — la DB queda semánticamente limpia. Los campos de ciclo de aprobación (`status`, `approved_by`, `approved_at`) se centralizan en `EmployeeRequest`. Se agrega subdominio 1.7 (ER Solicitudes), sección 2.24 (diccionario employee_requests) y secuencia 6.5 (ciclo de vida de solicitud).
+**Changelog v1.1 (2026-04-21):** Se agrega `EmployeeRequest` como wrapper unificado de aprobación para todas las solicitudes de empleados. Las entidades concretas (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) solo se crean al aprobarse — la DB queda semánticamente limpia. Los campos de ciclo de aprobación (`status`, `approved_by`, `approved_at`) se centralizan en `EmployeeRequest`. Se agrega subdominio 1.7 (ER Solicitudes), sección 2.23 (diccionario employee_requests) y secuencia 6.4 (ciclo de vida de solicitud).
 
 ---
 
@@ -222,7 +222,7 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         enum type "EXTRA_DAY|LEAVE|VACATION|..."
-        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        enum status "PENDING|APPROVED|REJECTED"
         string requestable_type "nullable - se asigna al aprobar"
         bigint requestable_id "nullable - se asigna al aprobar"
         json payload "datos específicos mientras está pendiente"
@@ -438,7 +438,7 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         enum type "EXTRA_DAY|LEAVE|VACATION|SCHEDULE_CHANGE"
-        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
+        enum status "PENDING|APPROVED|REJECTED"
         string requestable_type "nullable - se asigna al aprobar"
         bigint requestable_id "nullable - se asigna al aprobar"
         json payload "datos específicos mientras pendiente"
@@ -626,7 +626,7 @@ Empleado solicita → EmployeeRequest{PENDING} → inbox → Manager aprueba →
 
 ### 2.9 `negotiated_extra_days` — Días Extra Negociados (Aprobados)
 
-> **v1.1:** Los registros solo existen en estado aprobado. El ciclo de aprobación (`status`, `approved_by`, `approved_at`) se gestiona en `EmployeeRequest`. `agreed_pay` se desglosa en tres componentes para las líneas de nómina.
+> **v1.1:** Se agrega `request_id` (FK nullable) para trazabilidad. El renombramiento de columnas (`salary_day`, `prima`, `seventh_day`) y la eliminación de los campos de ciclo de aprobación (`approved_by`, `status`) se posponen a una tarea futura.
 
 | Campo | Tipo | Null | Default | Descripción | RF |
 |-------|------|------|---------|-------------|-----|
@@ -634,16 +634,17 @@ Empleado solicita → EmployeeRequest{PENDING} → inbox → Manager aprueba →
 | `employee_id` | bigint FK | NO | — | Empleado. | RF-38 |
 | `date` | date | NO | — | Fecha del día extra. | RF-39 |
 | `branch_id` | bigint FK | NO | — | Sucursal donde trabajó. | RF-39 |
-| `salary_day` | decimal(10,2) | NO | — | Componente salario del día acordado. | RF-39, RN-10 |
-| `prima` | decimal(10,2) | NO | — | Componente prima por día de descanso. | RF-39, RN-10 |
-| `seventh_day` | decimal(10,2) | NO | — | Componente séptimo día: 1/6 del salario semanal. Para jornadas de 6 días equivale a `salary_day` (semanal = salary_day × 6, por tanto semanal / 6 = salary_day). | RF-39 |
-| `agreed_pay` | decimal(10,2) | NO | — | Total acordado (= salary_day + prima + seventh_day). | RF-39, RN-10 |
-| `request_id` | bigint FK | NO | — | Solicitud de origen (→ `employee_requests`). | RF-39, RN-09 |
+| `agreed_daily_wage` | decimal(10,4) | NO | — | Salario diario acordado. | RF-39 |
+| `prima_percent` | decimal(7,4) | NO | — | Porcentaje de prima sobre el salario diario. | RF-39 |
+| `prima_amount` | decimal(10,4) | NO | — | Monto de prima (= agreed_daily_wage × prima_percent / 100). | RF-39 |
+| `approved_by` | bigint FK | NO | — | Usuario que aprobó (→ `users`). | RF-39 |
+| `status` | varchar | NO | APPROVED | Estado (siempre APPROVED; el registro existe en estado aprobado). | RF-39 |
+| `request_id` | bigint FK | SÍ | NULL | Solicitud de origen (→ `employee_requests`). Nullable; se popula en nuevas creaciones. | RF-39, RN-09 |
 | `notes` | text | SÍ | NULL | Notas/observaciones. | RF-39 |
 | `created_at` | timestamp | NO | now | — | — |
 | `updated_at` | timestamp | NO | now | — | — |
 
-**Constraints:** UNIQUE(`employee_id`, `date`). INDEX(`request_id`).
+**Constraints:** UNIQUE(`employee_id`, `date`) WHERE deleted_at IS NULL (partial). INDEX(`request_id`).
 
 ---
 
@@ -688,9 +689,9 @@ Empleado solicita → EmployeeRequest{PENDING} → inbox → Manager aprueba →
 
 ---
 
-### 2.12 `leaves` — Permisos Aprobados (Día Completo o Rango)
+### 2.12 `leaves` — Permisos (Solicitud + Aprobación)
 
-> **v1.1:** Los registros solo existen en estado aprobado. El ciclo de aprobación se gestiona en `EmployeeRequest`. `request_id` da trazabilidad a la solicitud de origen.
+> **v1.1:** La integración con `EmployeeRequest` (campo `request_id` y retiro de campos de ciclo de aprobación) se pospone a una tarea futura. La tabla mantiene su ciclo de aprobación actual.
 
 | Campo | Tipo | Null | Default | Descripción | RF |
 |-------|------|------|---------|-------------|-----|
@@ -699,7 +700,18 @@ Empleado solicita → EmployeeRequest{PENDING} → inbox → Manager aprueba →
 | `leave_type_id` | bigint FK | NO | — | Tipo de permiso del catálogo. | RF-25 |
 | `start_date` | date | NO | — | Fecha inicio. | RF-25 |
 | `end_date` | date | NO | — | Fecha fin (= start_date si un solo día). | RF-25 |
-| `request_id` | bigint FK | NO | — | Solicitud de origen (→ `employee_requests`). | RF-25 |
+| `pay_percentage` | decimal(5,2) | SÍ | NULL | Override de % de pago. NULL = usar default del tipo. | RF-25 |
+| `rest_day_factor` | enum | SÍ | NULL | Override del factor de descanso: FULL, PROPORTIONAL, NONE. | RF-25 |
+| `time_mode` | enum | SÍ | NULL | SCHEDULED o OPEN_ENDED. Requerido para tipos PROPORTIONAL_HOURS. | RF-25a |
+| `scheduled_start_time` | time | SÍ | NULL | Hora planificada de salida. | RF-25a |
+| `scheduled_end_time` | time | SÍ | NULL | Hora planificada de regreso. | RF-25a |
+| `actual_start_time` | time | SÍ | NULL | Hora real de salida (desde vista Today). | RF-25a |
+| `actual_end_time` | time | SÍ | NULL | Hora real de regreso. NULL si no regresó. | RF-25a |
+| `actual_duration_minutes` | integer | SÍ | NULL | Minutos ausente. Calculado desde tiempos reales. | RF-25a |
+| `status` | enum | NO | PENDING | Estado: PENDING, APPROVED, REJECTED, CANCELLED. | RF-25 |
+| `requested_by` | bigint FK | NO | — | Usuario que registró la solicitud (→ `users`). | RF-25 |
+| `approved_by` | bigint FK | SÍ | NULL | Usuario que aprobó/rechazó (→ `users`). | RF-25 |
+| `approved_at` | datetime | SÍ | NULL | Fecha/hora de aprobación o rechazo. | RF-25 |
 | `notes` | text | SÍ | NULL | Notas. | RF-25 |
 | `created_at` | timestamp | NO | now | — | — |
 | `updated_at` | timestamp | NO | now | — | — |
@@ -740,9 +752,9 @@ Empleado solicita → EmployeeRequest{PENDING} → inbox → Manager aprueba →
 
 ---
 
-### 2.15 `vacation_requests` — Vacaciones Aprobadas
+### 2.15 `vacation_requests` — Solicitudes de Vacaciones
 
-> **v1.1:** Los registros solo existen en estado aprobado. El ciclo de aprobación se gestiona en `EmployeeRequest`. El nombre de tabla se mantiene por compatibilidad pero conceptualmente representa un periodo de vacaciones aprobado.
+> **v1.1:** La integración con `EmployeeRequest` (`request_id` y retiro de campos de ciclo de aprobación) se pospone a una tarea futura.
 
 | Campo | Tipo | Null | Default | Descripción | RF |
 |-------|------|------|---------|-------------|-----|
@@ -750,8 +762,10 @@ Empleado solicita → EmployeeRequest{PENDING} → inbox → Manager aprueba →
 | `employee_id` | bigint FK | NO | — | Empleado. | RF-27 |
 | `start_date` | date | NO | — | Fecha inicio. | RF-27 |
 | `end_date` | date | NO | — | Fecha fin. | RF-27 |
-| `days_count` | decimal(5,2) | NO | — | Días de vacaciones aprobados. | RF-27 |
-| `request_id` | bigint FK | NO | — | Solicitud de origen (→ `employee_requests`). | RF-27 |
+| `days_count` | decimal(5,2) | NO | — | Días de vacaciones solicitados. | RF-27 |
+| `status` | varchar | NO | pending | Estado de la solicitud. | RF-27 |
+| `approved_by` | bigint FK | SÍ | NULL | Usuario que aprobó/rechazó (→ `users`). | RF-27 |
+| `approved_at` | timestamp | SÍ | NULL | Fecha/hora de aprobación o rechazo. | RF-27 |
 | `notes` | text | SÍ | NULL | Notas. | RF-27 |
 | `created_at` | timestamp | NO | now | — | — |
 | `updated_at` | timestamp | NO | now | — | — |
