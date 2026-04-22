@@ -77,6 +77,7 @@ class PermissionSeeder extends LockedSeeder
             'employee-requests.view',
             'employee-requests.create',
             'employee-requests.approve',
+            'employee-requests.cancel',
 
             // Attendances
             'attendances.view',

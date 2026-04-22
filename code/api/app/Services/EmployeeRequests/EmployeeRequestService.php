@@ -109,6 +109,38 @@ class EmployeeRequestService
     /**
      * @throws ValidationException
      */
+    public function cancel(EmployeeRequest $employeeRequest, User $requester): EmployeeRequest
+    {
+        return DB::transaction(function () use ($employeeRequest, $requester): EmployeeRequest {
+            $employeeRequest = EmployeeRequest::query()->lockForUpdate()->findOrFail($employeeRequest->id);
+
+            if ($employeeRequest->requested_by !== $requester->id) {
+                abort(403, 'Solo el solicitante puede cancelar esta solicitud.');
+            }
+
+            if (! in_array($employeeRequest->status, [EmployeeRequestStatus::PENDING, EmployeeRequestStatus::APPROVED], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Solo se pueden cancelar solicitudes en estado PENDING o APPROVED.',
+                ]);
+            }
+
+            if ($employeeRequest->status === EmployeeRequestStatus::APPROVED && $employeeRequest->requestable !== null) {
+                $employeeRequest->requestable->forceDelete();
+            }
+
+            $employeeRequest->update([
+                'status' => EmployeeRequestStatus::CANCELLED,
+                'requestable_type' => null,
+                'requestable_id' => null,
+            ]);
+
+            return $employeeRequest->load(['employee', 'requestable', 'requestedBy', 'approvedBy']);
+        });
+    }
+
+    /**
+     * @throws ValidationException
+     */
     private function resolveHandler(EmployeeRequest $employeeRequest): RequestHandler
     {
         return match ($employeeRequest->type) {
