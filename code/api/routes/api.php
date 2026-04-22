@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\Devtools\ResetClockController;
 use App\Http\Controllers\Api\V1\Devtools\SetClockController;
 use App\Http\Controllers\Api\V1\Devtools\ShiftClockController;
 use App\Http\Controllers\Api\V1\EmployeeRequests\ApproveEmployeeRequestController;
+use App\Http\Controllers\Api\V1\EmployeeRequests\CancelEmployeeRequestController;
 use App\Http\Controllers\Api\V1\EmployeeRequests\CreateEmployeeRequestController;
 use App\Http\Controllers\Api\V1\EmployeeRequests\ListEmployeeRequestsController;
 use App\Http\Controllers\Api\V1\EmployeeRequests\RejectEmployeeRequestController;
@@ -298,6 +299,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/', CreateEmployeeRequestController::class)->name('store')->middleware('permission:employee-requests.create');
         Route::patch('/{id}/approve', ApproveEmployeeRequestController::class)->name('approve')->middleware('permission:employee-requests.approve');
         Route::patch('/{id}/reject', RejectEmployeeRequestController::class)->name('reject')->middleware('permission:employee-requests.approve');
+        Route::patch('/{id}/cancel', CancelEmployeeRequestController::class)->name('cancel')->middleware('permission:employee-requests.cancel');
     });
 
     // Attendances Module (All Protected)

@@ -34,11 +34,13 @@ class EmployeeRequestApiTest extends TestCase
         Permission::create(['name' => 'employee-requests.view', 'guard_name' => 'api']);
         Permission::create(['name' => 'employee-requests.create', 'guard_name' => 'api']);
         Permission::create(['name' => 'employee-requests.approve', 'guard_name' => 'api']);
+        Permission::create(['name' => 'employee-requests.cancel', 'guard_name' => 'api']);
 
         $managerRole = Role::create(['name' => 'manager', 'guard_name' => 'api']);
         $managerRole->givePermissionTo('employee-requests.view');
         $managerRole->givePermissionTo('employee-requests.create');
         $managerRole->givePermissionTo('employee-requests.approve');
+        $managerRole->givePermissionTo('employee-requests.cancel');
 
         Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
         foreach (Employee::POSITION_ROLES as $roleName) {
@@ -456,6 +458,121 @@ class EmployeeRequestApiTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    #[Test]
+    public function it_cancels_a_pending_request_without_creating_concrete_entity(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        $cancelResponse = $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel");
+
+        $cancelResponse->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::CANCELLED->value)
+            ->assertJsonPath('data.requestable', null);
+
+        $this->assertDatabaseHas('employee_requests', [
+            'public_id' => $requestId,
+            'status' => EmployeeRequestStatus::CANCELLED->value,
+        ]);
+
+        $this->assertDatabaseMissing('negotiated_extra_days', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+        ]);
+    }
+
+    #[Test]
+    public function it_cancels_an_approved_request_and_deletes_concrete_entity(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/approve")->assertOk();
+
+        $this->assertDatabaseHas('negotiated_extra_days', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+        ]);
+
+        $cancelResponse = $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel");
+
+        $cancelResponse->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::CANCELLED->value)
+            ->assertJsonPath('data.requestable', null);
+
+        $this->assertDatabaseMissing('negotiated_extra_days', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+        ]);
+    }
+
+    #[Test]
+    public function it_prevents_cancel_by_non_requester(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        $otherUser = User::factory()->createOne();
+        assert($otherUser instanceof User);
+
+        $cancelOnlyRole = Role::create(['name' => 'cancel-only', 'guard_name' => 'api']);
+        $cancelOnlyRole->givePermissionTo('employee-requests.cancel');
+        $otherUser->assignRole('cancel-only');
+
+        Passport::actingAs($otherUser);
+
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel")
+            ->assertStatus(403);
+
+        $this->assertDatabaseHas('employee_requests', [
+            'public_id' => $requestId,
+            'status' => EmployeeRequestStatus::PENDING->value,
+        ]);
+    }
+
+    #[Test]
+    public function it_prevents_cancelling_a_rejected_request(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/reject", [
+            'reason' => 'No aplica.',
+        ])->assertOk();
+
+        $cancelResponse = $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel");
+
+        $cancelResponse->assertStatus(422);
     }
 
     private function extraDayPayload(): array

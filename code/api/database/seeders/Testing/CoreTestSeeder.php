@@ -82,6 +82,7 @@ class CoreTestSeeder extends Seeder
         'employee-requests.view',
         'employee-requests.create',
         'employee-requests.approve',
+        'employee-requests.cancel',
         'items.view',
         'items.create',
         'items.update',
