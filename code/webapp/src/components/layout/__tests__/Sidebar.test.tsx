@@ -49,6 +49,14 @@ vi.mock('@/components/ui/logo', () => ({
   Logo: () => <div data-testid="logo" />,
 }))
 
+vi.mock('@/stores/auth.store', () => ({
+  useAuthStore: () => ({ isAdmin: false }),
+}))
+
+vi.mock('@/services/employee-request-hooks', () => ({
+  usePendingRequestsCount: () => ({ data: 0 }),
+}))
+
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, className }: {
     children: React.ReactNode
