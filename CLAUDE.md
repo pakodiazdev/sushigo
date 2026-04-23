@@ -157,6 +157,11 @@ docker exec dev_container bash -c "cd /app/code/webapp && npm run lint && npm ru
 
 Full convention reference: `doc/conventions/git/commits.md`
 
+**Why this format exists:**
+
+- **Issue number `[#NNN]`** — every commit must link to a GitHub issue. The issue is where the full context lives: *why* the change was needed, *what problem* it solves, *what decision* was made and why. Without it, future maintainers see code in a state they can't explain. A commit with no issue number destroys that history permanently. If the work has no issue yet, create one before committing.
+- **Emojis instead of words** — `✨` replaces `feat`, `🐛` replaces `fix`, `🔨` replaces `refactor`. One character carries the same semantic weight as a whole word, keeps the subject line scannable at a glance, and makes the category immediately visible in `git log` without reading. Each emoji has a fixed meaning — they are not decoration, they are the category label.
+
 **Format — every field is required:**
 ```
 :emoji [#issue] - short description :emoji
@@ -203,9 +208,9 @@ Full convention reference: `doc/conventions/git/commits.md`
 - Crear BaseResource                                       ← missing emoji on bullet
 - Crear AttendanceResource                                 ← missing emoji on bullet
 
-fix: address PR review comments                           ← no issue number, no emoji, wrong format
-feat(schedules): add schedule history                     ← no issue number, wrong format
-refactor: fix SonarCloud issues                           ← no issue number, no emoji
+fix: address PR review comments                           ← no issue, no emoji — destroys history
+feat(schedules): add schedule history                     ← no issue, word instead of emoji
+refactor: fix SonarCloud issues                           ← no issue, word instead of emoji
 ```
 
 When a commit relates to a backlog story or requirement, add traceability tags before the bullet list:
