@@ -7,7 +7,7 @@ export function useSolicitudesPage() {
   const { isAdmin } = useAuthStore()
   const [activeTab, setActiveTab] = useState<TabId>('mine')
 
-  const { data: pendingCount = 0 } = usePendingRequestsCount()
+  const { data: pendingCount = 0 } = usePendingRequestsCount({ enabled: isAdmin })
 
   return {
     isManager: isAdmin,

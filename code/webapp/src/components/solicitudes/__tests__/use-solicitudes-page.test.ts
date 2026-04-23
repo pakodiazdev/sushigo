@@ -11,9 +11,13 @@ vi.mock('@/stores/auth.store', () => ({
 }))
 
 const mockPendingCount = vi.fn().mockReturnValue({ data: 0 })
+const mockPendingCountCalls: Array<{ enabled?: boolean }> = []
 
 vi.mock('@/services/employee-request-hooks', () => ({
-    usePendingRequestsCount: () => mockPendingCount(),
+    usePendingRequestsCount: (opts?: { enabled?: boolean }) => {
+        mockPendingCountCalls.push(opts ?? {})
+        return mockPendingCount()
+    },
 }))
 
 import { useSolicitudesPage } from '../use-solicitudes-page'
@@ -23,6 +27,7 @@ import { useSolicitudesPage } from '../use-solicitudes-page'
 describe('useSolicitudesPage', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        mockPendingCountCalls.length = 0
         mockIsAdmin.mockReturnValue(false)
         mockPendingCount.mockReturnValue({ data: 0 })
     })
@@ -72,5 +77,17 @@ describe('useSolicitudesPage', () => {
     it('exposes onTabChange function', () => {
         const { result } = renderHook(() => useSolicitudesPage())
         expect(typeof result.current.onTabChange).toBe('function')
+    })
+
+    it('passes enabled=false to usePendingRequestsCount when user is not admin', () => {
+        mockIsAdmin.mockReturnValue(false)
+        renderHook(() => useSolicitudesPage())
+        expect(mockPendingCountCalls[0]).toEqual({ enabled: false })
+    })
+
+    it('passes enabled=true to usePendingRequestsCount when user is admin', () => {
+        mockIsAdmin.mockReturnValue(true)
+        renderHook(() => useSolicitudesPage())
+        expect(mockPendingCountCalls[0]).toEqual({ enabled: true })
     })
 })
