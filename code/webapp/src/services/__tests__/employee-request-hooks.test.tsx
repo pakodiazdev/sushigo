@@ -101,4 +101,26 @@ describe('usePendingRequestsCount', () => {
         await waitFor(() => expect(result.current.isSuccess).toBe(true))
         expect(result.current.data).toBe(0)
     })
+
+    it('does not fire API call when enabled=false', () => {
+        const { result } = renderHook(
+            () => usePendingRequestsCount({ enabled: false }),
+            { wrapper: createWrapper() },
+        )
+
+        expect(result.current.fetchStatus).toBe('idle')
+        expect(mockList).not.toHaveBeenCalled()
+    })
+
+    it('fires API call when enabled=true (default)', async () => {
+        mockList.mockResolvedValue({ data: { status: 200, data: [], meta: { total: 3 } } })
+
+        const { result } = renderHook(
+            () => usePendingRequestsCount({ enabled: true }),
+            { wrapper: createWrapper() },
+        )
+
+        await waitFor(() => expect(result.current.isSuccess).toBe(true))
+        expect(mockList).toHaveBeenCalledTimes(1)
+    })
 })

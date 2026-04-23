@@ -12,7 +12,7 @@ export function useEmployeeRequests(filters?: EmployeeRequestFilters) {
   })
 }
 
-export function usePendingRequestsCount() {
+export function usePendingRequestsCount({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ['employee-requests', 'pending-count'],
     queryFn: async () => {
@@ -20,5 +20,6 @@ export function usePendingRequestsCount() {
       return response.data.meta?.total ?? 0
     },
     refetchInterval: 60_000,
+    enabled,
   })
 }

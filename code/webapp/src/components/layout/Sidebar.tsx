@@ -121,7 +121,7 @@ export default function Sidebar() {
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
     const { resolveAccess } = useMenuAccess();
     const { isAdmin } = useAuthStore();
-    const { data: pendingCount = 0 } = usePendingRequestsCount();
+    const { data: pendingCount = 0 } = usePendingRequestsCount({ enabled: isAdmin });
 
     const menuItemsResolved = menuItems.map((item) =>
         item.path === '/solicitudes' && isAdmin && pendingCount > 0
