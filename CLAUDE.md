@@ -167,11 +167,13 @@ Full convention reference: `doc/conventions/git/commits.md`
 ```
 
 **Rules (violations like commit 73848c3b must not repeat):**
+- **Every commit MUST be tied to a GitHub issue number** — no commit without `[#NNN]`. If the work doesn't have an issue yet, create one before committing. A commit without an issue number is a hard blocker.
 - Subject line: `emoji [#NNN] - description emoji` — the dash (` - `) between issue and description is mandatory
 - Each bullet in the body **must start with an emoji** — plain `- text` is not allowed
 - Issue number is always 3 digits zero-padded: `#001`, `#030`, not `#1` or `#30`
 - Description is concise (imperative mood), never a sentence ending in period
 - Final ornamental emoji on the subject line is required
+- If a commit covers work that spans the same issue as the previous commit, reuse that issue number — never leave the field blank or use a placeholder
 
 **Emoji types:**
 - ✨ feat — new feature
@@ -200,6 +202,10 @@ Full convention reference: `doc/conventions/git/commits.md`
 🔨 [#030] Implementar JsonResource — migrar formato API   ← missing dash
 - Crear BaseResource                                       ← missing emoji on bullet
 - Crear AttendanceResource                                 ← missing emoji on bullet
+
+fix: address PR review comments                           ← no issue number, no emoji, wrong format
+feat(schedules): add schedule history                     ← no issue number, wrong format
+refactor: fix SonarCloud issues                           ← no issue number, no emoji
 ```
 
 When a commit relates to a backlog story or requirement, add traceability tags before the bullet list:
