@@ -14,6 +14,7 @@ import {
     DollarSign,
     UserCog,
     CalendarCheck,
+    ClipboardList,
     type LucideIcon
 } from 'lucide-react';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -24,6 +25,8 @@ import { BranchSwitcher } from '@/components/auth';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useMenuAccess, type AccessResult } from '@/hooks/use-menu-access';
+import { useAuthStore } from '@/stores/auth.store';
+import { usePendingRequestsCount } from '@/services/employee-request-hooks';
 
 interface SubMenuItem {
     label: string;
@@ -40,6 +43,8 @@ interface MenuItem {
     requiredRole?: 'admin' | 'super-admin';
     /** 'hidden' = remove from DOM (default). 'disabled' = greyed-out. */
     accessMode?: 'hidden' | 'disabled';
+    /** Optional badge count shown next to the label. */
+    badge?: number;
 }
 
 const menuItems: MenuItem[] = [
@@ -62,6 +67,13 @@ const menuItems: MenuItem[] = [
         subItems: [
             { label: 'Hoy', path: '/attendance/today' },
         ]
+    },
+    {
+        icon: ClipboardList,
+        label: 'Solicitudes',
+        path: '/solicitudes',
+        requiredPermission: 'employee-requests.view',
+        accessMode: 'hidden',
     },
     {
         icon: Warehouse,
@@ -108,6 +120,14 @@ export default function Sidebar() {
     const currentPath = router.location.pathname;
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
     const { resolveAccess } = useMenuAccess();
+    const { isAdmin } = useAuthStore();
+    const { data: pendingCount = 0 } = usePendingRequestsCount();
+
+    const menuItemsResolved = menuItems.map((item) =>
+        item.path === '/solicitudes' && isAdmin && pendingCount > 0
+            ? { ...item, badge: pendingCount }
+            : item,
+    );
 
     const toggleSubmenu = (label: string) => {
         setExpandedMenus(prev =>
@@ -170,7 +190,16 @@ export default function Sidebar() {
                         )}
                     >
                         <Icon className="h-5 w-5 shrink-0" />
-                        {!isCollapsed && <span>{item.label}</span>}
+                        {!isCollapsed && (
+                            <>
+                                <span className="flex-1">{item.label}</span>
+                                {item.badge != null && item.badge > 0 && (
+                                    <span className="inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full text-xs font-medium bg-destructive text-destructive-foreground">
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </>
+                        )}
                     </Link>
                 ) : (
                     <>
@@ -291,7 +320,7 @@ export default function Sidebar() {
                     {/* Navigation */}
                     <nav className="flex-1 overflow-y-auto px-3">
                         <ul className="space-y-1">
-                            {menuItems.map((item) => {
+                            {menuItemsResolved.map((item) => {
                                 const access = resolveAccess(item);
                                 if (access === 'hidden') return null;
                                 return renderMenuItem(item, access);

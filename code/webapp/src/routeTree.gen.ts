@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './pages/__root'
 import { Route as UnauthorizedRouteImport } from './pages/unauthorized'
 import { Route as StockDashboardRouteImport } from './pages/stock-dashboard'
+import { Route as SolicitudesRouteImport } from './pages/solicitudes'
 import { Route as ResetPasswordRouteImport } from './pages/reset-password'
 import { Route as ReportesRouteImport } from './pages/reportes'
 import { Route as ProductosRouteImport } from './pages/productos'
@@ -42,6 +43,11 @@ const UnauthorizedRoute = UnauthorizedRouteImport.update({
 const StockDashboardRoute = StockDashboardRouteImport.update({
   id: '/stock-dashboard',
   path: '/stock-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolicitudesRoute = SolicitudesRouteImport.update({
+  id: '/solicitudes',
+  path: '/solicitudes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/productos': typeof ProductosRoute
   '/reportes': typeof ReportesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
   '/attendance/today': typeof AttendanceTodayRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/productos': typeof ProductosRoute
   '/reportes': typeof ReportesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
   '/attendance/today': typeof AttendanceTodayRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/productos': typeof ProductosRoute
   '/reportes': typeof ReportesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
   '/attendance/today': typeof AttendanceTodayRoute
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/productos'
     | '/reportes'
     | '/reset-password'
+    | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
     | '/attendance/today'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/productos'
     | '/reportes'
     | '/reset-password'
+    | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
     | '/attendance/today'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/productos'
     | '/reportes'
     | '/reset-password'
+    | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
     | '/attendance/today'
@@ -325,6 +337,7 @@ export interface RootRouteChildren {
   ProductosRoute: typeof ProductosRoute
   ReportesRoute: typeof ReportesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SolicitudesRoute: typeof SolicitudesRoute
   StockDashboardRoute: typeof StockDashboardRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
   AttendanceTodayRoute: typeof AttendanceTodayRoute
@@ -344,6 +357,13 @@ declare module '@tanstack/react-router' {
       path: '/stock-dashboard'
       fullPath: '/stock-dashboard'
       preLoaderRoute: typeof StockDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solicitudes': {
+      id: '/solicitudes'
+      path: '/solicitudes'
+      fullPath: '/solicitudes'
+      preLoaderRoute: typeof SolicitudesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -551,6 +571,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProductosRoute: ProductosRoute,
   ReportesRoute: ReportesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SolicitudesRoute: SolicitudesRoute,
   StockDashboardRoute: StockDashboardRoute,
   UnauthorizedRoute: UnauthorizedRoute,
   AttendanceTodayRoute: AttendanceTodayRoute,
