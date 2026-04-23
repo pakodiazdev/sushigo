@@ -110,18 +110,18 @@ NegotiatedExtraDay / Leave / VacationRequest / ...
 
 ## ✅ Criterios de Aceptación
 
-- [ ] Migración crea la tabla `employee_requests` con todos sus campos
-- [ ] Modelo `EmployeeRequest` con morphTo `requestable()` y campos tipados
-- [ ] `RequestHandler` interface + `ExtraDayRequestHandler` implementado
-- [ ] `EmployeeRequestService` maneja creación, auto-aprobación y aprobación manual
-- [ ] Al aprobar se crea la entidad concreta desde el payload y se asigna `requestable_type/id`
-- [ ] Al rechazar solo cambia el status y se guarda el motivo en `rejection_reason` — no se crea entidad concreta ni se modifican las `notes` del solicitante
-- [ ] `auto_approve=true` requiere permiso `employee-requests.approve` además de `employee-requests.create` — devuelve 403 si no
-- [ ] El solicitante puede cancelar su propia solicitud `PENDING` → pasa a `CANCELLED`, no se crea entidad concreta
-- [ ] Cancelar una solicitud `APPROVED` elimina la entidad concreta en la misma transacción (preserva invariante "existencia = aprobado")
-- [ ] API endpoints documentados en Swagger
-- [ ] PHPUnit: happy path (crear + aprobar), rechazo, duplicado, permisos
-- [ ] SonarCloud ≥ 80% en código nuevo
+- [x] Migración crea la tabla `employee_requests` con todos sus campos
+- [x] Modelo `EmployeeRequest` con morphTo `requestable()` y campos tipados
+- [x] `RequestHandler` interface + `ExtraDayRequestHandler` implementado
+- [x] `EmployeeRequestService` maneja creación, auto-aprobación y aprobación manual
+- [x] Al aprobar se crea la entidad concreta desde el payload y se asigna `requestable_type/id`
+- [x] Al rechazar solo cambia el status y se guarda el motivo en `rejection_reason` — no se crea entidad concreta ni se modifican las `notes` del solicitante
+- [x] `auto_approve=true` requiere permiso `employee-requests.approve` además de `employee-requests.create` — devuelve 403 si no
+- [x] El solicitante puede cancelar su propia solicitud `PENDING` → pasa a `CANCELLED`, no se crea entidad concreta
+- [x] Cancelar una solicitud `APPROVED` elimina la entidad concreta en la misma transacción (preserva invariante "existencia = aprobado")
+- [x] API endpoints documentados en Swagger
+- [x] PHPUnit: happy path (crear + aprobar), rechazo, duplicado, permisos — 20 tests cubriendo todos los escenarios
+- [x] SonarCloud ≥ 80% en código nuevo — PR #129 aprobado con cobertura suficiente
 
 ---
 
