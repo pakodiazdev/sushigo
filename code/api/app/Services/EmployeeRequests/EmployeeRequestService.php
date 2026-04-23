@@ -7,6 +7,7 @@ use App\Enums\EmployeeRequestType;
 use App\Models\Employee;
 use App\Models\EmployeeRequest;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +31,7 @@ class EmployeeRequestService
         }
 
         if ($autoApprove && ! $requestedBy->can('employee-requests.approve')) {
-            abort(403, 'No tienes permiso para auto-aprobar solicitudes.');
+            throw new AuthorizationException('No tienes permiso para auto-aprobar solicitudes.');
         }
 
         return DB::transaction(function () use ($data, $autoApprove, $requestedBy): EmployeeRequest {
@@ -115,7 +116,7 @@ class EmployeeRequestService
             $employeeRequest = EmployeeRequest::query()->lockForUpdate()->findOrFail($employeeRequest->id);
 
             if ($employeeRequest->requested_by !== $requester->id) {
-                abort(403, 'Solo el solicitante puede cancelar esta solicitud.');
+                throw new AuthorizationException('Solo el solicitante puede cancelar esta solicitud.');
             }
 
             if (! in_array($employeeRequest->status, [EmployeeRequestStatus::PENDING, EmployeeRequestStatus::APPROVED], true)) {

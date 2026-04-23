@@ -5,7 +5,7 @@
 **Base:** attendance-payroll-spec v0.8 + mvp-scope
 **Status:** Active domain contract
 
-**Changelog v1.2 (2026-04-21):** Added `rejection_reason` column to `employee_requests` to separate the manager's rejection note from the requester's original `notes`. Fixed `status` enum to `PENDING`, `APPROVED`, `REJECTED` only — `CANCELLED` is deferred. Added permission guard: `auto_approve=true` requires `employee-requests.approve` in addition to `employee-requests.create`.
+**Changelog v1.2 (2026-04-21):** Added `rejection_reason` column to `employee_requests` to separate the manager's rejection note from the requester's original `notes`. The `status` enum is `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED` — cancellation is available to the requester for requests in PENDING or APPROVED state. Added permission guard: `auto_approve=true` requires `employee-requests.approve` in addition to `employee-requests.create`.
 
 **Changelog v1.1 (2026-04-21):** Added `EmployeeRequest` as the unified approval wrapper for all employee requests. Concrete entities (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) are now created only upon approval — keeping the DB semantically clean. Approval lifecycle fields (`status`, `approved_by`, `approved_at`) removed from concrete entities and centralized in `EmployeeRequest`. Added subdomain 1.7 (Requests ER), section 2.23 (employee_requests dict), and sequence 6.4 (request lifecycle).
 
@@ -183,7 +183,7 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         enum type "EXTRA_DAY|LEAVE|VACATION|..."
-        enum status "PENDING|APPROVED|REJECTED"
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
         string requestable_type "nullable - set on approval"
         bigint requestable_id "nullable - set on approval"
         json payload "type-specific data"
@@ -379,7 +379,7 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         enum type "EXTRA_DAY|LEAVE|VACATION|SCHEDULE_CHANGE"
-        enum status "PENDING|APPROVED|REJECTED"
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
         string requestable_type "nullable - set on approval"
         bigint requestable_id "nullable - set on approval"
         json payload "type-specific data while pending"
