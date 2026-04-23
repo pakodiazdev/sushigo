@@ -5,7 +5,7 @@
 **Base:** attendance-payroll-spec v0.8 + mvp-scope
 **Estado:** Contrato de dominio activo
 
-**Changelog v1.2 (2026-04-21):** Se agrega columna `rejection_reason` a `employee_requests` para separar el motivo de rechazo del manager de las `notes` originales del solicitante. Se corrige el enum `status` a `PENDING`, `APPROVED`, `REJECTED` únicamente — `CANCELLED` queda diferido. Se agrega guardia de permiso: `auto_approve=true` requiere `employee-requests.approve` además de `employee-requests.create`.
+**Changelog v1.2 (2026-04-21):** Se agrega columna `rejection_reason` a `employee_requests` para separar el motivo de rechazo del manager de las `notes` originales del solicitante. El enum `status` es `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED` — cancelación disponible para el solicitante en estado PENDING o APPROVED. Se agrega guardia de permiso: `auto_approve=true` requiere `employee-requests.approve` además de `employee-requests.create`.
 
 **Changelog v1.1 (2026-04-21):** Se agrega `EmployeeRequest` como wrapper unificado de aprobación para todas las solicitudes de empleados. Las entidades concretas (`NegotiatedExtraDay`, `Leave`, `VacationRequest`) solo se crean al aprobarse — la DB queda semánticamente limpia. Los campos de ciclo de aprobación (`status`, `approved_by`, `approved_at`) se centralizan en `EmployeeRequest`. Se agrega subdominio 1.7 (ER Solicitudes), sección 2.23 (diccionario employee_requests) y secuencia 6.4 (ciclo de vida de solicitud).
 
@@ -224,7 +224,7 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         enum type "EXTRA_DAY|LEAVE|VACATION|..."
-        enum status "PENDING|APPROVED|REJECTED"
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
         string requestable_type "nullable - se asigna al aprobar"
         bigint requestable_id "nullable - se asigna al aprobar"
         json payload "datos específicos mientras está pendiente"
@@ -440,7 +440,7 @@ erDiagram
         bigint id PK
         bigint employee_id FK
         enum type "EXTRA_DAY|LEAVE|VACATION|SCHEDULE_CHANGE"
-        enum status "PENDING|APPROVED|REJECTED"
+        enum status "PENDING|APPROVED|REJECTED|CANCELLED"
         string requestable_type "nullable - se asigna al aprobar"
         bigint requestable_id "nullable - se asigna al aprobar"
         json payload "datos específicos mientras pendiente"
