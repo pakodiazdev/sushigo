@@ -7,7 +7,7 @@ import { ExtraDayForm } from './extra-day-form'
 import type { Employee } from '@/types/employee'
 
 interface ExtraDaySectionProps {
-  employee: Employee
+  readonly employee: Employee
 }
 
 function formatExtraDayDate(dateStr: string): string {

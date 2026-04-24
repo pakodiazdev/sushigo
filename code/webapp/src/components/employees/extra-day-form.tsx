@@ -7,9 +7,9 @@ import { useExtraDayForm } from './use-extra-day-form'
 import type { Employee } from '@/types/employee'
 
 interface ExtraDayFormProps {
-  isOpen: boolean
-  onClose: () => void
-  employee: Employee
+  readonly isOpen: boolean
+  readonly onClose: () => void
+  readonly employee: Employee
 }
 
 function formatCurrency(value: number): string {
