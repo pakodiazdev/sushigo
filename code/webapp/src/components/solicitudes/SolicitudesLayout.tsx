@@ -18,7 +18,7 @@ export function SolicitudesLayout({
   pendingCount,
   onTabChange,
   children,
-}: SolicitudesLayoutProps) {
+}: Readonly<SolicitudesLayoutProps>) {
   if (!isManager) {
     return <div className="mt-6">{children}</div>
   }
@@ -53,11 +53,11 @@ function TabButton({
   active,
   onClick,
   children,
-}: {
+}: Readonly<{
   active: boolean
   onClick: () => void
   children: React.ReactNode
-}) {
+}>) {
   return (
     <button
       onClick={onClick}
