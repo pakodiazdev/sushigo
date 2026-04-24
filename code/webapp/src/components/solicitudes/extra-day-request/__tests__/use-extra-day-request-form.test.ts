@@ -136,4 +136,26 @@ describe('useExtraDayRequestForm', () => {
     expect(payload.payload.salary_pct).toBe(100)
     expect(onSuccess).toHaveBeenCalledOnce()
   })
+
+  it('does not call onSuccess and does not throw when mutateAsync rejects', async () => {
+    mockMutateAsync.mockRejectedValueOnce(new Error('Network error'))
+    mockWageHistory.mockReturnValue({
+      data: [{ hourly_rate: '50.00', weekly_scheduled_hours: 48 }],
+      isLoading: false,
+    })
+
+    const onSuccess = vi.fn()
+    const { result } = renderHook(() => useExtraDayRequestForm('emp-1', onSuccess), { wrapper })
+
+    act(() => {
+      result.current.form.setValue('date', '2099-12-31')
+      result.current.form.setValue('prima_pct', 100)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault: vi.fn() } as unknown as React.FormEvent)
+    })
+
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
 })
