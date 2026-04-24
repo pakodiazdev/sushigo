@@ -52,7 +52,7 @@ class ListEmployeeRequestsController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
+            $query->whereIn('status', (array) $request->input('status'));
         }
 
         $request->applySorts($query);

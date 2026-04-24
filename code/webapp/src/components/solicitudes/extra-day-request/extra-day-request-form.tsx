@@ -3,16 +3,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Textarea } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
+import { formatCurrency } from '@/lib/format'
 import { useExtraDayRequestForm } from './use-extra-day-request-form'
 
 interface ExtraDayRequestFormProps {
   readonly isOpen: boolean
   readonly onClose: () => void
   readonly employeeId: string
-}
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
 }
 
 export function ExtraDayRequestForm({ isOpen, onClose, employeeId }: ExtraDayRequestFormProps) {
