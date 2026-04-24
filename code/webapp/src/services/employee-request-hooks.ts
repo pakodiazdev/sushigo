@@ -31,7 +31,7 @@ export function usePendingRequestsCount({ enabled = true }: { enabled?: boolean 
 
 export function useApprovedExtraDays(employeeId: string) {
   return useQuery({
-    queryKey: ['employee-requests', { employee_id: employeeId, type: 'EXTRA_DAY', status: 'APPROVED' }],
+    queryKey: ['employee-requests', 'approved-extra-days', employeeId],
     queryFn: async () => {
       const response = await employeeRequestApi.list({
         employee_id: employeeId,
