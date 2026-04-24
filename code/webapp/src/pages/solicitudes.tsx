@@ -4,6 +4,8 @@ import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { RequestTypeBar } from '@/components/solicitudes/RequestTypeBar'
 import { SolicitudesLayout } from '@/components/solicitudes/SolicitudesLayout'
+import { ExtraDayRequestForm } from '@/components/solicitudes/extra-day-request/extra-day-request-form'
+import { MyRequestsList } from '@/components/solicitudes/my-requests/my-requests-list'
 import { useSolicitudesPage } from '@/components/solicitudes/use-solicitudes-page'
 
 export const Route = createFileRoute('/solicitudes')({
@@ -12,7 +14,30 @@ export const Route = createFileRoute('/solicitudes')({
 })
 
 export function SolicitudesPage() {
-  const { isManager, activeTab, pendingCount, onTabChange } = useSolicitudesPage()
+  const {
+    isManager,
+    activeTab,
+    pendingCount,
+    onTabChange,
+    showExtraDayForm,
+    openExtraDayForm,
+    closeExtraDayForm,
+    myEmployeeId,
+  } = useSolicitudesPage()
+
+  const mineContent = myEmployeeId ? (
+    <MyRequestsList employeeId={myEmployeeId} />
+  ) : (
+    <div className="text-sm text-muted-foreground py-8 text-center">
+      No hay un empleado vinculado a tu cuenta.
+    </div>
+  )
+
+  const pendingContent = (
+    <div className="text-sm text-muted-foreground py-8 text-center">
+      El listado de solicitudes pendientes estará disponible próximamente.
+    </div>
+  )
 
   return (
     <PageContainer>
@@ -22,7 +47,7 @@ export function SolicitudesPage() {
       />
 
       <div className="mt-6">
-        <RequestTypeBar />
+        <RequestTypeBar onExtraDayClick={openExtraDayForm} />
       </div>
 
       <div className="mt-8">
@@ -41,11 +66,17 @@ export function SolicitudesPage() {
         activeTab={activeTab}
         pendingCount={pendingCount}
         onTabChange={onTabChange}
-      >
-        <div className="text-sm text-muted-foreground py-8 text-center">
-          El listado de solicitudes estará disponible próximamente.
-        </div>
-      </SolicitudesLayout>
+        mineContent={mineContent}
+        pendingContent={pendingContent}
+      />
+
+      {myEmployeeId && (
+        <ExtraDayRequestForm
+          isOpen={showExtraDayForm}
+          onClose={closeExtraDayForm}
+          employeeId={myEmployeeId}
+        />
+      )}
     </PageContainer>
   )
 }

@@ -21,6 +21,9 @@ export const employeeApi = {
   list: (params?: EmployeeFilters) =>
     api.get<PaginatedResponse<Employee>>('/employees', { params }),
 
+  me: () =>
+    api.get<EntityResponse<Employee>>('/employees/me'),
+
   get: (id: string) =>
     api.get<EntityResponse<Employee>>(`/employees/${id}`),
 
