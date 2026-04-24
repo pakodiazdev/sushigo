@@ -8,7 +8,11 @@ const extraDayRequestSchema = z.object({
   date: z
     .string()
     .min(1, 'La fecha es requerida')
-    .refine((d) => d > new Date().toISOString().split('T')[0]!, 'Solo se permiten fechas futuras'),
+    .refine((d) => {
+      const now = new Date()
+      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      return d > localToday
+    }, 'Solo se permiten fechas futuras'),
   prima_pct: z.number().min(0, 'Mínimo 0%').max(200, 'Máximo 200%'),
   notes: z.string().max(1000).optional(),
 })

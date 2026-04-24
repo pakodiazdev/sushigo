@@ -88,7 +88,7 @@ describe('RequestStatusCard — APPROVED', () => {
     expect(screen.queryByText('Cancelar')).toBeNull()
   })
 
-  it('shows the approval note when present', () => {
+  it('does NOT show notes on APPROVED (no manager note in MVP)', () => {
     render(
       <RequestStatusCard
         request={makeRequest({ status: 'APPROVED', notes: 'Buen trabajo' })}
@@ -96,7 +96,7 @@ describe('RequestStatusCard — APPROVED', () => {
         isCancelling={false}
       />
     )
-    expect(screen.getByText('"Buen trabajo"')).toBeDefined()
+    expect(screen.queryByText(/"Buen trabajo"/)).toBeNull()
   })
 })
 
@@ -127,5 +127,29 @@ describe('RequestStatusCard — prima display', () => {
   it('shows prima_pct from payload', () => {
     render(<RequestStatusCard request={makeRequest()} onCancel={vi.fn()} isCancelling={false} />)
     expect(screen.getByText(/Prima propuesta: 100%/)).toBeDefined()
+  })
+})
+
+describe('RequestStatusCard — employee notes', () => {
+  it('shows employee note in PENDING status', () => {
+    render(
+      <RequestStatusCard
+        request={makeRequest({ status: 'PENDING', notes: 'Quiero apoyar ese día' })}
+        onCancel={vi.fn()}
+        isCancelling={false}
+      />
+    )
+    expect(screen.getByText(/Quiero apoyar ese día/)).toBeDefined()
+  })
+
+  it('does not show employee note when status is not PENDING', () => {
+    render(
+      <RequestStatusCard
+        request={makeRequest({ status: 'APPROVED', notes: 'Quiero apoyar ese día' })}
+        onCancel={vi.fn()}
+        isCancelling={false}
+      />
+    )
+    expect(screen.queryByText(/Quiero apoyar ese día/)).toBeNull()
   })
 })

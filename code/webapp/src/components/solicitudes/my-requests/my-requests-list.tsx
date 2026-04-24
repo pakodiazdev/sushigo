@@ -7,13 +7,21 @@ interface MyRequestsListProps {
 }
 
 export function MyRequestsList({ employeeId }: MyRequestsListProps) {
-  const { data: requests, isLoading } = useMyExtraDayRequests(employeeId)
+  const { data: requests, isLoading, isError } = useMyExtraDayRequests(employeeId)
   const cancelMutation = useCancelEmployeeRequest()
 
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-8 text-sm text-destructive">
+        No se pudieron cargar las solicitudes. Intenta de nuevo.
       </div>
     )
   }
