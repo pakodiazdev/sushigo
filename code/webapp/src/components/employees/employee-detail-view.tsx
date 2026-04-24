@@ -11,6 +11,7 @@ import { RehireForm } from './rehire-form'
 import { useEmployeeDetailActions } from './use-employee-detail-actions'
 import { ScheduleSection } from './schedule-section'
 import { LeaveSummarySection } from './leave-summary-section'
+import { ExtraDaySection } from './extra-day-section'
 import { usePermissionManager } from './use-permission-manager'
 import { PermissionManagerDialog } from './permission-manager-dialog'
 
@@ -81,6 +82,11 @@ export function EmployeeDetailView({
         employeeId={employee.id}
         employee={employee}
       />
+
+      <hr className="border-border" />
+
+      {/* Extra days — approved agreements + manager registration */}
+      <ExtraDaySection employee={employee} />
 
       <hr className="border-border" />
 
