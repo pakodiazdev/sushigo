@@ -77,8 +77,9 @@ Esta tarea establece la **estructura navegable** de la sección de solicitudes. 
 
 ### Navegación
 - Agregar entrada al menú lateral con badge reactivo
-- Badge muestra `GET /employee-requests?status=pending&branch_id=X` count (solo manager)
+- Badge muestra `GET /employee-requests?status=PENDING&per_page=1` count (solo usuarios con `employee-requests.approve`)
 - Permisos de vista: `employee-requests.view`
+- Detección de Manager/Admin: `can('employee-requests.approve')` — no `isAdmin` directo
 
 ---
 

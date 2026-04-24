@@ -90,28 +90,25 @@ All roles are assigned to the **User**. `Employee` never holds roles directly.
 
 ### System roles (application access)
 
-| Role | Employee profile | Description | Base permissions |
+| Role | Employee profile | Description | Key permissions |
 |------|------------------|-------------|-----------------|
 | `super-admin` | ❌ No | Full system access. Technical account, no work profile. | All (`*`) |
-| `admin` | ✅ Yes | Full operational management. | `users.*`, `employees.*` |
-| `inventory-manager` | ✅ Yes | Inventory and employee management. | `users.*`, `employees.*` |
-| `employee-manager` | ✅ Yes | Team lead. Assigned automatically via position sync. | `users.index/show`, `employees.*` |
-| `employee` | ✅ Yes | Base access for any active employee. | `users.index/show` |
-| `user` | ⚪ Optional | Generic fallback for non-employee accounts. | `users.index/show` |
+| `admin` | ✅ Yes | Owner / general manager. Root access for the tenant. | `users.*`, `employees.*`, `leaves.*`, `employee-requests.*`, `items.*`, `stock.*` |
+| `inventory-manager` | ✅ Yes | Inventory specialist. No HR or approval scope. | `items.*`, `inventory_locations.*`, `stock.*` |
 
 ### Position roles (job title)
 
 Describe the employee's job within operations. Assigned to `User` via `Employee::syncPositionRoles()`.
 
-| Position role | Resulting system role |
-|---------------|-----------------------|
-| `employee-manager` | `employee-manager` |
-| `employee-cook` | `employee` |
-| `employee-kitchen-assistant` | `employee` |
-| `employee-delivery-driver` | `employee` |
-| `employee-acting-manager` | `employee` |
+| Position role | Description | Key permissions |
+|---------------|-------------|-----------------|
+| `manager` | Branch manager / shift supervisor. Approves employee requests. | `employees.*`, `leaves.*`, `employee-requests.*`, `attendances.*` |
+| `cook` | Kitchen staff. | `users.index`, `users.show` |
+| `kitchen-assistant` | Kitchen support. | `users.index`, `users.show` |
+| `delivery-driver` | Delivery operations. | `users.index`, `users.show` |
+| `acting-manager` | Temporary manager stand-in. | `users.index`, `users.show` |
 
-A user can hold **multiple roles simultaneously**: e.g. `admin` + `employee-manager` (position).
+A user can hold **multiple roles simultaneously**: e.g. `admin` + `manager` (when the owner is also a shift supervisor).
 
 ---
 
@@ -184,6 +181,7 @@ flowchart LR
 - **Auditing**: log role/permission changes (events `RoleAssigned`, `PermissionRevoked`).
 - **Testing**: cover role + direct permission combinations in policy tests.
 - **New modules**: define permissions with the `context.action` schema (`sales.create`, `production.schedule`) and assign them in `PermissionSeeder`.
+- **Approval gating**: use `can('resource.approve')` in frontend logic — not `isAdmin`. This ensures that `manager` role users with the approve permission see the same UI as admins without hardcoding role names.
 
 ---
 

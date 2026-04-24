@@ -312,6 +312,7 @@ class CoreTestSeeder extends Seeder
         $now = now();
         $adminHash = Hash::make('admin123456');
         $inventoryHash = Hash::make('inventory123456');
+        $employeeHash = Hash::make('employee123456');
 
         $userModel = User::class;
         $allUnitIds = array_values($unitIds);
@@ -350,6 +351,17 @@ class CoreTestSeeder extends Seeder
                 'updated_at' => $now,
                 '_role' => 'inventory-manager',
                 '_unit_role' => 'INVENTORY',
+                '_units' => $mainBufferIds,
+            ],
+            [
+                'name' => 'Branch Manager',
+                'email' => 'manager@sushigo.com',
+                'password' => $employeeHash,
+                'email_verified_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+                '_role' => 'manager',
+                '_unit_role' => 'MANAGER',
                 '_units' => $mainBufferIds,
             ],
         ];

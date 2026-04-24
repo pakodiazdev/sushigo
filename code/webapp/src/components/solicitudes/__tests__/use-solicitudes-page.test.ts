@@ -4,10 +4,10 @@ import { renderHook, act } from '@testing-library/react'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-const mockIsAdmin = vi.fn().mockReturnValue(false)
+const mockCan = vi.fn().mockReturnValue(false)
 
 vi.mock('@/stores/auth.store', () => ({
-    useAuthStore: () => ({ isAdmin: mockIsAdmin() }),
+    useAuthStore: () => ({ can: mockCan }),
 }))
 
 const mockPendingCount = vi.fn().mockReturnValue({ data: 0 })
@@ -28,7 +28,7 @@ describe('useSolicitudesPage', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockPendingCountCalls.length = 0
-        mockIsAdmin.mockReturnValue(false)
+        mockCan.mockReturnValue(false)
         mockPendingCount.mockReturnValue({ data: 0 })
     })
 
@@ -37,14 +37,14 @@ describe('useSolicitudesPage', () => {
         expect(result.current.activeTab).toBe('mine')
     })
 
-    it('isManager is false when user is not admin', () => {
-        mockIsAdmin.mockReturnValue(false)
+    it('isManager is false when user lacks employee-requests.approve', () => {
+        mockCan.mockReturnValue(false)
         const { result } = renderHook(() => useSolicitudesPage())
         expect(result.current.isManager).toBe(false)
     })
 
-    it('isManager is true when user is admin', () => {
-        mockIsAdmin.mockReturnValue(true)
+    it('isManager is true when user has employee-requests.approve', () => {
+        mockCan.mockReturnValue(true)
         const { result } = renderHook(() => useSolicitudesPage())
         expect(result.current.isManager).toBe(true)
     })
@@ -79,14 +79,14 @@ describe('useSolicitudesPage', () => {
         expect(typeof result.current.onTabChange).toBe('function')
     })
 
-    it('passes enabled=false to usePendingRequestsCount when user is not admin', () => {
-        mockIsAdmin.mockReturnValue(false)
+    it('passes enabled=false to usePendingRequestsCount when user lacks approve permission', () => {
+        mockCan.mockReturnValue(false)
         renderHook(() => useSolicitudesPage())
         expect(mockPendingCountCalls[0]).toEqual({ enabled: false })
     })
 
-    it('passes enabled=true to usePendingRequestsCount when user is admin', () => {
-        mockIsAdmin.mockReturnValue(true)
+    it('passes enabled=true to usePendingRequestsCount when user has approve permission', () => {
+        mockCan.mockReturnValue(true)
         renderHook(() => useSolicitudesPage())
         expect(mockPendingCountCalls[0]).toEqual({ enabled: true })
     })

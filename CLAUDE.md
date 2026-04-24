@@ -453,6 +453,7 @@ docker exec -it dev_container php artisan test --testsuite=Feature
 | Super Admin       | superadmin@sushigo.com | admin123456     | super-admin       |
 | Admin             | admin@sushigo.com      | admin123456     | admin             |
 | Inventory Manager | inventory@sushigo.com  | inventory123456 | inventory-manager |
+| Branch Manager    | manager@sushigo.com    | employee123456  | manager           |
 
 ## Task Tracking Convention (mandatory)
 
