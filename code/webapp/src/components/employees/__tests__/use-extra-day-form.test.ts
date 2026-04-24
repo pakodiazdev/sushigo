@@ -99,6 +99,38 @@ describe('useExtraDayForm — wage calculations', () => {
     expect(result.current.total).toBeCloseTo(2400)
   })
 
+  it('falls back to 0 instead of NaN when salary_pct is cleared (NaN)', async () => {
+    mockUseWageHistory.mockReturnValue({ data: [makeWage('100', 48)], isLoading: false })
+
+    const { result } = renderHook(() => useExtraDayForm('emp-1', vi.fn()), { wrapper: createWrapper() })
+
+    act(() => {
+      result.current.form.setValue('salary_type', 'custom')
+      result.current.form.setValue('salary_pct', NaN)
+    })
+
+    await waitFor(() => {
+      expect(result.current.salaryDay).toBe(0)
+      expect(Number.isNaN(result.current.total)).toBe(false)
+    })
+  })
+
+  it('falls back to 0 instead of NaN when prima_pct is cleared (NaN)', async () => {
+    mockUseWageHistory.mockReturnValue({ data: [makeWage('100', 48)], isLoading: false })
+
+    const { result } = renderHook(() => useExtraDayForm('emp-1', vi.fn()), { wrapper: createWrapper() })
+
+    act(() => {
+      result.current.form.setValue('prima_type', 'custom')
+      result.current.form.setValue('prima_pct', NaN)
+    })
+
+    await waitFor(() => {
+      expect(result.current.prima).toBe(0)
+      expect(Number.isNaN(result.current.total)).toBe(false)
+    })
+  })
+
   it('uses custom salary_pct when salary_type is custom', async () => {
     // dailyWage = 800, salary_pct=50 → salaryDay = 400
     mockUseWageHistory.mockReturnValue({ data: [makeWage('100', 48)], isLoading: false })

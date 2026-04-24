@@ -41,15 +41,16 @@ export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
   const primaType = form.watch('prima_type')
   const primaPct = form.watch('prima_pct')
 
+  const safeSalaryPct = Number.isNaN(salaryPct) ? 0 : salaryPct
   const salaryDay =
     salaryType === 'registered'
       ? registeredDailyWage
-      : (salaryPct / 100) * registeredDailyWage
+      : (safeSalaryPct / 100) * registeredDailyWage
 
   // seventh day = 1/6 of weekly wage = 1 daily wage (for 6-day schedule)
   const seventhDay = salaryDay
-  const effectivePrimaPct = primaType === 'legal' ? 100 : primaPct
-  const prima = (effectivePrimaPct / 100) * salaryDay
+  const safePrimaPct = primaType === 'legal' ? 100 : (Number.isNaN(primaPct) ? 0 : primaPct)
+  const prima = (safePrimaPct / 100) * salaryDay
   const total = salaryDay + seventhDay + prima
 
   const hasNoWage = !isLoadingWages && !currentWage
