@@ -21,7 +21,7 @@ export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
 
   // daily wage = hourly_rate × (weekly_scheduled_hours / 6 days)
   const registeredDailyWage = currentWage
-    ? parseFloat(currentWage.hourly_rate) * (currentWage.weekly_scheduled_hours / 6)
+    ? Number.parseFloat(currentWage.hourly_rate) * (currentWage.weekly_scheduled_hours / 6)
     : 0
 
   const form = useForm<ExtraDayFormValues>({
