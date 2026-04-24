@@ -60,3 +60,50 @@ export function useCreateEmployeeRequest() {
     },
   })
 }
+
+export function useRequestExtraDay() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: CreateEmployeeRequestData) => employeeRequestApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-requests'] })
+      showSuccess('Tu solicitud ha sido enviada al Manager.', 'Solicitud enviada')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo enviar la solicitud.'), 'Error')
+    },
+  })
+}
+
+export function useCancelEmployeeRequest() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (id: string) => employeeRequestApi.cancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-requests'] })
+      showSuccess('La solicitud ha sido cancelada.', 'Solicitud cancelada')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo cancelar la solicitud.'), 'Error')
+    },
+  })
+}
+
+export function useMyExtraDayRequests(employeeId: string | undefined) {
+  return useQuery({
+    queryKey: ['employee-requests', 'my-extra-days', employeeId],
+    queryFn: async () => {
+      const response = await employeeRequestApi.list({
+        employee_id: employeeId,
+        type: 'EXTRA_DAY',
+        per_page: 20,
+      })
+      return response.data.data
+    },
+    enabled: !!employeeId,
+  })
+}

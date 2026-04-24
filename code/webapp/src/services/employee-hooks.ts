@@ -37,6 +37,17 @@ export function useEmployee(id: string) {
   });
 }
 
+export function useMyEmployee() {
+  return useQuery({
+    queryKey: ["employees", "me"],
+    queryFn: async () => {
+      const response = await employeeApi.me();
+      return response.data.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useNextEmployeeCode(enabled: boolean) {
   return useQuery({
     queryKey: ["employees", "next-code"],

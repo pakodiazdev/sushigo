@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\CreateWageController;
 use App\Http\Controllers\Api\V1\Employees\DeactivateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\GetMyEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\GetUserPermissionsController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeeLeavesController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
@@ -249,6 +250,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/', ListEmployeesController::class)->name('employees.list')->middleware('permission:employees.view');
         Route::get('/next-code', SuggestEmployeeCodeController::class)->name('employees.next-code')->middleware('permission:employees.create');
         Route::get('/assignable-roles', AssignableRolesController::class)->name('employees.assignable-roles')->middleware('permission:employees.view');
+        Route::get('/me', GetMyEmployeeController::class)->name('employees.me');
         Route::post('/', CreateEmployeeController::class)->name('employees.create')->middleware('permission:employees.create');
         Route::get('/{employee}', ShowEmployeeController::class)->name('employees.show')->middleware('permission:employees.view');
         Route::put('/{employee}', UpdateEmployeeController::class)->name('employees.update')->middleware('permission:employees.update');

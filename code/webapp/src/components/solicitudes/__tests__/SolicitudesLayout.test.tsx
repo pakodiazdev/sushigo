@@ -7,18 +7,22 @@ import { SolicitudesLayout } from '../SolicitudesLayout'
 
 afterEach(() => cleanup())
 
+const mineContent = <div data-testid="mine-content">Mine Content</div>
+const pendingContent = <div data-testid="pending-content">Pending Content</div>
+
 const defaultProps = {
     isManager: false,
     activeTab: 'mine' as const,
     pendingCount: 0,
     onTabChange: vi.fn(),
-    children: <div data-testid="content">Content</div>,
+    mineContent,
+    pendingContent,
 }
 
 describe('SolicitudesLayout — employee view', () => {
-    it('renders children without tabs', () => {
+    it('renders mineContent without tabs', () => {
         render(<SolicitudesLayout {...defaultProps} />)
-        expect(screen.getByTestId('content')).toBeDefined()
+        expect(screen.getByTestId('mine-content')).toBeDefined()
         expect(screen.queryByText('Mis solicitudes')).toBeNull()
         expect(screen.queryByText('Pendientes de aprobación')).toBeNull()
     })
@@ -37,9 +41,16 @@ describe('SolicitudesLayout — manager view', () => {
         expect(screen.getByText('Pendientes de aprobación')).toBeDefined()
     })
 
-    it('renders children inside layout', () => {
-        render(<SolicitudesLayout {...managerProps} />)
-        expect(screen.getByTestId('content')).toBeDefined()
+    it('renders mineContent when activeTab is mine', () => {
+        render(<SolicitudesLayout {...managerProps} activeTab="mine" />)
+        expect(screen.getByTestId('mine-content')).toBeDefined()
+        expect(screen.queryByTestId('pending-content')).toBeNull()
+    })
+
+    it('renders pendingContent when activeTab is pending', () => {
+        render(<SolicitudesLayout {...managerProps} activeTab="pending" />)
+        expect(screen.getByTestId('pending-content')).toBeDefined()
+        expect(screen.queryByTestId('mine-content')).toBeNull()
     })
 
     it('does not show badge when pendingCount is 0', () => {

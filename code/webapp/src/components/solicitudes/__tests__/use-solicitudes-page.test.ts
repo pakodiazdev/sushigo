@@ -20,6 +20,10 @@ vi.mock('@/services/employee-request-hooks', () => ({
     },
 }))
 
+vi.mock('@/services/employee-hooks', () => ({
+    useMyEmployee: () => ({ data: undefined }),
+}))
+
 import { useSolicitudesPage } from '../use-solicitudes-page'
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

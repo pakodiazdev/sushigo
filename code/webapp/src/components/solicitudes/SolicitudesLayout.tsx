@@ -7,7 +7,8 @@ interface SolicitudesLayoutProps {
   activeTab: TabId
   pendingCount: number
   onTabChange: (tab: TabId) => void
-  children: React.ReactNode
+  mineContent: React.ReactNode
+  pendingContent?: React.ReactNode
 }
 
 export type { TabId }
@@ -17,25 +18,20 @@ export function SolicitudesLayout({
   activeTab,
   pendingCount,
   onTabChange,
-  children,
+  mineContent,
+  pendingContent,
 }: Readonly<SolicitudesLayoutProps>) {
   if (!isManager) {
-    return <div className="mt-6">{children}</div>
+    return <div className="mt-6">{mineContent}</div>
   }
 
   return (
     <div className="mt-6">
       <div className="flex border-b mb-6">
-        <TabButton
-          active={activeTab === 'mine'}
-          onClick={() => onTabChange('mine')}
-        >
+        <TabButton active={activeTab === 'mine'} onClick={() => onTabChange('mine')}>
           Mis solicitudes
         </TabButton>
-        <TabButton
-          active={activeTab === 'pending'}
-          onClick={() => onTabChange('pending')}
-        >
+        <TabButton active={activeTab === 'pending'} onClick={() => onTabChange('pending')}>
           Pendientes de aprobación
           {pendingCount > 0 && (
             <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full text-xs font-medium bg-destructive text-destructive-foreground">
@@ -44,7 +40,7 @@ export function SolicitudesLayout({
           )}
         </TabButton>
       </div>
-      {children}
+      {activeTab === 'mine' ? mineContent : pendingContent}
     </div>
   )
 }

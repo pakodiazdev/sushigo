@@ -12,4 +12,7 @@ export const employeeRequestApi = {
 
   create: (data: CreateEmployeeRequestData) =>
     apiClient.post<EntityResponse<EmployeeRequest>>('/employee-requests', data),
+
+  cancel: (id: string) =>
+    apiClient.patch<EntityResponse<EmployeeRequest>>(`/employee-requests/${id}/cancel`),
 }
