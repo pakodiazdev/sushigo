@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/format'
 import type { EmployeeRequest, ExtraDayPayload } from '@/types/employee-request'
 
 interface RequestStatusCardProps {
@@ -15,9 +16,32 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
-}
+const STATUS_CONFIG = {
+  PENDING: {
+    icon: '⏳',
+    label: 'Pendiente de aprobación',
+    className: 'border-yellow-200 bg-yellow-50',
+    labelClass: 'text-yellow-700',
+  },
+  APPROVED: {
+    icon: '✅',
+    label: 'Aprobado',
+    className: 'border-emerald-200 bg-emerald-50',
+    labelClass: 'text-emerald-700',
+  },
+  REJECTED: {
+    icon: '❌',
+    label: 'Rechazado',
+    className: 'border-red-200 bg-red-50',
+    labelClass: 'text-red-700',
+  },
+  CANCELLED: {
+    icon: '🚫',
+    label: 'Cancelado',
+    className: 'border-muted bg-muted/30',
+    labelClass: 'text-muted-foreground',
+  },
+} as const
 
 export function RequestStatusCard({ request, onCancel, isCancelling }: RequestStatusCardProps) {
   const payload = request.payload as ExtraDayPayload | null
@@ -25,34 +49,7 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
   const primaPct = payload?.prima_pct ?? 0
   const primaAmount = payload?.prima ?? 0
 
-  const statusConfig = {
-    PENDING: {
-      icon: '⏳',
-      label: 'Pendiente de aprobación',
-      className: 'border-yellow-200 bg-yellow-50',
-      labelClass: 'text-yellow-700',
-    },
-    APPROVED: {
-      icon: '✅',
-      label: 'Aprobado',
-      className: 'border-emerald-200 bg-emerald-50',
-      labelClass: 'text-emerald-700',
-    },
-    REJECTED: {
-      icon: '❌',
-      label: 'Rechazado',
-      className: 'border-red-200 bg-red-50',
-      labelClass: 'text-red-700',
-    },
-    CANCELLED: {
-      icon: '🚫',
-      label: 'Cancelado',
-      className: 'border-muted bg-muted/30',
-      labelClass: 'text-muted-foreground',
-    },
-  } as const
-
-  const config = statusConfig[request.status]
+  const config = STATUS_CONFIG[request.status]
 
   return (
     <div className={cn('rounded-lg border p-4 space-y-2', config.className)}>

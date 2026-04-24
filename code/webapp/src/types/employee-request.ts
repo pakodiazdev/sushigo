@@ -19,7 +19,7 @@ export interface EmployeeRequest {
 export interface EmployeeRequestFilters {
   employee_id?: string
   type?: EmployeeRequestType
-  status?: EmployeeRequestStatus
+  status?: EmployeeRequestStatus | EmployeeRequestStatus[]
   per_page?: number
   sort?: string[]
 }

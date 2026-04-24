@@ -100,6 +100,7 @@ export function useMyExtraDayRequests(employeeId: string | undefined) {
       const response = await employeeRequestApi.list({
         employee_id: employeeId,
         type: 'EXTRA_DAY',
+        status: ['PENDING', 'APPROVED', 'REJECTED'],
         per_page: 20,
       })
       return response.data.data

@@ -4,13 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useWageHistory } from '@/services/employee-hooks'
 import { useRequestExtraDay } from '@/services/employee-request-hooks'
 
-const today = new Date().toISOString().split('T')[0]!
-
 const extraDayRequestSchema = z.object({
   date: z
     .string()
     .min(1, 'La fecha es requerida')
-    .refine((d) => d > today, 'Solo se permiten fechas futuras'),
+    .refine((d) => d > new Date().toISOString().split('T')[0]!, 'Solo se permiten fechas futuras'),
   prima_pct: z.number().min(0, 'Mínimo 0%').max(200, 'Máximo 200%'),
   notes: z.string().max(1000).optional(),
 })
@@ -53,7 +51,7 @@ export function useExtraDayRequestForm(employeeId: string, onSuccess: () => void
         notes: values.notes || undefined,
         payload: {
           date: values.date,
-          salary_pct: 100,
+          salary_pct: 100, // employee always proposes 100% salary; manager adjusts on approval
           prima_pct: values.prima_pct,
           salary_day: salaryDay,
           prima,
