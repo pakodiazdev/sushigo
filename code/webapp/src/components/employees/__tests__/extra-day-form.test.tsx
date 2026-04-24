@@ -48,18 +48,43 @@ vi.mock('@/components/ui/form-fields', () => ({
 
 // ── Hook mock ─────────────────────────────────────────────────────────────────
 
-const mockSetValue = vi.fn()
-const mockRegister = vi.fn((name: string) => ({ name, onChange: vi.fn(), onBlur: vi.fn(), ref: vi.fn() }))
-const mockHandleSubmit = vi.fn()
+interface MockForm {
+  register: (name: string) => object
+  watch: (field: string) => string
+  setValue: (...args: unknown[]) => void
+  handleSubmit: (...args: unknown[]) => unknown
+  formState: { errors: Record<string, unknown> }
+}
 
-const defaultHookReturn = {
-  form: {
-    register: mockRegister,
-    watch: vi.fn((field: string) => field === 'salary_type' ? 'registered' : 'legal'),
-    setValue: mockSetValue,
+interface MockHookReturn {
+  form: MockForm
+  isLoadingWages: boolean
+  hasNoWage: boolean
+  registeredDailyWage: number
+  salaryDay: number
+  seventhDay: number
+  prima: number
+  total: number
+  handleSubmit: (...args: unknown[]) => unknown
+  isPending: boolean
+}
+
+function makeForm(watchImpl: (field: string) => string): MockForm {
+  return {
+    register: vi.fn((name: string) => ({ name, onChange: vi.fn(), onBlur: vi.fn(), ref: vi.fn() })),
+    watch: vi.fn(watchImpl),
+    setValue: vi.fn(),
     handleSubmit: vi.fn(),
     formState: { errors: {} },
-  },
+  }
+}
+
+vi.mock('../use-extra-day-form', () => ({
+  useExtraDayForm: () => mockUseExtraDayFormReturn,
+}))
+
+let mockUseExtraDayFormReturn: MockHookReturn = {
+  form: makeForm((field) => field === 'salary_type' ? 'registered' : 'legal'),
   isLoadingWages: false,
   hasNoWage: false,
   registeredDailyWage: 800,
@@ -67,15 +92,9 @@ const defaultHookReturn = {
   seventhDay: 800,
   prima: 800,
   total: 2400,
-  handleSubmit: mockHandleSubmit,
+  handleSubmit: vi.fn(),
   isPending: false,
 }
-
-vi.mock('../use-extra-day-form', () => ({
-  useExtraDayForm: () => mockUseExtraDayFormReturn,
-}))
-
-let mockUseExtraDayFormReturn = { ...defaultHookReturn }
 
 import { ExtraDayForm } from '../extra-day-form'
 
@@ -99,15 +118,16 @@ describe('ExtraDayForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseExtraDayFormReturn = {
-      ...defaultHookReturn,
-      form: {
-        register: vi.fn((name: string) => ({ name, onChange: vi.fn(), onBlur: vi.fn(), ref: vi.fn() })),
-        watch: vi.fn((field: string) => field === 'salary_type' ? 'registered' : 'legal'),
-        setValue: mockSetValue,
-        handleSubmit: vi.fn(),
-        formState: { errors: {} },
-      },
-      handleSubmit: mockHandleSubmit,
+      form: makeForm((field) => field === 'salary_type' ? 'registered' : 'legal'),
+      isLoadingWages: false,
+      hasNoWage: false,
+      registeredDailyWage: 800,
+      salaryDay: 800,
+      seventhDay: 800,
+      prima: 800,
+      total: 2400,
+      handleSubmit: vi.fn(),
+      isPending: false,
     }
   })
 
@@ -133,10 +153,7 @@ describe('ExtraDayForm', () => {
   it('shows salary custom input only when salary_type is custom', () => {
     mockUseExtraDayFormReturn = {
       ...mockUseExtraDayFormReturn,
-      form: {
-        ...mockUseExtraDayFormReturn.form,
-        watch: vi.fn((field: string) => field === 'salary_type' ? 'custom' : 'legal'),
-      },
+      form: makeForm((field) => field === 'salary_type' ? 'custom' : 'legal'),
     }
 
     render(<ExtraDayForm {...baseProps} />)
@@ -156,10 +173,7 @@ describe('ExtraDayForm', () => {
   it('shows prima custom input only when prima_type is custom', () => {
     mockUseExtraDayFormReturn = {
       ...mockUseExtraDayFormReturn,
-      form: {
-        ...mockUseExtraDayFormReturn.form,
-        watch: vi.fn((field: string) => field === 'salary_type' ? 'registered' : 'custom'),
-      },
+      form: makeForm((field) => field === 'salary_type' ? 'registered' : 'custom'),
     }
 
     render(<ExtraDayForm {...baseProps} />)
@@ -226,19 +240,13 @@ describe('ExtraDayForm', () => {
   })
 
   it('resets salary_pct to 100 when salary_type radio changes to registered', () => {
-    mockUseExtraDayFormReturn = {
-      ...mockUseExtraDayFormReturn,
-      form: {
-        ...mockUseExtraDayFormReturn.form,
-        watch: vi.fn((field: string) => field === 'salary_type' ? 'custom' : 'legal'),
-      },
-    }
     const setValueSpy = vi.fn()
-    mockUseExtraDayFormReturn.form.setValue = setValueSpy
+    const form = makeForm((field) => field === 'salary_type' ? 'custom' : 'legal')
+    form.setValue = setValueSpy
+    mockUseExtraDayFormReturn = { ...mockUseExtraDayFormReturn, form }
 
     render(<ExtraDayForm {...baseProps} />)
 
-    // Click the "registered" radio
     const registeredRadio = screen.getByDisplayValue('registered')
     fireEvent.click(registeredRadio)
 
@@ -247,15 +255,10 @@ describe('ExtraDayForm', () => {
   })
 
   it('resets prima_pct to 100 when prima_type radio changes to legal', () => {
-    mockUseExtraDayFormReturn = {
-      ...mockUseExtraDayFormReturn,
-      form: {
-        ...mockUseExtraDayFormReturn.form,
-        watch: vi.fn((field: string) => field === 'salary_type' ? 'registered' : 'custom'),
-      },
-    }
     const setValueSpy = vi.fn()
-    mockUseExtraDayFormReturn.form.setValue = setValueSpy
+    const form = makeForm((field) => field === 'salary_type' ? 'registered' : 'custom')
+    form.setValue = setValueSpy
+    mockUseExtraDayFormReturn = { ...mockUseExtraDayFormReturn, form }
 
     render(<ExtraDayForm {...baseProps} />)
 
