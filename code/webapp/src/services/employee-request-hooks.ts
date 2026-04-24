@@ -1,6 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useToast } from '@/components/ui/toast-provider'
+import { getApiErrorMessage } from '@/lib/api-error'
 import { employeeRequestApi } from './employee-request-api'
-import type { EmployeeRequestFilters } from '@/types/employee-request'
+import type {
+  EmployeeRequestFilters,
+  CreateEmployeeRequestData,
+} from '@/types/employee-request'
 
 export function useEmployeeRequests(filters?: EmployeeRequestFilters) {
   return useQuery({
@@ -21,5 +26,37 @@ export function usePendingRequestsCount({ enabled = true }: { enabled?: boolean 
     },
     refetchInterval: 60_000,
     enabled,
+  })
+}
+
+export function useApprovedExtraDays(employeeId: string) {
+  return useQuery({
+    queryKey: ['employee-requests', { employee_id: employeeId, type: 'EXTRA_DAY', status: 'APPROVED' }],
+    queryFn: async () => {
+      const response = await employeeRequestApi.list({
+        employee_id: employeeId,
+        type: 'EXTRA_DAY',
+        status: 'APPROVED',
+        per_page: 10,
+      })
+      return response.data.data
+    },
+    enabled: !!employeeId,
+  })
+}
+
+export function useCreateEmployeeRequest() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: CreateEmployeeRequestData) => employeeRequestApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-requests'] })
+      showSuccess('El día extra ha sido registrado y aprobado.', 'Día extra acordado')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo registrar el día extra.'), 'Error')
+    },
   })
 }

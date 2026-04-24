@@ -23,3 +23,21 @@ export interface EmployeeRequestFilters {
   per_page?: number
   sort?: string[]
 }
+
+export interface ExtraDayPayload {
+  date: string
+  salary_pct: number
+  prima_pct: number
+  salary_day: number
+  prima: number
+  seventh_day: number
+  total: number
+}
+
+export interface CreateEmployeeRequestData {
+  employee_id: string
+  type: EmployeeRequestType
+  auto_approve?: boolean
+  notes?: string
+  payload: ExtraDayPayload
+}
