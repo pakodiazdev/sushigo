@@ -111,28 +111,56 @@ If the gate has failed, list each failing metric with its current value vs. thre
 
 ---
 
-## SECTION 5 — Test Coverage (Local Verification)
+## SECTION 5 — Linters (must pass before any push)
 
-For webapp changes, run the relevant Vitest tests and report coverage:
+Run both linters regardless of which side of the stack changed. Both must exit with 0 errors before committing fixes.
 
+**Backend — Laravel Pint (auto-fixes formatting):**
 ```bash
-docker exec dev_container bash -c "cd /app/code/webapp && npx vitest run --reporter=verbose 2>&1 | tail -30"
+docker exec dev_container bash -c "cd /app/code/api && ./vendor/bin/pint" 2>&1
+```
+Stage any auto-fixed files and include them in the fix commit. A commit must NOT be created if Pint reports errors it could not auto-fix.
+
+**Frontend — ESLint + TypeScript:**
+```bash
+docker exec dev_container bash -c "cd /app/code/webapp && npm run lint && npm run typecheck" 2>&1
+```
+Zero errors required (`any` usage, missing types, unused imports all count as errors). Warnings in files not touched by this PR are acceptable but must not increase.
+
+Report:
+- Backend Pint: ✅ clean / ❌ errors (list files)
+- Frontend ESLint: ✅ 0 errors / ❌ N errors (list rules violated)
+- Frontend TypeScript: ✅ 0 errors / ❌ N errors (list files + lines)
+
+---
+
+## SECTION 6 — Test Suite (Local Verification)
+
+**Run all existing tests first** to catch regressions, then run targeted coverage for new files.
+
+**Full webapp test suite:**
+```bash
+docker exec dev_container bash -c "cd /app/code/webapp && npx vitest run 2>&1 | tail -15"
 ```
 
-For API changes, run PHPUnit:
-
+**Full API test suite:**
 ```bash
-docker exec dev_container bash -c "cd /app/code/api && php artisan test --filter=<relevant-test-class> 2>&1 | tail -20"
+docker exec dev_container bash -c "cd /app/code/api && php artisan test 2>&1 | tail -15"
+```
+
+**Coverage on new/changed files only** (webapp):
+```bash
+docker exec dev_container bash -c "cd /app/code/webapp && npx vitest run --coverage --coverage.include='src/path/to/changed/**' 2>&1 | tail -20"
 ```
 
 Report:
-- All tests pass: yes / no (list failures if any)
-- Coverage on new files: list each new file with its % statements coverage
+- All existing tests still pass: ✅ / ❌ (list regressions)
+- Coverage on new files: list each file with % statements
 - Overall new code coverage: X% (threshold: ≥80%)
 
 ---
 
-## SECTION 6 — Final PR Status Report
+## SECTION 7 — Final PR Status Report
 
 Produce a consolidated report with this structure:
 
@@ -157,9 +185,14 @@ Produce a consolidated report with this structure:
 - New bugs: N (0 required)
 - New code smells: N (0 required)
 
+### Linters
+- Backend Pint: ✅ / ❌
+- Frontend ESLint: ✅ 0 errors / ❌ N errors
+- Frontend TypeScript: ✅ 0 errors / ❌ N errors
+
 ### Test Suite
-- All tests pass: ✅ / ❌
-- New code coverage: X%
+- Existing tests (no regressions): ✅ / ❌
+- New code coverage: X% (≥80% required)
 
 ### Overall Status
 ✅ READY TO MERGE / ⚠️ NEEDS WORK / ❌ BLOCKED
