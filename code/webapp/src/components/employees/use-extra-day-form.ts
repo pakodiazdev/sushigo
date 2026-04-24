@@ -49,7 +49,8 @@ export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
 
   // seventh day = 1/6 of weekly wage = 1 daily wage (for 6-day schedule)
   const seventhDay = salaryDay
-  const safePrimaPct = primaType === 'legal' ? 100 : (Number.isNaN(primaPct) ? 0 : primaPct)
+  const cleanPrimaPct = Number.isNaN(primaPct) ? 0 : primaPct
+  const safePrimaPct = primaType === 'legal' ? 100 : cleanPrimaPct
   const prima = (safePrimaPct / 100) * salaryDay
   const total = salaryDay + seventhDay + prima
 
