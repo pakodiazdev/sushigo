@@ -22,6 +22,7 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
   const {
     form,
     isLoadingWages,
+    hasNoWage,
     registeredDailyWage,
     salaryDay,
     seventhDay,
@@ -57,7 +58,7 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
               type="radio"
               value="registered"
               checked={salaryType === 'registered'}
-              onChange={() => setValue('salary_type', 'registered')}
+              onChange={() => { setValue('salary_type', 'registered'); setValue('salary_pct', 100) }}
               className="h-4 w-4 text-primary"
             />
             <span className="flex-1 text-sm">Salario registrado</span>
@@ -109,7 +110,7 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
               type="radio"
               value="legal"
               checked={primaType === 'legal'}
-              onChange={() => setValue('prima_type', 'legal')}
+              onChange={() => { setValue('prima_type', 'legal'); setValue('prima_pct', 100) }}
               className="h-4 w-4 text-primary"
             />
             <span className="flex-1 text-sm">Prima legal &nbsp; 100%</span>
@@ -180,6 +181,13 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
           />
         </FormField>
 
+        {/* No wage warning */}
+        {hasNoWage && (
+          <p className="text-sm text-red-600">
+            Este empleado no tiene historial de salario registrado. No es posible registrar un día extra.
+          </p>
+        )}
+
         {/* Actions */}
         <div className="flex gap-3 justify-end pt-2">
           <Button
@@ -192,7 +200,7 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
           </Button>
           <Button
             type="submit"
-            disabled={isPending || isLoadingWages}
+            disabled={isPending || isLoadingWages || hasNoWage}
             className="bg-emerald-600 text-white hover:bg-emerald-700"
           >
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

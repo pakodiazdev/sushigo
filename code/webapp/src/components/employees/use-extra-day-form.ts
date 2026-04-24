@@ -52,34 +52,42 @@ export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
   const prima = (effectivePrimaPct / 100) * salaryDay
   const total = salaryDay + seventhDay + prima
 
+  const hasNoWage = !isLoadingWages && !currentWage
+
   const mutation = useCreateEmployeeRequest()
 
   const handleSubmit = form.handleSubmit(async (values) => {
     const effectiveSalaryPct = values.salary_type === 'registered' ? 100 : values.salary_pct
     const effectivePrimaPctValue = values.prima_type === 'legal' ? 100 : values.prima_pct
 
-    await mutation.mutateAsync({
-      employee_id: employeeId,
-      type: 'EXTRA_DAY',
-      auto_approve: true,
-      notes: values.notes || undefined,
-      payload: {
-        date: values.date,
-        salary_pct: effectiveSalaryPct,
-        prima_pct: effectivePrimaPctValue,
-        salary_day: salaryDay,
-        prima,
-        seventh_day: seventhDay,
-        total,
-      },
-    })
+    try {
+      await mutation.mutateAsync({
+        employee_id: employeeId,
+        type: 'EXTRA_DAY',
+        auto_approve: true,
+        notes: values.notes || undefined,
+        payload: {
+          date: values.date,
+          salary_pct: effectiveSalaryPct,
+          prima_pct: effectivePrimaPctValue,
+          salary_day: salaryDay,
+          prima,
+          seventh_day: seventhDay,
+          total,
+        },
+      })
 
-    onSuccess()
+      form.reset()
+      onSuccess()
+    } catch {
+      // error handled by mutation.onError toast
+    }
   })
 
   return {
     form,
     isLoadingWages,
+    hasNoWage,
     registeredDailyWage,
     salaryDay,
     seventhDay,

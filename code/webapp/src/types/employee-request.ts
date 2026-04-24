@@ -36,7 +36,7 @@ export interface ExtraDayPayload {
 
 export interface CreateEmployeeRequestData {
   employee_id: string
-  type: EmployeeRequestType
+  type: 'EXTRA_DAY'
   auto_approve?: boolean
   notes?: string
   payload: ExtraDayPayload

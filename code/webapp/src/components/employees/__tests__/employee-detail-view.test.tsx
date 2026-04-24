@@ -52,6 +52,10 @@ vi.mock('@/components/employees/leave-summary-section', () => ({
   LeaveSummarySection: () => <div>LeaveSummarySection</div>,
 }))
 
+vi.mock('@/components/employees/extra-day-section', () => ({
+  ExtraDaySection: () => <div>ExtraDaySection</div>,
+}))
+
 vi.mock('@/components/employees/permission-manager-dialog', () => ({
   PermissionManagerDialog: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>PermissionManagerDialog</div> : null,
 }))
