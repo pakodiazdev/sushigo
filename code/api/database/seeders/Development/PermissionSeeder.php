@@ -16,6 +16,10 @@ class PermissionSeeder extends LockedSeeder
 
     private const STOCK_PATTERN = 'stock.%';
 
+    private const EMPLOYEE_REQUESTS_PATTERN = 'employee-requests.%';
+
+    private const LEAVES_PATTERN = 'leaves.%';
+
     private const GROUP_INVENTARIO = 'Inventario';
 
     private const GROUP_CUENTAS_BANCARIAS = 'Cuentas bancarias';
@@ -138,8 +142,8 @@ class PermissionSeeder extends LockedSeeder
                     ->where(function ($q) {
                         $q->where('name', 'like', 'users.%')
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
-                            ->orWhere('name', 'like', 'leaves.%')
-                            ->orWhere('name', 'like', 'employee-requests.%')
+                            ->orWhere('name', 'like', self::LEAVES_PATTERN)
+                            ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::ITEMS_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN);
@@ -171,8 +175,8 @@ class PermissionSeeder extends LockedSeeder
                     ->where(function ($q) {
                         $q->whereIn('name', ['users.show', 'users.index'])
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
-                            ->orWhere('name', 'like', 'leaves.%')
-                            ->orWhere('name', 'like', 'employee-requests.%');
+                            ->orWhere('name', 'like', self::LEAVES_PATTERN)
+                            ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN);
                     })
                     ->get()
             );
