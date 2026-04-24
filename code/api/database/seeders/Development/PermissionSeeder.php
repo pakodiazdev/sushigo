@@ -97,10 +97,10 @@ class PermissionSeeder extends LockedSeeder
             'leaves.reject' => ['label' => 'Rechazar ausencia',           'group' => 'Ausencias'],
 
             // Solicitudes de empleado
-            'employee-requests.view'    => ['label' => 'Ver solicitudes',      'group' => 'Solicitudes'],
-            'employee-requests.create'  => ['label' => 'Crear solicitud',      'group' => 'Solicitudes'],
+            'employee-requests.view' => ['label' => 'Ver solicitudes',      'group' => 'Solicitudes'],
+            'employee-requests.create' => ['label' => 'Crear solicitud',      'group' => 'Solicitudes'],
             'employee-requests.approve' => ['label' => 'Aprobar solicitud',    'group' => 'Solicitudes'],
-            'employee-requests.cancel'  => ['label' => 'Cancelar solicitud',   'group' => 'Solicitudes'],
+            'employee-requests.cancel' => ['label' => 'Cancelar solicitud',   'group' => 'Solicitudes'],
 
             // Inventario — Ítems y variantes
             'items.view' => ['label' => 'Ver ítems y variantes',       'group' => self::GROUP_INVENTARIO],
