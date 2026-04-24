@@ -96,6 +96,12 @@ class PermissionSeeder extends LockedSeeder
             'leaves.approve' => ['label' => 'Aprobar ausencia',            'group' => 'Ausencias'],
             'leaves.reject' => ['label' => 'Rechazar ausencia',           'group' => 'Ausencias'],
 
+            // Solicitudes de empleado
+            'employee-requests.view'    => ['label' => 'Ver solicitudes',      'group' => 'Solicitudes'],
+            'employee-requests.create'  => ['label' => 'Crear solicitud',      'group' => 'Solicitudes'],
+            'employee-requests.approve' => ['label' => 'Aprobar solicitud',    'group' => 'Solicitudes'],
+            'employee-requests.cancel'  => ['label' => 'Cancelar solicitud',   'group' => 'Solicitudes'],
+
             // Inventario — Ítems y variantes
             'items.view' => ['label' => 'Ver ítems y variantes',       'group' => self::GROUP_INVENTARIO],
             'items.create' => ['label' => 'Crear ítem / variante',      'group' => self::GROUP_INVENTARIO],
@@ -133,6 +139,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->where('name', 'like', 'users.%')
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', self::ITEMS_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN);
@@ -164,7 +171,8 @@ class PermissionSeeder extends LockedSeeder
                     ->where(function ($q) {
                         $q->whereIn('name', ['users.show', 'users.index'])
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
-                            ->orWhere('name', 'like', 'leaves.%');
+                            ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'employee-requests.%');
                     })
                     ->get()
             );

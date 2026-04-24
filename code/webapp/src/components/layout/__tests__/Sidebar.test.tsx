@@ -50,7 +50,7 @@ vi.mock('@/components/ui/logo', () => ({
 }))
 
 vi.mock('@/stores/auth.store', () => ({
-  useAuthStore: () => ({ isAdmin: false }),
+  useAuthStore: () => ({ can: () => false }),
 }))
 
 vi.mock('@/services/employee-request-hooks', () => ({

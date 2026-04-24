@@ -120,11 +120,12 @@ export default function Sidebar() {
     const currentPath = router.location.pathname;
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
     const { resolveAccess } = useMenuAccess();
-    const { isAdmin } = useAuthStore();
-    const { data: pendingCount = 0 } = usePendingRequestsCount({ enabled: isAdmin });
+    const { can } = useAuthStore();
+    const canApprove = can('employee-requests.approve');
+    const { data: pendingCount = 0 } = usePendingRequestsCount({ enabled: canApprove });
 
     const menuItemsResolved = menuItems.map((item) =>
-        item.path === '/solicitudes' && isAdmin && pendingCount > 0
+        item.path === '/solicitudes' && canApprove && pendingCount > 0
             ? { ...item, badge: pendingCount }
             : item,
     );
