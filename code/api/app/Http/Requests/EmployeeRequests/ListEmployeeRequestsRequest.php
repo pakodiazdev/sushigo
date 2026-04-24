@@ -27,6 +27,13 @@ class ListEmployeeRequestsRequest extends FormRequest
         return [['field' => 'created_at', 'direction' => 'desc']];
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('status') && is_string($this->input('status'))) {
+            $this->merge(['status' => [$this->input('status')]]);
+        }
+    }
+
     public function rules(): array
     {
         return [

@@ -66,12 +66,8 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
           </p>
           <p className={cn('text-xs font-medium', config.labelClass)}>{config.label}</p>
 
-          {request.status === 'APPROVED' && (
-            <div className="mt-1 space-y-0.5">
-              {request.notes && (
-                <p className="text-xs text-muted-foreground italic">"{request.notes}"</p>
-              )}
-            </div>
+          {request.status === 'PENDING' && request.notes && (
+            <p className="text-xs text-muted-foreground italic">Tu nota: "{request.notes}"</p>
           )}
 
           {request.status === 'REJECTED' && request.rejection_reason && (
