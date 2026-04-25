@@ -135,6 +135,52 @@ describe('useReviewRequestDialog', () => {
     expect(Number.isNaN(result.current.total)).toBe(false)
   })
 
+  it('handleApprove calls mutate with computed overrides using registered salary', async () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useReviewRequestDialog(makeRequest(), onClose), { wrapper })
+
+    await act(async () => {
+      await result.current.form.handleSubmit(result.current.handleApprove)()
+    })
+
+    expect(mockApprove).toHaveBeenCalledWith(
+      {
+        id: '01HZTEST00000001',
+        data: expect.objectContaining({
+          salary_pct: 100,
+          salary_day: 200,
+          prima_pct: 100,
+          prima: 200,
+          seventh_day: 200,
+          total: 600,
+        }),
+      },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
+  })
+
+  it('handleApprove uses agreed salary_pct when salary_type is agreed', async () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useReviewRequestDialog(makeRequest(), onClose), { wrapper })
+
+    act(() => {
+      result.current.form.setValue('salary_type', 'agreed')
+      result.current.form.setValue('salary_pct', 50)
+    })
+
+    await act(async () => {
+      await result.current.form.handleSubmit(result.current.handleApprove)()
+    })
+
+    expect(mockApprove).toHaveBeenCalledWith(
+      {
+        id: '01HZTEST00000001',
+        data: expect.objectContaining({ salary_pct: 50, salary_day: 100 }),
+      },
+      expect.anything(),
+    )
+  })
+
   it('handleReject reads reject_reason from form state and calls mutate', () => {
     const onClose = vi.fn()
     const { result } = renderHook(() => useReviewRequestDialog(makeRequest(), onClose), { wrapper })
