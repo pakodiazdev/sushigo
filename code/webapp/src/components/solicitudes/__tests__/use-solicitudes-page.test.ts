@@ -20,8 +20,10 @@ vi.mock('@/services/employee-request-hooks', () => ({
     },
 }))
 
+const mockMyEmployee = vi.fn().mockReturnValue({ data: undefined })
+
 vi.mock('@/services/employee-hooks', () => ({
-    useMyEmployee: () => ({ data: undefined }),
+    useMyEmployee: () => mockMyEmployee(),
 }))
 
 import { useSolicitudesPage } from '../use-solicitudes-page'
@@ -34,6 +36,7 @@ describe('useSolicitudesPage', () => {
         mockPendingCountCalls.length = 0
         mockCan.mockReturnValue(false)
         mockPendingCount.mockReturnValue({ data: 0 })
+        mockMyEmployee.mockReturnValue({ data: undefined })
     })
 
     it('initializes with activeTab=mine', () => {
@@ -93,5 +96,17 @@ describe('useSolicitudesPage', () => {
         mockCan.mockReturnValue(true)
         renderHook(() => useSolicitudesPage())
         expect(mockPendingCountCalls[0]).toEqual({ enabled: true })
+    })
+
+    it('myEmployeeId is undefined when useMyEmployee returns no data', () => {
+        mockMyEmployee.mockReturnValue({ data: undefined })
+        const { result } = renderHook(() => useSolicitudesPage())
+        expect(result.current.myEmployeeId).toBeUndefined()
+    })
+
+    it('myEmployeeId reflects the employee id when useMyEmployee returns data', () => {
+        mockMyEmployee.mockReturnValue({ data: { id: 'emp-xyz' } })
+        const { result } = renderHook(() => useSolicitudesPage())
+        expect(result.current.myEmployeeId).toBe('emp-xyz')
     })
 })
