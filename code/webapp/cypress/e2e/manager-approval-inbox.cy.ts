@@ -43,17 +43,16 @@ function seedPendingRequest(): Cypress.Chainable<string> {
     })
     .then((loginRes) => {
       const token = loginRes.body.data.token as string
-      const employeePublicId = loginRes.body.data.user?.employee_id as string | undefined
 
-      // We need the employee's public_id — fetch it from /me if not in login response
+      // GET /employees/me returns the Employee profile linked to the authenticated user
       return cy
         .request({
           method: 'GET',
-          url: `${API}/me`,
+          url: `${API}/employees/me`,
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((meRes) => {
-          const empId = (meRes.body.data?.employee?.public_id ?? employeePublicId) as string
+          const empId = meRes.body.data.id as string
           return cy
             .request({
               method: 'POST',
