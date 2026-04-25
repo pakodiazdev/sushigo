@@ -17,6 +17,8 @@ const extraDayRequestSchema = z.object({
   notes: z.string().max(1000).optional(),
 })
 
+export { extraDayRequestSchema }
+
 export type ExtraDayRequestFormValues = z.infer<typeof extraDayRequestSchema>
 
 export function useExtraDayRequestForm(employeeId: string, onSuccess: () => void) {

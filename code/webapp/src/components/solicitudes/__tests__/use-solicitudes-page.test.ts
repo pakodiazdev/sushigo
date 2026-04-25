@@ -20,7 +20,7 @@ vi.mock('@/services/employee-request-hooks', () => ({
     },
 }))
 
-const mockMyEmployee = vi.fn().mockReturnValue({ data: undefined })
+const mockMyEmployee = vi.fn().mockReturnValue({ data: undefined, isLoading: false })
 
 vi.mock('@/services/employee-hooks', () => ({
     useMyEmployee: () => mockMyEmployee(),
@@ -36,7 +36,7 @@ describe('useSolicitudesPage', () => {
         mockPendingCountCalls.length = 0
         mockCan.mockReturnValue(false)
         mockPendingCount.mockReturnValue({ data: 0 })
-        mockMyEmployee.mockReturnValue({ data: undefined })
+        mockMyEmployee.mockReturnValue({ data: undefined, isLoading: false })
     })
 
     it('initializes with activeTab=mine', () => {
@@ -99,14 +99,26 @@ describe('useSolicitudesPage', () => {
     })
 
     it('myEmployeeId is undefined when useMyEmployee returns no data', () => {
-        mockMyEmployee.mockReturnValue({ data: undefined })
+        mockMyEmployee.mockReturnValue({ data: undefined, isLoading: false })
         const { result } = renderHook(() => useSolicitudesPage())
         expect(result.current.myEmployeeId).toBeUndefined()
     })
 
     it('myEmployeeId reflects the employee id when useMyEmployee returns data', () => {
-        mockMyEmployee.mockReturnValue({ data: { id: 'emp-xyz' } })
+        mockMyEmployee.mockReturnValue({ data: { id: 'emp-xyz' }, isLoading: false })
         const { result } = renderHook(() => useSolicitudesPage())
         expect(result.current.myEmployeeId).toBe('emp-xyz')
+    })
+
+    it('isLoadingEmployee is true while useMyEmployee is loading', () => {
+        mockMyEmployee.mockReturnValue({ data: undefined, isLoading: true })
+        const { result } = renderHook(() => useSolicitudesPage())
+        expect(result.current.isLoadingEmployee).toBe(true)
+    })
+
+    it('isLoadingEmployee is false when useMyEmployee has resolved', () => {
+        mockMyEmployee.mockReturnValue({ data: { id: 'emp-xyz' }, isLoading: false })
+        const { result } = renderHook(() => useSolicitudesPage())
+        expect(result.current.isLoadingEmployee).toBe(false)
     })
 })
