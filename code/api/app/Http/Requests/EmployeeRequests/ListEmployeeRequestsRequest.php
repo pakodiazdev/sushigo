@@ -40,7 +40,7 @@ class ListEmployeeRequestsRequest extends FormRequest
             'employee_id' => ['nullable', 'string', Rule::exists('employees', 'public_id')->whereNull('deleted_at')],
             'type' => ['nullable', Rule::in(array_map(fn (EmployeeRequestType $type) => $type->value, EmployeeRequestType::cases()))],
             'status' => ['nullable', 'array'],
-            'status.*' => ['nullable', Rule::in(array_map(fn (EmployeeRequestStatus $status) => $status->value, EmployeeRequestStatus::cases()))],
+            'status.*' => ['required', Rule::in(array_map(fn (EmployeeRequestStatus $status) => $status->value, EmployeeRequestStatus::cases()))],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             ...$this->sortRules(),
         ];

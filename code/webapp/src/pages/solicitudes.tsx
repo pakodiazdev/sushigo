@@ -25,6 +25,7 @@ export function SolicitudesPage() {
     closeExtraDayForm,
     myEmployeeId,
     isLoadingEmployee,
+    isEmployeeError,
   } = useSolicitudesPage()
 
   function renderMineContent() {
@@ -32,6 +33,13 @@ export function SolicitudesPage() {
       return (
         <div className="flex justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )
+    }
+    if (isEmployeeError) {
+      return (
+        <div className="text-sm text-muted-foreground py-8 text-center">
+          No se pudo cargar tu perfil de empleado. Intenta de nuevo.
         </div>
       )
     }

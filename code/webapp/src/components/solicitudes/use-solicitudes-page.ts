@@ -11,7 +11,7 @@ export function useSolicitudesPage() {
   const [showExtraDayForm, setShowExtraDayForm] = useState(false)
 
   const { data: pendingCount = 0 } = usePendingRequestsCount({ enabled: canApprove })
-  const { data: myEmployee, isLoading: isLoadingEmployee } = useMyEmployee()
+  const { data: myEmployee, isLoading: isLoadingEmployee, isError: isEmployeeError } = useMyEmployee()
 
   return {
     isManager: canApprove,
@@ -23,5 +23,6 @@ export function useSolicitudesPage() {
     closeExtraDayForm: () => setShowExtraDayForm(false),
     myEmployeeId: myEmployee?.id,
     isLoadingEmployee,
+    isEmployeeError,
   }
 }

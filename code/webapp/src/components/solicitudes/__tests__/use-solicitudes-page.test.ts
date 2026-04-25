@@ -36,7 +36,7 @@ describe('useSolicitudesPage', () => {
         mockPendingCountCalls.length = 0
         mockCan.mockReturnValue(false)
         mockPendingCount.mockReturnValue({ data: 0 })
-        mockMyEmployee.mockReturnValue({ data: undefined, isLoading: false })
+        mockMyEmployee.mockReturnValue({ data: undefined, isLoading: false, isError: false })
     })
 
     it('initializes with activeTab=mine', () => {
@@ -99,7 +99,7 @@ describe('useSolicitudesPage', () => {
     })
 
     it('myEmployeeId is undefined when useMyEmployee returns no data', () => {
-        mockMyEmployee.mockReturnValue({ data: undefined, isLoading: false })
+        mockMyEmployee.mockReturnValue({ data: undefined, isLoading: false, isError: false })
         const { result } = renderHook(() => useSolicitudesPage())
         expect(result.current.myEmployeeId).toBeUndefined()
     })
@@ -120,5 +120,17 @@ describe('useSolicitudesPage', () => {
         mockMyEmployee.mockReturnValue({ data: { id: 'emp-xyz' }, isLoading: false })
         const { result } = renderHook(() => useSolicitudesPage())
         expect(result.current.isLoadingEmployee).toBe(false)
+    })
+
+    it('isEmployeeError is true when useMyEmployee returns an error', () => {
+        mockMyEmployee.mockReturnValue({ data: undefined, isLoading: false, isError: true })
+        const { result } = renderHook(() => useSolicitudesPage())
+        expect(result.current.isEmployeeError).toBe(true)
+    })
+
+    it('isEmployeeError is false when useMyEmployee succeeds', () => {
+        mockMyEmployee.mockReturnValue({ data: { id: 'emp-xyz' }, isLoading: false, isError: false })
+        const { result } = renderHook(() => useSolicitudesPage())
+        expect(result.current.isEmployeeError).toBe(false)
     })
 })
