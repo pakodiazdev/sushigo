@@ -135,6 +135,47 @@ describe('useReviewRequestDialog', () => {
     expect(Number.isNaN(result.current.total)).toBe(false)
   })
 
+  it('handleApprove succeeds after agreed→registered switch even if salary_pct was NaN', async () => {
+    // Regression for D2: zod schema was rejecting NaN left over from a cleared agreed input
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useReviewRequestDialog(makeRequest(), onClose), { wrapper })
+
+    act(() => {
+      // Simulate: user selects agreed, clears the input (→ NaN), then switches back to registered
+      result.current.form.setValue('salary_type', 'agreed')
+      result.current.form.setValue('salary_pct', NaN)
+      // Component resets salary_pct to proposedSalaryPct when switching back
+      result.current.form.setValue('salary_type', 'registered')
+      result.current.form.setValue('salary_pct', 100)
+    })
+
+    await act(async () => {
+      await result.current.form.handleSubmit(result.current.handleApprove)()
+    })
+
+    expect(mockApprove).toHaveBeenCalledOnce()
+  })
+
+  it('handleApprove succeeds after agreed→legal prima switch even if prima_pct was NaN', async () => {
+    // Regression for D2: same NaN issue on the prima_pct field
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useReviewRequestDialog(makeRequest(), onClose), { wrapper })
+
+    act(() => {
+      result.current.form.setValue('prima_type', 'agreed')
+      result.current.form.setValue('prima_pct', NaN)
+      // Component resets prima_pct to 100 when switching back to legal
+      result.current.form.setValue('prima_type', 'legal')
+      result.current.form.setValue('prima_pct', 100)
+    })
+
+    await act(async () => {
+      await result.current.form.handleSubmit(result.current.handleApprove)()
+    })
+
+    expect(mockApprove).toHaveBeenCalledOnce()
+  })
+
   it('handleApprove calls mutate with computed overrides using registered salary', async () => {
     const onClose = vi.fn()
     const { result } = renderHook(() => useReviewRequestDialog(makeRequest(), onClose), { wrapper })

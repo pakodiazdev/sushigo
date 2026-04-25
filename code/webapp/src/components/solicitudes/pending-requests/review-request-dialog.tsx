@@ -72,7 +72,7 @@ function InnerDialog({ request, onClose }: { readonly request: EmployeeRequest; 
               name="salary_type"
               value="registered"
               checked={salaryType === 'registered'}
-              onChange={() => setValue('salary_type', 'registered')}
+              onChange={() => { setValue('salary_type', 'registered'); setValue('salary_pct', payload?.salary_pct ?? 100) }}
               className="accent-primary"
             />
             <span className="text-sm text-foreground flex-1">Salario registrado</span>
@@ -122,7 +122,7 @@ function InnerDialog({ request, onClose }: { readonly request: EmployeeRequest; 
               name="prima_type"
               value="legal"
               checked={primaType === 'legal'}
-              onChange={() => setValue('prima_type', 'legal')}
+              onChange={() => { setValue('prima_type', 'legal'); setValue('prima_pct', 100) }}
               className="accent-primary"
             />
             <span className="text-sm text-foreground flex-1">Prima legal</span>
