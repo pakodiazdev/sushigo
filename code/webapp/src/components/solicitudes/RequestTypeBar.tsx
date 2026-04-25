@@ -10,20 +10,20 @@ export function RequestTypeBar({ onExtraDayClick }: RequestTypeBarProps) {
       <h3 className="text-sm font-medium text-muted-foreground mb-3">Nueva solicitud</h3>
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" onClick={onExtraDayClick} className="gap-2">
-          <span>➕</span>
+          <span aria-hidden="true">➕</span>
           Día extra
         </Button>
 
         <span title="Próximamente" className="cursor-not-allowed">
           <Button variant="outline" disabled className="gap-2 pointer-events-none">
-            <span>📅</span>
+            <span aria-hidden="true">📅</span>
             Permiso
           </Button>
         </span>
 
         <span title="Próximamente" className="cursor-not-allowed">
           <Button variant="outline" disabled className="gap-2 pointer-events-none">
-            <span>🌴</span>
+            <span aria-hidden="true">🌴</span>
             Vacaciones
           </Button>
         </span>

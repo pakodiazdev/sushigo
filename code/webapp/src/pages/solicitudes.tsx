@@ -27,17 +27,25 @@ export function SolicitudesPage() {
     isLoadingEmployee,
   } = useSolicitudesPage()
 
-  const mineContent = isLoadingEmployee ? (
-    <div className="flex justify-center py-8">
-      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-    </div>
-  ) : myEmployeeId ? (
-    <MyRequestsList employeeId={myEmployeeId} />
-  ) : (
-    <div className="text-sm text-muted-foreground py-8 text-center">
-      No hay un empleado vinculado a tu cuenta.
-    </div>
-  )
+  function renderMineContent() {
+    if (isLoadingEmployee) {
+      return (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )
+    }
+    if (myEmployeeId) {
+      return <MyRequestsList employeeId={myEmployeeId} />
+    }
+    return (
+      <div className="text-sm text-muted-foreground py-8 text-center">
+        No hay un empleado vinculado a tu cuenta.
+      </div>
+    )
+  }
+
+  const mineContent = renderMineContent()
 
   const pendingContent = (
     <div className="text-sm text-muted-foreground py-8 text-center">
