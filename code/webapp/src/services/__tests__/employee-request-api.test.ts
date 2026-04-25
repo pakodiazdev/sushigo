@@ -4,6 +4,7 @@ vi.mock('@/lib/api-client', () => ({
     apiClient: {
         get: vi.fn(),
         post: vi.fn(),
+        patch: vi.fn(),
     },
 }))
 
@@ -54,6 +55,46 @@ describe('employeeRequestApi', () => {
             await employeeRequestApi.list({ per_page: 1 })
 
             expect(apiClient.get).toHaveBeenCalledWith('/employee-requests', { params: { per_page: 1 } })
+        })
+    })
+
+    describe('approve', () => {
+        it('calls PATCH /employee-requests/:id/approve with override data', async () => {
+            const mockResponse = { data: { status: 200, data: { id: 'req-1', status: 'APPROVED' } } }
+            vi.mocked(apiClient.patch).mockResolvedValue(mockResponse)
+
+            const result = await employeeRequestApi.approve('req-1', { salary_pct: 80, salary_day: 160 })
+
+            expect(apiClient.patch).toHaveBeenCalledWith('/employee-requests/req-1/approve', { salary_pct: 80, salary_day: 160 })
+            expect(result).toEqual(mockResponse)
+        })
+
+        it('sends empty object when no data provided', async () => {
+            vi.mocked(apiClient.patch).mockResolvedValue({ data: {} })
+
+            await employeeRequestApi.approve('req-1')
+
+            expect(apiClient.patch).toHaveBeenCalledWith('/employee-requests/req-1/approve', {})
+        })
+    })
+
+    describe('reject', () => {
+        it('calls PATCH /employee-requests/:id/reject with reason', async () => {
+            const mockResponse = { data: { status: 200, data: { id: 'req-1', status: 'REJECTED' } } }
+            vi.mocked(apiClient.patch).mockResolvedValue(mockResponse)
+
+            const result = await employeeRequestApi.reject('req-1', 'No procede')
+
+            expect(apiClient.patch).toHaveBeenCalledWith('/employee-requests/req-1/reject', { reason: 'No procede' })
+            expect(result).toEqual(mockResponse)
+        })
+
+        it('calls PATCH /employee-requests/:id/reject with undefined reason when not provided', async () => {
+            vi.mocked(apiClient.patch).mockResolvedValue({ data: {} })
+
+            await employeeRequestApi.reject('req-1')
+
+            expect(apiClient.patch).toHaveBeenCalledWith('/employee-requests/req-1/reject', { reason: undefined })
         })
     })
 

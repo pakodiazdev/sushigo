@@ -9,6 +9,8 @@ import type { ReactNode } from 'react'
 const mockList = vi.fn()
 const mockCreate = vi.fn()
 const mockCancel = vi.fn()
+const mockApprove = vi.fn()
+const mockReject = vi.fn()
 const mockShowSuccess = vi.fn()
 const mockShowError = vi.fn()
 
@@ -17,6 +19,8 @@ vi.mock('@/services/employee-request-api', () => ({
         list: (...args: unknown[]) => mockList(...args),
         create: (...args: unknown[]) => mockCreate(...args),
         cancel: (...args: unknown[]) => mockCancel(...args),
+        approve: (...args: unknown[]) => mockApprove(...args),
+        reject: (...args: unknown[]) => mockReject(...args),
     },
 }))
 
@@ -32,6 +36,9 @@ import {
     useRequestExtraDay,
     useCancelEmployeeRequest,
     useMyExtraDayRequests,
+    usePendingRequests,
+    useApproveEmployeeRequest,
+    useRejectEmployeeRequest,
 } from '../employee-request-hooks'
 
 // ── Wrapper ───────────────────────────────────────────────────────────────────
@@ -405,6 +412,136 @@ describe('useCancelEmployeeRequest', () => {
             } catch {
                 // expected
             }
+        })
+
+        await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+    })
+})
+
+describe('usePendingRequests', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('fetches pending requests sorted by created_at asc', async () => {
+        const pendingItems = [{ id: 'req-1', status: 'PENDING' }]
+        mockList.mockResolvedValue({ data: { data: pendingItems, meta: null } })
+
+        const { result } = renderHook(() => usePendingRequests(), { wrapper: createWrapper() })
+
+        await waitFor(() => expect(result.current.isSuccess).toBe(true))
+        expect(result.current.data).toEqual(pendingItems)
+        expect(mockList).toHaveBeenCalledWith({ status: 'PENDING', sort: ['created_at:asc'], per_page: 50 })
+    })
+
+    it('returns empty array when no pending requests', async () => {
+        mockList.mockResolvedValue({ data: { data: [], meta: { total: 0 } } })
+
+        const { result } = renderHook(() => usePendingRequests(), { wrapper: createWrapper() })
+
+        await waitFor(() => expect(result.current.isSuccess).toBe(true))
+        expect(result.current.data).toEqual([])
+    })
+
+    it('is in loading state initially', () => {
+        mockList.mockReturnValue(new Promise(() => {}))
+
+        const { result } = renderHook(() => usePendingRequests(), { wrapper: createWrapper() })
+
+        expect(result.current.isLoading).toBe(true)
+    })
+})
+
+describe('useApproveEmployeeRequest', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('calls employeeRequestApi.approve with id and data', async () => {
+        mockApprove.mockResolvedValue({ data: { data: { id: 'req-1', status: 'APPROVED' } } })
+
+        const { result } = renderHook(() => useApproveEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync({ id: 'req-1', data: { salary_pct: 80 } })
+        })
+
+        expect(mockApprove).toHaveBeenCalledWith('req-1', { salary_pct: 80 })
+    })
+
+    it('shows success toast on approval', async () => {
+        mockApprove.mockResolvedValue({ data: { data: { id: 'req-1', status: 'APPROVED' } } })
+
+        const { result } = renderHook(() => useApproveEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync({ id: 'req-1' })
+        })
+
+        expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('aprobada'), expect.any(String))
+    })
+
+    it('shows error toast when approval fails', async () => {
+        mockApprove.mockRejectedValue(new Error('Server error'))
+
+        const { result } = renderHook(() => useApproveEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            try { await result.current.mutateAsync({ id: 'req-1' }) } catch { /* expected */ }
+        })
+
+        await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+    })
+})
+
+describe('useRejectEmployeeRequest', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('calls employeeRequestApi.reject with id and reason', async () => {
+        mockReject.mockResolvedValue({ data: { data: { id: 'req-1', status: 'REJECTED' } } })
+
+        const { result } = renderHook(() => useRejectEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync({ id: 'req-1', reason: 'No procede' })
+        })
+
+        expect(mockReject).toHaveBeenCalledWith('req-1', 'No procede')
+    })
+
+    it('calls reject with undefined reason when reason omitted', async () => {
+        mockReject.mockResolvedValue({ data: { data: { id: 'req-1', status: 'REJECTED' } } })
+
+        const { result } = renderHook(() => useRejectEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync({ id: 'req-1' })
+        })
+
+        expect(mockReject).toHaveBeenCalledWith('req-1', undefined)
+    })
+
+    it('shows success toast on rejection', async () => {
+        mockReject.mockResolvedValue({ data: { data: { id: 'req-1', status: 'REJECTED' } } })
+
+        const { result } = renderHook(() => useRejectEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync({ id: 'req-1', reason: 'No aplica' })
+        })
+
+        expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('rechazada'), expect.any(String))
+    })
+
+    it('shows error toast when rejection fails', async () => {
+        mockReject.mockRejectedValue(new Error('Network error'))
+
+        const { result } = renderHook(() => useRejectEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            try { await result.current.mutateAsync({ id: 'req-1' }) } catch { /* expected */ }
         })
 
         await waitFor(() => expect(mockShowError).toHaveBeenCalled())
