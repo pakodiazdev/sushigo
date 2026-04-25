@@ -286,3 +286,52 @@ describe('ReviewRequestDialog — loading states', () => {
     expect(rejectBtn.disabled).toBe(true)
   })
 })
+
+describe('ReviewRequestDialog — form error states', () => {
+  it('shows salary_pct validation error when form has salary_pct error', () => {
+    mockUseReviewRequestDialog.mockReturnValue({
+      ...defaultHookReturn,
+      form: {
+        ...defaultHookReturn.form,
+        formState: { errors: { salary_pct: { message: 'Debe ser entre 0 y 100', type: 'max' } } },
+      },
+    })
+    mockWatch.mockImplementation((field: string) => {
+      if (field === 'salary_type') return 'agreed'
+      if (field === 'prima_type') return 'legal'
+      if (field === 'reject_reason') return ''
+      return undefined
+    })
+    render(<ReviewRequestDialog request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByText('Debe ser entre 0 y 100')).toBeDefined()
+  })
+
+  it('shows prima_pct validation error when form has prima_pct error', () => {
+    mockUseReviewRequestDialog.mockReturnValue({
+      ...defaultHookReturn,
+      form: {
+        ...defaultHookReturn.form,
+        formState: { errors: { prima_pct: { message: 'Máximo 200%', type: 'max' } } },
+      },
+    })
+    mockWatch.mockImplementation((field: string) => {
+      if (field === 'salary_type') return 'registered'
+      if (field === 'prima_type') return 'agreed'
+      if (field === 'reject_reason') return ''
+      return undefined
+    })
+    render(<ReviewRequestDialog request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByText('Máximo 200%')).toBeDefined()
+  })
+})
+
+describe('ReviewRequestDialog — reject reason textarea onChange', () => {
+  it('calls setValue when reject reason textarea changes', () => {
+    mockUseReviewRequestDialog.mockReturnValue({ ...defaultHookReturn, showRejectConfirm: true })
+    render(<ReviewRequestDialog request={makeRequest()} onClose={vi.fn()} />)
+    const textareas = screen.getAllByRole('textbox') as HTMLTextAreaElement[]
+    const rejectTextarea = textareas[textareas.length - 1]!
+    fireEvent.change(rejectTextarea, { target: { value: 'No aplica' } })
+    expect(mockSetValue).toHaveBeenCalledWith('reject_reason', 'No aplica')
+  })
+})
