@@ -47,19 +47,23 @@ export function useReviewRequestDialog(request: EmployeeRequest, onClose: () => 
   const watchedPrimaType = form.watch('prima_type')
   const watchedPrimaPct = form.watch('prima_pct')
 
+  // Sanitize NaN (valueAsNumber returns NaN when input is cleared)
+  const safeSalaryPct = Number.isNaN(watchedSalaryPct) ? 0 : watchedSalaryPct
+  const safePrimaPct = Number.isNaN(watchedPrimaPct) ? 0 : watchedPrimaPct
+
   const salaryDay =
     watchedSalaryType === 'registered'
       ? proposedSalaryDay
-      : (baseDailyWage * watchedSalaryPct) / 100
+      : (baseDailyWage * safeSalaryPct) / 100
 
-  const effectivePrimaPct = watchedPrimaType === 'legal' ? 100 : watchedPrimaPct
+  const effectivePrimaPct = watchedPrimaType === 'legal' ? 100 : safePrimaPct
   const prima = (salaryDay * effectivePrimaPct) / 100
   const seventhDay = salaryDay
   const total = salaryDay + seventhDay + prima
 
   function handleApprove(values: FormValues) {
     const overrides = {
-      salary_pct: watchedSalaryType === 'agreed' ? values.salary_pct : proposedSalaryPct,
+      salary_pct: watchedSalaryType === 'agreed' ? safeSalaryPct : proposedSalaryPct,
       salary_day: salaryDay,
       prima_pct: effectivePrimaPct,
       prima,
@@ -74,9 +78,11 @@ export function useReviewRequestDialog(request: EmployeeRequest, onClose: () => 
     )
   }
 
-  function handleReject(values: FormValues) {
+  // Reject does not validate approve fields — reads reason directly from form state
+  function handleReject() {
+    const reason = form.getValues('reject_reason') || undefined
     rejectMutation.mutate(
-      { id: request.id, reason: values.reject_reason || undefined },
+      { id: request.id, reason },
       { onSuccess: () => { form.reset(); setShowRejectConfirm(false); onClose() } },
     )
   }

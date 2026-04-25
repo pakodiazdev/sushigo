@@ -69,6 +69,7 @@ function InnerDialog({ request, onClose }: { request: EmployeeRequest; onClose: 
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="radio"
+              name="salary_type"
               value="registered"
               checked={salaryType === 'registered'}
               onChange={() => setValue('salary_type', 'registered')}
@@ -81,6 +82,7 @@ function InnerDialog({ request, onClose }: { request: EmployeeRequest; onClose: 
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="radio"
+              name="salary_type"
               value="agreed"
               checked={salaryType === 'agreed'}
               onChange={() => setValue('salary_type', 'agreed')}
@@ -117,6 +119,7 @@ function InnerDialog({ request, onClose }: { request: EmployeeRequest; onClose: 
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="radio"
+              name="prima_type"
               value="legal"
               checked={primaType === 'legal'}
               onChange={() => setValue('prima_type', 'legal')}
@@ -129,6 +132,7 @@ function InnerDialog({ request, onClose }: { request: EmployeeRequest; onClose: 
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="radio"
+              name="prima_type"
               value="agreed"
               checked={primaType === 'agreed'}
               onChange={() => setValue('prima_type', 'agreed')}
@@ -216,7 +220,7 @@ function InnerDialog({ request, onClose }: { request: EmployeeRequest; onClose: 
       <ConfirmDialog
         isOpen={showRejectConfirm}
         onClose={() => setShowRejectConfirm(false)}
-        onConfirm={form.handleSubmit(handleReject)}
+        onConfirm={handleReject}
         title="Rechazar solicitud"
         description={
           <div className="space-y-3">
