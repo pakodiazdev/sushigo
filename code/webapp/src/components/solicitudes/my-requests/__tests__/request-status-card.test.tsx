@@ -153,3 +153,48 @@ describe('RequestStatusCard — employee notes', () => {
     expect(screen.queryByText(/Quiero apoyar ese día/)).toBeNull()
   })
 })
+
+describe('RequestStatusCard — null / missing payload', () => {
+  it('renders without crashing when payload is null', () => {
+    render(<RequestStatusCard request={makeRequest({ payload: null })} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/Día extra solicitado/)).toBeDefined()
+  })
+
+  it('shows 0% prima when payload is null', () => {
+    render(<RequestStatusCard request={makeRequest({ payload: null })} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/Prima propuesta: 0%/)).toBeDefined()
+  })
+
+  it('does NOT show currency amount when primaAmount is 0', () => {
+    const payload = { date: '2026-06-15', salary_pct: 100, prima_pct: 50, salary_day: 200, prima: 0, seventh_day: 200, total: 400 }
+    render(<RequestStatusCard request={makeRequest({ payload })} onCancel={vi.fn()} isCancelling={false} />)
+    // primaAmount === 0 → the "· $..." part should not appear
+    expect(screen.queryByText(/·/)).toBeNull()
+  })
+})
+
+describe('RequestStatusCard — CANCELLED', () => {
+  it('shows the Cancelado label', () => {
+    render(<RequestStatusCard request={makeRequest({ status: 'CANCELLED' })} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText('Cancelado')).toBeDefined()
+  })
+
+  it('does NOT show a Cancelar button', () => {
+    render(<RequestStatusCard request={makeRequest({ status: 'CANCELLED' })} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.queryByText('Cancelar')).toBeNull()
+  })
+})
+
+describe('RequestStatusCard — REJECTED without rejection_reason', () => {
+  it('does NOT show a rejection reason line when rejection_reason is null', () => {
+    render(
+      <RequestStatusCard
+        request={makeRequest({ status: 'REJECTED', rejection_reason: null })}
+        onCancel={vi.fn()}
+        isCancelling={false}
+      />
+    )
+    // No italic quoted reason should appear
+    expect(screen.queryByText(/"/)).toBeNull()
+  })
+})

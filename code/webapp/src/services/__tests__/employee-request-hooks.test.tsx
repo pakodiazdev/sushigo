@@ -8,6 +8,7 @@ import type { ReactNode } from 'react'
 
 const mockList = vi.fn()
 const mockCreate = vi.fn()
+const mockCancel = vi.fn()
 const mockShowSuccess = vi.fn()
 const mockShowError = vi.fn()
 
@@ -15,6 +16,7 @@ vi.mock('@/services/employee-request-api', () => ({
     employeeRequestApi: {
         list: (...args: unknown[]) => mockList(...args),
         create: (...args: unknown[]) => mockCreate(...args),
+        cancel: (...args: unknown[]) => mockCancel(...args),
     },
 }))
 
@@ -27,6 +29,9 @@ import {
     usePendingRequestsCount,
     useApprovedExtraDays,
     useCreateEmployeeRequest,
+    useRequestExtraDay,
+    useCancelEmployeeRequest,
+    useMyExtraDayRequests,
 } from '../employee-request-hooks'
 
 // ── Wrapper ───────────────────────────────────────────────────────────────────
@@ -267,5 +272,173 @@ describe('useCreateEmployeeRequest', () => {
         })
 
         await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+    })
+})
+
+describe('useRequestExtraDay', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('calls employeeRequestApi.create with the given data', async () => {
+        mockCreate.mockResolvedValue({ data: { data: { id: 'req-new' } } })
+
+        const { result } = renderHook(() => useRequestExtraDay(), { wrapper: createWrapper() })
+
+        const payload = {
+            employee_id: 'emp-1',
+            type: 'EXTRA_DAY' as const,
+            payload: {
+                date: '2026-06-20',
+                salary_pct: 100,
+                prima_pct: 100,
+                salary_day: 800,
+                prima: 800,
+                seventh_day: 800,
+                total: 2400,
+            },
+        }
+
+        await act(async () => {
+            await result.current.mutateAsync(payload)
+        })
+
+        expect(mockCreate).toHaveBeenCalledWith(payload)
+    })
+
+    it('shows success toast with employee-facing message on success', async () => {
+        mockCreate.mockResolvedValue({ data: { data: { id: 'req-new' } } })
+
+        const { result } = renderHook(() => useRequestExtraDay(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync({
+                employee_id: 'emp-1',
+                type: 'EXTRA_DAY',
+                payload: {
+                    date: '2026-06-20',
+                    salary_pct: 100,
+                    prima_pct: 100,
+                    salary_day: 800,
+                    prima: 800,
+                    seventh_day: 800,
+                    total: 2400,
+                },
+            })
+        })
+
+        expect(mockShowSuccess).toHaveBeenCalledWith(
+            expect.stringContaining('Manager'),
+            expect.any(String),
+        )
+    })
+
+    it('shows error toast when mutation fails', async () => {
+        mockCreate.mockRejectedValue(new Error('Network error'))
+
+        const { result } = renderHook(() => useRequestExtraDay(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            try {
+                await result.current.mutateAsync({
+                    employee_id: 'emp-1',
+                    type: 'EXTRA_DAY',
+                    payload: {
+                        date: '2026-06-20',
+                        salary_pct: 100,
+                        prima_pct: 100,
+                        salary_day: 800,
+                        prima: 800,
+                        seventh_day: 800,
+                        total: 2400,
+                    },
+                })
+            } catch {
+                // expected
+            }
+        })
+
+        await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+    })
+})
+
+describe('useCancelEmployeeRequest', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('calls employeeRequestApi.cancel with the request id', async () => {
+        mockCancel.mockResolvedValue({ data: {} })
+
+        const { result } = renderHook(() => useCancelEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync('req-abc')
+        })
+
+        expect(mockCancel).toHaveBeenCalledWith('req-abc')
+    })
+
+    it('shows success toast on successful cancellation', async () => {
+        mockCancel.mockResolvedValue({ data: {} })
+
+        const { result } = renderHook(() => useCancelEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync('req-abc')
+        })
+
+        expect(mockShowSuccess).toHaveBeenCalledWith(
+            expect.stringContaining('cancelada'),
+            expect.any(String),
+        )
+    })
+
+    it('shows error toast when cancellation fails', async () => {
+        mockCancel.mockRejectedValue(new Error('Cancel failed'))
+
+        const { result } = renderHook(() => useCancelEmployeeRequest(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            try {
+                await result.current.mutateAsync('req-abc')
+            } catch {
+                // expected
+            }
+        })
+
+        await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+    })
+})
+
+describe('useMyExtraDayRequests', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('fires the query when employeeId is provided', async () => {
+        const extraDays = [{ id: 'req-1', type: 'EXTRA_DAY', status: 'PENDING' }]
+        mockList.mockResolvedValue({ data: { data: extraDays, meta: null } })
+
+        const { result } = renderHook(
+            () => useMyExtraDayRequests('emp-1'),
+            { wrapper: createWrapper() },
+        )
+
+        await waitFor(() => expect(result.current.isSuccess).toBe(true))
+        expect(result.current.data).toEqual(extraDays)
+        expect(mockList).toHaveBeenCalledWith(
+            expect.objectContaining({ employee_id: 'emp-1', type: 'EXTRA_DAY' }),
+        )
+    })
+
+    it('does not fire when employeeId is undefined', () => {
+        const { result } = renderHook(
+            () => useMyExtraDayRequests(undefined),
+            { wrapper: createWrapper() },
+        )
+
+        expect(result.current.fetchStatus).toBe('idle')
+        expect(mockList).not.toHaveBeenCalled()
     })
 })

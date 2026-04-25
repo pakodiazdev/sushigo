@@ -8,6 +8,7 @@ import type { ReactNode } from 'react'
 
 const mockEmployeeList = vi.fn()
 const mockEmployeeGet = vi.fn()
+const mockEmployeeMe = vi.fn()
 const mockEmployeeNextCode = vi.fn()
 const mockEmployeeAssignableRoles = vi.fn()
 const mockEmployeeCreate = vi.fn()
@@ -22,6 +23,7 @@ vi.mock('@/services/employee-api', () => ({
     employeeApi: {
         list: (...args: unknown[]) => mockEmployeeList(...args),
         get: (...args: unknown[]) => mockEmployeeGet(...args),
+        me: () => mockEmployeeMe(),
         nextCode: () => mockEmployeeNextCode(),
         assignableRoles: () => mockEmployeeAssignableRoles(),
         create: (...args: unknown[]) => mockEmployeeCreate(...args),
@@ -52,6 +54,7 @@ vi.mock('@/lib/api-error', () => ({
 import {
     useEmployees,
     useEmployee,
+    useMyEmployee,
     useNextEmployeeCode,
     useAssignableRoles,
     useCreateEmployee,
@@ -148,6 +151,23 @@ describe('employee-hooks', () => {
 
             expect(result.current.isFetching).toBe(false)
             expect(mockEmployeeGet).not.toHaveBeenCalled()
+        })
+    })
+
+    describe('useMyEmployee', () => {
+        it('fetches the current user employee profile', async () => {
+            mockEmployeeMe.mockResolvedValue({
+                data: { data: { id: 'emp-me', first_name: 'Yo', code: 'EMP-001' } },
+            })
+
+            const { result } = renderHook(() => useMyEmployee(), {
+                wrapper: createWrapper(),
+            })
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+            expect(mockEmployeeMe).toHaveBeenCalled()
+            expect(result.current.data?.id).toBe('emp-me')
         })
     })
 
