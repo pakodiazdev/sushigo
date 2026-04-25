@@ -130,6 +130,98 @@ class EmployeeRequestApiTest extends TestCase
     }
 
     #[Test]
+    public function it_approves_request_with_payload_overrides_but_no_notes(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+        $requestId = $createResponse->json('data.id');
+
+        $approveResponse = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve", [
+            'salary_pct' => 80,
+            'salary_day' => 160.00,
+            'prima_pct' => 100,
+            'prima' => 160.00,
+            'seventh_day' => 160.00,
+            'total' => 480.00,
+        ]);
+
+        $approveResponse->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::APPROVED->value)
+            ->assertJsonPath('data.notes', null);
+
+        $this->assertDatabaseHas('negotiated_extra_days', [
+            'employee_id' => $employee->id,
+            'agreed_daily_wage' => 160.00,
+            'prima_percent' => 100,
+        ]);
+    }
+
+    #[Test]
+    public function it_validates_salary_pct_max_on_approve(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+        $requestId = $createResponse->json('data.id');
+
+        $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve", [
+            'salary_pct' => 150,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('salary_pct');
+    }
+
+    #[Test]
+    public function it_validates_prima_pct_max_on_approve(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+        $requestId = $createResponse->json('data.id');
+
+        $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve", [
+            'prima_pct' => 201,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('prima_pct');
+    }
+
+    #[Test]
+    public function it_validates_negative_salary_day_on_approve(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+        $requestId = $createResponse->json('data.id');
+
+        $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve", [
+            'salary_day' => -10,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('salary_day');
+    }
+
+    #[Test]
     public function it_returns_employee_name_in_response(): void
     {
         $employee = $this->makeEmployeeWithActivePeriod();
