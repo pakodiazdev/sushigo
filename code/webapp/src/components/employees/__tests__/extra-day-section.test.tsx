@@ -44,6 +44,7 @@ function makeRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest 
   return {
     id: 'req-1',
     employee_id: 'emp-1',
+    employee_name: 'Ana López',
     type: 'EXTRA_DAY',
     status: 'APPROVED',
     payload: { date: '2026-04-25', prima_pct: 100 },

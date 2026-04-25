@@ -36,6 +36,7 @@ class EmployeeRequestResource extends BaseResource
         return [
             'id' => $this->public_id,
             'employee_id' => $this->employee->public_id,
+            'employee_name' => $this->employee->first_name.' '.$this->employee->last_name,
             'type' => $this->type->value,
             'status' => $this->status->value,
             'payload' => $this->payload,

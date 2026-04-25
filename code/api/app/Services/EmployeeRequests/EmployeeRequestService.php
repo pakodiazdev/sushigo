@@ -55,11 +55,13 @@ class EmployeeRequestService
     }
 
     /**
+     * @param  array<string, mixed>|null  $overrides  Optional payload overrides and notes from the approver.
+     *
      * @throws ValidationException
      */
-    public function approve(EmployeeRequest $employeeRequest, User $approver): EmployeeRequest
+    public function approve(EmployeeRequest $employeeRequest, User $approver, ?array $overrides = null): EmployeeRequest
     {
-        return DB::transaction(function () use ($employeeRequest, $approver): EmployeeRequest {
+        return DB::transaction(function () use ($employeeRequest, $approver, $overrides): EmployeeRequest {
             $employeeRequest = EmployeeRequest::query()->lockForUpdate()->findOrFail($employeeRequest->id);
 
             if ($employeeRequest->status !== EmployeeRequestStatus::PENDING) {
@@ -68,11 +70,24 @@ class EmployeeRequestService
                 ]);
             }
 
-            $employeeRequest->update([
+            $payloadKeys = ['salary_pct', 'salary_day', 'prima_pct', 'prima', 'seventh_day', 'total'];
+            $payloadOverrides = array_intersect_key($overrides ?? [], array_flip($payloadKeys));
+
+            $updatedFields = [
                 'status' => EmployeeRequestStatus::APPROVED,
                 'approved_by' => $approver->id,
                 'approved_at' => now(),
-            ]);
+            ];
+
+            if (! empty($payloadOverrides)) {
+                $updatedFields['payload'] = array_merge($employeeRequest->payload ?? [], $payloadOverrides);
+            }
+
+            if (isset($overrides['notes'])) {
+                $updatedFields['notes'] = $overrides['notes'];
+            }
+
+            $employeeRequest->update($updatedFields);
 
             $requestable = $this->resolveHandler($employeeRequest)->handle($employeeRequest);
 

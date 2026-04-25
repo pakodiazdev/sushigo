@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\V1\EmployeeRequests;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\EmployeeRequests\ApproveEmployeeRequestRequest;
 use App\Http\Resources\EmployeeRequest\EmployeeRequestResource;
 use App\Models\EmployeeRequest;
 use App\Services\EmployeeRequests\EmployeeRequestService;
-use Illuminate\Http\Request;
 
 /**
  * @OA\Patch(
@@ -39,12 +39,13 @@ use Illuminate\Http\Request;
 class ApproveEmployeeRequestController extends Controller
 {
     public function __invoke(
-        Request $request,
+        ApproveEmployeeRequestRequest $request,
         string $id,
         EmployeeRequestService $service,
     ): EmployeeRequestResource {
         $employeeRequest = EmployeeRequest::query()->where('public_id', $id)->firstOrFail();
-        $employeeRequest = $service->approve($employeeRequest, $request->user());
+        $overrides = array_filter($request->validated(), fn ($v) => $v !== null);
+        $employeeRequest = $service->approve($employeeRequest, $request->user(), empty($overrides) ? null : $overrides);
 
         return new EmployeeRequestResource($employeeRequest);
     }

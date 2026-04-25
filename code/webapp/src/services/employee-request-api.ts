@@ -4,6 +4,7 @@ import type {
   EmployeeRequest,
   EmployeeRequestFilters,
   CreateEmployeeRequestData,
+  ApproveEmployeeRequestData,
 } from '@/types/employee-request'
 
 export const employeeRequestApi = {
@@ -12,6 +13,12 @@ export const employeeRequestApi = {
 
   create: (data: CreateEmployeeRequestData) =>
     apiClient.post<EntityResponse<EmployeeRequest>>('/employee-requests', data),
+
+  approve: (id: string, data?: ApproveEmployeeRequestData) =>
+    apiClient.patch<EntityResponse<EmployeeRequest>>(`/employee-requests/${id}/approve`, data ?? {}),
+
+  reject: (id: string, reason?: string) =>
+    apiClient.patch<EntityResponse<EmployeeRequest>>(`/employee-requests/${id}/reject`, { reason }),
 
   cancel: (id: string) =>
     apiClient.patch<EntityResponse<EmployeeRequest>>(`/employee-requests/${id}/cancel`),

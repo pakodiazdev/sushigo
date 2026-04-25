@@ -24,6 +24,7 @@ function makeRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest 
   return {
     id: '01HZTEST00000001',
     employee_id: '01HZTEST00000002',
+    employee_name: 'Test Employee',
     type: 'EXTRA_DAY',
     status: 'PENDING',
     payload: { date: '2026-06-15', salary_pct: 100, prima_pct: 100, salary_day: 200, prima: 200, seventh_day: 200, total: 600 },

@@ -5,6 +5,7 @@ import { employeeRequestApi } from './employee-request-api'
 import type {
   EmployeeRequestFilters,
   CreateEmployeeRequestData,
+  ApproveEmployeeRequestData,
 } from '@/types/employee-request'
 
 export function useEmployeeRequests(filters?: EmployeeRequestFilters) {
@@ -89,6 +90,55 @@ export function useCancelEmployeeRequest() {
     },
     onError: (error: unknown) => {
       showError(getApiErrorMessage(error, 'No se pudo cancelar la solicitud.'), 'Error')
+    },
+  })
+}
+
+export function usePendingRequests() {
+  return useQuery({
+    queryKey: ['employee-requests', 'pending-inbox'],
+    queryFn: async () => {
+      const response = await employeeRequestApi.list({
+        status: 'PENDING',
+        sort: ['created_at:asc'],
+        per_page: 50,
+      })
+      return response.data.data
+    },
+    refetchInterval: 60_000,
+  })
+}
+
+export function useApproveEmployeeRequest() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data?: ApproveEmployeeRequestData }) =>
+      employeeRequestApi.approve(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-requests'] })
+      showSuccess('La solicitud ha sido aprobada.', 'Solicitud aprobada')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo aprobar la solicitud.'), 'Error')
+    },
+  })
+}
+
+export function useRejectEmployeeRequest() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      employeeRequestApi.reject(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-requests'] })
+      showSuccess('La solicitud ha sido rechazada.', 'Solicitud rechazada')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo rechazar la solicitud.'), 'Error')
     },
   })
 }
