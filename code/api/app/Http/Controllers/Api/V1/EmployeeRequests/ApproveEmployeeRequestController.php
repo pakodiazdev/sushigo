@@ -18,6 +18,21 @@ use App\Services\EmployeeRequests\EmployeeRequestService;
  *
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="EmployeeRequest public_id (ULID)"),
  *
+ *   @OA\RequestBody(
+ *       required=false,
+ *
+ *       @OA\JsonContent(
+ *
+ *           @OA\Property(property="salary_pct", type="number", nullable=true, example=100, description="Override: salary as % of daily wage (0–100)"),
+ *           @OA\Property(property="salary_day", type="number", nullable=true, example=200.00, description="Override: computed salary day amount"),
+ *           @OA\Property(property="prima_pct", type="number", nullable=true, example=100, description="Override: prima percentage (0–200)"),
+ *           @OA\Property(property="prima", type="number", nullable=true, example=200.00, description="Override: computed prima amount"),
+ *           @OA\Property(property="seventh_day", type="number", nullable=true, example=200.00, description="Override: seventh-day bonus amount"),
+ *           @OA\Property(property="total", type="number", nullable=true, example=600.00, description="Override: total amount"),
+ *           @OA\Property(property="notes", type="string", nullable=true, example="Acuerdo ajustado", description="Manager note for the employee")
+ *       )
+ *   ),
+ *
  *   @OA\Response(
  *       response=200,
  *       description="Employee request approved",
