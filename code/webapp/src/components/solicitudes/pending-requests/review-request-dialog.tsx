@@ -19,7 +19,7 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function InnerDialog({ request, onClose }: { request: EmployeeRequest; onClose: () => void }) {
+function InnerDialog({ request, onClose }: { readonly request: EmployeeRequest; readonly onClose: () => void }) {
   const payload = request.payload as ExtraDayPayload | null
   const date = payload?.date ?? ''
 
@@ -188,10 +188,11 @@ function InnerDialog({ request, onClose }: { request: EmployeeRequest; onClose: 
 
         {/* Notes */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">
+          <label htmlFor="notes" className="text-sm font-medium text-foreground">
             Nota para el empleado <span className="text-muted-foreground font-normal">(opcional)</span>
           </label>
           <Textarea
+            id="notes"
             placeholder="Ej: Acuerdo ajustado según disponibilidad"
             rows={2}
             {...register('notes')}
@@ -226,10 +227,11 @@ function InnerDialog({ request, onClose }: { request: EmployeeRequest; onClose: 
           <div className="space-y-3">
             <p>¿Confirmas que deseas rechazar la solicitud de {request.employee_name}?</p>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-foreground">
+              <label htmlFor="reject_reason" className="text-xs font-medium text-foreground">
                 Motivo <span className="text-muted-foreground">(opcional)</span>
               </label>
               <Textarea
+                id="reject_reason"
                 placeholder="Ej: No procede por política interna"
                 rows={2}
                 value={rejectReason ?? ''}
