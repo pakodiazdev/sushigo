@@ -26,8 +26,13 @@ export function ExtraDayRequestForm({ isOpen, onClose, employeeId }: ExtraDayReq
 
   const { register, formState: { errors } } = form
 
+  const handleClose = () => {
+    form.reset()
+    onClose()
+  }
+
   return (
-    <SlidePanel isOpen={isOpen} onClose={onClose} title="Solicitar día extra" size="sm">
+    <SlidePanel isOpen={isOpen} onClose={handleClose} title="Solicitar día extra" size="sm">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Date */}
         <FormField label="Fecha" required error={errors.date?.message}>
@@ -119,7 +124,7 @@ export function ExtraDayRequestForm({ isOpen, onClose, employeeId }: ExtraDayReq
 
         {/* Actions */}
         <div className="flex gap-3 justify-end pt-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isPending}>
             Cancelar
           </Button>
           <Button

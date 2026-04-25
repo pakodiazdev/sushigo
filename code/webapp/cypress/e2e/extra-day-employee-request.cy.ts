@@ -85,14 +85,4 @@ describe('Extra Day Employee Self-Request — Happy Path', () => {
     // Step 7: Card disappears (filtered out on refetch)
     cy.contains('No tienes solicitudes de días extra.', { timeout: 8_000 }).should('be.visible')
   })
-
-  it('shows validation error when a past date is entered', () => {
-    openExtraDayForm()
-    assertSlidePanelOpen()
-
-    cy.get('input[type="date"]').clear().type('2020-01-01')
-    cy.contains('button', 'Enviar solicitud').click()
-
-    cy.contains('Solo se permiten fechas futuras').should('be.visible')
-  })
 })

@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 const mockMutateAsync = vi.fn()
@@ -28,6 +27,7 @@ vi.mock('@/services/employee-request-hooks', () => ({
 }))
 
 import { useExtraDayRequestForm } from '../use-extra-day-request-form'
+import { extraDayRequestSchema } from '../use-extra-day-request-form'
 
 // ── Wrapper ────────────────────────────────────────────────────────────────────
 
@@ -157,5 +157,52 @@ describe('useExtraDayRequestForm', () => {
     })
 
     expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('does NOT call mutateAsync when a past date is submitted', async () => {
+    mockWageHistory.mockReturnValue({
+      data: [{ hourly_rate: '50.00', weekly_scheduled_hours: 48 }],
+      isLoading: false,
+    })
+
+    const onSuccess = vi.fn()
+    const { result } = renderHook(() => useExtraDayRequestForm('emp-1', onSuccess), { wrapper })
+
+    act(() => {
+      result.current.form.setValue('date', '2020-01-01') // past date
+      result.current.form.setValue('prima_pct', 100)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault: vi.fn() } as unknown as React.FormEvent)
+    })
+
+    expect(mockMutateAsync).not.toHaveBeenCalled()
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+})
+
+describe('extraDayRequestSchema — date validation', () => {
+  it('rejects a past date with "futuras" message', () => {
+    const result = extraDayRequestSchema.safeParse({ date: '2020-01-01', prima_pct: 100 })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const dateError = result.error.issues.find((i) => i.path[0] === 'date')
+      expect(dateError?.message).toMatch(/futuras/)
+    }
+  })
+
+  it('accepts a future date', () => {
+    const result = extraDayRequestSchema.safeParse({ date: '2099-12-31', prima_pct: 100 })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects an empty date with "requerida" message', () => {
+    const result = extraDayRequestSchema.safeParse({ date: '', prima_pct: 100 })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const dateError = result.error.issues.find((i) => i.path[0] === 'date')
+      expect(dateError?.message).toMatch(/requerida/)
+    }
   })
 })

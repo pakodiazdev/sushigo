@@ -7,6 +7,7 @@ import { SolicitudesLayout } from '@/components/solicitudes/SolicitudesLayout'
 import { ExtraDayRequestForm } from '@/components/solicitudes/extra-day-request/extra-day-request-form'
 import { MyRequestsList } from '@/components/solicitudes/my-requests/my-requests-list'
 import { useSolicitudesPage } from '@/components/solicitudes/use-solicitudes-page'
+import { Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/solicitudes')({
   beforeLoad: requirePermission('employee-requests.view'),
@@ -23,9 +24,14 @@ export function SolicitudesPage() {
     openExtraDayForm,
     closeExtraDayForm,
     myEmployeeId,
+    isLoadingEmployee,
   } = useSolicitudesPage()
 
-  const mineContent = myEmployeeId ? (
+  const mineContent = isLoadingEmployee ? (
+    <div className="flex justify-center py-8">
+      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+    </div>
+  ) : myEmployeeId ? (
     <MyRequestsList employeeId={myEmployeeId} />
   ) : (
     <div className="text-sm text-muted-foreground py-8 text-center">

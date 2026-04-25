@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import React from 'react'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -12,8 +12,12 @@ vi.mock('../use-extra-day-request-form', () => ({
 }))
 
 vi.mock('@/components/ui/slide-panel', () => ({
-  SlidePanel: ({ isOpen, children, title }: { isOpen: boolean; children: React.ReactNode; title: string }) =>
-    isOpen ? React.createElement('div', { 'data-testid': 'slide-panel' }, React.createElement('h2', null, title), children) : null,
+  SlidePanel: ({ isOpen, children, title, onClose }: { isOpen: boolean; children: React.ReactNode; title: string; onClose: () => void }) =>
+    isOpen ? React.createElement('div', { 'data-testid': 'slide-panel' },
+      React.createElement('h2', null, title),
+      React.createElement('button', { 'data-testid': 'panel-close', onClick: onClose }),
+      children,
+    ) : null,
 }))
 
 vi.mock('@/components/ui/button', () => ({
@@ -52,6 +56,7 @@ function makeForm(overrides = {}) {
     register: () => ({}),
     formState: { errors: {} },
     watch: () => 100,
+    reset: vi.fn(),
     ...overrides,
   }
 }
@@ -179,5 +184,27 @@ describe('ExtraDayRequestForm — hook binding', () => {
     mockUseExtraDayRequestForm.mockReturnValue(defaultHookResult())
     render(<ExtraDayRequestForm isOpen={true} onClose={vi.fn()} employeeId="emp-99" />)
     expect(mockUseExtraDayRequestForm).toHaveBeenCalledWith('emp-99', expect.any(Function))
+  })
+})
+
+describe('ExtraDayRequestForm — close resets form', () => {
+  it('calls form.reset() and onClose when Cancel button is clicked', () => {
+    const mockReset = vi.fn()
+    const onClose = vi.fn()
+    mockUseExtraDayRequestForm.mockReturnValue(defaultHookResult({ form: makeForm({ reset: mockReset }) }))
+    render(<ExtraDayRequestForm isOpen={true} onClose={onClose} employeeId="emp-1" />)
+    fireEvent.click(screen.getByText('Cancelar'))
+    expect(mockReset).toHaveBeenCalledOnce()
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('calls form.reset() and onClose when SlidePanel close button is triggered', () => {
+    const mockReset = vi.fn()
+    const onClose = vi.fn()
+    mockUseExtraDayRequestForm.mockReturnValue(defaultHookResult({ form: makeForm({ reset: mockReset }) }))
+    render(<ExtraDayRequestForm isOpen={true} onClose={onClose} employeeId="emp-1" />)
+    fireEvent.click(screen.getByTestId('panel-close'))
+    expect(mockReset).toHaveBeenCalledOnce()
+    expect(onClose).toHaveBeenCalledOnce()
   })
 })
