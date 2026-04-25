@@ -97,6 +97,57 @@ class EmployeeRequestApiTest extends TestCase
     }
 
     #[Test]
+    public function it_approves_request_with_manager_overrides(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+        $requestId = $createResponse->json('data.id');
+
+        $approveResponse = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve", [
+            'salary_pct' => 50,
+            'salary_day' => 100.00,
+            'prima_pct' => 150,
+            'prima' => 150.00,
+            'seventh_day' => 100.00,
+            'total' => 350.00,
+            'notes' => 'Acuerdo ajustado por el Manager',
+        ]);
+
+        $approveResponse->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::APPROVED->value)
+            ->assertJsonPath('data.notes', 'Acuerdo ajustado por el Manager');
+
+        $this->assertDatabaseHas('negotiated_extra_days', [
+            'employee_id' => $employee->id,
+            'agreed_daily_wage' => 100.00,
+            'prima_percent' => 150,
+        ]);
+    }
+
+    #[Test]
+    public function it_returns_employee_name_in_response(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+
+        $createResponse->assertStatus(201)
+            ->assertJsonStructure(['data' => ['employee_name']]);
+
+        $employeeName = $employee->first_name.' '.$employee->last_name;
+        $createResponse->assertJsonPath('data.employee_name', $employeeName);
+    }
+
+    #[Test]
     public function it_rejects_request_without_creating_concrete_entity(): void
     {
         $employee = $this->makeEmployeeWithActivePeriod();

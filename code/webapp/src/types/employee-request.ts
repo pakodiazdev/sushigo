@@ -4,6 +4,7 @@ export type EmployeeRequestType = 'EXTRA_DAY' | 'LEAVE' | 'VACATION' | 'SCHEDULE
 export interface EmployeeRequest {
   id: string
   employee_id: string
+  employee_name: string
   type: EmployeeRequestType
   status: EmployeeRequestStatus
   payload: Record<string, unknown> | null
@@ -14,6 +15,16 @@ export interface EmployeeRequest {
   notes: string | null
   rejection_reason: string | null
   created_at: string
+}
+
+export interface ApproveEmployeeRequestData {
+  salary_pct?: number
+  salary_day?: number
+  prima_pct?: number
+  prima?: number
+  seventh_day?: number
+  total?: number
+  notes?: string
 }
 
 export interface EmployeeRequestFilters {

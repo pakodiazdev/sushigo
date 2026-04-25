@@ -6,6 +6,7 @@ import { RequestTypeBar } from '@/components/solicitudes/RequestTypeBar'
 import { SolicitudesLayout } from '@/components/solicitudes/SolicitudesLayout'
 import { ExtraDayRequestForm } from '@/components/solicitudes/extra-day-request/extra-day-request-form'
 import { MyRequestsList } from '@/components/solicitudes/my-requests/my-requests-list'
+import { PendingRequestsList } from '@/components/solicitudes/pending-requests/pending-requests-list'
 import { useSolicitudesPage } from '@/components/solicitudes/use-solicitudes-page'
 import { Loader2 } from 'lucide-react'
 
@@ -55,11 +56,7 @@ export function SolicitudesPage() {
 
   const mineContent = renderMineContent()
 
-  const pendingContent = (
-    <div className="text-sm text-muted-foreground py-8 text-center">
-      El listado de solicitudes pendientes estará disponible próximamente.
-    </div>
-  )
+  const pendingContent = isManager ? <PendingRequestsList /> : null
 
   return (
     <PageContainer>
