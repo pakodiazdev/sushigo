@@ -14,6 +14,37 @@ vi.mock('@/components/ui/button', () => ({
 
 vi.mock('lucide-react', () => ({
   Loader2: () => React.createElement('span', { 'data-testid': 'loader' }),
+  AlertTriangle: () => React.createElement('span', { 'data-testid': 'alert-triangle' }),
+}))
+
+vi.mock('@/components/ui/confirm-dialog', () => ({
+  ConfirmDialog: ({
+    isOpen,
+    onConfirm,
+    onClose,
+    title,
+    description,
+    confirmLabel,
+    isLoading,
+  }: {
+    isOpen: boolean
+    onConfirm: () => void
+    onClose: () => void
+    title: string
+    description: string
+    confirmLabel: string
+    isLoading?: boolean
+  }) =>
+    isOpen
+      ? React.createElement(
+          'div',
+          { 'data-testid': 'confirm-dialog' },
+          React.createElement('p', null, title),
+          React.createElement('p', null, description),
+          React.createElement('button', { 'data-testid': 'confirm-btn', onClick: onConfirm, disabled: isLoading }, confirmLabel),
+          React.createElement('button', { 'data-testid': 'cancel-confirm-btn', onClick: onClose }, 'No'),
+        )
+      : null,
 }))
 
 afterEach(cleanup)
@@ -63,10 +94,12 @@ describe('RequestStatusCard — PENDING', () => {
     expect(screen.getByText('Cancelar')).toBeDefined()
   })
 
-  it('calls onCancel with the request id when Cancelar is clicked', () => {
+  it('calls onCancel with the request id after confirming in dialog', () => {
     const onCancel = vi.fn()
     render(<RequestStatusCard request={makeRequest()} onCancel={onCancel} isCancelling={false} />)
     fireEvent.click(screen.getByText('Cancelar'))
+    // Confirm dialog should now be open — click the confirm button
+    fireEvent.click(screen.getByTestId('confirm-btn'))
     expect(onCancel).toHaveBeenCalledWith('01HZTEST00000001')
   })
 

@@ -30,6 +30,10 @@ vi.mock('@/services/employee-request-hooks', () => ({
   useApprovedExtraDays: (...args: unknown[]) => mockUseApprovedExtraDays(...args),
 }))
 
+vi.mock('@/services/negotiated-extra-day-hooks', () => ({
+  useCancelNegotiatedExtraDay: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
 import { ExtraDaySection } from '../extra-day-section'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────

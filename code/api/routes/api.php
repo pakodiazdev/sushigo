@@ -263,7 +263,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/{employee}/wages', ListWagesController::class)->name('employees.wages.list')->middleware('permission:employees.view');
         Route::post('/{employee}/wages', CreateWageController::class)->name('employees.wages.create')->middleware('permission:employees.update');
         // Schedule endpoints
-        Route::get('/{employee}/current-schedule', CurrentScheduleController::class)->name('employees.schedule.current')->middleware('permission:employees.view');
+        Route::get('/{employee}/current-schedule', CurrentScheduleController::class)->name('employees.schedule.current');
         // Leave history endpoints
         Route::get('/{employee}/leaves', ListEmployeeLeavesController::class)->name('employees.leaves.list')->middleware('permission:employees.view');
         // Negotiated extra days history endpoints

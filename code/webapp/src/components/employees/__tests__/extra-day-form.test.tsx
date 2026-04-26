@@ -11,6 +11,15 @@ vi.mock('@/components/ui/slide-panel', () => ({
     isOpen ? <div data-testid="slide-panel"><div data-testid="panel-title">{title}</div>{children}</div> : null,
 }))
 
+vi.mock('@/components/ui/rest-day-picker', () => ({
+  RestDayPicker: ({ value, onChange }: { value: string; onChange: (d: string) => void }) =>
+    React.createElement('input', {
+      'data-testid': 'rest-day-picker',
+      value,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+    }),
+}))
+
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, type, className }: {
     children: React.ReactNode
