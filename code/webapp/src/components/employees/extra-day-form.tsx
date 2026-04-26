@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Textarea } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { CalendarPicker } from '@/components/ui/calendar-picker'
+import { RestDayPicker } from '@/components/ui/rest-day-picker'
 import { useExtraDayForm } from './use-extra-day-form'
 import type { Employee } from '@/types/employee'
 
@@ -31,8 +31,6 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
     total,
     handleSubmit,
     isPending,
-    disabledDaysOfWeek,
-    isLoadingSchedule,
   } = useExtraDayForm(employee.id, onClose)
 
   const { register, watch, setValue, formState: { errors } } = form
@@ -52,18 +50,11 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
           <label className="text-sm font-medium text-foreground">
             Fecha <span className="text-destructive">*</span>
           </label>
-          {isLoadingSchedule ? (
-            <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Cargando horario…
-            </div>
-          ) : (
-            <CalendarPicker
-              value={watch('date')}
-              onChange={(date) => setValue('date', date, { shouldValidate: true })}
-              disabledDaysOfWeek={disabledDaysOfWeek}
-            />
-          )}
+          <RestDayPicker
+            employeeId={employee.id}
+            value={watch('date')}
+            onChange={(date) => setValue('date', date, { shouldValidate: true })}
+          />
           {errors.date && (
             <p className="text-xs text-destructive">{errors.date.message}</p>
           )}

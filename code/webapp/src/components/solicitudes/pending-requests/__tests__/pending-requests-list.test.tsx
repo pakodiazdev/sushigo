@@ -10,6 +10,7 @@ const mockUsePendingRequests = vi.fn()
 
 vi.mock('@/services/employee-request-hooks', () => ({
   usePendingRequests: () => mockUsePendingRequests(),
+  useCancelEmployeeRequest: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
 vi.mock('lucide-react', () => ({

@@ -139,10 +139,36 @@ class CurrentScheduleApiTest extends TestCase
         $user = User::factory()->create();
         Passport::actingAs($user);
 
-        $employee = Employee::factory()->create();
+        // Employee belongs to a different user → not self-access
+        $employee = Employee::factory()->create(['user_id' => User::factory()->create()->id]);
 
         $response = $this->getJson("/api/v1/employees/{$employee->public_id}/current-schedule");
 
         $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function employee_can_access_own_schedule_without_permission(): void
+    {
+        $user = User::factory()->create();
+        // Employee linked to this user — no extra permissions assigned
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
+
+        $period = EmploymentPeriod::factory()->create([
+            'employee_id' => $employee->id,
+            'is_active' => true,
+        ]);
+
+        EmployeeSchedule::factory()->create([
+            'employment_period_id' => $period->id,
+            'effective_from' => Carbon::now()->subMonth()->toDateString(),
+            'effective_to' => null,
+        ]);
+
+        Passport::actingAs($user);
+
+        $response = $this->getJson("/api/v1/employees/{$employee->public_id}/current-schedule");
+
+        $response->assertStatus(200);
     }
 }

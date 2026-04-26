@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Schedule\ScheduleResource;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
+use App\Models\User;
 use App\Support\Clock\ApplicationClock;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -45,6 +47,15 @@ class CurrentScheduleController extends Controller
 
     public function __invoke(Request $request, Employee $employee): ScheduleResource|JsonResponse
     {
+        $user = $request->user();
+        assert($user instanceof User);
+
+        $isSelf = $employee->user_id !== null && $employee->user_id === $user->id;
+
+        if (! $isSelf && ! $user->hasPermissionTo('employees.view')) {
+            throw new AuthorizationException('No tienes permiso para ver el horario de este empleado.');
+        }
+
         $activePeriod = $employee->employmentPeriods()->active()->first();
 
         if (! $activePeriod) {
