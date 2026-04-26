@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { useWageHistory } from '@/services/employee-hooks'
 import { useCreateEmployeeRequest } from '@/services/employee-request-hooks'
 
@@ -16,6 +17,7 @@ const extraDaySchema = z.object({
 export type ExtraDayFormValues = z.infer<typeof extraDaySchema>
 
 export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
+  const queryClient = useQueryClient()
   const { data: wages, isLoading: isLoadingWages } = useWageHistory(employeeId)
   const currentWage = wages?.[0]
 
@@ -80,6 +82,7 @@ export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
       })
 
       form.reset()
+      void queryClient.invalidateQueries({ queryKey: ['negotiated-extra-days'] })
       onSuccess()
     } catch {
       // error handled by mutation.onError toast

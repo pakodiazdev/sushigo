@@ -8,12 +8,13 @@ use App\Models\Attendance;
 use App\Models\EmployeeRequest;
 use App\Models\NegotiatedExtraDay;
 use App\Support\Traits\ResolvesActiveEmploymentPeriod;
+use App\Support\Traits\ValidatesRestDay;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
 class ExtraDayRequestHandler implements RequestHandler
 {
-    use ResolvesActiveEmploymentPeriod;
+    use ResolvesActiveEmploymentPeriod, ValidatesRestDay;
 
     /**
      * @throws ValidationException
@@ -39,8 +40,11 @@ class ExtraDayRequestHandler implements RequestHandler
         }
 
         $branchId = $payload['branch_id'] ?? null;
+        $period = $this->resolveActiveEmploymentPeriod($employeeRequest->employee_id, $date);
+
+        $this->guardIsRestDay($period, $date);
+
         if ($branchId === null) {
-            $period = $this->resolveActiveEmploymentPeriod($employeeRequest->employee_id, $date);
             $branchId = $period->branch_id;
         }
 

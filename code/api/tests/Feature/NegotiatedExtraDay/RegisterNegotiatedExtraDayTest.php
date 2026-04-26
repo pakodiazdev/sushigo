@@ -194,6 +194,40 @@ class RegisterNegotiatedExtraDayTest extends TestCase
             ->assertJsonPath('data.day_status', 'EXTRA');
     }
 
+    #[Test]
+    public function rejects_date_that_is_not_a_rest_day_with_422(): void
+    {
+        $dayOfWeekIso = Carbon::parse(self::DATE)->dayOfWeekIso;
+
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => '2026-01-01',
+        ]);
+
+        $employee = $period->employee;
+
+        $schedule = EmployeeSchedule::factory()->current()->create([
+            'employment_period_id' => $period->id,
+            'effective_from' => '2026-01-01',
+        ]);
+
+        // Configured as a WORK day (not a rest day)
+        ScheduleDay::factory()
+            ->workDay()
+            ->onDayOfWeek($dayOfWeekIso)
+            ->create(['employee_schedule_id' => $schedule->id]);
+
+        $response = $this->postJson('/api/v1/negotiated-extra-days', [
+            'employee_id' => $employee->public_id,
+            'date' => self::DATE,
+            'agreed_daily_wage' => 500.00,
+            'prima_percent' => 100.00,
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('date', $response->json('errors'));
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /**
