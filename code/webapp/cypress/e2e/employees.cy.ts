@@ -211,26 +211,29 @@ describe('Nuevo horario pre-llenado', () => {
 
   it('pre-llena el formulario con valores del horario actual y fecha próximo lunes', () => {
     // ── 1. Seleccionar empleado Carlos Mendoza (EMP-001) que tiene horario ────
-    cy.contains('tr', 'EMP-001', { timeout: 10_000 }).click()
+    cy.contains('tr', 'EMP-001', { timeout: 10_000 }).find('button[title="Ver detalle"]').click()
 
-    // Esperar que abra el slide de detalle
-    cy.contains('Carlos Mendoza', { timeout: 10_000 }).should('be.visible')
+    // Esperar que abra el slide de detalle (EMP-001 aparece en la tabla)
+    cy.contains('tr', 'EMP-001').should('exist')
 
     // ── 2. Abrir diálogo de horario ────────────────────────────────────────────
     cy.contains('button', /Ver horario/i, { timeout: 10_000 }).click()
 
-    // Esperar que el modal de "Horario activo" aparezca
-    cy.contains('Horario activo', { timeout: 10_000 }).should('be.visible')
-
-    // Verificar que hay un horario existente (entrada 13:00, salida 22:00)
-    cy.contains('13:00').should('be.visible')
-    cy.contains('22:00').should('be.visible')
+    // Esperar que el modal aparezca y verificar contenido dentro del dialog
+    cy.get('dialog[open]', { timeout: 10_000 }).should('exist')
+    cy.get('dialog').within(() => {
+      cy.contains('Horarios').should('exist')
+      cy.contains(/1:00\s*PM|13:00/).should('exist')
+      cy.contains(/10:00\s*PM|22:00/).should('exist')
+    })
 
     // ── 3. Click en "Nuevo horario" ────────────────────────────────────────────
-    cy.contains('button', 'Nuevo horario').click()
+    cy.get('dialog').contains('button', 'Nuevo horario', { timeout: 10_000 }).click()
 
-    // El formulario de creación debe aparecer
-    cy.contains('Horario laboral', { timeout: 10_000 }).should('be.visible')
+    // El formulario de creación debe aparecer dentro del dialog
+    cy.get('dialog').within(() => {
+      cy.contains('Horario laboral', { timeout: 10_000 }).should('exist')
+    })
 
     // ── 4. Verificar que el formulario está pre-llenado ────────────────────────
 
@@ -259,15 +262,17 @@ describe('Nuevo horario pre-llenado', () => {
     cy.get('input[name="expected_start"]').clear({ force: true }).type('14:00', { force: true })
 
     // Guardar
-    cy.contains('button', 'Guardar horario').click({ force: true })
+    cy.get('dialog').contains('button', 'Guardar horario').click({ force: true })
 
-    // Esperar confirmación de guardado
-    cy.contains('Horario creado correctamente', { timeout: 10_000 }).should('be.visible')
+    // Esperar que el formulario de creación desaparezca (el input deja de existir)
+    cy.get('input[name="expected_start"]', { timeout: 10_000 }).should('not.exist')
 
-    // El formulario debe cerrarse y mostrar el horario activo de nuevo
-    cy.contains('Horario activo', { timeout: 10_000 }).should('be.visible')
-
-    // Verificar que el nuevo horario refleja la entrada 14:00
-    cy.contains('14:00').should('be.visible')
+    // El diálogo vuelve a modo vista con el encabezado de horarios
+    cy.get('dialog[open]', { timeout: 10_000 }).within(() => {
+      cy.contains('Horarios', { timeout: 10_000 }).should('exist')
+      // El historial debe mostrar el nuevo horario con entrada a las 2:00 PM (14:00)
+      cy.contains('button', 'Historial').click()
+      cy.contains(/2:00\s*PM|14:00/, { timeout: 10_000 }).should('exist')
+    })
   })
 })

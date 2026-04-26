@@ -57,6 +57,8 @@ services:
       CYPRESS_apiUrl: ${CYPRESS_apiUrl:-https://api.sushigo.e2e.local/api/v1}
       # Target container for cy.task('db:reset') / cy.task('db:seed')
       CYPRESS_container: e2e_container
+      # Business timezone — makes browser Intl use CDMX (UTC-6) matching the backend
+      TZ: America/Mexico_City
     extra_hosts:
       - "sushigo.local:host-gateway"
       - "sushigo.e2e.local:host-gateway"
@@ -81,6 +83,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       CYPRESS_baseUrl: ${CYPRESS_baseUrl:-https://devtest.sushigo.local}
+      TZ: America/Mexico_City
       DISPLAY: :99
       CA_CERT_PATH: /certs/rootCA.pem
     extra_hosts:

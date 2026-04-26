@@ -33,42 +33,47 @@ before(() => {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Creates a PENDING extra day request via API and returns the request id */
-function seedPendingRequest(): Cypress.Chainable<string> {
-  return cy
-    .request({
-      method: 'POST',
-      url: `${API}/auth/login`,
-      body: { email, password },
-    })
-    .then((loginRes) => {
-      const token = loginRes.body.data.token as string
+/**
+ * Seeds a PENDING extra day request via API.
+ * Uses a flat alias-based chain to avoid nested .then() issues in Cypress.
+ *
+ * EXTRA_DAY payload requires all calculated fields (salary_pct, salary_day,
+ * prima_pct, prima, seventh_day, total) due to withValidator in StoreEmployeeRequestRequest.
+ */
+function seedPendingRequest(): void {
+  let authToken: string
 
-      // GET /employees/me returns the Employee profile linked to the authenticated user
-      return cy
-        .request({
-          method: 'GET',
-          url: `${API}/employees/me`,
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((meRes) => {
-          const empId = meRes.body.data.id as string
-          return cy
-            .request({
-              method: 'POST',
-              url: `${API}/employee-requests`,
-              headers: { Authorization: `Bearer ${token}` },
-              body: {
-                employee_id: empId,
-                type: 'EXTRA_DAY',
-                payload: { date: FUTURE_DATE, prima_pct: 100 },
-                notes: 'Solicitud para test E2E del inbox',
-              },
-            })
-            .then((createRes) => {
-              return createRes.body.data.id as string
-            })
-        })
+  cy.request({ method: 'POST', url: `${API}/auth/login`, body: { email, password } })
+    .then((res) => { authToken = res.body.data.token })
+
+  cy.then(() =>
+    cy.request({
+      method: 'GET',
+      url: `${API}/employees/me`,
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
+  )
+    .then((res) => {
+      const empId = res.body.data.id as string
+      cy.request({
+        method: 'POST',
+        url: `${API}/employee-requests`,
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: {
+          employee_id: empId,
+          type: 'EXTRA_DAY',
+          notes: 'Solicitud para test E2E del inbox',
+          payload: {
+            date: FUTURE_DATE,
+            salary_pct: 100,
+            prima_pct: 100,
+            salary_day: 200,
+            prima: 200,
+            seventh_day: 0,
+            total: 400,
+          },
+        },
+      })
     })
 }
 
@@ -112,7 +117,7 @@ describe('Manager Approval Inbox — Approve', () => {
 
     // Open review dialog
     cy.contains('Revisar →', { timeout: 8_000 }).click()
-    cy.contains('Revisar solicitud', { timeout: 6_000 }).should('be.visible')
+    cy.contains('Solicitud de', { timeout: 6_000 }).should('be.visible')
 
     // Approve with default terms
     cy.contains('button', 'Aprobar acuerdo').click()
@@ -146,15 +151,15 @@ describe('Manager Approval Inbox — Reject', () => {
     goToPendingTab()
 
     cy.contains('Revisar →', { timeout: 8_000 }).click()
-    cy.contains('Revisar solicitud', { timeout: 6_000 }).should('be.visible')
+    cy.contains('Solicitud de', { timeout: 6_000 }).should('be.visible')
 
     // Click Rechazar → confirm dialog
     cy.contains('button', 'Rechazar').click()
     cy.contains('Rechazar solicitud', { timeout: 4_000 }).should('be.visible')
 
-    // Fill reject reason
-    cy.get('textarea').type('No hay operaciones ese día')
-    cy.contains('button', 'Rechazar').last().click()
+    // Fill reject reason (use id to avoid matching the notes textarea in the review form)
+    cy.get('#reject_reason').type('No hay operaciones ese día')
+    cy.get('[aria-labelledby="confirm-dialog-title"]').contains('button', 'Rechazar').click()
 
     cy.wait('@reject').its('response.statusCode').should('eq', 200)
 
