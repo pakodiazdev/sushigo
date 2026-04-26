@@ -18,3 +18,19 @@ export interface RegisterExtraDayPayload {
   prima_percent: number
   notes?: string
 }
+
+export interface ListExtraDaysFilters {
+  date_from?: string
+  date_to?: string
+  per_page?: number
+}
+
+export interface PaginatedNegotiatedExtraDays {
+  data: NegotiatedExtraDay[]
+  meta: {
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+  }
+}

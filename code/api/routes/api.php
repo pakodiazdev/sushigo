@@ -64,6 +64,7 @@ use App\Http\Controllers\Api\V1\Leaves\ListLeaveTypesController;
 use App\Http\Controllers\Api\V1\Leaves\RegisterDirectLeaveController;
 use App\Http\Controllers\Api\V1\Leaves\RegisterLeaveRequestController;
 use App\Http\Controllers\Api\V1\Leaves\RejectLeaveController;
+use App\Http\Controllers\Api\V1\NegotiatedExtraDays\ListNegotiatedExtraDaysController;
 use App\Http\Controllers\Api\V1\NegotiatedExtraDays\RegisterNegotiatedExtraDayController;
 use App\Http\Controllers\Api\V1\OperatingUnit\CreateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnit\DeleteOperatingUnitController;
@@ -264,6 +265,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/{employee}/current-schedule', CurrentScheduleController::class)->name('employees.schedule.current')->middleware('permission:employees.view');
         // Leave history endpoints
         Route::get('/{employee}/leaves', ListEmployeeLeavesController::class)->name('employees.leaves.list')->middleware('permission:employees.view');
+        // Negotiated extra days history endpoints
+        Route::get('/{employee}/negotiated-extra-days', ListNegotiatedExtraDaysController::class)->name('employees.negotiated-extra-days.list')->middleware('permission:employees.view');
         // Direct permission management
         Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
         Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');
