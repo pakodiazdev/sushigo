@@ -8,8 +8,6 @@ use App\Models\User;
 use Carbon\Carbon;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class CancelNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
 {
@@ -25,15 +23,10 @@ class CancelNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     {
         parent::setUp();
 
-        Permission::firstOrCreate(['name' => 'employee-requests.approve', 'guard_name' => 'api']);
-        Permission::firstOrCreate(['name' => 'employee-requests.cancel', 'guard_name' => 'api']);
-        $role = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
-        $role->givePermissionTo(['employee-requests.approve', 'employee-requests.cancel']);
-
-        $this->manager = User::factory()->create();
-        $this->manager->assignRole('manager');
-
-        Passport::actingAs($this->manager);
+        $this->manager = $this->makeManagerWithPermissions([
+            'employee-requests.approve',
+            'employee-requests.cancel',
+        ]);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

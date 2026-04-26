@@ -8,10 +8,7 @@ use App\Models\NegotiatedExtraDay;
 use App\Models\ScheduleDay;
 use App\Models\User;
 use Carbon\Carbon;
-use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
 {
@@ -24,15 +21,7 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     {
         parent::setUp();
 
-        // Auth roles/permissions for the managing user
-        Permission::firstOrCreate(['name' => 'attendances.create', 'guard_name' => 'api']);
-        $role = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
-        $role->givePermissionTo('attendances.create');
-
-        $this->user = User::factory()->create();
-        $this->user->assignRole('manager');
-
-        Passport::actingAs($this->user);
+        $this->user = $this->makeManagerWithPermissions(['attendances.create']);
     }
 
     #[Test]
@@ -40,12 +29,7 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     {
         ['employee' => $employee] = $this->makeEmployeeWithDayOff(self::DATE);
 
-        $response = $this->postJson('/api/v1/negotiated-extra-days', [
-            'employee_id' => $employee->public_id,
-            'date' => self::DATE,
-            'agreed_daily_wage' => 500.00,
-            'prima_percent' => 100.00,
-        ]);
+        $response = $this->postExtraDay($employee->public_id);
 
         $response->assertStatus(201)
             ->assertJsonPath('data.employee_id', $employee->public_id)
@@ -74,9 +58,7 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     {
         ['employee' => $employee] = $this->makeEmployeeWithDayOff(self::DATE);
 
-        $response = $this->postJson('/api/v1/negotiated-extra-days', [
-            'employee_id' => $employee->public_id,
-            'date' => self::DATE,
+        $response = $this->postExtraDay($employee->public_id, [
             'agreed_daily_wage' => 600.00,
             'prima_percent' => 50.00,
         ]);
@@ -90,19 +72,9 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     {
         ['employee' => $employee] = $this->makeEmployeeWithDayOff(self::DATE);
 
-        $this->postJson('/api/v1/negotiated-extra-days', [
-            'employee_id' => $employee->public_id,
-            'date' => self::DATE,
-            'agreed_daily_wage' => 500.00,
-            'prima_percent' => 100.00,
-        ])->assertStatus(201);
+        $this->postExtraDay($employee->public_id)->assertStatus(201);
 
-        $response = $this->postJson('/api/v1/negotiated-extra-days', [
-            'employee_id' => $employee->public_id,
-            'date' => self::DATE,
-            'agreed_daily_wage' => 600.00,
-            'prima_percent' => 100.00,
-        ]);
+        $response = $this->postExtraDay($employee->public_id, ['agreed_daily_wage' => 600.00]);
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('date', $response->json('errors'));
@@ -126,12 +98,7 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     {
         ['employee' => $employee] = $this->makeEmployeeWithDayOff(self::DATE);
 
-        $response = $this->postJson('/api/v1/negotiated-extra-days', [
-            'employee_id' => $employee->public_id,
-            'date' => self::DATE,
-            'agreed_daily_wage' => 500.00,
-            'prima_percent' => 201.00,
-        ]);
+        $response = $this->postExtraDay($employee->public_id, ['prima_percent' => 201.00]);
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('prima_percent', $response->json('errors'));
@@ -142,12 +109,7 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     {
         auth()->forgetGuards();
 
-        $response = $this->postJson('/api/v1/negotiated-extra-days', [
-            'employee_id' => 'some-id',
-            'date' => self::DATE,
-            'agreed_daily_wage' => 500.00,
-            'prima_percent' => 100.00,
-        ]);
+        $response = $this->postExtraDay('some-id');
 
         $response->assertStatus(401);
     }
@@ -182,32 +144,9 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     #[Test]
     public function rejects_date_that_is_not_a_rest_day_with_422(): void
     {
-        $dayOfWeekIso = Carbon::parse(self::DATE)->dayOfWeekIso;
+        ['employee' => $employee] = $this->makeEmployeeWithWorkDay(self::DATE);
 
-        $period = EmploymentPeriod::factory()->create([
-            'is_active' => true,
-            'start_date' => '2026-01-01',
-        ]);
-
-        $employee = $period->employee;
-
-        $schedule = EmployeeSchedule::factory()->current()->create([
-            'employment_period_id' => $period->id,
-            'effective_from' => '2026-01-01',
-        ]);
-
-        // Configured as a WORK day (not a rest day)
-        ScheduleDay::factory()
-            ->workDay()
-            ->onDayOfWeek($dayOfWeekIso)
-            ->create(['employee_schedule_id' => $schedule->id]);
-
-        $response = $this->postJson('/api/v1/negotiated-extra-days', [
-            'employee_id' => $employee->public_id,
-            'date' => self::DATE,
-            'agreed_daily_wage' => 500.00,
-            'prima_percent' => 100.00,
-        ]);
+        $response = $this->postExtraDay($employee->public_id);
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('date', $response->json('errors'));
@@ -216,10 +155,42 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /**
+     * POST to /api/v1/negotiated-extra-days with sensible defaults.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    private function postExtraDay(string $employeePublicId, array $overrides = []): \Illuminate\Testing\TestResponse
+    {
+        return $this->postJson('/api/v1/negotiated-extra-days', array_merge([
+            'employee_id' => $employeePublicId,
+            'date' => self::DATE,
+            'agreed_daily_wage' => 500.00,
+            'prima_percent' => 100.00,
+        ], $overrides));
+    }
+
+    /**
      * Create an employee with a rest day on the given date's ISO day of week.
      * Returns ['employee', 'period', 'schedule', 'scheduleDay'].
      */
     private function makeEmployeeWithDayOff(string $date): array
+    {
+        return $this->makeEmployeeWithScheduleDay($date, isDayOff: true);
+    }
+
+    /**
+     * Create an employee with a work day (not rest day) on the given date's ISO day of week.
+     * Returns ['employee', 'period', 'schedule', 'scheduleDay'].
+     */
+    private function makeEmployeeWithWorkDay(string $date): array
+    {
+        return $this->makeEmployeeWithScheduleDay($date, isDayOff: false);
+    }
+
+    /**
+     * @return array{employee: \App\Models\Employee, period: \App\Models\EmploymentPeriod, schedule: \App\Models\EmployeeSchedule, scheduleDay: \App\Models\ScheduleDay}
+     */
+    private function makeEmployeeWithScheduleDay(string $date, bool $isDayOff): array
     {
         $dayOfWeekIso = Carbon::parse($date)->dayOfWeekIso;
 
@@ -236,7 +207,7 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
         ]);
 
         $scheduleDay = ScheduleDay::factory()
-            ->dayOff()
+            ->when($isDayOff, fn ($f) => $f->dayOff(), fn ($f) => $f->workDay())
             ->onDayOfWeek($dayOfWeekIso)
             ->create(['employee_schedule_id' => $schedule->id]);
 
