@@ -13,8 +13,8 @@ use App\Models\EmployeeRequest;
  *     title="Employee Request Response",
  *
  *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
- *     @OA\Property(property="employee_id", type="string", nullable=true, example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
- *     @OA\Property(property="employee_name", type="string", nullable=true, example="Ana García", description="Employee full name"),
+ *     @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
+ *     @OA\Property(property="employee_name", type="string", example="Ana García", description="Employee full name"),
  *     @OA\Property(property="type", type="string", enum={"EXTRA_DAY", "LEAVE", "VACATION", "SCHEDULE_CHANGE"}, example="EXTRA_DAY"),
  *     @OA\Property(property="status", type="string", enum={"PENDING", "APPROVED", "REJECTED", "CANCELLED"}, example="PENDING"),
  *     @OA\Property(property="payload", type="object"),
@@ -36,10 +36,8 @@ class EmployeeRequestResource extends BaseResource
     {
         return [
             'id' => $this->public_id,
-            'employee_id' => $this->employee?->public_id,
-            'employee_name' => $this->employee
-                ? $this->employee->first_name.' '.$this->employee->last_name
-                : null,
+            'employee_id' => $this->employee->public_id,
+            'employee_name' => $this->employee->first_name.' '.$this->employee->last_name,
             'type' => $this->type->value,
             'status' => $this->status->value,
             'payload' => $this->payload,

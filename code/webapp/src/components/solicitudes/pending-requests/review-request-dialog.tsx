@@ -225,7 +225,7 @@ function InnerDialog({ request, onClose }: { readonly request: EmployeeRequest; 
         title="Rechazar solicitud"
         description={
           <div className="space-y-3">
-            <p>¿Confirmas que deseas rechazar la solicitud de {request.employee_name ?? 'Empleado eliminado'}?</p>
+            <p>¿Confirmas que deseas rechazar la solicitud de {request.employee_name}?</p>
             <div className="space-y-1">
               <label htmlFor="reject_reason" className="text-xs font-medium text-foreground">
                 Motivo <span className="text-muted-foreground">(opcional)</span>
@@ -253,7 +253,7 @@ export function ReviewRequestDialog({ request, onClose }: ReviewRequestDialogPro
     <SlidePanel
       isOpen={!!request}
       onClose={onClose}
-      title={request ? `Solicitud de ${request.employee_name ?? 'Empleado eliminado'}` : ''}
+      title={request ? `Solicitud de ${request.employee_name}` : ''}
       size="sm"
     >
       {request && <InnerDialog request={request} onClose={onClose} />}

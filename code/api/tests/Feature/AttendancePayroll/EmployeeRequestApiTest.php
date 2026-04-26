@@ -785,7 +785,7 @@ class EmployeeRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_null_employee_fields_when_employee_is_soft_deleted(): void
+    public function it_removes_employee_requests_when_employee_is_soft_deleted(): void
     {
         $employee = $this->makeEmployeeWithActivePeriod();
 
@@ -797,7 +797,7 @@ class EmployeeRequestApiTest extends TestCase
 
         $requestId = $createResponse->json('data.id');
 
-        // Soft-delete the employee to simulate deletion after the request was created
+        // Soft-deleting the employee should also delete their requests (cascade)
         $employee->delete();
 
         $response = $this->getJson('/api/v1/employee-requests?per_page=50');
@@ -805,9 +805,7 @@ class EmployeeRequestApiTest extends TestCase
         $response->assertOk();
 
         $requestData = collect($response->json('data'))->firstWhere('id', $requestId);
-        $this->assertNotNull($requestData, 'Request should still appear in listing after employee soft-delete');
-        $this->assertNull($requestData['employee_id']);
-        $this->assertNull($requestData['employee_name']);
+        $this->assertNull($requestData, 'Request should be removed from listing after employee soft-delete');
     }
 
     private function extraDayPayload(): array
