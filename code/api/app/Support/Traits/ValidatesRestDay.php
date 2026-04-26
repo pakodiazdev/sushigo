@@ -36,7 +36,7 @@ trait ValidatesRestDay
 
         $scheduleDay = $schedule->dayConfig($dayOfWeek);
 
-        if ($scheduleDay === null || ! $scheduleDay->is_day_off) {
+        if ($scheduleDay !== null && ! $scheduleDay->is_day_off) {
             throw ValidationException::withMessages([
                 'date' => 'El día seleccionado no es un día de descanso del empleado.',
             ]);
