@@ -19,4 +19,8 @@ export const negotiatedExtraDayApi = {
     )
     return res.data
   },
+
+  cancel: async (id: string): Promise<void> => {
+    await apiClient.delete(`/negotiated-extra-days/${id}`)
+  },
 }

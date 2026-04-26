@@ -130,8 +130,12 @@ class EmployeeRequestService
         return DB::transaction(function () use ($employeeRequest, $requester): EmployeeRequest {
             $employeeRequest = EmployeeRequest::query()->lockForUpdate()->findOrFail($employeeRequest->id);
 
-            if ($employeeRequest->requested_by !== $requester->id) {
-                throw new AuthorizationException('Solo el solicitante puede cancelar esta solicitud.');
+            $isRequester = $employeeRequest->requested_by === $requester->id;
+            $canCancel = $requester->hasPermissionTo('employee-requests.cancel')
+                || $requester->hasPermissionTo('employee-requests.approve');
+
+            if (! $isRequester && ! $canCancel) {
+                throw new AuthorizationException('Solo el solicitante, un manager o un admin puede cancelar esta solicitud.');
             }
 
             if (! in_array($employeeRequest->status, [EmployeeRequestStatus::PENDING, EmployeeRequestStatus::APPROVED], true)) {
@@ -140,8 +144,10 @@ class EmployeeRequestService
                 ]);
             }
 
-            if ($employeeRequest->status === EmployeeRequestStatus::APPROVED && $employeeRequest->requestable !== null) {
-                $employeeRequest->requestable->forceDelete();
+            if ($employeeRequest->status === EmployeeRequestStatus::APPROVED) {
+                // Use withTrashed in case the day was already soft-deleted from the extra-day side
+                $requestable = $employeeRequest->requestable()->withTrashed()->first();
+                $requestable?->forceDelete();
             }
 
             $employeeRequest->update([

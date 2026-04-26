@@ -75,7 +75,7 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
           )}
         </div>
 
-        {request.status === 'PENDING' && (
+        {(request.status === 'PENDING' || (request.status === 'APPROVED' && date >= new Date().toISOString().slice(0, 10))) && (
           <Button
             variant="ghost"
             size="sm"
