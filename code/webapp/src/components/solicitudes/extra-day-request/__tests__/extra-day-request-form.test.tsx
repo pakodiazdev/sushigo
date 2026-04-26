@@ -45,6 +45,17 @@ vi.mock('@/lib/format', () => ({
 
 vi.mock('lucide-react', () => ({
   Loader2: () => React.createElement('span', { 'data-testid': 'loader' }),
+  CalendarDays: () => React.createElement('span', { 'data-testid': 'calendar-days-icon' }),
+}))
+
+vi.mock('@/components/ui/calendar-picker', () => ({
+  CalendarPicker: ({ value, onChange, placeholder }: { value: string; onChange: (d: string) => void; placeholder?: string }) =>
+    React.createElement('input', {
+      'data-testid': 'calendar-picker',
+      value,
+      placeholder,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+    }),
 }))
 
 import { ExtraDayRequestForm } from '../extra-day-request-form'
@@ -55,7 +66,8 @@ function makeForm(overrides = {}) {
   return {
     register: () => ({}),
     formState: { errors: {} },
-    watch: () => 100,
+    watch: (field?: string) => field === 'date' ? '' : 100,
+    setValue: vi.fn(),
     reset: vi.fn(),
     ...overrides,
   }
@@ -71,6 +83,8 @@ function defaultHookResult(overrides = {}) {
     total: 1200,
     handleSubmit: vi.fn((e) => e.preventDefault?.()),
     isPending: false,
+    disabledDaysOfWeek: [],
+    isLoadingSchedule: false,
     ...overrides,
   }
 }
