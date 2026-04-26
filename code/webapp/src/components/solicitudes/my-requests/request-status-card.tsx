@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import type { EmployeeRequest, ExtraDayPayload } from '@/types/employee-request'
@@ -44,6 +46,8 @@ const STATUS_CONFIG = {
 } as const
 
 export function RequestStatusCard({ request, onCancel, isCancelling }: RequestStatusCardProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
   const payload = request.payload as ExtraDayPayload | null
   const date = payload?.date ?? ''
   const primaPct = payload?.prima_pct ?? 0
@@ -51,42 +55,68 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
 
   const config = STATUS_CONFIG[request.status]
 
+  const cancellable =
+    request.status === 'PENDING' ||
+    (request.status === 'APPROVED' && date >= new Date().toISOString().slice(0, 10))
+
   return (
-    <div className={cn('rounded-lg border p-4 space-y-2', config.className)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">
-            {config.icon} Día extra solicitado
-          </p>
-          {date && (
-            <p className="text-sm text-foreground capitalize">{formatDate(date)}</p>
-          )}
-          <p className="text-sm text-muted-foreground">
-            Prima propuesta: {primaPct}%{primaAmount > 0 && ` · ${formatCurrency(primaAmount)}`}
-          </p>
-          <p className={cn('text-xs font-medium', config.labelClass)}>{config.label}</p>
+    <>
+      <div className={cn('rounded-lg border p-4 space-y-2', config.className)}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              {config.icon} Día extra solicitado
+            </p>
+            {date && (
+              <p className="text-sm text-foreground capitalize">{formatDate(date)}</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Prima propuesta: {primaPct}%{primaAmount > 0 && ` · ${formatCurrency(primaAmount)}`}
+            </p>
+            <p className={cn('text-xs font-medium', config.labelClass)}>{config.label}</p>
 
-          {request.status === 'PENDING' && request.notes && (
-            <p className="text-xs text-muted-foreground italic">Tu nota: "{request.notes}"</p>
-          )}
+            {request.status === 'PENDING' && request.notes && (
+              <p className="text-xs text-muted-foreground italic">Tu nota: "{request.notes}"</p>
+            )}
 
-          {request.status === 'REJECTED' && request.rejection_reason && (
-            <p className="text-xs text-muted-foreground italic">"{request.rejection_reason}"</p>
+            {request.status === 'REJECTED' && request.rejection_reason && (
+              <p className="text-xs text-muted-foreground italic">"{request.rejection_reason}"</p>
+            )}
+          </div>
+
+          {cancellable && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-400 hover:bg-red-50 hover:text-red-600 shrink-0"
+              onClick={() => setConfirmOpen(true)}
+              disabled={isCancelling}
+            >
+              {isCancelling ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+              Cancelar
+            </Button>
           )}
         </div>
-
-        {(request.status === 'PENDING' || (request.status === 'APPROVED' && date >= new Date().toISOString().slice(0, 10))) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-destructive shrink-0"
-            onClick={() => onCancel(request.id)}
-            disabled={isCancelling}
-          >
-            {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancelar'}
-          </Button>
-        )}
       </div>
-    </div>
+
+      <ConfirmDialog
+        container="viewport"
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          onCancel(request.id)
+          setConfirmOpen(false)
+        }}
+        title="¿Cancelar esta solicitud?"
+        description={
+          request.status === 'APPROVED'
+            ? 'El día extra aprobado será eliminado. Esta acción no se puede deshacer.'
+            : 'Tu solicitud de día extra será cancelada. Esta acción no se puede deshacer.'
+        }
+        confirmLabel="Sí, cancelar"
+        variant="danger"
+        isLoading={isCancelling}
+      />
+    </>
   )
 }

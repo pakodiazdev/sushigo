@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import { Plus, History, X, CalendarDays, XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
 import { useDialogAnimation } from './use-dialog-animation'
@@ -58,6 +59,7 @@ function ExtraDayHistoryDialog({
 }) {
   const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, onClose)
   const cancelMutation = useCancelNegotiatedExtraDay()
+  const [confirmId, setConfirmId] = useState<string | null>(null)
 
   if (!visible) return null
 
@@ -187,12 +189,12 @@ function ExtraDayHistoryDialog({
                               type="button"
                               aria-label="Cancelar día extra"
                               disabled={!cancellable || isCancelling}
-                              onClick={() => cancelMutation.mutate(day.id)}
+                              onClick={() => cancellable && setConfirmId(day.id)}
                               className={cn(
                                 'flex items-center justify-center rounded p-1 transition-colors',
                                 cancellable && !isCancelling
-                                  ? 'text-muted-foreground hover:bg-red-50 hover:text-red-600'
-                                  : 'cursor-not-allowed text-muted-foreground/30',
+                                  ? 'text-red-400 hover:bg-red-50 hover:text-red-600'
+                                  : 'cursor-not-allowed text-red-300/40',
                               )}
                             >
                               {isCancelling
@@ -213,7 +215,25 @@ function ExtraDayHistoryDialog({
     </div>
   )
 
-  return createPortal(content, document.body)
+  return (
+    <>
+      {createPortal(content, document.body)}
+      <ConfirmDialog
+        container="viewport"
+        isOpen={confirmId !== null}
+        onClose={() => setConfirmId(null)}
+        onConfirm={() => {
+          if (confirmId) cancelMutation.mutate(confirmId)
+          setConfirmId(null)
+        }}
+        title="¿Cancelar día extra?"
+        description="Esta acción no se puede deshacer. El día extra será eliminado del historial."
+        confirmLabel="Sí, cancelar"
+        variant="danger"
+        isLoading={cancelMutation.isPending}
+      />
+    </>
+  )
 }
 
 // ── Main section ───────────────────────────────────────────────────────────────
@@ -224,6 +244,7 @@ interface ExtraDaySectionProps {
 
 export function ExtraDaySection({ employee }: ExtraDaySectionProps) {
   const [showForm, setShowForm] = useState(false)
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null)
   const canApprove = useAuthStore((s) => s.can('employee-requests.approve'))
   const canCancel = useAuthStore((s) => s.can('employee-requests.cancel') || s.can('employee-requests.approve'))
   const cancelMutation = useCancelNegotiatedExtraDay()
@@ -312,8 +333,8 @@ export function ExtraDaySection({ employee }: ExtraDaySectionProps) {
                           type="button"
                           aria-label="Cancelar día extra"
                           disabled={isCancellingThis}
-                          onClick={() => cancelMutation.mutate(day.id)}
-                          className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                          onClick={() => setConfirmCancelId(day.id)}
+                          className="ml-1 rounded p-0.5 text-red-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
                         >
                           {isCancellingThis
                             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -346,6 +367,21 @@ export function ExtraDaySection({ employee }: ExtraDaySectionProps) {
         isOpen={showForm}
         onClose={() => setShowForm(false)}
         employee={employee}
+      />
+
+      {/* Confirm cancel (upcoming list) — inside SlidePanel, no container needed */}
+      <ConfirmDialog
+        isOpen={confirmCancelId !== null}
+        onClose={() => setConfirmCancelId(null)}
+        onConfirm={() => {
+          if (confirmCancelId) cancelMutation.mutate(confirmCancelId)
+          setConfirmCancelId(null)
+        }}
+        title="¿Cancelar día extra?"
+        description="Esta acción no se puede deshacer. El día extra será eliminado del historial."
+        confirmLabel="Sí, cancelar"
+        variant="danger"
+        isLoading={cancelMutation.isPending}
       />
     </>
   )
