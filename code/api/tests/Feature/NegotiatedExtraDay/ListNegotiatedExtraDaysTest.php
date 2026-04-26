@@ -6,18 +6,13 @@ use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Models\NegotiatedExtraDay;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\PermissionRegistrar;
-use Tests\TestCase;
 
-class ListNegotiatedExtraDaysTest extends TestCase
+class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
 {
-    use RefreshDatabase;
-
     protected User $user;
 
     protected Employee $employee;
@@ -25,14 +20,6 @@ class ListNegotiatedExtraDaysTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
-
-        foreach (Employee::POSITION_ROLES as $roleName) {
-            Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
-        }
-        Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
-        Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
 
         Permission::firstOrCreate(['name' => 'employees.view', 'guard_name' => 'api']);
         $role = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);

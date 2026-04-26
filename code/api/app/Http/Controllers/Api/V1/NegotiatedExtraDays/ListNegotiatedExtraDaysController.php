@@ -7,6 +7,7 @@ use App\Http\Resources\NegotiatedExtraDay\NegotiatedExtraDayResource;
 use App\Http\Responses\Common\ResponsePaginated;
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * @OA\Get(
@@ -45,7 +46,7 @@ class ListNegotiatedExtraDaysController extends Controller
     {
         $validated = $request->validate([
             'date_from' => ['sometimes', 'date'],
-            'date_to' => ['sometimes', 'date', 'after_or_equal:date_from'],
+            'date_to' => ['sometimes', 'date', Rule::when($request->has('date_from'), 'after_or_equal:date_from')],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 

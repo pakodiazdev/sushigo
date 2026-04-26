@@ -26,6 +26,7 @@ export interface ListExtraDaysFilters {
 }
 
 export interface PaginatedNegotiatedExtraDays {
+  status: string
   data: NegotiatedExtraDay[]
   meta: {
     current_page: number
