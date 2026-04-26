@@ -127,7 +127,12 @@ class Employee extends Model
     protected static function booted(): void
     {
         static::deleting(function (Employee $employee) {
-            $employee->employeeRequests()->delete();
+            $employee->employeeRequests()->each(function (EmployeeRequest $request) {
+                if ($request->requestable !== null) {
+                    $request->requestable->forceDelete();
+                }
+                $request->delete();
+            });
         });
     }
 
