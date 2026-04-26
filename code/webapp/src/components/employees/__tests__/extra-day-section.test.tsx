@@ -4,7 +4,6 @@ import { render, screen, cleanup } from '@testing-library/react'
 import { fireEvent } from '@testing-library/react'
 import React from 'react'
 import type { Employee } from '@/types/employee'
-import type { EmployeeRequest } from '@/types/employee-request'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -25,13 +24,13 @@ vi.mock('@/stores/auth.store', () => ({
     selector({ can: (p: string) => mockCan(p) }),
 }))
 
-const mockUseApprovedExtraDays = vi.fn()
-vi.mock('@/services/employee-request-hooks', () => ({
-  useApprovedExtraDays: (...args: unknown[]) => mockUseApprovedExtraDays(...args),
-}))
-
 vi.mock('@/services/negotiated-extra-day-hooks', () => ({
   useCancelNegotiatedExtraDay: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
+const mockUseNegotiatedExtraDays = vi.fn()
+vi.mock('../use-negotiated-extra-days', () => ({
+  useNegotiatedExtraDays: (...args: unknown[]) => mockUseNegotiatedExtraDays(...args),
 }))
 
 import { ExtraDaySection } from '../extra-day-section'
@@ -44,21 +43,20 @@ const employee = {
   last_name: 'López',
 } as unknown as Employee
 
-function makeRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest {
+function defaultHookCtx(overrides = {}) {
   return {
-    id: 'req-1',
-    employee_id: 'emp-1',
-    employee_name: 'Ana López',
-    type: 'EXTRA_DAY',
-    status: 'APPROVED',
-    payload: { date: '2026-04-25', prima_pct: 100 },
-    requestable: null,
-    requested_by: 'emp-1',
-    approved_by: null,
-    approved_at: null,
-    notes: null,
-    rejection_reason: null,
-    created_at: '2026-04-25T00:00:00Z',
+    thisMonthCount: 0,
+    upcomingCount: 0,
+    upcomingDays: [],
+    isLoadingSummary: false,
+    showHistory: false,
+    openHistory: vi.fn(),
+    closeHistory: vi.fn(),
+    historyExtraDays: [],
+    historyMeta: undefined,
+    historyIsLoading: false,
+    historyFilters: {},
+    setHistoryFilters: vi.fn(),
     ...overrides,
   }
 }
@@ -76,25 +74,25 @@ describe('ExtraDaySection', () => {
 
   it('hides empty-state text while data is loading', () => {
     mockCan.mockReturnValue(false)
-    mockUseApprovedExtraDays.mockReturnValue({ data: undefined, isLoading: true })
+    mockUseNegotiatedExtraDays.mockReturnValue(defaultHookCtx({ isLoadingSummary: true }))
 
     render(<ExtraDaySection employee={employee} />)
 
-    expect(screen.queryByText('No hay días extra acordados')).toBeNull()
+    expect(screen.queryByText('Sin días extra registrados')).toBeNull()
   })
 
   it('shows empty state when no extra days and not loading', () => {
     mockCan.mockReturnValue(false)
-    mockUseApprovedExtraDays.mockReturnValue({ data: [], isLoading: false })
+    mockUseNegotiatedExtraDays.mockReturnValue(defaultHookCtx())
 
     render(<ExtraDaySection employee={employee} />)
 
-    expect(screen.getByText('No hay días extra acordados')).toBeTruthy()
+    expect(screen.getByText('Sin días extra registrados')).toBeTruthy()
   })
 
   it('hides the "+ Día extra" button when user lacks approve permission', () => {
     mockCan.mockReturnValue(false)
-    mockUseApprovedExtraDays.mockReturnValue({ data: [], isLoading: false })
+    mockUseNegotiatedExtraDays.mockReturnValue(defaultHookCtx())
 
     render(<ExtraDaySection employee={employee} />)
 
@@ -103,7 +101,7 @@ describe('ExtraDaySection', () => {
 
   it('shows the "+ Día extra" button when user has approve permission', () => {
     mockCan.mockImplementation((p: string) => p === 'employee-requests.approve')
-    mockUseApprovedExtraDays.mockReturnValue({ data: [], isLoading: false })
+    mockUseNegotiatedExtraDays.mockReturnValue(defaultHookCtx())
 
     render(<ExtraDaySection employee={employee} />)
 
@@ -112,7 +110,7 @@ describe('ExtraDaySection', () => {
 
   it('opens ExtraDayForm when button is clicked', () => {
     mockCan.mockImplementation((p: string) => p === 'employee-requests.approve')
-    mockUseApprovedExtraDays.mockReturnValue({ data: [], isLoading: false })
+    mockUseNegotiatedExtraDays.mockReturnValue(defaultHookCtx())
 
     render(<ExtraDaySection employee={employee} />)
 
@@ -123,37 +121,32 @@ describe('ExtraDaySection', () => {
     expect(screen.getByTestId('extra-day-form')).toBeTruthy()
   })
 
-  it('renders approved extra-day chips with date and prima_pct', () => {
+  it('shows upcoming day row when upcomingDays is non-empty', () => {
     mockCan.mockReturnValue(false)
-    mockUseApprovedExtraDays.mockReturnValue({
-      data: [makeRequest({ payload: { date: '2026-04-25', prima_pct: 75 } })],
-      isLoading: false,
-    })
+    mockUseNegotiatedExtraDays.mockReturnValue(defaultHookCtx({
+      upcomingCount: 1,
+      upcomingDays: [{
+        id: 'ned-1',
+        date: '2026-06-15',
+        agreed_daily_wage: '800.00',
+        prima_percent: 75,
+        notes: null,
+        created_at: '2026-04-25T00:00:00Z',
+      }],
+    }))
 
     render(<ExtraDaySection employee={employee} />)
 
-    expect(screen.getByText('Día extra acordado')).toBeTruthy()
-    expect(screen.getByText('Prima: 75%')).toBeTruthy()
+    expect(screen.getByText('Próximos días extra')).toBeTruthy()
+    expect(screen.getByText('Prima 75%')).toBeTruthy()
   })
 
-  it('renders chip without prima when prima_pct is absent', () => {
+  it('passes employeeId to useNegotiatedExtraDays', () => {
     mockCan.mockReturnValue(false)
-    mockUseApprovedExtraDays.mockReturnValue({
-      data: [makeRequest({ payload: { date: '2026-04-25' } })],
-      isLoading: false,
-    })
+    mockUseNegotiatedExtraDays.mockReturnValue(defaultHookCtx())
 
     render(<ExtraDaySection employee={employee} />)
 
-    expect(screen.queryByText(/Prima:/)).toBeNull()
-  })
-
-  it('passes employeeId to useApprovedExtraDays', () => {
-    mockCan.mockReturnValue(false)
-    mockUseApprovedExtraDays.mockReturnValue({ data: [], isLoading: false })
-
-    render(<ExtraDaySection employee={employee} />)
-
-    expect(mockUseApprovedExtraDays).toHaveBeenCalledWith('emp-1')
+    expect(mockUseNegotiatedExtraDays).toHaveBeenCalledWith('emp-1')
   })
 })

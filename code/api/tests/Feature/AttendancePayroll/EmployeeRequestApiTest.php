@@ -668,7 +668,7 @@ class EmployeeRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function it_prevents_cancel_by_non_requester(): void
+    public function it_prevents_cancel_by_user_with_no_permissions(): void
     {
         $employee = $this->makeEmployeeWithActivePeriod();
 
@@ -680,13 +680,8 @@ class EmployeeRequestApiTest extends TestCase
 
         $requestId = $createResponse->json('data.id');
 
+        // A plain user with no relevant permissions and who is NOT the requester
         $otherUser = User::factory()->createOne();
-        assert($otherUser instanceof User);
-
-        $cancelOnlyRole = Role::create(['name' => 'cancel-only', 'guard_name' => 'api']);
-        $cancelOnlyRole->givePermissionTo('employee-requests.cancel');
-        $otherUser->assignRole('cancel-only');
-
         Passport::actingAs($otherUser);
 
         $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel")
@@ -696,6 +691,33 @@ class EmployeeRequestApiTest extends TestCase
             'public_id' => $requestId,
             'status' => EmployeeRequestStatus::PENDING->value,
         ]);
+    }
+
+    #[Test]
+    public function it_allows_cancel_by_user_with_cancel_permission(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        $cancelUser = User::factory()->createOne();
+        assert($cancelUser instanceof User);
+
+        $cancelRole = Role::create(['name' => 'cancel-role', 'guard_name' => 'api']);
+        $cancelRole->givePermissionTo('employee-requests.cancel');
+        $cancelUser->assignRole('cancel-role');
+
+        Passport::actingAs($cancelUser);
+
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::CANCELLED->value);
     }
 
     #[Test]
