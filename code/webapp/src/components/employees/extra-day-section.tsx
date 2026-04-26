@@ -1,9 +1,11 @@
 import { createPortal } from 'react-dom'
-import { Plus, History, X, CalendarDays } from 'lucide-react'
+import { Plus, History, X, CalendarDays, XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth.store'
 import { useDialogAnimation } from './use-dialog-animation'
 import { useNegotiatedExtraDays } from './use-negotiated-extra-days'
+import { useCancelNegotiatedExtraDay } from '@/services/negotiated-extra-day-hooks'
 import { ExtraDayForm } from './extra-day-form'
 import type { Employee } from '@/types/employee'
 import type { NegotiatedExtraDay } from '@/types/negotiated-extra-day'
@@ -11,6 +13,14 @@ import type { ListExtraDaysFilters } from '@/types/negotiated-extra-day'
 import { useState } from 'react'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function isFuture(dateStr: string): boolean {
+  return dateStr >= todayIso()
+}
 
 function formatDate(dateStr: string): string {
   return new Date(`${dateStr}T12:00:00`).toLocaleDateString('es-MX', {
@@ -35,6 +45,7 @@ function ExtraDayHistoryDialog({
   isLoading,
   filters,
   setFilters,
+  canCancel,
 }: {
   isOpen: boolean
   onClose: () => void
@@ -43,8 +54,10 @@ function ExtraDayHistoryDialog({
   isLoading: boolean
   filters: ListExtraDaysFilters
   setFilters: (f: ListExtraDaysFilters) => void
+  canCancel: boolean
 }) {
   const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, onClose)
+  const cancelMutation = useCancelNegotiatedExtraDay()
 
   if (!visible) return null
 
@@ -152,20 +165,45 @@ function ExtraDayHistoryDialog({
                     <th className="pb-2 pr-4 text-right">Prima %</th>
                     <th className="pb-2 pr-4 text-right">Prima $</th>
                     <th className="pb-2 pr-4">Aprobado por</th>
-                    <th className="pb-2">Notas</th>
+                    <th className="pb-2 pr-4">Notas</th>
+                    {canCancel && <th className="pb-2 w-8" />}
                   </tr>
                 </thead>
                 <tbody>
-                  {extraDays.map((day) => (
-                    <tr key={day.id} className="border-b border-border last:border-0 hover:bg-muted/30">
-                      <td className="py-2 pr-4 whitespace-nowrap">{formatDate(day.date)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{formatCurrency(day.agreed_daily_wage)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{day.prima_percent}%</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{formatCurrency(day.prima_amount)}</td>
-                      <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground">{day.approved_by}</td>
-                      <td className="py-2 max-w-[200px] truncate text-muted-foreground">{day.notes ?? '—'}</td>
-                    </tr>
-                  ))}
+                  {extraDays.map((day) => {
+                    const cancellable = isFuture(day.date)
+                    const isCancelling = cancelMutation.isPending && cancelMutation.variables === day.id
+                    return (
+                      <tr key={day.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                        <td className="py-2 pr-4 whitespace-nowrap">{formatDate(day.date)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{formatCurrency(day.agreed_daily_wage)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{day.prima_percent}%</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{formatCurrency(day.prima_amount)}</td>
+                        <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground">{day.approved_by}</td>
+                        <td className="py-2 pr-4 max-w-[180px] truncate text-muted-foreground">{day.notes ?? '—'}</td>
+                        {canCancel && (
+                          <td className="py-2">
+                            <button
+                              type="button"
+                              aria-label="Cancelar día extra"
+                              disabled={!cancellable || isCancelling}
+                              onClick={() => cancelMutation.mutate(day.id)}
+                              className={cn(
+                                'flex items-center justify-center rounded p-1 transition-colors',
+                                cancellable && !isCancelling
+                                  ? 'text-muted-foreground hover:bg-red-50 hover:text-red-600'
+                                  : 'cursor-not-allowed text-muted-foreground/30',
+                              )}
+                            >
+                              {isCancelling
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <XCircle className="h-4 w-4" />}
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -187,6 +225,8 @@ interface ExtraDaySectionProps {
 export function ExtraDaySection({ employee }: ExtraDaySectionProps) {
   const [showForm, setShowForm] = useState(false)
   const canApprove = useAuthStore((s) => s.can('employee-requests.approve'))
+  const canCancel = useAuthStore((s) => s.can('employee-requests.cancel') || s.can('employee-requests.approve'))
+  const cancelMutation = useCancelNegotiatedExtraDay()
 
   const ctx = useNegotiatedExtraDays(employee.id)
 
@@ -254,20 +294,36 @@ export function ExtraDaySection({ employee }: ExtraDaySectionProps) {
           <div>
             <p className="mb-1.5 text-xs text-muted-foreground">Próximos días extra</p>
             <div className="space-y-1.5">
-              {ctx.upcomingDays.map((day) => (
-                <div
-                  key={day.id}
-                  className="flex items-center justify-between rounded-md border border-border px-3 py-1.5 text-xs"
-                >
-                  <span className="text-muted-foreground whitespace-nowrap">{formatDate(day.date)}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="tabular-nums">{formatCurrency(day.agreed_daily_wage)}</span>
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-                      Prima {day.prima_percent}%
-                    </span>
+              {ctx.upcomingDays.map((day) => {
+                const isCancellingThis = cancelMutation.isPending && cancelMutation.variables === day.id
+                return (
+                  <div
+                    key={day.id}
+                    className="flex items-center justify-between rounded-md border border-border px-3 py-1.5 text-xs"
+                  >
+                    <span className="text-muted-foreground whitespace-nowrap">{formatDate(day.date)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="tabular-nums">{formatCurrency(day.agreed_daily_wage)}</span>
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                        Prima {day.prima_percent}%
+                      </span>
+                      {canCancel && (
+                        <button
+                          type="button"
+                          aria-label="Cancelar día extra"
+                          disabled={isCancellingThis}
+                          onClick={() => cancelMutation.mutate(day.id)}
+                          className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                        >
+                          {isCancellingThis
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <XCircle className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
@@ -282,6 +338,7 @@ export function ExtraDaySection({ employee }: ExtraDaySectionProps) {
         isLoading={ctx.historyIsLoading}
         filters={ctx.historyFilters}
         setFilters={ctx.setHistoryFilters}
+        canCancel={canCancel}
       />
 
       {/* Register form slide panel */}

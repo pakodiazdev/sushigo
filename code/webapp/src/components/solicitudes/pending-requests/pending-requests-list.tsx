@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
-import { usePendingRequests } from '@/services/employee-request-hooks'
+import { usePendingRequests, useCancelEmployeeRequest } from '@/services/employee-request-hooks'
 import type { EmployeeRequest } from '@/types/employee-request'
 import { PendingRequestCard } from './pending-request-card'
 import { ReviewRequestDialog } from './review-request-dialog'
 
 export function PendingRequestsList() {
   const { data: requests, isLoading, isError } = usePendingRequests()
+  const cancelMutation = useCancelEmployeeRequest()
   const [selectedRequest, setSelectedRequest] = useState<EmployeeRequest | null>(null)
 
   if (isLoading) {
@@ -41,6 +42,8 @@ export function PendingRequestsList() {
             key={request.id}
             request={request}
             onReview={setSelectedRequest}
+            onCancel={(id) => cancelMutation.mutate(id)}
+            isCancelling={cancelMutation.isPending && cancelMutation.variables === request.id}
           />
         ))}
       </div>

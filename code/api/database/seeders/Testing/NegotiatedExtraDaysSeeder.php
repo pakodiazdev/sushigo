@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Negotiated extra days seeder — 3 records for EMP-001 across two months.
+ * Negotiated extra days seeder — 4 records for EMP-001.
  *
  * Used by the employee-negotiated-extra-days Cypress spec via:
  *   cy.task('test:reset', 'attendance-extra-days')
@@ -15,9 +15,10 @@ use Illuminate\Support\Str;
  * Employees must already exist (AttendanceTestSeeder ran first).
  *
  * Records:
- *   2026-03-15  $600  prima 100%  → $600  notes: "Turno especial"
- *   2026-04-05  $500  prima 50%   → $250  notes: null
- *   2026-04-20  $700  prima 0%    → $0    notes: "Sin prima"
+ *   2026-03-15  $600  prima 100%  → $600  notes: "Turno especial"   (past)
+ *   2026-04-05  $500  prima 50%   → $250  notes: null                (past)
+ *   2026-04-20  $700  prima 0%    → $0    notes: "Sin prima"         (past)
+ *   2026-05-10  $800  prima 100%  → $800  notes: "Próximo extra"     (future — cancellable)
  */
 class NegotiatedExtraDaysSeeder extends Seeder
 {
@@ -74,6 +75,22 @@ class NegotiatedExtraDaysSeeder extends Seeder
                 'approved_by' => $adminUserId,
                 'status' => 'APPROVED',
                 'notes' => 'Sin prima',
+                'created_at' => $now,
+                'updated_at' => $now,
+                'deleted_at' => null,
+            ],
+            [
+                'public_id' => (string) Str::ulid(),
+                'employee_id' => $employee->id,
+                'request_id' => null,
+                'branch_id' => $branchId,
+                'date' => '2026-05-10',
+                'agreed_daily_wage' => '800.0000',
+                'prima_percent' => '100.0000',
+                'prima_amount' => '800.0000',
+                'approved_by' => $adminUserId,
+                'status' => 'APPROVED',
+                'notes' => 'Próximo extra',
                 'created_at' => $now,
                 'updated_at' => $now,
                 'deleted_at' => null,

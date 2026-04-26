@@ -64,6 +64,7 @@ use App\Http\Controllers\Api\V1\Leaves\ListLeaveTypesController;
 use App\Http\Controllers\Api\V1\Leaves\RegisterDirectLeaveController;
 use App\Http\Controllers\Api\V1\Leaves\RegisterLeaveRequestController;
 use App\Http\Controllers\Api\V1\Leaves\RejectLeaveController;
+use App\Http\Controllers\Api\V1\NegotiatedExtraDays\CancelNegotiatedExtraDayController;
 use App\Http\Controllers\Api\V1\NegotiatedExtraDays\ListNegotiatedExtraDaysController;
 use App\Http\Controllers\Api\V1\NegotiatedExtraDays\RegisterNegotiatedExtraDayController;
 use App\Http\Controllers\Api\V1\OperatingUnit\CreateOperatingUnitController;
@@ -324,6 +325,10 @@ Route::prefix('v1')->group(function () {
     // Negotiated Extra Days Module (All Protected)
     Route::middleware(['auth:api', 'permission:attendances.create'])->prefix('negotiated-extra-days')->name('negotiated-extra-days.')->group(function () {
         Route::post('/', RegisterNegotiatedExtraDayController::class)->name('store');
+    });
+
+    Route::middleware('auth:api')->prefix('negotiated-extra-days')->group(function () {
+        Route::delete('/{id}', CancelNegotiatedExtraDayController::class)->name('negotiated-extra-days.destroy');
     });
 
     // Cash Adjustments Module (All Protected)

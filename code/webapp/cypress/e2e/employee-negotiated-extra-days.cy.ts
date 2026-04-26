@@ -1,28 +1,50 @@
 /**
- * Negotiated Extra Days List — E2E happy path (Task #060)
+ * Negotiated Extra Days — E2E happy path (Task #060 + cancel)
  *
- * Tests the negotiated extra days table in the Employee Detail panel.
- * Verifies that seeded records appear, the date-range filter works,
- * and clearing the filter restores all records.
+ * Tests the executive summary and history dialog in the Employee Detail panel.
+ * Verifies:
+ *  1. Executive summary shows upcoming badge for future records.
+ *  2. "Ver historial" opens the dialog with all 4 seeded records.
+ *  3. Date-range filter in the dialog works (hides past records).
+ *  4. Cancel button (future day) removes the row and updates the summary.
+ *  5. Cancel button is disabled for past days in the history dialog.
  *
- * Seeder: NegotiatedExtraDaysSeeder seeds 3 records for EMP-001:
- *   - 2026-03-15  $600  prima 100%  "Turno especial"
- *   - 2026-04-05  $500  prima 50%   (sin notas)
- *   - 2026-04-20  $700  prima 0%    "Sin prima"
+ * Seeder: NegotiatedExtraDaysSeeder seeds 4 records for EMP-001:
+ *   2026-03-15  $600  prima 100%  "Turno especial"   (past)
+ *   2026-04-05  $500  prima 50%   (sin notas)         (past)
+ *   2026-04-20  $700  prima 0%    "Sin prima"         (past)
+ *   2026-05-10  $800  prima 100%  "Próximo extra"     (future — cancellable)
  *
  * DB reset strategy
  * ─────────────────
- * • before()     → cy.task('test:reset', 'attendance-extra-days') ONCE per file.
- * • beforeEach() → login + navigate to employee list.
+ * • before()      → cy.task('test:reset', 'attendance-extra-days') ONCE per file.
+ * • Cancel suite  → resets before each test (cancel mutates state).
  *
  * To run only this file:
  *   make cypress-spec SPEC=employee-negotiated-extra-days
- *   make cypress-debug SPEC=employee-negotiated-extra-days
  */
 
 import users from '../fixtures/users.json'
 
 const { email, password } = users.admin
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+function openEmp001Detail() {
+  cy.contains('tr', 'EMP-001', { timeout: 10_000 })
+    .find('button[title="Ver detalle"]')
+    .click()
+  cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
+}
+
+function scrollToExtraDays() {
+  cy.contains('Días extra', { timeout: 10_000 }).scrollIntoView().should('be.visible')
+}
+
+function openHistory() {
+  cy.contains('button', 'Ver historial').click()
+  cy.contains('Historial de días extra', { timeout: 8_000 }).should('be.visible')
+}
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
@@ -31,10 +53,10 @@ before(() => {
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Happy Path — view extra days list with date range filter
+// Suite 1 — Executive summary
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('Negotiated Extra Days List — Happy Path', () => {
+describe('Negotiated Extra Days — Executive Summary', () => {
   beforeEach(() => {
     cy.loginByApi(email, password)
     cy.visitWithAuth('/employees')
@@ -42,80 +64,135 @@ describe('Negotiated Extra Days List — Happy Path', () => {
     cy.closeDevDebugger()
   })
 
-  it('shows all 3 seeded extra days in the table', () => {
+  it('shows upcoming badge for the future seeded record', () => {
+    cy.intercept('GET', '**/negotiated-extra-days**').as('listUpcoming')
+
+    openEmp001Detail()
+    scrollToExtraDays()
+    cy.wait('@listUpcoming')
+
+    // The future record (2026-05-10) appears in the upcoming badge
+    cy.contains('1 programado').should('be.visible')
+
+    // Upcoming list row is shown
+    cy.contains('Próximo extra', { timeout: 8_000 }).should('be.visible')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Suite 2 — History dialog: list + filter
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('Negotiated Extra Days — History Dialog', () => {
+  beforeEach(() => {
+    cy.loginByApi(email, password)
+    cy.visitWithAuth('/employees')
+    cy.url().should('include', '/employees', { timeout: 10_000 })
+    cy.closeDevDebugger()
+  })
+
+  it('shows all 4 seeded records in the history table', () => {
     cy.intercept('GET', '**/negotiated-extra-days**').as('listExtraDays')
 
-    // ── 1. Open EMP-001 detail ────────────────────────────────────────────────
-    cy.contains('tr', 'EMP-001', { timeout: 10_000 })
-      .find('button[title="Ver detalle"]')
-      .click()
+    openEmp001Detail()
+    scrollToExtraDays()
+    openHistory()
 
-    cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
-
-    // ── 2. Scroll to section ──────────────────────────────────────────────────
-    cy.contains('Días extra negociados', { timeout: 10_000 }).scrollIntoView().should('be.visible')
-
-    // ── 3. Wait for the API call and verify table headers ─────────────────────
     cy.wait('@listExtraDays').its('response.statusCode').should('eq', 200)
 
+    // Table headers
     cy.contains('th', 'Fecha').should('be.visible')
-    cy.contains('th', 'Salario acordado').should('be.visible')
+    cy.contains('th', 'Salario').should('be.visible')
     cy.contains('th', 'Prima %').should('be.visible')
-    cy.contains('th', 'Aprobado por').should('be.visible')
 
-    // ── 4. Verify the 3 seeded records appear ─────────────────────────────────
-    // Records are sorted by date desc: 2026-04-20, 2026-04-05, 2026-03-15
+    // All 4 records
     cy.contains('Turno especial').should('be.visible')
     cy.contains('Sin prima').should('be.visible')
+    cy.contains('Próximo extra').should('be.visible')
 
-    // Check agreed wage values are rendered
+    // Wage amounts present
     cy.contains('td', /600/).should('exist')
-    cy.contains('td', /500/).should('exist')
-    cy.contains('td', /700/).should('exist')
-
-    // Check approved by column shows the admin user name
-    cy.contains('td', 'Admin User').should('exist')
+    cy.contains('td', /800/).should('exist')
   })
 
   it('filters records by date_from and clears the filter', () => {
     cy.intercept('GET', '**/negotiated-extra-days**').as('listExtraDays')
 
-    // ── 1. Open EMP-001 detail ────────────────────────────────────────────────
-    cy.contains('tr', 'EMP-001', { timeout: 10_000 })
-      .find('button[title="Ver detalle"]')
-      .click()
-
-    cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
-    cy.contains('Días extra negociados', { timeout: 10_000 }).scrollIntoView().should('be.visible')
+    openEmp001Detail()
+    scrollToExtraDays()
+    openHistory()
     cy.wait('@listExtraDays')
 
-    // Verify all 3 records initially visible
-    cy.contains('Turno especial').should('be.visible')
-    cy.contains('Sin prima').should('be.visible')
-
-    // ── 2. Apply date_from filter (2026-04-01) ────────────────────────────────
+    // Apply date_from filter (2026-05-01)
     cy.intercept('GET', '**/negotiated-extra-days**').as('listFiltered')
-
-    cy.get('#extra-day-date-from').clear().type('2026-04-01')
-
+    cy.get('#history-date-from').clear().type('2026-05-01')
     cy.wait('@listFiltered').its('response.statusCode').should('eq', 200)
 
-    // The March record should no longer be visible ("Turno especial" had notes)
     cy.contains('Turno especial').should('not.exist')
+    cy.contains('Sin prima').should('not.exist')
+    cy.contains('Próximo extra').should('be.visible')
 
-    // April records remain
-    cy.contains('td', /700/).should('exist')
-    cy.contains('td', /500/).should('exist')
-
-    // ── 3. Clear the filter ───────────────────────────────────────────────────
+    // Clear filter — all records return
     cy.intercept('GET', '**/negotiated-extra-days**').as('listCleared')
-
     cy.contains('button', 'Limpiar').click()
-
     cy.wait('@listCleared').its('response.statusCode').should('eq', 200)
 
-    // All 3 records visible again
     cy.contains('Turno especial').should('be.visible')
-    cy.contains('Sin prima').should('be.visible')
+    cy.contains('Próximo extra').should('be.visible')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Suite 3 — Cancel extra day
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('Negotiated Extra Days — Cancel', () => {
+  beforeEach(() => {
+    cy.task('test:reset', 'attendance-extra-days', { timeout: 60_000 })
+    cy.loginByApi(email, password)
+    cy.visitWithAuth('/employees')
+    cy.url().should('include', '/employees', { timeout: 10_000 })
+    cy.closeDevDebugger()
+  })
+
+  it('cancels the future extra day from the upcoming list', () => {
+    cy.intercept('DELETE', '**/negotiated-extra-days/**').as('cancelDay')
+
+    openEmp001Detail()
+    scrollToExtraDays()
+
+    // Upcoming row for "Próximo extra" is visible
+    cy.contains('Próximo extra', { timeout: 8_000 }).should('be.visible')
+
+    // Click the XCircle cancel button on that row
+    cy.contains('Próximo extra')
+      .closest('div')
+      .find('button[aria-label="Cancelar día extra"]')
+      .click()
+
+    cy.wait('@cancelDay').its('response.statusCode').should('eq', 200)
+
+    // Row and badge disappear after cancellation
+    cy.contains('Próximo extra').should('not.exist')
+    cy.contains('1 programado').should('not.exist')
+  })
+
+  it('shows cancel button disabled for past days in the history dialog', () => {
+    cy.intercept('GET', '**/negotiated-extra-days**').as('listExtraDays')
+
+    openEmp001Detail()
+    scrollToExtraDays()
+    openHistory()
+    cy.wait('@listExtraDays')
+
+    // Past record row → cancel button is disabled
+    cy.contains('tr', 'Turno especial')
+      .find('button[aria-label="Cancelar día extra"]')
+      .should('be.disabled')
+
+    // Future record row → cancel button is enabled
+    cy.contains('tr', 'Próximo extra')
+      .find('button[aria-label="Cancelar día extra"]')
+      .should('not.be.disabled')
   })
 })
