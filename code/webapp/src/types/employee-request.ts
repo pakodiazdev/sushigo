@@ -3,8 +3,8 @@ export type EmployeeRequestType = 'EXTRA_DAY' | 'LEAVE' | 'VACATION' | 'SCHEDULE
 
 export interface EmployeeRequest {
   id: string
-  employee_id: string
-  employee_name: string
+  employee_id: string | null
+  employee_name: string | null
   type: EmployeeRequestType
   status: EmployeeRequestStatus
   payload: Record<string, unknown> | null

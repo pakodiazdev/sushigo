@@ -24,7 +24,7 @@ export function PendingRequestCard({ request, onReview }: PendingRequestCardProp
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
           <p className="text-sm font-medium text-foreground">➕ Día extra</p>
-          <p className="text-sm text-foreground font-medium">{request.employee_name}</p>
+          <p className="text-sm text-foreground font-medium">{request.employee_name ?? 'Empleado eliminado'}</p>
           {date && (
             <p className="text-sm text-muted-foreground capitalize">{formatDate(date)}</p>
           )}
