@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-provider'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { useAuthStore } from '@/stores/auth.store'
 import { employeeRequestApi } from './employee-request-api'
 import type {
   EmployeeRequestFilters,
@@ -95,16 +96,20 @@ export function useCancelEmployeeRequest() {
 }
 
 export function usePendingRequests() {
+  const currentBranch = useAuthStore((s) => s.currentBranch)
+  const branchId = currentBranch?.id
   return useQuery({
-    queryKey: ['employee-requests', 'pending-inbox'],
+    queryKey: ['employee-requests', 'pending-inbox', branchId],
     queryFn: async () => {
       const response = await employeeRequestApi.list({
+        branch_id: branchId,
         status: 'PENDING',
         sort: ['created_at:asc'],
         per_page: 50,
       })
       return response.data.data
     },
+    enabled: branchId !== undefined,
     refetchInterval: 60_000,
   })
 }

@@ -14,7 +14,7 @@ class ApproveEmployeeRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'salary_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'salary_pct' => ['nullable', 'numeric', 'min:0', 'max:200'],
             'salary_day' => ['nullable', 'numeric', 'min:0'],
             'prima_pct' => ['nullable', 'numeric', 'min:0', 'max:200'],
             'prima' => ['nullable', 'numeric', 'min:0'],

@@ -95,7 +95,7 @@ function InnerDialog({ request, onClose }: { readonly request: EmployeeRequest; 
                   <Input
                     type="number"
                     min="0"
-                    max="100"
+                    max="200"
                     step="1"
                     className="w-20"
                     {...register('salary_pct', { valueAsNumber: true })}

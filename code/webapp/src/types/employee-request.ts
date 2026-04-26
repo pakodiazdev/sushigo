@@ -31,6 +31,7 @@ export interface EmployeeRequestFilters {
   employee_id?: string
   type?: EmployeeRequestType
   status?: EmployeeRequestStatus | EmployeeRequestStatus[]
+  branch_id?: number
   per_page?: number
   sort?: string[]
 }

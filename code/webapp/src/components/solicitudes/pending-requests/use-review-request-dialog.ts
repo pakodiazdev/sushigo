@@ -7,7 +7,7 @@ import type { EmployeeRequest, ExtraDayPayload } from '@/types/employee-request'
 
 const schema = z.object({
   salary_type: z.enum(['registered', 'agreed']),
-  salary_pct: z.number().min(0).max(100),
+  salary_pct: z.number().min(0).max(200),
   prima_type: z.enum(['legal', 'agreed']),
   prima_pct: z.number().min(0).max(200),
   notes: z.string().max(1000).optional(),
