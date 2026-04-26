@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -23,7 +24,7 @@ use Illuminate\Validation\ValidationException;
  *
  *   @OA\Response(response=200, description="Day cancelled", @OA\JsonContent(@OA\Property(property="data", type="null"), @OA\Property(property="status", type="string", example="ok"))),
  *   @OA\Response(response=401, description="Unauthenticated"),
- *   @OA\Response(response=403, description="Forbidden — requires employee-requests.approve"),
+ *   @OA\Response(response=403, description="Forbidden — requires employee-requests.cancel or employee-requests.approve"),
  *   @OA\Response(response=404, description="Not Found"),
  *   @OA\Response(response=422, description="Validation Error — date is in the past", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
@@ -52,17 +53,19 @@ class CancelNegotiatedExtraDayController extends Controller
             ]);
         }
 
-        // If linked to an EmployeeRequest, mark it as CANCELLED too
-        $record->loadMissing('employeeRequest');
-        if ($record->employeeRequest !== null) {
-            $record->employeeRequest->update([
-                'status' => 'CANCELLED',
-                'requestable_type' => null,
-                'requestable_id' => null,
-            ]);
-        }
+        DB::transaction(function () use ($record): void {
+            // If linked to an EmployeeRequest, mark it as CANCELLED too
+            $record->loadMissing('employeeRequest');
+            if ($record->employeeRequest !== null) {
+                $record->employeeRequest->update([
+                    'status' => 'CANCELLED',
+                    'requestable_type' => null,
+                    'requestable_id' => null,
+                ]);
+            }
 
-        $record->delete();
+            $record->delete();
+        });
 
         return response()->json(['data' => null, 'status' => 'ok']);
     }

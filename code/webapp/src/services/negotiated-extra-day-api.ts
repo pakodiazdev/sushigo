@@ -17,6 +17,7 @@ export const negotiatedExtraDayApi = {
       `/employees/${employeeId}/negotiated-extra-days`,
       { params: filters },
     )
+    // Backend ResponsePaginated envelope: { status, data, meta }
     return res.data
   },
 

@@ -2,25 +2,19 @@
 
 namespace Tests\Feature\NegotiatedExtraDay;
 
-use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\NegotiatedExtraDay;
 use App\Models\ScheduleDay;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\PermissionRegistrar;
-use Tests\TestCase;
 
-class RegisterNegotiatedExtraDayTest extends TestCase
+class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
 {
-    use RefreshDatabase;
-
     protected User $user;
 
     /** Monday 2026-02-23 (ISO dow = 1) */
@@ -29,15 +23,6 @@ class RegisterNegotiatedExtraDayTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
-
-        // Roles required by Employee factory
-        Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
-        Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
-        foreach (Employee::POSITION_ROLES as $roleName) {
-            Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
-        }
 
         // Auth roles/permissions for the managing user
         Permission::firstOrCreate(['name' => 'attendances.create', 'guard_name' => 'api']);

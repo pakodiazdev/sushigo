@@ -9,10 +9,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // ─── Mock api-client ──────────────────────────────────────────────────────────
 
 const mockPost = vi.fn()
+const mockGet = vi.fn()
+const mockDelete = vi.fn()
 
 vi.mock('@/lib/api-client', () => ({
   apiClient: {
     post: (...args: unknown[]) => mockPost(...args),
+    get: (...args: unknown[]) => mockGet(...args),
+    delete: (...args: unknown[]) => mockDelete(...args),
   },
 }))
 
@@ -104,5 +108,80 @@ describe('negotiatedExtraDayApi.register', () => {
 
     expect(result.id).toBe(2)
     expect(result.notes).toBeNull()
+  })
+})
+
+// ─── list ────────────────────────────────────────────────────────────────────
+
+describe('negotiatedExtraDayApi.list', () => {
+  const paginatedResponse = {
+    data: {
+      status: 'ok',
+      data: [
+        {
+          id: 'ned-1',
+          employee_id: 'emp-1',
+          branch_id: 1,
+          date: '2026-06-15',
+          agreed_daily_wage: 800,
+          prima_percent: 75,
+          prima_amount: 600,
+          approved_by: 'mgr-1',
+          status: 'APPROVED',
+          notes: null,
+        },
+      ],
+      meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 },
+    },
+  }
+
+  beforeEach(() => {
+    mockGet.mockResolvedValue(paginatedResponse)
+  })
+
+  it('calls GET /employees/:id/negotiated-extra-days', async () => {
+    await negotiatedExtraDayApi.list('emp-1')
+    expect(mockGet).toHaveBeenCalledWith('/employees/emp-1/negotiated-extra-days', { params: undefined })
+  })
+
+  it('passes filters as query params', async () => {
+    const filters = { date_from: '2026-06-01', date_to: '2026-06-30', per_page: 50 }
+    await negotiatedExtraDayApi.list('emp-1', filters)
+    expect(mockGet).toHaveBeenCalledWith('/employees/emp-1/negotiated-extra-days', { params: filters })
+  })
+
+  it('returns the full paginated response', async () => {
+    const result = await negotiatedExtraDayApi.list('emp-1')
+    expect(result.status).toBe('ok')
+    expect(result.data).toHaveLength(1)
+    expect(result.meta.total).toBe(1)
+  })
+
+  it('propagates errors from the API', async () => {
+    mockGet.mockRejectedValue(new Error('Network error'))
+    await expect(negotiatedExtraDayApi.list('emp-1')).rejects.toThrow('Network error')
+  })
+})
+
+// ─── cancel ──────────────────────────────────────────────────────────────────
+
+describe('negotiatedExtraDayApi.cancel', () => {
+  beforeEach(() => {
+    mockDelete.mockResolvedValue({ data: { data: null, status: 'ok' } })
+  })
+
+  it('calls DELETE /negotiated-extra-days/:id', async () => {
+    await negotiatedExtraDayApi.cancel('ned-abc')
+    expect(mockDelete).toHaveBeenCalledWith('/negotiated-extra-days/ned-abc')
+  })
+
+  it('resolves without a return value on success', async () => {
+    const result = await negotiatedExtraDayApi.cancel('ned-abc')
+    expect(result).toBeUndefined()
+  })
+
+  it('propagates errors from the API', async () => {
+    mockDelete.mockRejectedValue(new Error('Not Found'))
+    await expect(negotiatedExtraDayApi.cancel('bad-id')).rejects.toThrow('Not Found')
   })
 })

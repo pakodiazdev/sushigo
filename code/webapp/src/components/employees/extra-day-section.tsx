@@ -3,6 +3,7 @@ import { Plus, History, X, CalendarDays, XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth.store'
 import { useDialogAnimation } from './use-dialog-animation'
 import { useNegotiatedExtraDays } from './use-negotiated-extra-days'
@@ -30,10 +31,6 @@ function formatDate(dateStr: string): string {
     month: 'short',
     year: 'numeric',
   })
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount)
 }
 
 // ── History dialog ─────────────────────────────────────────────────────────────
@@ -65,11 +62,11 @@ function ExtraDayHistoryDialog({
 
   const content = (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      <button
-        type="button"
-        className={`absolute inset-0 bg-black/50 ${backdropCls} cursor-default appearance-none border-none p-0`}
+      <div
+        role="presentation"
+        aria-hidden="true"
+        className={`absolute inset-0 bg-black/50 ${backdropCls} cursor-default`}
         onClick={onClose}
-        aria-label="Cerrar"
       />
 
       <dialog

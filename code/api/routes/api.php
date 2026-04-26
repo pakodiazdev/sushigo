@@ -305,7 +305,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/', CreateEmployeeRequestController::class)->name('store')->middleware('permission:employee-requests.create');
         Route::patch('/{id}/approve', ApproveEmployeeRequestController::class)->name('approve')->middleware('permission:employee-requests.approve');
         Route::patch('/{id}/reject', RejectEmployeeRequestController::class)->name('reject')->middleware('permission:employee-requests.approve');
-        Route::patch('/{id}/cancel', CancelEmployeeRequestController::class)->name('cancel')->middleware('permission:employee-requests.cancel');
+        Route::patch('/{id}/cancel', CancelEmployeeRequestController::class)->name('cancel')->middleware('permission:employee-requests.cancel|employee-requests.approve');
     });
 
     // Attendances Module (All Protected)
