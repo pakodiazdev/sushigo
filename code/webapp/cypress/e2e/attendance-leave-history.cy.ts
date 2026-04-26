@@ -50,42 +50,37 @@ describe('Leave History — employee detail panel', () => {
     })
 
     it('registers a leave, then verifies summary and full history dialog', () => {
-        // ── 1. Register a medical absence from /attendance/today ────────────────
+        // ── 1. Register a medical absence via the employee detail panel ──────────
+        // The "Registrar ausencia" button was moved from the attendance card to the
+        // Ausencias section in the employee detail panel.
 
-        cy.intercept('GET', '**/attendances/today*').as('refetchAttendance')
         cy.intercept('GET', '**/leave-types*').as('leaveTypesLoad')
         cy.intercept('POST', '**/leaves').as('registerLeave')
-
-        cy.contains('p', 'Mendoza, Carlos', { timeout: 10_000 })
-            .closest('div.rounded-xl')
-            .scrollIntoView()
-            .contains('button', 'Registrar ausencia')
-            .scrollIntoView()
-            .click({ force: true })
-
-        cy.contains('h3', 'Registrar ausencia').should('be.visible')
-        cy.wait('@leaveTypesLoad')
-        cy.get('dialog select').first().select('Incapacidad médica')
-        cy.get('dialog').contains('button', 'Registrar ausencia').click({ force: true })
-
-        cy.wait('@registerLeave').its('response.statusCode').should('eq', 201)
-        cy.wait('@refetchAttendance', { timeout: 10_000 })
-
-        // ── 2. Navigate to /employees and open Mendoza detail panel ─────────────
-
-        cy.clock().then((clock) => clock.restore())
 
         cy.visitWithAuth('/employees')
         cy.url().should('include', '/employees', { timeout: 10_000 })
         cy.closeDevDebugger()
 
-        // Find Mendoza's row and click the detail button
         cy.contains('td', 'Carlos Mendoza', { timeout: 10_000 })
             .closest('tr')
             .find('button[title="Ver detalle"]')
             .click()
 
-        // Panel should open
+        cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
+        cy.contains('h3', 'Ausencias').parent().contains('button', 'Registrar').scrollIntoView().click()
+
+        cy.contains('h3', 'Registrar ausencia', { timeout: 6_000 }).should('be.visible')
+        cy.wait('@leaveTypesLoad')
+        cy.get('dialog select').first().select('Incapacidad médica')
+        cy.get('dialog').contains('button', 'Registrar ausencia').click({ force: true })
+
+        cy.wait('@registerLeave').its('response.statusCode').should('eq', 201)
+
+        // ── 2. The employee panel is still open; restore clock ───────────────────
+
+        cy.clock().then((clock) => clock.restore())
+
+        // Panel should still be showing Mendoza's detail
         cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
 
         // ── 3. Verify LeaveSummarySection shows the registered leave ────────────

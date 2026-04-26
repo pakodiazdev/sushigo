@@ -40,13 +40,14 @@ describe('Schedule History', () => {
   it('shows schedule history with ACTIVO badge and date range', () => {
     // ── 1. Find and click on an employee with schedule ───────────────────────
     // EMP-001 is seeded with an active schedule (Mon-Sat 13:00-22:00)
-    cy.contains('tr', 'EMP-001', { timeout: 10_000 }).click()
+    cy.contains('tr', 'EMP-001', { timeout: 10_000 }).find('button[title="Ver detalle"]').click()
 
-    // Wait for employee detail to load
-    cy.contains('Horario activo', { timeout: 10_000 }).should('be.visible')
+    // Wait for employee detail panel to open
+    cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
 
     // ── 2. Open schedule dialog ──────────────────────────────────────────────
-    cy.contains('button', 'Ver horario').click()
+    cy.contains('Horario activo', { timeout: 10_000 }).scrollIntoView().should('be.visible')
+    cy.contains('button', 'Ver horario').scrollIntoView().click()
 
     // Dialog should open with tabs
     cy.contains('dialog', 'Horarios', { timeout: 5_000 }).should('be.visible')
@@ -89,7 +90,7 @@ describe('Schedule History', () => {
     cy.contains('button', 'Crear').click()
 
     // Wait for detail view
-    cy.contains('Test NoSchedule', { timeout: 10_000 }).should('be.visible')
+    cy.contains('Test NoSchedule', { timeout: 10_000 }).scrollIntoView().should('be.visible')
 
     // Should have "Agregar horario" button instead of "Ver horario"
     cy.contains('button', 'Agregar horario').should('be.visible')
@@ -97,15 +98,13 @@ describe('Schedule History', () => {
     // Click to open dialog
     cy.contains('button', 'Agregar horario').click()
 
-    // Dialog opens but there are no tabs (no schedule yet)
-    cy.contains('dialog', 'Horarios', { timeout: 5_000 }).should('be.visible')
+    // Dialog opens in create mode — title is "Nuevo horario", no tabs
+    cy.contains('Nuevo horario', { timeout: 5_000 }).should('be.visible')
 
     // There should be no History tab visible when no schedule exists
-    cy.get('dialog').within(() => {
-      cy.contains('button', 'Historial').should('not.exist')
-    })
+    cy.contains('button', 'Historial').should('not.exist')
 
-    // Close dialog
-    cy.contains('button', 'Cerrar').click()
+    // Close dialog via the slide-panel X button
+    cy.contains('Close panel').parent().click({ force: true })
   })
 })

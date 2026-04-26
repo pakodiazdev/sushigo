@@ -1,3 +1,4 @@
+import { startTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -177,9 +178,9 @@ export function useCreateScheduleInline(
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'current-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['schedule-history', periodId] })
-      showSuccess('Horario creado correctamente')
       form.reset()
-      onSuccess()
+      showSuccess('Horario creado correctamente')
+      startTransition(() => onSuccess())
     },
     onError: () => {
       showError('Error al crear el horario. Verifica los datos e intenta de nuevo.')

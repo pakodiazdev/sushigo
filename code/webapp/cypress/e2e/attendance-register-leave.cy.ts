@@ -25,7 +25,7 @@ const { email: adminEmail, password: adminPassword } = users.admin
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task('test:reset', 'attendance', { timeout: 60_000 })
+  cy.task('test:reset', 'attendance', { timeout: 120_000 })
 })
 
 const TEST_TIME_ISO = '2026-04-09T10:00:00-06:00'
@@ -58,21 +58,33 @@ function getCard(lastName: string, firstName: string) {
 }
 
 /**
- * Opens the register-leave dialog for an employee and submits a
- * FIXED_PERCENTAGE leave (Incapacidad médica).
+ * Opens the register-leave dialog for an employee via the /employees panel
+ * (the "Registrar ausencia" button was moved from the attendance card to the
+ * employee detail panel in the Ausencias section), submits a FIXED_PERCENTAGE
+ * leave (Incapacidad médica), then navigates back to /attendance/today so
+ * callers can verify the attendance card.
  */
-function registerMedicalAbsence(lastName: string, firstName: string) {
-  cy.intercept('GET', '**/attendances/today*').as('refetchAttendance')
+function registerMedicalAbsence(firstName: string, lastName: string) {
   cy.intercept('GET', '**/leave-types*').as('leaveTypesLoad')
   cy.intercept('POST', '**/leaves').as('registerLeave')
+  cy.intercept('GET', '**/attendances/today*').as('refetchAttendance')
 
-  getCard(lastName, firstName)
-    .contains('button', 'Registrar ausencia')
-    .scrollIntoView()
-    .click({ force: true })
+  cy.visitWithAuth('/employees')
+  cy.url().should('include', '/employees', { timeout: 10_000 })
+  cy.closeDevDebugger()
+
+  cy.contains('td', `${firstName} ${lastName}`, { timeout: 10_000 })
+    .closest('tr')
+    .find('button[title="Ver detalle"]')
+    .click()
+
+  cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
+
+  // Click the "Registrar" button in the Ausencias section header
+  cy.contains('h3', 'Ausencias').parent().contains('button', 'Registrar').scrollIntoView().click()
 
   // Dialog should open
-  cy.contains('h3', 'Registrar ausencia').should('be.visible')
+  cy.contains('h3', 'Registrar ausencia', { timeout: 6_000 }).should('be.visible')
 
   // Wait for leave types to load then pick medical
   cy.wait('@leaveTypesLoad')
@@ -82,6 +94,11 @@ function registerMedicalAbsence(lastName: string, firstName: string) {
   cy.get('dialog').contains('button', 'Registrar ausencia').click({ force: true })
 
   cy.wait('@registerLeave').its('response.statusCode').should('eq', 201)
+
+  // Navigate back to /attendance/today so callers can verify the attendance card
+  cy.visitWithAuth('/attendance/today')
+  cy.url().should('include', '/attendance/today', { timeout: 10_000 })
+  cy.closeDevDebugger()
   cy.wait('@refetchAttendance', { timeout: 10_000 })
 }
 
@@ -91,7 +108,7 @@ function registerMedicalAbsence(lastName: string, firstName: string) {
 
 describe('Register Leave — Incapacidad médica (happy path)', () => {
   it('registers a medical absence and shows the Ausencia badge on the card', () => {
-    registerMedicalAbsence('Mendoza', 'Carlos')
+    registerMedicalAbsence('Carlos', 'Mendoza')
 
     getCard('Mendoza', 'Carlos').within(() => {
       cy.contains('Ausencia', { timeout: 10_000 }).should('be.visible')
@@ -109,16 +126,29 @@ describe('Register Leave — cancel closes dialog without changes', () => {
   it('closes the dialog when Cancel is clicked and leaves employee pending', () => {
     cy.intercept('GET', '**/leave-types*').as('leaveTypesLoad')
 
-    getCard('García', 'María')
-      .contains('button', 'Registrar ausencia')
-      .click({ force: true })
+    cy.visitWithAuth('/employees')
+    cy.url().should('include', '/employees', { timeout: 10_000 })
+    cy.closeDevDebugger()
 
-    cy.contains('h3', 'Registrar ausencia').should('be.visible')
+    cy.contains('td', 'María García', { timeout: 10_000 })
+      .closest('tr')
+      .find('button[title="Ver detalle"]')
+      .click()
+
+    cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h3', 'Ausencias').parent().contains('button', 'Registrar').scrollIntoView().click()
+
+    cy.contains('h3', 'Registrar ausencia', { timeout: 6_000 }).should('be.visible')
     cy.wait('@leaveTypesLoad')
 
     cy.contains('button', 'Cancelar').click()
 
     cy.contains('h3', 'Registrar ausencia').should('not.exist')
+
+    // Navigate back to /attendance/today to verify the card is still pending
+    cy.visitWithAuth('/attendance/today')
+    cy.url().should('include', '/attendance/today', { timeout: 10_000 })
+    cy.closeDevDebugger()
 
     getCard('García', 'María').within(() => {
       cy.contains('Sin registro').should('be.visible')

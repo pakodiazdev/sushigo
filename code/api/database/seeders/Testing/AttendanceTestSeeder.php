@@ -57,6 +57,7 @@ class AttendanceTestSeeder extends Seeder
         $periodIdMap = $this->seedEmploymentPeriods($employeeIdMap, $branchId, $hireDate, $now);
         $scheduleData = $this->seedSchedules($employeeIdMap, $periodIdMap, $hireDate, $now);
         $this->seedScheduleDays($scheduleData, $now);
+        $this->seedWageHistories($employeeIdMap, $hireDate, $now);
     }
 
     private function adminProfiles(): array
@@ -311,6 +312,29 @@ class AttendanceTestSeeder extends Seeder
         foreach (array_chunk($dayRows, 50) as $chunk) {
             DB::table('schedule_days')->insert($chunk);
         }
+    }
+
+    /**
+     * Seeds a wage history entry for every employee so extra-day request forms
+     * can compute daily_wage (= hourly_rate × weekly_scheduled_hours / 6).
+     * Schedule: 9h/day × 6 days = 54h/week; hourly_rate = 40.00 MXN → daily_wage = 360.
+     */
+    private function seedWageHistories(array $employeeIdMap, string $hireDate, $now): void
+    {
+        $wageRows = [];
+        foreach ($employeeIdMap as $employeeId) {
+            $wageRows[] = [
+                'employee_id' => $employeeId,
+                'public_id' => (string) Str::ulid(),
+                'hourly_rate' => '40.00',
+                'weekly_scheduled_hours' => '54.00',
+                'effective_from' => $hireDate,
+                'effective_to' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+        DB::table('wage_histories')->insert($wageRows);
     }
 
     private function restDayRow(int $scheduleId, int $dow, $now): array

@@ -217,7 +217,7 @@ export default defineConfig({
     },
   },
   chromeWebSecurity: false,
-  video: true,
+  video: false,
   screenshotOnRunFailure: true,
   viewportWidth: 1280,
   viewportHeight: 720,

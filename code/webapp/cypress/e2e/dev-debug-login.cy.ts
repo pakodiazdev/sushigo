@@ -18,7 +18,7 @@
  */
 
 before(() => {
-    cy.task('test:reset', null, { timeout: 60_000 })
+    cy.task('test:reset', null, { timeout: 120_000 })
 })
 
 beforeEach(() => {

@@ -23,7 +23,7 @@ const { email: adminEmail, password: adminPassword } = users.admin
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task('test:reset', 'attendance-today-leave', { timeout: 60_000 })
+  cy.task('test:reset', 'attendance-today-leave', { timeout: 120_000 })
 })
 
 // Test time: 10:00 CDMX (before EMP-008's leave starts at 13:00)
