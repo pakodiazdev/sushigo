@@ -1,9 +1,12 @@
+import { useMemo } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { useWageHistory } from '@/services/employee-hooks'
 import { useCreateEmployeeRequest } from '@/services/employee-request-hooks'
+import { scheduleApi } from '@/services/schedule-api'
 
 const extraDaySchema = z.object({
   date: z.string().min(1, 'La fecha es requerida'),
@@ -19,6 +22,28 @@ export type ExtraDayFormValues = z.infer<typeof extraDaySchema>
 export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
   const queryClient = useQueryClient()
   const { data: wages, isLoading: isLoadingWages } = useWageHistory(employeeId)
+
+  const scheduleQuery = useQuery({
+    queryKey: ['employees', employeeId, 'current-schedule'],
+    queryFn: async () => {
+      try {
+        const res = await scheduleApi.getCurrent(employeeId)
+        return res.data.data
+      } catch (err) {
+        if (isAxiosError(err) && err.response?.status === 404) return null
+        throw err
+      }
+    },
+    enabled: !!employeeId,
+  })
+
+  // ISO days of week (1=Mon…7=Sun) that are working days → disabled in the calendar
+  const disabledDaysOfWeek = useMemo<number[]>(() => {
+    if (!scheduleQuery.data?.days) return []
+    return scheduleQuery.data.days
+      .filter((d) => !d.is_day_off)
+      .map((d) => d.day_of_week)
+  }, [scheduleQuery.data])
   const currentWage = wages?.[0]
 
   // daily wage = hourly_rate × (weekly_scheduled_hours / 6 days)
@@ -100,5 +125,7 @@ export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
     total,
     handleSubmit,
     isPending: mutation.isPending,
+    disabledDaysOfWeek,
+    isLoadingSchedule: scheduleQuery.isLoading,
   }
 }
