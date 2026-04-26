@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\NegotiatedExtraDay;
 use App\Support\Traits\ResolvesActiveEmploymentPeriod;
+use App\Support\Traits\ValidatesRestDay;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -25,7 +26,7 @@ use Illuminate\Validation\ValidationException;
  */
 class RegisterNegotiatedExtraDayAction
 {
-    use ResolvesActiveEmploymentPeriod;
+    use ResolvesActiveEmploymentPeriod, ValidatesRestDay;
 
     /**
      * @param  array{employee_id: string, date: string, agreed_daily_wage: float, prima_percent: float, notes: ?string}  $data
@@ -39,6 +40,8 @@ class RegisterNegotiatedExtraDayAction
         $this->guardNoDuplicate($employee->id, $data['date']);
 
         $period = $this->resolveActiveEmploymentPeriod($employee->id, $data['date']);
+
+        $this->guardIsRestDay($period, $data['date']);
 
         $agreedDailyWage = (float) $data['agreed_daily_wage'];
         $primaPercent = (float) $data['prima_percent'];
