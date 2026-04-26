@@ -6,15 +6,15 @@ import { cn } from '@/lib/utils'
 
 export interface CalendarPickerProps {
   /** Selected date in YYYY-MM-DD format, or empty string */
-  value: string
-  onChange: (date: string) => void
+  readonly value: string
+  readonly onChange: (date: string) => void
   /**
    * ISO days of week (1=Mon … 7=Sun) that are DISABLED.
    * Pass the employee's working days so only rest days are selectable.
    */
-  disabledDaysOfWeek?: number[]
-  placeholder?: string
-  className?: string
+  readonly disabledDaysOfWeek?: number[]
+  readonly placeholder?: string
+  readonly className?: string
 }
 
 type View = 'day' | 'month' | 'year'
@@ -74,10 +74,10 @@ function yearPageStart(year: number, page: number): number {
 // ── CalendarGrid ──────────────────────────────────────────────────────────────
 
 interface CalendarGridProps {
-  value: string
-  onSelect: (iso: string) => void
-  disabledSet: Set<number>
-  disabledCount: number
+  readonly value: string
+  readonly onSelect: (iso: string) => void
+  readonly disabledSet: Set<number>
+  readonly disabledCount: number
 }
 
 function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarGridProps) {
@@ -96,7 +96,7 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
   const cells: (number | null)[] = [
-    ...Array<null>(startOffset).fill(null),
+    ...Array.from({ length: startOffset }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ]
 
@@ -130,7 +130,11 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
   // ── Cycle header label ──────────────────────────────────────────────────────
 
   function cycleView() {
-    setView((v) => (v === 'day' ? 'month' : v === 'month' ? 'year' : 'day'))
+    setView((v) => {
+      if (v === 'day') return 'month'
+      if (v === 'month') return 'year'
+      return 'day'
+    })
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -239,8 +243,8 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
 
           {/* Day cells */}
           <div className="grid grid-cols-7 gap-0.5">
-            {cells.map((day, idx) => {
-              if (day === null) return <div key={`e-${idx}`} />
+            {cells.map((day) => {
+              if (day === null) return null
 
               const date = new Date(year, month, day)
               const iso = toIso(date)
@@ -342,8 +346,8 @@ export function CalendarPicker({
 
       {/* Dropdown */}
       {open && (
-        <div
-          role="dialog"
+        <dialog
+          open
           aria-label="Seleccionar fecha"
           className="absolute left-0 top-full z-50 mt-1 w-72 rounded-lg border border-border bg-background shadow-lg"
         >
@@ -353,7 +357,7 @@ export function CalendarPicker({
             disabledSet={disabledSet}
             disabledCount={disabledDaysOfWeek.length}
           />
-        </div>
+        </dialog>
       )}
     </div>
   )

@@ -47,9 +47,9 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Date — calendar with working days disabled */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">
+          <p className="text-sm font-medium text-foreground">
             Fecha <span className="text-destructive">*</span>
-          </label>
+          </p>
           <RestDayPicker
             employeeId={employee.id}
             value={watch('date')}

@@ -83,7 +83,7 @@ export function useExtraDayForm(employeeId: string, onSuccess: () => void) {
       })
 
       form.reset()
-      void queryClient.invalidateQueries({ queryKey: ['negotiated-extra-days'] })
+      await queryClient.invalidateQueries({ queryKey: ['negotiated-extra-days'] })
       onSuccess()
     } catch {
       // error handled by mutation.onError toast

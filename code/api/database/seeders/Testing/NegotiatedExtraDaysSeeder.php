@@ -22,79 +22,52 @@ use Illuminate\Support\Str;
  */
 class NegotiatedExtraDaysSeeder extends Seeder
 {
+    private int $employeeId;
+
+    private int $branchId;
+
+    private int $adminUserId;
+
+    private string $now;
+
     public function run(): void
     {
-        $now = now();
-
-        $employee = DB::table('employees')->where('code', 'EMP-001')->first();
-        $branchId = DB::table('branches')->where('code', 'MAIN')->value('id');
-        $adminUserId = DB::table('users')->where('email', 'admin@sushigo.com')->value('id');
+        $this->now = (string) now();
+        $this->employeeId = (int) DB::table('employees')->where('code', 'EMP-001')->value('id');
+        $this->branchId = (int) DB::table('branches')->where('code', 'MAIN')->value('id');
+        $this->adminUserId = (int) DB::table('users')->where('email', 'admin@sushigo.com')->value('id');
 
         DB::table('negotiated_extra_days')->insert([
-            [
-                'public_id' => (string) Str::ulid(),
-                'employee_id' => $employee->id,
-                'request_id' => null,
-                'branch_id' => $branchId,
-                'date' => '2026-03-15',
-                'agreed_daily_wage' => '600.0000',
-                'prima_percent' => '100.0000',
-                'prima_amount' => '600.0000',
-                'approved_by' => $adminUserId,
-                'status' => 'APPROVED',
-                'notes' => 'Turno especial',
-                'created_at' => $now,
-                'updated_at' => $now,
-                'deleted_at' => null,
-            ],
-            [
-                'public_id' => (string) Str::ulid(),
-                'employee_id' => $employee->id,
-                'request_id' => null,
-                'branch_id' => $branchId,
-                'date' => '2026-04-05',
-                'agreed_daily_wage' => '500.0000',
-                'prima_percent' => '50.0000',
-                'prima_amount' => '250.0000',
-                'approved_by' => $adminUserId,
-                'status' => 'APPROVED',
-                'notes' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-                'deleted_at' => null,
-            ],
-            [
-                'public_id' => (string) Str::ulid(),
-                'employee_id' => $employee->id,
-                'request_id' => null,
-                'branch_id' => $branchId,
-                'date' => '2026-04-20',
-                'agreed_daily_wage' => '700.0000',
-                'prima_percent' => '0.0000',
-                'prima_amount' => '0.0000',
-                'approved_by' => $adminUserId,
-                'status' => 'APPROVED',
-                'notes' => 'Sin prima',
-                'created_at' => $now,
-                'updated_at' => $now,
-                'deleted_at' => null,
-            ],
-            [
-                'public_id' => (string) Str::ulid(),
-                'employee_id' => $employee->id,
-                'request_id' => null,
-                'branch_id' => $branchId,
-                'date' => '2026-05-10',
-                'agreed_daily_wage' => '800.0000',
-                'prima_percent' => '100.0000',
-                'prima_amount' => '800.0000',
-                'approved_by' => $adminUserId,
-                'status' => 'APPROVED',
-                'notes' => 'Próximo extra',
-                'created_at' => $now,
-                'updated_at' => $now,
-                'deleted_at' => null,
-            ],
+            $this->row('2026-03-15', '600.0000', '100.0000', '600.0000', 'Turno especial'),
+            $this->row('2026-04-05', '500.0000', '50.0000', '250.0000', null),
+            $this->row('2026-04-20', '700.0000', '0.0000', '0.0000', 'Sin prima'),
+            $this->row('2026-05-10', '800.0000', '100.0000', '800.0000', 'Próximo extra'),
         ]);
+    }
+
+    /** Build a single negotiated_extra_days row with shared fields pre-filled. */
+    private function row(
+        string $date,
+        string $wage,
+        string $primaPercent,
+        string $primaAmount,
+        ?string $notes,
+    ): array {
+        return [
+            'public_id' => (string) Str::ulid(),
+            'employee_id' => $this->employeeId,
+            'request_id' => null,
+            'branch_id' => $this->branchId,
+            'date' => $date,
+            'agreed_daily_wage' => $wage,
+            'prima_percent' => $primaPercent,
+            'prima_amount' => $primaAmount,
+            'approved_by' => $this->adminUserId,
+            'status' => 'APPROVED',
+            'notes' => $notes,
+            'created_at' => $this->now,
+            'updated_at' => $this->now,
+            'deleted_at' => null,
+        ];
     }
 }
