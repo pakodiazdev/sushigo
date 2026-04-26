@@ -28,6 +28,14 @@ vi.mock('@/components/ui/toast-provider', () => ({
     useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
 }))
 
+const mockAuthStore = {
+    currentBranch: { id: 1 } as { id: number } | null,
+}
+
+vi.mock('@/stores/auth.store', () => ({
+    useAuthStore: (selector: (s: typeof mockAuthStore) => unknown) => selector(mockAuthStore),
+}))
+
 import {
     useEmployeeRequests,
     usePendingRequestsCount,
@@ -97,6 +105,7 @@ describe('useEmployeeRequests', () => {
 describe('usePendingRequestsCount', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        mockAuthStore.currentBranch = { id: 1 }
     })
 
     it('returns pending count from meta.total', async () => {
@@ -106,7 +115,7 @@ describe('usePendingRequestsCount', () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true))
         expect(result.current.data).toBe(5)
-        expect(mockList).toHaveBeenCalledWith({ status: 'PENDING', per_page: 1 })
+        expect(mockList).toHaveBeenCalledWith({ branch_id: 1, status: 'PENDING', per_page: 1 })
     })
 
     it('returns 0 when meta is null', async () => {
@@ -130,6 +139,18 @@ describe('usePendingRequestsCount', () => {
     it('does not fire API call when enabled=false', () => {
         const { result } = renderHook(
             () => usePendingRequestsCount({ enabled: false }),
+            { wrapper: createWrapper() },
+        )
+
+        expect(result.current.fetchStatus).toBe('idle')
+        expect(mockList).not.toHaveBeenCalled()
+    })
+
+    it('does not fire API call when currentBranch is null', () => {
+        mockAuthStore.currentBranch = null
+
+        const { result } = renderHook(
+            () => usePendingRequestsCount(),
             { wrapper: createWrapper() },
         )
 
@@ -421,9 +442,10 @@ describe('useCancelEmployeeRequest', () => {
 describe('usePendingRequests', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        mockAuthStore.currentBranch = { id: 1 }
     })
 
-    it('fetches pending requests sorted by created_at asc', async () => {
+    it('fetches pending requests scoped to current branch', async () => {
         const pendingItems = [{ id: 'req-1', status: 'PENDING' }]
         mockList.mockResolvedValue({ data: { data: pendingItems, meta: null } })
 
@@ -431,7 +453,12 @@ describe('usePendingRequests', () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true))
         expect(result.current.data).toEqual(pendingItems)
-        expect(mockList).toHaveBeenCalledWith({ status: 'PENDING', sort: ['created_at:asc'], per_page: 50 })
+        expect(mockList).toHaveBeenCalledWith({
+            branch_id: 1,
+            status: 'PENDING',
+            sort: ['created_at:asc'],
+            per_page: 50,
+        })
     })
 
     it('returns empty array when no pending requests', async () => {
@@ -449,6 +476,15 @@ describe('usePendingRequests', () => {
         const { result } = renderHook(() => usePendingRequests(), { wrapper: createWrapper() })
 
         expect(result.current.isLoading).toBe(true)
+    })
+
+    it('does not fire API call when currentBranch is null', () => {
+        mockAuthStore.currentBranch = null
+
+        const { result } = renderHook(() => usePendingRequests(), { wrapper: createWrapper() })
+
+        expect(result.current.fetchStatus).toBe('idle')
+        expect(mockList).not.toHaveBeenCalled()
     })
 })
 

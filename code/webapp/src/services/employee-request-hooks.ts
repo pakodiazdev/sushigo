@@ -20,14 +20,16 @@ export function useEmployeeRequests(filters?: EmployeeRequestFilters) {
 }
 
 export function usePendingRequestsCount({ enabled = true }: { enabled?: boolean } = {}) {
+  const currentBranch = useAuthStore((s) => s.currentBranch)
+  const branchId = currentBranch?.id
   return useQuery({
-    queryKey: ['employee-requests', 'pending-count'],
+    queryKey: ['employee-requests', 'pending-count', branchId],
     queryFn: async () => {
-      const response = await employeeRequestApi.list({ status: 'PENDING', per_page: 1 })
+      const response = await employeeRequestApi.list({ branch_id: branchId, status: 'PENDING', per_page: 1 })
       return response.data.meta?.total ?? 0
     },
     refetchInterval: 60_000,
-    enabled,
+    enabled: enabled && branchId !== undefined,
   })
 }
 

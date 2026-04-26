@@ -174,7 +174,7 @@ class EmployeeRequestApiTest extends TestCase
         $requestId = $createResponse->json('data.id');
 
         $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve", [
-            'salary_pct' => 150,
+            'salary_pct' => 250,
         ]);
 
         $response->assertStatus(422)
