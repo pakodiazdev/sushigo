@@ -7,6 +7,7 @@ use App\Enums\EmployeeRequestType;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
+use App\Models\NegotiatedExtraDay;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -806,6 +807,33 @@ class EmployeeRequestApiTest extends TestCase
 
         $requestData = collect($response->json('data'))->firstWhere('id', $requestId);
         $this->assertNull($requestData, 'Request should be removed from listing after employee soft-delete');
+    }
+
+    #[Test]
+    public function it_force_deletes_requestable_when_employee_is_soft_deleted(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+            'auto_approve' => true,
+        ])->assertStatus(201);
+
+        $requestableId = $createResponse->json('data.requestable.id');
+        $this->assertNotNull($requestableId, 'An approved request must have a requestable');
+
+        $extraDay = NegotiatedExtraDay::where('public_id', $requestableId)->firstOrFail();
+        $extraDayDbId = $extraDay->id;
+
+        // Soft-deleting the employee should forceDelete the requestable (NegotiatedExtraDay)
+        $employee->delete();
+
+        $this->assertNull(
+            NegotiatedExtraDay::withTrashed()->find($extraDayDbId),
+            'NegotiatedExtraDay should be permanently deleted, not orphaned with null request_id'
+        );
     }
 
     private function extraDayPayload(): array
