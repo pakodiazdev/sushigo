@@ -112,14 +112,14 @@ describe('RestDayPicker — query key', () => {
   it('queries the current-schedule endpoint for the given employeeId', () => {
     mockUseQuery.mockReturnValue({ isLoading: false, data: null })
     render(<RestDayPicker employeeId="emp-42" value="" onChange={noop} />)
-    const callArg = mockUseQuery.mock.calls[0][0] as { queryKey: unknown[] }
+    const callArg = mockUseQuery.mock.calls[0]?.[0] as { queryKey: unknown[] }
     expect(callArg.queryKey).toEqual(['employees', 'emp-42', 'current-schedule'])
   })
 
   it('disables the query when employeeId is empty', () => {
     mockUseQuery.mockReturnValue({ isLoading: false, data: null })
     render(<RestDayPicker employeeId="" value="" onChange={noop} />)
-    const callArg = mockUseQuery.mock.calls[0][0] as { enabled: boolean }
+    const callArg = mockUseQuery.mock.calls[0]?.[0] as { enabled: boolean }
     expect(callArg.enabled).toBe(false)
   })
 })
