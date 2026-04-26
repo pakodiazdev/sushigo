@@ -4,6 +4,7 @@ namespace Tests\Feature\AttendancePayroll;
 
 use App\Enums\EmployeeRequestStatus;
 use App\Enums\EmployeeRequestType;
+use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Models\User;
@@ -718,6 +719,97 @@ class EmployeeRequestApiTest extends TestCase
         $cancelResponse->assertStatus(422);
     }
 
+    #[Test]
+    public function it_lists_employee_requests_filtered_by_branch_id(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+
+        $employeeInBranchA = $this->makeEmployeeWithActivePeriodInBranch($branchA);
+        $employeeInBranchB = $this->makeEmployeeWithActivePeriodInBranch($branchB);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchA->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchB->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $response = $this->getJson("/api/v1/employee-requests?branch_id={$branchA->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.employee_id', $employeeInBranchA->public_id);
+    }
+
+    #[Test]
+    public function it_excludes_requests_from_other_branches_when_filtering_by_branch_id(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+
+        $employeeInBranchA = $this->makeEmployeeWithActivePeriodInBranch($branchA);
+        $employeeInBranchB = $this->makeEmployeeWithActivePeriodInBranch($branchB);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchA->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchB->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $response = $this->getJson("/api/v1/employee-requests?branch_id={$branchB->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.employee_id', $employeeInBranchB->public_id);
+    }
+
+    #[Test]
+    public function it_validates_nonexistent_branch_id_on_list(): void
+    {
+        $response = $this->getJson('/api/v1/employee-requests?branch_id=999999');
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('branch_id');
+    }
+
+    #[Test]
+    public function it_returns_null_employee_fields_when_employee_is_soft_deleted(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        // Soft-delete the employee to simulate deletion after the request was created
+        $employee->delete();
+
+        $response = $this->getJson('/api/v1/employee-requests?per_page=50');
+
+        $response->assertOk();
+
+        $requestData = collect($response->json('data'))->firstWhere('id', $requestId);
+        $this->assertNotNull($requestData, 'Request should still appear in listing after employee soft-delete');
+        $this->assertNull($requestData['employee_id']);
+        $this->assertNull($requestData['employee_name']);
+    }
+
     private function extraDayPayload(): array
     {
         return [
@@ -734,6 +826,18 @@ class EmployeeRequestApiTest extends TestCase
     private function makeEmployeeWithActivePeriod(): Employee
     {
         $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => '2026-01-01',
+            'end_date' => null,
+        ]);
+
+        return $period->employee;
+    }
+
+    private function makeEmployeeWithActivePeriodInBranch(Branch $branch): Employee
+    {
+        $period = EmploymentPeriod::factory()->create([
+            'branch_id' => $branch->id,
             'is_active' => true,
             'start_date' => '2026-01-01',
             'end_date' => null,
