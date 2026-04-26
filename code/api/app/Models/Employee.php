@@ -124,6 +124,13 @@ class Employee extends Model
         return $this->hasManyThrough(EmployeeSchedule::class, EmploymentPeriod::class);
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Employee $employee) {
+            $employee->employeeRequests()->delete();
+        });
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
