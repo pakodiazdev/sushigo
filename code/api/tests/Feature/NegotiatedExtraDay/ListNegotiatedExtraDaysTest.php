@@ -34,6 +34,24 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
         $this->employee = $period->employee;
     }
 
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    private function makeExtraDay(string $date): NegotiatedExtraDay
+    {
+        return NegotiatedExtraDay::factory()->create([
+            'employee_id' => $this->employee->id,
+            'approved_by' => $this->user->id,
+            'date' => $date,
+        ]);
+    }
+
+    private function listUrl(?string $query = null): string
+    {
+        $base = "/api/v1/employees/{$this->employee->public_id}/negotiated-extra-days";
+
+        return $query ? "{$base}?{$query}" : $base;
+    }
+
     #[Test]
     public function returns_paginated_list_of_negotiated_extra_days(): void
     {
@@ -57,22 +75,11 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
     #[Test]
     public function filters_by_date_from(): void
     {
-        NegotiatedExtraDay::factory()->create([
-            'employee_id' => $this->employee->id,
-            'approved_by' => $this->user->id,
-            'date' => '2026-03-01',
-        ]);
-        NegotiatedExtraDay::factory()->create([
-            'employee_id' => $this->employee->id,
-            'approved_by' => $this->user->id,
-            'date' => '2026-04-15',
-        ]);
+        $this->makeExtraDay('2026-03-01');
+        $this->makeExtraDay('2026-04-15');
 
-        $response = $this->getJson(
-            "/api/v1/employees/{$this->employee->public_id}/negotiated-extra-days?date_from=2026-04-01"
-        );
-
-        $response->assertStatus(200)
+        $this->getJson($this->listUrl('date_from=2026-04-01'))
+            ->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.date', '2026-04-15');
     }
@@ -80,22 +87,11 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
     #[Test]
     public function filters_by_date_to(): void
     {
-        NegotiatedExtraDay::factory()->create([
-            'employee_id' => $this->employee->id,
-            'approved_by' => $this->user->id,
-            'date' => '2026-03-01',
-        ]);
-        NegotiatedExtraDay::factory()->create([
-            'employee_id' => $this->employee->id,
-            'approved_by' => $this->user->id,
-            'date' => '2026-04-15',
-        ]);
+        $this->makeExtraDay('2026-03-01');
+        $this->makeExtraDay('2026-04-15');
 
-        $response = $this->getJson(
-            "/api/v1/employees/{$this->employee->public_id}/negotiated-extra-days?date_to=2026-03-31"
-        );
-
-        $response->assertStatus(200)
+        $this->getJson($this->listUrl('date_to=2026-03-31'))
+            ->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.date', '2026-03-01');
     }
@@ -103,27 +99,12 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
     #[Test]
     public function filters_by_date_range(): void
     {
-        NegotiatedExtraDay::factory()->create([
-            'employee_id' => $this->employee->id,
-            'approved_by' => $this->user->id,
-            'date' => '2026-02-10',
-        ]);
-        NegotiatedExtraDay::factory()->create([
-            'employee_id' => $this->employee->id,
-            'approved_by' => $this->user->id,
-            'date' => '2026-03-15',
-        ]);
-        NegotiatedExtraDay::factory()->create([
-            'employee_id' => $this->employee->id,
-            'approved_by' => $this->user->id,
-            'date' => '2026-05-01',
-        ]);
+        $this->makeExtraDay('2026-02-10');
+        $this->makeExtraDay('2026-03-15');
+        $this->makeExtraDay('2026-05-01');
 
-        $response = $this->getJson(
-            "/api/v1/employees/{$this->employee->public_id}/negotiated-extra-days?date_from=2026-03-01&date_to=2026-04-30"
-        );
-
-        $response->assertStatus(200)
+        $this->getJson($this->listUrl('date_from=2026-03-01&date_to=2026-04-30'))
+            ->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.date', '2026-03-15');
     }
@@ -131,9 +112,8 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
     #[Test]
     public function returns_empty_list_when_no_extra_days(): void
     {
-        $response = $this->getJson("/api/v1/employees/{$this->employee->public_id}/negotiated-extra-days");
-
-        $response->assertStatus(200)
+        $this->getJson($this->listUrl())
+            ->assertStatus(200)
             ->assertJsonCount(0, 'data')
             ->assertJsonPath('meta.total', 0);
     }
@@ -141,9 +121,8 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
     #[Test]
     public function returns_404_for_nonexistent_employee(): void
     {
-        $response = $this->getJson('/api/v1/employees/nonexistent-ulid/negotiated-extra-days');
-
-        $response->assertStatus(404);
+        $this->getJson('/api/v1/employees/nonexistent-ulid/negotiated-extra-days')
+            ->assertStatus(404);
     }
 
     #[Test]
@@ -151,9 +130,7 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
     {
         auth()->forgetGuards();
 
-        $response = $this->getJson("/api/v1/employees/{$this->employee->public_id}/negotiated-extra-days");
-
-        $response->assertStatus(401);
+        $this->getJson($this->listUrl())->assertStatus(401);
     }
 
     #[Test]
@@ -162,8 +139,6 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
         $noPermUser = User::factory()->create();
         Passport::actingAs($noPermUser);
 
-        $response = $this->getJson("/api/v1/employees/{$this->employee->public_id}/negotiated-extra-days");
-
-        $response->assertStatus(403);
+        $this->getJson($this->listUrl())->assertStatus(403);
     }
 }

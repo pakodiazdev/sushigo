@@ -22,11 +22,6 @@ function getTrigger(): HTMLElement {
   return document.querySelector('[aria-haspopup="dialog"]') as HTMLElement
 }
 
-function openPicker(value = '') {
-  render(<CalendarPicker value={value} onChange={noop} />)
-  fireEvent.click(getTrigger())
-}
-
 beforeEach(() => {
   vi.clearAllMocks()
 })
