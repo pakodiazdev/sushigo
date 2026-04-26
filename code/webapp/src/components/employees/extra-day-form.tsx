@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Textarea } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
+import { CalendarPicker } from '@/components/ui/calendar-picker'
 import { useExtraDayForm } from './use-extra-day-form'
 import type { Employee } from '@/types/employee'
 
@@ -30,6 +31,8 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
     total,
     handleSubmit,
     isPending,
+    disabledDaysOfWeek,
+    isLoadingSchedule,
   } = useExtraDayForm(employee.id, onClose)
 
   const { register, watch, setValue, formState: { errors } } = form
@@ -44,10 +47,27 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
       size="sm"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Date */}
-        <FormField label="Fecha" required error={errors.date?.message}>
-          <Input type="date" {...register('date')} />
-        </FormField>
+        {/* Date — calendar with working days disabled */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">
+            Fecha <span className="text-destructive">*</span>
+          </label>
+          {isLoadingSchedule ? (
+            <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando horario…
+            </div>
+          ) : (
+            <CalendarPicker
+              value={watch('date')}
+              onChange={(date) => setValue('date', date, { shouldValidate: true })}
+              disabledDaysOfWeek={disabledDaysOfWeek}
+            />
+          )}
+          {errors.date && (
+            <p className="text-xs text-destructive">{errors.date.message}</p>
+          )}
+        </div>
 
         {/* Salary */}
         <div className="space-y-3">
