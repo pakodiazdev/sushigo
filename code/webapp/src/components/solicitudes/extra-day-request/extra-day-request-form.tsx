@@ -37,9 +37,9 @@ export function ExtraDayRequestForm({ isOpen, onClose, employeeId }: ExtraDayReq
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Date */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">
+          <p className="text-sm font-medium text-foreground">
             Fecha <span className="text-destructive">*</span>
-          </label>
+          </p>
           <RestDayPicker
             employeeId={employeeId}
             value={watch('date')}

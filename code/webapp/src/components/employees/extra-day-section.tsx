@@ -10,8 +10,7 @@ import { useNegotiatedExtraDays } from './use-negotiated-extra-days'
 import { useCancelNegotiatedExtraDay } from '@/services/negotiated-extra-day-hooks'
 import { ExtraDayForm } from './extra-day-form'
 import type { Employee } from '@/types/employee'
-import type { NegotiatedExtraDay } from '@/types/negotiated-extra-day'
-import type { ListExtraDaysFilters } from '@/types/negotiated-extra-day'
+import type { ListExtraDaysFilters, NegotiatedExtraDay } from '@/types/negotiated-extra-day'
 import { useState } from 'react'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -45,14 +44,14 @@ function ExtraDayHistoryDialog({
   setFilters,
   canCancel,
 }: {
-  isOpen: boolean
-  onClose: () => void
-  extraDays: NegotiatedExtraDay[]
-  meta: { current_page: number; last_page: number; total: number } | undefined
-  isLoading: boolean
-  filters: ListExtraDaysFilters
-  setFilters: (f: ListExtraDaysFilters) => void
-  canCancel: boolean
+  readonly isOpen: boolean
+  readonly onClose: () => void
+  readonly extraDays: NegotiatedExtraDay[]
+  readonly meta: { current_page: number; last_page: number; total: number } | undefined
+  readonly isLoading: boolean
+  readonly filters: ListExtraDaysFilters
+  readonly setFilters: (f: ListExtraDaysFilters) => void
+  readonly canCancel: boolean
 }) {
   const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, onClose)
   const cancelMutation = useCancelNegotiatedExtraDay()
@@ -62,9 +61,9 @@ function ExtraDayHistoryDialog({
 
   const content = (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      <div
-        role="presentation"
-        aria-hidden="true"
+      <button
+        type="button"
+        aria-label="Cerrar historial de días extra"
         className={`absolute inset-0 bg-black/50 ${backdropCls} cursor-default`}
         onClick={onClose}
       />
