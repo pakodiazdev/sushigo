@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1\NegotiatedExtraDays;
 
+use App\Enums\EmployeeRequestStatus;
 use App\Http\Controllers\Controller;
 use App\Models\NegotiatedExtraDay;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,10 @@ use Illuminate\Validation\ValidationException;
  */
 class CancelNegotiatedExtraDayController extends Controller
 {
+    public function __construct(
+        private readonly ApplicationClock $clock
+    ) {}
+
     public function __invoke(Request $request, string $id): JsonResponse
     {
         $record = NegotiatedExtraDay::query()->where('public_id', $id)->firstOrFail();
@@ -47,7 +52,7 @@ class CancelNegotiatedExtraDayController extends Controller
             throw new AuthorizationException('No tienes permiso para cancelar días extra negociados.');
         }
 
-        if (Carbon::parse($record->date)->lt(Carbon::today())) {
+        if ($record->date < $this->clock->todayInBusinessTz()) {
             throw ValidationException::withMessages([
                 'date' => 'No se puede cancelar un día extra que ya ocurrió.',
             ]);
@@ -58,7 +63,7 @@ class CancelNegotiatedExtraDayController extends Controller
             $record->loadMissing('employeeRequest');
             if ($record->employeeRequest !== null) {
                 $record->employeeRequest->update([
-                    'status' => 'CANCELLED',
+                    'status' => EmployeeRequestStatus::CANCELLED,
                     'requestable_type' => null,
                     'requestable_id' => null,
                 ]);
