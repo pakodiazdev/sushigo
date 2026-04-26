@@ -18,6 +18,15 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function todayIso(): string {
+  const d = new Date()
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
 const STATUS_CONFIG = {
   PENDING: {
     icon: '⏳',
@@ -57,7 +66,7 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
 
   const cancellable =
     request.status === 'PENDING' ||
-    (request.status === 'APPROVED' && date >= new Date().toISOString().slice(0, 10))
+    (request.status === 'APPROVED' && date >= todayIso())
 
   return (
     <>
