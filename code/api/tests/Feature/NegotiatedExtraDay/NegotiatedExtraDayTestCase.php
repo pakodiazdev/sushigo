@@ -3,7 +3,10 @@
 namespace Tests\Feature\NegotiatedExtraDay;
 
 use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Passport\Passport;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -27,5 +30,28 @@ abstract class NegotiatedExtraDayTestCase extends TestCase
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
+    }
+
+    /**
+     * Create (or reuse) the 'manager' role, grant it the given permissions,
+     * create a User with that role, and act as that user via Passport.
+     *
+     * @param  string[]  $permissions
+     */
+    protected function makeManagerWithPermissions(array $permissions): User
+    {
+        foreach ($permissions as $perm) {
+            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'api']);
+        }
+
+        $role = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
+        $role->givePermissionTo($permissions);
+
+        $user = User::factory()->create();
+        $user->assignRole('manager');
+
+        Passport::actingAs($user);
+
+        return $user;
     }
 }

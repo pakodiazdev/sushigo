@@ -8,8 +8,6 @@ use App\Models\NegotiatedExtraDay;
 use App\Models\User;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
 {
@@ -21,14 +19,7 @@ class ListNegotiatedExtraDaysTest extends NegotiatedExtraDayTestCase
     {
         parent::setUp();
 
-        Permission::firstOrCreate(['name' => 'employees.view', 'guard_name' => 'api']);
-        $role = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'api']);
-        $role->givePermissionTo('employees.view');
-
-        $this->user = User::factory()->create();
-        $this->user->assignRole('manager');
-
-        Passport::actingAs($this->user);
+        $this->user = $this->makeManagerWithPermissions(['employees.view']);
 
         $period = EmploymentPeriod::factory()->create(['is_active' => true]);
         $this->employee = $period->employee;
