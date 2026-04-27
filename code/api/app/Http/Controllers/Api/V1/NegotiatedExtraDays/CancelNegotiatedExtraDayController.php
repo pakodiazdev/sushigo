@@ -52,7 +52,10 @@ class CancelNegotiatedExtraDayController extends Controller
             throw new AuthorizationException('No tienes permiso para cancelar días extra negociados.');
         }
 
-        if ($record->date < $this->clock->todayInBusinessTz()) {
+        $recordDate = $record->date->toDateString();
+        $todayInBusinessTz = $this->clock->todayInBusinessTz();
+
+        if ($recordDate < $todayInBusinessTz) {
             throw ValidationException::withMessages([
                 'date' => 'No se puede cancelar un día extra que ya ocurrió.',
             ]);
