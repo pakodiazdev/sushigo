@@ -11,8 +11,8 @@ interface ScheduleCompactSummaryProps {
  * Format: "🕐 L-V · 1:00 PM – 10:00 PM · 🍽 1h · 🏠 Sáb-Dom  ⚡ +3"
  */
 export function ScheduleCompactSummary({ schedule }: ScheduleCompactSummaryProps) {
-  const summaryLine = buildCompactSummaryLine(schedule.days)
-  const overrideCount = schedule.active_overrides?.length ?? 0
+  const summaryLine = buildCompactSummaryLine(schedule.days, schedule.active_overrides ?? [])
+  const overrideCount = (schedule.active_overrides ?? []).filter((o) => o.effective_to !== null).length
 
   if (!summaryLine) return null
 

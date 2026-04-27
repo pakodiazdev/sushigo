@@ -3,8 +3,14 @@ import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 
 // ── Schedule summary helpers ──────────────────────────────────────────────────
 
+/** Returns today's date as YYYY-MM-DD in browser local time. */
+function getLocalDate(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** Single-letter abbreviations for ISO DOW 1=Mon…7=Sun (Mexican convention). */
-const DOW_ABBR  = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const
+const DOW_ABBR = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const
 const DOW_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] as const
 
 /** Compute the compact day-range label (e.g. "L-V", "L-D", "LXV"). */
@@ -25,7 +31,7 @@ function computeDayRangeLabel(working: ScheduleDay[], resting: ScheduleDay[]): s
   )
   if (isRestConsecutive) {
     const firstWork = working[0]!
-    const lastWork  = working[working.length - 1]!
+    const lastWork = working[working.length - 1]!
     return `${DOW_ABBR[firstWork.day_of_week - 1]}-${DOW_ABBR[lastWork.day_of_week - 1]}`
   }
 
@@ -33,35 +39,101 @@ function computeDayRangeLabel(working: ScheduleDay[], resting: ScheduleDay[]): s
 }
 
 /**
- * Given the 7 schedule days, build 1-3 compact summary lines:
- *   • Work:  "L-V · 1:00 PM – 10:00 PM"
+ * Apply indefinite overrides (effective_to === null) to the base days.
+ * Only overrides whose effective_from <= asOf (defaults to today) are applied.
+ * When multiple indefinite overrides exist for the same DOW, the most-recently
+ * started one (latest effective_from) takes precedence.
+ */
+export function resolveScheduleDays(
+  days: ScheduleDay[],
+  overrides: ScheduleDayOverride[],
+  asOf: string = getLocalDate(),
+): ScheduleDay[] {
+  const effective = overrides.filter((o) => o.effective_to === null && o.effective_from <= asOf)
+  if (effective.length === 0) return days
+  return days.map((day) => {
+    const override = [...effective]
+      .filter((o) => o.day_of_week === day.day_of_week)
+      .sort((a, b) => b.effective_from.localeCompare(a.effective_from))[0]
+    if (!override) return day
+    return {
+      ...day,
+      is_day_off: override.is_day_off,
+      expected_start: override.expected_start,
+      expected_lunch_start: override.expected_lunch_start,
+      expected_lunch_end: override.expected_lunch_end,
+      lunch_duration_minutes: override.lunch_duration_minutes,
+      expected_end: override.expected_end,
+    }
+  })
+}
+
+/** Comma-separated abbreviations for a group of days: "L, M, J" */
+function buildGroupLabel(groupDays: ScheduleDay[]): string {
+  return groupDays.map((d) => DOW_ABBR[d.day_of_week - 1]).join(', ')
+}
+
+/**
+ * Build the work-time text line (without icon prefix) for a set of working days.
+ * When `hasIndefiniteOverrides` is true, groups days by (start, end) slot.
+ * Otherwise falls back to the compact consecutive-range format.
+ */
+function buildWorkText(
+  working: ScheduleDay[],
+  resting: ScheduleDay[],
+  hasIndefiniteOverrides: boolean,
+): string {
+  if (hasIndefiniteOverrides) {
+    const groups = new Map<string, ScheduleDay[]>()
+    for (const day of working) {
+      const key = `${day.expected_start}|${day.expected_end}`
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(day)
+    }
+    const groupParts = [...groups.values()]
+      .sort((a, b) => a[0]!.day_of_week - b[0]!.day_of_week)
+      .map((groupDays) => {
+        const ref = groupDays[0]!
+        return `${buildGroupLabel(groupDays)} · ${formatTime(ref.expected_start)} – ${formatTime(ref.expected_end)}`
+      })
+    return `🕐 ${groupParts.join(' · ')}`
+  }
+  const dayRange = computeDayRangeLabel(working, resting)
+  const ref = working[0]!
+  return `🕐 ${dayRange} · ${formatTime(ref.expected_start)} – ${formatTime(ref.expected_end)}`
+}
+
+/**
+ * Given the 7 schedule days (and optional overrides), build 1-3 compact summary lines:
+ *   • Work:  "L-V · 1:00 PM – 10:00 PM"  (or grouped when indefinite overrides exist)
  *   • Lunch: "Comida 1 hr a las 4:00 PM"   (omitted if no lunch configured)
  *   • Rest:  "Descansa Sábado, Domingo"     (omitted if 0 rest days)
  */
-export function buildSummaryLines(days: ScheduleDay[]): { icon: 'work' | 'lunch' | 'rest'; text: string }[] {
-  const working = days.filter((d) => !d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
-  const resting = days.filter((d) =>  d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
+export function buildSummaryLines(
+  days: ScheduleDay[],
+  overrides: ScheduleDayOverride[] = [],
+): { icon: 'work' | 'lunch' | 'rest'; text: string }[] {
+  const asOf = getLocalDate()
+  const resolved = resolveScheduleDays(days, overrides, asOf)
+  const hasIndefiniteOverrides = overrides.some((o) => o.effective_to === null && o.effective_from <= asOf)
+
+  const working = resolved.filter((d) => !d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
+  const resting = resolved.filter((d) => d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
 
   if (working.length === 0) return []
 
-  const dayRange = computeDayRangeLabel(working, resting)
-
-  // ── Times (use the first working day as reference) ───────────────────────────
-  const ref = working[0]!
-  const startT = formatTime(ref.expected_start)
-  const endT   = formatTime(ref.expected_end)
-
   const lines: { icon: 'work' | 'lunch' | 'rest'; text: string }[] = []
 
-  lines.push({ icon: 'work', text: `🕐 ${dayRange} · ${startT} – ${endT}` })
+  lines.push({ icon: 'work', text: buildWorkText(working, resting, hasIndefiniteOverrides) })
 
-  // ── Lunch ────────────────────────────────────────────────────────────────────
-  if (ref.expected_lunch_start && ref.lunch_duration_minutes) {
-    const mins = ref.lunch_duration_minutes
+  // ── Lunch (first working day that has lunch configured) ─────────────────────
+  const lunchRef = working.find((d) => d.expected_lunch_start !== null && d.lunch_duration_minutes !== null)
+  if (lunchRef) {
+    const mins = lunchRef.lunch_duration_minutes!
     const durLabel = mins % 60 === 0 ? `${mins / 60} hr` : `${mins} min`
     lines.push({
       icon: 'lunch',
-      text: `🍽️ ${durLabel} a las ${formatTime(ref.expected_lunch_start)}`,
+      text: `🍽️ ${durLabel} a las ${formatTime(lunchRef.expected_lunch_start)}`,
     })
   }
 
@@ -110,25 +182,30 @@ const DOW_SHORT_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as c
 /**
  * Build a compact one-line summary of the schedule.
  * Format: "🕐 L-V · 1:00 PM – 10:00 PM · 🍽 1h · 🏠 Sáb-Dom"
+ * When indefinite overrides are present:
+ * "🕐 L, M, J, V, S · 1:00 PM – 10:00 PM · X · 2:00 PM – 11:00 PM · 🍽 1h · 🏠 Dom"
  */
-export function buildCompactSummaryLine(days: ScheduleDay[]): string {
-  const working = days.filter((d) => !d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
-  const resting = days.filter((d) => d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
+export function buildCompactSummaryLine(
+  days: ScheduleDay[],
+  overrides: ScheduleDayOverride[] = [],
+): string {
+  const asOf = getLocalDate()
+  const resolved = resolveScheduleDays(days, overrides, asOf)
+  const hasIndefiniteOverrides = overrides.some((o) => o.effective_to === null && o.effective_from <= asOf)
+
+  const working = resolved.filter((d) => !d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
+  const resting = resolved.filter((d) => d.is_day_off).sort((a, b) => a.day_of_week - b.day_of_week)
 
   if (working.length === 0) return ''
 
   const parts: string[] = []
 
-  // Day range (reuse the computeDayRangeLabel function defined above)
-  const dayRange = computeDayRangeLabel(working, resting)
-  const ref = working[0]!
-  const startT = formatTime(ref.expected_start)
-  const endT = formatTime(ref.expected_end)
-  parts.push(`🕐 ${dayRange} · ${startT} – ${endT}`)
+  parts.push(buildWorkText(working, resting, hasIndefiniteOverrides))
 
-  // Lunch duration
-  if (ref.lunch_duration_minutes) {
-    const mins = ref.lunch_duration_minutes
+  // Lunch duration (first working day with lunch configured)
+  const lunchRef = working.find((d) => d.lunch_duration_minutes !== null)
+  if (lunchRef) {
+    const mins = lunchRef.lunch_duration_minutes!
     const durLabel = mins % 60 === 0 ? `${mins / 60}h` : `${mins}min`
     parts.push(`🍽 ${durLabel}`)
   }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildSummaryLines } from '@/components/employees/schedule-section'
-import type { ScheduleDay } from '@/types/schedule'
+import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -191,5 +191,93 @@ describe('buildSummaryLines — line ordering', () => {
     const lines = buildSummaryLines(days)
     expect(lines).toHaveLength(1)
     expect(lines[0]!.icon).toBe('work')
+  })
+})
+
+// ── Indefinite overrides ──────────────────────────────────────────────────────
+
+/** Build a minimal indefinite ScheduleDayOverride for a given DOW. */
+function indefiniteOverride(dow: number, opts: Partial<ScheduleDayOverride> = {}): ScheduleDayOverride {
+  return {
+    id: `override-${dow}`,
+    employment_period_id: 'period-01',
+    day_of_week: dow,
+    effective_from: '2020-01-01',
+    effective_to: null, // indefinite
+    is_day_off: false,
+    expected_start: '14:00',
+    expected_lunch_start: null,
+    expected_lunch_end: null,
+    lunch_duration_minutes: null,
+    expected_end: '23:00',
+    note: null,
+    created_at: '2020-01-01T00:00:00Z',
+    updated_at: '2020-01-01T00:00:00Z',
+    ...opts,
+  }
+}
+
+/** Build a temporary (has effective_to) ScheduleDayOverride. */
+function temporaryOverride(dow: number): ScheduleDayOverride {
+  return {
+    ...indefiniteOverride(dow),
+    id: `temp-${dow}`,
+    effective_to: '2026-04-30',
+  }
+}
+
+describe('buildSummaryLines — indefinite overrides', () => {
+  it('shows two time groups when Wednesday has different hours', () => {
+    // Base: L-S 1:00 PM – 10:00 PM. Override: Wed → 2:00 PM – 11:00 PM
+    const days = [1, 2, 3, 4, 5, 6].map((d) => workDay(d)).concat([restDay(7)])
+    const overrides = [indefiniteOverride(3, { expected_start: '14:00', expected_end: '23:00' })]
+    const [work] = buildSummaryLines(days, overrides)
+    // Wed gets different hours → two groups should appear
+    expect(work!.text).toContain('2:00 PM')
+    expect(work!.text).toContain('11:00 PM')
+    expect(work!.text).toContain('1:00 PM')
+    expect(work!.text).toContain('10:00 PM')
+  })
+
+  it('work line shows comma-separated day abbreviations per group', () => {
+    const days = [1, 2, 3, 4, 5, 6].map((d) => workDay(d)).concat([restDay(7)])
+    const overrides = [indefiniteOverride(3)]
+    const [work] = buildSummaryLines(days, overrides)
+    // Main group should list day abbreviations with commas
+    expect(work!.text).toMatch(/[LMXJVSD], [LMXJVSD]/)
+  })
+
+  it('does not change behavior when no indefinite overrides (only temporary)', () => {
+    const days = [1, 2, 3, 4, 5].map((d) => workDay(d)).concat([restDay(6), restDay(7)])
+    const overrides = [temporaryOverride(1)]
+    const [work] = buildSummaryLines(days, overrides)
+    // Temporary override should not change the summary groups
+    expect(work!.text).toContain('L-V')
+  })
+
+  it('reflects indefinite day-off override in rest days', () => {
+    // Base: all 7 work. Override: Thursday → is_day_off
+    const days = allWeek()
+    const overrides = [indefiniteOverride(4, { is_day_off: true, expected_start: null, expected_end: null })]
+    const lines = buildSummaryLines(days, overrides)
+    const rest = lines.find((l) => l.icon === 'rest')
+    expect(rest).toBeDefined()
+    expect(rest!.text).toContain('Jueves')
+  })
+
+  it('no overrides uses original range format', () => {
+    const days = [1, 2, 3, 4, 5].map((d) => workDay(d)).concat([restDay(6), restDay(7)])
+    const [work] = buildSummaryLines(days, [])
+    expect(work!.text).toContain('L-V')
+  })
+
+  it('does not apply indefinite override with future effective_from', () => {
+    // Override for Wednesday with a date far in the future — should be ignored
+    const days = [1, 2, 3, 4, 5, 6].map((d) => workDay(d)).concat([restDay(7)])
+    const overrides = [indefiniteOverride(3, { effective_from: '2099-01-01', expected_start: '14:00', expected_end: '23:00' })]
+    const [work] = buildSummaryLines(days, overrides)
+    // Future override not applied → original single-range format with no time split
+    expect(work!.text).toContain('L-S')
+    expect(work!.text).not.toContain('2:00 PM')
   })
 })
