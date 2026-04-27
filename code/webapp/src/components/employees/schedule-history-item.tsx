@@ -70,7 +70,7 @@ interface ScheduleHistoryItemProps {
 export function ScheduleHistoryItem({ schedule, isActive }: ScheduleHistoryItemProps) {
   const [expanded, setExpanded] = useState(false)
   const hasOverrides = schedule.overrides.length > 0
-  const compactSummary = buildCompactSummaryLine(schedule.days)
+  const compactSummary = buildCompactSummaryLine(schedule.days, schedule.overrides)
 
   const sortedOverrides = useMemo(() =>
     [...schedule.overrides].sort((a, b) => {

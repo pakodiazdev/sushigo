@@ -2,7 +2,7 @@ import type { EmployeeSchedule } from '@/types/schedule'
 import { buildSummaryLines } from './schedule-section-utils'
 
 export function ScheduleSummary({ schedule }: { readonly schedule: EmployeeSchedule }) {
-  const lines = buildSummaryLines(schedule.days)
+  const lines = buildSummaryLines(schedule.days, schedule.active_overrides ?? [])
   if (lines.length === 0) return null
 
   return (
