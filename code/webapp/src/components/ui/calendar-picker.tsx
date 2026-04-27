@@ -95,9 +95,15 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
   const startOffset = mondayFirstIndex(firstDayOfMonth.getDay())
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
-  const cells: (number | null)[] = [
-    ...Array.from({ length: startOffset }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  const cells: Array<{ kind: 'pad'; key: string } | { kind: 'day'; day: number }> = [
+    ...Array.from({ length: startOffset }, (_, slot) => ({
+      kind: 'pad' as const,
+      key: `pad-${year}-${month}-${slot}`,
+    })),
+    ...Array.from({ length: daysInMonth }, (_, i) => ({
+      kind: 'day' as const,
+      day: i + 1,
+    })),
   ]
 
   function prevDay() {
@@ -243,8 +249,10 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
 
           {/* Day cells */}
           <div className="grid grid-cols-7 gap-0.5">
-            {cells.map((day) => {
-              if (day === null) return null
+            {cells.map((cell) => {
+              if (cell.kind === 'pad') return <div key={cell.key} />
+
+              const day = cell.day
 
               const date = new Date(year, month, day)
               const iso = toIso(date)
