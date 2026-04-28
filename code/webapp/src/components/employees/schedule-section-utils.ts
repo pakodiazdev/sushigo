@@ -1,10 +1,17 @@
 import { formatTime } from '@/lib/time-format'
+import { useApplicationClockStore } from '@/stores/clock.store'
 import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 
 // ── Schedule summary helpers ──────────────────────────────────────────────────
 
-/** Returns today's date as YYYY-MM-DD in browser local time. */
+/**
+ * Returns today's date as YYYY-MM-DD.
+ * Reads `business_date` from the application clock store (honours simulated time).
+ * Falls back to browser local time only when the store has not yet loaded.
+ */
 function getLocalDate(): string {
+  const businessDate = useApplicationClockStore.getState().clockState?.business_date
+  if (businessDate) return businessDate
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
