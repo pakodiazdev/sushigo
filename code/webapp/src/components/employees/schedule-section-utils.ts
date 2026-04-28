@@ -112,8 +112,8 @@ function buildWorkText(
 export function buildSummaryLines(
   days: ScheduleDay[],
   overrides: ScheduleDayOverride[] = [],
+  asOf: string = getLocalDate(),
 ): { icon: 'work' | 'lunch' | 'rest'; text: string }[] {
-  const asOf = getLocalDate()
   const resolved = resolveScheduleDays(days, overrides, asOf)
   const hasIndefiniteOverrides = overrides.some((o) => o.effective_to === null && o.effective_from <= asOf)
 
@@ -188,8 +188,8 @@ const DOW_SHORT_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as c
 export function buildCompactSummaryLine(
   days: ScheduleDay[],
   overrides: ScheduleDayOverride[] = [],
+  asOf: string = getLocalDate(),
 ): string {
-  const asOf = getLocalDate()
   const resolved = resolveScheduleDays(days, overrides, asOf)
   const hasIndefiniteOverrides = overrides.some((o) => o.effective_to === null && o.effective_from <= asOf)
 
@@ -203,7 +203,7 @@ export function buildCompactSummaryLine(
   parts.push(buildWorkText(working, resting, hasIndefiniteOverrides))
 
   // Lunch duration (first working day with lunch configured)
-  const lunchRef = working.find((d) => d.lunch_duration_minutes !== null)
+  const lunchRef = working.find((d) => d.expected_lunch_start !== null && d.lunch_duration_minutes !== null)
   if (lunchRef) {
     const mins = lunchRef.lunch_duration_minutes!
     const durLabel = mins % 60 === 0 ? `${mins / 60}h` : `${mins}min`

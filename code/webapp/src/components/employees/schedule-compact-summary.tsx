@@ -1,4 +1,5 @@
 import { Zap } from 'lucide-react'
+import { useBusinessDate } from '@/stores/clock.store'
 import type { EmployeeSchedule } from '@/types/schedule'
 import { buildCompactSummaryLine } from './schedule-section-utils'
 
@@ -11,7 +12,8 @@ interface ScheduleCompactSummaryProps {
  * Format: "🕐 L-V · 1:00 PM – 10:00 PM · 🍽 1h · 🏠 Sáb-Dom  ⚡ +3"
  */
 export function ScheduleCompactSummary({ schedule }: ScheduleCompactSummaryProps) {
-  const summaryLine = buildCompactSummaryLine(schedule.days, schedule.active_overrides ?? [])
+  const businessDate = useBusinessDate()
+  const summaryLine = buildCompactSummaryLine(schedule.days, schedule.active_overrides ?? [], businessDate ?? undefined)
   const overrideCount = (schedule.active_overrides ?? []).filter((o) => o.effective_to !== null).length
 
   if (!summaryLine) return null

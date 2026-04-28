@@ -1,8 +1,10 @@
+import { useBusinessDate } from '@/stores/clock.store'
 import type { EmployeeSchedule } from '@/types/schedule'
 import { buildSummaryLines } from './schedule-section-utils'
 
 export function ScheduleSummary({ schedule }: { readonly schedule: EmployeeSchedule }) {
-  const lines = buildSummaryLines(schedule.days, schedule.active_overrides ?? [])
+  const businessDate = useBusinessDate()
+  const lines = buildSummaryLines(schedule.days, schedule.active_overrides ?? [], businessDate ?? undefined)
   if (lines.length === 0) return null
 
   return (
