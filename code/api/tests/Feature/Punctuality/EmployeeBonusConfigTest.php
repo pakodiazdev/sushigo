@@ -184,6 +184,48 @@ class EmployeeBonusConfigTest extends TestCase
     }
 
     #[Test]
+    public function assigning_with_earlier_date_deletes_future_open_configs(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        // Existing open config starting in the future (June 1)
+        $futureConfig = EmployeeBonusConfig::create([
+            'public_id' => '01CFGTEST01234567890126',
+            'employee_id' => $this->employee->id,
+            'punctuality_bonus_group_id' => $this->group->id,
+            'effective_from' => '2026-06-01',
+            'effective_to' => null,
+        ]);
+
+        // Assign with an earlier date (May 1) — future config must be deleted
+        $this->postJson("/api/v1/employees/{$this->employee->public_id}/bonus-config", [
+            'bonus_group_id' => $this->group->public_id,
+            'effective_from' => '2026-05-01',
+        ])->assertCreated();
+
+        $this->assertDatabaseMissing('employee_bonus_configs', ['id' => $futureConfig->id]);
+
+        $this->assertDatabaseHas('employee_bonus_configs', [
+            'employee_id' => $this->employee->id,
+            'effective_from' => '2026-05-01',
+            'effective_to' => null,
+        ]);
+    }
+
+    #[Test]
+    public function response_status_field_matches_http_201(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        $this->postJson("/api/v1/employees/{$this->employee->public_id}/bonus-config", [
+            'bonus_group_id' => $this->group->public_id,
+            'effective_from' => '2026-05-01',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('status', 201);
+    }
+
+    #[Test]
     public function assign_bonus_config_requires_authentication(): void
     {
         $this->postJson("/api/v1/employees/{$this->employee->public_id}/bonus-config", [
