@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Production;
 
+use Database\Seeders\PunctualityBonusGroupSeeder;
 use Database\Seeders\PunctualityRangeSeeder;
 use Illuminate\Database\Seeder;
 
@@ -26,6 +27,7 @@ class ProductionSeeder extends Seeder
             \Database\Seeders\UnitOfMeasureSeeder::class,
             \Database\Seeders\UomConversionSeeder::class,
             PunctualityRangeSeeder::class,
+            PunctualityBonusGroupSeeder::class,
         ];
 
         foreach ($seeders as $seederClass) {
