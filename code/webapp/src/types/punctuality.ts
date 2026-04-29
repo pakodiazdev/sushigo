@@ -10,3 +10,18 @@ export interface PunctualityRange {
 export interface UpdatePunctualityRangesPayload {
   ranges: { min_seconds: number; bonus_percentage: number }[]
 }
+
+export interface PunctualityBonusGroup {
+  id: string
+  name: string
+  weekly_bonus_amount: number
+  working_days_divisor: number
+  daily_bonus_amount: number
+  is_active: boolean
+}
+
+export interface CreateBonusGroupPayload {
+  name: string
+  weekly_bonus_amount: number
+  working_days_divisor: number
+}

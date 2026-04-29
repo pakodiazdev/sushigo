@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { useToast } from '@/components/ui/toast-provider'
-import type { PunctualityRange, UpdatePunctualityRangesPayload } from '@/types/punctuality'
+import type {
+  CreateBonusGroupPayload,
+  PunctualityBonusGroup,
+  PunctualityRange,
+  UpdatePunctualityRangesPayload,
+} from '@/types/punctuality'
 import { punctualityConfigApi } from './punctuality-config-api'
 
 export function usePunctualityRanges() {
@@ -28,6 +33,34 @@ export function useUpdatePunctualityRanges() {
     },
     onError: (error: unknown) => {
       showError(getApiErrorMessage(error, 'Error al actualizar los rangos.'), 'Puntualidad')
+    },
+  })
+}
+
+export function useBonusGroups() {
+  return useQuery<PunctualityBonusGroup[]>({
+    queryKey: ['punctuality-bonus-groups'],
+    queryFn: async () => {
+      const response = await punctualityConfigApi.listBonusGroups()
+      return response.data.data
+    },
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useCreateBonusGroup() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (payload: CreateBonusGroupPayload) =>
+      punctualityConfigApi.createBonusGroup(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['punctuality-bonus-groups'] })
+      showSuccess('Grupo de bono creado.', 'Puntualidad')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'Error al crear el grupo.'), 'Puntualidad')
     },
   })
 }
