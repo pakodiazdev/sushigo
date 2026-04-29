@@ -1,6 +1,8 @@
 import { apiClient } from '@/lib/api-client'
 import type {
+  AssignBonusConfigPayload,
   CreateBonusGroupPayload,
+  EmployeeBonusConfig,
   PunctualityBonusGroup,
   PunctualityRange,
   UpdatePunctualityRangesPayload,
@@ -19,4 +21,10 @@ export const punctualityConfigApi = {
 
   createBonusGroup: (payload: CreateBonusGroupPayload) =>
     apiClient.post<{ status: number; data: PunctualityBonusGroup }>('/punctuality/bonus-groups', payload),
+
+  getBonusConfig: (employeeId: string) =>
+    apiClient.get<{ status: number; data: EmployeeBonusConfig[] }>(`/employees/${employeeId}/bonus-config`),
+
+  assignBonusConfig: (employeeId: string, payload: AssignBonusConfigPayload) =>
+    apiClient.post<{ status: number; data: EmployeeBonusConfig }>(`/employees/${employeeId}/bonus-config`, payload),
 }

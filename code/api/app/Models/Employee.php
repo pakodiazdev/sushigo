@@ -119,6 +119,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeRequest::class)->orderBy('created_at', 'desc');
     }
 
+    public function bonusConfigs(): HasMany
+    {
+        return $this->hasMany(EmployeeBonusConfig::class)->orderBy('effective_from', 'desc');
+    }
+
     /**
      * All schedules for this employee, via their employment periods.
      * For the active schedule use:

@@ -14,6 +14,7 @@ import { LeaveSummarySection } from './leave-summary-section'
 import { ExtraDaySection } from './extra-day-section'
 import { usePermissionManager } from './use-permission-manager'
 import { PermissionManagerDialog } from './permission-manager-dialog'
+import { BonusConfigSection } from './bonus-config-section'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -97,6 +98,11 @@ export function EmployeeDetailView({
 
       {/* Wage history */}
       <WageHistorySection employeeId={employee.id} />
+
+      <hr className="border-border" />
+
+      {/* Punctuality bonus group assignment */}
+      <BonusConfigSection employeeId={employee.id} />
 
       <hr className="border-border" />
 

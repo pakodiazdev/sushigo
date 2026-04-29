@@ -75,7 +75,9 @@ use App\Http\Controllers\Api\V1\OperatingUnit\UpdateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\AddUserToOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\ListOperatingUnitUsersController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitController;
+use App\Http\Controllers\Api\V1\Punctuality\AssignBonusConfigController;
 use App\Http\Controllers\Api\V1\Punctuality\CreatePunctualityBonusGroupController;
+use App\Http\Controllers\Api\V1\Punctuality\GetEmployeeBonusConfigController;
 use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityBonusGroupsController;
 use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityRangesController;
 use App\Http\Controllers\Api\V1\Punctuality\UpdatePunctualityRangesController;
@@ -275,6 +277,9 @@ Route::prefix('v1')->group(function () {
         // Direct permission management
         Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
         Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');
+        // Bonus config
+        Route::get('/{employee}/bonus-config', GetEmployeeBonusConfigController::class)->name('employees.bonus-config.get')->middleware('permission:employees.view');
+        Route::post('/{employee}/bonus-config', AssignBonusConfigController::class)->name('employees.bonus-config.assign')->middleware('permission:employees.update');
     });
 
     // Employment Periods — Schedules (All Protected)

@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { useToast } from '@/components/ui/toast-provider'
 import type {
+  AssignBonusConfigPayload,
   CreateBonusGroupPayload,
+  EmployeeBonusConfig,
   PunctualityBonusGroup,
   PunctualityRange,
   UpdatePunctualityRangesPayload,
@@ -61,6 +63,34 @@ export function useCreateBonusGroup() {
     },
     onError: (error: unknown) => {
       showError(getApiErrorMessage(error, 'Error al crear el grupo.'), 'Puntualidad')
+    },
+  })
+}
+
+export function useEmployeeBonusConfig(employeeId: string) {
+  return useQuery<EmployeeBonusConfig[]>({
+    queryKey: ['employee-bonus-config', employeeId],
+    queryFn: async () => {
+      const response = await punctualityConfigApi.getBonusConfig(employeeId)
+      return response.data.data
+    },
+    staleTime: 2 * 60_000,
+  })
+}
+
+export function useAssignBonusConfig(employeeId: string) {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (payload: AssignBonusConfigPayload) =>
+      punctualityConfigApi.assignBonusConfig(employeeId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-bonus-config', employeeId] })
+      showSuccess('Grupo de bono asignado.', 'Puntualidad')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'Error al asignar el grupo.'), 'Puntualidad')
     },
   })
 }

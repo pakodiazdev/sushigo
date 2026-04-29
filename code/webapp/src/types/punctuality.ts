@@ -25,3 +25,18 @@ export interface CreateBonusGroupPayload {
   weekly_bonus_amount: number
   working_days_divisor: number
 }
+
+export interface EmployeeBonusConfig {
+  id: string
+  bonus_group_id: string
+  bonus_group_name: string
+  weekly_bonus_amount: number
+  daily_bonus_amount: number
+  effective_from: string
+  effective_to: string | null
+}
+
+export interface AssignBonusConfigPayload {
+  bonus_group_id: string
+  effective_from: string
+}
