@@ -34,6 +34,7 @@ import { Route as CashTerminalsRouteImport } from './pages/cash/terminals'
 import { Route as CashRegistersRouteImport } from './pages/cash/registers'
 import { Route as CashBankAccountsRouteImport } from './pages/cash/bank-accounts'
 import { Route as AttendanceTodayRouteImport } from './pages/attendance/today'
+import { Route as AttendancePunctualityConfigRouteImport } from './pages/attendance/punctuality-config'
 
 const UnauthorizedRoute = UnauthorizedRouteImport.update({
   id: '/unauthorized',
@@ -160,6 +161,12 @@ const AttendanceTodayRoute = AttendanceTodayRouteImport.update({
   path: '/attendance/today',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttendancePunctualityConfigRoute =
+  AttendancePunctualityConfigRouteImport.update({
+    id: '/attendance/punctuality-config',
+    path: '/attendance/punctuality-config',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
+  '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
   '/attendance/today': typeof AttendanceTodayRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
@@ -203,6 +211,7 @@ export interface FileRoutesByTo {
   '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
+  '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
   '/attendance/today': typeof AttendanceTodayRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
@@ -231,6 +240,7 @@ export interface FileRoutesById {
   '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
+  '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
   '/attendance/today': typeof AttendanceTodayRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
+    | '/attendance/punctuality-config'
     | '/attendance/today'
     | '/cash/bank-accounts'
     | '/cash/registers'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
+    | '/attendance/punctuality-config'
     | '/attendance/today'
     | '/cash/bank-accounts'
     | '/cash/registers'
@@ -312,6 +324,7 @@ export interface FileRouteTypes {
     | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
+    | '/attendance/punctuality-config'
     | '/attendance/today'
     | '/cash/bank-accounts'
     | '/cash/registers'
@@ -340,6 +353,7 @@ export interface RootRouteChildren {
   SolicitudesRoute: typeof SolicitudesRoute
   StockDashboardRoute: typeof StockDashboardRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
+  AttendancePunctualityConfigRoute: typeof AttendancePunctualityConfigRoute
   AttendanceTodayRoute: typeof AttendanceTodayRoute
 }
 
@@ -520,6 +534,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AttendanceTodayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attendance/punctuality-config': {
+      id: '/attendance/punctuality-config'
+      path: '/attendance/punctuality-config'
+      fullPath: '/attendance/punctuality-config'
+      preLoaderRoute: typeof AttendancePunctualityConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -574,6 +595,7 @@ const rootRouteChildren: RootRouteChildren = {
   SolicitudesRoute: SolicitudesRoute,
   StockDashboardRoute: StockDashboardRoute,
   UnauthorizedRoute: UnauthorizedRoute,
+  AttendancePunctualityConfigRoute: AttendancePunctualityConfigRoute,
   AttendanceTodayRoute: AttendanceTodayRoute,
 }
 export const routeTree = rootRouteImport

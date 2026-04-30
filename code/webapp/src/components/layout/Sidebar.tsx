@@ -31,6 +31,8 @@ import { usePendingRequestsCount } from '@/services/employee-request-hooks';
 interface SubMenuItem {
     label: string;
     path: string;
+    /** When set, the sub-item is hidden unless the user has this permission. */
+    requiredPermission?: string;
 }
 
 interface MenuItem {
@@ -66,6 +68,7 @@ const menuItems: MenuItem[] = [
         accessMode: 'hidden',
         subItems: [
             { label: 'Hoy', path: '/attendance/today' },
+            { label: 'Puntualidad', path: '/attendance/punctuality-config', requiredPermission: 'punctuality.manage' },
         ]
     },
     {
@@ -229,7 +232,9 @@ export default function Sidebar() {
 
                         {hasSubItems && !isCollapsed && isExpanded && (
                             <ul className="mt-1 ml-8 space-y-1">
-                                {item.subItems!.map((subItem) => {
+                                {item.subItems!.filter((subItem) =>
+                                    !subItem.requiredPermission || can(subItem.requiredPermission)
+                                ).map((subItem) => {
                                     const isSubActive = currentPath === subItem.path;
                                     return (
                                         <li key={subItem.path}>

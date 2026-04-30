@@ -93,6 +93,7 @@ class CoreTestSeeder extends Seeder
         'stock.manage',
         'attendances.view',
         'attendances.create',
+        'punctuality.manage',
     ];
 
     /** Basic view-only user permissions shared by most roles */
@@ -101,7 +102,7 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.'],
+        'admin' => ['users.', 'employees.', 'leaves.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.', 'punctuality.'],
         'inventory-manager' => ['items.', 'inventory_locations.', 'stock.'],
         'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'employee-requests.', 'attendances.'],
         'cook' => self::BASIC_USER_VIEW,
