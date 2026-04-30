@@ -119,6 +119,9 @@ class PermissionSeeder extends LockedSeeder
             // Inventario — Stock y movimientos
             'stock.view' => ['label' => 'Ver stock y movimientos',   'group' => self::GROUP_INVENTARIO],
             'stock.manage' => ['label' => 'Registrar movimientos de stock', 'group' => self::GROUP_INVENTARIO],
+
+            // Asistencia — configuración
+            'punctuality.manage' => ['label' => 'Gestionar rangos de puntualidad', 'group' => 'Asistencia'],
         ];
 
         foreach ($permissions as $name => $meta) {
@@ -146,7 +149,8 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::ITEMS_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
-                            ->orWhere('name', 'like', self::STOCK_PATTERN);
+                            ->orWhere('name', 'like', self::STOCK_PATTERN)
+                            ->orWhereIn('name', ['punctuality.manage']);
                     })
                     ->get()
             );

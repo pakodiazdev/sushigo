@@ -75,6 +75,8 @@ use App\Http\Controllers\Api\V1\OperatingUnit\UpdateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\AddUserToOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\ListOperatingUnitUsersController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitController;
+use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityRangesController;
+use App\Http\Controllers\Api\V1\Punctuality\UpdatePunctualityRangesController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleDayOverrideController;
 use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
@@ -329,6 +331,12 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:api')->prefix('negotiated-extra-days')->group(function () {
         Route::delete('/{id}', CancelNegotiatedExtraDayController::class)->name('negotiated-extra-days.destroy');
+    });
+
+    // Punctuality config
+    Route::middleware('auth:api')->prefix('punctuality')->name('punctuality.')->group(function () {
+        Route::get('/ranges', ListPunctualityRangesController::class)->name('ranges.index')->middleware('permission:punctuality.manage');
+        Route::put('/ranges', UpdatePunctualityRangesController::class)->name('ranges.update')->middleware('permission:punctuality.manage');
     });
 
     // Cash Adjustments Module (All Protected)

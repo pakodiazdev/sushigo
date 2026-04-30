@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Contracts\PasswordResetTokenRecorder;
 use Database\Seeders\Fakes\FakeEmployeesSeeder;
+use Database\Seeders\PunctualityRangeSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
 use Database\Seeders\Testing\AttendanceTodayLeaveSeeder;
 use Database\Seeders\Testing\CloseDayHappyPathSeeder;
@@ -31,6 +32,7 @@ class TestReset extends Command
     private array $seederGroups = [
         'core' => [
             CoreTestSeeder::class,
+            PunctualityRangeSeeder::class,
         ],
         'attendance' => [
             AttendanceTestSeeder::class,
