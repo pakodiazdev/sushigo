@@ -116,4 +116,79 @@ describe('BonusConfigSection', () => {
     render(<BonusConfigSection employeeId="emp-1" />)
     expect(screen.getByText('Historial')).toBeTruthy()
   })
+
+  it('clicking Cancelar in the form calls setShowForm(false)', () => {
+    vi.mocked(sectionHook.useBonusConfigSection).mockReturnValue({
+      ...baseHook, showForm: true,
+    })
+    render(<BonusConfigSection employeeId="emp-1" />)
+    fireEvent.click(screen.getByRole('button', { name: /cancelar/i }))
+    expect(mockSetShowForm).toHaveBeenCalledWith(false)
+  })
+
+  it('shows spinner on submit button when isPending is true', () => {
+    vi.mocked(sectionHook.useBonusConfigSection).mockReturnValue({
+      ...baseHook, showForm: true, isPending: true,
+    })
+    render(<BonusConfigSection employeeId="emp-1" />)
+    expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
+
+  it('disables the select when isLoadingGroups is true', () => {
+    vi.mocked(sectionHook.useBonusConfigSection).mockReturnValue({
+      ...baseHook, showForm: true, isLoadingGroups: true,
+    })
+    render(<BonusConfigSection employeeId="emp-1" />)
+    const select = document.querySelector('select') as HTMLSelectElement
+    expect(select.disabled).toBe(true)
+  })
+
+  it('shows validation error for bonus_group_id when present', () => {
+    vi.mocked(sectionHook.useBonusConfigSection).mockReturnValue({
+      ...baseHook,
+      showForm: true,
+      form: {
+        ...baseHook.form,
+        formState: {
+          errors: { bonus_group_id: { message: 'Selecciona un grupo', type: 'required' } },
+        },
+      } as unknown as typeof baseHook.form,
+    })
+    render(<BonusConfigSection employeeId="emp-1" />)
+    expect(screen.getByText('Selecciona un grupo')).toBeTruthy()
+  })
+
+  it('shows validation error for effective_from when present', () => {
+    vi.mocked(sectionHook.useBonusConfigSection).mockReturnValue({
+      ...baseHook,
+      showForm: true,
+      form: {
+        ...baseHook.form,
+        formState: {
+          errors: { effective_from: { message: 'La fecha de vigencia es requerida', type: 'required' } },
+        },
+      } as unknown as typeof baseHook.form,
+    })
+    render(<BonusConfigSection employeeId="emp-1" />)
+    expect(screen.getByText('La fecha de vigencia es requerida')).toBeTruthy()
+  })
+
+  it('renders group options inside the select when form is shown', () => {
+    vi.mocked(sectionHook.useBonusConfigSection).mockReturnValue({
+      ...baseHook, showForm: true,
+    })
+    render(<BonusConfigSection employeeId="emp-1" />)
+    expect(screen.getByText(/Grupo \$110/)).toBeTruthy()
+  })
+
+  it('history shows dash when effective_to is null', () => {
+    const pastConfig: EmployeeBonusConfig = {
+      ...fakeConfig, id: 'cfg-2', effective_from: '2025-01-01', effective_to: null,
+    }
+    vi.mocked(sectionHook.useBonusConfigSection).mockReturnValue({
+      ...baseHook, current: fakeConfig, configs: [fakeConfig, pastConfig],
+    })
+    render(<BonusConfigSection employeeId="emp-1" />)
+    expect(screen.getByText(/→\s*—/)).toBeTruthy()
+  })
 })

@@ -82,4 +82,28 @@ describe('useBonusConfigSection', () => {
     const { result } = renderHook(() => useBonusConfigSection('emp-1'))
     expect(result.current.isLoadingConfigs).toBe(true)
   })
+
+  it('isLoadingGroups is true when groups query is loading', () => {
+    vi.mocked(hooks.useBonusGroups).mockReturnValue({ data: undefined, isLoading: true } as unknown as ReturnType<typeof hooks.useBonusGroups>)
+    const { result } = renderHook(() => useBonusConfigSection('emp-1'))
+    expect(result.current.isLoadingGroups).toBe(true)
+  })
+
+  it('onSubmit onSuccess hides the form and resets it', () => {
+    let capturedOnSuccess: (() => void) | undefined
+    vi.mocked(hooks.useAssignBonusConfig).mockReturnValue({
+      mutate: vi.fn((_, opts) => { capturedOnSuccess = opts?.onSuccess }),
+      isPending: false,
+    } as unknown as ReturnType<typeof hooks.useAssignBonusConfig>)
+
+    const { result } = renderHook(() => useBonusConfigSection('emp-1'))
+    act(() => { result.current.setShowForm(true) })
+    expect(result.current.showForm).toBe(true)
+
+    const values = { bonus_group_id: 'grp-1', effective_from: '2026-05-01' }
+    act(() => { result.current.onSubmit(values) })
+    act(() => { capturedOnSuccess?.() })
+
+    expect(result.current.showForm).toBe(false)
+  })
 })
