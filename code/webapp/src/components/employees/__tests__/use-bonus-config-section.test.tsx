@@ -38,13 +38,28 @@ beforeEach(() => {
 })
 
 describe('useBonusConfigSection', () => {
-  it('exposes the first config as current', () => {
+  it('exposes the config active today as current', () => {
     const { result } = renderHook(() => useBonusConfigSection('emp-1'))
+    // mockConfigs[0] has effective_from='2026-01-01' and effective_to=null → active on any date >= Jan 1 2026
     expect(result.current.current).toEqual(mockConfigs[0])
   })
 
   it('returns null for current when configs is empty', () => {
     vi.mocked(hooks.useEmployeeBonusConfig).mockReturnValue({ data: [], isLoading: false } as unknown as ReturnType<typeof hooks.useEmployeeBonusConfig>)
+    const { result } = renderHook(() => useBonusConfigSection('emp-1'))
+    expect(result.current.current).toBeNull()
+  })
+
+  it('returns null when the only config is in the future', () => {
+    const futureConfig = { ...mockConfigs[0], effective_from: '2099-01-01', effective_to: null }
+    vi.mocked(hooks.useEmployeeBonusConfig).mockReturnValue({ data: [futureConfig], isLoading: false } as unknown as ReturnType<typeof hooks.useEmployeeBonusConfig>)
+    const { result } = renderHook(() => useBonusConfigSection('emp-1'))
+    expect(result.current.current).toBeNull()
+  })
+
+  it('returns null when all configs are expired', () => {
+    const expiredConfig = { ...mockConfigs[0], effective_from: '2020-01-01', effective_to: '2020-12-31' }
+    vi.mocked(hooks.useEmployeeBonusConfig).mockReturnValue({ data: [expiredConfig], isLoading: false } as unknown as ReturnType<typeof hooks.useEmployeeBonusConfig>)
     const { result } = renderHook(() => useBonusConfigSection('emp-1'))
     expect(result.current.current).toBeNull()
   })

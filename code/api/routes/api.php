@@ -344,7 +344,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('punctuality')->name('punctuality.')->group(function () {
         Route::get('/ranges', ListPunctualityRangesController::class)->name('ranges.index')->middleware('permission:punctuality.manage');
         Route::put('/ranges', UpdatePunctualityRangesController::class)->name('ranges.update')->middleware('permission:punctuality.manage');
-        Route::get('/bonus-groups', ListPunctualityBonusGroupsController::class)->name('bonus-groups.index')->middleware('permission:punctuality.manage');
+        Route::get('/bonus-groups', ListPunctualityBonusGroupsController::class)->name('bonus-groups.index')->middleware('permission:punctuality.manage|employees.update');
         Route::post('/bonus-groups', CreatePunctualityBonusGroupController::class)->name('bonus-groups.store')->middleware('permission:punctuality.manage');
     });
 

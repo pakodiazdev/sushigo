@@ -18,16 +18,16 @@ class AssignBonusConfigController extends Controller
         $effectiveFrom = Carbon::parse($request->effective_from)->startOfDay();
 
         $config = DB::transaction(function () use ($employee, $group, $effectiveFrom) {
-            // Delete future open configs (effective_from >= new date) — superseded by this assignment
+            // Delete all configs starting on or after the new date (open or already closed by a later assignment)
             $employee->bonusConfigs()
-                ->whereNull('effective_to')
                 ->where('effective_from', '>=', $effectiveFrom->toDateString())
                 ->delete();
 
-            // Close the open config that started before the new effective date
+            // Lock and close the single open config that started before the new effective date
             $employee->bonusConfigs()
                 ->whereNull('effective_to')
                 ->where('effective_from', '<', $effectiveFrom->toDateString())
+                ->lockForUpdate()
                 ->update(['effective_to' => $effectiveFrom->copy()->subDay()->toDateString()]);
 
             return $employee->bonusConfigs()->create([

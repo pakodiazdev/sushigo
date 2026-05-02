@@ -23,6 +23,7 @@ class PunctualityBonusGroupsTest extends TestCase
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'punctuality.manage', 'guard_name' => 'api']);
+        Permission::create(['name' => 'employees.update', 'guard_name' => 'api']);
         $admin = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $admin->givePermissionTo('punctuality.manage');
 
@@ -90,6 +91,20 @@ class PunctualityBonusGroupsTest extends TestCase
     {
         Passport::actingAs(User::factory()->create());
         $this->getJson('/api/v1/punctuality/bonus-groups')->assertForbidden();
+    }
+
+    #[Test]
+    public function user_with_employees_update_can_list_bonus_groups(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::create(['name' => 'manager', 'guard_name' => 'api']);
+        $role->givePermissionTo('employees.update');
+        $user->assignRole('manager');
+        Passport::actingAs($user);
+
+        $this->getJson('/api/v1/punctuality/bonus-groups')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
     }
 
     // ── POST /api/v1/punctuality/bonus-groups ─────────────────────────────────

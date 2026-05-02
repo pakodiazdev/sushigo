@@ -259,6 +259,67 @@ class EmployeeBonusConfigTest extends TestCase
     }
 
     #[Test]
+    public function assign_bonus_config_rejects_inactive_bonus_group(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        $inactiveGroup = PunctualityBonusGroup::create([
+            'public_id' => '01GRPINACT1234567890123',
+            'name' => 'Grupo Inactivo',
+            'weekly_bonus_amount' => '80.00',
+            'working_days_divisor' => 5,
+            'is_active' => false,
+        ]);
+
+        $this->postJson("/api/v1/employees/{$this->employee->public_id}/bonus-config", [
+            'bonus_group_id' => $inactiveGroup->public_id,
+            'effective_from' => '2026-05-01',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['bonus_group_id']);
+    }
+
+    #[Test]
+    public function assigning_with_earlier_date_also_deletes_closed_future_configs(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        // Config A: Jan → Mar31 (closed by Apr assignment)
+        $configA = EmployeeBonusConfig::create([
+            'public_id' => '01CFGTEST01234567890127',
+            'employee_id' => $this->employee->id,
+            'punctuality_bonus_group_id' => $this->group->id,
+            'effective_from' => '2026-01-01',
+            'effective_to' => '2026-03-31',
+        ]);
+
+        // Config B: Apr → null (open) — will be in range when we post Mar
+        $configB = EmployeeBonusConfig::create([
+            'public_id' => '01CFGTEST01234567890128',
+            'employee_id' => $this->employee->id,
+            'punctuality_bonus_group_id' => $this->group->id,
+            'effective_from' => '2026-04-01',
+            'effective_to' => null,
+        ]);
+
+        // Assign with Mar 1 — should delete configB (effective_from >= Mar) entirely
+        $this->postJson("/api/v1/employees/{$this->employee->public_id}/bonus-config", [
+            'bonus_group_id' => $this->group->public_id,
+            'effective_from' => '2026-03-01',
+        ])->assertCreated();
+
+        // configA stays (effective_from < Mar, it's a closed past config)
+        $this->assertDatabaseHas('employee_bonus_configs', ['id' => $configA->id]);
+        // configB is deleted (effective_from >= Mar)
+        $this->assertDatabaseMissing('employee_bonus_configs', ['id' => $configB->id]);
+        // new config created from Mar
+        $this->assertDatabaseHas('employee_bonus_configs', [
+            'employee_id' => $this->employee->id,
+            'effective_from' => '2026-03-01',
+            'effective_to' => null,
+        ]);
+    }
+
+    #[Test]
     public function assign_bonus_config_rejects_missing_fields(): void
     {
         Passport::actingAs($this->adminUser());
