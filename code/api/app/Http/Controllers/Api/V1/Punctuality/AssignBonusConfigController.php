@@ -8,6 +8,7 @@ use App\Http\Resources\Punctuality\EmployeeBonusConfigResource;
 use App\Models\Employee;
 use App\Models\PunctualityBonusGroup;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class AssignBonusConfigController extends Controller
 {
@@ -16,23 +17,25 @@ class AssignBonusConfigController extends Controller
         $group = PunctualityBonusGroup::where('public_id', $request->bonus_group_id)->firstOrFail();
         $effectiveFrom = Carbon::parse($request->effective_from)->startOfDay();
 
-        // Delete future open configs (effective_from >= new date) — superseded by this assignment
-        $employee->bonusConfigs()
-            ->whereNull('effective_to')
-            ->where('effective_from', '>=', $effectiveFrom->toDateString())
-            ->delete();
+        $config = DB::transaction(function () use ($employee, $group, $effectiveFrom) {
+            // Delete future open configs (effective_from >= new date) — superseded by this assignment
+            $employee->bonusConfigs()
+                ->whereNull('effective_to')
+                ->where('effective_from', '>=', $effectiveFrom->toDateString())
+                ->delete();
 
-        // Close the open config that started before the new effective date
-        $employee->bonusConfigs()
-            ->whereNull('effective_to')
-            ->where('effective_from', '<', $effectiveFrom->toDateString())
-            ->update(['effective_to' => $effectiveFrom->copy()->subDay()->toDateString()]);
+            // Close the open config that started before the new effective date
+            $employee->bonusConfigs()
+                ->whereNull('effective_to')
+                ->where('effective_from', '<', $effectiveFrom->toDateString())
+                ->update(['effective_to' => $effectiveFrom->copy()->subDay()->toDateString()]);
 
-        $config = $employee->bonusConfigs()->create([
-            'punctuality_bonus_group_id' => $group->id,
-            'effective_from' => $effectiveFrom->toDateString(),
-            'effective_to' => null,
-        ]);
+            return $employee->bonusConfigs()->create([
+                'punctuality_bonus_group_id' => $group->id,
+                'effective_from' => $effectiveFrom->toDateString(),
+                'effective_to' => null,
+            ]);
+        });
 
         $config->load('bonusGroup');
 
