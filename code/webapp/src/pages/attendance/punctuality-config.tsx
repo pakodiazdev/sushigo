@@ -75,19 +75,20 @@ function BonusGroupsSection() {
       {showForm && (
         <form onSubmit={handleSubmit(onSubmit)} className="border rounded-lg p-4 space-y-3 bg-card">
           <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <label htmlFor="bg-name" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Nombre
             </label>
-            <Input {...register('name')} placeholder="Grupo $110 (÷6)" className="mt-1" />
+            <Input id="bg-name" {...register('name')} placeholder="Grupo $110 (÷6)" className="mt-1" />
             {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <label htmlFor="bg-weekly" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Monto semanal ($)
               </label>
               <Input
+                id="bg-weekly"
                 type="number"
                 min={0.01}
                 step={0.01}
@@ -99,10 +100,11 @@ function BonusGroupsSection() {
               )}
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <label htmlFor="bg-days" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Días divisor
               </label>
               <Input
+                id="bg-days"
                 type="number"
                 min={1}
                 step={1}

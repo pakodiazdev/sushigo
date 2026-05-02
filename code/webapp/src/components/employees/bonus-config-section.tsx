@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { useBonusConfigSection } from './use-bonus-config-section'
 
 interface BonusConfigSectionProps {
-  employeeId: string
+  readonly employeeId: string
 }
 
 function formatCurrency(amount: number): string {
