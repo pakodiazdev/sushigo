@@ -23,7 +23,11 @@ export function useBonusConfigSection(employeeId: string) {
     defaultValues: { bonus_group_id: '', effective_from: '' },
   })
 
-  const current = configs?.[0] ?? null
+  const today = new Date().toISOString().slice(0, 10)
+  const current =
+    configs?.find(
+      (c) => c.effective_from <= today && (c.effective_to === null || c.effective_to >= today),
+    ) ?? null
 
   const onSubmit: SubmitHandler<AssignFormValues> = (values) => {
     assign.mutate(values, {
