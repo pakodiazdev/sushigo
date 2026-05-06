@@ -100,3 +100,21 @@ These documents capture the target inventory domain (operating units, stock move
 - Running inside the provided devcontainer (`F1 → Dev Containers: Reopen in Container`) attaches VS Code extensions listed in `.devcontainer/devcontainer.json`.
 
 Happy hacking 🥢
+
+## License
+
+This project is licensed under the [Elastic License 2.0](LICENSE).
+
+| Use case | Allowed |
+|---|---|
+| Study, fork, portfolio, research | ✅ |
+| Self-hosting for your own business | ✅ |
+| Installing for a single client (on-premise) | ✅ |
+| Charging for implementation and support | ✅ |
+| Offering as a hosted / managed SaaS | ❌ |
+| Building a competing multi-tenant platform | ❌ |
+
+Full rationale: [doc/conventions/licensing.md](doc/conventions/licensing.md)  
+Commercial licensing inquiries: jfcodiaz@gmail.com
+
+© 2026 Pako Díaz. All rights reserved.
