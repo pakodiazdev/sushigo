@@ -75,6 +75,10 @@ use App\Http\Controllers\Api\V1\OperatingUnit\UpdateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\AddUserToOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\ListOperatingUnitUsersController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitController;
+use App\Http\Controllers\Api\V1\Punctuality\AssignBonusConfigController;
+use App\Http\Controllers\Api\V1\Punctuality\CreatePunctualityBonusGroupController;
+use App\Http\Controllers\Api\V1\Punctuality\GetEmployeeBonusConfigController;
+use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityBonusGroupsController;
 use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityRangesController;
 use App\Http\Controllers\Api\V1\Punctuality\UpdatePunctualityRangesController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
@@ -273,6 +277,9 @@ Route::prefix('v1')->group(function () {
         // Direct permission management
         Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
         Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');
+        // Bonus config
+        Route::get('/{employee}/bonus-config', GetEmployeeBonusConfigController::class)->name('employees.bonus-config.get')->middleware('permission:employees.view');
+        Route::post('/{employee}/bonus-config', AssignBonusConfigController::class)->name('employees.bonus-config.assign')->middleware('permission:employees.update');
     });
 
     // Employment Periods — Schedules (All Protected)
@@ -337,6 +344,8 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('punctuality')->name('punctuality.')->group(function () {
         Route::get('/ranges', ListPunctualityRangesController::class)->name('ranges.index')->middleware('permission:punctuality.manage');
         Route::put('/ranges', UpdatePunctualityRangesController::class)->name('ranges.update')->middleware('permission:punctuality.manage');
+        Route::get('/bonus-groups', ListPunctualityBonusGroupsController::class)->name('bonus-groups.index')->middleware('permission:punctuality.manage|employees.update');
+        Route::post('/bonus-groups', CreatePunctualityBonusGroupController::class)->name('bonus-groups.store')->middleware('permission:punctuality.manage');
     });
 
     // Cash Adjustments Module (All Protected)

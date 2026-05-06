@@ -60,6 +60,10 @@ vi.mock('@/components/employees/permission-manager-dialog', () => ({
   PermissionManagerDialog: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>PermissionManagerDialog</div> : null,
 }))
 
+vi.mock('@/components/employees/bonus-config-section', () => ({
+  BonusConfigSection: () => <div>BonusConfigSection</div>,
+}))
+
 vi.mock('@/components/employees/use-employee-detail-actions', () => ({
   useEmployeeDetailActions: () => ({
     hasActivePeriod: true,
