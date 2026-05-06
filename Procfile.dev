@@ -1,0 +1,2 @@
+web:    php -S 0.0.0.0:${APP_PORT:-8000} -t public
+vite:   npm --prefix ../webapp run dev -- --port ${VITE_PORT:-5173} --host 0.0.0.0
