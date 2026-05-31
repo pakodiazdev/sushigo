@@ -19,16 +19,16 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'http://localhost:5173',
-        'http://localhost:8005',
-        'http://dev:5173',
-        'http://localhost:80',
-        'http://dev:80',
-        'https://sushigo.local',
-        'https://devtest.sushigo.local',
-        'https://api.sushigo.local',
-    ],
+    'allowed_origins' => array_filter(array_merge(
+        [
+            'http://localhost:80',
+            'http://dev:80',
+            'https://sushigo.local',
+            'https://devtest.sushigo.local',
+            'https://api.sushigo.local',
+        ],
+        array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')))
+    )),
 
     'allowed_origins_patterns' => [],
 
