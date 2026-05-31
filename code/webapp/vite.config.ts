@@ -29,14 +29,15 @@ export default defineConfig({
       usePolling: true,
       ignored: ['**/routeTree.gen.ts'],
     },
-    hmr: {
-      // Usar el protocolo del cliente (wss:// cuando se accede por HTTPS)
-      protocol: 'wss',
-      // Usar el host desde variable de entorno o default a sushigo.local
-      host: process.env.VITE_HMR_HOST || 'sushigo.local',
-      // Puerto 443 (HTTPS por defecto) - nginx proxy redirigirá el WebSocket
-      clientPort: 443,
-    },
+    // When VITE_HMR_HOST is set (Docker/nginx environments), use explicit config.
+    // When unset (direct local dev), let Vite auto-detect (default behavior).
+    hmr: process.env.VITE_HMR_HOST
+      ? {
+          protocol: (process.env.VITE_HMR_PROTOCOL as 'ws' | 'wss') || 'wss',
+          host: process.env.VITE_HMR_HOST,
+          clientPort: parseInt(process.env.VITE_HMR_PORT || '443'),
+        }
+      : true,
   },
   test: {
     environment: 'node',
