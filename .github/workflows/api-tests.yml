@@ -42,17 +42,17 @@ jobs:
             api:
               - 'code/api/**'
 
-      - name: Setup PHP 8.2 with PCOV
+      - name: Setup PHP 8.5 with PCOV
         if: steps.changes.outputs.api == 'true'
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.5'
           coverage: pcov
           extensions: pdo_pgsql
 
       - name: Install Composer dependencies
         if: steps.changes.outputs.api == 'true'
-        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts --ignore-platform-req=php
 
       - name: Copy .env and generate app key
         if: steps.changes.outputs.api == 'true'

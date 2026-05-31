@@ -1,4 +1,4 @@
-FROM php:8.2-apache AS base
+FROM php:8.5-apache AS base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -67,7 +67,7 @@ CMD ["/usr/local/bin/init.sh"]
 FROM base AS composer_deps
 WORKDIR /var/www/html/api
 COPY ./code/api/composer.json ./code/api/composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts --ignore-platform-req=php
 
 # Stage para instalar dependencias de NPM
 FROM node:20 AS npm_deps
