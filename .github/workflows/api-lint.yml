@@ -27,16 +27,16 @@ jobs:
             api:
               - 'code/api/**'
 
-      - name: Setup PHP 8.2
+      - name: Setup PHP 8.5
         if: steps.changes.outputs.api == 'true'
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.5'
           coverage: none
 
       - name: Install Composer dependencies
         if: steps.changes.outputs.api == 'true'
-        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts --ignore-platform-req=php
 
       - name: Run PHP Pint (check mode)
         if: steps.changes.outputs.api == 'true'
