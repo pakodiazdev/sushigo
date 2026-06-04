@@ -1,8 +1,45 @@
 /// <reference types="vitest/config" />
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
 import path from 'path'
+import { execSync } from 'child_process'
+
+const VIRTUAL_GIT_BRANCH_ID = 'virtual:git-branch'
+const RESOLVED_GIT_BRANCH_ID = '\0' + VIRTUAL_GIT_BRANCH_ID
+
+function getCurrentBranch(): string {
+    try {
+        return execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
+    } catch {
+        return ''
+    }
+}
+
+function gitBranchPlugin(): Plugin {
+    return {
+        name: 'git-branch',
+        resolveId(id) {
+            if (id === VIRTUAL_GIT_BRANCH_ID) return RESOLVED_GIT_BRANCH_ID
+        },
+        load(id) {
+            if (id === RESOLVED_GIT_BRANCH_ID) {
+                return `export const gitBranch = ${JSON.stringify(getCurrentBranch())}`
+            }
+        },
+        configureServer(server) {
+            const gitHeadPath = path.resolve(process.cwd(), '.git/HEAD')
+            server.watcher.add(gitHeadPath)
+            server.watcher.on('change', (file) => {
+                if (file === gitHeadPath) {
+                    const mod = server.moduleGraph.getModuleById(RESOLVED_GIT_BRANCH_ID)
+                    if (mod) server.moduleGraph.invalidateModule(mod)
+                    server.hot.send({ type: 'full-reload' })
+                }
+            })
+        },
+    }
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -13,6 +50,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      gitBranchPlugin(),
       TanStackRouterVite({
         routesDirectory: './src/pages',
         generatedRouteTree: './src/routeTree.gen.ts',
