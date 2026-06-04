@@ -8,6 +8,14 @@ import { execSync } from 'child_process'
 const VIRTUAL_GIT_BRANCH_ID = 'virtual:git-branch'
 const RESOLVED_GIT_BRANCH_ID = '\0' + VIRTUAL_GIT_BRANCH_ID
 
+function getGitDir(): string {
+    try {
+        return execSync('git rev-parse --git-dir', { encoding: 'utf-8' }).trim()
+    } catch {
+        return '.git'
+    }
+}
+
 function getCurrentBranch(): string {
     try {
         return execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
@@ -28,7 +36,7 @@ function gitBranchPlugin(): Plugin {
             }
         },
         configureServer(server) {
-            const gitHeadPath = path.resolve(process.cwd(), '.git/HEAD')
+            const gitHeadPath = path.resolve(getGitDir(), 'HEAD')
             server.watcher.add(gitHeadPath)
             server.watcher.on('change', (file) => {
                 if (file === gitHeadPath) {
