@@ -14,6 +14,7 @@ import {
     GitBranch,
     type LucideIcon,
 } from 'lucide-react'
+import { gitBranch } from 'virtual:git-branch'
 import { useDevDebugger } from './use-dev-debugger'
 
 export function DevDebugger() {
@@ -127,10 +128,10 @@ export function DevDebugger() {
                 </div>
             </div>
 
-            {import.meta.env.VITE_GIT_BRANCH?.trim() && (
+            {gitBranch && (
                 <div className="bg-gray-950 px-4 py-1.5 flex items-center gap-2 text-xs font-mono border-b border-gray-700">
                     <GitBranch className="h-3 w-3 text-yellow-400 shrink-0" />
-                    <span className="text-yellow-300 truncate">{import.meta.env.VITE_GIT_BRANCH.trim()}</span>
+                    <span className="text-yellow-300 truncate">{gitBranch}</span>
                     {import.meta.env.VITE_AGENT_LABEL?.trim() && (
                         <span className="ml-auto text-gray-500 shrink-0">{import.meta.env.VITE_AGENT_LABEL.trim()}</span>
                     )}

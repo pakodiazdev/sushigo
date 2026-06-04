@@ -36,12 +36,6 @@ interface ImportMetaEnv {
      * Corresponds to VITE_AGENT_LABEL in code/webapp/.env
      */
     readonly VITE_AGENT_LABEL?: string
-    /**
-     * Full git branch name of the workspace at the time of startup.
-     * Injected by init.sh on every startup. Example: 'feature/065-my-feature'
-     * Shown in the Dev Debugger header for multi-branch dev work.
-     */
-    readonly VITE_GIT_BRANCH?: string
 }
 
 interface ImportMeta {
@@ -51,6 +45,10 @@ interface ImportMeta {
 declare module '*.png' {
     const value: string
     export default value
+}
+
+declare module 'virtual:git-branch' {
+    export const gitBranch: string
 }
 
 declare module '*.jpg' {
