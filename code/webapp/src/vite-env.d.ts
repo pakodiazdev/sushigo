@@ -30,6 +30,18 @@ interface ImportMetaEnv {
      * @see doc/tasks/backlog/101-dev-debug-login.md
      */
     readonly VITE_APP_ENV?: string
+    /**
+     * Agent label shown in the browser tab title — slot letter + git issue number.
+     * Injected by init.sh on every startup. Example: '[A:#065] '
+     * Corresponds to VITE_AGENT_LABEL in code/webapp/.env
+     */
+    readonly VITE_AGENT_LABEL?: string
+    /**
+     * Full git branch name of the workspace at the time of startup.
+     * Injected by init.sh on every startup. Example: 'feature/065-my-feature'
+     * Shown in the Dev Debugger header for multi-branch dev work.
+     */
+    readonly VITE_GIT_BRANCH?: string
 }
 
 interface ImportMeta {

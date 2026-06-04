@@ -11,6 +11,7 @@ import {
     LogIn,
     Search,
     Loader2,
+    GitBranch,
     type LucideIcon,
 } from 'lucide-react'
 import { useDevDebugger } from './use-dev-debugger'
@@ -125,6 +126,16 @@ export function DevDebugger() {
                     </button>
                 </div>
             </div>
+
+            {import.meta.env.VITE_GIT_BRANCH && (
+                <div className="bg-gray-950 px-4 py-1.5 flex items-center gap-2 text-xs font-mono border-b border-gray-700">
+                    <GitBranch className="h-3 w-3 text-yellow-400 shrink-0" />
+                    <span className="text-yellow-300 truncate">{import.meta.env.VITE_GIT_BRANCH}</span>
+                    {import.meta.env.VITE_AGENT_LABEL && (
+                        <span className="ml-auto text-gray-500 shrink-0">{import.meta.env.VITE_AGENT_LABEL.trim()}</span>
+                    )}
+                </div>
+            )}
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 text-sm">
                 <Section
