@@ -11,6 +11,20 @@ SushiGo is a full-stack tenant platform within the ComandaFlow ecosystem. **This
 
 ## Development Commands
 
+### Dev-Lab (multi-agent local development)
+
+When working inside [sushigo-dev-lab](https://github.com/pakodiazdev/sushigo-dev-lab), each workspace clone starts with:
+
+```bash
+./init-agent-workspace.sh   # starts Laravel (php artisan serve) + Vite via Overmind
+```
+
+This script lives at the root of this repo and is the **only startup method** when using the dev-lab.
+Shared services (PostgreSQL, Redis, Mailpit) are managed by the dev-lab's `docker compose up -d`.
+Do **not** run `docker compose up` from inside a workspace — that starts the full heavyweight stack.
+
+---
+
 ### Docker Development (Recommended)
 
 This monorepo runs inside `dev_container`. Each sub-project maps to a path inside the container:
