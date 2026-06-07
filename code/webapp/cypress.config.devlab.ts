@@ -13,8 +13,10 @@ const VITE_PORT = process.env.VITE_PORT || '5181'
 const MAILPIT_HOST = process.env.CYPRESS_mailpitHost || 'localhost'
 const MAILPIT_PORT = parseInt(process.env.CYPRESS_mailpitPort || '8025', 10)
 
+// /app/artisan is the absolute path inside the e2e container
+// (volume maps workspaces/sushigo-x/code/api → /app, WORKDIR /app in Dockerfile)
 const artisan = (cmd: string, opts: { timeout?: number } = {}) =>
-  execSync(`docker exec ${E2E_CONTAINER} php artisan ${cmd}`, {
+  execSync(`docker exec ${E2E_CONTAINER} php /app/artisan ${cmd}`, {
     timeout: opts.timeout ?? 60_000,
     stdio: 'inherit',
   })
@@ -81,7 +83,7 @@ export default defineConfig({
           console.log(`[test:getResetLink] Fetching reset link for ${email}...`)
           try {
             const result = execSync(
-              `docker exec ${E2E_CONTAINER} php artisan tinker --execute="echo app(App\\\\Contracts\\\\PasswordResetTokenRecorder::class)->retrieve('${email}') ?? 'NULL';"`,
+              `docker exec ${E2E_CONTAINER} php /app/artisan tinker --execute="echo app(App\\\\Contracts\\\\PasswordResetTokenRecorder::class)->retrieve('${email}') ?? 'NULL';"`,
               { timeout: 10_000, encoding: 'utf-8' }
             ).trim()
             if (result === 'NULL' || !result) {

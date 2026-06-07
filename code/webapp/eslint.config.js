@@ -7,7 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   // Ignore build output and Cypress suite (tested separately via cypress workflow)
-  globalIgnores(['dist', 'cypress/**', 'cypress.config.ts']),
+  globalIgnores(['dist', 'cypress/**', 'cypress.config.ts', 'cypress.config.devlab.ts']),
 
   // JS / JSX
   {
