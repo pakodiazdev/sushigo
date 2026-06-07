@@ -2,11 +2,11 @@
 
 ## 📖 Story
 
-**Español:**
-Como Manager, quiero ver únicamente las solicitudes pendientes de los empleados de mi sucursal, para no mezclar solicitudes de otras sucursales al momento de aprobar o rechazar.
-
 **English:**
 As a Manager, I need the pending requests list to be filtered by my branch so I only act on requests from employees I manage.
+
+**Español:**
+Como Manager, quiero ver únicamente las solicitudes pendientes de los empleados de mi sucursal, para no mezclar solicitudes de otras sucursales al momento de aprobar o rechazar.
 
 ---
 
