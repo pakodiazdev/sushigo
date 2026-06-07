@@ -16,7 +16,7 @@ SushiGo is a full-stack tenant platform within the ComandaFlow ecosystem. **This
 When working inside [sushigo-dev-lab](https://github.com/pakodiazdev/sushigo-dev-lab), each workspace clone starts with:
 
 ```bash
-./init-agent-workspace.sh   # starts Laravel (php artisan serve) + Vite via Overmind
+./init-agent-workspace.sh   # starts Laravel (php -S built-in server) + Vite via Overmind
 ```
 
 This script lives at the root of this repo and is the **only startup method** when using the dev-lab.
