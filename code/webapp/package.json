@@ -13,7 +13,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "cypress:open": "cypress open",
-    "cypress:run": "cypress run"
+    "cypress:run": "cypress run",
+    "cypress:open:devlab": "cypress open --config-file cypress.config.devlab.ts",
+    "cypress:run:devlab": "cypress run --config-file cypress.config.devlab.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
