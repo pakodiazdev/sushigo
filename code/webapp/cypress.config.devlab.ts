@@ -2,12 +2,14 @@ import { defineConfig } from 'cypress'
 import { execSync } from 'child_process'
 import * as http from 'http'
 
-// Container name set by sushigo-dev-lab's start-e2e.sh.
-// Example: E2E_CONTAINER=e2e-api-a npm run cypress:open:devlab
+// Container name set by sushigo-dev-lab's cypress.sh.
 const E2E_CONTAINER = process.env.E2E_CONTAINER || 'e2e-api-a'
 
-// Vite E2E port set by start-e2e.sh (5181–5188 per slot).
+// Vite E2E port set by cypress.sh (5181–5188 per workspace slot).
 const VITE_PORT = process.env.VITE_PORT || '5181'
+
+// API container port set by cypress.sh (8901–8908 per workspace slot).
+const E2E_API_PORT = process.env.E2E_API_PORT || '8901'
 
 // Mailpit (shared Docker service) exposes the same HTTP API as Mailhog.
 const MAILPIT_HOST = process.env.CYPRESS_mailpitHost || 'localhost'
@@ -25,6 +27,9 @@ export default defineConfig({
   projectId: 'phbcj4',
   e2e: {
     baseUrl: process.env.CYPRESS_baseUrl || `http://localhost:${VITE_PORT}`,
+    env: {
+      apiUrl: `http://localhost:${E2E_API_PORT}/api/v1`,
+    },
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
     setupNodeEvents(on, config) {
