@@ -1,4 +1,4 @@
-.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart
+.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart cypress-devlab
 
 # Colores para output
 GREEN  := \033[0;32m
@@ -66,6 +66,24 @@ cypress-debug: ## Abrir spec en modo interactivo (navegador queda abierto): make
 cypress-run: ## Ejecutar tests de Cypress en modo headless
 	@echo "$(GREEN)Ejecutando tests de Cypress...$(NC)"
 	@docker compose -f docker-compose.yml -f docker-compose.e2e.yml run --rm cypress
+
+cypress-devlab: ## Open Cypress GUI against the sushigo-dev-lab E2E stack (run make e2e WORKSPACE=... first)
+	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
+	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	if [ -z "$$CONTAINER" ]; then \
+		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+		exit 1; \
+	fi; \
+	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
+	VITE_PORT=$$((5180 + OFFSET)); \
+	API_PORT=$$((8900 + OFFSET)); \
+	echo "$(GREEN)Opening Cypress (devlab)$(NC)"; \
+	echo "  Container : $$CONTAINER"; \
+	echo "  Base URL  : http://localhost:$$VITE_PORT"; \
+	echo "  API URL   : http://localhost:$$API_PORT/api/v1"; \
+	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
+		npm --prefix code/webapp run cypress:open:devlab
 
 cypress-run-headed: cypress-up ## Ejecutar TODOS los tests con navegador visible (ver en VNC http://localhost:6080)
 	@echo "$(GREEN)Ejecutando todos los tests en modo headed (VNC: http://localhost:6080)...$(NC)"
