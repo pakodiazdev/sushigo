@@ -1,4 +1,4 @@
-.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart cypress-devlab
+.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart cypress-devlab cypress-devlab-spec
 
 # Colores para output
 GREEN  := \033[0;32m
@@ -84,6 +84,27 @@ cypress-devlab: ## Open Cypress GUI against the sushigo-dev-lab E2E stack (run m
 	echo "  API URL   : http://localhost:$$API_PORT/api/v1"; \
 	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
 		npm --prefix code/webapp run cypress:open:devlab
+
+cypress-devlab-spec: ## Run a specific spec headed against dev-lab stack: make cypress-devlab-spec SPEC=login [GREP="text"]
+	@if [ -z "$(SPEC)" ]; then echo "$(RED)Usage: make cypress-devlab-spec SPEC=<name> [GREP='text']$(NC)"; exit 1; fi
+	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
+	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	if [ -z "$$CONTAINER" ]; then \
+		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+		exit 1; \
+	fi; \
+	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
+	VITE_PORT=$$((5180 + OFFSET)); \
+	API_PORT=$$((8900 + OFFSET)); \
+	echo "$(GREEN)Running spec (devlab): $(SPEC).cy.ts$(if $(GREP), [grep: $(GREP)])$(NC)"; \
+	echo "  Container : $$CONTAINER"; \
+	echo "  Base URL  : http://localhost:$$VITE_PORT"; \
+	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
+		npm --prefix code/webapp run cypress:run:devlab -- \
+		--headed --browser chrome \
+		--spec "cypress/e2e/$(SPEC).cy.ts" \
+		$(if $(GREP),--env grep="$(GREP)")
 
 cypress-run-headed: cypress-up ## Ejecutar TODOS los tests con navegador visible (ver en VNC http://localhost:6080)
 	@echo "$(GREEN)Ejecutando todos los tests en modo headed (VNC: http://localhost:6080)...$(NC)"
