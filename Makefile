@@ -1,4 +1,4 @@
-.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart cypress-devlab cypress-devlab-spec
+.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart cypress-devlab cypress-devlab-spec cypress-devlab-headed cypress-devlab-run cypress-devlab-run-spec
 
 # Colores para output
 GREEN  := \033[0;32m
@@ -103,6 +103,61 @@ cypress-devlab-spec: ## Run a specific spec headed against dev-lab stack: make c
 	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
 		npm --prefix code/webapp run cypress:run:devlab -- \
 		--headed --browser chrome \
+		--spec "cypress/e2e/$(SPEC).cy.ts" \
+		$(if $(GREP),--env grep="$(GREP)")
+
+cypress-devlab-headed: ## Run ALL specs headed (browser visible) against dev-lab stack
+	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
+	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	if [ -z "$$CONTAINER" ]; then \
+		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+		exit 1; \
+	fi; \
+	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
+	VITE_PORT=$$((5180 + OFFSET)); \
+	API_PORT=$$((8900 + OFFSET)); \
+	echo "$(GREEN)Running ALL specs headed (devlab)$(NC)"; \
+	echo "  Container : $$CONTAINER"; \
+	echo "  Base URL  : http://localhost:$$VITE_PORT"; \
+	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
+		npm --prefix code/webapp run cypress:run:devlab -- \
+		--headed --browser chrome
+
+cypress-devlab-run: ## Run ALL specs headless against dev-lab stack
+	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
+	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	if [ -z "$$CONTAINER" ]; then \
+		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+		exit 1; \
+	fi; \
+	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
+	VITE_PORT=$$((5180 + OFFSET)); \
+	API_PORT=$$((8900 + OFFSET)); \
+	echo "$(GREEN)Running ALL specs headless (devlab)$(NC)"; \
+	echo "  Container : $$CONTAINER"; \
+	echo "  Base URL  : http://localhost:$$VITE_PORT"; \
+	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
+		npm --prefix code/webapp run cypress:run:devlab
+
+cypress-devlab-run-spec: ## Run a specific spec headless against dev-lab stack: make cypress-devlab-run-spec SPEC=login [GREP="text"]
+	@if [ -z "$(SPEC)" ]; then echo "$(RED)Usage: make cypress-devlab-run-spec SPEC=<name> [GREP='text']$(NC)"; exit 1; fi
+	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
+	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	if [ -z "$$CONTAINER" ]; then \
+		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+		exit 1; \
+	fi; \
+	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
+	VITE_PORT=$$((5180 + OFFSET)); \
+	API_PORT=$$((8900 + OFFSET)); \
+	echo "$(GREEN)Running spec headless (devlab): $(SPEC).cy.ts$(if $(GREP), [grep: $(GREP)])$(NC)"; \
+	echo "  Container : $$CONTAINER"; \
+	echo "  Base URL  : http://localhost:$$VITE_PORT"; \
+	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
+		npm --prefix code/webapp run cypress:run:devlab -- \
 		--spec "cypress/e2e/$(SPEC).cy.ts" \
 		$(if $(GREP),--env grep="$(GREP)")
 
