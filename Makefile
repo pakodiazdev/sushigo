@@ -1,4 +1,4 @@
-.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart cypress-devlab cypress-devlab-spec cypress-devlab-headed cypress-devlab-run cypress-devlab-run-spec
+.PHONY: help e2e-ui cypress-ui cypress-run cypress-run-headed cypress-spec cypress-debug cypress-build chrome-clear-hsts ssl-info hosts-setup db-seed e2e-up e2e-down e2e-logs e2e-restart cypress-devlab cypress-devlab-spec cypress-devlab-headed cypress-devlab-run cypress-devlab-run-spec cypress-up cypress-down cypress-logs
 
 # Colores para output
 GREEN  := \033[0;32m
