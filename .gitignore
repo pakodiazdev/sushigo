@@ -33,6 +33,9 @@ logs/
 # PostgreSQL
 pg_data/
 
+# Dev-lab runtime — PID files written by sushigo-dev-lab/start-e2e.sh
+.e2e-vite-*.pid
+
 # Temporary files
 tmp/
 temp/
