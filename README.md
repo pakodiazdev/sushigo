@@ -85,6 +85,55 @@ npm run build       # production build into dist/
 
 The webapp relies on the API base URL configured in `src/lib/api-client.ts`.
 
+## Make commands
+
+Run `make help` for the full list. Common commands grouped by purpose:
+
+### E2E testing — dev-lab stack
+
+Requires the dev-lab E2E stack to be running first (`make e2e WORKSPACE=sushigo-a` from `sushigo-dev-lab`).
+
+| Command | Description |
+|---|---|
+| `make cypress-devlab` | Open Cypress GUI — pick and run specs interactively |
+| `make cypress-devlab-spec SPEC=login` | Run one spec with browser visible |
+| `make cypress-devlab-spec SPEC=login GREP="logs in"` | Same, filtered by test name |
+| `make cypress-devlab-headed` | Run all specs with browser visible |
+| `make cypress-devlab-run` | Run all specs headless |
+| `make cypress-devlab-run-spec SPEC=login` | Run one spec headless |
+| `make cypress-devlab-run-spec SPEC=login GREP="logs in"` | Same, filtered by test name |
+
+`SPEC` is the filename without path or `.cy.ts` extension (e.g. `attendance-checkin`).
+`GREP` filters by test description substring — useful to run a single `it()` inside a spec.
+
+### E2E testing — devtest Docker stack
+
+Uses the workspace's own `docker-compose.e2e.yml` with a Cypress container.
+
+| Command | Description |
+|---|---|
+| `make e2e-up` | Start the E2E PHP container |
+| `make e2e-down` | Stop it |
+| `make e2e-restart` | Restart it |
+| `make e2e-logs` | Tail its logs |
+| `make cypress-run` | Run all specs headless inside Docker |
+| `make cypress-spec SPEC=login` | Run one spec headed (browser via VNC) |
+| `make cypress-ui` | Open Cypress GUI inside Docker (VNC at http://localhost:6080) |
+
+### Database
+
+| Command | Description |
+|---|---|
+| `make db-seed` | Run all seeders inside `dev_container` |
+
+### Local setup
+
+| Command | Description |
+|---|---|
+| `make hosts-setup` | Print the `/etc/hosts` line needed for `sushigo.local` |
+| `make ssl-info` | Show SSL certificate status and install instructions |
+| `make chrome-clear-hsts` | Instructions to clear Chrome HSTS cache for `localhost` |
+
 ## Architecture & domain documentation
 
 - [Inventory Architecture & Design (modelos, diagramas y flujos)](doc/architecture/inventory-architecture.md)
