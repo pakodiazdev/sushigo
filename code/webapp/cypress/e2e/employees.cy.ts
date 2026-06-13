@@ -60,7 +60,7 @@ describe('Crear empleado', () => {
     // La fecha de ingreso se pre-llena con hoy — no se modifica
 
     // ── 3. Crear empleado ────────────────────────────────────────────────────
-    cy.contains('button', 'Crear').click({ force: true })
+    cy.contains('button', 'Crear').click()
 
     // Esperar a que aparezca la vista de detalle
     cy.contains('Empleado Cypress', { timeout: 10_000 }).scrollIntoView().should('be.visible')
