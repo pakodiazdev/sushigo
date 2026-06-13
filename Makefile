@@ -69,13 +69,17 @@ cypress-run: ## Ejecutar tests de Cypress en modo headless
 
 cypress-devlab: ## Open Cypress GUI against the sushigo-dev-lab E2E stack (run make e2e WORKSPACE=... first)
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
-	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
 	if [ -z "$$CONTAINER" ]; then \
 		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
 		if [ -x "$$DEVLAB_START" ]; then \
 			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
-			"$$DEVLAB_START" "sushigo-$$LETTER"; \
-			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER" || exit 1; \
+			CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
+			if [ -z "$$CONTAINER" ]; then \
+				echo "$(RED)❌ Container e2e-api-$$LETTER not found after auto-start$(NC)"; \
+				exit 1; \
+			fi; \
 		else \
 			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
 			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
@@ -95,13 +99,17 @@ cypress-devlab: ## Open Cypress GUI against the sushigo-dev-lab E2E stack (run m
 cypress-devlab-spec: ## Run a specific spec headed against dev-lab stack: make cypress-devlab-spec SPEC=login [GREP="text"]
 	@if [ -z "$(SPEC)" ]; then echo "$(RED)Usage: make cypress-devlab-spec SPEC=<name> [GREP='text']$(NC)"; exit 1; fi
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
-	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
 	if [ -z "$$CONTAINER" ]; then \
 		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
 		if [ -x "$$DEVLAB_START" ]; then \
 			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
-			"$$DEVLAB_START" "sushigo-$$LETTER"; \
-			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER" || exit 1; \
+			CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
+			if [ -z "$$CONTAINER" ]; then \
+				echo "$(RED)❌ Container e2e-api-$$LETTER not found after auto-start$(NC)"; \
+				exit 1; \
+			fi; \
 		else \
 			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
 			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
@@ -126,13 +134,17 @@ cypress-devlab-spec: ## Run a specific spec headed against dev-lab stack: make c
 
 cypress-devlab-headed: ## Run ALL specs headed (browser visible) against dev-lab stack
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
-	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
 	if [ -z "$$CONTAINER" ]; then \
 		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
 		if [ -x "$$DEVLAB_START" ]; then \
 			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
-			"$$DEVLAB_START" "sushigo-$$LETTER"; \
-			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER" || exit 1; \
+			CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
+			if [ -z "$$CONTAINER" ]; then \
+				echo "$(RED)❌ Container e2e-api-$$LETTER not found after auto-start$(NC)"; \
+				exit 1; \
+			fi; \
 		else \
 			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
 			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
@@ -155,13 +167,17 @@ cypress-devlab-headed: ## Run ALL specs headed (browser visible) against dev-lab
 
 cypress-devlab-run: ## Run ALL specs headless against dev-lab stack
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
-	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
 	if [ -z "$$CONTAINER" ]; then \
 		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
 		if [ -x "$$DEVLAB_START" ]; then \
 			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
-			"$$DEVLAB_START" "sushigo-$$LETTER"; \
-			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER" || exit 1; \
+			CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
+			if [ -z "$$CONTAINER" ]; then \
+				echo "$(RED)❌ Container e2e-api-$$LETTER not found after auto-start$(NC)"; \
+				exit 1; \
+			fi; \
 		else \
 			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
 			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
@@ -184,13 +200,17 @@ cypress-devlab-run: ## Run ALL specs headless against dev-lab stack
 cypress-devlab-run-spec: ## Run a specific spec headless against dev-lab stack: make cypress-devlab-run-spec SPEC=login [GREP="text"]
 	@if [ -z "$(SPEC)" ]; then echo "$(RED)Usage: make cypress-devlab-run-spec SPEC=<name> [GREP='text']$(NC)"; exit 1; fi
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
-	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+	CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
 	if [ -z "$$CONTAINER" ]; then \
 		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
 		if [ -x "$$DEVLAB_START" ]; then \
 			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
-			"$$DEVLAB_START" "sushigo-$$LETTER"; \
-			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER" || exit 1; \
+			CONTAINER=$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1); \
+			if [ -z "$$CONTAINER" ]; then \
+				echo "$(RED)❌ Container e2e-api-$$LETTER not found after auto-start$(NC)"; \
+				exit 1; \
+			fi; \
 		else \
 			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
 			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
