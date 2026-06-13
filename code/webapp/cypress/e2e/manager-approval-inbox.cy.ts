@@ -23,7 +23,7 @@ import users from '../fixtures/users.json'
 const { email, password } = users.admin
 
 const API = Cypress.env('apiUrl') || 'https://devtest.api.sushigo.local/api/v1'
-const FUTURE_DATE = '2099-06-15'
+const FUTURE_DATE = '2099-06-14' // Sunday — only rest day in AttendanceTestSeeder schedule (ISO day 7)
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
@@ -93,7 +93,9 @@ describe('Manager Approval Inbox — Approve', () => {
   beforeEach(() => {
     cy.loginByApi(email, password)
     cy.visitWithAuth('/solicitudes')
-    cy.url().should('include', '/solicitudes', { timeout: 10_000 })
+    // Wait for React to hydrate before closeDevDebugger takes its synchronous DOM snapshot.
+    // cy.url() passes before hydration; cy.contains() retries until React renders the heading.
+    cy.contains('Solicitudes', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
   })
 
@@ -141,7 +143,7 @@ describe('Manager Approval Inbox — Reject', () => {
   beforeEach(() => {
     cy.loginByApi(email, password)
     cy.visitWithAuth('/solicitudes')
-    cy.url().should('include', '/solicitudes', { timeout: 10_000 })
+    cy.contains('Solicitudes', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
   })
 
