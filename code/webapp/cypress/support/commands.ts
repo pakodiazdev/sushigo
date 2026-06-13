@@ -101,6 +101,9 @@ Cypress.Commands.add('closeDevDebugger', () => {
     if ($body.find('[data-testid="dev-debugger"]').length > 0) {
       cy.log('🔧 Hiding Dev Debugger (Ctrl+Shift+D)...');
       cy.get('body').type('{ctrl}{shift}d');
+      // Verify the element was actually removed from the DOM so tests cannot
+      // proceed while the overlay is still covering page content.
+      cy.get('[data-testid="dev-debugger"]').should('not.exist');
     }
   });
 });
