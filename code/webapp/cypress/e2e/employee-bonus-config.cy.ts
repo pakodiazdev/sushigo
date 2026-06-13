@@ -82,6 +82,7 @@ describe('Employee Bonus Config — admin happy path', () => {
     // accidentally matching the <option value="active">Activos</option> in
     // the employee status filter select (which has 0x0 dimensions).
     cy.get('[data-testid="current-bonus-assignment"]').scrollIntoView().should('be.visible')
+    cy.get('[data-testid="current-bonus-assignment"]').contains('Activo').should('be.visible')
     cy.contains('Sin grupo de bono asignado').should('not.exist')
   })
 })
