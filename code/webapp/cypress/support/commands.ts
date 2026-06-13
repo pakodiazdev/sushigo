@@ -84,20 +84,23 @@ Cypress.Commands.add('logout', () => {
 });
 
 /**
- * Minimiza el Dev Debugger flotante si está visible.
- * Solo aparece en entorno devtest — no hace nada en producción.
+ * Oculta completamente el Dev Debugger (sets isHidden=true → component returns null).
+ * Uses Ctrl+Shift+D — the same shortcut the component listens to — so the element
+ * is removed from the DOM entirely, not just minimized.
+ *
+ * A minimized DevDebugger keeps a fixed-position badge on screen (z-9999) that
+ * can cover panel content in tests. Full hide avoids that.
+ *
+ * IMPORTANT: call this only after waiting for page content to be rendered
+ * (e.g. cy.get('table').should('exist')).  The inner check is a synchronous
+ * jQuery snapshot — if React hasn't hydrated yet the DevDebugger won't be in
+ * the DOM and the command silently no-ops.
  */
 Cypress.Commands.add('closeDevDebugger', () => {
   cy.get('body').then(($body) => {
-    if ($body.find('span:contains("Dev Debugger")').length > 0) {
-      cy.log('🔧 Minimizando Dev Debugger...');
-      // span → div.flex → div.bg-blue-600 (header) → último button = MinusCircle
-      cy.contains('span', 'Dev Debugger')
-        .parent()
-        .parent()
-        .find('button')
-        .last()
-        .click({ force: true });
+    if ($body.find('[data-testid="dev-debugger"]').length > 0) {
+      cy.log('🔧 Hiding Dev Debugger (Ctrl+Shift+D)...');
+      cy.get('body').type('{ctrl}{shift}d');
     }
   });
 });

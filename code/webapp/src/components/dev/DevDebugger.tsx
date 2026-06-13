@@ -74,6 +74,7 @@ export function DevDebugger() {
                     top: state.position.y,
                 }}
                 className="fixed z-[9999] cursor-move"
+                data-testid="dev-debugger"
                 onMouseDown={handleMouseDown}
             >
                 <div className="bg-gray-900 text-white rounded-lg shadow-2xl p-3 flex items-center gap-2 border-2 border-blue-500">
@@ -101,6 +102,7 @@ export function DevDebugger() {
                 maxHeight: '80vh',
             }}
             className="fixed z-[9999] bg-gray-900 text-white rounded-lg shadow-2xl border-2 border-blue-500 overflow-hidden flex flex-col"
+            data-testid="dev-debugger"
         >
             <div
                 className="bg-blue-600 px-4 py-2 flex items-center justify-between cursor-move"
@@ -122,6 +124,7 @@ export function DevDebugger() {
                         onClick={toggleMinimized}
                         className="p-1 hover:bg-blue-700 rounded"
                         title="Minimize debugger"
+                        aria-label="Minimize debugger"
                     >
                         <MinusCircle className="h-4 w-4" />
                     </button>

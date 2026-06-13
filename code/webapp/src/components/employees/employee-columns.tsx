@@ -123,6 +123,7 @@ export function getEmployeeColumns(onEdit: (item: Employee) => void): Column<Emp
           }}
           className="h-8 w-8 p-0"
           title="Ver detalle"
+          aria-label="Ver detalle"
         >
           <Eye className="h-4 w-4" />
         </Button>
