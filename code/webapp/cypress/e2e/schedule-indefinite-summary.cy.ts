@@ -45,6 +45,10 @@ describe('Indefinite override — employee card summary', () => {
     cy.url().should('not.include', '/login', { timeout: 10_000 })
     cy.visit('/employees')
     cy.url().should('include', '/employees', { timeout: 10_000 })
+    // Wait for the employee table to render before closing the DevDebugger.
+    // cy.closeDevDebugger uses a synchronous DOM check — React must be
+    // hydrated first or the DevDebugger won't be found and stays open.
+    cy.get('table', { timeout: 10_000 }).should('exist')
     cy.closeDevDebugger()
   })
 
@@ -85,6 +89,7 @@ describe('Indefinite override — schedule dialog compact summary', () => {
     cy.url().should('not.include', '/login', { timeout: 10_000 })
     cy.visit('/employees')
     cy.url().should('include', '/employees', { timeout: 10_000 })
+    cy.get('table', { timeout: 10_000 }).should('exist')
     cy.closeDevDebugger()
   })
 
