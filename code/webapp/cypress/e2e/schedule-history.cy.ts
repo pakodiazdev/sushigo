@@ -34,6 +34,10 @@ describe('Schedule History', () => {
     cy.url().should('not.include', '/login', { timeout: 10_000 })
     cy.visit('/employees')
     cy.url().should('include', '/employees', { timeout: 10_000 })
+    // Wait for the employee table to exist before closing the debugger.
+    // closeDevDebugger() uses a synchronous jQuery snapshot — if React hasn't
+    // hydrated yet the DevDebugger won't be in the DOM and the command no-ops.
+    cy.get('table', { timeout: 10_000 }).should('exist')
     cy.closeDevDebugger()
   })
 
@@ -86,8 +90,9 @@ describe('Schedule History', () => {
     // Select a position
     cy.contains('label', 'Cocinero').find('[role="switch"]').click({ force: true })
 
-    // Create employee
-    cy.contains('button', 'Crear').click()
+    // force: true required — the submit button may be outside the slide panel's overflow-y-auto
+    // visible area; all other form elements in this panel also use { force: true }
+    cy.contains('button', 'Crear').click({ force: true })
 
     // Wait for detail view
     cy.contains('Test NoSchedule', { timeout: 10_000 }).scrollIntoView().should('be.visible')
