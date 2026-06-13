@@ -32,12 +32,11 @@ class NegotiatedExtraDaysSeeder extends Seeder
 
     public function run(): void
     {
-        $this->now = (string) now();
+        $today = now();
+        $this->now = (string) $today;
         $this->employeeId = (int) DB::table('employees')->where('code', 'EMP-001')->value('id');
         $this->branchId = (int) DB::table('branches')->where('code', 'MAIN')->value('id');
         $this->adminUserId = (int) DB::table('users')->where('email', 'admin@sushigo.com')->value('id');
-
-        $today = now();
         $past1 = $today->copy()->subDays(90)->toDateString();
         $past2 = $today->copy()->subDays(69)->toDateString();
         $past3 = $today->copy()->subDays(54)->toDateString();
