@@ -118,7 +118,11 @@ cypress-devlab-spec: ## Run a specific spec headed against dev-lab stack: make c
 		npm --prefix code/webapp run cypress:run:devlab -- \
 		--headed --browser chrome \
 		--spec "cypress/e2e/$(SPEC).cy.ts" \
-		$(if $(GREP),--env grep="$(GREP)")
+		$(if $(GREP),--env grep="$(GREP)"); \
+	CYPRESS_EXIT=$$?; \
+	DEVLAB_STOP="$$(pwd)/../../scripts/stop-e2e.sh"; \
+	if [ -x "$$DEVLAB_STOP" ]; then "$$DEVLAB_STOP" "sushigo-$$LETTER"; fi; \
+	exit $$CYPRESS_EXIT
 
 cypress-devlab-headed: ## Run ALL specs headed (browser visible) against dev-lab stack
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
@@ -143,7 +147,11 @@ cypress-devlab-headed: ## Run ALL specs headed (browser visible) against dev-lab
 	echo "  Base URL  : http://localhost:$$VITE_PORT"; \
 	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
 		npm --prefix code/webapp run cypress:run:devlab -- \
-		--headed --browser chrome
+		--headed --browser chrome; \
+	CYPRESS_EXIT=$$?; \
+	DEVLAB_STOP="$$(pwd)/../../scripts/stop-e2e.sh"; \
+	if [ -x "$$DEVLAB_STOP" ]; then "$$DEVLAB_STOP" "sushigo-$$LETTER"; fi; \
+	exit $$CYPRESS_EXIT
 
 cypress-devlab-run: ## Run ALL specs headless against dev-lab stack
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
@@ -167,7 +175,11 @@ cypress-devlab-run: ## Run ALL specs headless against dev-lab stack
 	echo "  Container : $$CONTAINER"; \
 	echo "  Base URL  : http://localhost:$$VITE_PORT"; \
 	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
-		npm --prefix code/webapp run cypress:run:devlab
+		npm --prefix code/webapp run cypress:run:devlab; \
+	CYPRESS_EXIT=$$?; \
+	DEVLAB_STOP="$$(pwd)/../../scripts/stop-e2e.sh"; \
+	if [ -x "$$DEVLAB_STOP" ]; then "$$DEVLAB_STOP" "sushigo-$$LETTER"; fi; \
+	exit $$CYPRESS_EXIT
 
 cypress-devlab-run-spec: ## Run a specific spec headless against dev-lab stack: make cypress-devlab-run-spec SPEC=login [GREP="text"]
 	@if [ -z "$(SPEC)" ]; then echo "$(RED)Usage: make cypress-devlab-run-spec SPEC=<name> [GREP='text']$(NC)"; exit 1; fi
@@ -194,7 +206,11 @@ cypress-devlab-run-spec: ## Run a specific spec headless against dev-lab stack: 
 	E2E_CONTAINER="$$CONTAINER" VITE_PORT="$$VITE_PORT" E2E_API_PORT="$$API_PORT" \
 		npm --prefix code/webapp run cypress:run:devlab -- \
 		--spec "cypress/e2e/$(SPEC).cy.ts" \
-		$(if $(GREP),--env grep="$(GREP)")
+		$(if $(GREP),--env grep="$(GREP)"); \
+	CYPRESS_EXIT=$$?; \
+	DEVLAB_STOP="$$(pwd)/../../scripts/stop-e2e.sh"; \
+	if [ -x "$$DEVLAB_STOP" ]; then "$$DEVLAB_STOP" "sushigo-$$LETTER"; fi; \
+	exit $$CYPRESS_EXIT
 
 cypress-run-headed: cypress-up ## Ejecutar TODOS los tests con navegador visible (ver en VNC http://localhost:6080)
 	@echo "$(GREEN)Ejecutando todos los tests en modo headed (VNC: http://localhost:6080)...$(NC)"
