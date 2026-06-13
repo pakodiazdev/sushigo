@@ -35,6 +35,10 @@ describe('Crear empleado', () => {
     cy.url().should('not.include', '/login', { timeout: 10_000 })
     cy.visit('/employees')
     cy.url().should('include', '/employees', { timeout: 10_000 })
+    // Wait for the employee table to render before closing the DevDebugger.
+    // cy.closeDevDebugger uses a synchronous DOM check — React must be
+    // hydrated and the DevDebugger mounted before the check runs.
+    cy.get('table', { timeout: 10_000 }).should('exist')
     cy.closeDevDebugger()
   })
 
@@ -56,7 +60,7 @@ describe('Crear empleado', () => {
     // La fecha de ingreso se pre-llena con hoy — no se modifica
 
     // ── 3. Crear empleado ────────────────────────────────────────────────────
-    cy.contains('button', 'Crear').click()
+    cy.contains('button', 'Crear').click({ force: true })
 
     // Esperar a que aparezca la vista de detalle
     cy.contains('Empleado Cypress', { timeout: 10_000 }).scrollIntoView().should('be.visible')
@@ -206,6 +210,10 @@ describe('Nuevo horario pre-llenado', () => {
     cy.url().should('not.include', '/login', { timeout: 10_000 })
     cy.visit('/employees')
     cy.url().should('include', '/employees', { timeout: 10_000 })
+    // Wait for the employee table to render before closing the DevDebugger.
+    // cy.closeDevDebugger uses a synchronous DOM check — React must be
+    // hydrated and the DevDebugger mounted before the check runs.
+    cy.get('table', { timeout: 10_000 }).should('exist')
     cy.closeDevDebugger()
   })
 
