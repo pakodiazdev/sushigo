@@ -55,7 +55,7 @@ export function BonusConfigSection({ employeeId }: BonusConfigSectionProps) {
 
       {/* Current assignment */}
       {current ? (
-        <div className="rounded-md border border-border p-3 space-y-1">
+        <div className="rounded-md border border-border p-3 space-y-1" data-testid="current-bonus-assignment">
           <div className="flex items-center gap-2">
             <Award className="h-4 w-4 text-amber-500" />
             <span className="text-sm font-medium">{current.bonus_group_name}</span>
