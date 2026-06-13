@@ -71,9 +71,16 @@ cypress-devlab: ## Open Cypress GUI against the sushigo-dev-lab E2E stack (run m
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
 	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
 	if [ -z "$$CONTAINER" ]; then \
-		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
-		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
-		exit 1; \
+		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
+		if [ -x "$$DEVLAB_START" ]; then \
+			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER"; \
+			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+		else \
+			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+			exit 1; \
+		fi; \
 	fi; \
 	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
 	VITE_PORT=$$((5180 + OFFSET)); \
@@ -90,9 +97,16 @@ cypress-devlab-spec: ## Run a specific spec headed against dev-lab stack: make c
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
 	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
 	if [ -z "$$CONTAINER" ]; then \
-		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
-		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
-		exit 1; \
+		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
+		if [ -x "$$DEVLAB_START" ]; then \
+			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER"; \
+			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+		else \
+			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+			exit 1; \
+		fi; \
 	fi; \
 	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
 	VITE_PORT=$$((5180 + OFFSET)); \
@@ -110,9 +124,16 @@ cypress-devlab-headed: ## Run ALL specs headed (browser visible) against dev-lab
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
 	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
 	if [ -z "$$CONTAINER" ]; then \
-		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
-		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
-		exit 1; \
+		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
+		if [ -x "$$DEVLAB_START" ]; then \
+			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER"; \
+			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+		else \
+			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+			exit 1; \
+		fi; \
 	fi; \
 	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
 	VITE_PORT=$$((5180 + OFFSET)); \
@@ -128,9 +149,16 @@ cypress-devlab-run: ## Run ALL specs headless against dev-lab stack
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
 	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
 	if [ -z "$$CONTAINER" ]; then \
-		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
-		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
-		exit 1; \
+		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
+		if [ -x "$$DEVLAB_START" ]; then \
+			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER"; \
+			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+		else \
+			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+			exit 1; \
+		fi; \
 	fi; \
 	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
 	VITE_PORT=$$((5180 + OFFSET)); \
@@ -146,9 +174,16 @@ cypress-devlab-run-spec: ## Run a specific spec headless against dev-lab stack: 
 	@LETTER="$$(basename $$(pwd) | sed 's/sushigo-//')"; \
 	CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
 	if [ -z "$$CONTAINER" ]; then \
-		echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
-		echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
-		exit 1; \
+		DEVLAB_START="$$(pwd)/../../scripts/start-e2e.sh"; \
+		if [ -x "$$DEVLAB_START" ]; then \
+			echo "$(YELLOW)⚡ Dev-lab E2E stack not running — auto-starting for sushigo-$$LETTER...$(NC)"; \
+			"$$DEVLAB_START" "sushigo-$$LETTER"; \
+			CONTAINER="$$(docker ps --format '{{.Names}}' | grep "e2e-api-$$LETTER" | head -1)"; \
+		else \
+			echo "$(RED)❌ Dev-lab E2E stack not running.$(NC)"; \
+			echo "   Start it with: $(YELLOW)make e2e WORKSPACE=sushigo-$$LETTER$(NC)  (from sushigo-dev-lab)"; \
+			exit 1; \
+		fi; \
 	fi; \
 	OFFSET=$$(echo "$$LETTER" | tr 'a-h' '12345678'); \
 	VITE_PORT=$$((5180 + OFFSET)); \
