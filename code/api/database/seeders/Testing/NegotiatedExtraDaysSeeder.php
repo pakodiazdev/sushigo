@@ -14,11 +14,11 @@ use Illuminate\Support\Str;
  *
  * Employees must already exist (AttendanceTestSeeder ran first).
  *
- * Records:
- *   2026-03-15  $600  prima 100%  → $600  notes: "Turno especial"   (past)
- *   2026-04-05  $500  prima 50%   → $250  notes: null                (past)
- *   2026-04-20  $700  prima 0%    → $0    notes: "Sin prima"         (past)
- *   2026-05-10  $800  prima 100%  → $800  notes: "Próximo extra"     (future — cancellable)
+ * Records (dates are relative to today so the future record stays future):
+ *   today - 90 days  $600  prima 100%  → $600  notes: "Turno especial"   (past)
+ *   today - 69 days  $500  prima 50%   → $250  notes: null                (past)
+ *   today - 54 days  $700  prima 0%    → $0    notes: "Sin prima"         (past)
+ *   today + 30 days  $800  prima 100%  → $800  notes: "Próximo extra"     (future — cancellable)
  */
 class NegotiatedExtraDaysSeeder extends Seeder
 {
@@ -37,11 +37,16 @@ class NegotiatedExtraDaysSeeder extends Seeder
         $this->branchId = (int) DB::table('branches')->where('code', 'MAIN')->value('id');
         $this->adminUserId = (int) DB::table('users')->where('email', 'admin@sushigo.com')->value('id');
 
+        $past1  = now()->subDays(90)->toDateString();
+        $past2  = now()->subDays(69)->toDateString();
+        $past3  = now()->subDays(54)->toDateString();
+        $future = now()->addDays(30)->toDateString();
+
         DB::table('negotiated_extra_days')->insert([
-            $this->row('2026-03-15', '600.0000', '100.0000', '600.0000', 'Turno especial'),
-            $this->row('2026-04-05', '500.0000', '50.0000', '250.0000', null),
-            $this->row('2026-04-20', '700.0000', '0.0000', '0.0000', 'Sin prima'),
-            $this->row('2026-05-10', '800.0000', '100.0000', '800.0000', 'Próximo extra'),
+            $this->row($past1,  '600.0000', '100.0000', '600.0000', 'Turno especial'),
+            $this->row($past2,  '500.0000', '50.0000',  '250.0000', null),
+            $this->row($past3,  '700.0000', '0.0000',   '0.0000',   'Sin prima'),
+            $this->row($future, '800.0000', '100.0000', '800.0000', 'Próximo extra'),
         ]);
     }
 
