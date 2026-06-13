@@ -37,15 +37,16 @@ class NegotiatedExtraDaysSeeder extends Seeder
         $this->branchId = (int) DB::table('branches')->where('code', 'MAIN')->value('id');
         $this->adminUserId = (int) DB::table('users')->where('email', 'admin@sushigo.com')->value('id');
 
-        $past1  = now()->subDays(90)->toDateString();
-        $past2  = now()->subDays(69)->toDateString();
-        $past3  = now()->subDays(54)->toDateString();
-        $future = now()->addDays(30)->toDateString();
+        $today = now();
+        $past1 = $today->copy()->subDays(90)->toDateString();
+        $past2 = $today->copy()->subDays(69)->toDateString();
+        $past3 = $today->copy()->subDays(54)->toDateString();
+        $future = $today->copy()->addDays(30)->toDateString();
 
         DB::table('negotiated_extra_days')->insert([
-            $this->row($past1,  '600.0000', '100.0000', '600.0000', 'Turno especial'),
-            $this->row($past2,  '500.0000', '50.0000',  '250.0000', null),
-            $this->row($past3,  '700.0000', '0.0000',   '0.0000',   'Sin prima'),
+            $this->row($past1, '600.0000', '100.0000', '600.0000', 'Turno especial'),
+            $this->row($past2, '500.0000', '50.0000', '250.0000', null),
+            $this->row($past3, '700.0000', '0.0000', '0.0000', 'Sin prima'),
             $this->row($future, '800.0000', '100.0000', '800.0000', 'Próximo extra'),
         ]);
     }
