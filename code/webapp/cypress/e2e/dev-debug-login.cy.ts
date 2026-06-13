@@ -8,8 +8,10 @@
  *
  * Requires in the test environment:
  *   VITE_LOGIN_WITH_DEVDEBUG=true
- *   VITE_APP_ENV=local    (or whichever value is in VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS)
+ *   VITE_APP_ENV=dev    (or whichever value is in VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS)
+ *   VITE_DEV_DEBUGGER_START_HIDDEN=false  (DevDebugger visible on page load)
  *   LOGIN_WITH_DEVDEBUG=true  (API side)
+ *   DEV_LOGIN_ALLOWED_ENVIRONMENTS includes APP_ENV  (API side)
  *
  * DB reset strategy
  * ─────────────────
@@ -33,9 +35,7 @@ describe('Dev Debug Login — Happy Path', () => {
     it('muestra la sección Dev Login en el DevDebugger cuando no hay sesión', () => {
         cy.visit('/login')
 
-        // Show DevDebugger (hidden by default in e2e — trigger with Ctrl+Shift+D)
-        cy.get('body').type('{ctrl}{shift}d')
-
+        // DevDebugger is visible on page load (VITE_DEV_DEBUGGER_START_HIDDEN=false)
         cy.contains('Dev Debugger', { timeout: 5_000 }).should('be.visible')
         cy.contains('Dev Login').should('be.visible')
     })
@@ -43,7 +43,6 @@ describe('Dev Debug Login — Happy Path', () => {
     it('lista usuarios y permite iniciar sesión sin contraseña', () => {
         cy.visit('/login')
 
-        cy.get('body').type('{ctrl}{shift}d')
         cy.contains('Dev Login', { timeout: 5_000 }).should('be.visible')
 
         // Users should appear (seeded by test:reset)
@@ -68,7 +67,6 @@ describe('Dev Debug Login — Happy Path', () => {
     it('filtra usuarios por nombre con el buscador local', () => {
         cy.visit('/login')
 
-        cy.get('body').type('{ctrl}{shift}d')
         cy.contains('Dev Login', { timeout: 5_000 }).should('be.visible')
 
         // Wait for list to load
