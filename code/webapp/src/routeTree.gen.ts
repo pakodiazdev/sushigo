@@ -36,6 +36,7 @@ import { Route as CashBankAccountsRouteImport } from './pages/cash/bank-accounts
 import { Route as AttendanceTodayRouteImport } from './pages/attendance/today'
 import { Route as AttendancePunctualityConfigRouteImport } from './pages/attendance/punctuality-config'
 import { Route as AttendanceReportsTodayRouteImport } from './pages/attendance/reports/today'
+import { Route as AttendanceConfigHolidaysRouteImport } from './pages/attendance/config/holidays'
 
 const UnauthorizedRoute = UnauthorizedRouteImport.update({
   id: '/unauthorized',
@@ -173,6 +174,12 @@ const AttendanceReportsTodayRoute = AttendanceReportsTodayRouteImport.update({
   path: '/attendance/reports/today',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttendanceConfigHolidaysRoute =
+  AttendanceConfigHolidaysRouteImport.update({
+    id: '/attendance/config/holidays',
+    path: '/attendance/config/holidays',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/inventory/locations': typeof InventoryLocationsRoute
   '/cash/': typeof CashIndexRoute
   '/inventory/': typeof InventoryIndexRoute
+  '/attendance/config/holidays': typeof AttendanceConfigHolidaysRoute
   '/attendance/reports/today': typeof AttendanceReportsTodayRoute
 }
 export interface FileRoutesByTo {
@@ -228,6 +236,7 @@ export interface FileRoutesByTo {
   '/inventory/locations': typeof InventoryLocationsRoute
   '/cash': typeof CashIndexRoute
   '/inventory': typeof InventoryIndexRoute
+  '/attendance/config/holidays': typeof AttendanceConfigHolidaysRoute
   '/attendance/reports/today': typeof AttendanceReportsTodayRoute
 }
 export interface FileRoutesById {
@@ -258,6 +267,7 @@ export interface FileRoutesById {
   '/inventory/locations': typeof InventoryLocationsRoute
   '/cash/': typeof CashIndexRoute
   '/inventory/': typeof InventoryIndexRoute
+  '/attendance/config/holidays': typeof AttendanceConfigHolidaysRoute
   '/attendance/reports/today': typeof AttendanceReportsTodayRoute
 }
 export interface FileRouteTypes {
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/inventory/locations'
     | '/cash/'
     | '/inventory/'
+    | '/attendance/config/holidays'
     | '/attendance/reports/today'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '/inventory/locations'
     | '/cash'
     | '/inventory'
+    | '/attendance/config/holidays'
     | '/attendance/reports/today'
   id:
     | '__root__'
@@ -345,6 +357,7 @@ export interface FileRouteTypes {
     | '/inventory/locations'
     | '/cash/'
     | '/inventory/'
+    | '/attendance/config/holidays'
     | '/attendance/reports/today'
   fileRoutesById: FileRoutesById
 }
@@ -367,6 +380,7 @@ export interface RootRouteChildren {
   UnauthorizedRoute: typeof UnauthorizedRoute
   AttendancePunctualityConfigRoute: typeof AttendancePunctualityConfigRoute
   AttendanceTodayRoute: typeof AttendanceTodayRoute
+  AttendanceConfigHolidaysRoute: typeof AttendanceConfigHolidaysRoute
   AttendanceReportsTodayRoute: typeof AttendanceReportsTodayRoute
 }
 
@@ -561,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AttendanceReportsTodayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attendance/config/holidays': {
+      id: '/attendance/config/holidays'
+      path: '/attendance/config/holidays'
+      fullPath: '/attendance/config/holidays'
+      preLoaderRoute: typeof AttendanceConfigHolidaysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -617,6 +638,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnauthorizedRoute: UnauthorizedRoute,
   AttendancePunctualityConfigRoute: AttendancePunctualityConfigRoute,
   AttendanceTodayRoute: AttendanceTodayRoute,
+  AttendanceConfigHolidaysRoute: AttendanceConfigHolidaysRoute,
   AttendanceReportsTodayRoute: AttendanceReportsTodayRoute,
 }
 export const routeTree = rootRouteImport
