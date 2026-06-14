@@ -2,6 +2,8 @@ name: API Lint (PHP Pint)
 
 on:
   pull_request:
+    paths:
+      - 'code/api/**'
   push:
     branches:
       - main
