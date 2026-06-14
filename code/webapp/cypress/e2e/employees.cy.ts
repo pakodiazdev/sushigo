@@ -60,7 +60,11 @@ describe('Crear empleado', () => {
     // La fecha de ingreso se pre-llena con hoy — no se modifica
 
     // ── 3. Crear empleado ────────────────────────────────────────────────────
-    cy.contains('button', 'Crear').click()
+    // scrollIntoView + force: the SlidePanel's autoScrollOnFocus triggers a
+    // smooth-scroll animation when email is typed; the animation may still be
+    // in flight when Cypress checks visibility. The button is present and
+    // enabled — force bypasses the transient scroll-position race.
+    cy.contains('button', 'Crear').scrollIntoView().click({ force: true })
 
     // Esperar a que aparezca la vista de detalle
     cy.contains('Empleado Cypress', { timeout: 10_000 }).scrollIntoView().should('be.visible')
