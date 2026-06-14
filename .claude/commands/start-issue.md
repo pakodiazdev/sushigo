@@ -108,7 +108,7 @@ git checkout -b <type>/<NNN>-<short-description> origin/main
 
 Update the task file (in `doc/tasks/backlog/` or the correct monthly folder if already moved) to record the session start. Add or update the `## ⏱️ Time` section at the bottom:
 
-```markdown
+````markdown
 ## ⏱️ Time
 
 ### 📊 Estimates
@@ -120,7 +120,7 @@ Update the task file (in `doc/tasks/backlog/` or the correct monthly folder if a
   { "date": "YYYY-MM-DD", "start": "HH:MM", "end": "?" }
 ]
 ```
-```
+````
 
 Use today's date and the current local time as `start`. Leave `end` as `"?"` — it will be filled when the session closes.
 
