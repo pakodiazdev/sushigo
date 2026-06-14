@@ -12,27 +12,27 @@ Como Admin, quiero asignar un grupo de bono de puntualidad a un empleado con fec
 
 ## ✅ Backend Tasks
 
-- [ ] 📂 Migration `create_employee_bonus_configs_table` — employee_id (FK), punctuality_bonus_group_id (FK), effective_from (date), effective_to (date nullable), timestamps
-- [ ] 🔧 `EmployeeBonusConfig` model — scope `effective(date)`, `belongsTo(Employee)`, `belongsTo(PunctualityBonusGroup)`
-- [ ] 🌐 `POST /api/v1/employees/{id}/bonus-config` — AssignBonusConfigController; on create auto-closes previous config
-- [ ] 🌐 `GET /api/v1/employees/{id}/bonus-config` — current config + history
-- [ ] 🧪 Feature tests: assign, auto-close previous, retrieve current
+- [x] 📂 Migration `create_employee_bonus_configs_table` — employee_id (FK), punctuality_bonus_group_id (FK), effective_from (date), effective_to (date nullable), timestamps
+- [x] 🔧 `EmployeeBonusConfig` model — scope `effective(date)`, `belongsTo(Employee)`, `belongsTo(PunctualityBonusGroup)`
+- [x] 🌐 `POST /api/v1/employees/{id}/bonus-config` — AssignBonusConfigController; on create auto-closes previous config
+- [x] 🌐 `GET /api/v1/employees/{id}/bonus-config` — current config + history
+- [x] 🧪 Feature tests: assign, auto-close previous, retrieve current
 
 ## ✅ Frontend Tasks
 
-- [ ] 📝 Add `EmployeeBonusConfig` type to `src/types/attendance-payroll.ts`
-- [ ] 🔧 `assignBonusConfig(employeeId, data)` + `getBonusConfig(employeeId)` in `src/services/config.service.ts`
-- [ ] 📱 **Bonus config section** in Employee Detail → Configuration tab — shows current group (name, daily amount); "Cambiar grupo" button opens assignment form
-- [ ] 📱 **Assignment form** — bonus group selector (populated from #064), effective_from date
-- [ ] 🔧 `useEmployeeBonusConfig(employeeId)` hook
+- [x] 📝 Add `EmployeeBonusConfig` type to `src/types/attendance-payroll.ts`
+- [x] 🔧 `assignBonusConfig(employeeId, data)` + `getBonusConfig(employeeId)` in `src/services/config.service.ts`
+- [x] 📱 **Bonus config section** in Employee Detail → Configuration tab — shows current group (name, daily amount); "Cambiar grupo" button opens assignment form
+- [x] 📱 **Assignment form** — bonus group selector (populated from #064), effective_from date
+- [x] 🔧 `useEmployeeBonusConfig(employeeId)` hook
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Admin can assign a bonus group to an employee from their profile
-- [ ] Current assignment shows the group name and computed daily amount
-- [ ] Assigning a new group automatically closes the previous one
+- [x] Admin can assign a bonus group to an employee from their profile
+- [x] Current assignment shows the group name and computed daily amount
+- [x] Assigning a new group automatically closes the previous one
 
 ---
 
@@ -42,6 +42,15 @@ Como Admin, quiero asignar un grupo de bono de puntualidad a un empleado con fec
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `2h` · **Pessimistic:** `3h`
+### 📊 Estimates
+- **Optimistic:** `2h` · **Pessimistic:** `3h` · **Tracked:** `5h`
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-04-29", "start": "00:00", "end": "02:54" },
+  { "date": "2026-05-02", "start": "11:00", "end": "13:00" }
+]
+```
