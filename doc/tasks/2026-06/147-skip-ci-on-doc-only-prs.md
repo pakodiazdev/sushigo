@@ -39,6 +39,14 @@ Como desarrollador al mergear PRs de solo documentación, necesito que los CI wo
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `1h` · **Pessimistic:** `2h`
+### 📊 Estimates
+- **Optimistic:** `1h` · **Pessimistic:** `2h` · **Tracked:** _in progress_
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-06-14", "start": "02:06", "end": "?" }
+]
+```
