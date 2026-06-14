@@ -12,10 +12,10 @@ Como desarrollador al mergear PRs de solo documentación, necesito que los CI wo
 
 ## ✅ Technical Tasks
 
-- [ ] 🔧 Add `paths: ['code/api/**']` to `on: pull_request:` trigger in `.github/workflows/api-lint.yml`
-- [ ] 🔧 Add `paths: ['code/api/**']` to `on: pull_request:` trigger in `.github/workflows/api-tests.yml`
-- [ ] 🔧 Add `paths: ['code/webapp/**']` to `on: pull_request:` trigger in `.github/workflows/webapp-lint.yml`
-- [ ] 🔧 Add `paths: ['code/webapp/**']` to `on: pull_request:` trigger in `.github/workflows/webapp-tests.yml`
+- [x] 🔧 Add `paths: ['code/api/**']` to `on: pull_request:` trigger in `.github/workflows/api-lint.yml`
+- [x] 🔧 Add `paths: ['code/api/**']` to `on: pull_request:` trigger in `.github/workflows/api-tests.yml`
+- [x] 🔧 Add `paths: ['code/webapp/**']` to `on: pull_request:` trigger in `.github/workflows/webapp-lint.yml`
+- [x] 🔧 Add `paths: ['code/webapp/**']` to `on: pull_request:` trigger in `.github/workflows/webapp-tests.yml`
 - [ ] 🧪 Verify: doc-only PR → zero CI checks appear → merge unblocked
 - [ ] 🧪 Verify: code PR → CI checks appear and run correctly
 - [ ] 🧪 Verify: mixed PR (code + docs) → only relevant suite runs
@@ -42,11 +42,11 @@ Como desarrollador al mergear PRs de solo documentación, necesito que los CI wo
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `1h` · **Pessimistic:** `2h` · **Tracked:** _in progress_
+- **Optimistic:** `1h` · **Pessimistic:** `2h` · **Tracked:** 1m
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-06-14", "start": "02:06", "end": "?" }
+  { "date": "2026-06-14", "start": "02:06", "end": "02:07" }
 ]
 ```
