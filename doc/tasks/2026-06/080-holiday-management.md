@@ -47,6 +47,14 @@ Como Admin, quiero gestionar el catálogo de días festivos (ver, agregar, actua
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `3h` · **Pessimistic:** `5h`
+### 📊 Estimates
+- **Optimistic:** `3h` · **Pessimistic:** `5h` · **Tracked:** `4h`
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-06-14", "start": "10:00", "end": "14:00" }
+]
+```

@@ -124,7 +124,8 @@ describe('RequestStatusCard — APPROVED', () => {
   })
 
   it('shows a Cancelar button for a future approved date', () => {
-    render(<RequestStatusCard request={makeRequest({ status: 'APPROVED' })} onCancel={vi.fn()} isCancelling={false} />)
+    const payload = { date: '2099-12-31', salary_pct: 100, prima_pct: 100, salary_day: 200, prima: 200, seventh_day: 200, total: 600 }
+    render(<RequestStatusCard request={makeRequest({ status: 'APPROVED', payload })} onCancel={vi.fn()} isCancelling={false} />)
     expect(screen.getByText('Cancelar')).toBeDefined()
   })
 

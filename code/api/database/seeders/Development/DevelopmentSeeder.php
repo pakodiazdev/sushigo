@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Development;
 
+use Database\Seeders\HolidaySeeder;
 use Database\Seeders\PunctualityBonusGroupSeeder;
 use Database\Seeders\PunctualityRangeSeeder;
 use Illuminate\Database\Seeder;
@@ -35,6 +36,7 @@ class DevelopmentSeeder extends Seeder
             \Database\Seeders\LeaveTypeSeeder::class,
             PunctualityRangeSeeder::class,
             PunctualityBonusGroupSeeder::class,
+            HolidaySeeder::class,
         ];
 
         foreach ($seeders as $seederClass) {

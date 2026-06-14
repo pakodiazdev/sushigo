@@ -42,6 +42,10 @@ use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
 use App\Http\Controllers\Api\V1\Employees\SyncUserDirectPermissionsController;
 use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
 use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
+use App\Http\Controllers\Api\V1\Holidays\CreateHolidayController;
+use App\Http\Controllers\Api\V1\Holidays\DeleteHolidayController;
+use App\Http\Controllers\Api\V1\Holidays\ListHolidaysController;
+use App\Http\Controllers\Api\V1\Holidays\UpdateHolidayController;
 use App\Http\Controllers\Api\V1\Inventory\RegisterOpeningBalanceController;
 use App\Http\Controllers\Api\V1\Inventory\RegisterStockOutController;
 use App\Http\Controllers\Api\V1\InventoryLocation\CreateInventoryLocationController;
@@ -352,6 +356,14 @@ Route::prefix('v1')->group(function () {
         Route::put('/ranges', UpdatePunctualityRangesController::class)->name('ranges.update')->middleware('permission:punctuality.manage');
         Route::get('/bonus-groups', ListPunctualityBonusGroupsController::class)->name('bonus-groups.index')->middleware('permission:punctuality.manage|employees.update');
         Route::post('/bonus-groups', CreatePunctualityBonusGroupController::class)->name('bonus-groups.store')->middleware('permission:punctuality.manage');
+    });
+
+    // Holidays Module (All Protected — requires holidays.manage)
+    Route::middleware(['auth:api', 'permission:holidays.manage'])->prefix('holidays')->name('holidays.')->group(function () {
+        Route::get('/', ListHolidaysController::class)->name('index');
+        Route::post('/', CreateHolidayController::class)->name('store');
+        Route::put('/{id}', UpdateHolidayController::class)->name('update');
+        Route::delete('/{id}', DeleteHolidayController::class)->name('destroy');
     });
 
     // Cash Adjustments Module (All Protected)

@@ -85,6 +85,7 @@ class PermissionSeeder extends LockedSeeder
 
             // Asistencia — configuración
             'punctuality.manage',
+            'holidays.manage',
 
             // Inventario — Ítems y variantes
             'items.view',
@@ -144,7 +145,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
-                            ->orWhereIn('name', ['punctuality.manage']);
+                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage']);
                     })
                     ->get()
             );
