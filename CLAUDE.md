@@ -23,9 +23,46 @@ This script lives at the root of this repo and is the **only startup method** wh
 Shared services (PostgreSQL, Redis, Mailpit) are managed by the dev-lab's `docker compose up -d`.
 Do **not** run `docker compose up` from inside a workspace — that starts the full heavyweight stack.
 
+#### Running tests in Dev-Lab mode
+
+In Dev-Lab, processes run directly on the host (no `dev_container`). Run all commands from the workspace root without `docker exec`:
+
+```bash
+# API tests (PHPUnit)
+cd code/api && php artisan test
+cd code/api && php artisan test --filter=HolidayCrudTest   # specific test class
+cd code/api && php artisan test --coverage
+
+# API linter (Pint — auto-fixes in place)
+cd code/api && ./vendor/bin/pint
+
+# Database seeders
+cd code/api && php artisan db:seed
+
+# Swagger docs
+cd code/api && php artisan l5-swagger:generate
+
+# Frontend tests (Vitest)
+cd code/webapp && npx vitest run
+cd code/webapp && npx vitest run src/services/__tests__/holiday-api.test.ts   # specific file
+
+# Frontend linters
+cd code/webapp && npm run lint
+cd code/webapp && npm run typecheck
+
+# E2E (Cypress via dev-lab Makefile — from sushigo-dev-lab root)
+make cypress-run WORKSPACE=sushigo-a
+make cypress-devlab-spec WORKSPACE=sushigo-a SPEC=cypress/e2e/holiday-management.cy.ts
+```
+
+> **Rule:** When working in dev-lab, never prefix test or artisan commands with `docker exec dev_container`.
+> The dev-lab stack does NOT use `dev_container` — that container belongs to the standalone Docker mode below.
+
 ---
 
-### Docker Development (Recommended)
+### Docker Development (standalone container mode)
+
+Use this mode when running the full stack outside of dev-lab (e.g. CI, staging, or local all-in-one setup).
 
 This monorepo runs inside `dev_container`. Each sub-project maps to a path inside the container:
 
@@ -33,8 +70,6 @@ This monorepo runs inside `dev_container`. Each sub-project maps to a path insid
 | -------------- | -------------- | ------------------ |
 | API (Laravel)  | `code/api/`    | `/app/code/api`    |
 | Webapp (React) | `code/webapp/` | `/app/code/webapp` |
-
-All `php artisan` commands must run from `/app/code/api` inside `dev_container`.
 
 ```bash
 # Start full stack (API, webapp, PostgreSQL, nginx, pgadmin, mailhog)
