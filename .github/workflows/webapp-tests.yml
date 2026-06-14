@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'code/webapp/**'
+      - '.github/workflows/webapp-tests.yml'
   push:
     branches:
       - main

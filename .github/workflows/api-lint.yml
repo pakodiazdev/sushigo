@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'code/api/**'
+      - '.github/workflows/api-lint.yml'
   push:
     branches:
       - main
