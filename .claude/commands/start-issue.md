@@ -106,7 +106,20 @@ git checkout -b <type>/<NNN>-<short-description> origin/main
 
 ## PHASE 5 — Open work session in task file
 
-Update the task file (in `doc/tasks/backlog/` or the correct monthly folder if already moved) to record the session start. Add or update the `## ⏱️ Time` section at the bottom:
+### 5a. Move task file from backlog to current month
+
+If the task file is still in `doc/tasks/backlog/`, move it to `doc/tasks/YYYY-MM/` where `YYYY-MM` is the **current month** (e.g. `2026-06`). Create the monthly folder if it does not exist yet.
+
+```bash
+mkdir -p doc/tasks/YYYY-MM
+git mv doc/tasks/backlog/<NNN>-<slug>.md doc/tasks/YYYY-MM/<NNN>-<slug>.md
+```
+
+If the file is already in a monthly folder (i.e. work was started before), leave it in place.
+
+### 5b. Record session start
+
+Add or update the `## ⏱️ Time` section at the bottom of the (now-moved) task file:
 
 ````markdown
 ## ⏱️ Time
@@ -124,7 +137,17 @@ Update the task file (in `doc/tasks/backlog/` or the correct monthly folder if a
 
 Use today's date and the current local time as `start`. Leave `end` as `"?"` — it will be filled when the session closes.
 
-Do **not** commit this change yet.
+If the file already has a `Sessions` array with previous entries, append the new entry rather than replacing.
+
+### 5c. Commit the move + session open
+
+```bash
+git add doc/tasks/
+git commit -m "🔧 [#NNN] - Start work session on task #NNN 📂
+
+- 📂 Move task #NNN from backlog to YYYY-MM/
+- ⏱️ Open session YYYY-MM-DD HH:MM"
+```
 
 ---
 
@@ -219,17 +242,15 @@ The squashed commit(s) must still follow the commit convention above.
 
 ### 8a. Close session in task file
 
-Update the `end` field in the Sessions JSON with the current local time. Update `Tracked` in the Estimates line with the total duration.
-
-Move the task file from `doc/tasks/backlog/` to `doc/tasks/YYYY-MM/` (current month folder). Create the folder if it does not exist.
+Update the `end` field in the Sessions JSON with the current local time. Update `Tracked` in the Estimates line with the total duration. The file is already in `doc/tasks/YYYY-MM/` from Phase 5 — do not move it again.
 
 Commit the task file change:
 ```bash
 git add doc/tasks/...
-git commit -m "🔧 [#NNN] - Move task #NNN to completed 📂
+git commit -m "🔧 [#NNN] - Close work session on task #NNN ⏱️
 
-- 📂 Moved from backlog to YYYY-MM/
-- ⏱️ Session: YYYY-MM-DD HH:MM–HH:MM (~Xh)"
+- ⏱️ Session: YYYY-MM-DD HH:MM–HH:MM (~Xh)
+- 📋 Tracked: Xh total"
 ```
 
 ### 8b. Push the branch
