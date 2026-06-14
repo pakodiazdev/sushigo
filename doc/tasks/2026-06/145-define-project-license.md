@@ -79,8 +79,14 @@ BSL 1.1 was the first candidate but was eliminated because it requires a Change 
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `1h`
-- **Pessimistic:** `2h`
-- **Tracked:** `1.5h`
+### 📊 Estimates
+- **Optimistic:** `1h` · **Pessimistic:** `2h` · **Tracked:** `0.1h`
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-06-14", "start": "00:00", "end": "00:05" }
+]
+```
