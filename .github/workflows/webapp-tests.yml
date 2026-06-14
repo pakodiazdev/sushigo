@@ -2,6 +2,8 @@ name: Webapp Tests (Vitest + Coverage)
 
 on:
   pull_request:
+    paths:
+      - 'code/webapp/**'
   push:
     branches:
       - main

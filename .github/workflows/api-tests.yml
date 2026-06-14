@@ -2,6 +2,8 @@ name: API Tests (PHPUnit + Coverage)
 
 on:
   pull_request:
+    paths:
+      - 'code/api/**'
   push:
     branches:
       - main
