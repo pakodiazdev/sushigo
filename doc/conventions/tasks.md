@@ -46,7 +46,7 @@ Replace placeholders with actual task details.
 - Define three values in hours:
   - **Optimistic:** minimum time if everything goes well.
   - **Pessimistic:** maximum time if issues appear.
-  - **Tracked:** actual time spent.
+  - **Tracked:** actual time spent (sum of all sessions).
 
 ### Sessions
 - Log working sessions in JSON format:
@@ -56,6 +56,32 @@ Replace placeholders with actual task details.
   ]
   ```
 - Add multiple objects for multiple sessions.
+
+---
+
+## 5. Deviation (mandatory when closing a task)
+
+Fill this section when the task is completed. It compares the tracked time against estimates and justifies any overrun. This serves as historical context for future estimations.
+
+### Format
+```markdown
+## 📊 Desviación
+- **Total real:** Xh Xm (Nm + Nm + …)
+- **Diferencia vs optimista:** +Xh Xm  (or −Xh Xm if under)
+- **Diferencia vs pesimista:** +Xh Xm  (or −Xh Xm if under)
+
+**Justificación:**
+<narrative explaining why the task took more (or less) time than estimated.
+Focus on activities not contemplated in the original scope: unplanned rework,
+discovered technical debt, extra review cycles, scope additions, etc.>
+```
+
+### Rules
+- **Always fill it when closing** — even if the task finished within the estimate. In that case, note what went well.
+- **Total real** must match the sum of all session durations. Show the per-session breakdown in minutes.
+- **Justificación** must explain *why*, not just *what*. Reviewers should understand the root cause after reading it.
+- If the task finished under the pessimistic estimate with no surprises, a one-liner justification is enough.
+- Write in Spanish (consistent with the label `Desviación`).
 
 ---
 
@@ -70,8 +96,8 @@ As a developer, I need to add authentication middleware so that only authorized 
 
 ## ✅ Technical Tasks
 - [x] 🔧 Create middleware file
-- [ ] 📝 Write unit tests
-- [ ] 📂 Register middleware in project config
+- [x] 📝 Write unit tests
+- [x] 📂 Register middleware in project config
 
 ---
 
@@ -88,4 +114,13 @@ As a developer, I need to add authentication middleware so that only authorized 
   { "date": "2025-09-28", "start": "14:00", "end": "16:00" }
 ]
 ```
+
+## 📊 Desviación
+- **Total real:** 3h 30m (90 min + 120 min)
+- **Diferencia vs optimista:** +1h 30m
+- **Diferencia vs pesimista:** −1h 30m
+
+**Justificación:**
+
+La implementación del middleware estuvo lista en el tiempo optimista. El tiempo extra se debió a la configuración del pipeline de CI para ejecutar los tests de integración, que no estaba contemplada en el alcance original y requirió investigación adicional.
 ```

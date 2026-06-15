@@ -488,6 +488,13 @@ doc/tasks/
 - The monthly folder is flat (no subfolders by category inside it)
 - If the `yyyy-mm` folder doesn't exist yet, create it
 
+**Closing a task (mandatory checklist):**
+1. Fill `Tracked` with the sum of all session durations
+2. Add a `## 📊 Desviación` section at the bottom of the task file comparing tracked vs estimates and justifying any overrun — see `doc/conventions/tasks.md` for format and rules
+3. Update the corresponding GitHub issue body with the same sessions JSON and `Desviación` section
+4. Move the task file to `doc/tasks/yyyy-mm/`
+5. Close the GitHub issue
+
 ---
 
 ## Key Files
