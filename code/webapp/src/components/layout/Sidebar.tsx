@@ -68,6 +68,7 @@ const menuItems: MenuItem[] = [
         accessMode: 'hidden',
         subItems: [
             { label: 'Hoy', path: '/attendance/today' },
+            { label: 'Reporte del Día', path: '/attendance/reports/today', requiredPermission: 'reports.today' },
             { label: 'Puntualidad', path: '/attendance/punctuality-config', requiredPermission: 'punctuality.manage' },
         ]
     },

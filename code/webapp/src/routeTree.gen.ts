@@ -35,6 +35,7 @@ import { Route as CashRegistersRouteImport } from './pages/cash/registers'
 import { Route as CashBankAccountsRouteImport } from './pages/cash/bank-accounts'
 import { Route as AttendanceTodayRouteImport } from './pages/attendance/today'
 import { Route as AttendancePunctualityConfigRouteImport } from './pages/attendance/punctuality-config'
+import { Route as AttendanceReportsTodayRouteImport } from './pages/attendance/reports/today'
 
 const UnauthorizedRoute = UnauthorizedRouteImport.update({
   id: '/unauthorized',
@@ -167,6 +168,11 @@ const AttendancePunctualityConfigRoute =
     path: '/attendance/punctuality-config',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AttendanceReportsTodayRoute = AttendanceReportsTodayRouteImport.update({
+  id: '/attendance/reports/today',
+  path: '/attendance/reports/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/inventory/locations': typeof InventoryLocationsRoute
   '/cash/': typeof CashIndexRoute
   '/inventory/': typeof InventoryIndexRoute
+  '/attendance/reports/today': typeof AttendanceReportsTodayRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -221,6 +228,7 @@ export interface FileRoutesByTo {
   '/inventory/locations': typeof InventoryLocationsRoute
   '/cash': typeof CashIndexRoute
   '/inventory': typeof InventoryIndexRoute
+  '/attendance/reports/today': typeof AttendanceReportsTodayRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -250,6 +258,7 @@ export interface FileRoutesById {
   '/inventory/locations': typeof InventoryLocationsRoute
   '/cash/': typeof CashIndexRoute
   '/inventory/': typeof InventoryIndexRoute
+  '/attendance/reports/today': typeof AttendanceReportsTodayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -280,6 +289,7 @@ export interface FileRouteTypes {
     | '/inventory/locations'
     | '/cash/'
     | '/inventory/'
+    | '/attendance/reports/today'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/inventory/locations'
     | '/cash'
     | '/inventory'
+    | '/attendance/reports/today'
   id:
     | '__root__'
     | '/'
@@ -334,6 +345,7 @@ export interface FileRouteTypes {
     | '/inventory/locations'
     | '/cash/'
     | '/inventory/'
+    | '/attendance/reports/today'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -355,6 +367,7 @@ export interface RootRouteChildren {
   UnauthorizedRoute: typeof UnauthorizedRoute
   AttendancePunctualityConfigRoute: typeof AttendancePunctualityConfigRoute
   AttendanceTodayRoute: typeof AttendanceTodayRoute
+  AttendanceReportsTodayRoute: typeof AttendanceReportsTodayRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -541,6 +554,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AttendancePunctualityConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attendance/reports/today': {
+      id: '/attendance/reports/today'
+      path: '/attendance/reports/today'
+      fullPath: '/attendance/reports/today'
+      preLoaderRoute: typeof AttendanceReportsTodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -597,6 +617,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnauthorizedRoute: UnauthorizedRoute,
   AttendancePunctualityConfigRoute: AttendancePunctualityConfigRoute,
   AttendanceTodayRoute: AttendanceTodayRoute,
+  AttendanceReportsTodayRoute: AttendanceReportsTodayRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
