@@ -13,6 +13,7 @@ use Database\Seeders\Testing\CloseDayPendingLunchSeeder;
 use Database\Seeders\Testing\CoreTestSeeder;
 use Database\Seeders\Testing\NegotiatedExtraDaysSeeder;
 use Database\Seeders\Testing\ScheduleSummaryOverrideSeeder;
+use Database\Seeders\Testing\TodayReportStatusSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -62,6 +63,10 @@ class TestReset extends Command
         'schedule-summary' => [
             AttendanceTestSeeder::class,
             ScheduleSummaryOverrideSeeder::class,
+        ],
+        'today-report-statuses' => [
+            AttendanceTestSeeder::class,
+            TodayReportStatusSeeder::class,
         ],
         'fakes-employees' => [
             FakeEmployeesSeeder::class,
