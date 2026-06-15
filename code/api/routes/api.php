@@ -81,6 +81,7 @@ use App\Http\Controllers\Api\V1\Punctuality\GetEmployeeBonusConfigController;
 use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityBonusGroupsController;
 use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityRangesController;
 use App\Http\Controllers\Api\V1\Punctuality\UpdatePunctualityRangesController;
+use App\Http\Controllers\Api\V1\Reports\TodayReportController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleDayOverrideController;
 use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
@@ -329,6 +330,11 @@ Route::prefix('v1')->group(function () {
         Route::patch('{id}/lunch-return', RegisterLunchReturnController::class)->name('lunch-return');
         Route::patch('{id}/check-out', RegisterCheckOutController::class)->name('check-out');
         Route::patch('{id}/overtime-decision', OvertimeDecisionController::class)->name('overtime-decision');
+    });
+
+    // Reports Module
+    Route::middleware('auth:api')->prefix('reports')->name('reports.')->group(function () {
+        Route::get('today', TodayReportController::class)->name('today');
     });
 
     // Negotiated Extra Days Module (All Protected)

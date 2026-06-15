@@ -4,7 +4,9 @@ namespace App\Repositories;
 
 use App\Models\Employee;
 use App\Repositories\Concerns\HasPublicId;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 class EmployeeRepository extends BaseRepository
 {
@@ -13,6 +15,43 @@ class EmployeeRepository extends BaseRepository
     public function __construct(Employee $model)
     {
         parent::__construct($model);
+    }
+
+    /**
+     * Load all active employees for a branch with today's attendance and
+     * any approved leave covering the given date, ordered by last then first name.
+     */
+    public function getActiveForReport(int $branchId, string $today): Collection
+    {
+        $dayOfWeek = Carbon::parse($today)->dayOfWeekIso;
+
+        return $this->newQuery()
+            ->with([
+                'user.roles',
+                'attendances' => fn ($q) => $q->whereDate('date', $today),
+                'leaves' => fn ($q) => $q
+                    ->approved()
+                    ->forDate($today)
+                    ->reorder()
+                    ->oldest('id'),
+                'employmentPeriods' => fn ($q) => $q
+                    ->where('branch_id', $branchId)
+                    ->where('is_active', true)
+                    ->with([
+                        'employeeSchedules' => fn ($sq) => $sq
+                            ->effective($today)
+                            ->with([
+                                'scheduleDays' => fn ($dq) => $dq->where('day_of_week', $dayOfWeek),
+                            ]),
+                    ]),
+            ])
+            ->whereHas('employmentPeriods', fn ($q) => $q
+                ->where('branch_id', $branchId)
+                ->where('is_active', true)
+            )
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
     }
 
     /**

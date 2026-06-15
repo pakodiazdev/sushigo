@@ -20,6 +20,8 @@ class PermissionSeeder extends LockedSeeder
 
     private const LEAVES_PATTERN = 'leaves.%';
 
+    private const REPORTS_PATTERN = 'reports.%';
+
     private const GROUP_INVENTARIO = 'Inventario';
 
     private const GROUP_CUENTAS_BANCARIAS = 'Cuentas bancarias';
@@ -122,6 +124,9 @@ class PermissionSeeder extends LockedSeeder
 
             // Asistencia — configuración
             'punctuality.manage' => ['label' => 'Gestionar rangos de puntualidad', 'group' => 'Asistencia'],
+
+            // Reportes
+            'reports.today' => ['label' => 'Ver reporte operacional del día', 'group' => 'Reportes'],
         ];
 
         foreach ($permissions as $name => $meta) {
@@ -150,6 +155,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::ITEMS_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
+                            ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhereIn('name', ['punctuality.manage']);
                     })
                     ->get()
@@ -180,7 +186,8 @@ class PermissionSeeder extends LockedSeeder
                         $q->whereIn('name', ['users.show', 'users.index'])
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', self::LEAVES_PATTERN)
-                            ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN);
+                            ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
+                            ->orWhere('name', 'like', self::REPORTS_PATTERN);
                     })
                     ->get()
             );
