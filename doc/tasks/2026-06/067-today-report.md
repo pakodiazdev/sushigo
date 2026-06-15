@@ -45,15 +45,32 @@ Como Manager, quiero una vista consolidada de la asistencia del día con el esta
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `3h` · **Pessimistic:** `5h` · **Tracked:** `14h 01m`
+- **Optimistic:** `3h` · **Pessimistic:** `5h` · **Tracked:** `12h 34m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-06-14", "start": "00:08", "end": "02:17", "note": "Initial implementation: failing tests, GET /api/v1/reports/today endpoint, frontend page and service" },
-  { "date": "2026-06-14", "start": "10:06", "end": "15:46", "note": "PR review: addressed 4 Copilot review threads (late_minutes, Carbon cast, type comment, Cypress hydration race); created rebase-main command" },
-  { "date": "2026-06-14", "start": "16:05", "end": "20:13", "note": "SonarCloud review (webapp + api); PR review: extracted TodayReportService, EmployeeRepository, TodayReportResponse; added reports.today permission guard, sidebar menu entry, rest_day status detection and E2E spec with TodayReportStatusSeeder" },
-  { "date": "2026-06-15", "start": "01:43", "end": "02:00", "note": "PR review: moved @OA\\Schema to TodayReportResponse; extracted StatusBadge, SummaryCard, EmployeeRow, EmployeeTableSection to independent files with JSDoc" },
-  { "date": "2026-06-15", "start": "10:55", "end": "11:15", "note": "Squash commits, document sessions and close issue #067" }
+  { "date": "2026-06-14", "start": "00:08", "end": "02:17" },
+  { "date": "2026-06-14", "start": "10:06", "end": "15:46" },
+  { "date": "2026-06-14", "start": "16:05", "end": "20:13" },
+  { "date": "2026-06-15", "start": "01:43", "end": "02:00" },
+  { "date": "2026-06-15", "start": "10:55", "end": "11:15" }
 ]
 ```
+
+## 📊 Desviación
+- **Total real:** 12h 34m (129 min + 340 min + 248 min + 17 min + 20 min)
+- **Diferencia vs optimista:** +9h 34m
+- **Diferencia vs pesimista:** +7h 34m
+
+**Justificación:**
+
+El endpoint y la página básica estuvieron listos dentro del estimado optimista. La desviación se explica por cuatro factores no contemplados al estimar:
+
+1. **Iteraciones de PR review (≈6h):** Se recibieron múltiples rondas de feedback — cuatro observaciones de Copilot (fix de `late_minutes`, cast de Carbon, comentario de tipo TypeScript, race condition en Cypress) y cuatro observaciones del author (extraer lógica a `TodayReportService`, consulta a `EmployeeRepository`, formato de respuesta a `TodayReportResponse`, schema Swagger a la clase response, sub-componentes a archivos independientes). Cada ronda requirió implementación, lint, commit y re-push.
+
+2. **Estado `rest_day` no contemplado en el alcance original (≈1h):** Durante pruebas manuales se detectó que empleados con día de descanso programado (`ScheduleDay.is_day_off = true`) aparecían como "No registrado" en lugar de "Día de descanso". Resolver esto requirió eager-loading de la cadena `EmploymentPeriod → EmployeeSchedule (scope effective) → ScheduleDay` filtrada por día ISO de la semana.
+
+3. **SonarCloud quality gate (≈1h):** El gate falló en cobertura y code smells en webapp y api, requiriendo una sesión de revisión y corrección dedicada antes de poder continuar con el PR review.
+
+4. **E2E con seeder determinístico para los 6 estados (≈1h):** Crear `TodayReportStatusSeeder` con empleados determinísticos para cada estado y depurar el fallo de `scrollIntoView` en Cypress para filas fuera del viewport tomó más de lo esperado para una spec E2E estándar.
