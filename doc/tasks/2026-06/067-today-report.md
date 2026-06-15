@@ -58,7 +58,7 @@ Como Manager, quiero una vista consolidada de la asistencia del día con el esta
 ]
 ```
 
-## 📊 Variance
+## 📊 Retrospective
 - **Actual total:** 12h 34m (129 min + 340 min + 248 min + 17 min + 20 min)
 - **vs optimistic:** +9h 34m
 - **vs pessimistic:** +7h 34m

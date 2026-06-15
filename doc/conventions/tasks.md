@@ -59,13 +59,13 @@ Replace placeholders with actual task details.
 
 ---
 
-## 5. Variance (mandatory when closing a task)
+## 5. Retrospective (mandatory when closing a task)
 
 Fill this section when the task is completed. It compares the tracked time against estimates and justifies any overrun. This serves as historical context for future estimations.
 
 ### Format
 ```markdown
-## 📊 Variance
+## 📊 Retrospective
 - **Actual total:** Xh Xm (Nm + Nm + …)
 - **vs optimistic:** +Xh Xm  (or −Xh Xm if under)
 - **vs pessimistic:** +Xh Xm  (or −Xh Xm if under)
@@ -115,7 +115,7 @@ As a developer, I need to add authentication middleware so that only authorized 
 ]
 ```
 
-## 📊 Variance
+## 📊 Retrospective
 - **Actual total:** 3h 30m (90 min + 120 min)
 - **vs optimistic:** +1h 30m
 - **vs pessimistic:** −1h 30m
