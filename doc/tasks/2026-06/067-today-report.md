@@ -59,18 +59,18 @@ Como Manager, quiero una vista consolidada de la asistencia del día con el esta
 ```
 
 ## 📊 Desviación
-- **Total real:** 12h 34m (129 min + 340 min + 248 min + 17 min + 20 min)
-- **Diferencia vs optimista:** +9h 34m
-- **Diferencia vs pesimista:** +7h 34m
+- **Actual total:** 12h 34m (129 min + 340 min + 248 min + 17 min + 20 min)
+- **vs optimistic:** +9h 34m
+- **vs pessimistic:** +7h 34m
 
-**Justificación:**
+**Justification:**
 
-El endpoint y la página básica estuvieron listos dentro del estimado optimista. La desviación se explica por cuatro factores no contemplados al estimar:
+The endpoint and basic page were ready within the optimistic estimate. The overrun is explained by four factors not contemplated in the original scope:
 
-1. **Iteraciones de PR review (≈6h):** Se recibieron múltiples rondas de feedback — cuatro observaciones de Copilot (fix de `late_minutes`, cast de Carbon, comentario de tipo TypeScript, race condition en Cypress) y cuatro observaciones del author (extraer lógica a `TodayReportService`, consulta a `EmployeeRepository`, formato de respuesta a `TodayReportResponse`, schema Swagger a la clase response, sub-componentes a archivos independientes). Cada ronda requirió implementación, lint, commit y re-push.
+1. **PR review iterations (≈6h):** Multiple rounds of feedback were received — four Copilot observations (fix `late_minutes`, Carbon cast redundancy, TypeScript type comment, Cypress hydration race condition) and four author observations (extract logic to `TodayReportService`, query to `EmployeeRepository`, response formatting to `TodayReportResponse`, move Swagger `@OA\Schema` to the response class, extract sub-components to independent files). Each round required implementation, lint, commit and re-push.
 
-2. **Estado `rest_day` no contemplado en el alcance original (≈1h):** Durante pruebas manuales se detectó que empleados con día de descanso programado (`ScheduleDay.is_day_off = true`) aparecían como "No registrado" en lugar de "Día de descanso". Resolver esto requirió eager-loading de la cadena `EmploymentPeriod → EmployeeSchedule (scope effective) → ScheduleDay` filtrada por día ISO de la semana.
+2. **`rest_day` status not contemplated in original scope (≈1h):** During manual testing, employees with a scheduled day off (`ScheduleDay.is_day_off = true`) appeared as "not_arrived" instead of "rest_day". Fixing this required eager-loading the `EmploymentPeriod → EmployeeSchedule (effective scope) → ScheduleDay` chain filtered by the ISO day of week.
 
-3. **SonarCloud quality gate (≈1h):** El gate falló en cobertura y code smells en webapp y api, requiriendo una sesión de revisión y corrección dedicada antes de poder continuar con el PR review.
+3. **SonarCloud quality gate (≈1h):** The gate failed on coverage and code smells in both webapp and api, requiring a dedicated review and fix session before the PR review could continue.
 
-4. **E2E con seeder determinístico para los 6 estados (≈1h):** Crear `TodayReportStatusSeeder` con empleados determinísticos para cada estado y depurar el fallo de `scrollIntoView` en Cypress para filas fuera del viewport tomó más de lo esperado para una spec E2E estándar.
+4. **E2E spec with deterministic seeder for all 6 statuses (≈1h):** Building `TodayReportStatusSeeder` with deterministic employees for each status and debugging a Cypress `scrollIntoView` failure for rows below the viewport fold took longer than a standard E2E spec.
