@@ -42,6 +42,18 @@ Como Manager, quiero una vista consolidada de la asistencia del día con el esta
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `3h` · **Pessimistic:** `5h`
+### 📊 Estimates
+- **Optimistic:** `3h` · **Pessimistic:** `5h` · **Tracked:** `14h 01m`
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-06-14", "start": "00:08", "end": "02:17", "note": "Initial implementation: failing tests, GET /api/v1/reports/today endpoint, frontend page and service" },
+  { "date": "2026-06-14", "start": "10:06", "end": "15:46", "note": "PR review: addressed 4 Copilot review threads (late_minutes, Carbon cast, type comment, Cypress hydration race); created rebase-main command" },
+  { "date": "2026-06-14", "start": "16:05", "end": "20:13", "note": "SonarCloud review (webapp + api); PR review: extracted TodayReportService, EmployeeRepository, TodayReportResponse; added reports.today permission guard, sidebar menu entry, rest_day status detection and E2E spec with TodayReportStatusSeeder" },
+  { "date": "2026-06-15", "start": "01:43", "end": "02:00", "note": "PR review: moved @OA\\Schema to TodayReportResponse; extracted StatusBadge, SummaryCard, EmployeeRow, EmployeeTableSection to independent files with JSDoc" },
+  { "date": "2026-06-15", "start": "10:55", "end": "11:15", "note": "Squash commits, document sessions and close issue #067" }
+]
+```
