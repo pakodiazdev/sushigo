@@ -66,11 +66,11 @@ Fill this section when the task is completed. It compares the tracked time again
 ### Format
 ```markdown
 ## 📊 Desviación
-- **Total real:** Xh Xm (Nm + Nm + …)
-- **Diferencia vs optimista:** +Xh Xm  (or −Xh Xm if under)
-- **Diferencia vs pesimista:** +Xh Xm  (or −Xh Xm if under)
+- **Actual total:** Xh Xm (Nm + Nm + …)
+- **vs optimistic:** +Xh Xm  (or −Xh Xm if under)
+- **vs pessimistic:** +Xh Xm  (or −Xh Xm if under)
 
-**Justificación:**
+**Justification:**
 <narrative explaining why the task took more (or less) time than estimated.
 Focus on activities not contemplated in the original scope: unplanned rework,
 discovered technical debt, extra review cycles, scope additions, etc.>
@@ -78,10 +78,10 @@ discovered technical debt, extra review cycles, scope additions, etc.>
 
 ### Rules
 - **Always fill it when closing** — even if the task finished within the estimate. In that case, note what went well.
-- **Total real** must match the sum of all session durations. Show the per-session breakdown in minutes.
-- **Justificación** must explain *why*, not just *what*. Reviewers should understand the root cause after reading it.
+- **Actual total** must match the sum of all session durations. Show the per-session breakdown in minutes.
+- **Justification** must explain *why*, not just *what*. Reviewers should understand the root cause after reading it.
 - If the task finished under the pessimistic estimate with no surprises, a one-liner justification is enough.
-- Write in Spanish (consistent with the label `Desviación`).
+- Write in English (consistent with the project language rule).
 
 ---
 
@@ -116,11 +116,11 @@ As a developer, I need to add authentication middleware so that only authorized 
 ```
 
 ## 📊 Desviación
-- **Total real:** 3h 30m (90 min + 120 min)
-- **Diferencia vs optimista:** +1h 30m
-- **Diferencia vs pesimista:** −1h 30m
+- **Actual total:** 3h 30m (90 min + 120 min)
+- **vs optimistic:** +1h 30m
+- **vs pessimistic:** −1h 30m
 
-**Justificación:**
+**Justification:**
 
-La implementación del middleware estuvo lista en el tiempo optimista. El tiempo extra se debió a la configuración del pipeline de CI para ejecutar los tests de integración, que no estaba contemplada en el alcance original y requirió investigación adicional.
+The middleware itself was ready within the optimistic estimate. The extra time was caused by setting up the CI pipeline to run integration tests, which was not contemplated in the original scope and required additional research.
 ```
