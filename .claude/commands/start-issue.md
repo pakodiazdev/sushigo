@@ -261,6 +261,9 @@ git push -u origin <branch-name>
 
 ### 8c. Create the PR
 
+Populate the `## Workspace` section with the name of the current workspace directory
+(e.g. `sushigo-c`) and the branch name from `git branch --show-current`.
+
 ```bash
 gh pr create \
   --title "<emoji> [#NNN] - <short description> <emoji>" \
@@ -278,6 +281,9 @@ gh pr create \
 
 ## Closes
 Closes #NNN
+
+## Workspace
+`<workspace-name>` — `<branch-name>`
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF

@@ -233,6 +233,24 @@ Story: AP-NNN · <full story text from backlog.en.md>
 Refs:  RF-XX · <requirement text from spec.en.md>
 ```
 
+### PR Description (mandatory)
+
+Every PR opened from dev-lab **must** include a `## Workspace` footer identifying where it was developed:
+
+```
+## Workspace
+`sushigo-c` — `feature/067-daily-operational-report`
+```
+
+**Why:** dev-lab runs up to 8 parallel workspace clones. Without this footer, reviewers cannot tell which workspace holds the branch, making it impossible to resume work or reproduce the environment without asking.
+
+**Rules:**
+- Workspace name is the directory name under `workspaces/` (e.g. `sushigo-a`, `sushigo-e`)
+- Branch name is the full git branch name at the time the PR was opened
+- Place the `## Workspace` section just before the `🤖 Generated with` attribution line
+
+---
+
 ### DateTime Standard (mandatory)
 
 **UTC everywhere. RFC 3339 in transport. Local only for display.**
