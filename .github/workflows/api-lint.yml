@@ -2,9 +2,6 @@ name: API Lint (PHP Pint)
 
 on:
   pull_request:
-    paths:
-      - 'code/api/**'
-      - '.github/workflows/api-lint.yml'
   push:
     branches:
       - main

@@ -2,9 +2,6 @@ name: Webapp Lint (ESLint + TypeScript)
 
 on:
   pull_request:
-    paths:
-      - 'code/webapp/**'
-      - '.github/workflows/webapp-lint.yml'
   push:
     branches:
       - main
