@@ -47,6 +47,7 @@ Como desarrollador al mergear PRs de solo documentación, necesito que los CI wo
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-06-14", "start": "02:06", "end": "02:07" }
+  { "date": "2026-06-14", "start": "02:06", "end": "02:07" },
+  { "date": "2026-06-16", "start": "verify", "end": "verify" }
 ]
 ```
