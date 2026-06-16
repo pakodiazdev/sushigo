@@ -2,9 +2,6 @@ name: Webapp Tests (Vitest + Coverage)
 
 on:
   pull_request:
-    paths:
-      - 'code/webapp/**'
-      - '.github/workflows/webapp-tests.yml'
   push:
     branches:
       - main
