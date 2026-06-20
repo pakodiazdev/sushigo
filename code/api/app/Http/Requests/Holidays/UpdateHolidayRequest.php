@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Holidays;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -9,9 +11,10 @@ use Illuminate\Validation\Rule;
  * @OA\Schema(
  *   schema="UpdateHolidayRequest",
  *
- *   @OA\Property(property="date", type="string", format="date", example="2026-01-01", description="New holiday date"),
- *   @OA\Property(property="name", type="string", example="New Year's Day", description="Holiday name"),
- *   @OA\Property(property="pay_multiplier", type="number", format="float", example=2.00, description="Pay multiplier")
+ *   @OA\Property(property="date", type="string", format="date", example="2026-01-01"),
+ *   @OA\Property(property="name", type="string", example="New Year's Day"),
+ *   @OA\Property(property="type", type="string", enum={"obligatorio","asueto","opcional"}, description="Override instance type"),
+ *   @OA\Property(property="pay_multiplier", type="number", format="float", example=2.00)
  * )
  */
 class UpdateHolidayRequest extends FormRequest
@@ -28,6 +31,7 @@ class UpdateHolidayRequest extends FormRequest
         return [
             'date' => ['sometimes', 'date', Rule::unique('holidays', 'date')->ignore($id)],
             'name' => ['sometimes', 'string', 'max:255'],
+            'type' => ['sometimes', 'nullable', 'in:obligatorio,asueto,opcional'],
             'pay_multiplier' => ['sometimes', 'numeric', 'min:1', 'max:9.99'],
         ];
     }

@@ -37,6 +37,7 @@ class DevelopmentSeeder extends Seeder
             PunctualityRangeSeeder::class,
             PunctualityBonusGroupSeeder::class,
             HolidaySeeder::class,
+            HolidayDefinitionSeeder::class,
         ];
 
         foreach ($seeders as $seederClass) {

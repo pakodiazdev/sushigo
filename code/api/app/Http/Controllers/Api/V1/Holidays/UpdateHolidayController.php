@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1\Holidays;
 
 use App\Http\Controllers\Controller;
@@ -13,7 +15,7 @@ use Illuminate\Http\Response;
  * @OA\Put(
  *   path="/api/v1/holidays/{id}",
  *   summary="Update Holiday",
- *   description="Updates an existing holiday in the catalog.",
+ *   description="Updates an existing holiday instance. Setting type or pay_multiplier marks the instance as a manual override (is_auto_generated=false).",
  *   tags={"Holidays"},
  *   security={{"passport": {}}},
  *
@@ -54,7 +56,14 @@ class UpdateHolidayController extends Controller
             throw new ModelNotFoundException("Holiday [{$id}] not found.");
         }
 
-        $holiday->update($request->validated());
+        $data = $request->validated();
+
+        // If type is being explicitly set, mark this instance as a manual override
+        if (isset($data['type'])) {
+            $data['is_auto_generated'] = false;
+        }
+
+        $holiday->update($data);
 
         return new HolidayResource($holiday);
     }

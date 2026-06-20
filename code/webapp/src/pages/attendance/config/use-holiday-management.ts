@@ -143,15 +143,16 @@ export function useHolidayManagement(year?: number) {
   })
 
   const handleAddSubmit = async (values: HolidayFormValues) => {
+    const isAnnual = values.is_annual
     await createDefinition.mutateAsync({
       name: values.name,
       description: values.description,
       type: values.type,
       pay_multiplier: values.type === 'opcional' ? values.pay_multiplier : undefined,
-      is_annual: values.is_annual,
-      recurrence_type: values.recurrence_type,
-      recurrence_config: buildRecurrenceConfig(values),
-      date: !values.is_annual || values.recurrence_type === 'none' ? values.date : undefined,
+      is_annual: isAnnual,
+      recurrence_type: isAnnual ? values.recurrence_type : 'none',
+      recurrence_config: isAnnual ? buildRecurrenceConfig(values) : {},
+      date: !isAnnual ? values.date : undefined,
     })
     addForm.reset()
     setShowAddForm(false)
