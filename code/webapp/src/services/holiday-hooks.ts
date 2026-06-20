@@ -14,10 +14,23 @@ const holidayKeys = {
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 export function useHolidays(year?: number) {
-  return useQuery({
+  const query = useQuery({
     queryKey: year ? holidayKeys.byYear(year) : holidayKeys.all,
     queryFn: () => holidayApi.list(year),
   })
+
+  const { data: rawData, isLoading, isError, isSuccess, error, isFetching, status } = query
+
+  return {
+    data: rawData?.data,
+    warnings: rawData?.warnings ?? [],
+    isLoading,
+    isError,
+    isSuccess,
+    error,
+    isFetching,
+    status,
+  }
 }
 
 // ── Mutations ─────────────────────────────────────────────────────────────────

@@ -56,8 +56,13 @@ describe('holidayApi.list', () => {
 
   it('returns the holiday array from response.data.data', async () => {
     const result = await holidayApi.list()
-    expect(result).toHaveLength(1)
-    expect(result[0]).toEqual(mockHoliday)
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]).toEqual(mockHoliday)
+  })
+
+  it('returns empty warnings when meta is null', async () => {
+    const result = await holidayApi.list()
+    expect(result.warnings).toEqual([])
   })
 
   it('propagates errors from the API', async () => {

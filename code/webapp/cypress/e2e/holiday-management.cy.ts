@@ -73,14 +73,14 @@ describe('Holiday Management — admin happy path', () => {
   it('edits a holiday and shows a success toast', () => {
     cy.visitWithAuth('/attendance/config/holidays')
     cy.get('body').should('be.visible')
-    cy.closeDevDebugger()
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
+    cy.closeDevDebugger()
 
     // Click edit button for the first row
     cy.get('button[title="Editar festivo"]').first().click()
 
-    // Clear the name field and type a new name
-    cy.get('input[type="text"]').first().clear().type('Año Nuevo Actualizado')
+    // Target the name field by its form register name attribute
+    cy.get('input[name="name"]').clear().type('Año Nuevo Actualizado')
 
     // Confirm the edit
     cy.get('button[title="Guardar"]').click()
@@ -92,8 +92,8 @@ describe('Holiday Management — admin happy path', () => {
   it('deletes a holiday after confirmation', () => {
     cy.visitWithAuth('/attendance/config/holidays')
     cy.get('body').should('be.visible')
-    cy.closeDevDebugger()
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
+    cy.closeDevDebugger()
 
     cy.get('button[title="Eliminar festivo"]').first().click()
 
