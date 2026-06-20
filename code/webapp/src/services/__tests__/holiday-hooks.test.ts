@@ -44,8 +44,17 @@ const fakeHoliday: Holiday = {
   id: 1,
   date: '2026-01-01',
   name: 'Año Nuevo',
-  pay_multiplier: 2,
+  type: 'obligatorio',
+  pay_multiplier: 3,
+  is_auto_generated: true,
+  definition_id: 1,
   created_at: '2026-01-01T00:00:00+00:00',
+}
+
+const fakeListResponse = { data: [fakeHoliday], warnings: [] }
+const fakeListResponseWithWarnings = {
+  data: [fakeHoliday],
+  warnings: ['Jueves Santo no tiene fecha configurada para 2026'],
 }
 
 beforeEach(() => {
@@ -56,7 +65,7 @@ beforeEach(() => {
 
 describe('useHolidays', () => {
   it('returns holidays from api.list', async () => {
-    mockList.mockResolvedValue([fakeHoliday])
+    mockList.mockResolvedValue(fakeListResponse)
     const { result } = renderHook(() => useHolidays(), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -64,7 +73,7 @@ describe('useHolidays', () => {
   })
 
   it('passes year param to api.list when provided', async () => {
-    mockList.mockResolvedValue([fakeHoliday])
+    mockList.mockResolvedValue(fakeListResponse)
     const { result } = renderHook(() => useHolidays(2026), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -72,7 +81,7 @@ describe('useHolidays', () => {
   })
 
   it('calls api.list with undefined when no year given', async () => {
-    mockList.mockResolvedValue([])
+    mockList.mockResolvedValue({ data: [], warnings: [] })
     const { result } = renderHook(() => useHolidays(), { wrapper: makeWrapper() })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -83,6 +92,30 @@ describe('useHolidays', () => {
     mockList.mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(() => useHolidays(), { wrapper: makeWrapper() })
     expect(result.current.data).toBeUndefined()
+  })
+
+  it('exposes warnings from meta', async () => {
+    mockList.mockResolvedValue(fakeListResponseWithWarnings)
+    const { result } = renderHook(() => useHolidays(), { wrapper: makeWrapper() })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.warnings).toEqual([
+      'Jueves Santo no tiene fecha configurada para 2026',
+    ])
+  })
+
+  it('exposes empty warnings array when none returned', async () => {
+    mockList.mockResolvedValue(fakeListResponse)
+    const { result } = renderHook(() => useHolidays(), { wrapper: makeWrapper() })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.warnings).toEqual([])
+  })
+
+  it('exposes empty warnings before data resolves', () => {
+    mockList.mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(() => useHolidays(), { wrapper: makeWrapper() })
+    expect(result.current.warnings).toEqual([])
   })
 })
 
