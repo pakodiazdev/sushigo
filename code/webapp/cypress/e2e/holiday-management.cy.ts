@@ -4,16 +4,25 @@
  * Verifies that an admin can view, add, edit, and delete holidays from the
  * holiday catalog page at /attendance/config/holidays.
  *
- * Seeder group: 'core' — base data only (no pre-seeded holidays).
+ * The "add holiday" flow goes through HolidayDefinition (POST /holiday-definitions).
  *
- * Happy path:
- *   1. Admin navigates to /attendance/config/holidays via the Asistencia sidebar.
- *   2. Empty state is displayed ("No hay días festivos registrados...").
- *   3. Admin adds a holiday — New Year's Day 2026, 2× multiplier.
- *   4. Row appears in the table.
- *   5. Admin edits the holiday name — success toast appears.
- *   6. Admin deletes the holiday — confirm dialog + toast.
- *   7. Table is empty again.
+ * Seeder group: 'core' — base data only (no pre-seeded holiday definitions).
+ *
+ * Tests run sequentially sharing a single test:reset. DB state flows:
+ *   Tests 1-2 : empty DB
+ *   Test 3    : creates one-off holiday (non-annual, 2026-07-15)
+ *   Tests 4-5 : edits then deletes that holiday → DB empty again
+ *   Test 6    : creates annual fixed definition → auto-generated instance (2026-01-01)
+ *   Test 7    : creates floating definition → warning banner appears
+ *
+ * Happy paths covered:
+ *   1. Navigate via sidebar
+ *   2. Empty state
+ *   3. Add one-off holiday (non-annual) — Manual chip
+ *   4. Edit holiday instance
+ *   5. Delete holiday
+ *   6. Add annual holiday (fixed recurrence) — Auto chip
+ *   7. Floating holiday shows warning banner
  *
  * For running only this file:
  *   make cypress-spec SPEC=holiday-management
@@ -51,7 +60,7 @@ describe('Holiday Management — admin happy path', () => {
     cy.contains('No hay días festivos registrados').should('be.visible')
   })
 
-  it('adds a new holiday and shows it in the table', () => {
+  it('adds a one-off holiday and shows it in the table', () => {
     cy.visitWithAuth('/attendance/config/holidays')
     cy.get('body').should('be.visible')
     cy.closeDevDebugger()
@@ -59,14 +68,24 @@ describe('Holiday Management — admin happy path', () => {
 
     cy.contains('button', 'Agregar festivo').click()
 
-    cy.get('#add-date').type('2026-01-01')
-    cy.get('#add-name').type("New Year's Day")
+    // Fill the name field
+    cy.get('#add-name').type('Día de Prueba')
+
+    // Change type to asueto — 2× fixed, no multiplier input required
+    cy.get('#add-type').select('asueto')
+
+    // Uncheck "¿Se repite cada año?" to switch to one-off mode (shows #add-date)
+    cy.get('#add-is-annual').uncheck()
+
+    // Date picker now visible — enter the holiday date
+    cy.get('#add-date').type('2026-07-15')
 
     cy.contains('button', 'Guardar').click()
 
     cy.contains('Festivo creado', { timeout: 10_000 }).should('be.visible')
-    cy.contains("New Year's Day").should('be.visible')
-    cy.contains('2026-01-01').should('be.visible')
+    cy.contains('Día de Prueba').should('be.visible')
+    cy.contains('2026-07-15').should('be.visible')
+    cy.contains('Asueto').should('be.visible')
     cy.contains('2× Doble').should('be.visible')
   })
 
@@ -76,17 +95,16 @@ describe('Holiday Management — admin happy path', () => {
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
 
-    // Click edit button for the first row
+    // Click edit button on the first row
     cy.get('button[title="Editar festivo"]').first().click()
 
-    // Target the name field by its form register name attribute
-    cy.get('input[name="name"]').clear().type('Año Nuevo Actualizado')
+    // react-hook-form injects name="name" on the input — unique selector vs global search bar
+    cy.get('input[name="name"]').clear().type('Día de Prueba Actualizado')
 
-    // Confirm the edit
     cy.get('button[title="Guardar"]').click()
 
     cy.contains('Festivo actualizado', { timeout: 10_000 }).should('be.visible')
-    cy.contains('Año Nuevo Actualizado').should('be.visible')
+    cy.contains('Día de Prueba Actualizado').should('be.visible')
   })
 
   it('deletes a holiday after confirmation', () => {
@@ -97,13 +115,61 @@ describe('Holiday Management — admin happy path', () => {
 
     cy.get('button[title="Eliminar festivo"]').first().click()
 
-    // Confirmation dialog should appear
+    // Confirmation dialog
     cy.contains('Eliminar día festivo').should('be.visible')
-
-    // Confirm deletion
     cy.contains('button', 'Eliminar').last().click()
 
     cy.contains('Festivo eliminado', { timeout: 10_000 }).should('be.visible')
+    // One-off holidays don't regenerate — table returns to empty state
     cy.contains('No hay días festivos registrados').should('be.visible')
+  })
+
+  it('adds an annual holiday with fixed recurrence and shows it with Auto chip', () => {
+    cy.visitWithAuth('/attendance/config/holidays')
+    cy.get('body').should('be.visible')
+    cy.closeDevDebugger()
+    cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
+
+    cy.contains('button', 'Agregar festivo').click()
+
+    cy.get('#add-name').type('Año Nuevo de Prueba')
+    cy.get('#add-type').select('asueto')
+
+    // is_annual is checked by default — RecurrenceBuilder is already visible
+    // recurrence_type defaults to "fixed" — month and day selects appear
+
+    cy.get('#add-rec-month').select('Enero')
+    cy.get('#add-rec-day').type('1')
+
+    cy.contains('button', 'Guardar').click()
+
+    cy.contains('Festivo creado', { timeout: 10_000 }).should('be.visible')
+    cy.contains('Año Nuevo de Prueba').should('be.visible')
+    // Auto-generated instance — chip reads "Auto"
+    cy.contains('Auto').should('be.visible')
+    cy.contains('Asueto').should('be.visible')
+    cy.contains('2× Doble').should('be.visible')
+  })
+
+  it('shows warning banner for floating holidays without a configured date', () => {
+    cy.visitWithAuth('/attendance/config/holidays')
+    cy.get('body').should('be.visible')
+    cy.closeDevDebugger()
+    cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
+
+    cy.contains('button', 'Agregar festivo').click()
+
+    cy.get('#add-name').type('Viernes Santo de Prueba')
+    cy.get('#add-type').select('asueto')
+
+    // is_annual checked — switch recurrence type to floating
+    cy.get('#add-recurrence-type').select('floating')
+
+    cy.contains('button', 'Guardar').click()
+
+    cy.contains('Festivo creado', { timeout: 10_000 }).should('be.visible')
+    // Floating holidays have no auto-generated date — warning banner appears
+    cy.contains('Festividades sin fecha para').should('be.visible')
+    cy.contains('Viernes Santo de Prueba').should('be.visible')
   })
 })

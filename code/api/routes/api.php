@@ -43,9 +43,13 @@ use App\Http\Controllers\Api\V1\Employees\SyncUserDirectPermissionsController;
 use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
 use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
 use App\Http\Controllers\Api\V1\Holidays\CreateHolidayController;
+use App\Http\Controllers\Api\V1\Holidays\CreateHolidayDefinitionController;
 use App\Http\Controllers\Api\V1\Holidays\DeleteHolidayController;
+use App\Http\Controllers\Api\V1\Holidays\DeleteHolidayDefinitionController;
+use App\Http\Controllers\Api\V1\Holidays\ListHolidayDefinitionsController;
 use App\Http\Controllers\Api\V1\Holidays\ListHolidaysController;
 use App\Http\Controllers\Api\V1\Holidays\UpdateHolidayController;
+use App\Http\Controllers\Api\V1\Holidays\UpdateHolidayDefinitionController;
 use App\Http\Controllers\Api\V1\Inventory\RegisterOpeningBalanceController;
 use App\Http\Controllers\Api\V1\Inventory\RegisterStockOutController;
 use App\Http\Controllers\Api\V1\InventoryLocation\CreateInventoryLocationController;
@@ -359,11 +363,20 @@ Route::prefix('v1')->group(function () {
     });
 
     // Holidays Module (All Protected — requires holidays.manage)
-    Route::middleware(['auth:api', 'permission:holidays.manage'])->prefix('holidays')->name('holidays.')->group(function () {
-        Route::get('/', ListHolidaysController::class)->name('index');
-        Route::post('/', CreateHolidayController::class)->name('store');
-        Route::put('/{id}', UpdateHolidayController::class)->name('update');
-        Route::delete('/{id}', DeleteHolidayController::class)->name('destroy');
+    Route::middleware(['auth:api', 'permission:holidays.manage'])->group(function () {
+        Route::prefix('holidays')->name('holidays.')->group(function () {
+            Route::get('/', ListHolidaysController::class)->name('index');
+            Route::post('/', CreateHolidayController::class)->name('store');
+            Route::put('/{id}', UpdateHolidayController::class)->name('update');
+            Route::delete('/{id}', DeleteHolidayController::class)->name('destroy');
+        });
+
+        Route::prefix('holiday-definitions')->name('holiday-definitions.')->group(function () {
+            Route::get('/', ListHolidayDefinitionsController::class)->name('index');
+            Route::post('/', CreateHolidayDefinitionController::class)->name('store');
+            Route::put('/{holidayDefinition}', UpdateHolidayDefinitionController::class)->name('update');
+            Route::delete('/{holidayDefinition}', DeleteHolidayDefinitionController::class)->name('destroy');
+        });
     });
 
     // Cash Adjustments Module (All Protected)

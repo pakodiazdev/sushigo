@@ -51,3 +51,6 @@ node_modules/
 # Local planning documents — never committed
 plan/
 
+
+# Session memory — multi-agent work tracking
+.memory/
