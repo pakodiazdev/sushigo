@@ -134,7 +134,8 @@ function RecurrenceBuilder({
         >
           <option value="fixed">Fecha fija (ej. 1 de enero)</option>
           <option value="nth_weekday">Lunes movible (ej. 1er lunes de febrero)</option>
-          <option value="floating">Fecha variable (Semana Santa — configurar por año)</option>
+          <option value="easter_offset">Relativo a Pascua (Semana Santa — automático)</option>
+          <option value="floating">Fecha variable (requiere captura manual por año)</option>
         </select>
       </div>
 
@@ -209,6 +210,26 @@ function RecurrenceBuilder({
               El día de la semana es siempre lunes (LFT). El campo weekday se establece automáticamente.
             </p>
           </div>
+        </div>
+      )}
+
+      {recurrenceType === 'easter_offset' && (
+        <div>
+          <label htmlFor="add-rec-offset" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Días desde Pascua (negativo = antes)
+          </label>
+          <Input
+            id="add-rec-offset"
+            type="number"
+            min="-7"
+            max="7"
+            {...register('recurrence_offset', { valueAsNumber: true })}
+            placeholder="ej. -2 para Viernes Santo"
+            className="mt-1"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pascua 2026: 5 de abril · −3 Jueves Santo · −2 Viernes Santo · −1 Sábado Santo
+          </p>
         </div>
       )}
 
