@@ -104,6 +104,27 @@ class HolidayDefinitionCrudTest extends HolidayTestCase
     }
 
     #[Test]
+    public function create_with_easter_offset_generates_correct_date(): void
+    {
+        $this->makeUserWithPermissions(['holidays.manage']);
+
+        // Easter 2026 = April 5 → Viernes Santo (offset −2) = April 3
+        $this->postJson('/api/v1/holiday-definitions', [
+            'name' => 'Viernes Santo',
+            'type' => 'asueto',
+            'is_annual' => true,
+            'recurrence_type' => 'easter_offset',
+            'recurrence_config' => ['offset' => -2],
+        ])->assertStatus(201);
+
+        $this->assertDatabaseHas('holidays', [
+            'date' => '2026-04-03',
+            'name' => 'Viernes Santo',
+            'is_auto_generated' => true,
+        ]);
+    }
+
+    #[Test]
     public function create_with_is_annual_false_creates_holiday_instance_for_date(): void
     {
         $this->makeUserWithPermissions(['holidays.manage']);

@@ -1,11 +1,12 @@
 // ── Holiday types ──────────────────────────────────────────────────────────────
 
 export type HolidayType = 'obligatorio' | 'asueto' | 'opcional'
-export type RecurrenceType = 'fixed' | 'nth_weekday' | 'floating' | 'none'
+export type RecurrenceType = 'fixed' | 'nth_weekday' | 'floating' | 'none' | 'easter_offset'
 
 export type RecurrenceConfig =
   | { month: number; day: number }                         // fixed
   | { month: number; week: number; weekday: number }       // nth_weekday
+  | { offset: number }                                     // easter_offset (days from Easter Sunday)
   | Record<string, never>                                  // floating | none
 
 // ── HolidayDefinition ─────────────────────────────────────────────────────────

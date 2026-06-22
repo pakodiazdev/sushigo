@@ -12,10 +12,11 @@ use Carbon\Carbon;
  * Generates Holiday instances from annual HolidayDefinitions for a given year.
  *
  * Strategy: lazy + persisted
- * - fixed       → exact calendar date (month/day)
- * - nth_weekday → Nth occurrence of a weekday in a month (1=Mon…7=Sun, ISO)
- * - floating    → skip, emit a warning (e.g. Semana Santa)
- * - none        → skip (one-time, never auto-generated)
+ * - fixed         → exact calendar date (month/day)
+ * - nth_weekday   → Nth occurrence of a weekday in a month (1=Mon…7=Sun, ISO)
+ * - easter_offset → offset in days from Easter Sunday (Butcher algorithm)
+ * - floating      → skip, emit a warning (truly undetermined date)
+ * - none          → skip (one-time, never auto-generated)
  *
  * Manual overrides (is_auto_generated=false) are never overwritten.
  */
@@ -100,6 +101,7 @@ class HolidayGeneratorService
         return match ($definition->recurrence_type) {
             'fixed' => $this->resolveFixed($year, $config),
             'nth_weekday' => $this->resolveNthWeekday($year, $config),
+            'easter_offset' => $this->resolveEasterOffset($year, $config),
             default => null,
         };
     }
@@ -130,6 +132,43 @@ class HolidayGeneratorService
         $isoWeekday = (int) $config['weekday']; // 1=Mon … 7=Sun
 
         return $this->calcNthWeekday($year, $month, $week, $isoWeekday);
+    }
+
+    /**
+     * Offset in days from Easter Sunday (Butcher/Meeus/Jones algorithm).
+     *
+     * @param  array{offset: int}  $config
+     */
+    private function resolveEasterOffset(int $year, array $config): ?Carbon
+    {
+        if (! isset($config['offset'])) {
+            return null;
+        }
+
+        return $this->easterSunday($year)->addDays((int) $config['offset']);
+    }
+
+    /**
+     * Returns Easter Sunday for a Gregorian year using Butcher's algorithm.
+     */
+    private function easterSunday(int $year): Carbon
+    {
+        $a = $year % 19;
+        $b = (int) ($year / 100);
+        $c = $year % 100;
+        $d = (int) ($b / 4);
+        $e = $b % 4;
+        $f = (int) (($b + 8) / 25);
+        $g = (int) (($b - $f + 1) / 3);
+        $h = (19 * $a + $b - $d - $g + 15) % 30;
+        $i = (int) ($c / 4);
+        $k = $c % 4;
+        $l = (32 + 2 * $e + 2 * $i - $h - $k) % 7;
+        $m = (int) (($a + 11 * $h + 22 * $l) / 451);
+        $month = (int) (($h + $l - 7 * $m + 114) / 31);
+        $day = (($h + $l - 7 * $m + 114) % 31) + 1;
+
+        return Carbon::createFromDate($year, $month, $day);
     }
 
     /**
