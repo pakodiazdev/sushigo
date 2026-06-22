@@ -64,7 +64,7 @@ class HolidayDefinitionCrudTest extends HolidayTestCase
     }
 
     #[Test]
-    public function create_with_asueto_ignores_pay_multiplier_and_uses_2(): void
+    public function create_with_asueto_ignores_pay_multiplier_and_uses_1(): void
     {
         $this->makeUserWithPermissions(['holidays.manage']);
 
@@ -74,11 +74,11 @@ class HolidayDefinitionCrudTest extends HolidayTestCase
             'is_annual' => true,
             'recurrence_type' => 'floating',
             'recurrence_config' => [],
-            'pay_multiplier' => 1.50, // should be ignored
+            'pay_multiplier' => 2.50, // should be ignored — asueto is fixed at 1×
         ])
             ->assertStatus(201)
-            ->assertJsonPath('data.pay_multiplier', 2)
-            ->assertJsonPath('data.effective_pay_multiplier', 2);
+            ->assertJsonPath('data.pay_multiplier', 1)
+            ->assertJsonPath('data.effective_pay_multiplier', 1);
     }
 
     #[Test]

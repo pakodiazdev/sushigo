@@ -59,7 +59,7 @@ class HolidayDefinition extends Model
     {
         return match ($this->type) {
             'obligatorio' => 3.0,
-            'asueto' => 2.0,
+            'asueto' => 1.0,
             default => (float) $this->pay_multiplier,
         };
     }

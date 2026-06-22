@@ -58,8 +58,8 @@ class CreateHolidayDefinitionController extends Controller
         $type = $data['type'];
         $data['pay_multiplier'] = match ($type) {
             'obligatorio' => 3.00,
-            'asueto' => 2.00,
-            default => $data['pay_multiplier'] ?? 2.00,
+            'asueto' => 1.00,
+            default => $data['pay_multiplier'] ?? 1.00,
         };
 
         $definition = HolidayDefinition::create($data);

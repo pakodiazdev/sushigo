@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Pencil, Trash2, Plus, X, Check, AlertTriangle } from 'lucide-react'
+import { Pencil, Trash2, Plus, AlertTriangle } from 'lucide-react'
 import { requirePermission } from '@/lib/route-guards'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { SlidePanel } from '@/components/ui/slide-panel'
+import { DataGrid, type Column } from '@/components/ui/data-grid'
 import {
   useHolidayManagement,
   type HolidayEditValues,
@@ -34,6 +36,8 @@ const WEEK_LABELS = ['1ª', '2ª', '3ª', '4ª', '5ª']
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function multiplierLabel(value: number): string {
+  if (value < 1) return `${value}× Parcial`
+  if (value === 1) return '1× Normal'
   if (value === 2) return '2× Doble'
   if (value === 3) return '3× Triple'
   return `${value}×`
@@ -45,9 +49,9 @@ function TypeBadge({ type }: Readonly<{ type: HolidayType | null }>) {
   if (!type) return null
 
   const styles: Record<HolidayType, string> = {
-    obligatorio: 'bg-red-100 text-red-700 border-red-200',
-    asueto: 'bg-orange-100 text-orange-700 border-orange-200',
-    opcional: 'bg-gray-100 text-gray-600 border-gray-200',
+    obligatorio: 'bg-red-50 text-red-700 border-red-100',
+    asueto: 'bg-blue-50 text-blue-700 border-blue-100',
+    opcional: 'bg-purple-50 text-purple-700 border-purple-100',
   }
 
   const labels: Record<HolidayType, string> = {
@@ -57,7 +61,7 @@ function TypeBadge({ type }: Readonly<{ type: HolidayType | null }>) {
   }
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${styles[type]}`}>
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs border ${styles[type]}`}>
       {labels[type]}
     </span>
   )
@@ -66,14 +70,14 @@ function TypeBadge({ type }: Readonly<{ type: HolidayType | null }>) {
 function OriginChip({ holiday }: Readonly<{ holiday: Holiday }>) {
   if (holiday.is_auto_generated) {
     return (
-      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-600 border border-blue-100">
+      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-600 border border-green-100">
         Auto
       </span>
     )
   }
   if (holiday.definition_id !== null) {
     return (
-      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-amber-50 text-amber-600 border border-amber-100">
+      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-yellow-50 text-yellow-600 border border-yellow-100">
         Override
       </span>
     )
@@ -105,115 +109,6 @@ function WarningBanner({
         </ul>
       </div>
     </div>
-  )
-}
-
-function HolidayRow({
-  holiday,
-  isEditing,
-  editForm,
-  onStartEdit,
-  onCancelEdit,
-  onEditSubmit,
-  isUpdating,
-  onDeleteClick,
-}: Readonly<{
-  holiday: Holiday
-  isEditing: boolean
-  editForm: ReturnType<typeof useHolidayManagement>['editForm']
-  onStartEdit: (h: Holiday) => void
-  onCancelEdit: () => void
-  onEditSubmit: (values: HolidayEditValues) => void
-  isUpdating: boolean
-  onDeleteClick: (id: number) => void
-}>) {
-  const { register, handleSubmit, formState: { errors } } = editForm
-
-  if (isEditing) {
-    return (
-      <tr className="border-t bg-muted/30">
-        <td className="px-4 py-2">
-          <Input type="date" {...register('date')} className="h-8 text-sm" />
-          {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
-        </td>
-        <td className="px-4 py-2" colSpan={2}>
-          <Input type="text" {...register('name')} className="h-8 text-sm" />
-          {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
-        </td>
-        <td className="px-4 py-2">
-          <Input
-            type="number"
-            step="0.01"
-            min="1"
-            max="9.99"
-            {...register('pay_multiplier', { valueAsNumber: true })}
-            className="h-8 text-sm"
-          />
-          {errors.pay_multiplier && (
-            <p className="text-xs text-destructive mt-1">{errors.pay_multiplier.message}</p>
-          )}
-        </td>
-        <td className="px-4 py-2 text-right">
-          <div className="flex justify-end gap-1">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={handleSubmit(onEditSubmit)}
-              disabled={isUpdating}
-              title="Guardar"
-            >
-              <Check className="h-4 w-4 text-green-600" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={onCancelEdit}
-              title="Cancelar"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </td>
-      </tr>
-    )
-  }
-
-  return (
-    <tr className="border-t">
-      <td className="px-4 py-2 text-sm">{holiday.date}</td>
-      <td className="px-4 py-2 text-sm">
-        <span>{holiday.name}</span>
-        <OriginChip holiday={holiday} />
-      </td>
-      <td className="px-4 py-2">
-        <TypeBadge type={holiday.type} />
-      </td>
-      <td className="px-4 py-2 text-sm">{multiplierLabel(holiday.pay_multiplier)}</td>
-      <td className="px-4 py-2 text-right">
-        <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => onStartEdit(holiday)}
-            title="Editar festivo"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => onDeleteClick(holiday.id)}
-            title="Eliminar festivo"
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      </td>
-    </tr>
   )
 }
 
@@ -350,10 +245,8 @@ function AddHolidayForm({
   return (
     <form
       onSubmit={handleSubmit(handleAddSubmit)}
-      className="border rounded-lg p-4 space-y-4 bg-card max-w-lg"
+      className="space-y-5"
     >
-      <h3 className="text-sm font-semibold">Nuevo día festivo</h3>
-
       <div>
         <label htmlFor="add-name" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           Nombre
@@ -384,11 +277,27 @@ function AddHolidayForm({
           {...register('type')}
           className="mt-1 h-10 w-full border rounded px-2 text-sm bg-background"
         >
-          <option value="obligatorio">Obligatorio (Art. 74 LFT — 3× fijo)</option>
-          <option value="asueto">Asueto (empresa/convenio — 2× fijo)</option>
-          <option value="opcional">Opcional (discrecional — multiplicador libre)</option>
+          <option value="obligatorio">Obligatorio — 3× fijo (LFT Art. 74)</option>
+          <option value="asueto">Asueto — 1× normal (empresa / convenio colectivo)</option>
+          <option value="opcional">Opcional — multiplicador libre (negociación extra)</option>
         </select>
         {errors.type && <p className="text-xs text-destructive mt-1">{errors.type.message}</p>}
+
+        {type === 'obligatorio' && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            La LFT Art. 74 exige 3× de pago si el trabajador labora este día (salario doble + el día ordinario). No negociable.
+          </p>
+        )}
+        {type === 'asueto' && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Día libre otorgado por la empresa o convenio colectivo. Si el trabajador labora, cobra su jornada normal (1×) — el beneficio es el descanso, no un premium.
+          </p>
+        )}
+        {type === 'opcional' && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Para negociaciones específicas o acuerdos excepcionales. Define el multiplicador según lo pactado; el valor habitual es 1×.
+          </p>
+        )}
       </div>
 
       {type === 'opcional' && (
@@ -400,10 +309,10 @@ function AddHolidayForm({
             id="add-multiplier"
             type="number"
             step="0.01"
-            min="1"
+            min="0.01"
             max="9.99"
             {...register('pay_multiplier', { valueAsNumber: true })}
-            placeholder="Ej. 2.0"
+            placeholder="1.0"
             className="mt-1"
           />
           {errors.pay_multiplier && (
@@ -448,6 +357,66 @@ function AddHolidayForm({
   )
 }
 
+function EditHolidayForm({
+  editForm,
+  onSubmit,
+  isUpdating,
+  onCancel,
+}: Readonly<{
+  editForm: ReturnType<typeof useHolidayManagement>['editForm']
+  onSubmit: (values: HolidayEditValues) => void
+  isUpdating: boolean
+  onCancel: () => void
+}>) {
+  const { register, handleSubmit, formState: { errors } } = editForm
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Fecha
+        </label>
+        <Input type="date" {...register('date')} className="mt-1" />
+        {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Nombre
+        </label>
+        <Input type="text" {...register('name')} className="mt-1" />
+        {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Multiplicador de pago
+        </label>
+        <Input
+          type="number"
+          step="0.01"
+          min="0.01"
+          max="9.99"
+          {...register('pay_multiplier', { valueAsNumber: true })}
+          className="mt-1"
+        />
+        {errors.pay_multiplier && (
+          <p className="text-xs text-destructive mt-1">{errors.pay_multiplier.message}</p>
+        )}
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <Button type="submit" size="sm" title="Guardar" disabled={isUpdating}>
+          {isUpdating ? 'Guardando...' : 'Guardar'}
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function HolidaysPage() {
@@ -474,6 +443,65 @@ function HolidaysPage() {
     isDeleting,
   } = useHolidayManagement(selectedYear)
 
+  const columns: Column<Holiday>[] = [
+    {
+      key: 'date',
+      header: 'Fecha',
+      width: '130px',
+      render: (h) => h.date,
+    },
+    {
+      key: 'name',
+      header: 'Nombre',
+      render: (h) => (
+        <span className="inline-flex items-center gap-1.5">
+          {h.name}
+          <OriginChip holiday={h} />
+        </span>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Tipo',
+      width: '120px',
+      render: (h) => <TypeBadge type={h.type} />,
+    },
+    {
+      key: 'pay_multiplier',
+      header: 'Multiplicador',
+      width: '130px',
+      render: (h) => multiplierLabel(h.pay_multiplier),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '90px',
+      align: 'right',
+      render: (h) => (
+        <div className="flex justify-end gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => startEdit(h)}
+            title="Editar festivo"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => setConfirmDeleteId(h.id)}
+            title="Eliminar festivo"
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <PageContainer>
       <PageHeader
@@ -481,89 +509,77 @@ function HolidaysPage() {
         description="Administra el catálogo de días festivos y su multiplicador de pago."
       />
 
-      {/* Year selector */}
-      <div className="flex items-center gap-3 mb-6">
-        <label htmlFor="year-select" className="text-sm font-medium text-muted-foreground">
-          Año:
-        </label>
-        <select
-          id="year-select"
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(Number(e.target.value))}
-          className="border rounded px-3 py-1.5 text-sm bg-background"
-        >
-          {YEAR_OPTIONS.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+      <div className="mt-6 space-y-4">
+        {/* Toolbar: year filter + action */}
+        <div className="flex flex-wrap items-center gap-3">
+          <label htmlFor="year-select" className="text-sm font-medium text-muted-foreground">
+            Año:
+          </label>
+          <select
+            id="year-select"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="border rounded px-3 py-1.5 text-sm bg-background"
+          >
+            {YEAR_OPTIONS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+          <div className="flex-1" />
+          <Button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className="bg-blue-600 text-white hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Agregar festivo
+          </Button>
+        </div>
+
+        <WarningBanner warnings={warnings} selectedYear={selectedYear} />
+
+        <DataGrid
+          data={holidays}
+          columns={columns}
+          loading={isLoading}
+          emptyMessage={`No hay días festivos registrados para ${selectedYear}.`}
+          getRowId={(h) => h.id}
+        />
       </div>
 
-      {/* Warning banner for floating holidays without date */}
-      <WarningBanner warnings={warnings} selectedYear={selectedYear} />
-
-      {/* Holidays table */}
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Cargando días festivos...</p>
-      ) : (
-        <div className="border rounded-lg overflow-hidden mb-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted text-muted-foreground text-xs uppercase tracking-wide">
-                <th className="px-4 py-2 text-left">Fecha</th>
-                <th className="px-4 py-2 text-left">Nombre</th>
-                <th className="px-4 py-2 text-left">Tipo</th>
-                <th className="px-4 py-2 text-left">Multiplicador</th>
-                <th className="px-4 py-2 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {holidays.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
-                    No hay días festivos registrados para {selectedYear}.
-                  </td>
-                </tr>
-              ) : (
-                holidays.map((holiday) => (
-                  <HolidayRow
-                    key={holiday.id}
-                    holiday={holiday}
-                    isEditing={editingId === holiday.id}
-                    editForm={editForm}
-                    onStartEdit={startEdit}
-                    onCancelEdit={cancelEdit}
-                    onEditSubmit={handleEditSubmit}
-                    isUpdating={isUpdating}
-                    onDeleteClick={setConfirmDeleteId}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Add holiday form */}
-      {showAddForm ? (
+      {/* Add holiday slide panel */}
+      <SlidePanel
+        isOpen={showAddForm}
+        onClose={() => setShowAddForm(false)}
+        title="Nuevo día festivo"
+        description="Define el tipo, multiplicador y recurrencia del festivo."
+        size="sm"
+      >
         <AddHolidayForm
           addForm={addForm}
           handleAddSubmit={handleAddSubmit}
           isCreating={isCreating}
           onCancel={() => setShowAddForm(false)}
         />
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAddForm(true)}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Agregar festivo
-        </Button>
-      )}
+      </SlidePanel>
+
+      {/* Edit holiday slide panel */}
+      <SlidePanel
+        isOpen={editingId !== null}
+        onClose={cancelEdit}
+        title="Editar festivo"
+        description="Modifica la fecha, nombre o multiplicador de esta instancia."
+        size="sm"
+      >
+        <EditHolidayForm
+          editForm={editForm}
+          onSubmit={handleEditSubmit}
+          isUpdating={isUpdating}
+          onCancel={cancelEdit}
+        />
+      </SlidePanel>
 
       <ConfirmDialog
         isOpen={confirmDeleteId !== null}
