@@ -18,7 +18,7 @@ const holidayFormBaseSchema = z.object({
   type: z.enum(['obligatorio', 'asueto', 'opcional']),
   pay_multiplier: z.number().min(0.01).max(9.99).optional(),
   is_annual: z.boolean(),
-  recurrence_type: z.enum(['fixed', 'nth_weekday', 'floating', 'none', 'easter_offset']),
+  recurrence_type: z.enum(['fixed', 'nth_weekday', 'none', 'easter_offset']),
   recurrence_month: z.number().min(1).max(12).optional(),
   recurrence_day: z.number().min(1).max(31).optional(),
   recurrence_week: z.number().min(1).max(5).optional(),

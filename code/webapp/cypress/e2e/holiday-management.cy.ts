@@ -13,7 +13,6 @@
  *   Test 3    : creates one-off holiday (non-annual, 2026-07-15)
  *   Tests 4-5 : edits then deletes that holiday → DB empty again
  *   Test 6    : creates annual fixed definition → auto-generated instance (2026-01-01)
- *   Test 7    : creates floating definition → warning banner appears
  *
  * Happy paths covered:
  *   1. Navigate via sidebar
@@ -22,7 +21,6 @@
  *   4. Edit holiday instance
  *   5. Delete holiday
  *   6. Add annual holiday (fixed recurrence) — Auto chip
- *   7. Floating holiday shows warning banner
  *
  * For running only this file:
  *   make cypress-spec SPEC=holiday-management
@@ -66,7 +64,7 @@ describe('Holiday Management — admin happy path', () => {
     cy.closeDevDebugger()
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
 
-    cy.contains('button', 'Agregar festivo').click()
+    cy.contains('button', 'Nuevo tipo de festivo').click()
 
     // Fill the name field
     cy.get('#add-name').type('Día de Prueba')
@@ -130,7 +128,7 @@ describe('Holiday Management — admin happy path', () => {
     cy.closeDevDebugger()
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
 
-    cy.contains('button', 'Agregar festivo').click()
+    cy.contains('button', 'Nuevo tipo de festivo').click()
 
     cy.get('#add-name').type('Año Nuevo de Prueba')
     cy.get('#add-type').select('asueto')
@@ -151,25 +149,4 @@ describe('Holiday Management — admin happy path', () => {
     cy.contains('1× Normal').should('be.visible')
   })
 
-  it('shows warning banner for floating holidays without a configured date', () => {
-    cy.visitWithAuth('/attendance/config/holidays')
-    cy.get('body').should('be.visible')
-    cy.closeDevDebugger()
-    cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
-
-    cy.contains('button', 'Agregar festivo').click()
-
-    cy.get('#add-name').type('Viernes Santo de Prueba')
-    cy.get('#add-type').select('asueto')
-
-    // is_annual checked — switch recurrence type to floating
-    cy.get('#add-recurrence-type').select('floating')
-
-    cy.contains('button', 'Guardar').click()
-
-    cy.contains('Festivo creado', { timeout: 10_000 }).should('be.visible')
-    // Floating holidays have no auto-generated date — warning banner appears
-    cy.contains('Festividades sin fecha para').should('be.visible')
-    cy.contains('Viernes Santo de Prueba').should('be.visible')
-  })
 })

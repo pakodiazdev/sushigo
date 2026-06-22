@@ -42,7 +42,7 @@ class StoreHolidayDefinitionRequest extends FormRequest
             'type' => ['required', 'in:obligatorio,asueto,opcional'],
             'pay_multiplier' => ['required_if:type,opcional', 'nullable', 'numeric', 'min:0.01', 'max:9.99'],
             'is_annual' => ['boolean'],
-            'recurrence_type' => ['required', 'in:fixed,nth_weekday,floating,none,easter_offset'],
+            'recurrence_type' => ['required', 'in:fixed,nth_weekday,none,easter_offset'],
             'recurrence_config.offset' => ['required_if:recurrence_type,easter_offset', 'integer', 'min:-7', 'max:7'],
             'recurrence_config' => ['array'],
             'recurrence_config.month' => ['required_if:recurrence_type,fixed', 'required_if:recurrence_type,nth_weekday', 'integer', 'min:1', 'max:12'],

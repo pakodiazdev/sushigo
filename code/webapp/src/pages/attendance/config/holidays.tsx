@@ -100,7 +100,7 @@ function WarningBanner({
       <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
       <div>
         <p className="text-sm font-medium text-yellow-800">
-          Festividades sin fecha para {selectedYear}:
+          Estos tipos de festivo no tienen fecha calculable para {selectedYear} — usa "Nuevo tipo de festivo" con fecha específica para registrar cada instancia:
         </p>
         <ul className="mt-1 text-sm text-yellow-700">
           {warnings.map((w) => (
@@ -135,7 +135,6 @@ function RecurrenceBuilder({
           <option value="fixed">Fecha fija (ej. 1 de enero)</option>
           <option value="nth_weekday">Lunes movible (ej. 1er lunes de febrero)</option>
           <option value="easter_offset">Relativo a Pascua (Semana Santa — automático)</option>
-          <option value="floating">Fecha variable (requiere captura manual por año)</option>
         </select>
       </div>
 
@@ -233,11 +232,6 @@ function RecurrenceBuilder({
         </div>
       )}
 
-      {recurrenceType === 'floating' && (
-        <p className="text-sm text-muted-foreground bg-muted/50 rounded p-2">
-          Las fechas se configurarán manualmente cada año desde el calendario de instancias.
-        </p>
-      )}
     </div>
   )
 }
@@ -555,7 +549,7 @@ function HolidaysPage() {
             className="bg-blue-600 text-white hover:bg-blue-700"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Agregar festivo
+            Nuevo tipo de festivo
           </Button>
         </div>
 
@@ -574,8 +568,8 @@ function HolidaysPage() {
       <SlidePanel
         isOpen={showAddForm}
         onClose={() => setShowAddForm(false)}
-        title="Nuevo día festivo"
-        description="Define el tipo, multiplicador y recurrencia del festivo."
+        title="Nuevo tipo de festivo"
+        description="Define la plantilla. Las instancias se calculan automáticamente para cada año a partir del año en curso."
         size="sm"
       >
         <AddHolidayForm

@@ -2,28 +2,21 @@
 
 namespace Database\Seeders;
 
-use App\Models\Holiday;
-use Database\Seeders\Base\OnceSeeder;
+use App\Services\HolidayGeneratorService;
+use Database\Seeders\Base\RepeatableSeeder;
 
-class HolidaySeeder extends OnceSeeder
+class HolidaySeeder extends RepeatableSeeder
 {
     public function run(): void
     {
-        $holidays = [
-            ['date' => '2026-01-01', 'name' => 'New Year\'s Day', 'pay_multiplier' => 2.00],
-            ['date' => '2026-02-02', 'name' => 'Constitution Day', 'pay_multiplier' => 2.00],
-            ['date' => '2026-03-16', 'name' => 'Benito Juárez Birthday', 'pay_multiplier' => 2.00],
-            ['date' => '2026-05-01', 'name' => 'Labor Day', 'pay_multiplier' => 2.00],
-            ['date' => '2026-09-16', 'name' => 'Independence Day', 'pay_multiplier' => 2.00],
-            ['date' => '2026-11-16', 'name' => 'Revolution Day', 'pay_multiplier' => 2.00],
-            ['date' => '2026-12-25', 'name' => 'Christmas Day', 'pay_multiplier' => 2.00],
-        ];
+        $generator = new HolidayGeneratorService;
+        $year = now()->year;
 
-        foreach ($holidays as $holiday) {
-            Holiday::updateOrCreate(
-                ['date' => $holiday['date']],
-                $holiday
-            );
-        }
+        $result = $generator->generateForYear($year);
+
+        $this->command->info(
+            "✓ Holidays generated for {$year}: {$result->generated} generated, {$result->skipped} skipped"
+            .(count($result->warnings) > 0 ? ', '.count($result->warnings).' warnings' : '')
+        );
     }
 }
