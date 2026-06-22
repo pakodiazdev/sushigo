@@ -36,8 +36,8 @@ class DevelopmentSeeder extends Seeder
             \Database\Seeders\LeaveTypeSeeder::class,
             PunctualityRangeSeeder::class,
             PunctualityBonusGroupSeeder::class,
-            HolidaySeeder::class,
             HolidayDefinitionSeeder::class,
+            HolidaySeeder::class,
         ];
 
         foreach ($seeders as $seederClass) {

@@ -72,8 +72,8 @@ class HolidayDefinitionCrudTest extends HolidayTestCase
             'name' => 'Good Friday',
             'type' => 'asueto',
             'is_annual' => true,
-            'recurrence_type' => 'floating',
-            'recurrence_config' => [],
+            'recurrence_type' => 'easter_offset',
+            'recurrence_config' => ['offset' => -2],
             'pay_multiplier' => 2.50, // should be ignored — asueto is fixed at 1×
         ])
             ->assertStatus(201)
