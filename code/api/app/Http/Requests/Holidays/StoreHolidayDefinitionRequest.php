@@ -40,7 +40,7 @@ class StoreHolidayDefinitionRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:500'],
             'type' => ['required', 'in:obligatorio,asueto,opcional'],
-            'pay_multiplier' => ['required_if:type,opcional', 'nullable', 'numeric', 'min:1', 'max:9.99'],
+            'pay_multiplier' => ['required_if:type,opcional', 'nullable', 'numeric', 'min:0.01', 'max:9.99'],
             'is_annual' => ['boolean'],
             'recurrence_type' => ['required', 'in:fixed,nth_weekday,floating,none'],
             'recurrence_config' => ['array'],

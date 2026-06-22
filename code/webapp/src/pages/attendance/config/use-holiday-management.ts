@@ -12,77 +12,64 @@ import type { Holiday, RecurrenceConfig } from '@/types/attendance-payroll'
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
-export const holidayFormSchema = z
-  .object({
-    name: z.string().min(1, 'El nombre es requerido').max(255),
-    description: z.string().max(500).optional(),
-    type: z.enum(['obligatorio', 'asueto', 'opcional']),
-    pay_multiplier: z.number().min(1).max(9.99).optional(),
-    is_annual: z.boolean(),
-    recurrence_type: z.enum(['fixed', 'nth_weekday', 'floating', 'none']),
-    recurrence_month: z.number().min(1).max(12).optional(),
-    recurrence_day: z.number().min(1).max(31).optional(),
-    recurrence_week: z.number().min(1).max(5).optional(),
-    recurrence_weekday: z.number().min(1).max(7).optional(),
-    date: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.type === 'opcional' && !data.pay_multiplier) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'El multiplicador es requerido para tipo opcional',
-        path: ['pay_multiplier'],
-      })
-    }
-    if (data.is_annual && data.recurrence_type === 'fixed') {
-      if (!data.recurrence_month) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'El mes es requerido',
-          path: ['recurrence_month'],
-        })
-      }
-      if (!data.recurrence_day) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'El día es requerido',
-          path: ['recurrence_day'],
-        })
-      }
-    }
-    if (data.is_annual && data.recurrence_type === 'nth_weekday') {
-      if (!data.recurrence_month) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'El mes es requerido',
-          path: ['recurrence_month'],
-        })
-      }
-      if (!data.recurrence_week) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'La semana es requerida',
-          path: ['recurrence_week'],
-        })
-      }
-      if (!data.recurrence_weekday) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'El día de la semana es requerido',
-          path: ['recurrence_weekday'],
-        })
-      }
-    }
-    if (!data.is_annual || data.recurrence_type === 'none') {
-      if (!data.date) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'La fecha es requerida',
-          path: ['date'],
-        })
-      }
-    }
-  })
+const holidayFormBaseSchema = z.object({
+  name: z.string().min(1, 'El nombre es requerido').max(255),
+  description: z.string().max(500).optional(),
+  type: z.enum(['obligatorio', 'asueto', 'opcional']),
+  pay_multiplier: z.number().min(0.01).max(9.99).optional(),
+  is_annual: z.boolean(),
+  recurrence_type: z.enum(['fixed', 'nth_weekday', 'floating', 'none']),
+  recurrence_month: z.number().min(1).max(12).optional(),
+  recurrence_day: z.number().min(1).max(31).optional(),
+  recurrence_week: z.number().min(1).max(5).optional(),
+  recurrence_weekday: z.number().min(1).max(7).optional(),
+  date: z.string().optional(),
+})
+
+type HolidayFormRaw = z.infer<typeof holidayFormBaseSchema>
+
+function validateOpcionalMultiplier(data: HolidayFormRaw, ctx: z.RefinementCtx): void {
+  if (data.type === 'opcional' && !data.pay_multiplier) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El multiplicador es requerido para tipo opcional', path: ['pay_multiplier'] })
+  }
+}
+
+function validateFixedRecurrence(data: HolidayFormRaw, ctx: z.RefinementCtx): void {
+  if (!data.is_annual || data.recurrence_type !== 'fixed') return
+  if (!data.recurrence_month) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El mes es requerido', path: ['recurrence_month'] })
+  }
+  if (!data.recurrence_day) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El día es requerido', path: ['recurrence_day'] })
+  }
+}
+
+function validateNthWeekdayRecurrence(data: HolidayFormRaw, ctx: z.RefinementCtx): void {
+  if (!data.is_annual || data.recurrence_type !== 'nth_weekday') return
+  if (!data.recurrence_month) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El mes es requerido', path: ['recurrence_month'] })
+  }
+  if (!data.recurrence_week) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'La semana es requerida', path: ['recurrence_week'] })
+  }
+  if (!data.recurrence_weekday) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El día de la semana es requerido', path: ['recurrence_weekday'] })
+  }
+}
+
+function validateOneOffDate(data: HolidayFormRaw, ctx: z.RefinementCtx): void {
+  if (data.is_annual && data.recurrence_type !== 'none') return
+  if (!data.date) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'La fecha es requerida', path: ['date'] })
+  }
+}
+
+export const holidayFormSchema = holidayFormBaseSchema.superRefine((data, ctx) => {
+  validateOpcionalMultiplier(data, ctx)
+  validateFixedRecurrence(data, ctx)
+  validateNthWeekdayRecurrence(data, ctx)
+  validateOneOffDate(data, ctx)
+})
 
 export type HolidayFormValues = z.infer<typeof holidayFormSchema>
 
@@ -90,7 +77,7 @@ export type HolidayFormValues = z.infer<typeof holidayFormSchema>
 export const holidayEditSchema = z.object({
   date: z.string().min(1, 'La fecha es requerida').regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
   name: z.string().min(1, 'El nombre es requerido').max(255),
-  pay_multiplier: z.number().min(1).max(9.99),
+  pay_multiplier: z.number().min(0.01).max(9.99),
 })
 
 export type HolidayEditValues = z.infer<typeof holidayEditSchema>
@@ -131,7 +118,7 @@ export function useHolidayManagement(year?: number) {
       name: '',
       description: '',
       type: 'obligatorio',
-      pay_multiplier: undefined,
+      pay_multiplier: 1,
       is_annual: true,
       recurrence_type: 'fixed',
       recurrence_month: undefined,
@@ -152,7 +139,7 @@ export function useHolidayManagement(year?: number) {
       is_annual: isAnnual,
       recurrence_type: isAnnual ? values.recurrence_type : 'none',
       recurrence_config: isAnnual ? buildRecurrenceConfig(values) : {},
-      date: !isAnnual ? values.date : undefined,
+      date: isAnnual ? undefined : values.date,
     })
     addForm.reset()
     setShowAddForm(false)
@@ -162,7 +149,7 @@ export function useHolidayManagement(year?: number) {
 
   const editForm = useForm<HolidayEditValues>({
     resolver: zodResolver(holidayEditSchema),
-    defaultValues: { date: '', name: '', pay_multiplier: 2 },
+    defaultValues: { date: '', name: '', pay_multiplier: 1 },
   })
 
   const startEdit = (holiday: Holiday) => {

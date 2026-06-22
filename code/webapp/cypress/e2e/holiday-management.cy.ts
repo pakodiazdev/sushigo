@@ -86,7 +86,7 @@ describe('Holiday Management — admin happy path', () => {
     cy.contains('Día de Prueba').should('be.visible')
     cy.contains('2026-07-15').should('be.visible')
     cy.contains('Asueto').should('be.visible')
-    cy.contains('2× Doble').should('be.visible')
+    cy.contains('1× Normal').should('be.visible')
   })
 
   it('edits a holiday and shows a success toast', () => {
@@ -148,7 +148,7 @@ describe('Holiday Management — admin happy path', () => {
     // Auto-generated instance — chip reads "Auto"
     cy.contains('Auto').should('be.visible')
     cy.contains('Asueto').should('be.visible')
-    cy.contains('2× Doble').should('be.visible')
+    cy.contains('1× Normal').should('be.visible')
   })
 
   it('shows warning banner for floating holidays without a configured date', () => {
