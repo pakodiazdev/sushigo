@@ -27,14 +27,14 @@ class HolidayDefinitionTest extends TestCase
     }
 
     #[Test]
-    public function get_effective_pay_multiplier_returns_2_for_asueto(): void
+    public function get_effective_pay_multiplier_returns_1_for_asueto(): void
     {
         $definition = new HolidayDefinition([
             'type' => 'asueto',
             'pay_multiplier' => 1.50,
         ]);
 
-        $this->assertSame(2.0, $definition->getEffectivePayMultiplier());
+        $this->assertSame(1.0, $definition->getEffectivePayMultiplier());
     }
 
     #[Test]

@@ -43,4 +43,20 @@ class UpdateHolidayRequest extends FormRequest
             'pay_multiplier.min' => 'The pay multiplier must be at least 1.',
         ];
     }
+
+    /**
+     * Returns validated data with is_auto_generated derived from whether type was explicitly set.
+     *
+     * @return array<string, mixed>
+     */
+    public function holidayData(): array
+    {
+        $data = $this->validated();
+
+        if (isset($data['type'])) {
+            $data['is_auto_generated'] = false;
+        }
+
+        return $data;
+    }
 }

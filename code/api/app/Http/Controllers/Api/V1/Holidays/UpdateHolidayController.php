@@ -56,14 +56,7 @@ class UpdateHolidayController extends Controller
             throw new ModelNotFoundException("Holiday [{$id}] not found.");
         }
 
-        $data = $request->validated();
-
-        // If type is being explicitly set, mark this instance as a manual override
-        if (isset($data['type'])) {
-            $data['is_auto_generated'] = false;
-        }
-
-        $holiday->update($data);
+        $holiday->update($request->holidayData());
 
         return new HolidayResource($holiday);
     }
