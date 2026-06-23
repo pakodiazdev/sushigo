@@ -33,7 +33,17 @@ class DeleteHolidayController extends Controller
             throw new ModelNotFoundException("Holiday [{$id}] not found.");
         }
 
+        // Load the definition before deleting the instance so we can cascade below.
+        $definition = $holiday->holidayDefinition;
+
         $holiday->delete();
+
+        // Cascade to the definition to prevent the lazy generator from recreating
+        // this holiday on the next list request. The FK ON DELETE SET NULL will
+        // preserve any other historical instances linked to the same definition.
+        if ($definition !== null) {
+            $definition->delete();
+        }
 
         return response()->json(null, 204);
     }

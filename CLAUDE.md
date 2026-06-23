@@ -289,6 +289,40 @@ This rule applies everywhere: return types, parameter types, `::class` reference
 
 **PR requirement:** Reviewers must reject any code that uses a backslash-prefixed FQCN anywhere outside a `use` or `namespace` declaration.
 
+### FormRequest / Controller / Service responsibilities (mandatory)
+
+Each layer has a fixed responsibility. Never mix them:
+
+| Layer | Responsibility |
+|---|---|
+| **FormRequest** | Authorize the request · validate input · sanitize and transform data · expose typed accessor methods that return ready-to-use data structures |
+| **Controller** | Receive the request · call `$request->someMethod()` to get processed data · delegate to a model or service · return the response. **No data transformation here.** |
+| **Service** | Encapsulate business logic that spans multiple models or operations |
+
+**FormRequest accessor pattern** — expose a named method instead of doing post-processing in the controller:
+
+```php
+// FormRequest
+public function definitionData(): array
+{
+    $data = $this->validated();
+    $data['recurrence_config'] ??= [];
+    $data['pay_multiplier'] = match ($data['type']) {
+        'obligatorio' => 3.00,
+        'asueto'      => 1.00,
+        default       => $data['pay_multiplier'] ?? 1.00,
+    };
+    return $data;
+}
+
+// Controller — one line, no logic
+$definition = HolidayDefinition::create($request->definitionData());
+```
+
+**PR requirement:** Reviewers must reject any controller that performs data transformation (defaulting values, deriving fields from other fields, etc.) after calling `$request->validated()`. Move that logic into a FormRequest accessor method.
+
+---
+
 ### API Code Style
 
 - Strong typing always (PHP 8.2) - avoid redundant PHPDoc

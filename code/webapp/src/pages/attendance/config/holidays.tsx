@@ -146,7 +146,7 @@ function RecurrenceBuilder({
             </label>
             <select
               id="add-rec-month"
-              {...register('recurrence_month', { valueAsNumber: true })}
+              {...register('recurrence_month', { setValueAs: (v: string) => (v === '' || v === undefined) ? undefined : Number(v) })}
               className="mt-1 h-10 w-full border rounded px-2 text-sm bg-background"
             >
               <option value="">Seleccionar</option>
@@ -164,7 +164,7 @@ function RecurrenceBuilder({
               type="number"
               min="1"
               max="31"
-              {...register('recurrence_day', { valueAsNumber: true })}
+              {...register('recurrence_day', { setValueAs: (v: string) => (v === '' || v === undefined) ? undefined : Number(v) })}
               placeholder="1-31"
               className="mt-1"
             />
@@ -180,7 +180,7 @@ function RecurrenceBuilder({
             </label>
             <select
               id="add-rec-week"
-              {...register('recurrence_week', { valueAsNumber: true })}
+              {...register('recurrence_week', { setValueAs: (v: string) => (v === '' || v === undefined) ? undefined : Number(v) })}
               className="mt-1 h-10 w-full border rounded px-2 text-sm bg-background"
             >
               <option value="">Seleccionar</option>
@@ -195,7 +195,7 @@ function RecurrenceBuilder({
             </label>
             <select
               id="add-rec-nth-month"
-              {...register('recurrence_month', { valueAsNumber: true })}
+              {...register('recurrence_month', { setValueAs: (v: string) => (v === '' || v === undefined) ? undefined : Number(v) })}
               className="mt-1 h-10 w-full border rounded px-2 text-sm bg-background"
             >
               <option value="">Seleccionar</option>
@@ -222,7 +222,7 @@ function RecurrenceBuilder({
             type="number"
             min="-7"
             max="7"
-            {...register('recurrence_offset', { valueAsNumber: true })}
+            {...register('recurrence_offset', { setValueAs: (v: string) => (v === '' || v === undefined) ? undefined : Number(v) })}
             placeholder="ej. -2 para Viernes Santo"
             className="mt-1"
           />
@@ -326,7 +326,7 @@ function AddHolidayForm({
             step="0.01"
             min="0.01"
             max="9.99"
-            {...register('pay_multiplier', { valueAsNumber: true })}
+            {...register('pay_multiplier', { setValueAs: (v: string) => (v === '' || v === undefined) ? undefined : Number(v) })}
             placeholder="1.0"
             className="mt-1"
           />
@@ -348,17 +348,22 @@ function AddHolidayForm({
         />
       </div>
 
-      {isAnnual ? (
-        <RecurrenceBuilder register={register} watch={watch} />
-      ) : (
-        <div>
-          <label htmlFor="add-date" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Fecha
-          </label>
-          <Input id="add-date" type="date" {...register('date')} className="mt-1" />
-          {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
-        </div>
-      )}
+      {isAnnual && <RecurrenceBuilder register={register} watch={watch} />}
+
+      {/* Always mounted so react-hook-form keeps the ref; hidden via CSS when is_annual */}
+      <div className={isAnnual ? 'hidden' : ''}>
+        <label htmlFor="add-date" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Fecha
+        </label>
+        <Input
+          id="add-date"
+          type="text"
+          placeholder="YYYY-MM-DD"
+          {...register('date')}
+          className="mt-1"
+        />
+        {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
+      </div>
 
       <div className="flex gap-2 pt-1">
         <Button type="submit" size="sm" disabled={isCreating}>
@@ -388,31 +393,32 @@ function EditHolidayForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div>
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <label htmlFor="edit-date" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           Fecha
         </label>
-        <Input type="date" {...register('date')} className="mt-1" />
+        <Input id="edit-date" type="date" {...register('date')} className="mt-1" />
         {errors.date && <p className="text-xs text-destructive mt-1">{errors.date.message}</p>}
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <label htmlFor="edit-name" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           Nombre
         </label>
-        <Input type="text" {...register('name')} className="mt-1" />
+        <Input id="edit-name" type="text" {...register('name')} className="mt-1" />
         {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <label htmlFor="edit-pay-multiplier" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           Multiplicador de pago
         </label>
         <Input
+          id="edit-pay-multiplier"
           type="number"
           step="0.01"
           min="0.01"
           max="9.99"
-          {...register('pay_multiplier', { valueAsNumber: true })}
+          {...register('pay_multiplier', { setValueAs: (v: string) => (v === '' || v === undefined) ? undefined : Number(v) })}
           className="mt-1"
         />
         {errors.pay_multiplier && (

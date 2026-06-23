@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Holidays;
 
+use App\Models\HolidayDefinition;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -41,5 +42,25 @@ class UpdateHolidayDefinitionRequest extends FormRequest
             'recurrence_config.week' => ['integer', 'min:1', 'max:5'],
             'recurrence_config.weekday' => ['integer', 'min:1', 'max:7'],
         ];
+    }
+
+    /**
+     * Returns validated data with pay_multiplier re-derived if type is being changed.
+     *
+     * @return array<string, mixed>
+     */
+    public function definitionData(HolidayDefinition $definition): array
+    {
+        $data = $this->validated();
+
+        if (isset($data['type'])) {
+            $data['pay_multiplier'] = match ($data['type']) {
+                'obligatorio' => 3.00,
+                'asueto' => 1.00,
+                default => $data['pay_multiplier'] ?? (float) $definition->pay_multiplier,
+            };
+        }
+
+        return $data;
     }
 }

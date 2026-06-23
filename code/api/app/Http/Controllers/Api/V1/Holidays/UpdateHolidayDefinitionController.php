@@ -53,19 +53,7 @@ class UpdateHolidayDefinitionController extends Controller
         UpdateHolidayDefinitionRequest $request,
         HolidayDefinition $holidayDefinition,
     ): HolidayDefinitionResource {
-        $data = $request->validated();
-
-        // Re-derive multiplier if type changed to obligatorio/asueto
-        $type = $data['type'] ?? $holidayDefinition->type;
-        if (isset($data['type'])) {
-            $data['pay_multiplier'] = match ($type) {
-                'obligatorio' => 3.00,
-                'asueto' => 2.00,
-                default => $data['pay_multiplier'] ?? (float) $holidayDefinition->pay_multiplier,
-            };
-        }
-
-        $holidayDefinition->update($data);
+        $holidayDefinition->update($request->definitionData($holidayDefinition));
         $holidayDefinition->refresh();
 
         // Generate current-year instance if now annual (and not already generated)

@@ -49,18 +49,7 @@ class CreateHolidayDefinitionController extends Controller
 
     public function __invoke(StoreHolidayDefinitionRequest $request): HolidayDefinitionResource
     {
-        $data = $request->validated();
-
-        // Ensure recurrence_config is always present (empty array if not provided)
-        $data['recurrence_config'] = $data['recurrence_config'] ?? [];
-
-        // Derive pay_multiplier from type for obligatorio/asueto (ignore request value)
-        $type = $data['type'];
-        $data['pay_multiplier'] = match ($type) {
-            'obligatorio' => 3.00,
-            'asueto' => 1.00,
-            default => $data['pay_multiplier'] ?? 1.00,
-        };
+        $data = $request->definitionData();
 
         $definition = HolidayDefinition::create($data);
 

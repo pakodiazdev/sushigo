@@ -22,6 +22,10 @@
  *   5. Delete holiday
  *   6. Add annual holiday (fixed recurrence) — Auto chip
  *
+ * closeDevDebugger() must be called AFTER the first meaningful page-content
+ * assertion — if called before React hydrates the DevDebugger is not yet in
+ * the DOM and the command silently no-ops, leaving it visible over the UI.
+ *
  * For running only this file:
  *   make cypress-spec SPEC=holiday-management
  *   make cypress-debug SPEC=holiday-management
@@ -52,30 +56,29 @@ describe('Holiday Management — admin happy path', () => {
 
   it('shows empty state when no holidays exist', () => {
     cy.visitWithAuth('/attendance/config/holidays')
-    cy.get('body').should('be.visible')
-    cy.closeDevDebugger()
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
+    cy.closeDevDebugger()
     cy.contains('No hay días festivos registrados').should('be.visible')
   })
 
   it('adds a one-off holiday and shows it in the table', () => {
     cy.visitWithAuth('/attendance/config/holidays')
-    cy.get('body').should('be.visible')
-    cy.closeDevDebugger()
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
+    cy.closeDevDebugger()
 
     cy.contains('button', 'Nuevo tipo de festivo').click()
 
-    // Fill the name field
     cy.get('#add-name').type('Día de Prueba')
-
-    // Change type to asueto — 2× fixed, no multiplier input required
     cy.get('#add-type').select('asueto')
 
-    // Uncheck "¿Se repite cada año?" to switch to one-off mode (shows #add-date)
+    // Uncheck "¿Se repite cada año?" — date input is always in DOM (hidden via CSS)
     cy.get('#add-is-annual').uncheck()
+    cy.get('#add-is-annual').should('not.be.checked')
 
-    // Date picker now visible — enter the holiday date
+    // RecurrenceBuilder is gone, date field is now visible
+    cy.get('#add-rec-month').should('not.exist')
+    cy.get('#add-date').should('be.visible')
+
     cy.get('#add-date').type('2026-07-15')
 
     cy.contains('button', 'Guardar').click()
@@ -89,7 +92,6 @@ describe('Holiday Management — admin happy path', () => {
 
   it('edits a holiday and shows a success toast', () => {
     cy.visitWithAuth('/attendance/config/holidays')
-    cy.get('body').should('be.visible')
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
 
@@ -107,7 +109,6 @@ describe('Holiday Management — admin happy path', () => {
 
   it('deletes a holiday after confirmation', () => {
     cy.visitWithAuth('/attendance/config/holidays')
-    cy.get('body').should('be.visible')
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
 
@@ -124,9 +125,8 @@ describe('Holiday Management — admin happy path', () => {
 
   it('adds an annual holiday with fixed recurrence and shows it with Auto chip', () => {
     cy.visitWithAuth('/attendance/config/holidays')
-    cy.get('body').should('be.visible')
-    cy.closeDevDebugger()
     cy.contains('Días Festivos', { timeout: 10_000 }).should('be.visible')
+    cy.closeDevDebugger()
 
     cy.contains('button', 'Nuevo tipo de festivo').click()
 
@@ -148,5 +148,4 @@ describe('Holiday Management — admin happy path', () => {
     cy.contains('Asueto').should('be.visible')
     cy.contains('1× Normal').should('be.visible')
   })
-
 })

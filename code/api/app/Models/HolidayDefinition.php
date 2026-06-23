@@ -52,7 +52,7 @@ class HolidayDefinition extends Model
     /**
      * Returns the effective pay multiplier based on holiday type.
      * - obligatorio → fixed 3.0 (LFT Art. 74)
-     * - asueto      → fixed 2.0 (company convention)
+     * - asueto      → fixed 1.0 (rest day granted by company; no pay premium)
      * - opcional    → own pay_multiplier (editable)
      */
     public function getEffectivePayMultiplier(): float

@@ -52,4 +52,23 @@ class StoreHolidayDefinitionRequest extends FormRequest
             'date' => [Rule::requiredIf(fn () => ! $this->boolean('is_annual')), 'nullable', 'date_format:Y-m-d'],
         ];
     }
+
+    /**
+     * Returns validated data with sanitized and derived fields ready for model creation.
+     * Ensures recurrence_config defaults to [] and pay_multiplier reflects the type rule.
+     *
+     * @return array<string, mixed>
+     */
+    public function definitionData(): array
+    {
+        $data = $this->validated();
+        $data['recurrence_config'] ??= [];
+        $data['pay_multiplier'] = match ($data['type']) {
+            'obligatorio' => 3.00,
+            'asueto' => 1.00,
+            default => $data['pay_multiplier'] ?? 1.00,
+        };
+
+        return $data;
+    }
 }

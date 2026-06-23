@@ -3,6 +3,7 @@
 namespace Tests\Feature\Holidays;
 
 use App\Models\Holiday;
+use App\Models\HolidayDefinition;
 use PHPUnit\Framework\Attributes\Test;
 
 class HolidayCrudTest extends HolidayTestCase
@@ -229,6 +230,54 @@ class HolidayCrudTest extends HolidayTestCase
 
         $this->deleteJson('/api/v1/holidays/999999')
             ->assertStatus(404);
+    }
+
+    #[Test]
+    public function delete_also_removes_definition_when_holiday_is_linked(): void
+    {
+        $this->makeUserWithPermissions(['holidays.manage']);
+        $definition = HolidayDefinition::factory()->create(['is_annual' => true]);
+        $holiday = Holiday::factory()->create([
+            'definition_id' => $definition->id,
+            'is_auto_generated' => true,
+        ]);
+
+        $this->deleteJson("/api/v1/holidays/{$holiday->id}")
+            ->assertStatus(204);
+
+        $this->assertDatabaseMissing('holidays', ['id' => $holiday->id]);
+        $this->assertDatabaseMissing('holiday_definitions', ['id' => $definition->id]);
+    }
+
+    #[Test]
+    public function delete_with_definition_nullifies_other_linked_holidays(): void
+    {
+        $this->makeUserWithPermissions(['holidays.manage']);
+        $definition = HolidayDefinition::factory()->create(['is_annual' => true]);
+
+        $holidayToDelete = Holiday::factory()->create([
+            'definition_id' => $definition->id,
+            'date' => '2026-01-01',
+            'is_auto_generated' => true,
+        ]);
+
+        // Another historical instance linked to the same definition
+        $historicalHoliday = Holiday::factory()->create([
+            'definition_id' => $definition->id,
+            'date' => '2025-01-01',
+            'is_auto_generated' => true,
+        ]);
+
+        $this->deleteJson("/api/v1/holidays/{$holidayToDelete->id}")
+            ->assertStatus(204);
+
+        $this->assertDatabaseMissing('holidays', ['id' => $holidayToDelete->id]);
+        $this->assertDatabaseMissing('holiday_definitions', ['id' => $definition->id]);
+        // Historical record preserved — definition_id nullified by FK ON DELETE SET NULL
+        $this->assertDatabaseHas('holidays', [
+            'id' => $historicalHoliday->id,
+            'definition_id' => null,
+        ]);
     }
 
     #[Test]
