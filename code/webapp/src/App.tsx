@@ -5,7 +5,6 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { BranchSelectionDialog } from '@/components/auth';
-import { DevDebugger } from '@/components/dev';
 import { routeTree } from './routeTree.gen';
 
 const queryClient = new QueryClient({
@@ -40,7 +39,6 @@ function App() {
             <RouterProvider router={router} />
             <BranchSelectionDialog />
             <ReactQueryDevtools initialIsOpen={false} />
-            {import.meta.env.DEV && <DevDebugger />}
           </ToastProvider>
         </SidebarProvider>
       </ThemeProvider>

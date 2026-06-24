@@ -12,6 +12,7 @@ use Database\Seeders\Testing\CloseDayHappyPathSeeder;
 use Database\Seeders\Testing\CloseDayPendingLunchSeeder;
 use Database\Seeders\Testing\CoreTestSeeder;
 use Database\Seeders\Testing\NegotiatedExtraDaysSeeder;
+use Database\Seeders\Testing\PayrollPreviewSeeder;
 use Database\Seeders\Testing\ScheduleSummaryOverrideSeeder;
 use Database\Seeders\Testing\TodayReportStatusSeeder;
 use Illuminate\Console\Command;
@@ -70,6 +71,9 @@ class TestReset extends Command
         ],
         'fakes-employees' => [
             FakeEmployeesSeeder::class,
+        ],
+        'payroll-preview' => [
+            PayrollPreviewSeeder::class,
         ],
     ];
 

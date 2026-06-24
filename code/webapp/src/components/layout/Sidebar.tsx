@@ -69,6 +69,7 @@ const menuItems: MenuItem[] = [
         subItems: [
             { label: 'Hoy', path: '/attendance/today' },
             { label: 'Reporte del Día', path: '/attendance/reports/today', requiredPermission: 'reports.today' },
+            { label: 'Cierre de Nómina', path: '/attendance/payroll/close', requiredPermission: 'payroll.preview' },
             { label: 'Puntualidad', path: '/attendance/punctuality-config', requiredPermission: 'punctuality.manage' },
             { label: 'Festivos', path: '/attendance/config/holidays', requiredPermission: 'holidays.manage' },
         ]

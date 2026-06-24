@@ -46,6 +46,14 @@ Como Manager, quiero ver un preview del cierre semanal de nómina con los totale
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `8h` · **Pessimistic:** `13h`
+### 📊 Estimates
+- **Optimistic:** `8h` · **Pessimistic:** `13h` · **Tracked:** `0h 29min`
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-06-24", "start": "08:40", "end": "09:09" }
+]
+```

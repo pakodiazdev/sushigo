@@ -67,3 +67,50 @@ export interface CreateHolidayDefinitionPayload {
 }
 
 export type UpdateHolidayDefinitionPayload = Partial<CreateHolidayDefinitionPayload>
+
+// ── Pay Period types ──────────────────────────────────────────────────────────
+
+export type PayPeriodStatus = 'OPEN' | 'CLOSED' | 'REOPENED'
+
+export type PayConcept =
+  | 'BASE_PAY'
+  | 'LATE_DEDUCTION'
+  | 'UNPAID_LEAVE'
+  | 'OVERTIME'
+  | 'EXTRA_DAY'
+  | 'PUNCTUALITY_BONUS'
+  | 'HOLIDAY'
+  | 'OTHER'
+
+export interface PayPeriodLine {
+  date: string | null
+  concept: PayConcept
+  description: string
+  amount: number
+  minutes: number | null
+}
+
+export interface PayPeriodEmployeePreview {
+  employee: {
+    id: string
+    first_name: string
+    last_name: string
+    code: string
+  }
+  base_pay: number
+  late_deductions: number
+  unpaid_leave_deductions: number
+  overtime_pay: number
+  extra_day_pay: number
+  punctuality_bonus: number
+  holiday_pay: number
+  other_adjustments: number
+  total_pay: number
+  free_hours_earned: number
+  pay_period_lines: PayPeriodLine[]
+}
+
+export interface PayPeriodPreviewResponse {
+  status: number
+  data: PayPeriodEmployeePreview[]
+}

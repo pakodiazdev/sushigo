@@ -38,6 +38,7 @@ vi.mock('@/stores/auth.store', () => ({
 vi.mock('@/components/layout/Header', () => ({ default: () => null }))
 vi.mock('@/components/layout/Sidebar', () => ({ default: () => null }))
 vi.mock('@/components/ui/breadcrumbs', () => ({ Breadcrumbs: () => null }))
+vi.mock('@/components/dev', () => ({ DevDebugger: () => null }))
 
 let mockPathname = '/dashboard'
 
