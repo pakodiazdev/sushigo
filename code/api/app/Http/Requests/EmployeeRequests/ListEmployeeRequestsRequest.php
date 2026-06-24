@@ -52,9 +52,10 @@ class ListEmployeeRequestsRequest extends FormRequest
     /**
      * Returns the branch ID that should be used to scope the query.
      *
-     * Managers are always restricted to their own branch regardless of any
-     * branch_id sent in the request. Admins and super-admins may pass an
-     * optional branch_id filter. Everyone else is unrestricted.
+     * Managers with a resolvable active EmploymentPeriod are always scoped to
+     * their own branch, ignoring any branch_id sent in the request. Managers
+     * whose branch cannot be resolved, and all other users, may use the optional
+     * branch_id query parameter.
      */
     public function effectiveBranchId(): ?int
     {
