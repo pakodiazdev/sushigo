@@ -12,6 +12,7 @@ export interface DebuggerState {
         roles: boolean
         queries: boolean
         devLogin: boolean
+        pageActions: boolean
     }
 }
 
@@ -27,6 +28,7 @@ function getDefaultState(): DebuggerState {
             roles: false,
             queries: false,
             devLogin: true,
+            pageActions: true,
         },
     }
 }

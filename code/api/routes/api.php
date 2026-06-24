@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\Dev\DevLoginController;
 use App\Http\Controllers\Api\V1\Dev\ListDevUsersController;
 use App\Http\Controllers\Api\V1\Devtools\GetClockController;
 use App\Http\Controllers\Api\V1\Devtools\ResetClockController;
+use App\Http\Controllers\Api\V1\Devtools\SeedPayrollController;
 use App\Http\Controllers\Api\V1\Devtools\SetClockController;
 use App\Http\Controllers\Api\V1\Devtools\ShiftClockController;
 use App\Http\Controllers\Api\V1\EmployeeRequests\ApproveEmployeeRequestController;
@@ -135,6 +136,12 @@ if (app()->environment('testing', 'local', 'dev', 'devtest')) {
         Route::post('set', SetClockController::class)->name('set');
         Route::post('shift', ShiftClockController::class)->name('shift');
         Route::post('reset', ResetClockController::class)->name('reset');
+    });
+
+    // ── Devtools payroll seed route ────────────────────────────────────────
+    // Protected by PayrollSeedGuard (env check + feature flag)
+    Route::prefix('v1/devtools/payroll')->name('devtools.payroll.')->middleware('auth:api')->group(function () {
+        Route::post('seed', SeedPayrollController::class)->name('seed');
     });
 }
 
@@ -352,6 +359,11 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:api')->prefix('negotiated-extra-days')->group(function () {
         Route::delete('/{id}', CancelNegotiatedExtraDayController::class)->name('negotiated-extra-days.destroy');
+    });
+
+    // Pay Periods Module
+    Route::middleware('auth:api')->prefix('pay-periods')->name('pay-periods.')->group(function () {
+        Route::get('/preview', \App\Http\Controllers\Api\V1\PayPeriods\PreviewPayPeriodController::class)->name('preview');
     });
 
     // Punctuality config

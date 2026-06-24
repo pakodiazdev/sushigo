@@ -136,9 +136,16 @@ describe('Negotiated Extra Days — History Dialog', () => {
     openHistory()
     cy.wait('@listExtraDays')
 
-    // Apply date_from filter (2026-05-01)
+    // Apply date_from filter set to today-30 days: always hides the 3 past
+    // records (seeded at today-90, today-69, today-54 days) while leaving the
+    // future record (today+30 days) visible. A hardcoded date would break once
+    // today-54 days overtakes it.
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const filterDate = thirtyDaysAgo.toISOString().slice(0, 10)
+
     cy.intercept('GET', '**/negotiated-extra-days**').as('listFiltered')
-    cy.get('#history-date-from').clear().type('2026-05-01')
+    cy.get('#history-date-from').clear().type(filterDate)
     cy.wait('@listFiltered').its('response.statusCode').should('eq', 200)
 
     cy.contains('Turno especial').should('not.exist')

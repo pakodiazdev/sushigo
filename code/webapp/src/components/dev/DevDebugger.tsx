@@ -12,10 +12,20 @@ import {
     Search,
     Loader2,
     GitBranch,
+    Zap,
     type LucideIcon,
 } from 'lucide-react'
+import { useRouterState } from '@tanstack/react-router'
 import { gitBranch } from 'virtual:git-branch'
 import { useDevDebugger } from './use-dev-debugger'
+import { PayrollCloseActions } from './page-actions/payroll-close-actions'
+
+const PAGE_ACTIONS: Record<string, { title: string; component: React.ReactNode }> = {
+    '/attendance/payroll/close': {
+        title: 'Cierre de Nómina',
+        component: <PayrollCloseActions />,
+    },
+}
 
 export function DevDebugger() {
     const {
@@ -51,6 +61,9 @@ export function DevDebugger() {
         refreshQueries,
         handleDevLogin,
     } = useDevDebugger()
+
+    const currentPath = useRouterState({ select: (s) => s.location.pathname })
+    const pageAction = PAGE_ACTIONS[currentPath] ?? null
 
     const [permissionInputFocused, setPermissionInputFocused] = useState(false)
 
@@ -168,6 +181,17 @@ export function DevDebugger() {
                         <p className="text-xs text-gray-400">No autenticado</p>
                     )}
                 </Section>
+
+                {pageAction && (
+                    <Section
+                        icon={Zap}
+                        title={`Acciones — ${pageAction.title}`}
+                        isExpanded={state.expandedSections.pageActions}
+                        onToggle={() => toggleSection('pageActions')}
+                    >
+                        {pageAction.component}
+                    </Section>
+                )}
 
                 <Section
                     icon={Shield}

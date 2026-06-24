@@ -34,6 +34,11 @@ vi.mock('@/stores/auth.store', () => ({
   }),
 }))
 
+vi.mock('@tanstack/react-router', () => ({
+  useRouterState: ({ select }: { select?: (s: { location: { pathname: string } }) => unknown } = {}) =>
+    select ? select({ location: { pathname: '/dashboard' } }) : { location: { pathname: '/dashboard' } },
+}))
+
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
     invalidateQueries,
@@ -44,6 +49,12 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
     data: mockDevUsersQueryData,
     isLoading: mockIsLoadingDevUsers,
+  }),
+  useMutation: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    isSuccess: false,
+    data: null,
   }),
 }))
 

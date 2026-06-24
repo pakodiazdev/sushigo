@@ -22,6 +22,8 @@ class PermissionSeeder extends LockedSeeder
 
     private const REPORTS_PATTERN = 'reports.%';
 
+    private const PAYROLL_PATTERN = 'payroll.%';
+
     private const GROUP_INVENTARIO = 'Inventario';
 
     private const GROUP_CUENTAS_BANCARIAS = 'Cuentas bancarias';
@@ -128,6 +130,9 @@ class PermissionSeeder extends LockedSeeder
 
             // Reportes
             'reports.today' => ['label' => 'Ver reporte operacional del día', 'group' => 'Reportes'],
+
+            // Nómina
+            'payroll.preview' => ['label' => 'Ver preview de cierre de nómina', 'group' => 'Nómina'],
         ];
 
         foreach ($permissions as $name => $meta) {
@@ -157,6 +162,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
+                            ->orWhere('name', 'like', self::PAYROLL_PATTERN)
                             ->orWhereIn('name', ['punctuality.manage', 'holidays.manage']);
                     })
                     ->get()
@@ -188,7 +194,8 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', self::LEAVES_PATTERN)
                             ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
-                            ->orWhere('name', 'like', self::REPORTS_PATTERN);
+                            ->orWhere('name', 'like', self::REPORTS_PATTERN)
+                            ->orWhere('name', 'like', self::PAYROLL_PATTERN);
                     })
                     ->get()
             );
