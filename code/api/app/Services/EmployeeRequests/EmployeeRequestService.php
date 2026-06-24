@@ -58,9 +58,12 @@ class EmployeeRequestService
      * @param  array<string, mixed>|null  $overrides  Optional payload overrides and notes from the approver.
      *
      * @throws ValidationException
+     * @throws AuthorizationException
      */
     public function approve(EmployeeRequest $employeeRequest, User $approver, ?array $overrides = null): EmployeeRequest
     {
+        $this->assertManagerCanApproveRequest($employeeRequest, $approver);
+
         return DB::transaction(function () use ($employeeRequest, $approver, $overrides): EmployeeRequest {
             $employeeRequest = EmployeeRequest::query()->lockForUpdate()->findOrFail($employeeRequest->id);
 
@@ -158,6 +161,34 @@ class EmployeeRequestService
 
             return $employeeRequest->load(['employee', 'requestable', 'requestedBy', 'approvedBy']);
         });
+    }
+
+    /**
+     * Managers (not admin/super-admin) may only approve requests from their own branch.
+     * If the approver has no linked Employee or active EmploymentPeriod, no restriction applies.
+     *
+     * @throws AuthorizationException
+     */
+    private function assertManagerCanApproveRequest(EmployeeRequest $employeeRequest, User $approver): void
+    {
+        if (! $approver->hasRole(Employee::ROLE_MANAGER)
+            || $approver->hasAnyRole([Employee::ROLE_ADMIN, Employee::ROLE_SUPER_ADMIN])
+        ) {
+            return;
+        }
+
+        $approverEmployee = Employee::query()->where('user_id', $approver->id)->first();
+        $approverPeriod = $approverEmployee?->employmentPeriods()->active()->first();
+
+        if ($approverPeriod === null) {
+            return;
+        }
+
+        $requestPeriod = $employeeRequest->employee->employmentPeriods()->active()->first();
+
+        if ($requestPeriod === null || $requestPeriod->branch_id !== $approverPeriod->branch_id) {
+            throw new AuthorizationException('No puedes aprobar solicitudes de otra sucursal.');
+        }
     }
 
     /**

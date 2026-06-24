@@ -48,10 +48,10 @@ class ListEmployeeRequestsController extends Controller
             $query->where('employee_id', $employee->id);
         }
 
-        if ($request->filled('branch_id')) {
-            $branchId = $request->integer('branch_id');
-            $query->whereHas('employee.employmentPeriods', function ($q) use ($branchId) {
-                $q->where('branch_id', $branchId)->where('is_active', true);
+        $effectiveBranchId = $request->effectiveBranchId();
+        if ($effectiveBranchId !== null) {
+            $query->whereHas('employee.employmentPeriods', function ($q) use ($effectiveBranchId) {
+                $q->where('branch_id', $effectiveBranchId)->where('is_active', true);
             });
         }
 
