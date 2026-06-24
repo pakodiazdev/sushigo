@@ -871,6 +871,147 @@ class EmployeeRequestApiTest extends TestCase
         ];
     }
 
+    #[Test]
+    public function it_scopes_list_to_managers_branch_automatically(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+
+        $managerInBranchA = $this->makeManagerWithBranch($branchA);
+        Passport::actingAs($managerInBranchA);
+
+        $employeeInBranchA = $this->makeEmployeeWithActivePeriodInBranch($branchA);
+        $employeeInBranchB = $this->makeEmployeeWithActivePeriodInBranch($branchB);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchA->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        // Acting as the Manager of branch B to create the request there
+        $managerInBranchB = $this->makeManagerWithBranch($branchB);
+        Passport::actingAs($managerInBranchB);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchB->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        // Manager A should only see their branch's requests
+        Passport::actingAs($managerInBranchA);
+        $response = $this->getJson('/api/v1/employee-requests');
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.employee_id', $employeeInBranchA->public_id);
+    }
+
+    #[Test]
+    public function it_ignores_explicit_branch_id_override_for_manager(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+
+        $managerInBranchA = $this->makeManagerWithBranch($branchA);
+        Passport::actingAs($managerInBranchA);
+
+        $employeeInBranchA = $this->makeEmployeeWithActivePeriodInBranch($branchA);
+        $employeeInBranchB = $this->makeEmployeeWithActivePeriodInBranch($branchB);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchA->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $managerInBranchB = $this->makeManagerWithBranch($branchB);
+        Passport::actingAs($managerInBranchB);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchB->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        // Manager A tries to pass branch B's id — must still only see branch A
+        Passport::actingAs($managerInBranchA);
+        $response = $this->getJson("/api/v1/employee-requests?branch_id={$branchB->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.employee_id', $employeeInBranchA->public_id);
+    }
+
+    #[Test]
+    public function it_allows_admin_to_see_all_branches(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+
+        $admin = User::factory()->create();
+        $adminRole = Role::findByName('admin', 'api');
+        $adminRole->givePermissionTo([
+            'employee-requests.view',
+            'employee-requests.create',
+            'employee-requests.approve',
+        ]);
+        $admin->assignRole('admin');
+
+        Passport::actingAs($admin);
+
+        $employeeA = $this->makeEmployeeWithActivePeriodInBranch($branchA);
+        $employeeB = $this->makeEmployeeWithActivePeriodInBranch($branchB);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeA->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeB->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $response = $this->getJson('/api/v1/employee-requests');
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 2);
+    }
+
+    #[Test]
+    public function it_prevents_manager_from_approving_request_from_another_branch(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+
+        $managerInBranchA = $this->makeManagerWithBranch($branchA);
+
+        // Create request for an employee in branch B (as the default manager)
+        $employeeInBranchB = $this->makeEmployeeWithActivePeriodInBranch($branchB);
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employeeInBranchB->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        // Manager A tries to approve a branch B request — must get 403
+        Passport::actingAs($managerInBranchA);
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/approve")
+            ->assertStatus(403);
+
+        $this->assertDatabaseHas('employee_requests', [
+            'public_id' => $requestId,
+            'status' => EmployeeRequestStatus::PENDING->value,
+        ]);
+    }
+
     private function makeEmployeeWithActivePeriod(): Employee
     {
         $period = EmploymentPeriod::factory()->create([
@@ -892,6 +1033,22 @@ class EmployeeRequestApiTest extends TestCase
         ]);
 
         return $period->employee;
+    }
+
+    private function makeManagerWithBranch(Branch $branch): User
+    {
+        $employee = Employee::factory()->manager()->create();
+        $employee->load('user');
+
+        EmploymentPeriod::factory()->create([
+            'employee_id' => $employee->id,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+            'start_date' => '2026-01-01',
+            'end_date' => null,
+        ]);
+
+        return $employee->user;
     }
 
     private function assertDatabaseHasAndReturnId(string $table, array $attributes): string

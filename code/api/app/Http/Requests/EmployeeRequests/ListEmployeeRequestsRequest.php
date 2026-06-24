@@ -5,6 +5,8 @@ namespace App\Http\Requests\EmployeeRequests;
 use App\Enums\EmployeeRequestStatus;
 use App\Enums\EmployeeRequestType;
 use App\Http\Traits\HandlesSortableRequest;
+use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -45,5 +47,31 @@ class ListEmployeeRequestsRequest extends FormRequest
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             ...$this->sortRules(),
         ];
+    }
+
+    /**
+     * Returns the branch ID that should be used to scope the query.
+     *
+     * Managers are always restricted to their own branch regardless of any
+     * branch_id sent in the request. Admins and super-admins may pass an
+     * optional branch_id filter. Everyone else is unrestricted.
+     */
+    public function effectiveBranchId(): ?int
+    {
+        $user = $this->user();
+
+        if ($user instanceof User
+            && $user->hasRole(Employee::ROLE_MANAGER)
+            && ! $user->hasAnyRole([Employee::ROLE_ADMIN, Employee::ROLE_SUPER_ADMIN])
+        ) {
+            $employee = Employee::query()->where('user_id', $user->id)->first();
+            $activePeriod = $employee?->employmentPeriods()->active()->first();
+
+            if ($activePeriod !== null) {
+                return $activePeriod->branch_id;
+            }
+        }
+
+        return $this->filled('branch_id') ? $this->integer('branch_id') : null;
     }
 }
