@@ -19,8 +19,8 @@ Como Manager, quiero ver únicamente las solicitudes pendientes de los empleados
 
 ## ✅ Frontend Tasks
 
-- [ ] 🔧 `usePendingRequests()` — pasar `branch_id` del Manager autenticado en los filtros de la query
-- [ ] 🧪 Verificar que la lista no muestra solicitudes de otras sucursales al loguear como Manager
+- [x] 🔧 `usePendingRequests()` — pasar `branch_id` del Manager autenticado en los filtros de la query
+- [x] 🧪 Verificar que la lista no muestra solicitudes de otras sucursales al loguear como Manager
 
 ---
 
@@ -41,6 +41,14 @@ Como Manager, quiero ver únicamente las solicitudes pendientes de los empleados
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `2h` · **Pessimistic:** `4h`
+### 📊 Estimates
+- **Optimistic:** `2h` · **Pessimistic:** `4h` · **Tracked:** _in progress_
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-06-24", "start": "09:00", "end": "?" }
+]
+```
