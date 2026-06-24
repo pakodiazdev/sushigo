@@ -27,18 +27,11 @@ Do **not** run `docker compose up` from inside a workspace — that starts the f
 
 In Dev-Lab, processes run directly on the host (no `dev_container`). Run all commands from the workspace root without `docker exec`:
 
-> **First-time setup:** `phpunit.xml` targets the Docker-internal hostname `pgsql`. On the host, the test
-> database must exist and `DB_HOST` must be overridden:
-> ```bash
-> psql postgresql://admin:admin@127.0.0.1:5432/postgres -c "CREATE DATABASE mydb_test;"
-> ```
-> After that, prefix every `php artisan test` call with `DB_HOST=127.0.0.1` (shown below).
-
 ```bash
 # API tests (PHPUnit)
-cd code/api && DB_HOST=127.0.0.1 php artisan test
-cd code/api && DB_HOST=127.0.0.1 php artisan test --filter=HolidayCrudTest   # specific test class
-cd code/api && DB_HOST=127.0.0.1 php artisan test --coverage
+cd code/api && php artisan test
+cd code/api && php artisan test --filter=HolidayCrudTest   # specific test class
+cd code/api && php artisan test --coverage
 
 # API linter (Pint — auto-fixes in place)
 cd code/api && ./vendor/bin/pint
