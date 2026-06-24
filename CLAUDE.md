@@ -51,8 +51,8 @@ cd code/webapp && npm run lint
 cd code/webapp && npm run typecheck
 
 # E2E (Cypress via dev-lab Makefile — from sushigo-dev-lab root)
-make cypress-run WORKSPACE=sushigo-a
-make cypress-devlab-spec WORKSPACE=sushigo-a SPEC=cypress/e2e/holiday-management.cy.ts
+make cypress-run WORKSPACE=sushigo-a        # headless (all specs)
+make cypress WORKSPACE=sushigo-a            # interactive UI (pick a spec)
 ```
 
 > **Rule:** When working in dev-lab, never prefix test or artisan commands with `docker exec dev_container`.
