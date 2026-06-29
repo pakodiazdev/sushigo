@@ -10,6 +10,7 @@ use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\ScheduleDayOverride;
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -34,6 +35,7 @@ use Illuminate\Validation\ValidationException;
 class CloseDayAction
 {
     public function __construct(
+        private readonly ApplicationClock $clock,
         private RegisterLunchReturnAction $lunchReturnAction,
         private RegisterCheckOutAction $checkOutAction,
     ) {}
@@ -56,12 +58,11 @@ class CloseDayAction
     public function __invoke(array $data): array
     {
         $branchId = $data['branch_id'];
-        $businessTz = config('app.business_timezone');
-        $today = Carbon::today($businessTz)->toDateString();
-        $dayOfWeek = Carbon::today($businessTz)->dayOfWeekIso;
+        $today = $this->clock->todayInBusinessTz();
+        $dayOfWeek = $this->clock->nowInBusinessTz()->dayOfWeekIso;
 
         // Build the close_time as a full ISO datetime in the business timezone
-        $closeTimeLocal = Carbon::parse("{$today} {$data['close_time']}", $businessTz);
+        $closeTimeLocal = Carbon::parse("{$today} {$data['close_time']}", $this->clock->businessTimezone());
         $closeTimeIso = $closeTimeLocal->toIso8601String();
 
         $counts = ['lunch_returns' => 0, 'check_outs' => 0, 'absences' => 0, 'leaves' => 0, 'day_offs' => 0, 'overtime_pending' => []];

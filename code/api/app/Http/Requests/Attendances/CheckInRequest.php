@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Attendances;
 
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,6 +35,11 @@ use Illuminate\Validation\Rule;
  */
 class CheckInRequest extends FormRequest
 {
+    public function __construct(private readonly ApplicationClock $clock)
+    {
+        parent::__construct();
+    }
+
     public function authorize(): bool
     {
         $checkInInput = $this->input('check_in');
@@ -42,7 +48,7 @@ class CheckInRequest extends FormRequest
         }
 
         $date = Carbon::parse($checkInInput)->toDateString();
-        $today = Carbon::today(config('app.business_timezone'))->toDateString();
+        $today = $this->clock->todayInBusinessTz();
 
         $user = $this->user();
         $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
@@ -81,7 +87,7 @@ class CheckInRequest extends FormRequest
 
         $user = $this->user();
         $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
-        $today = Carbon::today(config('app.business_timezone'))->toDateString();
+        $today = $this->clock->todayInBusinessTz();
         $date = Carbon::parse($checkInInput)->toDateString();
         $isPastDay = $date < $today;
 
