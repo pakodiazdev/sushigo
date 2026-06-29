@@ -417,26 +417,32 @@ export function EmployeeAttendanceCard({
                 </Button>
             )}
 
-            {/* Overtime section: pending decision button or decision badge */}
-            {att && (att.overtime_minutes ?? 0) > 0 && (
-                canEdit && att.requires_overtime_decision ? (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-950/30"
-                        onClick={() => onOvertimeDecision(row.employee, att.id)}
-                        data-testid="btn-overtime-decision"
-                    >
-                        <Clock className="h-3.5 w-3.5 mr-1.5" />
-                        Decidir horas extra ({att.overtime_minutes} min)
-                    </Button>
-                ) : (
+            {/* Overtime section: pending decision button, pending-read-only badge, or decision badge */}
+            {att && (att.overtime_minutes ?? 0) > 0 && (() => {
+                if (canEdit && att.requires_overtime_decision) {
+                    return (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-950/30"
+                            onClick={() => onOvertimeDecision(row.employee, att.id)}
+                            data-testid="btn-overtime-decision"
+                        >
+                            <Clock className="h-3.5 w-3.5 mr-1.5" />
+                            Decidir horas extra ({att.overtime_minutes} min)
+                        </Button>
+                    )
+                }
+                if (att.requires_overtime_decision) {
+                    return <OvertimeAlert overtimeMinutes={att.overtime_minutes ?? 0} />
+                }
+                return (
                     <OvertimeDecisionBadge
                         authorized={att.overtime_authorized}
                         minutes={att.overtime_minutes ?? 0}
                     />
                 )
-            )}
+            })()}
         </div>
     )
 }
