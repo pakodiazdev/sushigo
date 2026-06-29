@@ -3,28 +3,27 @@ import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseD
 
 export const attendanceApi = {
   /**
-   * GET /attendances/today?branch_id=<id>
-   * Returns all active employees for the branch with their today's attendance (if any).
+   * GET /attendances/today?branch_id=<id>&date=<YYYY-MM-DD>
+   * Returns all active employees for the branch with their attendance for the given date
+   * (defaults to today when date is omitted).
    */
-  today: (branchId: number) =>
+  daily: (branchId: number, date?: string) =>
     apiClient.get<TodayAttendanceResponse>('/attendances/today', {
-      params: { branch_id: branchId },
+      params: { branch_id: branchId, ...(date ? { date } : {}) },
     }),
 
   /**
    * POST /attendances/check-in
-   * Registers the employee's check-in at the given datetime.
-   * Body: { employee_id: ULID, check_in: "YYYY-MM-DDTHH:mm:ss" }
+   * Body: { employee_id: ULID, check_in: "YYYY-MM-DDTHH:mm:ss±offset", reason?: string }
    */
-  checkIn: (data: { employee_id: string; check_in: string }) =>
+  checkIn: (data: { employee_id: string; check_in: string; reason?: string }) =>
     apiClient.post<{ status: number; data: AttendanceRecord }>('/attendances/check-in', data),
 
   /**
    * PATCH /attendances/{id}/lunch-start
-   * Registers the employee's lunch start (salida a comida) at the given datetime.
-   * Body: { lunch_start: "YYYY-MM-DDTHH:mm:ss+offset" }
+   * Body: { lunch_start: "YYYY-MM-DDTHH:mm:ss+offset", reason?: string }
    */
-  lunchStart: (attendanceId: string, data: { lunch_start: string }) =>
+  lunchStart: (attendanceId: string, data: { lunch_start: string; reason?: string }) =>
     apiClient.patch<{ status: number; data: AttendanceRecord }>(
       `/attendances/${attendanceId}/lunch-start`,
       data,
@@ -32,10 +31,9 @@ export const attendanceApi = {
 
   /**
    * PATCH /attendances/{id}/lunch-return
-   * Registers the employee's return from lunch (regreso de comida) at the given datetime.
-   * Body: { lunch_end: "YYYY-MM-DDTHH:mm:ss+offset" }
+   * Body: { lunch_end: "YYYY-MM-DDTHH:mm:ss+offset", reason?: string }
    */
-  lunchReturn: (attendanceId: string, data: { lunch_end: string }) =>
+  lunchReturn: (attendanceId: string, data: { lunch_end: string; reason?: string }) =>
     apiClient.patch<{ status: number; data: AttendanceRecord }>(
       `/attendances/${attendanceId}/lunch-return`,
       data,
@@ -43,10 +41,9 @@ export const attendanceApi = {
 
   /**
    * PATCH /attendances/{id}/check-out
-   * Registers the employee's check-out (departure) at the given datetime.
-   * Body: { check_out: "YYYY-MM-DDTHH:mm:ss+offset" }
+   * Body: { check_out: "YYYY-MM-DDTHH:mm:ss+offset", reason?: string }
    */
-  checkOut: (attendanceId: string, data: { check_out: string }) =>
+  checkOut: (attendanceId: string, data: { check_out: string; reason?: string }) =>
     apiClient.patch<{ status: number; data: AttendanceRecord }>(
       `/attendances/${attendanceId}/check-out`,
       data,
@@ -54,10 +51,9 @@ export const attendanceApi = {
 
   /**
    * PATCH /attendances/{id}/overtime-decision
-   * Authorize or reject overtime payment for a given attendance.
-   * Body: { authorize: boolean }
+   * Body: { authorize: boolean, reason?: string }
    */
-  overtimeDecision: (attendanceId: string, data: { authorize: boolean }) =>
+  overtimeDecision: (attendanceId: string, data: { authorize: boolean; reason?: string }) =>
     apiClient.patch<{ status: number; data: AttendanceRecord }>(
       `/attendances/${attendanceId}/overtime-decision`,
       data,
@@ -65,11 +61,9 @@ export const attendanceApi = {
 
   /**
    * POST /attendances/day-status
-   * Marks an employee's day as ABSENCE (unexcused no-show).
-   * DAY_OFF is auto-managed by CloseDayAction — cannot be set via this endpoint.
-   * Body: { employee_id: ULID, date: "YYYY-MM-DD", day_status: "ABSENCE" }
+   * Body: { employee_id: ULID, date: "YYYY-MM-DD", day_status: "ABSENCE", reason?: string }
    */
-  markDayStatus: (data: { employee_id: string; date: string; day_status: 'ABSENCE' }) =>
+  markDayStatus: (data: { employee_id: string; date: string; day_status: 'ABSENCE'; reason?: string }) =>
     apiClient.post<{ status: number; data: AttendanceRecord }>('/attendances/day-status', data),
 
   /**

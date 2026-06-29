@@ -10,7 +10,7 @@
  * DB reset strategy
  * ─────────────────
  * • before()     → cy.task('test:reset', 'attendance') ONCE per file.
- * • beforeEach() → login via API + navigate to /attendance/today.
+ * • beforeEach() → login via API + navigate to /attendance.
  * • Each it() uses a DIFFERENT employee — no slot is reused.
  *
  * Employees used:
@@ -41,8 +41,8 @@ beforeEach(() => {
   }).as("apiWithTestTime");
 
   cy.loginByApi(adminEmail, adminPassword);
-  cy.visitWithAuth("/attendance/today");
-  cy.url().should("include", "/attendance/today", { timeout: 10_000 });
+  cy.visitWithAuth("/attendance");
+  cy.url().should("include", "/attendance", { timeout: 10_000 });
   cy.closeDevDebugger();
 
   cy.clock(TEST_TIME_UTC.getTime(), ["Date"]);

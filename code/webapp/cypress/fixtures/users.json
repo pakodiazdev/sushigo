@@ -4,6 +4,11 @@
     "password": "admin123456",
     "expectedName": "Admin User"
   },
+  "manager": {
+    "email": "manager@sushigo.com",
+    "password": "employee123456",
+    "expectedName": "Branch Manager"
+  },
   "invalidUser": {
     "email": "invalid@test.com",
     "password": "wrongpassword"

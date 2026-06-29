@@ -2,8 +2,6 @@
 
 namespace App\Http\Requests\Attendances;
 
-use Illuminate\Foundation\Http\FormRequest;
-
 /**
  * Validate the lunch-start registration payload.
  *
@@ -17,20 +15,22 @@ use Illuminate\Foundation\Http\FormRequest;
  *         format="date-time",
  *         example="2026-02-23T13:05:00-06:00",
  *         description="Lunch-start datetime in ISO 8601 / RFC 3339 with timezone offset. Normalized to UTC by the server."
+ *     ),
+ *     @OA\Property(
+ *         property="reason",
+ *         type="string",
+ *         example="Corrección retroactiva",
+ *         description="Required when an Admin edits a past-day record."
  *     )
  * )
  */
-class LunchStartRequest extends FormRequest
+class LunchStartRequest extends AttendanceFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [
             'lunch_start' => ['required', 'date'],
+            'reason' => $this->reasonRules(),
         ];
     }
 
@@ -39,6 +39,7 @@ class LunchStartRequest extends FormRequest
         return [
             'lunch_start.required' => 'La hora de salida a comida es requerida.',
             'lunch_start.date' => 'La hora de salida debe ser una fecha válida en formato ISO 8601 (ej. 2026-02-23T13:05:00-06:00).',
+            'reason.required' => 'Se requiere un motivo para editar registros de días anteriores.',
         ];
     }
 }

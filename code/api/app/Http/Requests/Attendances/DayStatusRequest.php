@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Attendances;
 
 use App\Enums\DayStatus;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,6 +31,12 @@ use Illuminate\Validation\Rule;
  *       enum={"ABSENCE"},
  *       example="ABSENCE",
  *       description="Only ABSENCE (unexcused no-show) is accepted. DAY_OFF is auto-managed by CloseDayAction."
+ *   ),
+ *   @OA\Property(
+ *       property="reason",
+ *       type="string",
+ *       example="Corrección retroactiva",
+ *       description="Required when an Admin marks a past-day status."
  *   )
  * )
  */
@@ -37,7 +44,16 @@ class DayStatusRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $date = $this->input('date');
+        if (! $date) {
+            return true; // validation will reject missing date
+        }
+
+        $user = $this->user();
+        $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
+        $today = Carbon::today(config('app.business_timezone'))->toDateString();
+
+        return $isAdmin || $date === $today;
     }
 
     public function rules(): array
@@ -53,6 +69,7 @@ class DayStatusRequest extends FormRequest
                 'required',
                 Rule::in([DayStatus::ABSENCE->value]),
             ],
+            'reason' => $this->reasonRules(),
         ];
     }
 
@@ -62,6 +79,24 @@ class DayStatusRequest extends FormRequest
             'employee_id.exists' => 'No se encontró el empleado especificado.',
             'date.date_format' => 'La fecha debe estar en formato YYYY-MM-DD.',
             'day_status.in' => 'Solo se permite el estado ABSENCE. El estado DAY_OFF es asignado automáticamente al cerrar el día.',
+            'reason.required' => 'Se requiere un motivo para editar registros de días anteriores.',
         ];
+    }
+
+    private function reasonRules(): array
+    {
+        $date = $this->input('date');
+        if (! $date) {
+            return ['nullable', 'string', 'max:500'];
+        }
+
+        $user = $this->user();
+        $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
+        $today = Carbon::today(config('app.business_timezone'))->toDateString();
+        $isPastDay = $date < $today;
+
+        return ($isAdmin && $isPastDay)
+            ? ['required', 'string', 'min:5', 'max:500']
+            : ['nullable', 'string', 'max:500'];
     }
 }

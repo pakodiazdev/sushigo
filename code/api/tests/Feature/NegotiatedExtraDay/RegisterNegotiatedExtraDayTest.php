@@ -9,6 +9,7 @@ use App\Models\ScheduleDay;
 use App\Models\User;
 use Carbon\Carbon;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Role;
 
 class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
 {
@@ -21,7 +22,21 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
     {
         parent::setUp();
 
+        Carbon::setTestNow(Carbon::parse(self::DATE.' 23:59:00'));
+
         $this->user = $this->makeManagerWithPermissions(['attendances.create']);
+
+        // Also assign admin role so this user can register check-ins for historical dates.
+        // Business-logic tests should use admin to bypass date restrictions;
+        // permission tests are covered by AttendanceEditPermissionsTest.
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'api']);
+        $this->user->assignRole('admin');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow(null);
+        parent::tearDown();
     }
 
     #[Test]

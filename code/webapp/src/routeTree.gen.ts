@@ -27,13 +27,13 @@ import { Route as CashRouteImport } from './pages/cash'
 import { Route as IndexRouteImport } from './pages/index'
 import { Route as InventoryIndexRouteImport } from './pages/inventory.index'
 import { Route as CashIndexRouteImport } from './pages/cash/index'
+import { Route as AttendanceIndexRouteImport } from './pages/attendance/index'
 import { Route as InventoryLocationsRouteImport } from './pages/inventory/locations'
 import { Route as InventoryItemsRouteImport } from './pages/inventory/items'
 import { Route as InventoryItemVariantsRouteImport } from './pages/inventory/item-variants'
 import { Route as CashTerminalsRouteImport } from './pages/cash/terminals'
 import { Route as CashRegistersRouteImport } from './pages/cash/registers'
 import { Route as CashBankAccountsRouteImport } from './pages/cash/bank-accounts'
-import { Route as AttendanceTodayRouteImport } from './pages/attendance/today'
 import { Route as AttendancePunctualityConfigRouteImport } from './pages/attendance/punctuality-config'
 import { Route as AttendanceReportsTodayRouteImport } from './pages/attendance/reports/today'
 import { Route as AttendancePayrollCloseRouteImport } from './pages/attendance/payroll/close'
@@ -129,6 +129,11 @@ const CashIndexRoute = CashIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CashRoute,
 } as any)
+const AttendanceIndexRoute = AttendanceIndexRouteImport.update({
+  id: '/attendance/',
+  path: '/attendance/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InventoryLocationsRoute = InventoryLocationsRouteImport.update({
   id: '/locations',
   path: '/locations',
@@ -158,11 +163,6 @@ const CashBankAccountsRoute = CashBankAccountsRouteImport.update({
   id: '/bank-accounts',
   path: '/bank-accounts',
   getParentRoute: () => CashRoute,
-} as any)
-const AttendanceTodayRoute = AttendanceTodayRouteImport.update({
-  id: '/attendance/today',
-  path: '/attendance/today',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const AttendancePunctualityConfigRoute =
   AttendancePunctualityConfigRouteImport.update({
@@ -205,13 +205,13 @@ export interface FileRoutesByFullPath {
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
   '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
-  '/attendance/today': typeof AttendanceTodayRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
   '/cash/terminals': typeof CashTerminalsRoute
   '/inventory/item-variants': typeof InventoryItemVariantsRoute
   '/inventory/items': typeof InventoryItemsRoute
   '/inventory/locations': typeof InventoryLocationsRoute
+  '/attendance': typeof AttendanceIndexRoute
   '/cash/': typeof CashIndexRoute
   '/inventory/': typeof InventoryIndexRoute
   '/attendance/config/holidays': typeof AttendanceConfigHolidaysRoute
@@ -234,13 +234,13 @@ export interface FileRoutesByTo {
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
   '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
-  '/attendance/today': typeof AttendanceTodayRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
   '/cash/terminals': typeof CashTerminalsRoute
   '/inventory/item-variants': typeof InventoryItemVariantsRoute
   '/inventory/items': typeof InventoryItemsRoute
   '/inventory/locations': typeof InventoryLocationsRoute
+  '/attendance': typeof AttendanceIndexRoute
   '/cash': typeof CashIndexRoute
   '/inventory': typeof InventoryIndexRoute
   '/attendance/config/holidays': typeof AttendanceConfigHolidaysRoute
@@ -266,13 +266,13 @@ export interface FileRoutesById {
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
   '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
-  '/attendance/today': typeof AttendanceTodayRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
   '/cash/terminals': typeof CashTerminalsRoute
   '/inventory/item-variants': typeof InventoryItemVariantsRoute
   '/inventory/items': typeof InventoryItemsRoute
   '/inventory/locations': typeof InventoryLocationsRoute
+  '/attendance/': typeof AttendanceIndexRoute
   '/cash/': typeof CashIndexRoute
   '/inventory/': typeof InventoryIndexRoute
   '/attendance/config/holidays': typeof AttendanceConfigHolidaysRoute
@@ -299,13 +299,13 @@ export interface FileRouteTypes {
     | '/stock-dashboard'
     | '/unauthorized'
     | '/attendance/punctuality-config'
-    | '/attendance/today'
     | '/cash/bank-accounts'
     | '/cash/registers'
     | '/cash/terminals'
     | '/inventory/item-variants'
     | '/inventory/items'
     | '/inventory/locations'
+    | '/attendance'
     | '/cash/'
     | '/inventory/'
     | '/attendance/config/holidays'
@@ -328,13 +328,13 @@ export interface FileRouteTypes {
     | '/stock-dashboard'
     | '/unauthorized'
     | '/attendance/punctuality-config'
-    | '/attendance/today'
     | '/cash/bank-accounts'
     | '/cash/registers'
     | '/cash/terminals'
     | '/inventory/item-variants'
     | '/inventory/items'
     | '/inventory/locations'
+    | '/attendance'
     | '/cash'
     | '/inventory'
     | '/attendance/config/holidays'
@@ -359,13 +359,13 @@ export interface FileRouteTypes {
     | '/stock-dashboard'
     | '/unauthorized'
     | '/attendance/punctuality-config'
-    | '/attendance/today'
     | '/cash/bank-accounts'
     | '/cash/registers'
     | '/cash/terminals'
     | '/inventory/item-variants'
     | '/inventory/items'
     | '/inventory/locations'
+    | '/attendance/'
     | '/cash/'
     | '/inventory/'
     | '/attendance/config/holidays'
@@ -391,7 +391,7 @@ export interface RootRouteChildren {
   StockDashboardRoute: typeof StockDashboardRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
   AttendancePunctualityConfigRoute: typeof AttendancePunctualityConfigRoute
-  AttendanceTodayRoute: typeof AttendanceTodayRoute
+  AttendanceIndexRoute: typeof AttendanceIndexRoute
   AttendanceConfigHolidaysRoute: typeof AttendanceConfigHolidaysRoute
   AttendancePayrollCloseRoute: typeof AttendancePayrollCloseRoute
   AttendanceReportsTodayRoute: typeof AttendanceReportsTodayRoute
@@ -525,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CashIndexRouteImport
       parentRoute: typeof CashRoute
     }
+    '/attendance/': {
+      id: '/attendance/'
+      path: '/attendance'
+      fullPath: '/attendance'
+      preLoaderRoute: typeof AttendanceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inventory/locations': {
       id: '/inventory/locations'
       path: '/locations'
@@ -566,13 +573,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/cash/bank-accounts'
       preLoaderRoute: typeof CashBankAccountsRouteImport
       parentRoute: typeof CashRoute
-    }
-    '/attendance/today': {
-      id: '/attendance/today'
-      path: '/attendance/today'
-      fullPath: '/attendance/today'
-      preLoaderRoute: typeof AttendanceTodayRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/attendance/punctuality-config': {
       id: '/attendance/punctuality-config'
@@ -657,7 +657,7 @@ const rootRouteChildren: RootRouteChildren = {
   StockDashboardRoute: StockDashboardRoute,
   UnauthorizedRoute: UnauthorizedRoute,
   AttendancePunctualityConfigRoute: AttendancePunctualityConfigRoute,
-  AttendanceTodayRoute: AttendanceTodayRoute,
+  AttendanceIndexRoute: AttendanceIndexRoute,
   AttendanceConfigHolidaysRoute: AttendanceConfigHolidaysRoute,
   AttendancePayrollCloseRoute: AttendancePayrollCloseRoute,
   AttendanceReportsTodayRoute: AttendanceReportsTodayRoute,

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
+import { useDailyAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { useExtraDayExpress } from '@/components/attendance/use-extra-day-express'
 import { getAttendancePhase } from '@/types/attendance'
 import { todayDateCdmx } from '@/lib/datetime'
@@ -42,14 +42,14 @@ export function todayCdmxDate(): string {
 }
 
 /**
- * ISO 8601 / RFC 3339 from a "HH:mm" string using today's date in business timezone.
+ * ISO 8601 / RFC 3339 from a "HH:mm" string using the given date in business timezone.
  * Uses centralized timezone resolver with proper offset calculation.
  * The backend normalizes to UTC via Carbon::parse($value)->utc().
  * See CLAUDE.md § DateTime Standard.
  * (exported for testing)
  */
-export function timeToIso(hhmm: string): string {
-  return timeToIsoWithOffset(hhmm)
+export function timeToIso(hhmm: string, date?: string): string {
+  return timeToIsoWithOffset(hhmm, date)
 }
 
 export interface UseTodayAttendancePageResult {
@@ -62,30 +62,33 @@ export interface UseTodayAttendancePageResult {
   hasBranch: boolean
   branchId: number | null
   getPhase: (row: TodayAttendanceRow) => AttendancePhase
+  // Date selection
+  selectedDate: string
+  setSelectedDate: (date: string) => void
   // Check-in action
   pendingCheckInEmployee: TodayAttendanceEmployee | null
   isCheckingIn: boolean
   openCheckIn: (row: TodayAttendanceRow) => void
   closeCheckIn: () => void
-  confirmCheckIn: (time: string) => void
+  confirmCheckIn: (time: string, reason?: string) => void
   // Lunch-start action
   pendingLunchStart: PendingAttendanceData | null
   isRegisteringLunch: boolean
   openLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeLunchStart: () => void
-  confirmLunchStart: (time: string) => void
+  confirmLunchStart: (time: string, reason?: string) => void
   // Lunch-return action
   pendingLunchReturn: PendingAttendanceData | null
   isRegisteringLunchReturn: boolean
   openLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeLunchReturn: () => void
-  confirmLunchReturn: (time: string) => void
+  confirmLunchReturn: (time: string, reason?: string) => void
   // Check-out action
   pendingCheckOut: PendingAttendanceData | null
   isCheckingOut: boolean
   openCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeCheckOut: () => void
-  confirmCheckOut: (time: string) => void
+  confirmCheckOut: (time: string, reason?: string) => void
   // Overtime decision action (individual)
   pendingOvertimeDecision: PendingAttendanceData | null
   pendingOvertimeMinutes: number
@@ -100,7 +103,7 @@ export interface UseTodayAttendancePageResult {
   closeBulkOvertimeDecision: () => void
   // Mark day status action
   isMarkingDayStatus: boolean
-  markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
+  markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string) => void
   // Extra day express action
   extraDayRow: TodayAttendanceRow | null
   isRegisteringExtraDay: boolean
@@ -113,7 +116,9 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const currentBranch = useAuthStore(s => s.currentBranch)
   const branchId = currentBranch?.id ?? null
 
-  const { data = [], isLoading, isError } = useTodayAttendance(branchId)
+  const [selectedDate, setSelectedDate] = useState<string>(todayDateCdmx())
+
+  const { data = [], isLoading, isError } = useDailyAttendance(branchId, selectedDate)
   const checkInMutation = useCheckIn()
   const lunchStartMutation = useLunchStart()
   const lunchReturnMutation = useLunchReturn()
@@ -148,13 +153,13 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     setPendingCheckInEmployee(null)
   }, [])
 
-  const confirmCheckIn = useCallback((time: string) => {
+  const confirmCheckIn = useCallback((time: string, reason?: string) => {
     if (!pendingCheckInEmployee) return
     checkInMutation.mutate(
-      { employee_id: pendingCheckInEmployee.id, check_in: timeToIso(time) },
+      { employee_id: pendingCheckInEmployee.id, check_in: timeToIso(time, selectedDate), reason },
       { onSettled: closeCheckIn }
     )
-  }, [pendingCheckInEmployee, checkInMutation, closeCheckIn])
+  }, [pendingCheckInEmployee, checkInMutation, closeCheckIn, selectedDate])
 
   // ── Lunch-start state ────────────────────────────────────────────────────────
   const [pendingLunchStart, setPendingLunchStart] =
@@ -168,13 +173,13 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     setPendingLunchStart(null)
   }, [])
 
-  const confirmLunchStart = useCallback((time: string) => {
+  const confirmLunchStart = useCallback((time: string, reason?: string) => {
     if (!pendingLunchStart) return
     lunchStartMutation.mutate(
-      { attendance_id: pendingLunchStart.attendanceId, lunch_start: timeToIso(time) },
+      { attendance_id: pendingLunchStart.attendanceId, lunch_start: timeToIso(time, selectedDate), reason },
       { onSettled: closeLunchStart }
     )
-  }, [pendingLunchStart, lunchStartMutation, closeLunchStart])
+  }, [pendingLunchStart, lunchStartMutation, closeLunchStart, selectedDate])
 
   // ── Lunch-return state ───────────────────────────────────────────────────────
   const [pendingLunchReturn, setPendingLunchReturn] =
@@ -188,13 +193,13 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     setPendingLunchReturn(null)
   }, [])
 
-  const confirmLunchReturn = useCallback((time: string) => {
+  const confirmLunchReturn = useCallback((time: string, reason?: string) => {
     if (!pendingLunchReturn) return
     lunchReturnMutation.mutate(
-      { attendance_id: pendingLunchReturn.attendanceId, lunch_end: timeToIso(time) },
+      { attendance_id: pendingLunchReturn.attendanceId, lunch_end: timeToIso(time, selectedDate), reason },
       { onSettled: closeLunchReturn }
     )
-  }, [pendingLunchReturn, lunchReturnMutation, closeLunchReturn])
+  }, [pendingLunchReturn, lunchReturnMutation, closeLunchReturn, selectedDate])
 
   // ── Check-out state ──────────────────────────────────────────────────────────
   const [pendingCheckOut, setPendingCheckOut] =
@@ -208,13 +213,13 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     setPendingCheckOut(null)
   }, [])
 
-  const confirmCheckOut = useCallback((time: string) => {
+  const confirmCheckOut = useCallback((time: string, reason?: string) => {
     if (!pendingCheckOut) return
     checkOutMutation.mutate(
-      { attendance_id: pendingCheckOut.attendanceId, check_out: timeToIso(time) },
+      { attendance_id: pendingCheckOut.attendanceId, check_out: timeToIso(time, selectedDate), reason },
       { onSettled: closeCheckOut }
     )
-  }, [pendingCheckOut, checkOutMutation, closeCheckOut])
+  }, [pendingCheckOut, checkOutMutation, closeCheckOut, selectedDate])
 
   // ── Overtime decision state ───────────────────────────────────────────────────
   const [pendingOvertimeDecision, setPendingOvertimeDecision] =
@@ -263,14 +268,15 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
 
   // ── Mark day status ───────────────────────────────────────────────────────────
   const markDayStatus = useCallback(
-    (employee: TodayAttendanceEmployee, status: 'ABSENCE') => {
+    (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string) => {
       markDayStatusMutation.mutate({
         employee_id: employee.id,
-        date: todayCdmxDate(),
+        date: selectedDate,
         day_status: status,
+        reason,
       })
     },
-    [markDayStatusMutation],
+    [markDayStatusMutation, selectedDate],
   )
 
   // ── Extra day express ─────────────────────────────────────────────────────────
@@ -289,11 +295,10 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     (payload: { agreed_daily_wage: number; prima_percent: number; notes: string }) => {
       if (!extraDayRow) return
       const employee = extraDayRow.employee
-      const date = todayCdmxDate()
       extraDayMutation.mutate(
         {
           employee_id: employee.id,
-          date,
+          date: selectedDate,
           agreed_daily_wage: payload.agreed_daily_wage,
           prima_percent: payload.prima_percent,
           notes: payload.notes || undefined,
@@ -309,7 +314,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
         },
       )
     },
-    [extraDayRow, extraDayMutation, closeExtraDay],
+    [extraDayRow, extraDayMutation, closeExtraDay, selectedDate],
   )
 
   return {
@@ -321,6 +326,8 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     hasBranch: !!branchId,
     branchId,
     getPhase: (row) => getAttendancePhase(row.attendance),
+    selectedDate,
+    setSelectedDate,
     // Check-in
     pendingCheckInEmployee,
     isCheckingIn: checkInMutation.isPending,

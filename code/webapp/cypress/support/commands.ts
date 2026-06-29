@@ -96,6 +96,25 @@ Cypress.Commands.add('logout', () => {
  * jQuery snapshot — if React hasn't hydrated yet the DevDebugger won't be in
  * the DOM and the command silently no-ops.
  */
+/**
+ * Set a date input value in a way that triggers React 18's onChange.
+ * React 18 controlled inputs require the native HTMLInputElement.prototype.value
+ * setter (not jQuery .val()) so that the framework tracks the change correctly.
+ */
+Cypress.Commands.add('setDateInput', (selector: string, value: string) => {
+  cy.window().then((win) => {
+    cy.get(selector).then(($el) => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        win.HTMLInputElement.prototype,
+        'value',
+      )?.set
+      nativeSetter?.call($el[0], value)
+      $el[0].dispatchEvent(new win.Event('input', { bubbles: true }))
+      $el[0].dispatchEvent(new win.Event('change', { bubbles: true }))
+    })
+  })
+})
+
 Cypress.Commands.add('closeDevDebugger', () => {
   cy.get('body').then(($body) => {
     if ($body.find('[data-testid="dev-debugger"]').length > 0) {
@@ -136,7 +155,7 @@ declare global {
       /**
        * Visit a page with auth from loginByApi
        * @param path - The path to visit
-       * @example cy.visitWithAuth('/attendance/today')
+       * @example cy.visitWithAuth('/attendance')
        */
       visitWithAuth(path: string): Chainable<void>;
 
@@ -151,6 +170,13 @@ declare global {
        * @example cy.closeDevDebugger()
        */
       closeDevDebugger(): Chainable<void>;
+
+      /**
+       * Set a date input value and trigger React 18 onChange.
+       * Use instead of .invoke('val', x).trigger('change') for controlled inputs.
+       * @example cy.setDateInput('[aria-label="Seleccionar fecha"]', '2026-04-01')
+       */
+      setDateInput(selector: string, value: string): Chainable<void>;
 
       /**
        * Cypress task to get password reset link from Mailhog

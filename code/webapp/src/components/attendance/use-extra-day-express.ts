@@ -15,7 +15,7 @@ export function useExtraDayExpress() {
   return useMutation({
     mutationFn: (payload: RegisterExtraDayPayload) => negotiatedExtraDayApi.register(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       showSuccess('Día extra registrado correctamente.', 'Día extra')
     },
     onError: (error: unknown) => {

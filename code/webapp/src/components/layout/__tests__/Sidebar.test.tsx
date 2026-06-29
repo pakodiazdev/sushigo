@@ -189,23 +189,23 @@ describe('Sidebar — submenu toggle', () => {
 
   it('submenu items are hidden by default (collapsed submenu)', () => {
     render(<Sidebar />)
-    expect(screen.queryByText('Hoy')).toBeNull()
+    expect(screen.queryByText('Asistencia', { selector: 'a' })).toBeNull()
   })
 
   it('expands submenu when button is clicked', () => {
     render(<Sidebar />)
     const asistenciaBtn = screen.getByText('Asistencia')
     fireEvent.click(asistenciaBtn.closest('button')!)
-    expect(screen.getByText('Hoy')).toBeDefined()
+    expect(screen.getByText('Asistencia', { selector: 'a' })).toBeDefined()
   })
 
   it('collapses submenu on second click', () => {
     render(<Sidebar />)
     const btn = screen.getByText('Asistencia').closest('button')!
     fireEvent.click(btn)
-    expect(screen.getByText('Hoy')).toBeDefined()
+    expect(screen.getByText('Asistencia', { selector: 'a' })).toBeDefined()
     fireEvent.click(btn)
-    expect(screen.queryByText('Hoy')).toBeNull()
+    expect(screen.queryByText('Asistencia', { selector: 'a' })).toBeNull()
   })
 
   it('expands Inventario submenu and shows sub-items', () => {
@@ -244,7 +244,7 @@ describe('Sidebar — collapsed state', () => {
     // Sub-menu buttons are not rendered but the buttons still exist
     // When isCollapsed = true, onClick does nothing for submenu
     // The submenu items remain hidden
-    expect(screen.queryByText('Hoy')).toBeNull()
+    expect(screen.queryByText('Asistencia', { selector: 'a' })).toBeNull()
   })
 
   it('shows expand button when collapsed', () => {

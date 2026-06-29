@@ -33,7 +33,7 @@ class RecordOvertimeDecisionAction
 
     /**
      * @param  Attendance  $attendance  Already-loaded attendance record
-     * @param  array{authorize: bool}  $data  Validated request data
+     * @param  array{authorize: bool, reason?: string}  $data  Validated request data
      * @param  User  $decidedBy  Authenticated user recording the decision
      *
      * @throws ValidationException
@@ -79,7 +79,7 @@ class RecordOvertimeDecisionAction
                 'overtime_authorized_at' => $now->toDateTimeString(),
             ],
             'user_id' => $decidedBy->id,
-            'reason' => null,
+            'reason' => $data['reason'] ?? null,
         ]);
 
         return $attendance->fresh(['employee']);

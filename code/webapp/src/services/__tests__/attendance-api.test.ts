@@ -11,9 +11,9 @@ vi.mock('@/lib/api-client', () => ({
 
 import { apiClient } from '@/lib/api-client'
 
-// ── attendanceApi.today ────────────────────────────────────────────────────────
+// ── attendanceApi.daily ────────────────────────────────────────────────────────
 
-describe('attendanceApi.today', () => {
+describe('attendanceApi.daily', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -28,7 +28,7 @@ describe('attendanceApi.today', () => {
     }
     vi.mocked(apiClient.get).mockResolvedValueOnce(mockResponse as never)
 
-    const result = await attendanceApi.today(5)
+    const result = await attendanceApi.daily(5)
 
     expect(apiClient.get).toHaveBeenCalledWith('/attendances/today', {
       params: { branch_id: 5 },
@@ -36,13 +36,15 @@ describe('attendanceApi.today', () => {
     expect(result).toEqual(mockResponse)
   })
 
-  it('passes different branch_id values correctly', async () => {
-    await attendanceApi.today(10)
+  it('passes optional date param when provided', async () => {
+    await attendanceApi.daily(10, '2026-06-23')
     expect(apiClient.get).toHaveBeenCalledWith('/attendances/today', {
-      params: { branch_id: 10 },
+      params: { branch_id: 10, date: '2026-06-23' },
     })
+  })
 
-    await attendanceApi.today(1)
+  it('omits date param when not provided', async () => {
+    await attendanceApi.daily(1)
     expect(apiClient.get).toHaveBeenCalledWith('/attendances/today', {
       params: { branch_id: 1 },
     })

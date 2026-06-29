@@ -36,6 +36,7 @@ class RegisterLunchStartAction
 
         $lunchStart = Carbon::parse($data['lunch_start'])->utc();
 
+        $attendance->auditReason = $data['reason'] ?? null;
         $attendance->update(['lunch_start' => $lunchStart]);
 
         return $attendance->load('employee');

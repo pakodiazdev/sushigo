@@ -126,8 +126,8 @@ export const useAuthStore = create<AuthState>()(
           let branches = extractBranchesFromUser(userData);
           const isUserAdmin = checkIsAdmin(userData);
 
-          // Admins may not have operating_unit assignments — fetch from API
-          if (isUserAdmin && branches.length === 0) {
+          // Login response omits operating_units — fall back to API for all roles
+          if (branches.length === 0) {
             branches = await fetchBranchesFromApi();
           }
 
@@ -212,8 +212,8 @@ export const useAuthStore = create<AuthState>()(
           const userData = response.data as User;
           let branches = extractBranchesFromUser(userData);
 
-          // Admins may not have operating_unit assignments — fetch from API
-          if (checkIsAdmin(userData) && branches.length === 0) {
+          // Login/me response omits operating_units — fall back to API for all roles
+          if (branches.length === 0) {
             branches = await fetchBranchesFromApi();
           }
 
@@ -273,8 +273,8 @@ export const useAuthStore = create<AuthState>()(
           const userData = response.data as User;
           let branches = extractBranchesFromUser(userData);
 
-          // Admins may not have operating_unit assignments — fetch from API
-          if (checkIsAdmin(userData) && branches.length === 0) {
+          // me response omits operating_units — fall back to API for all roles
+          if (branches.length === 0) {
             branches = await fetchBranchesFromApi();
           }
 
@@ -306,8 +306,8 @@ export const useAuthStore = create<AuthState>()(
         let branches = extractBranchesFromUser(user);
         const isUserAdmin = checkIsAdmin(user);
 
-        // Admins may not have operating_unit assignments — fetch from API
-        if (isUserAdmin && branches.length === 0) {
+        // Login response omits operating_units — fall back to API for all roles
+        if (branches.length === 0) {
           branches = await fetchBranchesFromApi();
         }
 

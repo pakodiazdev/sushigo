@@ -2,8 +2,6 @@
 
 namespace App\Http\Requests\Attendances;
 
-use Illuminate\Foundation\Http\FormRequest;
-
 /**
  * Validate the overtime authorization/rejection payload.
  *
@@ -16,20 +14,22 @@ use Illuminate\Foundation\Http\FormRequest;
  *         type="boolean",
  *         example=true,
  *         description="true to authorize overtime payment, false to reject it."
+ *     ),
+ *     @OA\Property(
+ *         property="reason",
+ *         type="string",
+ *         example="Autorización retroactiva aprobada por gerencia",
+ *         description="Required when an Admin decides overtime for a past-day record."
  *     )
  * )
  */
-class OvertimeDecisionRequest extends FormRequest
+class OvertimeDecisionRequest extends AttendanceFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [
             'authorize' => ['required', 'boolean'],
+            'reason' => $this->reasonRules(),
         ];
     }
 
@@ -38,6 +38,7 @@ class OvertimeDecisionRequest extends FormRequest
         return [
             'authorize.required' => 'La decisión sobre horas extra es requerida.',
             'authorize.boolean' => 'La decisión debe ser verdadero o falso.',
+            'reason.required' => 'Se requiere un motivo para editar registros de días anteriores.',
         ];
     }
 }

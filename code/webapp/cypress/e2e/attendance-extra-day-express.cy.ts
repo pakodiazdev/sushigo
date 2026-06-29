@@ -6,7 +6,7 @@
  * a prior agreement).
  *
  * Happy path flow:
- *   1. Manager navigates to /attendance/today (on a Sunday)
+ *   1. Manager navigates to /attendance (on a Sunday)
  *   2. Employee card shows "Descanso programado" badge
  *   3. Manager clicks "Registrar entrada"
  *   4. ExtraDayNegotiationDialog opens with defaults:
@@ -50,8 +50,8 @@ beforeEach(() => {
   }).as("apiWithTestTime");
 
   cy.loginByApi(adminEmail, adminPassword);
-  cy.visitWithAuth("/attendance/today");
-  cy.url().should("include", "/attendance/today", { timeout: 10_000 });
+  cy.visitWithAuth("/attendance");
+  cy.url().should("include", "/attendance", { timeout: 10_000 });
   cy.closeDevDebugger();
 
   // Mock Date after page loads

@@ -45,6 +45,7 @@ class RegisterLunchReturnAction
 
         $lunchLateSeconds = $this->calculateLunchLateSeconds($attendance, $lunchEnd);
 
+        $attendance->auditReason = $data['reason'] ?? null;
         $attendance->update([
             'lunch_end' => $lunchEnd,
             'lunch_late_seconds' => $lunchLateSeconds,

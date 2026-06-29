@@ -87,7 +87,7 @@ describe('useExtraDayExpress', () => {
 
     await waitFor(() =>
       expect(mockInvalidateQueries).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: ['attendances', 'today'] }),
+        expect.objectContaining({ queryKey: ['attendances', 'daily'] }),
       ),
     )
   })

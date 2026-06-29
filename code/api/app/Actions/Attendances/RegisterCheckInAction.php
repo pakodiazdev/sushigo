@@ -40,7 +40,7 @@ class RegisterCheckInAction
     ) {}
 
     /**
-     * @param  array{employee_id: string, check_in: string}  $data
+     * @param  array{employee_id: string, check_in: string, reason?: string}  $data
      *
      * @throws ValidationException
      */
@@ -91,14 +91,22 @@ class RegisterCheckInAction
             ? DayStatus::EXTRA
             : DayStatus::WORKED;
 
-        $attendance = Attendance::updateOrCreate(
-            ['employee_id' => $employee->id, 'date' => $date],
-            [
-                'check_in' => $checkIn,
-                'entry_late_seconds' => $lateSeconds,
-                'day_status' => $dayStatus,
-            ],
-        );
+        $attendanceData = [
+            'check_in' => $checkIn,
+            'entry_late_seconds' => $lateSeconds,
+            'day_status' => $dayStatus,
+        ];
+
+        $attendance = Attendance::where('employee_id', $employee->id)->where('date', $date)->first();
+
+        if ($attendance) {
+            $attendance->auditReason = $data['reason'] ?? null;
+            $attendance->fill($attendanceData)->save();
+        } else {
+            $attendance = new Attendance(array_merge(['employee_id' => $employee->id, 'date' => $date], $attendanceData));
+            $attendance->auditReason = $data['reason'] ?? null;
+            $attendance->save();
+        }
 
         return $attendance->load('employee');
     }

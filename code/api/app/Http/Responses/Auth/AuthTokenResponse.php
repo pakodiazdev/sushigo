@@ -27,7 +27,7 @@ class AuthTokenResponse implements Responsable
 
     public function toResponse($request): JsonResponse
     {
-        $this->user->load('roles', 'permissions');
+        $this->user->load('roles');
 
         return response()->json([
             'status' => $this->status,
@@ -42,7 +42,7 @@ class AuthTokenResponse implements Responsable
                         'id' => $role->id,
                         'name' => $role->name,
                     ]),
-                    'permissions' => $this->user->permissions->map(fn ($perm) => [
+                    'permissions' => $this->user->getAllPermissions()->map(fn ($perm) => [
                         'id' => $perm->id,
                         'name' => $perm->name,
                     ]),

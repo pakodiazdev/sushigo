@@ -11,6 +11,7 @@ import {
     Clock,
     BedDouble,
     UserX,
+    Lock,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -239,6 +240,7 @@ export interface EmployeeAttendanceCardProps {
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
+    canEdit?: boolean
 }
 
 export function EmployeeAttendanceCard({
@@ -249,6 +251,7 @@ export function EmployeeAttendanceCard({
     onCheckOut,
     onOvertimeDecision,
     onMarkDayStatus,
+    canEdit = true,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
@@ -345,8 +348,16 @@ export function EmployeeAttendanceCard({
                 <p className="text-xs text-muted-foreground italic">Sin registro aún</p>
             )}
 
+            {/* Lock indicator for past-day view (manager cannot edit) */}
+            {!canEdit && ['pending', 'checked-in', 'at-lunch', 'returned'].includes(phase) && (
+                <div className="flex items-center gap-1.5 rounded-md bg-muted/50 border border-muted px-3 py-2 mt-auto">
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-[11px] text-muted-foreground">Solo lectura — día pasado</span>
+                </div>
+            )}
+
             {/* Actions for pending employees */}
-            {phase === 'pending' && (
+            {canEdit && phase === 'pending' && (
                 <div className="flex flex-col gap-1.5 mt-auto">
                     {renderPendingActions()}
                 </div>
@@ -368,7 +379,7 @@ export function EmployeeAttendanceCard({
             />
 
             {/* Lunch-start action — only for checked-in employees */}
-            {phase === 'checked-in' && att && (
+            {canEdit && phase === 'checked-in' && att && (
                 <Button
                     size="sm"
                     variant="outline"
@@ -381,7 +392,7 @@ export function EmployeeAttendanceCard({
             )}
 
             {/* Lunch-return action — only for employees at lunch */}
-            {phase === 'at-lunch' && att && (
+            {canEdit && phase === 'at-lunch' && att && (
                 <Button
                     size="sm"
                     variant="outline"
@@ -394,7 +405,7 @@ export function EmployeeAttendanceCard({
             )}
 
             {/* Check-out action — only for employees who returned from lunch */}
-            {phase === 'returned' && att && (
+            {canEdit && phase === 'returned' && att && (
                 <Button
                     size="sm"
                     variant="outline"
@@ -408,7 +419,7 @@ export function EmployeeAttendanceCard({
 
             {/* Overtime section: pending decision button or decision badge */}
             {att && (att.overtime_minutes ?? 0) > 0 && (
-                att.requires_overtime_decision ? (
+                canEdit && att.requires_overtime_decision ? (
                     <Button
                         size="sm"
                         variant="outline"

@@ -46,6 +46,7 @@ class RegisterCheckOutAction
         $netWorkedMinutes = $this->calculateNetWorkedMinutes($attendance, $checkOut);
         $overtimeMinutes = $this->calculateOvertimeMinutes($attendance, $checkOut, $checkOutLocal);
 
+        $attendance->auditReason = $data['reason'] ?? null;
         $attendance->update([
             'check_out' => $checkOut,
             'net_worked_minutes' => $netWorkedMinutes,
