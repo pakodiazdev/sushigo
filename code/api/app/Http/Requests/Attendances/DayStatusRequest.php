@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Attendances;
 
 use App\Enums\DayStatus;
-use Carbon\Carbon;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -42,6 +42,11 @@ use Illuminate\Validation\Rule;
  */
 class DayStatusRequest extends FormRequest
 {
+    public function __construct(private readonly ApplicationClock $clock)
+    {
+        parent::__construct();
+    }
+
     public function authorize(): bool
     {
         $date = $this->input('date');
@@ -51,7 +56,7 @@ class DayStatusRequest extends FormRequest
 
         $user = $this->user();
         $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
-        $today = Carbon::today(config('app.business_timezone'))->toDateString();
+        $today = $this->clock->todayInBusinessTz();
 
         return $isAdmin || $date === $today;
     }
@@ -92,7 +97,7 @@ class DayStatusRequest extends FormRequest
 
         $user = $this->user();
         $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
-        $today = Carbon::today(config('app.business_timezone'))->toDateString();
+        $today = $this->clock->todayInBusinessTz();
         $isPastDay = $date < $today;
 
         return ($isAdmin && $isPastDay)

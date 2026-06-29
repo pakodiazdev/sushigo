@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Attendances;
 
 use App\Models\Attendance;
-use Carbon\Carbon;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 
@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Gate;
  */
 abstract class AttendanceFormRequest extends FormRequest
 {
+    public function __construct(private readonly ApplicationClock $clock)
+    {
+        parent::__construct();
+    }
+
     private ?Attendance $resolvedAttendance = null;
 
     public function authorize(): bool
@@ -44,7 +49,7 @@ abstract class AttendanceFormRequest extends FormRequest
 
         $user = $this->user();
         $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
-        $today = Carbon::today(config('app.business_timezone'))->toDateString();
+        $today = $this->clock->todayInBusinessTz();
         $isPastDay = $attendance->date->toDateString() < $today;
 
         return ($isAdmin && $isPastDay)
