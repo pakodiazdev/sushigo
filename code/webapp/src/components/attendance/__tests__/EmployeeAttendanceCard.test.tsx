@@ -484,6 +484,25 @@ describe('EmployeeAttendanceCard', () => {
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={rejectedRow} />)
         expect(getByText(/No pagadas/)).toBeDefined()
     })
+
+    it('shows pending authorization alert when canEdit is false and overtime decision is pending', () => {
+        const pendingRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({
+                id: '01HZATTEND000008',
+                check_in: '2024-01-15T08:00:00Z',
+                check_out: '2024-01-15T17:30:00Z',
+                overtime_minutes: 30,
+                requires_overtime_decision: true,
+            }),
+            schedule: null,
+            today_leave: null,
+        }
+        const { getByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={pendingRow} canEdit={false} />
+        )
+        expect(getByText(/pendiente autorización/)).toBeDefined()
+    })
 })
 
 // ── LeaveChip ─────────────────────────────────────────────────────────────────

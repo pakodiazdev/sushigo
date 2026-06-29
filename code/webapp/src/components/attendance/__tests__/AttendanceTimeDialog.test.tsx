@@ -161,6 +161,23 @@ describe('AttendanceTimeDialog', () => {
         expect(input.value).toBe('13:30')
     })
 
+    it('renders reason textarea when requiresReason is true', () => {
+        const { getByPlaceholderText } = render(
+            <AttendanceTimeDialog {...defaultProps} requiresReason={true} />
+        )
+        expect(getByPlaceholderText(/corrección retroactiva/i)).toBeDefined()
+    })
+
+    it('shows reason validation error when reason text is too short', async () => {
+        const { getByPlaceholderText, findByText } = render(
+            <AttendanceTimeDialog {...defaultProps} requiresReason={true} />
+        )
+        const textarea = getByPlaceholderText(/corrección retroactiva/i)
+        fireEvent.change(textarea, { target: { value: 'abc' } })
+        const error = await findByText(/al menos 5 caracteres/i)
+        expect(error).toBeDefined()
+    })
+
     it('resets form when dialog reopens', () => {
         const { container, rerender } = render(<AttendanceTimeDialog {...defaultProps} />)
 
