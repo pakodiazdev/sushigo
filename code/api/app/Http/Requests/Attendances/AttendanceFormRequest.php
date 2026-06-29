@@ -19,6 +19,8 @@ abstract class AttendanceFormRequest extends FormRequest
         parent::__construct();
     }
 
+    private bool $hasResolved = false;
+
     private ?Attendance $resolvedAttendance = null;
 
     public function authorize(): bool
@@ -33,8 +35,9 @@ abstract class AttendanceFormRequest extends FormRequest
 
     protected function resolveAttendance(): ?Attendance
     {
-        if ($this->resolvedAttendance === null) {
+        if (! $this->hasResolved) {
             $this->resolvedAttendance = Attendance::where('public_id', $this->route('id'))->first();
+            $this->hasResolved = true;
         }
 
         return $this->resolvedAttendance;
