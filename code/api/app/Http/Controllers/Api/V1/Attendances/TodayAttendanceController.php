@@ -16,6 +16,7 @@ use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\ScheduleDay;
 use App\Models\ScheduleDayOverride;
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 
 /**
@@ -75,12 +76,14 @@ use Carbon\Carbon;
  */
 class TodayAttendanceController extends Controller
 {
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     public function __invoke(TodayAttendanceRequest $request): ResponseEntity
     {
         $branchId = (int) $request->input('branch_id');
-        // Use the requested date or default to today in the business timezone.
-        $today = $request->input('date')
-            ?? Carbon::today(config('app.business_timezone'))->toDateString();
+        // Use the requested date or default to today according to the application clock
+        // (respects clock simulation in dev/testing environments).
+        $today = $request->input('date') ?? $this->clock->todayInBusinessTz();
 
         // Fetch all active employees for the branch (via active employment period)
         // and eager-load today's attendance (if any) and any approved leave covering
