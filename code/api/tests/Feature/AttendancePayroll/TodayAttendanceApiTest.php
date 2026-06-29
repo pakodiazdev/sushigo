@@ -459,8 +459,8 @@ class TodayAttendanceApiTest extends TestCase
 
         // Seed the clock state row (id=1) with simulated mode
         ApplicationClockState::firstOrCreate(['id' => 1])->update([
-            'mode'                    => ClockMode::SIMULATED,
-            'base_datetime_utc'       => $baseUtc,
+            'mode' => ClockMode::SIMULATED,
+            'base_datetime_utc' => $baseUtc,
             'started_real_datetime_utc' => \Carbon\CarbonImmutable::now('UTC'),
         ]);
 
@@ -469,7 +469,7 @@ class TodayAttendanceApiTest extends TestCase
         // Attendance on the simulated date — NOT real today
         Attendance::factory()->onDate($simulatedDate)->create([
             'employee_id' => $employee->id,
-            'check_in'    => $simulatedDate.'T09:00:00',
+            'check_in' => $simulatedDate.'T09:00:00',
         ]);
 
         $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
