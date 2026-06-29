@@ -42,8 +42,8 @@ describe('Payroll Close Preview — happy path', () => {
   it('shows employee rows after clicking Calcular preview', () => {
     cy.intercept('GET', '**/pay-periods/preview**').as('preview')
 
-    cy.get('input[type="date"]').first().clear().type(PERIOD_START)
-    cy.get('input[type="date"]').last().clear().type(PERIOD_END)
+    cy.setDateInput('#period-start', PERIOD_START)
+    cy.setDateInput('#period-end', PERIOD_END)
     cy.contains('button', 'Calcular preview').click()
 
     cy.wait('@preview')
@@ -58,14 +58,15 @@ describe('Payroll Close Preview — happy path', () => {
   it('expands a row and shows BASE_PAY lines', () => {
     cy.intercept('GET', '**/pay-periods/preview**').as('preview')
 
-    cy.get('input[type="date"]').first().clear().type(PERIOD_START)
-    cy.get('input[type="date"]').last().clear().type(PERIOD_END)
+    cy.setDateInput('#period-start', PERIOD_START)
+    cy.setDateInput('#period-end', PERIOD_END)
     cy.contains('button', 'Calcular preview').click()
 
     cy.wait('@preview')
 
-    // Expand first employee row
-    cy.get('[data-testid="employee-preview-row"]').first().click()
+    // Click the toggle button explicitly — clicking the outer div is not reliable
+    cy.get('[data-testid="employee-preview-row"]').first().find('button[aria-expanded]').click()
+    cy.get('[data-testid="employee-preview-row"]').first().find('button[aria-expanded="true"]').should('exist')
     cy.contains('BASE_PAY').should('be.visible')
   })
 })
