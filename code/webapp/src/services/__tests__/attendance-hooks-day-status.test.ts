@@ -138,7 +138,7 @@ describe('useMarkDayStatus', () => {
 
     await waitFor(() =>
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: ['attendances', 'today'] })
+        expect.objectContaining({ queryKey: ['attendances', 'daily'] })
       )
     )
   })

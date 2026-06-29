@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 // ── Schema ─────────────────────────────────────────────────────────────────────
 
-export function createTimeSchema(maxTime: string) {
+export function createTimeSchema(maxTime: string, requiresReason = false) {
     return z.object({
         time: z
             .string()
@@ -15,6 +15,9 @@ export function createTimeSchema(maxTime: string) {
                 (val) => val <= maxTime,
                 `La hora no puede ser posterior a ${maxTime}`
             ),
+        reason: requiresReason
+            ? z.string().min(5, 'El motivo debe tener al menos 5 caracteres').max(500)
+            : z.string().max(500).optional(),
     })
 }
 
@@ -26,7 +29,8 @@ export interface UseAttendanceTimeDialogParams {
     isOpen: boolean
     initialTime: string
     maxTime: string
-    onConfirm: (time: string) => void
+    requiresReason?: boolean
+    onConfirm: (time: string, reason?: string) => void
     onClose: () => void
 }
 
@@ -34,10 +38,11 @@ export function useAttendanceTimeDialog({
     isOpen,
     initialTime,
     maxTime,
+    requiresReason = false,
     onConfirm,
     onClose,
 }: Readonly<UseAttendanceTimeDialogParams>) {
-    const schema = createTimeSchema(maxTime)
+    const schema = createTimeSchema(maxTime, requiresReason)
 
     const {
         register,
@@ -48,7 +53,7 @@ export function useAttendanceTimeDialog({
         formState: { errors, isValid },
     } = useForm<TimeFormValues>({
         resolver: zodResolver(schema),
-        defaultValues: { time: initialTime },
+        defaultValues: { time: initialTime, reason: '' },
         mode: 'onChange',
     })
 
@@ -58,7 +63,7 @@ export function useAttendanceTimeDialog({
     // Reset form only when dialog opens (false → true), not when initialTime changes
     useEffect(() => {
         if (isOpen && !wasOpenRef.current) {
-            reset({ time: initialTime })
+            reset({ time: initialTime, reason: '' })
             // Trigger validation after reset to update isValid
             trigger('time')
         }
@@ -68,11 +73,11 @@ export function useAttendanceTimeDialog({
     const time = watch('time')
 
     const handleConfirm = handleSubmit((data) => {
-        onConfirm(data.time)
+        onConfirm(data.time, data.reason || undefined)
     })
 
     const handleClose = () => {
-        reset({ time: '' })
+        reset({ time: '', reason: '' })
         onClose()
     }
 

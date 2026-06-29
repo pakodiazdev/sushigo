@@ -23,7 +23,7 @@ use Illuminate\Validation\ValidationException;
 class MarkDayStatusAction
 {
     /**
-     * @param  array{employee_id: string, date: string, day_status: string}  $data
+     * @param  array{employee_id: string, date: string, day_status: string, reason?: string}  $data
      *
      * @throws ValidationException
      */
@@ -33,11 +33,13 @@ class MarkDayStatusAction
 
         $this->guardNoDuplicateAttendance($employee->id, $data['date']);
 
-        $attendance = Attendance::create([
+        $attendance = new Attendance([
             'employee_id' => $employee->id,
             'date' => $data['date'],
             'day_status' => DayStatus::from($data['day_status']),
         ]);
+        $attendance->auditReason = $data['reason'] ?? null;
+        $attendance->save();
 
         return $attendance->load('employee');
     }

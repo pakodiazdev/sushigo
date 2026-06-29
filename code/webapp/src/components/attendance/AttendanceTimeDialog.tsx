@@ -6,7 +6,7 @@ import { useAttendanceTimeDialog } from './use-attendance-time-dialog'
 export interface AttendanceTimeDialogProps {
     isOpen: boolean
     onClose: () => void
-    onConfirm: (time: string) => void
+    onConfirm: (time: string, reason?: string) => void
     title: string
     employeeName: string
     confirmLabel: string
@@ -15,6 +15,7 @@ export interface AttendanceTimeDialogProps {
     inputId: string
     inputLabel: string
     isLoading?: boolean
+    requiresReason?: boolean
 }
 
 export function AttendanceTimeDialog({
@@ -29,12 +30,14 @@ export function AttendanceTimeDialog({
     inputId,
     inputLabel,
     isLoading = false,
+    requiresReason = false,
 }: Readonly<AttendanceTimeDialogProps>) {
     const { register, errors, isValid, handleConfirm, handleClose } =
         useAttendanceTimeDialog({
             isOpen,
             initialTime,
             maxTime,
+            requiresReason,
             onConfirm,
             onClose,
         })
@@ -68,6 +71,26 @@ export function AttendanceTimeDialog({
                             <span className="text-xs text-destructive">{errors.time.message}</span>
                         )}
                     </span>
+                    {requiresReason && (
+                        <span className="flex flex-col gap-1">
+                            <label
+                                htmlFor={`${inputId}-reason`}
+                                className="text-sm font-medium text-foreground"
+                            >
+                                Motivo de edición:
+                            </label>
+                            <textarea
+                                id={`${inputId}-reason`}
+                                rows={2}
+                                placeholder="Describe el motivo de esta corrección retroactiva..."
+                                {...register('reason')}
+                                className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground resize-none"
+                            />
+                            {errors.reason && (
+                                <span className="text-xs text-destructive">{errors.reason.message}</span>
+                            )}
+                        </span>
+                    )}
                 </span>
             }
             confirmLabel={confirmLabel}

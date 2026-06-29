@@ -108,7 +108,7 @@ describe('useAttendanceTimeDialog', () => {
             await result.current.handleConfirm()
         })
 
-        expect(onConfirm).toHaveBeenCalledWith('09:00')
+        expect(onConfirm).toHaveBeenCalledWith('09:00', undefined)
     })
 
     it('provides register function', () => {

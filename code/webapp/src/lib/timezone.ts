@@ -203,13 +203,13 @@ export function getTimezoneOffsetString(referenceDate: Date = new Date()): strin
 
 /**
  * Create an ISO 8601 datetime string with timezone offset from HH:mm time.
- * Uses today's date in the frontend timezone.
  *
  * @param hhmm - Time string in "HH:mm" format
+ * @param date - Optional date in "YYYY-MM-DD" format; defaults to today in the frontend timezone
  * @returns ISO 8601 string with timezone offset (e.g., "2026-04-16T09:30:00-06:00")
  * @throws TypeError if time format is invalid
  */
-export function timeToIsoWithOffset(hhmm: string): string {
+export function timeToIsoWithOffset(hhmm: string, date?: string): string {
     if (!hhmm?.includes(':')) {
         throw new TypeError(`Invalid time value: "${hhmm}"`);
     }
@@ -222,20 +222,26 @@ export function timeToIsoWithOffset(hhmm: string): string {
         throw new TypeError(`Invalid time value: "${hhmm}"`);
     }
 
-    const timezone = getFrontendTimezone();
     const now = new Date();
 
-    // Get today's date components in the target timezone
-    const dateFormatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    });
-    const todayDate = dateFormatter.format(now); // YYYY-MM-DD
+    let resolvedDate: string;
+    if (date) {
+        resolvedDate = date;
+    } else {
+        const timezone = getFrontendTimezone();
+        const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+        resolvedDate = dateFormatter.format(now); // YYYY-MM-DD
+    }
 
     const pad = (n: number) => String(n).padStart(2, '0');
-    const offset = getTimezoneOffsetString(now);
+    // Use noon on the target date so DST transitions on `date` are resolved correctly.
+    const referenceDate = date ? new Date(`${date}T12:00:00`) : now;
+    const offset = getTimezoneOffsetString(referenceDate);
 
-    return `${todayDate}T${pad(hours)}:${pad(minutes)}:00${offset}`;
+    return `${resolvedDate}T${pad(hours)}:${pad(minutes)}:00${offset}`;
 }

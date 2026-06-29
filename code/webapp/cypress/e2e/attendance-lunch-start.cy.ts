@@ -11,7 +11,7 @@
  * DB reset strategy
  * ─────────────────
  * • before()     → cy.task('test:reset', 'attendance') ONCE por archivo (~3-5s).
- * • beforeEach() → login vía UI + navega a /attendance/today.
+ * • beforeEach() → login vía UI + navega a /attendance.
  * • Cada it() usa un EMPLEADO DISTINTO — no se reutiliza ningún slot.
  *
  * Employees used (EMP-001..EMP-002 seeded via config/seeders.php):
@@ -48,8 +48,8 @@ beforeEach(() => {
   cy.loginByApi(adminEmail, adminPassword);
 
   // Visit with auth - sets localStorage before page loads
-  cy.visitWithAuth("/attendance/today");
-  cy.url().should("include", "/attendance/today", { timeout: 10_000 });
+  cy.visitWithAuth("/attendance");
+  cy.url().should("include", "/attendance", { timeout: 10_000 });
   cy.closeDevDebugger();
 
   // Mock Date for dialogs — the dialogs use Date.now() for default time

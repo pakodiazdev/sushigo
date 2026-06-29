@@ -8,6 +8,7 @@ use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\ScheduleDay;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
@@ -45,23 +46,32 @@ class CheckOutApiTest extends TestCase
     {
         parent::setUp();
 
+        Carbon::setTestNow(Carbon::parse(self::DATE.' 23:59:00'));
+
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
-        $role = Role::create(['name' => 'manager', 'guard_name' => 'api']);
+        $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $role->givePermissionTo('attendances.create');
 
         // Position roles required by Employee factory
         Role::firstOrCreate(['name' => 'employee',         'guard_name' => 'api']);
         Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'manager',          'guard_name' => 'api']);
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
 
         $this->user = User::factory()->create();
-        $this->user->assignRole('manager');
+        $this->user->assignRole('admin');
 
         Passport::actingAs($this->user);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow(null);
+        parent::tearDown();
     }
 
     // #region Happy path

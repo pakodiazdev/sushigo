@@ -32,7 +32,7 @@ export function useRegisterDirectLeave() {
     mutationFn: (data: RegisterDirectLeaveRequest) =>
       leaveApi.registerDirectLeave(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       queryClient.invalidateQueries({ queryKey: ['employees'] })
       showSuccess('Ausencia registrada correctamente.', 'Ausencia')
     },
@@ -80,7 +80,7 @@ export function useLeaveActions(employeeId: string) {
   const approveMutation = useMutation({
     mutationFn: (leaveId: string) => leaveApi.approveLeave(leaveId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendances', 'today'] })
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'leaves'] })
       queryClient.invalidateQueries({ queryKey: ['employees'] })
       showSuccess('Ausencia aprobada correctamente.', 'Aprobación')

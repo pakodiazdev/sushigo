@@ -18,8 +18,10 @@ import {
   useCloseDayPanel,
 } from '@/components/attendance'
 import { ExtraDayNegotiationDialog } from '@/components/attendance/ExtraDayNegotiationDialog'
+import { useAttendancePermissions } from '@/components/attendance/use-attendance-permissions'
 import { useTodayAttendancePage } from './-use-today-attendance-page'
 import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
+import { useAuthStore } from '@/stores/auth.store'
 import { todayDateCdmx } from '@/lib/datetime'
 import type { PendingAttendanceData } from './-use-today-attendance-page'
 import type { TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
@@ -77,12 +79,12 @@ function resolveOvertimeDialog(
   }
 }
 
-export const Route = createFileRoute('/attendance/today')({
+export const Route = createFileRoute('/attendance/')({
   beforeLoad: requirePermission('employees.view'),
-  component: TodayAttendancePage,
+  component: AttendancePage,
 })
 
-export function TodayAttendancePage() {
+export function AttendancePage() {
   const {
     rows,
     summary,
@@ -91,6 +93,8 @@ export function TodayAttendancePage() {
     branchName,
     hasBranch,
     branchId,
+    selectedDate,
+    setSelectedDate,
     // Check-in
     pendingCheckInEmployee,
     isCheckingIn,
@@ -138,6 +142,9 @@ export function TodayAttendancePage() {
 
   const maxTime = useApplicationTimeLabel()
   const closeDayPanel = useCloseDayPanel(rows, branchId, maxTime)
+  const isAdmin = useAuthStore(s => s.isAdmin)
+  const today = todayDateCdmx()
+  const { canEdit, requiresReason } = useAttendancePermissions(selectedDate)
 
   // Feed bulk overtime decisions from the close-day panel into the queue
   const { overtimePending, clearOvertimePending } = closeDayPanel
@@ -166,21 +173,32 @@ export function TodayAttendancePage() {
     )
   }
 
+  const isToday = selectedDate === today
+  const dateLabel = isToday
+    ? `Sucursal: ${branchName ?? '—'} — actualización automática cada 30 s`
+    : `Sucursal: ${branchName ?? '—'} — ${selectedDate}`
+
   return (
     <PageContainer>
       <PageHeader
-        title="Asistencia de Hoy"
-        description={
-          branchName
-            ? `Sucursal: ${branchName} — actualización automática cada 30 s`
-            : 'Actualización automática cada 30 s'
-        }
+        title="Asistencia"
+        description={branchName ? dateLabel : 'Actualización automática cada 30 s'}
         action={
           <div className="flex items-center gap-2">
             {isLoading && (
               <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
             )}
-            {rows.length > 0 && (
+            {/* Date picker — admin sees all past dates; manager is restricted to today */}
+            <input
+              type="date"
+              max={today}
+              min={isAdmin ? undefined : today}
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value || today)}
+              className="rounded border border-input bg-background px-2 py-1 text-sm text-foreground"
+              aria-label="Seleccionar fecha"
+            />
+            {isToday && rows.length > 0 && (
               <Button size="sm" onClick={closeDayPanel.open}>
                 <DoorClosed className="h-4 w-4 mr-1.5" />
                 Cerrar día
@@ -192,28 +210,28 @@ export function TodayAttendancePage() {
 
       <AttendanceSummaryBar summary={summary} />
 
-      {isError ? (
-        <ErrorState />
-      ) : isLoading && rows.length === 0 ? (
-        <SkeletonGrid />
-      ) : rows.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {rows.map((row) => (
-            <EmployeeAttendanceCard
-              key={row.employee.id}
-              row={row}
-              onCheckIn={openCheckIn}
-              onLunchStart={openLunchStart}
-              onLunchReturn={openLunchReturn}
-              onCheckOut={openCheckOut}
-              onOvertimeDecision={openOvertimeDecision}
-              onMarkDayStatus={markDayStatus}
-            />
-          ))}
-        </div>
-      )}
+      {(() => {
+        if (isError) return <ErrorState />
+        if (isLoading && rows.length === 0) return <SkeletonGrid />
+        if (rows.length === 0) return <EmptyState />
+        return (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {rows.map((row) => (
+              <EmployeeAttendanceCard
+                key={row.employee.id}
+                row={row}
+                canEdit={canEdit}
+                onCheckIn={openCheckIn}
+                onLunchStart={openLunchStart}
+                onLunchReturn={openLunchReturn}
+                onCheckOut={openCheckOut}
+                onOvertimeDecision={openOvertimeDecision}
+                onMarkDayStatus={markDayStatus}
+              />
+            ))}
+          </div>
+        )
+      })()}
 
       {/* Check-in dialog */}
       <AttendanceTimeDialog
@@ -228,6 +246,7 @@ export function TodayAttendancePage() {
         inputId="checkin-time"
         inputLabel="Hora de entrada"
         isLoading={isCheckingIn}
+        requiresReason={requiresReason}
       />
 
       {/* Lunch-start dialog */}
@@ -243,6 +262,7 @@ export function TodayAttendancePage() {
         inputId="lunch-time"
         inputLabel="Hora de salida"
         isLoading={isRegisteringLunch}
+        requiresReason={requiresReason}
       />
 
       {/* Lunch-return dialog */}
@@ -258,6 +278,7 @@ export function TodayAttendancePage() {
         inputId="lunch-return-time"
         inputLabel="Hora de regreso"
         isLoading={isRegisteringLunchReturn}
+        requiresReason={requiresReason}
       />
 
       {/* Check-out dialog */}
@@ -273,6 +294,7 @@ export function TodayAttendancePage() {
         inputId="checkout-time"
         inputLabel="Hora de salida"
         isLoading={isCheckingOut}
+        requiresReason={requiresReason}
       />
 
       {/* Overtime Decision Dialog — handles both individual and bulk day close flows */}
@@ -288,7 +310,7 @@ export function TodayAttendancePage() {
       {extraDayRow && (
         <ExtraDayNegotiationDialog
           employee={extraDayRow.employee}
-          date={todayDateCdmx()}
+          date={selectedDate}
           registeredDailyWage={extraDayRow.employee.daily_wage}
           isPending={isRegisteringExtraDay}
           onConfirm={confirmExtraDay}

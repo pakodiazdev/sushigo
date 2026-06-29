@@ -29,7 +29,7 @@ vi.mock('@/stores/auth.store', () => ({
 
 vi.mock('@/services/attendance-api', () => ({
   attendanceApi: {
-    today: vi.fn(),
+    daily: vi.fn(),
     checkIn: vi.fn(),
     lunchStart: vi.fn(),
     lunchReturn: vi.fn(),
@@ -309,7 +309,7 @@ describe('useTodayAttendancePage', () => {
   }
 
   beforeEach(() => {
-    vi.mocked(attendanceApi.today).mockResolvedValue(mockTodayResponse as never)
+    vi.mocked(attendanceApi.daily).mockResolvedValue(mockTodayResponse as never)
     vi.mocked(attendanceApi.checkIn).mockResolvedValue({ data: { status: 200, data: {} } } as never)
     vi.mocked(attendanceApi.lunchStart).mockResolvedValue({ data: { status: 200, data: {} } } as never)
     vi.mocked(attendanceApi.lunchReturn).mockResolvedValue({ data: { status: 200, data: {} } } as never)
@@ -335,7 +335,7 @@ describe('useTodayAttendancePage', () => {
     renderHook(() => useTodayAttendancePage(), { wrapper })
 
     await waitFor(() => {
-      expect(attendanceApi.today).toHaveBeenCalledWith(1)
+      expect(attendanceApi.daily).toHaveBeenCalled()
     })
   })
 

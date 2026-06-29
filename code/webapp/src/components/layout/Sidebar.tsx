@@ -67,7 +67,7 @@ const menuItems: MenuItem[] = [
         requiredPermission: 'employees.view',
         accessMode: 'hidden',
         subItems: [
-            { label: 'Hoy', path: '/attendance/today' },
+            { label: 'Asistencia', path: '/attendance' },
             { label: 'Reporte del Día', path: '/attendance/reports/today', requiredPermission: 'reports.today' },
             { label: 'Cierre de Nómina', path: '/attendance/payroll/close', requiredPermission: 'payroll.preview' },
             { label: 'Puntualidad', path: '/attendance/punctuality-config', requiredPermission: 'punctuality.manage' },

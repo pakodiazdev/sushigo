@@ -8,7 +8,7 @@
  * DB reset strategy
  * ─────────────────
  * • before()     → cy.task('test:reset', 'attendance') ONCE per file.
- * • beforeEach() → login via API + navigate to /attendance/today.
+ * • beforeEach() → login via API + navigate to /attendance.
  *
  * Employee used: EMP-009 (any seeded employee that doesn't overlap with
  * the check-in suite) — falls back to EMP-001 Mendoza, Carlos if only
@@ -38,8 +38,8 @@ beforeEach(() => {
   }).as('apiWithTestTime')
 
   cy.loginByApi(adminEmail, adminPassword)
-  cy.visitWithAuth('/attendance/today')
-  cy.url().should('include', '/attendance/today', { timeout: 10_000 })
+  cy.visitWithAuth('/attendance')
+  cy.url().should('include', '/attendance', { timeout: 10_000 })
   cy.closeDevDebugger()
 
   cy.clock(TEST_TIME_UTC.getTime(), ['Date'])
@@ -61,7 +61,7 @@ function getCard(lastName: string, firstName: string) {
  * Opens the register-leave dialog for an employee via the /employees panel
  * (the "Registrar ausencia" button was moved from the attendance card to the
  * employee detail panel in the Ausencias section), submits a FIXED_PERCENTAGE
- * leave (Incapacidad médica), then navigates back to /attendance/today so
+ * leave (Incapacidad médica), then navigates back to /attendance so
  * callers can verify the attendance card.
  */
 function registerMedicalAbsence(firstName: string, lastName: string) {
@@ -95,9 +95,9 @@ function registerMedicalAbsence(firstName: string, lastName: string) {
 
   cy.wait('@registerLeave').its('response.statusCode').should('eq', 201)
 
-  // Navigate back to /attendance/today so callers can verify the attendance card
-  cy.visitWithAuth('/attendance/today')
-  cy.url().should('include', '/attendance/today', { timeout: 10_000 })
+  // Navigate back to /attendance so callers can verify the attendance card
+  cy.visitWithAuth('/attendance')
+  cy.url().should('include', '/attendance', { timeout: 10_000 })
   cy.closeDevDebugger()
   cy.wait('@refetchAttendance', { timeout: 10_000 })
 }
@@ -145,9 +145,9 @@ describe('Register Leave — cancel closes dialog without changes', () => {
 
     cy.contains('h3', 'Registrar ausencia').should('not.exist')
 
-    // Navigate back to /attendance/today to verify the card is still pending
-    cy.visitWithAuth('/attendance/today')
-    cy.url().should('include', '/attendance/today', { timeout: 10_000 })
+    // Navigate back to /attendance to verify the card is still pending
+    cy.visitWithAuth('/attendance')
+    cy.url().should('include', '/attendance', { timeout: 10_000 })
     cy.closeDevDebugger()
 
     getCard('García', 'María').within(() => {

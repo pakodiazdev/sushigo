@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn } from '@/services/attendance-hooks'
+import { useDailyAttendance, useTodayAttendance, useCheckIn, useLunchStart, useLunchReturn } from '@/services/attendance-hooks'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ vi.mock('@/components/ui/toast-provider', () => ({
 
 vi.mock('@/services/attendance-api', () => ({
   attendanceApi: {
-    today: vi.fn(),
+    daily: vi.fn(),
     checkIn: vi.fn(),
     lunchStart: vi.fn(),
     lunchReturn: vi.fn(),
@@ -67,11 +67,11 @@ const mockAttendanceRecord = {
   },
 }
 
-// ── useTodayAttendance ─────────────────────────────────────────────────────────
+// ── useDailyAttendance ─────────────────────────────────────────────────────────
 
-describe('useTodayAttendance', () => {
+describe('useDailyAttendance', () => {
   beforeEach(() => {
-    vi.mocked(attendanceApi.today).mockResolvedValue(mockTodayResponse as never)
+    vi.mocked(attendanceApi.daily).mockResolvedValue(mockTodayResponse as never)
   })
   afterEach(() => {
     vi.clearAllMocks()
@@ -79,35 +79,40 @@ describe('useTodayAttendance', () => {
 
   it('returns undefined data when branchId is null (query disabled)', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useTodayAttendance(null), { wrapper })
+    const { result } = renderHook(() => useDailyAttendance(null), { wrapper })
 
-    // When disabled (null branchId), the query doesn't run and data is undefined
     expect(result.current.data).toBeUndefined()
-    expect(attendanceApi.today).not.toHaveBeenCalled()
+    expect(attendanceApi.daily).not.toHaveBeenCalled()
   })
 
   it('fetches attendance data when branchId is provided', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useTodayAttendance(5), { wrapper })
+    const { result } = renderHook(() => useDailyAttendance(5), { wrapper })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(attendanceApi.today).toHaveBeenCalledWith(5)
+    expect(attendanceApi.daily).toHaveBeenCalledWith(5, undefined)
     expect(result.current.data).toEqual(mockTodayResponse.data.data)
   })
 
   it('is disabled when branchId is null', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useTodayAttendance(null), { wrapper })
+    const { result } = renderHook(() => useDailyAttendance(null), { wrapper })
 
-    // Query should still succeed but with empty data (not in loading state)
     expect(result.current.fetchStatus).toBe('idle')
   })
 
-  it('passes different branchId values correctly', async () => {
+  it('passes date param when provided', async () => {
     const { wrapper } = makeWrapper()
-    renderHook(() => useTodayAttendance(10), { wrapper })
+    renderHook(() => useDailyAttendance(10, '2026-06-23'), { wrapper })
 
-    await waitFor(() => expect(attendanceApi.today).toHaveBeenCalledWith(10))
+    await waitFor(() => expect(attendanceApi.daily).toHaveBeenCalledWith(10, '2026-06-23'))
+  })
+
+  it('useTodayAttendance alias still works', async () => {
+    const { wrapper } = makeWrapper()
+    renderHook(() => useTodayAttendance(5), { wrapper })
+
+    await waitFor(() => expect(attendanceApi.daily).toHaveBeenCalled())
   })
 })
 
@@ -190,7 +195,7 @@ describe('useCheckIn', () => {
       })
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'today'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'daily'] })
   })
 })
 
@@ -282,7 +287,7 @@ describe('useLunchStart', () => {
       })
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'today'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'daily'] })
   })
 
   it('passes attendance_id and lunch_start separately', async () => {
@@ -391,7 +396,7 @@ describe('useLunchReturn', () => {
       })
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'today'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'daily'] })
   })
 
   it('passes attendance_id and lunch_end separately', async () => {

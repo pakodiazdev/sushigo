@@ -40,23 +40,35 @@ class CheckInApiTest extends TestCase
     {
         parent::setUp();
 
+        // Set "now" to 23:30 Mexico City on self::DATE (= 05:30 UTC next calendar day).
+        // This keeps Carbon::today('America/Mexico_City') = self::DATE (midnight MX = 06:00 UTC)
+        // while placing all night-shift check-ins (23:00-06:00, 23:10-06:00) in the past.
+        Carbon::setTestNow(Carbon::parse('2026-02-24 05:30:00'));
+
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
-        $role = Role::create(['name' => 'manager', 'guard_name' => 'api']);
+        $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $role->givePermissionTo('attendances.create');
 
         // Position roles required by Employee factory
         Role::firstOrCreate(['name' => 'employee',         'guard_name' => 'api']);
         Role::firstOrCreate(['name' => 'employee-manager', 'guard_name' => 'api']);
+        Role::firstOrCreate(['name' => 'manager',          'guard_name' => 'api']);
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
 
         $this->user = User::factory()->create();
-        $this->user->assignRole('manager');
+        $this->user->assignRole('admin');
 
         Passport::actingAs($this->user);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow(null);
+        parent::tearDown();
     }
 
     #[Test]
@@ -327,6 +339,7 @@ class CheckInApiTest extends TestCase
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
             'check_in' => self::SUNDAY_CHECK_IN,
+            'reason' => 'Test: schedule override allows check-in on rest day',
         ]);
 
         $response->assertStatus(201)

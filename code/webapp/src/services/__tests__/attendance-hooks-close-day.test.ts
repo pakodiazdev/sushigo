@@ -132,7 +132,7 @@ describe('useCheckOut', () => {
       })
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'today'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'daily'] })
   })
 })
 
@@ -264,7 +264,7 @@ describe('useCloseDay', () => {
       await result.current.mutateAsync({ branch_id: 1, close_time: '22:00' })
     })
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'today'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'daily'] })
   })
 
   it('sends request without lunch_returns when none provided', async () => {
