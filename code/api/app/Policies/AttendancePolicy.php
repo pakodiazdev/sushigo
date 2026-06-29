@@ -4,10 +4,12 @@ namespace App\Policies;
 
 use App\Models\Attendance;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Support\Clock\ApplicationClock;
 
 class AttendancePolicy
 {
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     /**
      * Determine whether the user can edit an existing attendance record.
      *
@@ -36,6 +38,6 @@ class AttendancePolicy
 
     private function isToday(string $date): bool
     {
-        return $date === Carbon::today(config('app.business_timezone'))->toDateString();
+        return $date === $this->clock->todayInBusinessTz();
     }
 }
