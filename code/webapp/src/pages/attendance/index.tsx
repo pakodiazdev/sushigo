@@ -174,6 +174,11 @@ export function AttendancePage() {
   }
 
   const isToday = selectedDate === today
+  // For past-day corrective entries, allow any time up to 23:59 and start blank so
+  // the admin must explicitly type the time rather than accidentally submitting the
+  // current clock time.
+  const effectiveMaxTime = isToday ? maxTime : '23:59'
+  const effectiveInitialTime = isToday ? maxTime : ''
   const dateLabel = isToday
     ? `Sucursal: ${branchName ?? '—'} — actualización automática cada 30 s`
     : `Sucursal: ${branchName ?? '—'} — ${selectedDate}`
@@ -241,8 +246,8 @@ export function AttendancePage() {
         title="Registrar entrada"
         employeeName={checkInName(pendingCheckInEmployee)}
         confirmLabel="Confirmar entrada"
-        initialTime={maxTime}
-        maxTime={maxTime}
+        initialTime={effectiveInitialTime}
+        maxTime={effectiveMaxTime}
         inputId="checkin-time"
         inputLabel="Hora de entrada"
         isLoading={isCheckingIn}
@@ -257,8 +262,8 @@ export function AttendancePage() {
         title="Salir a comer"
         employeeName={pendingName(pendingLunchStart)}
         confirmLabel="Confirmar salida"
-        initialTime={maxTime}
-        maxTime={maxTime}
+        initialTime={effectiveInitialTime}
+        maxTime={effectiveMaxTime}
         inputId="lunch-time"
         inputLabel="Hora de salida"
         isLoading={isRegisteringLunch}
@@ -273,8 +278,8 @@ export function AttendancePage() {
         title="Regresar de comida"
         employeeName={pendingName(pendingLunchReturn)}
         confirmLabel="Confirmar regreso"
-        initialTime={maxTime}
-        maxTime={maxTime}
+        initialTime={effectiveInitialTime}
+        maxTime={effectiveMaxTime}
         inputId="lunch-return-time"
         inputLabel="Hora de regreso"
         isLoading={isRegisteringLunchReturn}
@@ -289,8 +294,8 @@ export function AttendancePage() {
         title="Registrar salida"
         employeeName={pendingName(pendingCheckOut)}
         confirmLabel="Confirmar salida"
-        initialTime={maxTime}
-        maxTime={maxTime}
+        initialTime={effectiveInitialTime}
+        maxTime={effectiveMaxTime}
         inputId="checkout-time"
         inputLabel="Hora de salida"
         isLoading={isCheckingOut}
