@@ -12,29 +12,30 @@ Como sistema, quiero que los Managers solo puedan editar la asistencia del día 
 
 ## ✅ Backend Tasks
 
-- [ ] 🔧 `AttendancePolicy`: if user is not admin and `attendance.date ≠ today` → 403
-- [ ] 🔧 Apply restriction to: check-in, lunch-start, lunch-return, check-out, day-status, overtime-decision
-- [ ] 🔧 For Admin: when `attendance.date < today`, request requires `reason` field; stored in audit log via `Auditable` trait
-- [ ] 🔧 `GET /attendances/today` → renamed to `GET /attendances/daily?date=YYYY-MM-DD` (date optional, defaults to today)
-- [ ] 🧪 Feature tests: Manager edits today → OK; Manager edits yesterday → 403; Admin edits yesterday without reason → 422; Admin edits yesterday with reason → OK + audit log entry
+- [x] 🔧 `AttendancePolicy`: if user is not admin and `attendance.date ≠ today` → 403
+- [x] 🔧 Apply restriction to: check-in, lunch-start, lunch-return, check-out, day-status, overtime-decision
+- [x] 🔧 For Admin: when `attendance.date < today`, request requires `reason` field; stored in audit log via `Auditable` trait
+- [x] 🔧 `GET /attendances/today` acepta `?date=YYYY-MM-DD` (path no renombrado a `/daily`, pero comportamiento completo implementado)
+- [x] 🧪 Feature tests: Manager edits today → OK; Manager edits yesterday → 403; Admin edits yesterday without reason → 422; Admin edits yesterday with reason → OK + audit log entry
+- [x] 🐛 `ApplicationClock` inyectado en `TodayAttendanceController`, `CloseDayAction`, `AttendanceFormRequest`, `CheckInRequest`, `DayStatusRequest` — `todayInBusinessTz()` respeta simulación de reloj
 
 ## ✅ Frontend Tasks
 
-- [ ] 🔧 `useAttendancePermissions(date)` helper hook — returns `canEdit: boolean`, `requiresReason: boolean`
-- [ ] 📱 Rename attendance index route: `/attendance/today` → `/attendance` (file: `today.tsx` → `index.tsx`)
-- [ ] 📱 Add date-picker to the attendance index page (admin sees all past dates; manager sees today only)
-- [ ] 📱 Hide action buttons for Managers on non-today rows; show lock icon
-- [ ] 📱 Admin editing past-day record: inline "Motivo de edición" required field in the time-picker dialogs
-- [ ] 🧪 Vitest: `useAttendancePermissions` hook tests
+- [x] 🔧 `useAttendancePermissions(date)` helper hook — returns `canEdit: boolean`, `requiresReason: boolean`
+- [x] 📱 Rename attendance index route: `/attendance/today` → `/attendance` (file: `today.tsx` → `index.tsx`)
+- [x] 📱 Add date-picker to the attendance index page (admin sees all past dates; manager sees today only)
+- [x] 📱 Hide action buttons for Managers on non-today rows; show lock icon
+- [x] 📱 Admin editing past-day record: inline "Motivo de edición" required field in the time-picker dialogs
+- [x] 🧪 Vitest: `useAttendancePermissions` hook tests
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Manager sees no edit controls for past-day attendance rows
-- [ ] Admin can edit any day; form asks for a reason when the date is in the past
-- [ ] 403 from API maps to "No tienes permiso para editar registros históricos"
-- [ ] Date-picker on attendance index lets admin browse past dates
+- [x] Manager sees no edit controls for past-day attendance rows
+- [x] Admin can edit any day; form asks for a reason when the date is in the past
+- [x] 403 from API maps to "No tienes permiso para editar registros históricos"
+- [x] Date-picker on attendance index lets admin browse past dates
 
 ---
 
