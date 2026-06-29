@@ -47,7 +47,12 @@ class CheckInRequest extends FormRequest
             return true; // validation will reject it
         }
 
-        $date = Carbon::parse($checkInInput)->toDateString();
+        try {
+            $date = Carbon::parse($checkInInput)->toDateString();
+        } catch (\Throwable) {
+            return true; // unparseable date — let validation reject it with 422
+        }
+
         $today = $this->clock->todayInBusinessTz();
 
         $user = $this->user();
@@ -88,7 +93,13 @@ class CheckInRequest extends FormRequest
         $user = $this->user();
         $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
         $today = $this->clock->todayInBusinessTz();
-        $date = Carbon::parse($checkInInput)->toDateString();
+
+        try {
+            $date = Carbon::parse($checkInInput)->toDateString();
+        } catch (\Throwable) {
+            return ['nullable', 'string', 'max:500']; // unparseable — validation will reject
+        }
+
         $isPastDay = $date < $today;
 
         return ($isAdmin && $isPastDay)
