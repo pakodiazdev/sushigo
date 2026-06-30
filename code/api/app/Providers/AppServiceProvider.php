@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Contracts\PasswordResetTokenRecorder;
+use App\Contracts\VacationEntitlementRule;
 use App\Services\Testing\FileTokenRecorder;
 use App\Services\Testing\NullTokenRecorder;
+use App\Services\VacationRules\VacationsLFTMX;
 use App\Support\Clock\ApplicationClock;
 use App\Support\Clock\DatabaseApplicationClock;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Application Clock: single source of truth for business time
         $this->app->singleton(ApplicationClock::class, DatabaseApplicationClock::class);
+
+        // Active vacation entitlement rule — locked to LFT Mexico 2022 until #214
+        $this->app->bind(VacationEntitlementRule::class, VacationsLFTMX::class);
     }
 
     /**

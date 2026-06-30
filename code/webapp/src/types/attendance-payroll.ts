@@ -114,3 +114,14 @@ export interface PayPeriodPreviewResponse {
   status: number
   data: PayPeriodEmployeePreview[]
 }
+
+// ── Vacation Entitlement ───────────────────────────────────────────────────────
+
+export interface VacationEntitlement {
+  id: number
+  year: number
+  entitled_days: number
+  used_days: number
+  remaining_days: number
+  rule_key: string
+}
