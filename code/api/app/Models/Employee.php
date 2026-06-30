@@ -114,6 +114,11 @@ class Employee extends Model
         return $this->hasMany(NegotiatedExtraDay::class)->orderBy('date', 'desc');
     }
 
+    public function vacationEntitlements(): HasMany
+    {
+        return $this->hasMany(VacationEntitlement::class)->orderBy('year', 'desc');
+    }
+
     public function employeeRequests(): HasMany
     {
         return $this->hasMany(EmployeeRequest::class)->orderBy('created_at', 'desc');

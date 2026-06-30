@@ -15,6 +15,7 @@ import { ExtraDaySection } from './extra-day-section'
 import { usePermissionManager } from './use-permission-manager'
 import { PermissionManagerDialog } from './permission-manager-dialog'
 import { BonusConfigSection } from './bonus-config-section'
+import { VacationSection } from './vacation-section'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -98,6 +99,11 @@ export function EmployeeDetailView({
 
       {/* Wage history */}
       <WageHistorySection employeeId={employee.id} />
+
+      <hr className="border-border" />
+
+      {/* Vacation entitlements */}
+      <VacationSection employeeId={employee.id} />
 
       <hr className="border-border" />
 
