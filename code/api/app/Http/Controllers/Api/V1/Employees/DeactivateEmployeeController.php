@@ -22,6 +22,7 @@ class DeactivateEmployeeController extends Controller
                 'is_active' => false,
                 'end_date' => $request->end_date,
                 'termination_reason' => $request->termination_reason,
+                'termination_type' => $request->termination_type,
             ]);
 
             $employee->update(['is_active' => false]);

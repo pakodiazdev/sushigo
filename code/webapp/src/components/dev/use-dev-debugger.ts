@@ -13,6 +13,7 @@ export interface DebuggerState {
         queries: boolean
         devLogin: boolean
         pageActions: boolean
+        clock: boolean
     }
 }
 
@@ -29,6 +30,7 @@ function getDefaultState(): DebuggerState {
             queries: false,
             devLogin: true,
             pageActions: true,
+            clock: false,
         },
     }
 }

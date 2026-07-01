@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useDailyAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { useExtraDayExpress } from '@/components/attendance/use-extra-day-express'
 import { getAttendancePhase } from '@/types/attendance'
 import { todayDateCdmx } from '@/lib/datetime'
 import { timeToIsoWithOffset } from '@/lib/timezone'
+import { useBusinessDate } from '@/stores/clock.store'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
 
@@ -116,7 +117,13 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const currentBranch = useAuthStore(s => s.currentBranch)
   const branchId = currentBranch?.id ?? null
 
-  const [selectedDate, setSelectedDate] = useState<string>(todayDateCdmx())
+  const businessDate = useBusinessDate()
+  const [selectedDate, setSelectedDate] = useState<string>(businessDate ?? todayDateCdmx())
+
+  // Sync selectedDate when business_date changes (clock simulation, Layout pre-fetch)
+  useEffect(() => {
+    if (businessDate) setSelectedDate(businessDate)
+  }, [businessDate])
 
   const { data = [], isLoading, isError } = useDailyAttendance(branchId, selectedDate)
   const checkInMutation = useCheckIn()

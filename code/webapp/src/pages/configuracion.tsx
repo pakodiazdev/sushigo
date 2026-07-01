@@ -1,37 +1,39 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { requireRole } from '@/lib/route-guards';
-import { PageContainer } from '@/components/ui/page-container';
-import { PageHeader } from '@/components/ui/page-header';
-import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
-import { ClockDebugPanel } from '@/components/devtools/ClockDebugPanel';
+import { useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { requirePermission } from '@/lib/route-guards'
+import { PageContainer } from '@/components/ui/page-container'
+import { PageHeader } from '@/components/ui/page-header'
+import { Tabs, TabPanel } from '@/components/ui/tabs'
+import { PunctualityConfigSection } from '@/components/settings/punctuality-config-section'
 
 export const Route = createFileRoute('/configuracion')({
-    beforeLoad: requireRole('super-admin'),
+    beforeLoad: requirePermission('settings.manage'),
     component: ConfiguracionPage,
-});
+})
+
+const TABS = [
+    { id: 'puntualidad', label: 'Puntualidad' },
+]
 
 export function ConfiguracionPage() {
+    const [activeTab, setActiveTab] = useState('puntualidad')
+
     return (
         <PageContainer>
             <PageHeader
                 title="Configuración"
                 description="Configura los parámetros del sistema"
-            >
-                <Button className="gap-2">
-                    <Save className="h-4 w-4" />
-                    Guardar Cambios
-                </Button>
-            </PageHeader>
+            />
 
-            <div className="mt-6 grid gap-6">
-                {/* Clock Debug Panel - only shows if feature is available */}
-                <ClockDebugPanel />
+            <div className="mt-6 rounded-lg border border-border">
+                <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
 
-                <div className="p-8 text-center border-2 border-dashed rounded-lg border-sushigo-cream/50">
-                    <p className="text-muted-foreground">Más opciones de configuración próximamente</p>
+                <div className="p-6">
+                    <TabPanel id="puntualidad" activeTab={activeTab}>
+                        <PunctualityConfigSection />
+                    </TabPanel>
                 </div>
             </div>
         </PageContainer>
-    );
+    )
 }

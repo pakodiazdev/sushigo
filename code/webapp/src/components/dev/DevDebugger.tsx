@@ -13,12 +13,14 @@ import {
     Loader2,
     GitBranch,
     Zap,
+    Clock,
     type LucideIcon,
 } from 'lucide-react'
 import { useRouterState } from '@tanstack/react-router'
 import { gitBranch } from 'virtual:git-branch'
 import { useDevDebugger } from './use-dev-debugger'
 import { PayrollCloseActions } from './page-actions/payroll-close-actions'
+import { ClockDebugPanel } from '@/components/devtools/ClockDebugPanel'
 
 const PAGE_ACTIONS: Record<string, { title: string; component: React.ReactNode }> = {
     '/attendance/payroll/close': {
@@ -390,6 +392,15 @@ export function DevDebugger() {
                         </div>
                     </Section>
                 )}
+
+                <Section
+                    icon={Clock}
+                    title="Reloj (Simulación)"
+                    isExpanded={state.expandedSections.clock}
+                    onToggle={() => toggleSection('clock')}
+                >
+                    <ClockDebugPanel />
+                </Section>
 
                 <Section
                     icon={RefreshCw}

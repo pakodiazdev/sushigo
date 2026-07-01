@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TerminationType;
 use App\Support\Traits\HasPublicId;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,7 @@ class EmploymentPeriod extends Model
         'start_date',
         'end_date',
         'termination_reason',
+        'termination_type',
         'is_active',
         'meta',
     ];
@@ -29,6 +31,7 @@ class EmploymentPeriod extends Model
         'end_date' => 'date',
         'is_active' => 'boolean',
         'meta' => 'array',
+        'termination_type' => TerminationType::class,
     ];
 
     public function employee(): BelongsTo

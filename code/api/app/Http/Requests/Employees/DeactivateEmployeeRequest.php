@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Employees;
 
+use App\Enums\TerminationType;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class DeactivateEmployeeRequest extends FormRequest
 {
@@ -17,6 +19,7 @@ class DeactivateEmployeeRequest extends FormRequest
         return [
             'end_date' => ['required', 'date'],
             'termination_reason' => ['nullable', 'string', 'max:500'],
+            'termination_type' => ['nullable', new Enum(TerminationType::class)],
         ];
     }
 
