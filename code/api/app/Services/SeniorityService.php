@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\VacationEntitlementRule;
 use App\Models\Employee;
-use App\Models\VacationPolicy;
 use Carbon\Carbon;
 
 class SeniorityService
 {
+    public function __construct(private readonly VacationEntitlementRule $rule) {}
+
     /**
      * Effective seniority start date considering employment period continuity.
      *
@@ -53,7 +55,7 @@ class SeniorityService
     }
 
     /**
-     * Next anniversary details: date, seniority year number, and entitled days from policy.
+     * Next anniversary details: date, seniority year number, and entitled days from active rule.
      */
     public function nextAnniversary(Employee $employee, ?Carbon $at = null): array
     {
@@ -64,42 +66,17 @@ class SeniorityService
         $nextSeniorityYear = $completedYears + 1;
         $nextAnniversaryDate = $start->copy()->addYears($nextSeniorityYear);
 
-        $entitledDays = $this->entitledDaysForSeniorityYear($nextSeniorityYear, $nextAnniversaryDate);
-
         return [
             'date' => $nextAnniversaryDate->toDateString(),
             'seniority_year' => $nextSeniorityYear,
-            'entitled_days' => $entitledDays,
+            'entitled_days' => $this->rule->calculate($nextSeniorityYear),
             'days_until' => (int) $at->diffInDays($nextAnniversaryDate, false),
         ];
     }
 
-    /**
-     * Days entitled for a given seniority year, using the policy effective on that date.
-     */
-    public function entitledDaysForSeniorityYear(int $year, Carbon $onDate): int
+    public function entitledDaysForSeniorityYear(int $year): int
     {
-        $policy = VacationPolicy::where('year_of_seniority', $year)
-            ->where('effective_from', '<=', $onDate->toDateString())
-            ->orderByDesc('effective_from')
-            ->first();
-
-        if ($policy) {
-            return $policy->entitled_days;
-        }
-
-        // Fallback: find highest defined year and extrapolate LFT pattern (+2 per 5 years)
-        $maxPolicy = VacationPolicy::where('effective_from', '<=', $onDate->toDateString())
-            ->orderByDesc('year_of_seniority')
-            ->first();
-
-        if (! $maxPolicy) {
-            return 12; // LFT minimum
-        }
-
-        $extraFiveYearPeriods = (int) ceil(($year - $maxPolicy->year_of_seniority) / 5);
-
-        return $maxPolicy->entitled_days + ($extraFiveYearPeriods * 2);
+        return $this->rule->calculate($year);
     }
 
     /**

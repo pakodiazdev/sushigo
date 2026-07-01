@@ -6,8 +6,8 @@ use App\Enums\TerminationType;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
-use App\Models\VacationPolicy;
 use App\Services\SeniorityService;
+use App\Services\VacationRules\VacationsLFTMX;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -32,12 +32,7 @@ class SeniorityServiceTest extends TestCase
 
         $this->branch = Branch::factory()->create();
 
-        $scale = [1 => 12, 2 => 14, 3 => 16, 4 => 18];
-        foreach ($scale as $year => $days) {
-            VacationPolicy::create(['year_of_seniority' => $year, 'entitled_days' => $days, 'effective_from' => '2023-01-01']);
-        }
-
-        $this->service = new SeniorityService;
+        $this->service = new SeniorityService(new VacationsLFTMX);
     }
 
     private function employeeWithPeriod(string $startDate, bool $active = true): Employee
