@@ -3,85 +3,74 @@
 ## 📖 Story
 
 **English:**
-As an Admin, I want the system to automatically generate vacation entitlements at each employee anniversary based on a configurable LFT policy scale, so that HR no longer needs to register entitlements manually and legal compliance is guaranteed.
+As an Admin, I want the system to automatically generate vacation entitlements at each employee anniversary using the active LFT rule, so that HR no longer needs to register entitlements manually and legal compliance is guaranteed.
 
 **Español:**
-Como Admin, quiero que el sistema genere automáticamente los derechos vacacionales en cada aniversario del empleado, basándose en una escala configurable de la LFT, para que RH ya no registre derechos manualmente y se garantice el cumplimiento legal.
+Como Admin, quiero que el sistema genere automáticamente los derechos vacacionales en cada aniversario del empleado usando la regla LFT activa, para que RH ya no registre derechos manualmente y se garantice el cumplimiento legal.
+
+---
+
+## 🏗️ Design Decision (post-rebase onto #081)
+
+The original design used a `vacation_policies` DB table (configurable LFT scale). After #081 was merged with the `VacationEntitlementRule` strategy pattern, the DB-driven policy table was dropped in favor of the IoC-bound `VacationsLFTMX` strategy. This keeps the rule in code (where it belongs for a legal standard) and eliminates CRUD surface.
+
+`SeniorityService` was refactored to inject `VacationEntitlementRule` instead of querying `VacationPolicy`. The auto-generation runs as an Artisan command (`vacation:generate-entitlements`) rather than on first GET.
 
 ---
 
 ## ✅ Backend Tasks
 
-### Infrastructure
-- [x] 📂 Migration: add `termination_type` enum to `employment_periods` (`resignation`, `dismissal`, `contract_end`, `internal_transfer`, `other`)
-- [x] 📂 Migration: create `vacation_policies` table (`year_of_seniority`, `entitled_days`, `effective_from`, UNIQUE `(year_of_seniority, effective_from)`)
-- [ ] 📂 Migration: alter `vacation_entitlements` — add `seniority_year`, `anniversary_date`, `must_schedule_before`, `expires_at`, `is_manual_override`, `overridden_by`; replace UNIQUE `(employee_id, year)` → `(employee_id, anniversary_date)` **(deferred to #081 refactor)**
-- [x] 🔧 Update `EmploymentPeriod` model and `DeactivateEmployeeRequest` to include `termination_type`
-- [x] 🔧 `VacationPolicy` model
-- [ ] 🔧 Update `VacationEntitlement` model with new fields and casts **(deferred to #081 refactor)**
-
-### Services
-- [x] 🔧 `SeniorityService` — `effectiveStartDate(Employee)`, `completedYears(Employee, ?Carbon)`, `nextAnniversary(Employee)`
-- [x] 🔧 `entitledDaysForSeniorityYear(int, Carbon)` — integrated into `SeniorityService`
-- [ ] 🔧 `VacationEntitlementSyncService` — retroactively generate all past anniversaries on first GET **(deferred to #081 refactor)**
-
-### API
-- [x] 🌐 `GET /api/v1/settings/vacation-policy` — list policy rows (admin only)
-- [x] 🌐 `POST /api/v1/settings/vacation-policy` — add row (admin only)
-- [x] 🌐 `PUT /api/v1/settings/vacation-policy/{id}` — update row (admin only)
-- [x] 🌐 `DELETE /api/v1/settings/vacation-policy/{id}` — remove row (admin only)
-- [ ] 🌐 Update `GET /employees/{id}/vacation-entitlements` — call sync, return `next_anniversary` + `alerts` **(deferred to #081 refactor)**
-
-### Seeders
-- [x] 🌱 `VacationPolicySeeder` — LFT 2023 scale (effective 2023-01-01, years 1–40)
-- [ ] 🌱 Update `EmployeeSeeder` / `AttendanceTestSeeder` to set `termination_type` on closed periods **(deferred to #081 refactor)**
-
-### Tests
-- [x] 🧪 Unit: `SeniorityServiceTest` — continuity across `internal_transfer`, reset on resignation/dismissal (9 tests)
-- [ ] 🧪 Unit: `VacationEntitlementSyncServiceTest` — retroactive generation, correct days from policy **(deferred to #081)**
-- [x] 🧪 Feature: `VacationPolicyTest` — CRUD happy path, admin-only (10 tests)
-- [ ] 🧪 Feature: update `VacationEntitlementTest` — enriched response with `next_anniversary` and `alerts` **(deferred to #081)**
+- [x] 📂 Migration: add `termination_type` enum to `employment_periods`
+- [x] 🔧 Update `EmploymentPeriod` model with `termination_type` cast
+- [x] 🔧 Update `DeactivateEmployeeRequest` + `DeactivateEmployeeController` to accept `termination_type`
+- [x] 🔧 `TerminationType` enum — `resetsSeniority()` returns false only for `internal_transfer`
+- [x] 🔧 `SeniorityService` — `effectiveStartDate()`, `completedYears()`, `nextAnniversary()`, `entitledDaysForSeniorityYear()` — delegates to injected `VacationEntitlementRule`
+- [x] 🔧 `vacation:generate-entitlements` artisan command — iterates active employees, creates `VacationEntitlement` for each past anniversary not yet registered
+  - `--dry-run` — preview without saving
+  - `--employee=ID` — process a single employee
+- [x] 🔧 Add `settings.manage` permission to `PermissionSeeder`
+- [x] 🧪 Unit: `SeniorityServiceTest` — 9 tests covering continuity, resets, completed years, next anniversary
+- [x] 🧪 Feature: `GenerateAnniversaryEntitlementsTest` — 5 tests: creates past years, skips existing, dry-run, employee filter, no-completed-years
 
 ## ✅ Frontend Tasks
 
-- [x] 📝 Add `VacationPolicy` type to `src/types/attendance-payroll.ts`
-- [x] 🔧 `vacation-policy-api.ts` — CRUD service functions
-- [x] 🔧 `vacation-policy-hooks.ts` — `useVacationPolicy`, `useCreateVacationPolicy`, `useUpdateVacationPolicy`, `useDeleteVacationPolicy`
-- [x] 📱 `VacationPolicyTable` component + integrated into `/configuracion` page
-- [ ] 📱 Update `VacationEntitlementSection` — remove "Registrar derecho" button, add next anniversary card and alerts **(deferred to #081 refactor)**
+- [x] 📝 Add `TerminationType` to `src/types/attendance-payroll.ts`
+- [x] 📱 `Tabs` + `TabPanel` UI components (`src/components/ui/tabs.tsx`)
+- [x] 📱 `PunctualityConfigSection` placeholder (`src/components/settings/punctuality-config-section.tsx`)
+- [x] 🔌 `/configuracion` page refactored: `requireRole('super-admin')` → `requirePermission('settings.manage')`, tabs layout with Puntualidad tab
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [x] `termination_type` enum on `employment_periods` distinguishes internal transfers from real terminations
-- [x] `VacationPolicy` table seeded with LFT 2023 scale
-- [x] `SeniorityService` accumulates seniority across `internal_transfer` and resets on real terminations
-- [ ] First GET auto-generates all past anniversaries retroactively **(deferred to #081)**
-- [ ] GET response includes `next_anniversary` and `alerts` (must_schedule, expiring) **(deferred to #081)**
-- [x] VacationPolicy CRUD endpoints work, admin-only (403 for other roles)
-- [x] Frontend settings page renders and allows editing the policy scale
-- [x] PHPUnit coverage ≥ 80% on new code (19 tests)
-- [x] Cypress E2E: admin views and edits vacation policy
+- [x] `termination_type` on `employment_periods` distinguishes internal transfers from real terminations
+- [x] `SeniorityService` accumulates seniority across `internal_transfer` and resets on resignation/dismissal/contract_end
+- [x] `vacation:generate-entitlements` creates `VacationEntitlement` records for all past anniversaries using `VacationsLFTMX`
+- [x] Dry-run mode previews without saving
+- [x] `/configuracion` accessible to users with `settings.manage` permission (not only super-admin)
+- [x] PHPUnit: 14 new tests passing (9 unit + 5 feature)
+- [ ] Cypress E2E for anniversary command — deferred to dedicated ops task
 
 ---
 
 ## 🔗 References
 
-- **Related PR:** #207 (will be refactored after this issue)
-- **LFT:** Art. 76–81, Reforma Vacaciones Dignas 2023 (DOF 2022-12-27)
+- **PR:** #213
+- **Depends on:** #081 (merged — provides `VacationEntitlementRule`, `VacationsLFTMX`, `vacation_entitlements` table)
+- **LFT:** Art. 76, Reforma Vacaciones Dignas 2022 (DOF 2022-12-27)
 
 ---
 
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `4h` · **Pessimistic:** `8h` · **Tracked:** `5h`
+- **Optimistic:** `4h` · **Pessimistic:** `8h` · **Tracked:** `8h`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-06-29", "start": "17:33", "end": "22:33" }
+  { "date": "2026-06-29", "start": "17:33", "end": "22:33" },
+  { "date": "2026-06-30", "start": "14:00", "end": "17:00" }
 ]
 ```
 
@@ -89,16 +78,11 @@ Como Admin, quiero que el sistema genere automáticamente los derechos vacaciona
 
 ## 📊 Retrospective
 
-**Estimate:** 4h optimistic / 8h pessimistic  
-**Tracked:** 5h  
-**Variance:** On estimate (+1h over optimistic)
+**Estimated:** 4h–8h · **Tracked:** ~8h · **Variance:** on estimate
 
 **What slowed us down:**
-- `SeniorityService` had a bug where `orderBy('start_date')` on the `employmentPeriods()` relation (which defaults to `DESC`) produced wrong ordering — fixed with `reorder()`.
-- `Employee::factory()->create()` does NOT auto-create an `EmploymentPeriod` — tests needed to create periods explicitly.
-- Scope was clarified during planning: `VacationEntitlementSyncService` and the `vacation_entitlements` table alterations were deferred to the #081 refactor to avoid a large cross-branch diff.
+- **Workspace collision with #081 (+1h):** sushigo-b had implemented #212 with the `vacation_policies` DB approach. After #081 merged with the strategy pattern, the branch had to be fully rebased and the architecture adapted — `vacation_policies` CRUD dropped, `SeniorityService` refactored to inject `VacationEntitlementRule`, new command written.
+- **`reorder()` bug in SeniorityService (+20m):** `employmentPeriods()` relation defaults to `DESC`; using plain `orderBy('start_date')` appended a secondary sort instead of replacing it. Fixed with `reorder('start_date', 'asc')`.
+- **Test setup for EmploymentPeriod (+20m):** `Employee::factory()->create()` does not auto-create periods — every test had to create them explicitly.
 
-**Deferred to #081:**
-- Migration to alter `vacation_entitlements` with seniority_year, anniversary_date, alerts fields
-- `VacationEntitlementSyncService`
-- Update `VacationEntitlementTest` with enriched response
+**What went well:** The strategy pattern made `SeniorityService` refactor trivial (one constructor injection, one method body swap). The command tests are fast and deterministic using `RefreshDatabase` + relative dates.
