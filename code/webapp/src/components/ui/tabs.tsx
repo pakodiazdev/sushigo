@@ -7,9 +7,9 @@ interface Tab {
 }
 
 interface TabsProps {
-    tabs: Tab[]
-    activeTab: string
-    onTabChange: (id: string) => void
+    readonly tabs: Tab[]
+    readonly activeTab: string
+    readonly onTabChange: (id: string) => void
 }
 
 export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
@@ -38,9 +38,9 @@ export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
 }
 
 interface TabPanelProps {
-    id: string
-    activeTab: string
-    children: ReactNode
+    readonly id: string
+    readonly activeTab: string
+    readonly children: ReactNode
 }
 
 export function TabPanel({ id, activeTab, children }: TabPanelProps) {
