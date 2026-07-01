@@ -34,9 +34,11 @@ vi.mock('@/stores/auth.store', () => ({
   }),
 }))
 
+let mockPathname = '/dashboard'
+
 vi.mock('@tanstack/react-router', () => ({
   useRouterState: ({ select }: { select?: (s: { location: { pathname: string } }) => unknown } = {}) =>
-    select ? select({ location: { pathname: '/dashboard' } }) : { location: { pathname: '/dashboard' } },
+    select ? select({ location: { pathname: mockPathname } }) : { location: { pathname: mockPathname } },
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -80,6 +82,7 @@ describe('DevDebugger', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
+    mockPathname = '/dashboard'
     mockDevUsersQueryData = undefined
     mockIsLoadingDevUsers = false
     mockUser = {
@@ -263,6 +266,24 @@ describe('DevDebugger', () => {
     // Loading skeleton: 3 pulse divs should be present
     const pulseDivs = document.querySelectorAll('.animate-pulse')
     expect(pulseDivs.length).toBeGreaterThan(0)
+  })
+
+  it('shows page-specific actions section when on a route with registered actions', async () => {
+    mockPathname = '/attendance/payroll/close'
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    expect(document.body.textContent).toContain('Acciones — Cierre de Nómina')
+  })
+
+  it('does not show a page actions section on routes without registered actions', async () => {
+    mockPathname = '/dashboard'
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    expect(document.body.textContent).not.toContain('Acciones —')
   })
 
   it('calls handleDevLogin when a dev user button is clicked', async () => {
