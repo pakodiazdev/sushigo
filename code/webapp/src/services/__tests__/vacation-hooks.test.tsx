@@ -46,15 +46,16 @@ beforeEach(() => {
 // ── useVacationEntitlements ───────────────────────────────────────────────────
 
 describe('useVacationEntitlements', () => {
-  it('returns entitlements data from the API', async () => {
-    mockGetEntitlements.mockResolvedValue({ data: { data: [fakeEntitlement] } })
+  it('returns entitlements and summary data from the API', async () => {
+    const summary = { seniority_years: 2, next_anniversary_date: '2027-03-15' }
+    mockGetEntitlements.mockResolvedValue({ data: { data: [fakeEntitlement], meta: summary } })
 
     const { result } = renderHook(() => useVacationEntitlements(EMP_ID), {
       wrapper: makeWrapper(),
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data).toEqual([fakeEntitlement])
+    expect(result.current.data).toEqual({ entitlements: [fakeEntitlement], summary })
     expect(mockGetEntitlements).toHaveBeenCalledWith(EMP_ID)
   })
 

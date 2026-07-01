@@ -1,10 +1,10 @@
 import { apiClient } from '@/lib/api-client'
-import type { VacationEntitlement } from '@/types/attendance-payroll'
+import type { VacationEntitlement, VacationSummary } from '@/types/attendance-payroll'
 
 interface ListResponse<T> {
   data: T[]
   status: number
-  meta: null
+  meta: VacationSummary | null
 }
 
 export const vacationApi = {
