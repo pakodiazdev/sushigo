@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\TerminationType;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
@@ -22,6 +23,7 @@ class EmploymentPeriodFactory extends Factory
             'start_date' => fake()->dateTimeBetween('-2 years', '-1 month'),
             'end_date' => null,
             'termination_reason' => null,
+            'termination_type' => null,
             'is_active' => true,
             'meta' => null,
         ];
@@ -35,12 +37,22 @@ class EmploymentPeriodFactory extends Factory
         ]);
     }
 
-    public function terminated(string $reason = 'Renuncia voluntaria'): static
+    public function terminated(string $reason = 'Renuncia voluntaria', TerminationType $type = TerminationType::Resignation): static
     {
         return $this->state(fn (array $attributes) => [
             'is_active' => false,
             'end_date' => fake()->dateTimeBetween($attributes['start_date'], 'now'),
             'termination_reason' => $reason,
+            'termination_type' => $type,
+        ]);
+    }
+
+    public function internalTransfer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+            'end_date' => fake()->dateTimeBetween($attributes['start_date'], 'now'),
+            'termination_type' => TerminationType::InternalTransfer,
         ]);
     }
 

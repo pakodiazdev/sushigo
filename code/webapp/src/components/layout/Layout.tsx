@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Loader2 } from 'lucide-react';
 import { DevDebugger } from '@/components/dev';
+import { useApplicationClockStore } from '@/stores/clock.store';
 
 export default function Layout() {
     const { isAuthenticated, isLoading, initializeAuth, user, _hasHydrated } = useAuthStore();
@@ -14,12 +15,20 @@ export default function Layout() {
     const currentPath = routerState.location.pathname;
     const devTools = import.meta.env.DEV ? <DevDebugger /> : null;
 
+    const fetchClock = useApplicationClockStore(s => s.fetchClock);
+
     // Initialize auth after hydration completes
     useEffect(() => {
         if (_hasHydrated) {
             initializeAuth();
         }
     }, [_hasHydrated, initializeAuth]);
+
+    // Fetch ApplicationClock once the user is authenticated so business_date
+    // is available in the store before any page renders.
+    useEffect(() => {
+        if (isAuthenticated) fetchClock();
+    }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Public routes that don't require authentication
     const publicRoutes = ['/login', '/logout', '/reset-password', '/forgot-password', '/unauthorized'];

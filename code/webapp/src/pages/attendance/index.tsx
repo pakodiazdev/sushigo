@@ -23,6 +23,7 @@ import { useTodayAttendancePage } from './-use-today-attendance-page'
 import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
 import { useAuthStore } from '@/stores/auth.store'
 import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 import type { PendingAttendanceData } from './-use-today-attendance-page'
 import type { TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
 
@@ -143,7 +144,7 @@ export function AttendancePage() {
   const maxTime = useApplicationTimeLabel()
   const closeDayPanel = useCloseDayPanel(rows, branchId, maxTime)
   const isAdmin = useAuthStore(s => s.isAdmin)
-  const today = todayDateCdmx()
+  const today = useBusinessDate() ?? todayDateCdmx()
   const { canEdit, requiresReason } = useAttendancePermissions(selectedDate)
 
   // Feed bulk overtime decisions from the close-day panel into the queue

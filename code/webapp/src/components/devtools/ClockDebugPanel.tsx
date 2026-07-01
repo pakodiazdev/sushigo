@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Clock, Play, RotateCcw, FastForward, Rewind, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Play, RotateCcw, FastForward, Rewind, Calendar, RefreshCw } from 'lucide-react';
 import { useApplicationClockStore } from '@/stores/clock.store';
 
 /**
  * Debug panel for controlling Application Clock simulation.
- * Only renders when clock simulation feature is available.
+ * Styled for the dark DevDebugger context.
  */
 export function ClockDebugPanel() {
     const {
@@ -23,14 +21,12 @@ export function ClockDebugPanel() {
 
     const [customDatetime, setCustomDatetime] = useState('');
 
-    // Fetch clock state on mount to check availability
     useEffect(() => {
         if (!clockState && !isLoading) {
             fetchClock();
         }
     }, [clockState, isLoading, fetchClock]);
 
-    // Don't render if feature is not available
     if (!isAvailable && !isLoading) {
         return null;
     }
@@ -38,20 +34,9 @@ export function ClockDebugPanel() {
     const handleSetTime = async () => {
         if (!customDatetime) return;
         const success = await setClockTime(customDatetime);
-        if (success) {
-            setCustomDatetime('');
-        }
+        if (success) setCustomDatetime('');
     };
 
-    const handleShift = async (minutes: number) => {
-        await shiftClockTime(minutes);
-    };
-
-    const handleReset = async () => {
-        await resetClockToSystem();
-    };
-
-    // Format time in the business timezone (not browser local)
     const formatBusinessTime = (isoString: string | undefined) => {
         if (!isoString || !clockState?.business_timezone) return '--:--:--';
         return new Date(isoString).toLocaleString('es-MX', {
@@ -61,181 +46,124 @@ export function ClockDebugPanel() {
         });
     };
 
+    const isSimulated = clockState?.mode === 'simulated';
+
     return (
-        <div className="rounded-lg border bg-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-                <Clock className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold">Application Clock (Devtools)</h3>
-                {clockState?.mode === 'simulated' && (
-                    <span className="ml-auto px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/50">
+        <div className="space-y-3 text-xs">
+            {/* Mode badge */}
+            <div className="flex items-center justify-between">
+                <span className="text-gray-400">Modo</span>
+                {isSimulated ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
                         SIMULATED
                     </span>
-                )}
-                {clockState?.mode === 'system' && (
-                    <span className="ml-auto px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/50">
+                ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-300 border border-green-500/40 font-mono">
                         SYSTEM
                     </span>
                 )}
             </div>
 
-            {/* Error display */}
+            {/* Error */}
             {error && (
-                <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm flex justify-between items-center">
-                    <span>{error}</span>
-                    <Button variant="ghost" size="sm" onClick={clearError}>
-                        Dismiss
-                    </Button>
+                <div className="p-2 rounded bg-red-900/40 border border-red-700/50 text-red-300 flex justify-between items-center gap-2">
+                    <span className="truncate">{error}</span>
+                    <button onClick={clearError} className="shrink-0 text-red-400 hover:text-red-200">✕</button>
                 </div>
             )}
 
-            {/* Current time display */}
-            <div className="mb-6 p-4 rounded-md bg-muted/50">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <p className="text-muted-foreground mb-1">Business Time</p>
-                        <p className="font-mono text-lg font-semibold">
-                            {formatBusinessTime(clockState?.business_now)}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-muted-foreground mb-1">Business Date</p>
-                        <p className="font-mono text-lg font-semibold">
-                            {clockState?.business_date || '--'}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-muted-foreground mb-1">UTC Time</p>
-                        <p className="font-mono text-sm">
-                            {clockState?.application_now_utc || '--'}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-muted-foreground mb-1">Timezone</p>
-                        <p className="font-mono text-sm">
-                            {clockState?.business_timezone || '--'}
-                        </p>
-                    </div>
+            {/* Current time */}
+            <div className="rounded bg-gray-700/60 border border-gray-600/50 p-2 space-y-1.5">
+                <div className="flex justify-between items-baseline gap-2">
+                    <span className="text-gray-400 shrink-0">Business time</span>
+                    <span className="font-mono text-white text-right truncate">
+                        {formatBusinessTime(clockState?.business_now)}
+                    </span>
+                </div>
+                <div className="flex justify-between items-baseline gap-2">
+                    <span className="text-gray-400 shrink-0">UTC</span>
+                    <span className="font-mono text-gray-300 text-right truncate text-[10px]">
+                        {clockState?.application_now_utc ?? '--'}
+                    </span>
+                </div>
+                <div className="flex justify-between items-baseline gap-2">
+                    <span className="text-gray-400 shrink-0">Timezone</span>
+                    <span className="font-mono text-gray-300 text-right text-[10px]">
+                        {clockState?.business_timezone ?? '--'}
+                    </span>
                 </div>
             </div>
 
-            {/* Quick shift buttons */}
-            <div className="mb-6">
-                <p className="text-sm text-muted-foreground mb-2">Quick Shift</p>
-                <div className="flex flex-wrap gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShift(-60)}
-                        disabled={isLoading}
-                        className="gap-1"
-                    >
-                        <Rewind className="h-3.5 w-3.5" />
-                        -1h
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShift(-30)}
-                        disabled={isLoading}
-                    >
-                        -30m
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShift(-5)}
-                        disabled={isLoading}
-                    >
-                        -5m
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShift(5)}
-                        disabled={isLoading}
-                    >
-                        +5m
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShift(30)}
-                        disabled={isLoading}
-                    >
-                        +30m
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShift(60)}
-                        disabled={isLoading}
-                        className="gap-1"
-                    >
-                        +1h
-                        <FastForward className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShift(60 * 24)}
-                        disabled={isLoading}
-                        className="gap-1"
-                    >
-                        +1d
-                        <Calendar className="h-3.5 w-3.5" />
-                    </Button>
+            {/* Quick shift */}
+            <div>
+                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Desplazar
+                </p>
+                <div className="flex flex-wrap gap-1">
+                    {[
+                        { label: '-1h', minutes: -60, icon: <Rewind className="h-3 w-3" /> },
+                        { label: '-30m', minutes: -30 },
+                        { label: '-5m', minutes: -5 },
+                        { label: '+5m', minutes: 5 },
+                        { label: '+30m', minutes: 30 },
+                        { label: '+1h', minutes: 60, icon: <FastForward className="h-3 w-3" /> },
+                        { label: '+1d', minutes: 60 * 24, icon: <Calendar className="h-3 w-3" /> },
+                    ].map(({ label, minutes, icon }) => (
+                        <button
+                            key={label}
+                            onClick={() => shiftClockTime(minutes)}
+                            disabled={isLoading}
+                            className="flex items-center gap-0.5 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 disabled:opacity-40 transition-colors"
+                        >
+                            {icon}
+                            {label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
             {/* Set specific time */}
-            <div className="mb-6">
-                <p className="text-sm text-muted-foreground mb-2">Set Specific Time</p>
-                <div className="flex gap-2">
-                    <Input
+            <div>
+                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Fijar hora
+                </p>
+                <div className="flex gap-1.5">
+                    <input
                         type="datetime-local"
                         value={customDatetime}
                         onChange={(e) => setCustomDatetime(e.target.value)}
-                        className="flex-1"
                         disabled={isLoading}
+                        className="flex-1 min-w-0 bg-gray-700 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-40"
                     />
-                    <Button
+                    <button
                         onClick={handleSetTime}
                         disabled={isLoading || !customDatetime}
-                        className="gap-1"
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 transition-colors shrink-0"
                     >
-                        <Play className="h-4 w-4" />
+                        <Play className="h-3 w-3" />
                         Set
-                    </Button>
+                    </button>
                 </div>
             </div>
 
-            {/* Reset to system */}
-            <div className="flex justify-between items-center pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                    Reset clock to real system time
-                </p>
-                <Button
-                    variant="secondary"
-                    onClick={handleReset}
+            {/* Reset + Refresh */}
+            <div className="flex gap-1.5 pt-1 border-t border-gray-700">
+                <button
+                    onClick={() => resetClockToSystem()}
                     disabled={isLoading || clockState?.mode === 'system'}
-                    className="gap-1"
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 disabled:opacity-40 transition-colors"
                 >
-                    <RotateCcw className="h-4 w-4" />
-                    Reset to System
-                </Button>
-            </div>
-
-            {/* Refresh button */}
-            <div className="mt-4 pt-4 border-t">
-                <Button
-                    variant="ghost"
-                    size="sm"
+                    <RotateCcw className="h-3 w-3" />
+                    Reset
+                </button>
+                <button
                     onClick={() => fetchClock()}
                     disabled={isLoading}
-                    className="w-full"
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 disabled:opacity-40 transition-colors"
                 >
-                    {isLoading ? 'Loading...' : 'Refresh Clock State'}
-                </Button>
+                    <RefreshCw className="h-3 w-3" />
+                    {isLoading ? 'Cargando...' : 'Refresh'}
+                </button>
             </div>
         </div>
     );

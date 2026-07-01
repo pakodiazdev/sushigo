@@ -117,6 +117,8 @@ export interface PayPeriodPreviewResponse {
 
 // ── Vacation Entitlement ───────────────────────────────────────────────────────
 
+export type TerminationType = 'resignation' | 'dismissal' | 'contract_end' | 'internal_transfer' | 'other'
+
 export interface VacationEntitlement {
   id: number
   year: number
