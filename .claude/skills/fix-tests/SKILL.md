@@ -1,6 +1,6 @@
 ---
 name: fix-tests
-description: Run the test suite for api (PHPUnit) or webapp (Vitest), and iteratively diagnose and fix any failing tests until they pass. Fixes confined to the test file are applied directly; any fix that requires touching source code outside the test must be confirmed by the user first, with the problem and proposed solution presented before editing anything.
+description: Run the test suite for api (PHPUnit) or webapp (Vitest), and iteratively diagnose and fix any failing tests until they pass. Fixes confined to the test file are applied directly; any fix that requires touching source code outside the test must be confirmed by the user first, with the problem and proposed solution presented before editing anything. Once fixes pass and lint is clean, commits the changed files and pushes to the current branch.
 argument-hint: [api|webapp]
 ---
 
@@ -164,4 +164,29 @@ Iterations: N
 Status: ✅ ALL GREEN / ⚠️ PARTIAL (N still failing / N skipped) / ❌ BLOCKED
 ```
 
-**Do not commit or push.** This skill only fixes and verifies tests locally — creating commits is a separate, explicit step the user must request.
+---
+
+## PHASE 9 — Commit and push the fixes
+
+Run this once, after every requested project (`api`, `webapp`, or both) has finished Phases 1–8 — not per project.
+
+**Skip this phase entirely** (no commit, no push) if no file was actually edited during the run (e.g. every project was already `✅ ALL GREEN` with nothing to fix). State `Nothing to commit — no files were changed.` in place of the commit/push section below.
+
+Otherwise:
+
+1. **Determine the issue number.** Parse the current branch name against `^[a-z]+/([0-9]{3})-`. If it matches, use that zero-padded number. If it doesn't match, ask the user for the issue number with `AskUserQuestion` before committing — never guess or invent one, per this repo's commit convention (`doc/conventions/git/commits.md` / root `CLAUDE.md`).
+2. **Stage only the files this skill run actually modified** (tracked across Phases 3 and 5 of every project processed). Never use `git add -A` or `git add .` — untouched working-tree changes that predate this run must be left exactly as they were.
+3. **Compose the commit message** following the mandatory format (emoji + `[#NNN] - description` + emoji, bulleted body with one emoji-prefixed line per fixed file):
+   - Use ✅ as the type emoji for the subject line (this is a test-fixing commit).
+   - Each bullet uses ✅ for a TEST_BUG fix or 🐛 for a user-confirmed SOURCE_BUG fix, summarizing what changed in that file.
+   - If both `api` and `webapp` were processed, cover both in the same commit unless the user asked for them separately.
+4. **Commit** with the composed message (heredoc, per this repo's git workflow), then **push** to the current branch's upstream (`git push`). Do not force-push, do not push to `main`/`master`, and do not skip hooks.
+5. If the push fails (no upstream configured, diverged history, rejected, etc.), report the exact error and stop — do not retry with `--force` or any destructive flag; let the user decide how to proceed.
+
+Add this to the Phase 8 report output:
+
+```
+### Commit & Push
+- <sha> — <subject line> → pushed to <branch>
+  (or: ⚠️ commit created but push failed: <error> — or — Nothing to commit — no files were changed.)
+```
