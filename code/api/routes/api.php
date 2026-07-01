@@ -38,7 +38,6 @@ use App\Http\Controllers\Api\V1\Employees\ListEmployeeLeavesController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
 use App\Http\Controllers\Api\V1\Employees\ListVacationEntitlementsController;
 use App\Http\Controllers\Api\V1\Employees\ListWagesController;
-use App\Http\Controllers\Api\V1\Employees\RegisterVacationEntitlementController;
 use App\Http\Controllers\Api\V1\Employees\RehireEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ShowEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
@@ -292,9 +291,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/{employee}/leaves', ListEmployeeLeavesController::class)->name('employees.leaves.list')->middleware('permission:employees.view');
         // Negotiated extra days history endpoints
         Route::get('/{employee}/negotiated-extra-days', ListNegotiatedExtraDaysController::class)->name('employees.negotiated-extra-days.list')->middleware('permission:employees.view');
-        // Vacation entitlement endpoints
+        // Vacation entitlement endpoints (auto-generated on read, no manual registration)
         Route::get('/{employee}/vacation-entitlements', ListVacationEntitlementsController::class)->name('employees.vacation-entitlements.list')->middleware('permission:employees.view');
-        Route::post('/{employee}/vacation-entitlements', RegisterVacationEntitlementController::class)->name('employees.vacation-entitlements.register')->middleware('permission:vacation.manage');
         // Direct permission management
         Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
         Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');
