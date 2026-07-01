@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import type { VacationEntitlement } from '@/types/attendance-payroll'
+import type { VacationEntitlement, VacationSummary } from '@/types/attendance-payroll'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 let mockState = {
   entitlements: [] as VacationEntitlement[],
+  summary: null as VacationSummary | null,
   isLoading: false,
 }
 
@@ -26,6 +27,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockState = {
     entitlements: [],
+    summary: null,
     isLoading: false,
   }
 })
@@ -94,5 +96,32 @@ describe('VacationSection', () => {
 
     const span = container.querySelector('.text-amber-600')
     expect(span).toBeTruthy()
+  })
+
+  it('shows seniority years and next anniversary date when summary is present', () => {
+    mockState = {
+      ...mockState,
+      summary: { seniority_years: 2, next_anniversary_date: '2027-03-15' },
+    }
+    render(<VacationSection employeeId="emp-001" />)
+
+    expect(screen.getByText(/2 años de antigüedad/)).toBeTruthy()
+    expect(screen.getByText(/Próximo aniversario: 15 mar 2027/)).toBeTruthy()
+  })
+
+  it('uses singular wording for a single year of seniority', () => {
+    mockState = {
+      ...mockState,
+      summary: { seniority_years: 1, next_anniversary_date: null },
+    }
+    render(<VacationSection employeeId="emp-001" />)
+
+    expect(screen.getByText(/1 año de antigüedad/)).toBeTruthy()
+  })
+
+  it('does not render the summary line when summary is null', () => {
+    render(<VacationSection employeeId="emp-001" />)
+
+    expect(screen.queryByText(/antigüedad/)).toBeNull()
   })
 })

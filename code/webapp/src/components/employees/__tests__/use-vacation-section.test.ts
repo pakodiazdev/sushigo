@@ -40,7 +40,7 @@ const EMP_ID = 'emp-001'
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockGetEntitlements.mockResolvedValue({ data: { data: [] } })
+  mockGetEntitlements.mockResolvedValue({ data: { data: [], meta: null } })
 })
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -52,10 +52,11 @@ describe('useVacationSection', () => {
     })
 
     expect(result.current.entitlements).toEqual([])
+    expect(result.current.summary).toBeNull()
   })
 
   it('loads entitlements from the API', async () => {
-    mockGetEntitlements.mockResolvedValue({ data: { data: [fakeEntitlement] } })
+    mockGetEntitlements.mockResolvedValue({ data: { data: [fakeEntitlement], meta: null } })
 
     const { result } = renderHook(() => useVacationSection(EMP_ID), {
       wrapper: createWrapper(),
@@ -64,5 +65,16 @@ describe('useVacationSection', () => {
     await waitFor(() => expect(result.current.entitlements).toHaveLength(1))
     expect(result.current.entitlements[0]).toEqual(fakeEntitlement)
     expect(result.current.isLoading).toBe(false)
+  })
+
+  it('loads the seniority summary from the API', async () => {
+    const summary = { seniority_years: 2, next_anniversary_date: '2027-03-15' }
+    mockGetEntitlements.mockResolvedValue({ data: { data: [], meta: summary } })
+
+    const { result } = renderHook(() => useVacationSection(EMP_ID), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.summary).toEqual(summary))
   })
 })

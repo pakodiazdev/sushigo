@@ -127,3 +127,8 @@ export interface VacationEntitlement {
   remaining_days: number
   rule_key: string
 }
+
+export interface VacationSummary {
+  seniority_years: number
+  next_anniversary_date: string | null
+}

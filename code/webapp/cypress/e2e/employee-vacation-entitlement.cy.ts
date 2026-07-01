@@ -56,6 +56,10 @@ it('auto-generates the reached anniversary entitlement when Vacaciones is opened
   cy.contains('h3', 'Vacaciones').should('be.visible')
   cy.contains('LFT México 2022').should('be.visible')
 
+  // 1 completed seniority year → summary shows tenure and next anniversary date
+  cy.contains('1 año de antigüedad').should('be.visible')
+  cy.contains('Próximo aniversario:').should('be.visible')
+
   // 1 completed seniority year → 12 days (LFT year 1), generated automatically
   cy.contains('12').should('be.visible')
   cy.contains('Regla aplicada: LFT México 2022').should('be.visible')

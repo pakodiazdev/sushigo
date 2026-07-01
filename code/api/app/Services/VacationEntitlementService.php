@@ -71,4 +71,24 @@ class VacationEntitlementService
                 'rule_key' => class_basename($this->rule),
             ]));
     }
+
+    /**
+     * Seniority years completed and the employee's next anniversary date.
+     *
+     * @return array{seniority_years: int, next_anniversary_date: ?string}
+     */
+    public function summary(Employee $employee): array
+    {
+        try {
+            return [
+                'seniority_years' => $this->seniority->completedYears($employee),
+                'next_anniversary_date' => $this->seniority->nextAnniversary($employee)['date'],
+            ];
+        } catch (\LogicException) {
+            return [
+                'seniority_years' => 0,
+                'next_anniversary_date' => null,
+            ];
+        }
+    }
 }

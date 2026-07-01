@@ -8,7 +8,7 @@ export function useVacationEntitlements(employeeId: string) {
     queryKey: QUERY_KEY(employeeId),
     queryFn: async () => {
       const response = await vacationApi.getEntitlements(employeeId)
-      return response.data.data
+      return { entitlements: response.data.data, summary: response.data.meta }
     },
     enabled: !!employeeId,
   })

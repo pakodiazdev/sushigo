@@ -94,6 +94,22 @@ class VacationEntitlementApiTest extends TestCase
     }
 
     #[Test]
+    public function it_includes_seniority_summary_in_meta(): void
+    {
+        $startDate = Carbon::today()->subYears(2);
+        $employee = $this->employeeStartedOn($startDate->toDateString());
+
+        $response = $this->getJson("/api/v1/employees/{$employee->public_id}/vacation-entitlements");
+
+        $response->assertStatus(200);
+        $this->assertSame(2, $response->json('meta.seniority_years'));
+        $this->assertSame(
+            $startDate->copy()->addYears(3)->toDateString(),
+            $response->json('meta.next_anniversary_date'),
+        );
+    }
+
+    #[Test]
     public function it_does_not_duplicate_entitlements_on_repeated_requests(): void
     {
         $employee = $this->employeeStartedOn(Carbon::today()->subYears(2)->toDateString());

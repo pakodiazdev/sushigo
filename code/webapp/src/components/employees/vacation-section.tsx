@@ -15,6 +15,14 @@ function ruleLabel(key: string): string {
   return RULE_LABELS[key] ?? key
 }
 
+function formatDate(dateString: string): string {
+  return new Date(`${dateString}T00:00:00`).toLocaleDateString('es-MX', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 function remainingDaysClass(remaining: number): string {
   if (remaining <= 0) return 'text-destructive font-semibold'
   if (remaining <= 3) return 'text-amber-600 font-semibold'
@@ -37,7 +45,7 @@ function EntitlementRow({ row }: { readonly row: VacationEntitlement }) {
 }
 
 export function VacationSection({ employeeId }: VacationSectionProps) {
-  const { entitlements, isLoading } = useVacationSection(employeeId)
+  const { entitlements, summary, isLoading } = useVacationSection(employeeId)
 
   return (
     <div className="space-y-4">
@@ -47,6 +55,16 @@ export function VacationSection({ employeeId }: VacationSectionProps) {
           LFT México 2022
         </Badge>
       </div>
+
+      {summary && (
+        <p className="text-xs text-muted-foreground">
+          {summary.seniority_years}{' '}
+          {summary.seniority_years === 1 ? 'año de antigüedad' : 'años de antigüedad'}
+          {summary.next_anniversary_date && (
+            <> · Próximo aniversario: {formatDate(summary.next_anniversary_date)}</>
+          )}
+        </p>
+      )}
 
       {/* Entitlement table */}
       {isLoading && (

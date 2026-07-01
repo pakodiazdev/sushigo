@@ -75,7 +75,7 @@ describe('ClockDebugPanel', () => {
 
         render(<ClockDebugPanel />);
 
-        expect(screen.getByText('Application Clock (Devtools)')).toBeDefined();
+        expect(screen.getByText('Modo')).toBeDefined();
     });
 
     it('displays SYSTEM badge when mode is system', () => {
@@ -122,7 +122,7 @@ describe('ClockDebugPanel', () => {
         render(<ClockDebugPanel />);
 
         expect(screen.getByText('Failed to set clock')).toBeDefined();
-        expect(screen.getByText('Dismiss')).toBeDefined();
+        expect(screen.getByText('✕')).toBeDefined();
     });
 
     it('calls clearError when dismiss button is clicked', () => {
@@ -138,7 +138,7 @@ describe('ClockDebugPanel', () => {
 
         render(<ClockDebugPanel />);
 
-        fireEvent.click(screen.getByText('Dismiss'));
+        fireEvent.click(screen.getByText('✕'));
 
         expect(mockClearError).toHaveBeenCalled();
     });
@@ -155,7 +155,7 @@ describe('ClockDebugPanel', () => {
 
         render(<ClockDebugPanel />);
 
-        expect(screen.getByText('2026-04-16')).toBeDefined();
+        expect(screen.getByText('2026-04-16T15:30:45+00:00')).toBeDefined();
         expect(screen.getByText('America/Mexico_City')).toBeDefined();
     });
 
@@ -249,7 +249,7 @@ describe('ClockDebugPanel', () => {
 
         render(<ClockDebugPanel />);
 
-        const resetButton = screen.getByText('Reset to System').closest('button');
+        const resetButton = screen.getByText('Reset').closest('button');
         expect(resetButton?.disabled).toBe(true);
     });
 
@@ -265,7 +265,7 @@ describe('ClockDebugPanel', () => {
 
         render(<ClockDebugPanel />);
 
-        const resetButton = screen.getByText('Reset to System').closest('button');
+        const resetButton = screen.getByText('Reset').closest('button');
         expect(resetButton?.disabled).toBe(false);
     });
 
@@ -281,7 +281,7 @@ describe('ClockDebugPanel', () => {
 
         render(<ClockDebugPanel />);
 
-        fireEvent.click(screen.getByText('Reset to System'));
+        fireEvent.click(screen.getByText('Reset'));
 
         await waitFor(() => {
             expect(mockResetClockToSystem).toHaveBeenCalled();
@@ -334,7 +334,7 @@ describe('ClockDebugPanel', () => {
 
         render(<ClockDebugPanel />);
 
-        expect(screen.getByText('Loading...')).toBeDefined();
+        expect(screen.getByText('Cargando...')).toBeDefined();
     });
 
     it('shows refresh button text when not loading', () => {
@@ -350,7 +350,7 @@ describe('ClockDebugPanel', () => {
 
         render(<ClockDebugPanel />);
 
-        expect(screen.getByText('Refresh Clock State')).toBeDefined();
+        expect(screen.getByText('Refresh')).toBeDefined();
     });
 
     it('calls fetchClock when refresh button is clicked', () => {
@@ -369,7 +369,7 @@ describe('ClockDebugPanel', () => {
         // Reset to clear mount call
         mockFetchClock.mockClear();
 
-        fireEvent.click(screen.getByText('Refresh Clock State'));
+        fireEvent.click(screen.getByText('Refresh'));
 
         expect(mockFetchClock).toHaveBeenCalled();
     });

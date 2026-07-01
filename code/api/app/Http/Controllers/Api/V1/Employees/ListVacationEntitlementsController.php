@@ -22,6 +22,7 @@ class ListVacationEntitlementsController extends Controller
 
         return new ResponseEntity(
             data: VacationEntitlementResource::collection($entitlements)->toArray(request()),
+            meta: $this->entitlements->summary($employee),
         );
     }
 }
