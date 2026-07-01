@@ -1,45 +1,17 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import type { VacationEntitlement } from '@/types/attendance-payroll'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-const mockOpenForm = vi.fn()
-const mockCloseForm = vi.fn()
-const mockHandleSubmit = vi.fn((fn: unknown) => fn)
-
 let mockState = {
   entitlements: [] as VacationEntitlement[],
   isLoading: false,
-  showForm: false,
-  isPending: false,
 }
 
 vi.mock('@/components/employees/use-vacation-section', () => ({
-  useVacationSection: () => ({
-    ...mockState,
-    openForm: mockOpenForm,
-    closeForm: mockCloseForm,
-    handleSubmit: mockHandleSubmit,
-    form: {
-      register: () => ({}),
-      formState: { errors: {} },
-    },
-  }),
-}))
-
-vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, type, disabled }: {
-    children: React.ReactNode
-    onClick?: () => void
-    type?: string
-    disabled?: boolean
-  }) => (
-    <button type={(type ?? 'button') as 'button' | 'submit' | 'reset'} onClick={onClick} disabled={disabled}>
-      {children}
-    </button>
-  ),
+  useVacationSection: () => mockState,
 }))
 
 vi.mock('@/components/ui/badge', () => ({
@@ -55,8 +27,6 @@ beforeEach(() => {
   mockState = {
     entitlements: [],
     isLoading: false,
-    showForm: false,
-    isPending: false,
   }
 })
 
@@ -83,32 +53,6 @@ describe('VacationSection', () => {
     const { container } = render(<VacationSection employeeId="emp-001" />)
 
     expect(container.querySelector('.animate-spin')).toBeTruthy()
-  })
-
-  it('shows register button and calls openForm on click', () => {
-    render(<VacationSection employeeId="emp-001" />)
-
-    const btn = screen.getByText('Registrar derecho')
-    fireEvent.click(btn)
-
-    expect(mockOpenForm).toHaveBeenCalledTimes(1)
-  })
-
-  it('shows the registration form when showForm is true', () => {
-    mockState = { ...mockState, showForm: true }
-    render(<VacationSection employeeId="emp-001" />)
-
-    expect(screen.getByTestId('vacation-register-form')).toBeTruthy()
-    expect(screen.getByText('Registrar derecho vacacional')).toBeTruthy()
-  })
-
-  it('calls closeForm when X button is clicked', () => {
-    mockState = { ...mockState, showForm: true }
-    render(<VacationSection employeeId="emp-001" />)
-
-    fireEvent.click(screen.getByLabelText('Cerrar'))
-
-    expect(mockCloseForm).toHaveBeenCalledTimes(1)
   })
 
   it('renders entitlements table when data is present', () => {

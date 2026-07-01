@@ -97,7 +97,6 @@ class PermissionSeeder extends LockedSeeder
             'employees.view' => ['label' => 'Ver empleados',    'group' => 'Empleados'],
             'employees.create' => ['label' => 'Crear empleado',   'group' => 'Empleados'],
             'employees.update' => ['label' => 'Editar empleado',  'group' => 'Empleados'],
-            'vacation.manage' => ['label' => 'Gestionar derechos vacacionales', 'group' => 'Vacaciones'],
 
             // Ausencias
             'leaves.register-direct' => ['label' => 'Registrar ausencia directa', 'group' => 'Ausencias'],
@@ -167,7 +166,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN)
-                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'vacation.manage', 'settings.manage']);
+                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'settings.manage']);
                     })
                     ->get()
             );

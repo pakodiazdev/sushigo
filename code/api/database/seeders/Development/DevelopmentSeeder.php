@@ -31,6 +31,7 @@ class DevelopmentSeeder extends Seeder
             EmployeeScheduleSeeder::class,
             ScheduleHistorySeeder::class,
             WageSeeder::class,
+            VacationEntitlementSeeder::class,
             \Database\Seeders\UnitOfMeasureSeeder::class,
             \Database\Seeders\UomConversionSeeder::class,
             AttendanceAuditLogSeeder::class,

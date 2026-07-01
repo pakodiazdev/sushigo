@@ -1,5 +1,4 @@
-import { Loader2, Palmtree, Plus, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Loader2, Palmtree } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useVacationSection } from './use-vacation-section'
 import type { VacationEntitlement } from '@/types/attendance-payroll'
@@ -38,92 +37,16 @@ function EntitlementRow({ row }: { readonly row: VacationEntitlement }) {
 }
 
 export function VacationSection({ employeeId }: VacationSectionProps) {
-  const {
-    entitlements,
-    isLoading,
-    showForm,
-    openForm,
-    closeForm,
-    form,
-    handleSubmit,
-    isPending,
-  } = useVacationSection(employeeId)
-
-  const {
-    register,
-    formState: { errors },
-  } = form
-
-  const currentYear = new Date().getFullYear()
+  const { entitlements, isLoading } = useVacationSection(employeeId)
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Vacaciones</h3>
-          <Badge variant="default" className="text-xs">
-            LFT México 2022
-          </Badge>
-        </div>
-        {!showForm && (
-          <Button type="button" size="sm" variant="outline" onClick={openForm}>
-            <Plus className="mr-1 h-4 w-4" />
-            Registrar derecho
-          </Button>
-        )}
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Vacaciones</h3>
+        <Badge variant="default" className="text-xs">
+          LFT México 2022
+        </Badge>
       </div>
-
-      {/* Register form */}
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-md border border-border p-3 space-y-3"
-          data-testid="vacation-register-form"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Registrar derecho vacacional</p>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded p-1 text-muted-foreground hover:text-foreground"
-              aria-label="Cerrar"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
-              <label htmlFor="vac-year" className="text-xs text-muted-foreground block mb-1">
-                Año
-              </label>
-              <select
-                id="vac-year"
-                className="w-full rounded border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                {...register('year', { valueAsNumber: true })}
-              >
-                {Array.from({ length: 6 }, (_, i) => currentYear - 2 + i).map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-              {errors.year && (
-                <p className="mt-1 text-xs text-destructive">{errors.year.message}</p>
-              )}
-            </div>
-
-            <Button type="submit" size="sm" disabled={isPending}>
-              {isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Guardar
-            </Button>
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Los días se calculan automáticamente según las reglas de LFT México 2022.
-          </p>
-        </form>
-      )}
 
       {/* Entitlement table */}
       {isLoading && (

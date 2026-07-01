@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import React from 'react'
@@ -9,22 +9,14 @@ import type { VacationEntitlement } from '@/types/attendance-payroll'
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 const mockGetEntitlements = vi.fn()
-const mockRegisterEntitlement = vi.fn()
-const mockShowSuccess = vi.fn()
-const mockShowError = vi.fn()
 
 vi.mock('@/services/vacation.service', () => ({
   vacationApi: {
     getEntitlements: (...args: unknown[]) => mockGetEntitlements(...args),
-    registerEntitlement: (...args: unknown[]) => mockRegisterEntitlement(...args),
   },
 }))
 
-vi.mock('@/components/ui/toast-provider', () => ({
-  useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
-}))
-
-import { useVacationEntitlements, useRegisterEntitlement } from '../vacation-hooks'
+import { useVacationEntitlements } from '../vacation-hooks'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -73,39 +65,5 @@ describe('useVacationEntitlements', () => {
 
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'))
     expect(mockGetEntitlements).not.toHaveBeenCalled()
-  })
-})
-
-// ── useRegisterEntitlement ────────────────────────────────────────────────────
-
-describe('useRegisterEntitlement', () => {
-  it('calls registerEntitlement and shows success toast on success', async () => {
-    mockRegisterEntitlement.mockResolvedValue({ data: { data: fakeEntitlement } })
-    mockGetEntitlements.mockResolvedValue({ data: { data: [fakeEntitlement] } })
-
-    const { result } = renderHook(() => useRegisterEntitlement(EMP_ID), {
-      wrapper: makeWrapper(),
-    })
-
-    await act(async () => {
-      await result.current.mutateAsync({ year: 2026 })
-    })
-
-    expect(mockRegisterEntitlement).toHaveBeenCalledWith(EMP_ID, { year: 2026 })
-    expect(mockShowSuccess).toHaveBeenCalledWith('Derecho vacacional registrado correctamente.')
-  })
-
-  it('shows error toast when mutation fails', async () => {
-    mockRegisterEntitlement.mockRejectedValue(new Error('Server error'))
-
-    const { result } = renderHook(() => useRegisterEntitlement(EMP_ID), {
-      wrapper: makeWrapper(),
-    })
-
-    await act(async () => {
-      await result.current.mutateAsync({ year: 2026 }).catch(() => null)
-    })
-
-    expect(mockShowError).toHaveBeenCalled()
   })
 })

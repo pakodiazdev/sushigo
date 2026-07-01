@@ -1,18 +1,18 @@
 /**
- * Vacation Entitlement — E2E happy path (Task #081)
+ * Vacation Entitlement — E2E happy path (Task #212)
  *
- * Verifies that an Admin can:
- *  1. Open EMP-001's employee detail panel from the /employees page
- *  2. See the "Vacaciones" section with the "LFT México 2022" badge
- *  3. Click "Registrar derecho", select year 2026, and submit
- *  4. The table shows the newly registered entitlement with auto-calculated days
- *  5. Registering the same year again shows a duplicate error
+ * Verifies that vacation entitlements are generated automatically the first
+ * time an Admin opens an employee's "Vacaciones" section — there is no
+ * manual "Registrar derecho" action anymore. Entitlements are created for
+ * every anniversary the employee has already reached, using the active LFT
+ * rule (VacationsLFTMX).
  *
  * DB reset strategy
  * ─────────────────
- * • before() → cy.task('test:reset', 'core') ONCE per file.
- *   EMP-001 (Carlos Mendoza) is seeded by CoreTestSeeder with hire year 2020
- *   → 6 years by 2026 → 22 days (LFT bracket 6–10).
+ * • before() → cy.task('test:reset', 'attendance') ONCE per file.
+ *   AttendanceTestSeeder hires every employee exactly 1 year before "now",
+ *   so EMP-001 has completed exactly 1 seniority year → viewing its
+ *   Vacaciones section auto-generates a single 12-day entitlement (LFT year 1).
  *
  * To run only this file:
  *   make cypress-spec SPEC=employee-vacation-entitlement
@@ -38,7 +38,7 @@ function scrollToVacation() {
 // ── Suite setup ───────────────────────────────────────────────────────────────
 
 before(() => {
-  cy.task('test:reset', 'core', { timeout: 60_000 })
+  cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })
 
 beforeEach(() => {
@@ -49,47 +49,14 @@ beforeEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-it('shows the Vacaciones section with the LFT badge', () => {
+it('auto-generates the reached anniversary entitlement when Vacaciones is opened', () => {
   openEmp001Detail()
   scrollToVacation()
 
   cy.contains('h3', 'Vacaciones').should('be.visible')
   cy.contains('LFT México 2022').should('be.visible')
-  cy.contains('Sin derechos vacacionales registrados').should('be.visible')
-})
 
-it('registers a vacation entitlement for 2026 and shows it in the table', () => {
-  openEmp001Detail()
-  scrollToVacation()
-
-  cy.contains('button', 'Registrar derecho').click()
-  cy.get('[data-testid="vacation-register-form"]').should('be.visible')
-
-  // Select 2026
-  cy.get('#vac-year').select('2026')
-
-  cy.contains('button', 'Guardar').click()
-
-  // Wait for the table to appear with the new row
-  cy.contains('2026', { timeout: 8_000 }).should('be.visible')
-  cy.contains('22').should('be.visible')   // entitled_days for 6 years of service
-  cy.contains('0').should('be.visible')    // used_days
-})
-
-it('shows a duplicate error when registering the same year twice', () => {
-  openEmp001Detail()
-  scrollToVacation()
-
-  // Register first time
-  cy.contains('button', 'Registrar derecho').click()
-  cy.get('#vac-year').select('2025')
-  cy.contains('button', 'Guardar').click()
-  cy.contains('2025', { timeout: 8_000 }).should('be.visible')
-
-  // Try to register 2025 again
-  cy.contains('button', 'Registrar derecho').click()
-  cy.get('#vac-year').select('2025')
-  cy.contains('button', 'Guardar').click()
-
-  cy.contains('2025', { timeout: 5_000 }).should('be.visible') // error message contains year
+  // 1 completed seniority year → 12 days (LFT year 1), generated automatically
+  cy.contains('12').should('be.visible')
+  cy.contains('Regla aplicada: LFT México 2022').should('be.visible')
 })
