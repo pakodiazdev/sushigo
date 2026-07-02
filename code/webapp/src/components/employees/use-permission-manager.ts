@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { userPermissionsApi } from '@/services/user-permissions-api'
-import { useToast } from '@/components/ui/toast-provider'
+import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
 import type { PermissionGroup, PermissionSource } from '@/types/user-permissions'
 

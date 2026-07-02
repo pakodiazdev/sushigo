@@ -87,7 +87,7 @@ vi.mock('@/services/inventory-api', () => ({
 }))
 
 // Mock toast provider
-vi.mock('@/components/ui/toast-provider', () => ({
+vi.mock('@/components/ui/toast-context', () => ({
     useToast: () => ({
         showWarning: vi.fn(),
         showError: vi.fn(),

@@ -28,7 +28,7 @@ vi.mock('@/components/ui/button', () => ({
   ),
 }))
 
-vi.mock('@/components/ui/slide-panel', () => ({
+vi.mock('@/components/ui/slide-panel-context', () => ({
   SlidePanelOverlayContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
 }))
 

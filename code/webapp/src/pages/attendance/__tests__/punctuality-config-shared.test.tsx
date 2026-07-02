@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import React from 'react'
 import type { PunctualityRange, PunctualityBonusGroup } from '@/types/punctuality'
-import { rangeLabel } from '../punctuality-config-shared'
+import { rangeLabel } from '../punctuality-config-utils'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ vi.mock('@/services/punctuality-config-api', () => ({
     },
 }))
 
-vi.mock('@/components/ui/toast-provider', () => ({
+vi.mock('@/components/ui/toast-context', () => ({
     useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
 }))
 

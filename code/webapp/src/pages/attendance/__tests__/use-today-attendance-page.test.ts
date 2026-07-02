@@ -17,7 +17,7 @@ import type { TodayAttendanceRow } from '@/types/attendance'
 const mockShowSuccess = vi.fn()
 const mockShowError = vi.fn()
 
-vi.mock('@/components/ui/toast-provider', () => ({
+vi.mock('@/components/ui/toast-context', () => ({
   useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
 }))
 

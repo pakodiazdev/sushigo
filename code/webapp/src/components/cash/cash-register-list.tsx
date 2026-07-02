@@ -1,10 +1,8 @@
 import { Plus, Edit } from 'lucide-react'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { Button } from '@/components/ui/button'
-import {
-    CashRegisterTypeBadge,
-    formatDate
-} from './cash-utils'
+import { CashRegisterTypeBadge } from './cash-utils'
+import { formatDate } from '@/lib/cash-format'
 import { useCashRegisters } from '@/services/cash-hooks'
 import type { CashRegister } from '@/types/cash'
 

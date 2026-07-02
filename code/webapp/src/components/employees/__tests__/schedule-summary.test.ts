@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSummaryLines } from '@/components/employees/schedule-section'
+import { buildSummaryLines } from '@/components/employees/schedule-section-utils'
 import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────

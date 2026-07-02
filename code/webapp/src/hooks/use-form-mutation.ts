@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useMutation, UseMutationOptions, UseMutationResult } from '@tanstack/react-query'
-import { useToast } from '@/components/ui/toast-provider'
+import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
 
 export interface FormMutationConfig<TData, TVariables> {

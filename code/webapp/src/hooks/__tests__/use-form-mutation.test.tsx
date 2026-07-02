@@ -5,11 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useFormMutation, useCreateUpdateMutation } from '../use-form-mutation'
-import * as toastProvider from '@/components/ui/toast-provider'
+import * as toastProvider from '@/components/ui/toast-context'
 import * as apiError from '@/lib/api-error'
 
 // Mock toast provider
-vi.mock('@/components/ui/toast-provider', () => ({
+vi.mock('@/components/ui/toast-context', () => ({
   useToast: vi.fn(() => ({
     showToast: vi.fn(),
     showSuccess: vi.fn(),

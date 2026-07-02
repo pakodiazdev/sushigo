@@ -3,7 +3,8 @@
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, renderHook, act } from '@testing-library/react'
-import { SidebarProvider, useSidebar } from '../SidebarContext'
+import { SidebarProvider } from '../SidebarContext'
+import { useSidebar } from '../sidebar-context'
 
 describe('SidebarContext', () => {
     afterEach(() => {

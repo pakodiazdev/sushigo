@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Loader2, AlertTriangle, Info } from 'lucide-react'
-import { SlidePanelOverlayContext } from '@/components/ui/slide-panel'
+import { SlidePanelOverlayContext } from '@/components/ui/slide-panel-context'
 
 export interface ConfirmDialogProps {
   isOpen: boolean

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatCurrency, formatDate, formatDateTime } from '@/components/cash/cash-utils'
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/cash-format'
 
 describe('formatCurrency', () => {
     it('formats positive numbers as MXN currency', () => {

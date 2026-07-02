@@ -3,13 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { usePunctualityConfigPage } from './use-punctuality-config-page'
 import { useBonusGroupsSection } from './use-bonus-groups-section'
-
-export function rangeLabel(minSeconds: number, maxSeconds: number | null): string {
-  const minMin = Math.floor(minSeconds / 60)
-  if (maxSeconds === null) return `≥ ${minMin} min`
-  const maxMin = Math.floor((maxSeconds + 1) / 60)
-  return `${minMin} – ${maxMin - 1} min`
-}
+import { rangeLabel } from './punctuality-config-utils'
 
 interface HeadingProps {
   readonly titleAs?: 'h2' | 'h3'

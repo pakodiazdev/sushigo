@@ -6,7 +6,7 @@ export interface User {
   email: string
   email_verified_at: string | null
   is_active: boolean
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   // Relationships
@@ -44,7 +44,7 @@ export interface Branch {
   region: string | null
   timezone: string
   is_active: boolean
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }
@@ -57,7 +57,7 @@ export interface OperatingUnit {
   start_date: string | null
   end_date: string | null
   is_active: boolean
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   branch?: Branch
@@ -69,7 +69,7 @@ export interface OperatingUnitAssignment {
   operating_unit_id: number
   assignment_role: string | null
   is_active: boolean
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   operating_unit?: OperatingUnit

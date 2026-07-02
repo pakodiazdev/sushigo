@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useToast } from '@/components/ui/toast-provider'
+import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { negotiatedExtraDayApi } from './negotiated-extra-day-api'
 

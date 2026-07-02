@@ -47,7 +47,3 @@ export function ScheduleSection({ employee }: ScheduleSectionProps) {
     </>
   )
 }
-
-// Re-export utilities that tests import from this module
-export { buildSummaryLines } from './schedule-section-utils'
-export { calcDayHours, formatHours, overrideDateLabel } from './schedule-section-utils'

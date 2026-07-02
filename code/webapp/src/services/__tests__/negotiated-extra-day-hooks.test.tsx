@@ -17,7 +17,7 @@ vi.mock('@/services/negotiated-extra-day-api', () => ({
   },
 }))
 
-vi.mock('@/components/ui/toast-provider', () => ({
+vi.mock('@/components/ui/toast-context', () => ({
   useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
 }))
 

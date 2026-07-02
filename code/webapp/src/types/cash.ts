@@ -43,7 +43,7 @@ export interface CashRegister {
   name: string
   type: CashRegisterType
   is_active: boolean
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   // Relationships
@@ -60,7 +60,7 @@ export interface CashTerminal {
   account_ref: string
   last_four: string
   is_active: boolean
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   // Relationships
@@ -75,7 +75,7 @@ export interface BankAccount {
   account_number_masked: string
   clabe_masked: string
   is_active: boolean
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   // Relationships
@@ -94,7 +94,7 @@ export interface CashSession {
   opened_at: string
   posted_by: number | null
   posted_at: string | null
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   // Relationships
@@ -114,7 +114,7 @@ export interface CashAdjustment {
   notes: string | null
   posted_by: number | null
   posted_at: string | null
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   // Relationships
@@ -132,7 +132,7 @@ export interface CashAdjustmentLine {
   card_terminal_id: number | null
   bank_account_id: number | null
   reference: string | null
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   // Relationships
@@ -156,7 +156,7 @@ export interface CashExpense {
   created_by: number
   posted_by: number | null
   posted_at: string | null
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   created_at: string
   updated_at: string
   // Relationships
@@ -210,7 +210,7 @@ export interface PaginatedResponse<T> {
 export interface EntityResponse<T> {
   status: number
   data: T
-  meta?: Record<string, any> | null
+  meta?: Record<string, unknown> | null
 }
 
 export interface MessageResponse {
@@ -250,7 +250,7 @@ export interface CashRegisterFormData {
   operating_unit_id?: number | null
   type: CashRegisterType
   is_active: boolean
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
 export interface CashTerminalFormData {
@@ -260,7 +260,7 @@ export interface CashTerminalFormData {
   account_ref: string
   last_four: string
   is_active: boolean
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
 export interface BankAccountFormData {
@@ -270,14 +270,14 @@ export interface BankAccountFormData {
   account_number_masked: string
   clabe_masked: string
   is_active: boolean
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
 export interface CashSessionFormData {
   cash_register_id: number
   operating_date: string
   opening_balance?: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
 export interface CashAdjustmentFormData {
@@ -286,7 +286,7 @@ export interface CashAdjustmentFormData {
   type: AdjustmentType
   direction: Direction
   notes?: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
   lines: CashAdjustmentLineFormData[]
 }
 
@@ -297,7 +297,7 @@ export interface CashAdjustmentLineFormData {
   card_terminal_id?: number | null
   bank_account_id?: number | null
   reference?: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
 export interface CashExpenseFormData {
@@ -311,7 +311,7 @@ export interface CashExpenseFormData {
   card_terminal_id?: number | null
   bank_account_id?: number | null
   incurred_at: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
 // ============================================================================

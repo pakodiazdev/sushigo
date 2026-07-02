@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
-import { useToast } from '@/components/ui/toast-provider'
+import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
 import type { TodayAttendanceRow, CloseDayRequest } from '@/types/attendance'
 

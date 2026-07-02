@@ -81,7 +81,7 @@ export function CreateAdjustmentDialog({
     }
   }
 
-  const handleLineChange = (index: number, field: keyof CashAdjustmentLineFormData, value: any) => {
+  const handleLineChange = (index: number, field: keyof CashAdjustmentLineFormData, value: CashAdjustmentLineFormData[keyof CashAdjustmentLineFormData]) => {
     const updatedLines = [...lines]
     updatedLines[index] = { ...updatedLines[index], [field]: value } as CashAdjustmentLineFormData
 

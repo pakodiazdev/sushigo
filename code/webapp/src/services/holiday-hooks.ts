@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useToast } from '@/components/ui/toast-provider'
+import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { holidayApi } from './holiday-api'
 import type { CreateHolidayPayload, UpdateHolidayPayload } from '@/types/attendance-payroll'

@@ -1,6 +1,6 @@
 import { Menu, Moon, Sun, Bell, Search, User, LogOut, Settings, ChevronDown } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useSidebar } from '@/contexts/SidebarContext';
+import { useTheme } from '@/contexts/theme-context';
+import { useSidebar } from '@/contexts/sidebar-context';
 import { useAuthStore } from '@/stores/auth.store';
 import { useRouter } from '@tanstack/react-router';
 import { Input } from '@/components/ui/input';

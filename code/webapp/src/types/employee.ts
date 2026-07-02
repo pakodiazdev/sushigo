@@ -36,7 +36,7 @@ export interface Employee {
   email?: string | null
   phone?: string | null
   phone_country?: string | null
-  meta: Record<string, any> | null
+  meta: Record<string, unknown> | null
   employment_periods?: EmploymentPeriod[]
   created_at: string
   updated_at: string
@@ -60,7 +60,7 @@ export interface PaginatedResponse<T> {
 export interface EntityResponse<T> {
   status: number
   data: T
-  meta?: Record<string, any> | null
+  meta?: Record<string, unknown> | null
 }
 
 // ============================================================================
@@ -74,7 +74,7 @@ export interface EmployeeFormData {
   roles: EmployeePositionRole[]
   email?: string
   phone?: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
   branch_id?: number
   start_date?: string
   attendance_exempt?: boolean
@@ -96,7 +96,7 @@ export interface EmployeeUpdateData {
   roles?: EmployeePositionRole[]
   email?: string
   phone?: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
   attendance_exempt?: boolean
 }
 
