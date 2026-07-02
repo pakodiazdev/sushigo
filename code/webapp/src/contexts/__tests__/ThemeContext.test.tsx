@@ -3,7 +3,8 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, renderHook, act } from '@testing-library/react'
-import { ThemeProvider, useTheme } from '../ThemeContext'
+import { ThemeProvider } from '../ThemeContext'
+import { useTheme } from '../theme-context'
 
 describe('ThemeContext', () => {
     beforeEach(() => {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { useToast } from "@/components/ui/toast-provider";
+import { useToast } from "@/components/ui/toast-context";
 import { employeeApi } from "@/services/employee-api";
 import { getApiErrorMessage } from "@/lib/api-error";
 import type {

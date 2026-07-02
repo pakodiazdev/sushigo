@@ -2,7 +2,7 @@ import { useState, useContext, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, ChevronRight, Loader2, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SlidePanelOverlayContext } from '@/components/ui/slide-panel'
+import { SlidePanelOverlayContext } from '@/components/ui/slide-panel-context'
 import type { PermissionGroup, PermissionSource } from '@/types/user-permissions'
 
 interface PermissionManagerDialogProps {

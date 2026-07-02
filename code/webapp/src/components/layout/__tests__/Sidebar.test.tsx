@@ -23,7 +23,7 @@ const mockSidebar = {
   closeMobileSidebar: vi.fn(),
 }
 
-vi.mock('@/contexts/SidebarContext', () => ({
+vi.mock('@/contexts/sidebar-context', () => ({
   useSidebar: () => mockSidebar,
 }))
 

@@ -91,7 +91,7 @@ const PAGE_BTN_INACTIVE = 'text-foreground hover:bg-accent hover:text-accent-for
 const PAGE_BTN_ACTIVE = 'bg-primary text-primary-foreground font-semibold z-10'
 const NAV_BTN = 'relative inline-flex items-center px-2 py-2 text-muted-foreground ring-1 ring-inset ring-input hover:bg-accent hover:text-accent-foreground focus:z-20 disabled:opacity-50 disabled:cursor-not-allowed'
 
-export function DataGrid<T extends Record<string, any>>({
+export function DataGrid<T extends { id: string | number }>({
   data,
   columns,
   onRowClick,
@@ -279,7 +279,7 @@ export function DataGrid<T extends Record<string, any>>({
                             >
                               {column.render
                                 ? column.render(item)
-                                : item[column.key]}
+                                : ((item as Record<string, unknown>)[column.key] as React.ReactNode)}
                             </td>
                           )
                         })}

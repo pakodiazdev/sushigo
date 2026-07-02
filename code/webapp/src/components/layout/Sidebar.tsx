@@ -17,7 +17,7 @@ import {
     ClipboardList,
     type LucideIcon
 } from 'lucide-react';
-import { useSidebar } from '@/contexts/SidebarContext';
+import { useSidebar } from '@/contexts/sidebar-context';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/ui/logo';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calcDayHours, formatHours, overrideDateLabel } from '@/components/employees/schedule-section'
+import { calcDayHours, formatHours, overrideDateLabel } from '@/components/employees/schedule-section-utils'
 import type { ScheduleDayOverride } from '@/types/schedule'
 
 // ── calcDayHours ──────────────────────────────────────────────────────────────

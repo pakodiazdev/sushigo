@@ -20,11 +20,11 @@ const mockToggleTheme = vi.fn()
 const mockToggleMobileSidebar = vi.fn()
 const mockRouterNavigate = vi.fn()
 
-vi.mock('@/contexts/ThemeContext', () => ({
+vi.mock('@/contexts/theme-context', () => ({
   useTheme: () => ({ theme: 'light', toggleTheme: mockToggleTheme }),
 }))
 
-vi.mock('@/contexts/SidebarContext', () => ({
+vi.mock('@/contexts/sidebar-context', () => ({
   useSidebar: () => ({ toggleMobileSidebar: mockToggleMobileSidebar }),
 }))
 
@@ -248,13 +248,13 @@ describe('Header — click outside behavior', () => {
 
 describe('Header — dark mode icon', () => {
   beforeEach(() => {
-    vi.doMock('@/contexts/ThemeContext', () => ({
+    vi.doMock('@/contexts/theme-context', () => ({
       useTheme: () => ({ theme: 'dark', toggleTheme: mockToggleTheme }),
     }))
   })
 
   afterEach(() => {
-    vi.doUnmock('@/contexts/ThemeContext')
+    vi.doUnmock('@/contexts/theme-context')
   })
 
   it('renders without error in dark mode', () => {

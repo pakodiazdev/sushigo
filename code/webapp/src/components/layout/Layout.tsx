@@ -54,7 +54,7 @@ export default function Layout() {
             router.navigate({ to: '/login' });
             return;
         }
-    }, [isAuthenticated, currentPath, user, router, isLoading]);
+    }, [isAuthenticated, currentPath, user, router, isLoading, isPublicRoute]);
 
     // Show loading spinner while checking auth (but not on login/logout pages)
     // Login page handles its own loading state to preserve form data

@@ -8,7 +8,7 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
-import { useToast } from '@/components/ui/toast-provider'
+import { useToast } from '@/components/ui/toast-context'
 import { useFormMutation } from '@/hooks/use-form-mutation'
 import {
   useInventoryLocationsSelect,

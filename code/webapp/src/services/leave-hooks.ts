@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { leaveApi } from './leave-api'
 import type { LeaveFilters } from './leave-api'
-import { useToast } from '@/components/ui/toast-provider'
+import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
 import type { LeaveType, Leave, RegisterDirectLeaveRequest, RegisterLeaveRequestData } from '@/types/leave'
 

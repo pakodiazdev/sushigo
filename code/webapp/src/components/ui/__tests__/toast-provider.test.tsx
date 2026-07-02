@@ -3,7 +3,8 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
-import { ToastProvider, useToast } from '../toast-provider'
+import { ToastProvider } from '../toast-provider'
+import { useToast } from '../toast-context'
 
 // Test component that uses the toast context
 function TestComponent() {

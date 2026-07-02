@@ -1,24 +1,6 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { useState, useCallback, type ReactNode } from 'react'
 import { Toast, type ToastProps } from '@/components/ui/toast'
-
-interface ToastContextType {
-  showToast: (toast: Omit<ToastProps, 'id' | 'onClose'>) => void
-  showSuccess: (message: string, title?: string) => void
-  showError: (message: string, title?: string) => void
-  showWarning: (message: string, title?: string) => void
-  showInfo: (message: string, title?: string) => void
-  removeToast: (id: string) => void
-}
-
-const ToastContext = createContext<ToastContextType | undefined>(undefined)
-
-export function useToast() {
-  const context = useContext(ToastContext)
-  if (!context) {
-    throw new Error('useToast must be used within ToastProvider')
-  }
-  return context
-}
+import { ToastContext } from '@/components/ui/toast-context'
 
 interface ToastWithId extends Omit<ToastProps, 'onClose'> {
   id: string
