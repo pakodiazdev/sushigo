@@ -141,6 +141,11 @@ class Employee extends Model
         return $this->hasMany(EmployeeBonusConfig::class)->orderBy('effective_from', 'desc');
     }
 
+    public function overtimePayConfigs(): HasMany
+    {
+        return $this->hasMany(OvertimePayConfig::class)->orderBy('effective_from', 'desc');
+    }
+
     /**
      * All schedules for this employee, via their employment periods.
      * For the active schedule use:

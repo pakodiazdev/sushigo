@@ -85,6 +85,8 @@ use App\Http\Controllers\Api\V1\OperatingUnit\UpdateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\AddUserToOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\ListOperatingUnitUsersController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitController;
+use App\Http\Controllers\Api\V1\Overtime\GetOvertimeConfigController;
+use App\Http\Controllers\Api\V1\Overtime\SetOvertimeConfigController;
 use App\Http\Controllers\Api\V1\Punctuality\AssignBonusConfigController;
 use App\Http\Controllers\Api\V1\Punctuality\CreatePunctualityBonusGroupController;
 use App\Http\Controllers\Api\V1\Punctuality\GetEmployeeBonusConfigController;
@@ -300,6 +302,9 @@ Route::prefix('v1')->group(function () {
         // Bonus config
         Route::get('/{employee}/bonus-config', GetEmployeeBonusConfigController::class)->name('employees.bonus-config.get')->middleware('permission:employees.view');
         Route::post('/{employee}/bonus-config', AssignBonusConfigController::class)->name('employees.bonus-config.assign')->middleware('permission:employees.update');
+        // Overtime pay config
+        Route::get('/{employee}/overtime-config', GetOvertimeConfigController::class)->name('employees.overtime-config.get')->middleware('permission:employees.view');
+        Route::post('/{employee}/overtime-config', SetOvertimeConfigController::class)->name('employees.overtime-config.set')->middleware('permission:employees.update');
     });
 
     // Employment Periods — Schedules (All Protected)
