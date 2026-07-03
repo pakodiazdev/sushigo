@@ -80,6 +80,11 @@ class PermissionSeeder extends LockedSeeder
             // Leaves — anticipated requests go through Employee Requests (type=LEAVE)
             'leaves.register-direct',
 
+            // Vacation Requests
+            'vacation-requests.request',
+            'vacation-requests.approve',
+            'vacation-requests.reject',
+
             // Employee Requests
             'employee-requests.view',
             'employee-requests.create',
@@ -136,6 +141,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->whereIn('name', ['users.show', 'users.index'])
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'vacation-requests.%')
                             ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', 'attendances.%');
                     })
@@ -152,6 +158,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->where('name', 'like', 'users.%')
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
+                            ->orWhere('name', 'like', 'vacation-requests.%')
                             ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', 'attendances.%')
                             ->orWhere('name', 'like', 'items.%')

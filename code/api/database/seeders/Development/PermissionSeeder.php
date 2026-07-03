@@ -113,6 +113,11 @@ class PermissionSeeder extends LockedSeeder
             // Employee Requests module (type=LEAVE), not through leaves.* directly.
             'leaves.register-direct' => ['label' => 'Registrar ausencia directa', 'group' => 'Ausencias'],
 
+            // Vacaciones
+            'vacation-requests.request' => ['label' => 'Solicitar vacaciones', 'group' => 'Ausencias'],
+            'vacation-requests.approve' => ['label' => 'Aprobar vacaciones',   'group' => 'Ausencias'],
+            'vacation-requests.reject' => ['label' => 'Rechazar vacaciones',  'group' => 'Ausencias'],
+
             // Solicitudes de empleado
             'employee-requests.view' => ['label' => 'Ver solicitudes',      'group' => 'Solicitudes'],
             'employee-requests.create' => ['label' => 'Crear solicitud',      'group' => 'Solicitudes'],
