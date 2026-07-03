@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
-import type { EmployeeRequest, ExtraDayPayload } from '@/types/employee-request'
+import { useLeaveTypes } from '@/services/leave-hooks'
+import type { EmployeeRequest, ExtraDayPayload, LeavePayload } from '@/types/employee-request'
 
 interface RequestStatusCardProps {
   readonly request: EmployeeRequest
@@ -16,6 +17,10 @@ function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const date = new Date(year!, month! - 1, day!)
   return date.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function formatDateRange(startDate: string, endDate: string): string {
+  return startDate === endDate ? formatDate(startDate) : `${formatDate(startDate)} — ${formatDate(endDate)}`
 }
 
 function todayIso(): string {
@@ -54,34 +59,66 @@ const STATUS_CONFIG = {
   },
 } as const
 
-export function RequestStatusCard({ request, onCancel, isCancelling }: RequestStatusCardProps) {
-  const [confirmOpen, setConfirmOpen] = useState(false)
-
+function ExtraDayStatusBody({ request, config }: { readonly request: EmployeeRequest; readonly config: (typeof STATUS_CONFIG)[keyof typeof STATUS_CONFIG] }) {
   const payload = request.payload as ExtraDayPayload | null
   const date = payload?.date ?? ''
   const primaPct = payload?.prima_pct ?? 0
   const primaAmount = payload?.prima ?? 0
 
+  return (
+    <>
+      <p className="text-sm font-medium text-foreground">
+        {config.icon} Día extra solicitado
+      </p>
+      {date && (
+        <p className="text-sm text-foreground capitalize">{formatDate(date)}</p>
+      )}
+      <p className="text-sm text-muted-foreground">
+        Prima propuesta: {primaPct}%{primaAmount > 0 && ` · ${formatCurrency(primaAmount)}`}
+      </p>
+    </>
+  )
+}
+
+function LeaveStatusBody({ request, config }: { readonly request: EmployeeRequest; readonly config: (typeof STATUS_CONFIG)[keyof typeof STATUS_CONFIG] }) {
+  const payload = request.payload as LeavePayload | null
+  const { data: leaveTypes = [] } = useLeaveTypes()
+  const leaveType = leaveTypes.find((t) => t.id === payload?.leave_type_id)
+
+  return (
+    <>
+      <p className="text-sm font-medium text-foreground">
+        {config.icon} {leaveType?.name ?? 'Permiso'} solicitado
+      </p>
+      {payload && (
+        <p className="text-sm text-foreground capitalize">
+          {formatDateRange(payload.start_date, payload.end_date)}
+        </p>
+      )}
+    </>
+  )
+}
+
+export function RequestStatusCard({ request, onCancel, isCancelling }: RequestStatusCardProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const payload = request.payload as ExtraDayPayload & LeavePayload | null
+  const endDate = request.type === 'LEAVE' ? (payload?.end_date ?? '') : (payload?.date ?? '')
+
   const config = STATUS_CONFIG[request.status]
 
   const cancellable =
     request.status === 'PENDING' ||
-    (request.status === 'APPROVED' && date >= todayIso())
+    (request.status === 'APPROVED' && endDate >= todayIso())
 
   return (
     <>
       <div className={cn('rounded-lg border p-4 space-y-2', config.className)}>
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">
-              {config.icon} Día extra solicitado
-            </p>
-            {date && (
-              <p className="text-sm text-foreground capitalize">{formatDate(date)}</p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              Prima propuesta: {primaPct}%{primaAmount > 0 && ` · ${formatCurrency(primaAmount)}`}
-            </p>
+            {request.type === 'LEAVE'
+              ? <LeaveStatusBody request={request} config={config} />
+              : <ExtraDayStatusBody request={request} config={config} />}
             <p className={cn('text-xs font-medium', config.labelClass)}>{config.label}</p>
 
             {request.status === 'PENDING' && request.notes && (
@@ -118,9 +155,13 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
         }}
         title="¿Cancelar esta solicitud?"
         description={
-          request.status === 'APPROVED'
-            ? 'El día extra aprobado será eliminado. Esta acción no se puede deshacer.'
-            : 'Tu solicitud de día extra será cancelada. Esta acción no se puede deshacer.'
+          request.type === 'LEAVE'
+            ? request.status === 'APPROVED'
+              ? 'El permiso aprobado será eliminado. Esta acción no se puede deshacer.'
+              : 'Tu solicitud de permiso será cancelada. Esta acción no se puede deshacer.'
+            : request.status === 'APPROVED'
+              ? 'El día extra aprobado será eliminado. Esta acción no se puede deshacer.'
+              : 'Tu solicitud de día extra será cancelada. Esta acción no se puede deshacer.'
         }
         confirmLabel="Sí, cancelar"
         variant="danger"

@@ -3,7 +3,8 @@ import { XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatCurrency } from '@/lib/format'
-import type { EmployeeRequest, ExtraDayPayload } from '@/types/employee-request'
+import { useLeaveTypes } from '@/services/leave-hooks'
+import type { EmployeeRequest, ExtraDayPayload, LeavePayload } from '@/types/employee-request'
 
 interface PendingRequestCardProps {
   readonly request: EmployeeRequest
@@ -18,9 +19,11 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function PendingRequestCard({ request, onReview, onCancel, isCancelling }: PendingRequestCardProps) {
-  const [confirmOpen, setConfirmOpen] = useState(false)
+function formatDateRange(startDate: string, endDate: string): string {
+  return startDate === endDate ? formatDate(startDate) : `${formatDate(startDate)} — ${formatDate(endDate)}`
+}
 
+function ExtraDayCardBody({ request }: { readonly request: EmployeeRequest }) {
   const payload = request.payload as ExtraDayPayload | null
   const date = payload?.date ?? ''
   const primaPct = payload?.prima_pct ?? 0
@@ -28,17 +31,47 @@ export function PendingRequestCard({ request, onReview, onCancel, isCancelling }
 
   return (
     <>
+      <p className="text-sm font-medium text-foreground">➕ Día extra</p>
+      <p className="text-sm text-foreground font-medium">{request.employee_name}</p>
+      {date && (
+        <p className="text-sm text-muted-foreground capitalize">{formatDate(date)}</p>
+      )}
+      <p className="text-sm text-muted-foreground">
+        Prima propuesta: {primaPct}%{primaAmount > 0 && ` · ${formatCurrency(primaAmount)}`}
+      </p>
+    </>
+  )
+}
+
+function LeaveCardBody({ request }: { readonly request: EmployeeRequest }) {
+  const payload = request.payload as LeavePayload | null
+  const { data: leaveTypes = [] } = useLeaveTypes()
+  const leaveType = leaveTypes.find((t) => t.id === payload?.leave_type_id)
+
+  return (
+    <>
+      <p className="text-sm font-medium text-foreground">📅 {leaveType?.name ?? 'Permiso'}</p>
+      <p className="text-sm text-foreground font-medium">{request.employee_name}</p>
+      {payload && (
+        <p className="text-sm text-muted-foreground capitalize">
+          {formatDateRange(payload.start_date, payload.end_date)}
+        </p>
+      )}
+    </>
+  )
+}
+
+export function PendingRequestCard({ request, onReview, onCancel, isCancelling }: PendingRequestCardProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  return (
+    <>
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            <p className="text-sm font-medium text-foreground">➕ Día extra</p>
-            <p className="text-sm text-foreground font-medium">{request.employee_name}</p>
-            {date && (
-              <p className="text-sm text-muted-foreground capitalize">{formatDate(date)}</p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              Prima propuesta: {primaPct}%{primaAmount > 0 && ` · ${formatCurrency(primaAmount)}`}
-            </p>
+            {request.type === 'LEAVE'
+              ? <LeaveCardBody request={request} />
+              : <ExtraDayCardBody request={request} />}
             {request.notes && (
               <p className="text-xs text-muted-foreground italic truncate">"{request.notes}"</p>
             )}
@@ -76,7 +109,7 @@ export function PendingRequestCard({ request, onReview, onCancel, isCancelling }
           setConfirmOpen(false)
         }}
         title="¿Cancelar esta solicitud?"
-        description={`Se cancelará la solicitud de día extra de ${request.employee_name}. Esta acción no se puede deshacer.`}
+        description={`Se cancelará la solicitud de ${request.type === 'LEAVE' ? 'permiso' : 'día extra'} de ${request.employee_name}. Esta acción no se puede deshacer.`}
         confirmLabel="Sí, cancelar"
         variant="danger"
         isLoading={isCancelling}

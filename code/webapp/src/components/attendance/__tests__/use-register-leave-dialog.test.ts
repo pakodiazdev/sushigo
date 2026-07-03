@@ -20,7 +20,6 @@ vi.mock('@/services/leave-api', () => ({
   leaveApi: {
     listLeaveTypes: vi.fn(),
     registerDirectLeave: vi.fn(),
-    registerLeaveRequest: vi.fn(),
   },
 }))
 
@@ -312,42 +311,6 @@ describe('useRegisterLeaveDialog', () => {
 
     expect(result.current.form.getValues('leave_type_id')).toBe(0)
     expect(result.current.form.getValues('notes')).toBeNull()
-  })
-
-  it('submits via registerLeaveRequest when mode is request', async () => {
-    vi.mocked(leaveApi.registerLeaveRequest).mockResolvedValue({
-      data: { status: 201, data: {} },
-    } as never)
-
-    const onSuccess = vi.fn()
-    const { wrapper } = makeWrapper()
-    const { result } = renderHook(
-      () => useRegisterLeaveDialog({ employee: mockEmployee, onSuccess, mode: 'request' }),
-      { wrapper }
-    )
-
-    await waitFor(() => expect(result.current.isLoadingTypes).toBe(false))
-
-    act(() => {
-      result.current.form.setValue('leave_type_id', 1)
-    })
-
-    await act(async () => {
-      await result.current.handleSubmit()
-    })
-
-    await waitFor(() => {
-      expect(leaveApi.registerLeaveRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          employee_id: '01HZTEST00000001',
-          leave_type_id: 1,
-          start_date: '2026-04-09',
-          end_date: '2026-04-09',
-        })
-      )
-    })
-
-    expect(leaveApi.registerDirectLeave).not.toHaveBeenCalled()
   })
 
   it('sets error when SCHEDULED mode has no scheduled_end_time', async () => {

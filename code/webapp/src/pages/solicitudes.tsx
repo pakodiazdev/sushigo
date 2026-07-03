@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { RequestTypeBar } from '@/components/solicitudes/RequestTypeBar'
 import { SolicitudesLayout } from '@/components/solicitudes/SolicitudesLayout'
 import { ExtraDayRequestForm } from '@/components/solicitudes/extra-day-request/extra-day-request-form'
+import { LeaveRequestForm } from '@/components/solicitudes/leave-request/leave-request-form'
 import { MyRequestsList } from '@/components/solicitudes/my-requests/my-requests-list'
 import { PendingRequestsList } from '@/components/solicitudes/pending-requests/pending-requests-list'
 import { useSolicitudesPage } from '@/components/solicitudes/use-solicitudes-page'
@@ -24,6 +25,9 @@ export function SolicitudesPage() {
     showExtraDayForm,
     openExtraDayForm,
     closeExtraDayForm,
+    showLeaveForm,
+    openLeaveForm,
+    closeLeaveForm,
     myEmployeeId,
     isLoadingEmployee,
     isEmployeeError,
@@ -66,7 +70,7 @@ export function SolicitudesPage() {
       />
 
       <div className="mt-6">
-        <RequestTypeBar onExtraDayClick={openExtraDayForm} />
+        <RequestTypeBar onExtraDayClick={openExtraDayForm} onLeaveClick={openLeaveForm} />
       </div>
 
       <div className="mt-8">
@@ -93,6 +97,14 @@ export function SolicitudesPage() {
         <ExtraDayRequestForm
           isOpen={showExtraDayForm}
           onClose={closeExtraDayForm}
+          employeeId={myEmployeeId}
+        />
+      )}
+
+      {myEmployeeId && (
+        <LeaveRequestForm
+          isOpen={showLeaveForm}
+          onClose={closeLeaveForm}
           employeeId={myEmployeeId}
         />
       )}

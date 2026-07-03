@@ -2,9 +2,10 @@ import { Button } from '@/components/ui/button'
 
 interface RequestTypeBarProps {
   readonly onExtraDayClick: () => void
+  readonly onLeaveClick: () => void
 }
 
-export function RequestTypeBar({ onExtraDayClick }: RequestTypeBarProps) {
+export function RequestTypeBar({ onExtraDayClick, onLeaveClick }: RequestTypeBarProps) {
   return (
     <div>
       <h3 className="text-sm font-medium text-muted-foreground mb-3">Nueva solicitud</h3>
@@ -14,12 +15,10 @@ export function RequestTypeBar({ onExtraDayClick }: RequestTypeBarProps) {
           <span>Día extra</span>
         </Button>
 
-        <span title="Próximamente" className="cursor-not-allowed">
-          <Button variant="outline" disabled className="gap-2 pointer-events-none">
-            <span aria-hidden="true">📅</span>
-            <span>Permiso</span>
-          </Button>
-        </span>
+        <Button variant="outline" onClick={onLeaveClick} className="gap-2">
+          <span aria-hidden="true">📅</span>
+          <span>Permiso</span>
+        </Button>
 
         <span title="Próximamente" className="cursor-not-allowed">
           <Button variant="outline" disabled className="gap-2 pointer-events-none">

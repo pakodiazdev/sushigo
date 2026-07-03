@@ -5,11 +5,11 @@ import React from 'react'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
-const mockUseMyExtraDayRequests = vi.fn()
+const mockUseMyRequests = vi.fn()
 const mockUseCancelEmployeeRequest = vi.fn()
 
 vi.mock('@/services/employee-request-hooks', () => ({
-  useMyExtraDayRequests: (id: string) => mockUseMyExtraDayRequests(id),
+  useMyRequests: (id: string) => mockUseMyRequests(id),
   useCancelEmployeeRequest: () => mockUseCancelEmployeeRequest(),
 }))
 
@@ -41,13 +41,13 @@ beforeEach(() => {
 
 describe('MyRequestsList — loading state', () => {
   it('shows a spinner while loading', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({ data: undefined, isLoading: true, isError: false })
+    mockUseMyRequests.mockReturnValue({ data: undefined, isLoading: true, isError: false })
     render(<MyRequestsList employeeId="emp-1" />)
     expect(screen.getByTestId('loader')).toBeDefined()
   })
 
   it('does not render cards while loading', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({ data: undefined, isLoading: true, isError: false })
+    mockUseMyRequests.mockReturnValue({ data: undefined, isLoading: true, isError: false })
     render(<MyRequestsList employeeId="emp-1" />)
     expect(screen.queryByText(/No tienes solicitudes/)).toBeNull()
   })
@@ -55,13 +55,13 @@ describe('MyRequestsList — loading state', () => {
 
 describe('MyRequestsList — error state', () => {
   it('shows an error message when the query fails', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({ data: undefined, isLoading: false, isError: true })
+    mockUseMyRequests.mockReturnValue({ data: undefined, isLoading: false, isError: true })
     render(<MyRequestsList employeeId="emp-1" />)
     expect(screen.getByText(/No se pudieron cargar/)).toBeDefined()
   })
 
   it('does not show empty state on error', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({ data: undefined, isLoading: false, isError: true })
+    mockUseMyRequests.mockReturnValue({ data: undefined, isLoading: false, isError: true })
     render(<MyRequestsList employeeId="emp-1" />)
     expect(screen.queryByText(/No tienes solicitudes/)).toBeNull()
   })
@@ -69,31 +69,31 @@ describe('MyRequestsList — error state', () => {
 
 describe('MyRequestsList — empty state', () => {
   it('shows empty message when no requests', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({ data: [], isLoading: false, isError: false })
+    mockUseMyRequests.mockReturnValue({ data: [], isLoading: false, isError: false })
     render(<MyRequestsList employeeId="emp-1" />)
-    expect(screen.getByText('No tienes solicitudes de días extra.')).toBeDefined()
+    expect(screen.getByText('No tienes solicitudes.')).toBeDefined()
   })
 
   it('shows empty message when data is undefined', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({ data: undefined, isLoading: false, isError: false })
+    mockUseMyRequests.mockReturnValue({ data: undefined, isLoading: false, isError: false })
     render(<MyRequestsList employeeId="emp-1" />)
-    expect(screen.getByText('No tienes solicitudes de días extra.')).toBeDefined()
+    expect(screen.getByText('No tienes solicitudes.')).toBeDefined()
   })
 
   it('filters out CANCELLED requests — shows empty if all cancelled', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({
+    mockUseMyRequests.mockReturnValue({
       data: [makeRequest('r1', 'CANCELLED')],
       isLoading: false,
       isError: false,
     })
     render(<MyRequestsList employeeId="emp-1" />)
-    expect(screen.getByText('No tienes solicitudes de días extra.')).toBeDefined()
+    expect(screen.getByText('No tienes solicitudes.')).toBeDefined()
   })
 })
 
 describe('MyRequestsList — with requests', () => {
   it('renders a card for each non-cancelled request', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({
+    mockUseMyRequests.mockReturnValue({
       data: [makeRequest('r1', 'PENDING'), makeRequest('r2', 'APPROVED')],
       isLoading: false,
       isError: false,
@@ -104,7 +104,7 @@ describe('MyRequestsList — with requests', () => {
   })
 
   it('does not render CANCELLED requests', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({
+    mockUseMyRequests.mockReturnValue({
       data: [makeRequest('r1', 'PENDING'), makeRequest('r2', 'CANCELLED')],
       isLoading: false,
       isError: false,
@@ -115,18 +115,18 @@ describe('MyRequestsList — with requests', () => {
   })
 
   it('does not show empty message when there are active requests', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({
+    mockUseMyRequests.mockReturnValue({
       data: [makeRequest('r1', 'PENDING')],
       isLoading: false,
       isError: false,
     })
     render(<MyRequestsList employeeId="emp-1" />)
-    expect(screen.queryByText('No tienes solicitudes de días extra.')).toBeNull()
+    expect(screen.queryByText('No tienes solicitudes.')).toBeNull()
   })
 
-  it('passes the employeeId to useMyExtraDayRequests', () => {
-    mockUseMyExtraDayRequests.mockReturnValue({ data: [], isLoading: false, isError: false })
+  it('passes the employeeId to useMyRequests', () => {
+    mockUseMyRequests.mockReturnValue({ data: [], isLoading: false, isError: false })
     render(<MyRequestsList employeeId="emp-42" />)
-    expect(mockUseMyExtraDayRequests).toHaveBeenCalledWith('emp-42')
+    expect(mockUseMyRequests).toHaveBeenCalledWith('emp-42')
   })
 })

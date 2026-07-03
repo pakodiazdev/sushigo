@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import { useMyExtraDayRequests, useCancelEmployeeRequest } from '@/services/employee-request-hooks'
+import { useMyRequests, useCancelEmployeeRequest } from '@/services/employee-request-hooks'
 import { RequestStatusCard } from './request-status-card'
 
 interface MyRequestsListProps {
@@ -7,7 +7,7 @@ interface MyRequestsListProps {
 }
 
 export function MyRequestsList({ employeeId }: MyRequestsListProps) {
-  const { data: requests, isLoading, isError } = useMyExtraDayRequests(employeeId)
+  const { data: requests, isLoading, isError } = useMyRequests(employeeId)
   const cancelMutation = useCancelEmployeeRequest()
 
   if (isLoading) {
@@ -31,7 +31,7 @@ export function MyRequestsList({ employeeId }: MyRequestsListProps) {
   if (active.length === 0) {
     return (
       <div className="text-center py-8 text-sm text-muted-foreground">
-        No tienes solicitudes de días extra.
+        No tienes solicitudes.
       </div>
     )
   }

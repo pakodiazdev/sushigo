@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatCurrency } from '@/lib/format'
 import type { EmployeeRequest, ExtraDayPayload } from '@/types/employee-request'
 import { useReviewRequestDialog } from './use-review-request-dialog'
+import { LeaveReviewContent } from './leave-review-content'
 
 interface ReviewRequestDialogProps {
   readonly request: EmployeeRequest | null
@@ -256,7 +257,12 @@ export function ReviewRequestDialog({ request, onClose }: ReviewRequestDialogPro
       title={request ? `Solicitud de ${request.employee_name}` : ''}
       size="sm"
     >
-      {request && <InnerDialog request={request} onClose={onClose} />}
+      {request && request.type === 'LEAVE' && (
+        <LeaveReviewContent request={request} onClose={onClose} />
+      )}
+      {request && request.type !== 'LEAVE' && (
+        <InnerDialog request={request} onClose={onClose} />
+      )}
     </SlidePanel>
   )
 }

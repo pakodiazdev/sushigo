@@ -3,7 +3,7 @@ import { leaveApi } from './leave-api'
 import type { LeaveFilters } from './leave-api'
 import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { LeaveType, Leave, RegisterDirectLeaveRequest, RegisterLeaveRequestData } from '@/types/leave'
+import type { LeaveType, Leave, RegisterDirectLeaveRequest } from '@/types/leave'
 
 /**
  * Fetch all active leave types for the register-absence form.
@@ -43,77 +43,6 @@ export function useRegisterDirectLeave() {
       )
     },
   })
-}
-
-/**
- * Mutation: register a leave REQUEST (status = PENDING).
- * On success: invalidates employee leaves so the list updates.
- */
-export function useRegisterLeaveRequest() {
-  const queryClient = useQueryClient()
-  const { showSuccess, showError } = useToast()
-
-  return useMutation({
-    mutationFn: (data: RegisterLeaveRequestData) =>
-      leaveApi.registerLeaveRequest(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] })
-      showSuccess('Solicitud de ausencia creada. Pendiente de aprobación.', 'Solicitud')
-    },
-    onError: (error: unknown) => {
-      showError(
-        getApiErrorMessage(error, 'No se pudo crear la solicitud.'),
-        'Error al solicitar'
-      )
-    },
-  })
-}
-
-/**
- * Hook: approve/reject mutations for managing leave requests.
- * Invalidates attendance + employee leave queries on success.
- */
-export function useLeaveActions(employeeId: string) {
-  const queryClient = useQueryClient()
-  const { showSuccess, showError } = useToast()
-
-  const approveMutation = useMutation({
-    mutationFn: (leaveId: string) => leaveApi.approveLeave(leaveId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
-      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'leaves'] })
-      queryClient.invalidateQueries({ queryKey: ['employees'] })
-      showSuccess('Ausencia aprobada correctamente.', 'Aprobación')
-    },
-    onError: (error: unknown) => {
-      showError(
-        getApiErrorMessage(error, 'No se pudo aprobar la ausencia.'),
-        'Error al aprobar'
-      )
-    },
-  })
-
-  const rejectMutation = useMutation({
-    mutationFn: (leaveId: string) => leaveApi.rejectLeave(leaveId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'leaves'] })
-      queryClient.invalidateQueries({ queryKey: ['employees'] })
-      showSuccess('Ausencia rechazada.', 'Rechazo')
-    },
-    onError: (error: unknown) => {
-      showError(
-        getApiErrorMessage(error, 'No se pudo rechazar la ausencia.'),
-        'Error al rechazar'
-      )
-    },
-  })
-
-  return {
-    approve: approveMutation.mutate,
-    reject: rejectMutation.mutate,
-    isApproving: approveMutation.isPending,
-    isRejecting: rejectMutation.isPending,
-  }
 }
 
 /**

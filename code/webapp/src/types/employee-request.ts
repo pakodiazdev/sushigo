@@ -46,10 +46,29 @@ export interface ExtraDayPayload {
   total: number
 }
 
-export interface CreateEmployeeRequestData {
-  employee_id: string
-  type: 'EXTRA_DAY'
-  auto_approve?: boolean
-  notes?: string
-  payload: ExtraDayPayload
+export interface LeavePayload {
+  leave_type_id: number
+  start_date: string
+  end_date: string
+  pay_percentage?: number | null
+  rest_day_factor?: 'FULL' | 'PROPORTIONAL' | 'NONE' | null
+  time_mode?: 'SCHEDULED' | 'OPEN_ENDED' | null
+  scheduled_start_time?: string | null
+  scheduled_end_time?: string | null
 }
+
+export type CreateEmployeeRequestData =
+  | {
+      employee_id: string
+      type: 'EXTRA_DAY'
+      auto_approve?: boolean
+      notes?: string
+      payload: ExtraDayPayload
+    }
+  | {
+      employee_id: string
+      type: 'LEAVE'
+      auto_approve?: boolean
+      notes?: string
+      payload: LeavePayload
+    }

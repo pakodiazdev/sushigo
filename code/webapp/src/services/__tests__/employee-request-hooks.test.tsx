@@ -42,8 +42,9 @@ import {
     useApprovedExtraDays,
     useCreateEmployeeRequest,
     useRequestExtraDay,
+    useRequestLeave,
     useCancelEmployeeRequest,
-    useMyExtraDayRequests,
+    useMyRequests,
     usePendingRequests,
     useApproveEmployeeRequest,
     useRejectEmployeeRequest,
@@ -390,6 +391,73 @@ describe('useRequestExtraDay', () => {
     })
 })
 
+describe('useRequestLeave', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('calls employeeRequestApi.create with the given LEAVE data', async () => {
+        mockCreate.mockResolvedValue({ data: { data: { id: 'req-new' } } })
+
+        const { result } = renderHook(() => useRequestLeave(), { wrapper: createWrapper() })
+
+        const payload = {
+            employee_id: 'emp-1',
+            type: 'LEAVE' as const,
+            payload: {
+                leave_type_id: 1,
+                start_date: '2026-06-20',
+                end_date: '2026-06-20',
+            },
+        }
+
+        await act(async () => {
+            await result.current.mutateAsync(payload)
+        })
+
+        expect(mockCreate).toHaveBeenCalledWith(payload)
+    })
+
+    it('shows success toast with employee-facing message on success', async () => {
+        mockCreate.mockResolvedValue({ data: { data: { id: 'req-new' } } })
+
+        const { result } = renderHook(() => useRequestLeave(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync({
+                employee_id: 'emp-1',
+                type: 'LEAVE',
+                payload: { leave_type_id: 1, start_date: '2026-06-20', end_date: '2026-06-20' },
+            })
+        })
+
+        expect(mockShowSuccess).toHaveBeenCalledWith(
+            expect.stringContaining('Manager'),
+            expect.any(String),
+        )
+    })
+
+    it('shows error toast when mutation fails', async () => {
+        mockCreate.mockRejectedValue(new Error('Network error'))
+
+        const { result } = renderHook(() => useRequestLeave(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            try {
+                await result.current.mutateAsync({
+                    employee_id: 'emp-1',
+                    type: 'LEAVE',
+                    payload: { leave_type_id: 1, start_date: '2026-06-20', end_date: '2026-06-20' },
+                })
+            } catch {
+                // expected
+            }
+        })
+
+        await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+    })
+})
+
 describe('useCancelEmployeeRequest', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -584,30 +652,34 @@ describe('useRejectEmployeeRequest', () => {
     })
 })
 
-describe('useMyExtraDayRequests', () => {
+describe('useMyRequests', () => {
     beforeEach(() => {
         vi.clearAllMocks()
     })
 
-    it('fires the query when employeeId is provided', async () => {
-        const extraDays = [{ id: 'req-1', type: 'EXTRA_DAY', status: 'PENDING' }]
-        mockList.mockResolvedValue({ data: { data: extraDays, meta: null } })
+    it('fires the query when employeeId is provided, without a type filter', async () => {
+        const requests = [
+            { id: 'req-1', type: 'EXTRA_DAY', status: 'PENDING' },
+            { id: 'req-2', type: 'LEAVE', status: 'PENDING' },
+        ]
+        mockList.mockResolvedValue({ data: { data: requests, meta: null } })
 
         const { result } = renderHook(
-            () => useMyExtraDayRequests('emp-1'),
+            () => useMyRequests('emp-1'),
             { wrapper: createWrapper() },
         )
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true))
-        expect(result.current.data).toEqual(extraDays)
+        expect(result.current.data).toEqual(requests)
         expect(mockList).toHaveBeenCalledWith(
-            expect.objectContaining({ employee_id: 'emp-1', type: 'EXTRA_DAY' }),
+            expect.objectContaining({ employee_id: 'emp-1' }),
         )
+        expect(mockList.mock.calls[0]![0]).not.toHaveProperty('type')
     })
 
     it('does not fire when employeeId is undefined', () => {
         const { result } = renderHook(
-            () => useMyExtraDayRequests(undefined),
+            () => useMyRequests(undefined),
             { wrapper: createWrapper() },
         )
 
