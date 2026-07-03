@@ -70,3 +70,20 @@ scope for this issue).
   { "date": "2026-07-03", "start": "13:00", "end": "16:00" }
 ]
 ```
+
+## 📊 Retrospective
+- **Actual total:** 7h 30m (90 min + 180 min + 180 min)
+- **vs optimistic:** +5h 30m
+- **vs pessimistic:** +4h 30m
+
+**Justification:**
+
+The core deliverable — the close endpoint, confirmation dialog, and their tests — landed close to the original 2–3h estimate. The overrun came from work bundled into the same PR at the user's request, none of which was in the original scope:
+
+- A scope discussion on the post-close redirect target, since #074 (closed period detail) doesn't exist yet, requiring a decision and a documented scope note.
+- A Dev Debugger DX improvement (mobile bottom bar, per-section quick-link icons, recovered clock-shift buttons from a stash) that went through three rounds of clarification and rework as the intended design was refined.
+- Three new repo-wide conventions (PR title format, mandatory manual-testing PR section, no-credentials rule), each requiring edits across two repositories (`sushigo` and `sushigo-dev-lab`) plus a new dev-lab issue and PR.
+- A full review cycle: addressing 3 Copilot review threads, then a separate pass fixing SonarCloud quality-gate issues across both `api` and `webapp` projects, then two more rounds of inline-FQCN convention fixes.
+- A final commit-history consolidation (17 commits → 5) at the user's request.
+
+None of this was scope creep in the sense of expanding the payroll-close feature itself — it was additional, explicitly requested work riding on the same session and PR.
