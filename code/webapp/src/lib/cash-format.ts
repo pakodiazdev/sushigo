@@ -1,7 +1,7 @@
 export function formatCurrency(amount: string | number, currency: string = 'MXN'): string {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+    const numAmount = typeof amount === 'string' ? Number.parseFloat(amount) : amount
 
-    if (isNaN(numAmount)) {
+    if (Number.isNaN(numAmount)) {
         return '-'
     }
 
