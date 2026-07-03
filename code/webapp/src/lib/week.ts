@@ -18,7 +18,7 @@
  *    next month.
  */
 
-const WEEK_START_DAY = parseInt(import.meta.env.VITE_WEEK_START_DAY ?? '1', 10)
+const WEEK_START_DAY = Number.parseInt(import.meta.env.VITE_WEEK_START_DAY ?? '1', 10)
 
 function toIsoDate(d: Date): string {
   return d.toISOString().substring(0, 10)

@@ -42,7 +42,7 @@ export function useWeeklySummaryDialog(): WeeklySummaryDialogState {
   const { data: employee } = useEmployee(employeePublicId)
   const periods = employee?.employment_periods ?? []
   const hireDate = periods.length > 0
-    ? periods.reduce((earliest, p) => (p.start_date < earliest ? p.start_date : earliest), periods[0]!.start_date)
+    ? periods.reduce((earliest, p) => (p.start_date < earliest ? p.start_date : earliest), periods[0]!.start_date) // NOSONAR — start_date is an ISO date string, not a number; Math.min() would coerce it to NaN
     : null
   const earliestWeekStart = hireDate ? weekRangeContaining(hireDate).start : null
 
