@@ -115,6 +115,23 @@ export interface PayPeriodPreviewResponse {
   data: PayPeriodEmployeePreview[]
 }
 
+export interface PayPeriod {
+  id: string
+  branch_id: number
+  period_start: string
+  period_end: string
+  status: PayPeriodStatus
+  closed_at: string
+}
+
+export interface ConfirmClosePayPeriodResponse {
+  status: number
+  data: {
+    pay_period: PayPeriod
+    employees_closed: number
+  }
+}
+
 // ── Vacation Entitlement ───────────────────────────────────────────────────────
 
 export type TerminationType = 'resignation' | 'dismissal' | 'contract_end' | 'internal_transfer' | 'other'

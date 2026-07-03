@@ -1,20 +1,45 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AxiosError, AxiosHeaders } from 'axios'
+
+function createAxiosError(
+  message?: string,
+  errors?: Record<string, string[]>,
+  status = 422,
+): AxiosError<{ message?: string; errors?: Record<string, string[]> }> {
+  const error = new AxiosError<{ message?: string; errors?: Record<string, string[]> }>('Request failed')
+  error.response = {
+    data: { message, errors },
+    status,
+    statusText: 'Unprocessable Entity',
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+  }
+  return error
+}
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 const mockGetClosePreview = vi.fn()
+const mockConfirmClose = vi.fn()
+const mockShowSuccess = vi.fn()
+const mockShowError = vi.fn()
 
 vi.mock('@/services/payroll.service', () => ({
   payrollApi: {
     getClosePreview: (...args: unknown[]) => mockGetClosePreview(...args),
+    confirmClose: (...args: unknown[]) => mockConfirmClose(...args),
   },
 }))
 
-import { useClosePreview } from '../payroll-hooks'
+vi.mock('@/components/ui/toast-context', () => ({
+  useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
+}))
+
+import { useClosePreview, useConfirmClose } from '../payroll-hooks'
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -90,5 +115,57 @@ describe('useClosePreview', () => {
     )
 
     expect(result.current.fetchStatus).toBe('idle')
+  })
+})
+
+const mockConfirmCloseResponse = {
+  status: 201,
+  data: {
+    pay_period: {
+      id: 'pp-ulid',
+      branch_id: 1,
+      period_start: '2026-06-22',
+      period_end: '2026-06-28',
+      status: 'CLOSED',
+      closed_at: '2026-06-29T00:00:00+00:00',
+    },
+    employees_closed: 1,
+  },
+}
+
+describe('useConfirmClose', () => {
+  it('calls payrollApi.confirmClose with the given variables and shows a success toast', async () => {
+    mockConfirmClose.mockResolvedValue({ data: mockConfirmCloseResponse })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useConfirmClose(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        branchId: 1,
+        periodStart: '2026-06-22',
+        periodEnd: '2026-06-28',
+      })
+    })
+
+    expect(mockConfirmClose).toHaveBeenCalledWith(1, '2026-06-22', '2026-06-28')
+    expect(mockShowSuccess).toHaveBeenCalled()
+  })
+
+  it('shows an error toast with the duplicate-period message on failure', async () => {
+    mockConfirmClose.mockRejectedValue(
+      createAxiosError('The given data was invalid.', {
+        period_start: ['Ya existe un cierre para este periodo.'],
+      }),
+    )
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useConfirmClose(), { wrapper })
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ branchId: 1, periodStart: '2026-06-22', periodEnd: '2026-06-28' }),
+      ).rejects.toBeDefined()
+    })
+
+    expect(mockShowError).toHaveBeenCalledWith('Ya existe un cierre para este periodo.', 'Error')
   })
 })
