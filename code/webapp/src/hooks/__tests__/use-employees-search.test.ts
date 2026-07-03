@@ -41,6 +41,14 @@ vi.mock('@/services/employee-hooks', () => ({
     }),
 }))
 
+vi.mock('@/services/report.service', () => ({
+    useWeeklySummary: () => ({
+        data: undefined,
+        isLoading: false,
+        isError: false,
+    }),
+}))
+
 vi.mock('@/lib/sort-utils', () => ({
     sortSpecsToParams: (specs: Array<{ id: string; desc: boolean }>) => {
         if (!specs?.length) return {}
@@ -285,6 +293,43 @@ describe('useEmployeesSearch', () => {
             result.current.handlePageChange(1)
         })
 
+        expect(mockNavigate).toHaveBeenCalled()
+    })
+
+    it('weeklySummary panel is closed by default', () => {
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        expect(result.current.weeklySummary.isOpen).toBe(false)
+    })
+
+    it('weeklySummary panel opens automatically when the URL already has a weeklySummary id', () => {
+        currentSearch = { weeklySummary: 'emp-01' }
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        expect(result.current.weeklySummary.isOpen).toBe(true)
+        expect(result.current.weeklySummary.employeePublicId).toBe('emp-01')
+    })
+
+    it('weeklySummary.open navigates with the weeklySummary id', () => {
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        act(() => {
+            result.current.weeklySummary.open('emp-02', 'Doe, John')
+        })
+
+        expect(result.current.weeklySummary.isOpen).toBe(true)
+        expect(mockNavigate).toHaveBeenCalled()
+    })
+
+    it('weeklySummary.close navigates removing the weeklySummary id', () => {
+        currentSearch = { weeklySummary: 'emp-01' }
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        act(() => {
+            result.current.weeklySummary.close()
+        })
+
+        expect(result.current.weeklySummary.isOpen).toBe(false)
         expect(mockNavigate).toHaveBeenCalled()
     })
 })

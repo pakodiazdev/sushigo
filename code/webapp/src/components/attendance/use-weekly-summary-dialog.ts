@@ -20,14 +20,15 @@ export interface WeeklySummaryDialogState {
   summary: WeeklySummaryResponse | null
   isLoading: boolean
   isError: boolean
-  open: (publicId: string, name: string) => void
+  /** `name` is optional — used for an instant title before the employee record loads (e.g. from an already-fetched row). Omit when only the id is known (e.g. restoring from a URL). */
+  open: (publicId: string, name?: string) => void
   close: () => void
 }
 
 export function useWeeklySummaryDialog(): WeeklySummaryDialogState {
   const [isOpen, setIsOpen] = useState(false)
   const [employeePublicId, setEmployeePublicId] = useState('')
-  const [employeeName, setEmployeeName] = useState('')
+  const [fallbackName, setFallbackName] = useState('')
   const { start, end } = currentWeekRange()
   const [periodStart, setPeriodStart] = useState(start)
   const [periodEnd, setPeriodEnd] = useState(end)
@@ -40,15 +41,16 @@ export function useWeeklySummaryDialog(): WeeklySummaryDialogState {
   )
 
   const { data: employee } = useEmployee(employeePublicId)
+  const employeeName = employee ? `${employee.last_name}, ${employee.first_name}` : fallbackName
   const periods = employee?.employment_periods ?? []
   const hireDate = periods.length > 0
     ? periods.reduce((earliest, p) => (p.start_date < earliest ? p.start_date : earliest), periods[0]!.start_date) // NOSONAR — start_date is an ISO date string, not a number; Math.min() would coerce it to NaN
     : null
   const earliestWeekStart = hireDate ? weekRangeContaining(hireDate).start : null
 
-  function open(publicId: string, name: string) {
+  function open(publicId: string, name?: string) {
     setEmployeePublicId(publicId)
-    setEmployeeName(name)
+    setFallbackName(name ?? '')
     const { start: s, end: e } = currentWeekRange()
     setPeriodStart(s)
     setPeriodEnd(e)

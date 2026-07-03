@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { useSearch, useNavigate } from '@tanstack/react-router'
 import { useEmployees, useEmployee } from '@/services/employee-hooks'
+import { useWeeklySummaryDialog } from '@/components/attendance/use-weekly-summary-dialog'
 import { sortSpecsToParams, parseSortParam, serializeSorts } from '@/lib/sort-utils'
 import type { SortSpec } from '@/components/ui/data-grid'
 import type { Employee, EmployeeFilters, EmployeePositionRole } from '@/types/employee'
@@ -12,6 +14,8 @@ export interface EmployeesSearch {
   role?: string
   status?: string
   form?: 'new' | string
+  /** Public id of the employee whose weekly summary panel is open — persists across refresh/copy-paste. */
+  weeklySummary?: string
 }
 
 export function useEmployeesSearch() {
@@ -89,6 +93,32 @@ export function useEmployeesSearch() {
     })
   }
 
+  // Weekly summary panel — same URL-state pattern as the employee form (`form=`),
+  // via `weeklySummary=<id>`, so refreshing or sharing the URL reopens it (deep linking).
+  const weeklySummaryDialog = useWeeklySummaryDialog()
+
+  useEffect(() => {
+    if (search.weeklySummary && search.weeklySummary !== weeklySummaryDialog.employeePublicId) {
+      weeklySummaryDialog.open(search.weeklySummary)
+    }
+    if (!search.weeklySummary && weeklySummaryDialog.isOpen) {
+      weeklySummaryDialog.close()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.weeklySummary])
+
+  const weeklySummary = {
+    ...weeklySummaryDialog,
+    open: (publicId: string, name?: string) => {
+      weeklySummaryDialog.open(publicId, name)
+      setSearch({ weeklySummary: publicId })
+    },
+    close: () => {
+      weeklySummaryDialog.close()
+      setSearch({ weeklySummary: undefined })
+    },
+  }
+
   return {
     // Data
     data,
@@ -112,5 +142,7 @@ export function useEmployeesSearch() {
     handleNewEmployee,
     handleEditEmployee,
     handleCloseForm,
+    // Weekly summary panel
+    weeklySummary,
   }
 }

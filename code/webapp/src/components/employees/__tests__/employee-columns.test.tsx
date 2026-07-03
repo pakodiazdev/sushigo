@@ -186,6 +186,48 @@ describe('getEmployeeColumns', () => {
         expect(parentClickHandler).not.toHaveBeenCalled()
     })
 
+    it('does not render the weekly summary button when onWeeklySummary is not provided', () => {
+        const columns = getEmployeeColumns(mockOnEdit)
+        const actionsColumn = columns.find((c) => c.key === 'actions')!
+
+        render(<>{actionsColumn.render!(mockEmployee)}</>)
+
+        expect(screen.getAllByRole('button')).toHaveLength(1)
+    })
+
+    it('renders the weekly summary button when onWeeklySummary is provided', () => {
+        const mockOnWeeklySummary = vi.fn()
+        const columns = getEmployeeColumns(mockOnEdit, mockOnWeeklySummary)
+        const actionsColumn = columns.find((c) => c.key === 'actions')!
+
+        render(<>{actionsColumn.render!(mockEmployee)}</>)
+
+        expect(screen.getAllByRole('button')).toHaveLength(2)
+        const button = screen.getByLabelText('Ver resumen semanal')
+        fireEvent.click(button)
+
+        expect(mockOnWeeklySummary).toHaveBeenCalledWith(mockEmployee)
+        expect(mockOnEdit).not.toHaveBeenCalled()
+    })
+
+    it('stops event propagation on the weekly summary button click', () => {
+        const parentClickHandler = vi.fn()
+        const mockOnWeeklySummary = vi.fn()
+        const columns = getEmployeeColumns(mockOnEdit, mockOnWeeklySummary)
+        const actionsColumn = columns.find((c) => c.key === 'actions')!
+
+        render(
+            <div onClick={parentClickHandler}>
+                {actionsColumn.render!(mockEmployee)}
+            </div>,
+        )
+        const button = screen.getByLabelText('Ver resumen semanal')
+        fireEvent.click(button)
+
+        expect(mockOnWeeklySummary).toHaveBeenCalled()
+        expect(parentClickHandler).not.toHaveBeenCalled()
+    })
+
     it('all columns have skeleton functions', () => {
         const columns = getEmployeeColumns(mockOnEdit)
 
