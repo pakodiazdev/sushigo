@@ -15,6 +15,7 @@ use App\Http\Resources\BaseResource;
  *     @OA\Property(property="last_name", type="string", example="Perez"),
  *     @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}), example={"cook"}, description="Position roles"),
  *     @OA\Property(property="is_active", type="boolean", example=true),
+ *     @OA\Property(property="attendance_exempt", type="boolean", example=false, description="True for roles (e.g. admin, super-admin) that do not check in/out — excluded from the attendance list"),
  *     @OA\Property(property="has_active_period", type="boolean", nullable=true, example=true, description="True when employee has at least one active employment period"),
  *     @OA\Property(property="has_user", type="boolean", example=true, description="Whether the employee has a linked user account"),
  *     @OA\Property(property="email", type="string", format="email", nullable=true, example="juan@sushigo.com"),
@@ -52,6 +53,7 @@ class EmployeeResource extends BaseResource
             'last_name' => $this->last_name,
             'roles' => $this->getPositionRoles(),
             'is_active' => $this->is_active,
+            'attendance_exempt' => $this->attendance_exempt,
             'has_active_period' => $this->active_employment_periods_count !== null
                 ? $this->active_employment_periods_count > 0
                 : ($this->relationLoaded('employmentPeriods')

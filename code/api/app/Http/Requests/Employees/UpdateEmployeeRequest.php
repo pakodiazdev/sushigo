@@ -15,6 +15,7 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager", "admin", "super-admin"}), example={"cook"}, description="Position roles (super-admin only visible to super-admins)"),
  *   @OA\Property(property="email", type="string", format="email", example="juan.perez@sushigo.com", description="User email (admin only)"),
  *   @OA\Property(property="phone", type="string", example="5512345678", description="National phone number (admin only)"),
+ *   @OA\Property(property="attendance_exempt", type="boolean", example=false, description="True for roles (e.g. admin, super-admin) that do not check in/out — excluded from the attendance list."),
  *   @OA\Property(property="meta", type="object", nullable=true),
  * )
  */
@@ -32,6 +33,7 @@ class UpdateEmployeeRequest extends FormRequest
             'last_name' => ['sometimes', 'string', 'max:100'],
             'roles' => ['sometimes', 'array', 'min:1'],
             'roles.*' => ['string', Rule::in(Employee::getAssignableRolesFor($this->user()))],
+            'attendance_exempt' => ['sometimes', 'boolean'],
             'meta' => ['nullable', 'array'],
         ];
 

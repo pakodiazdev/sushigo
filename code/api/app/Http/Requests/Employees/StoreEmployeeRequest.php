@@ -19,6 +19,7 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="phone", type="string", example="5512345678", description="National phone number without country code (required if email not provided). Country code (+52 for Mexico) is added automatically. A WhatsApp message with password setup link will be sent."),
  *   @OA\Property(property="branch_id", type="integer", example=1, description="Branch ID for the initial employment period"),
  *   @OA\Property(property="start_date", type="string", format="date", example="2026-01-15", description="Start date for the initial employment period"),
+ *   @OA\Property(property="attendance_exempt", type="boolean", example=false, description="True for roles (e.g. admin, super-admin) that do not check in/out — excluded from the attendance list. Defaults to false."),
  *   @OA\Property(property="meta", type="object", nullable=true, description="Additional metadata"),
  * )
  */
@@ -42,6 +43,7 @@ class StoreEmployeeRequest extends FormRequest
             'meta' => ['nullable', 'array'],
             'branch_id' => ['required', 'integer', Rule::exists('branches', 'id')->whereNull('deleted_at')],
             'start_date' => ['required', 'date'],
+            'attendance_exempt' => ['sometimes', 'boolean'],
         ];
     }
 

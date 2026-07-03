@@ -55,6 +55,7 @@ class AdminEmployeeSeeder extends OnceSeeder
                 'first_name' => $employeeData['first_name'],
                 'last_name' => $employeeData['last_name'],
                 'is_active' => true,
+                'attendance_exempt' => $employeeData['attendance_exempt'] ?? false,
             ]);
 
             // Sync position roles onto the User (preserves admin/inventory-manager roles)

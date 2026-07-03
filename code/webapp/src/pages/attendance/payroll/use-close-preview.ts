@@ -3,20 +3,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useClosePreview, type ClosePreviewRange } from '@/services/payroll-hooks'
 import { getApiErrorMessage } from '@/lib/api-error'
 import type { PayPeriodEmployeePreview } from '@/types/attendance-payroll'
-
-function currentWeekRange(): ClosePreviewRange {
-  const now = new Date()
-  const day = now.getDay()
-  const diffToMonday = (day === 0 ? -6 : 1 - day)
-  const monday = new Date(now)
-  monday.setDate(now.getDate() + diffToMonday)
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  return { periodStart: fmt(monday), periodEnd: fmt(sunday) }
-}
+import { currentWeekRange as getWeekRange } from '@/lib/week'
 
 export interface UseClosePreviewResult {
   range: ClosePreviewRange
@@ -34,7 +21,8 @@ export function useClosePreviewPage(): UseClosePreviewResult {
   const currentBranch = useAuthStore(s => s.currentBranch)
   const branchId = currentBranch?.id ?? null
 
-  const defaultRange = currentWeekRange()
+  const { start, end } = getWeekRange()
+  const defaultRange: ClosePreviewRange = { periodStart: start, periodEnd: end }
   const [pendingRange, setPendingRange] = useState<ClosePreviewRange>(defaultRange)
   const [activeRange, setActiveRange] = useState<ClosePreviewRange | null>(null)
 

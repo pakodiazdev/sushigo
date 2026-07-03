@@ -49,6 +49,8 @@ return [
                 'first_name' => 'Admin',
                 'last_name' => 'User',
                 'position_roles' => ['manager'],
+                // Admins are free of attendance tracking, like super-admin (which has no employee record)
+                'attendance_exempt' => true,
             ],
         ],
         [
@@ -162,7 +164,6 @@ return [
     */
 
     'factory_counts' => [
-        'users' => 10,
         'employees' => 5,
     ],
 

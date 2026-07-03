@@ -72,6 +72,21 @@ class TodayAttendanceApiTest extends TestCase
     }
 
     #[Test]
+    public function excludes_employees_marked_attendance_exempt(): void
+    {
+        $tracked = $this->makeEmployeeForBranch($this->branch);
+        $exempt = $this->makeEmployeeForBranch($this->branch);
+        $exempt->update(['attendance_exempt' => true]);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $response->assertStatus(200);
+        $ids = collect($response->json('data'))->pluck('employee.id');
+        $this->assertTrue($ids->contains($tracked->public_id));
+        $this->assertFalse($ids->contains($exempt->public_id));
+    }
+
+    #[Test]
     public function employees_without_attendance_have_null_attendance(): void
     {
         $employee = $this->makeEmployeeForBranch($this->branch);

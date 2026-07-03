@@ -20,6 +20,7 @@ class EmployeeRepository extends BaseRepository
     /**
      * Load all active employees for a branch with today's attendance and
      * any approved leave covering the given date, ordered by last then first name.
+     * Employees marked `attendance_exempt` (e.g. admin, super-admin) are excluded.
      */
     public function getActiveForReport(int $branchId, string $today): Collection
     {
@@ -45,6 +46,7 @@ class EmployeeRepository extends BaseRepository
                             ]),
                     ]),
             ])
+            ->where('attendance_exempt', false)
             ->whereHas('employmentPeriods', fn ($q) => $q
                 ->where('branch_id', $branchId)
                 ->where('is_active', true)

@@ -32,6 +32,7 @@ use Carbon\Carbon;
  * }
  *
  * Employees are ordered by last_name ASC, first_name ASC.
+ * Employees marked `attendance_exempt` (e.g. admin, super-admin) never appear here.
  *
  * @OA\Get(
  *     path="/api/v1/attendances/today",
@@ -104,6 +105,7 @@ class TodayAttendanceController extends Controller
             // ExtraDayNegotiationDialog. Only the most recent effective record is needed.
             'wageHistories' => fn ($q) => $q->effective($today)->latest('effective_from'),
         ])
+            ->where('attendance_exempt', false)
             ->whereHas('employmentPeriods', function ($q) use ($branchId) {
                 $q->where('branch_id', $branchId)
                     ->where('is_active', true);

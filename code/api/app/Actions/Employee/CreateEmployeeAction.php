@@ -39,6 +39,7 @@ class CreateEmployeeAction
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'is_active' => $data['is_active'] ?? true,
+                'attendance_exempt' => $data['attendance_exempt'] ?? false,
                 'meta' => $data['meta'] ?? null,
             ]);
 

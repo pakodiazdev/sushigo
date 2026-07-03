@@ -298,6 +298,39 @@ class CreateEmployeeActionTest extends TestCase
     }
 
     #[Test]
+    public function it_defaults_attendance_exempt_to_false(): void
+    {
+        $employee = ($this->action)([
+            'code' => 'EMP-EXEMPT-DEFAULT',
+            'first_name' => 'Default',
+            'last_name' => 'Exempt',
+            'roles' => ['cook'],
+            'email' => 'default-exempt@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
+        ]);
+
+        $this->assertFalse($employee->attendance_exempt);
+    }
+
+    #[Test]
+    public function it_can_create_attendance_exempt_employee(): void
+    {
+        $employee = ($this->action)([
+            'code' => 'EMP-EXEMPT',
+            'first_name' => 'Admin',
+            'last_name' => 'Free',
+            'roles' => ['admin'],
+            'email' => 'exempt@sushigo.com',
+            'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-15',
+            'attendance_exempt' => true,
+        ]);
+
+        $this->assertTrue($employee->attendance_exempt);
+    }
+
+    #[Test]
     public function it_eager_loads_user_relation(): void
     {
         $employee = ($this->action)([

@@ -97,4 +97,21 @@ class UpdateEmployeeContactTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => 'u@x.com']);
         $this->assertDatabaseHas('employees', ['id' => $employee->id, 'user_id' => $user->id]);
     }
+
+    #[Test]
+    public function admin_can_toggle_attendance_exempt(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        Passport::actingAs($admin);
+
+        $employee = Employee::factory()->create(['attendance_exempt' => false]);
+
+        $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
+            'attendance_exempt' => true,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('employees', ['id' => $employee->id, 'attendance_exempt' => true]);
+    }
 }

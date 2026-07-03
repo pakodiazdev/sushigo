@@ -42,3 +42,39 @@ export interface TodayReportResponse {
   summary: TodayReportSummary
   employees: TodayReportEmployee[]
 }
+
+// ── Weekly Summary ─────────────────────────────────────────────────────────────
+
+export interface PartialLeaveItem {
+  is_paid: boolean
+  duration_minutes: number
+}
+
+export interface DailyEvidenceItem {
+  date: string
+  check_in: string | null
+  check_out: string | null
+  day_status: string | null   // null when no attendance record exists for this date yet
+  late_minutes: number
+  deducted_minutes: number
+  partial_leaves: PartialLeaveItem[]
+  overtime_minutes: number
+  overtime_authorized: boolean
+}
+
+/** Full response payload for GET /api/v1/reports/weekly-summary. */
+export interface WeeklySummaryResponse {
+  employee_id: string
+  period_start: string
+  period_end: string
+  base_pay: number
+  late_deductions: number
+  unpaid_leave_deductions: number
+  overtime_pay: number
+  extra_day_pay: number
+  holiday_pay: number
+  punctuality_bonus: number
+  free_hours_earned: number
+  total_pay: number
+  daily_evidence: DailyEvidenceItem[]
+}
