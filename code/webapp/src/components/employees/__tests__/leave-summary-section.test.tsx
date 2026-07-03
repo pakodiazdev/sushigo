@@ -28,13 +28,6 @@ interface MockHookReturn {
     openRegisterLeave: () => void
     closeRegisterLeave: () => void
     showRegisterLeave: boolean
-    showRequestLeave: boolean
-    openRequestLeave: () => void
-    closeRequestLeave: () => void
-    handleApprove: (leaveId: string) => void
-    handleReject: (leaveId: string) => void
-    isApproving: boolean
-    isRejecting: boolean
 }
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -58,13 +51,6 @@ const defaultHookReturn: MockHookReturn = {
     openRegisterLeave: vi.fn(),
     closeRegisterLeave: vi.fn(),
     showRegisterLeave: false,
-    showRequestLeave: false,
-    openRequestLeave: vi.fn(),
-    closeRequestLeave: vi.fn(),
-    handleApprove: vi.fn(),
-    handleReject: vi.fn(),
-    isApproving: false,
-    isRejecting: false,
 }
 
 let currentHook = { ...defaultHookReturn }
@@ -74,8 +60,8 @@ vi.mock('@/components/employees/use-leave-summary-section', () => ({
 }))
 
 vi.mock('@/components/attendance', () => ({
-    RegisterLeaveDialog: ({ isOpen, mode }: { isOpen: boolean; mode?: string }) =>
-        isOpen ? <div data-testid={`register-leave-dialog${mode === 'request' ? '-request' : ''}`}>RegisterLeaveDialog</div> : null,
+    RegisterLeaveDialog: ({ isOpen }: { isOpen: boolean }) =>
+        isOpen ? <div data-testid="register-leave-dialog">RegisterLeaveDialog</div> : null,
 }))
 
 const employee = { id: 'emp-1', first_name: 'Ana', last_name: 'López', code: 'E001' }
@@ -110,7 +96,7 @@ function makeLeave(overrides: Partial<Leave> = {}): Leave {
 
 describe('LeaveSummarySection', () => {
     beforeEach(() => {
-        currentHook = { ...defaultHookReturn, openFullHistory: vi.fn(), openRegisterLeave: vi.fn(), openRequestLeave: vi.fn(), closeFullHistory: vi.fn() }
+        currentHook = { ...defaultHookReturn, openFullHistory: vi.fn(), openRegisterLeave: vi.fn(), closeFullHistory: vi.fn() }
     })
 
     afterEach(() => {
@@ -126,6 +112,11 @@ describe('LeaveSummarySection', () => {
         render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
         expect(screen.getByText('Registrar')).toBeDefined()
         expect(screen.getByText('Ver historial')).toBeDefined()
+    })
+
+    it('does not render a "Solicitar permiso" button — self-service lives in Solicitudes', () => {
+        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
+        expect(screen.queryByText('Solicitar permiso')).toBeNull()
     })
 
     it('shows empty message when no leaves this month', () => {
@@ -441,50 +432,18 @@ describe('LeaveSummarySection', () => {
         expect(currentHook.updateFilter).toHaveBeenCalledWith('leave_type_id', 1)
     })
 
-    it('calls handleApprove when approve button clicked in dialog', () => {
+    it('does not render approve/reject action buttons in the history table', () => {
         currentHook = {
             ...currentHook,
             showFullHistory: true,
             fullLeaves: [makeLeave({ id: 'pending-1', status: 'PENDING' })],
             isLoadingFull: false,
-            handleApprove: vi.fn(),
-            handleReject: vi.fn(),
         }
 
         render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
-        fireEvent.click(screen.getByLabelText('Aprobar ausencia'))
-        expect(currentHook.handleApprove).toHaveBeenCalledWith('pending-1')
-    })
-
-    it('calls handleReject when reject button clicked in dialog', () => {
-        currentHook = {
-            ...currentHook,
-            showFullHistory: true,
-            fullLeaves: [makeLeave({ id: 'pending-2', status: 'PENDING' })],
-            isLoadingFull: false,
-            handleApprove: vi.fn(),
-            handleReject: vi.fn(),
-        }
-
-        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
-        fireEvent.click(screen.getByLabelText('Rechazar ausencia'))
-        expect(currentHook.handleReject).toHaveBeenCalledWith('pending-2')
-    })
-
-    it('disables approve/reject buttons when isApproving is true', () => {
-        currentHook = {
-            ...currentHook,
-            showFullHistory: true,
-            fullLeaves: [makeLeave({ id: 'pending-3', status: 'PENDING' })],
-            isLoadingFull: false,
-            isApproving: true,
-        }
-
-        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
-        const approveBtn = screen.getByLabelText('Aprobar ausencia') as HTMLButtonElement
-        const rejectBtn = screen.getByLabelText('Rechazar ausencia') as HTMLButtonElement
-        expect(approveBtn.disabled).toBe(true)
-        expect(rejectBtn.disabled).toBe(true)
+        expect(screen.queryByLabelText('Aprobar ausencia')).toBeNull()
+        expect(screen.queryByLabelText('Rechazar ausencia')).toBeNull()
+        expect(screen.queryByText('Acciones')).toBeNull()
     })
 
     it('calls setPage when pagination buttons are clicked', () => {
@@ -510,35 +469,5 @@ describe('LeaveSummarySection', () => {
 
         if (nextBtn) fireEvent.click(nextBtn)
         expect(currentHook.setPage).toHaveBeenCalledWith(3)
-    })
-
-    it('calls openRequestLeave when Solicitar permiso button clicked', () => {
-        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
-        fireEvent.click(screen.getByText('Solicitar permiso'))
-        expect(currentHook.openRequestLeave).toHaveBeenCalled()
-    })
-
-    it('renders request leave dialog when showRequestLeave is true', () => {
-        currentHook = {
-            ...currentHook,
-            pendingLeaveEmployee: { id: 'emp-1', code: 'E001', first_name: 'Ana', last_name: 'López', roles: [], daily_wage: null },
-            showRequestLeave: true,
-        }
-
-        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
-        expect(screen.getByTestId('register-leave-dialog-request')).toBeDefined()
-    })
-
-    it('does not show approve/reject buttons for non-PENDING leaves', () => {
-        currentHook = {
-            ...currentHook,
-            showFullHistory: true,
-            fullLeaves: [makeLeave({ id: 'l1', status: 'APPROVED' })],
-            isLoadingFull: false,
-        }
-
-        render(<LeaveSummarySection employeeId="emp-1" employee={employee} />)
-        expect(screen.queryByLabelText('Aprobar ausencia')).toBeNull()
-        expect(screen.queryByLabelText('Rechazar ausencia')).toBeNull()
     })
 })

@@ -9,6 +9,7 @@ export function useSolicitudesPage() {
   const canApprove = can('employee-requests.approve')
   const [activeTab, setActiveTab] = useState<TabId>('mine')
   const [showExtraDayForm, setShowExtraDayForm] = useState(false)
+  const [showLeaveForm, setShowLeaveForm] = useState(false)
 
   const { data: pendingCount = 0 } = usePendingRequestsCount({ enabled: canApprove })
   const { data: myEmployee, isLoading: isLoadingEmployee, isError: isEmployeeError } = useMyEmployee()
@@ -21,6 +22,9 @@ export function useSolicitudesPage() {
     showExtraDayForm,
     openExtraDayForm: () => setShowExtraDayForm(true),
     closeExtraDayForm: () => setShowExtraDayForm(false),
+    showLeaveForm,
+    openLeaveForm: () => setShowLeaveForm(true),
+    closeLeaveForm: () => setShowLeaveForm(false),
     myEmployeeId: myEmployee?.id,
     isLoadingEmployee,
     isEmployeeError,

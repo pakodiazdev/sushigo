@@ -133,4 +133,15 @@ describe('useSolicitudesPage', () => {
         const { result } = renderHook(() => useSolicitudesPage())
         expect(result.current.isEmployeeError).toBe(false)
     })
+
+    it('showLeaveForm starts closed and toggles via open/closeLeaveForm', () => {
+        const { result } = renderHook(() => useSolicitudesPage())
+        expect(result.current.showLeaveForm).toBe(false)
+
+        act(() => result.current.openLeaveForm())
+        expect(result.current.showLeaveForm).toBe(true)
+
+        act(() => result.current.closeLeaveForm())
+        expect(result.current.showLeaveForm).toBe(false)
+    })
 })

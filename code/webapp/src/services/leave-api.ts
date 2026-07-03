@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { Leave, LeaveType, LeaveStatus, RegisterDirectLeaveRequest, RegisterLeaveRequestData } from '@/types/leave'
+import type { Leave, LeaveType, LeaveStatus, RegisterDirectLeaveRequest } from '@/types/leave'
 import type { PaginatedResponse } from '@/types/employee'
 
 export interface LeaveFilters {
@@ -27,27 +27,6 @@ export const leaveApi = {
    */
   registerDirectLeave: (data: RegisterDirectLeaveRequest) =>
     apiClient.post<{ status: number; data: Leave }>('/leaves', data),
-
-  /**
-   * POST /leaves/requests
-   * Registers a leave request (status = PENDING, awaiting approval).
-   */
-  registerLeaveRequest: (data: RegisterLeaveRequestData) =>
-    apiClient.post<{ status: number; data: Leave }>('/leaves/requests', data),
-
-  /**
-   * PATCH /leaves/{id}/approve
-   * Approves a PENDING leave → creates Attendance records.
-   */
-  approveLeave: (id: string) =>
-    apiClient.patch<{ status: number; data: Leave }>(`/leaves/${id}/approve`),
-
-  /**
-   * PATCH /leaves/{id}/reject
-   * Rejects a PENDING leave — no attendance impact.
-   */
-  rejectLeave: (id: string) =>
-    apiClient.patch<{ status: number; data: Leave }>(`/leaves/${id}/reject`),
 
   /**
    * GET /employees/{employeeId}/leaves

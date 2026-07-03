@@ -66,6 +66,3 @@ export interface RegisterDirectLeaveRequest {
   actual_end_time?: string | null
   notes?: string | null
 }
-
-// Leave request uses the same shape as direct registration
-export type RegisterLeaveRequestData = RegisterDirectLeaveRequest

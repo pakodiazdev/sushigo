@@ -47,6 +47,12 @@ vi.mock('@/components/ui/confirm-dialog', () => ({
       : null,
 }))
 
+vi.mock('@/services/leave-hooks', () => ({
+  useLeaveTypes: () => ({
+    data: [{ id: 1, code: 'MEDICAL', name: 'Incapacidad médica', calculation_mode: 'FIXED_PERCENTAGE', default_pay_percentage: 0, default_rest_day_factor: 'NONE', counts_for_bonus: false }],
+  }),
+}))
+
 afterEach(cleanup)
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -237,5 +243,44 @@ describe('RequestStatusCard — REJECTED without rejection_reason', () => {
     )
     // No italic quoted reason should appear
     expect(screen.queryByText(/"/)).toBeNull()
+  })
+})
+
+describe('RequestStatusCard — LEAVE type', () => {
+  function makeLeaveRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest {
+    return makeRequest({
+      type: 'LEAVE',
+      payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-15' },
+      ...overrides,
+    })
+  }
+
+  it('renders the leave type name instead of "Día extra solicitado"', () => {
+    render(<RequestStatusCard request={makeLeaveRequest()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/Incapacidad médica solicitado/)).toBeDefined()
+    expect(screen.queryByText(/Día extra solicitado/)).toBeNull()
+  })
+
+  it('shows the PENDING label', () => {
+    render(<RequestStatusCard request={makeLeaveRequest()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText('Pendiente de aprobación')).toBeDefined()
+  })
+
+  it('is cancellable when APPROVED and end_date is in the future', () => {
+    const future = '2099-01-01'
+    render(
+      <RequestStatusCard
+        request={makeLeaveRequest({ status: 'APPROVED', payload: { leave_type_id: 1, start_date: future, end_date: future } })}
+        onCancel={vi.fn()}
+        isCancelling={false}
+      />
+    )
+    expect(screen.getByText('Cancelar')).toBeDefined()
+  })
+
+  it('cancel confirmation mentions "permiso" instead of "día extra"', () => {
+    render(<RequestStatusCard request={makeLeaveRequest()} onCancel={vi.fn()} isCancelling={false} />)
+    fireEvent.click(screen.getByText('Cancelar'))
+    expect(screen.getByText(/Tu solicitud de permiso será cancelada/)).toBeDefined()
   })
 })

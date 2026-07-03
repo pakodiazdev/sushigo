@@ -81,6 +81,22 @@ export function useRequestExtraDay() {
   })
 }
 
+export function useRequestLeave() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: CreateEmployeeRequestData) => employeeRequestApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-requests'] })
+      showSuccess('Tu solicitud de permiso ha sido enviada al Manager.', 'Solicitud enviada')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo enviar la solicitud.'), 'Error')
+    },
+  })
+}
+
 export function useCancelEmployeeRequest() {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
@@ -150,13 +166,12 @@ export function useRejectEmployeeRequest() {
   })
 }
 
-export function useMyExtraDayRequests(employeeId: string | undefined) {
+export function useMyRequests(employeeId: string | undefined) {
   return useQuery({
-    queryKey: ['employee-requests', 'my-extra-days', employeeId],
+    queryKey: ['employee-requests', 'mine', employeeId],
     queryFn: async () => {
       const response = await employeeRequestApi.list({
         employee_id: employeeId,
-        type: 'EXTRA_DAY',
         status: ['PENDING', 'APPROVED', 'REJECTED'],
         per_page: 20,
       })

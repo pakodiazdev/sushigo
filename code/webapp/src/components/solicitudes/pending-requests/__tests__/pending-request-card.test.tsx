@@ -15,6 +15,12 @@ vi.mock('@/lib/format', () => ({
   formatCurrency: (v: number) => `$${v.toFixed(2)}`,
 }))
 
+vi.mock('@/services/leave-hooks', () => ({
+  useLeaveTypes: () => ({
+    data: [{ id: 1, code: 'MEDICAL', name: 'Incapacidad médica', calculation_mode: 'FIXED_PERCENTAGE', default_pay_percentage: 0, default_rest_day_factor: 'NONE', counts_for_bonus: false }],
+  }),
+}))
+
 import { PendingRequestCard } from '../pending-request-card'
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
@@ -110,5 +116,38 @@ describe('PendingRequestCard — interaction', () => {
     render(<PendingRequestCard request={request} onReview={onReview} onCancel={vi.fn()} isCancelling={false} />)
     fireEvent.click(screen.getByText('Revisar →'))
     expect(onReview).toHaveBeenCalledWith(request)
+  })
+})
+
+describe('PendingRequestCard — LEAVE type', () => {
+  function makeLeaveRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest {
+    return makeRequest({
+      type: 'LEAVE',
+      payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-15' },
+      ...overrides,
+    })
+  }
+
+  it('renders the leave type name instead of "Día extra"', () => {
+    render(<PendingRequestCard request={makeLeaveRequest()} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/Incapacidad médica/)).toBeDefined()
+    expect(screen.queryByText(/Día extra/)).toBeNull()
+  })
+
+  it('renders a single date for same-day leave', () => {
+    render(<PendingRequestCard request={makeLeaveRequest()} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/15 de jun/)).toBeDefined()
+  })
+
+  it('renders a date range for multi-day leave', () => {
+    const request = makeLeaveRequest({ payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-17' } })
+    render(<PendingRequestCard request={request} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/15 de jun.*—.*17 de jun/)).toBeDefined()
+  })
+
+  it('cancel confirmation mentions "permiso" instead of "día extra"', () => {
+    render(<PendingRequestCard request={makeLeaveRequest()} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
+    fireEvent.click(screen.getByLabelText('Cancelar solicitud'))
+    expect(screen.getByText(/Se cancelará la solicitud de permiso/)).toBeDefined()
   })
 })

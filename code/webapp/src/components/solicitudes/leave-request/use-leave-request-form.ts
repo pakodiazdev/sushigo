@@ -3,66 +3,59 @@ import { useForm } from 'react-hook-form'
 import type { UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useLeaveTypes, useRegisterDirectLeave } from '@/services/leave-hooks'
+import { useLeaveTypes } from '@/services/leave-hooks'
+import { useRequestLeave } from '@/services/employee-request-hooks'
 import { todayDateCdmx } from '@/lib/datetime'
 import type { LeaveType } from '@/types/leave'
-import type { TodayAttendanceEmployee } from '@/types/attendance'
 
-// ── Schema ──────────────────────────────────────────────────────────────────────
-// Use z.number() (not z.coerce) so the inferred input type stays consistent
-// with react-hook-form. The select registers with valueAsNumber:true so the
-// value is already a number by the time the resolver sees it.
+const schema = z
+  .object({
+    leave_type_id: z.number().min(1, 'Selecciona un tipo de ausencia'),
+    start_date: z.string().min(1, 'La fecha de inicio es requerida'),
+    end_date: z.string().min(1, 'La fecha de fin es requerida'),
+    pay_percentage: z.string().optional().nullable(),
+    time_mode: z.enum(['SCHEDULED', 'OPEN_ENDED', '']).optional().nullable(),
+    scheduled_start_time: z
+      .string()
+      .regex(/^(\d{2}:\d{2})?$/, 'Formato HH:mm')
+      .optional()
+      .nullable(),
+    scheduled_end_time: z
+      .string()
+      .regex(/^(\d{2}:\d{2})?$/, 'Formato HH:mm')
+      .optional()
+      .nullable(),
+    notes: z.string().max(1000, 'Máximo 1000 caracteres').optional().nullable(),
+  })
+  .refine((v) => v.end_date >= v.start_date, {
+    message: 'La fecha de fin no puede ser anterior a la fecha de inicio',
+    path: ['end_date'],
+  })
 
-const schema = z.object({
-  leave_type_id: z.number().min(1, 'Selecciona un tipo de ausencia'),
-  pay_percentage: z.string().optional().nullable(),
-  time_mode: z.enum(['SCHEDULED', 'OPEN_ENDED', '']).optional().nullable(),
-  scheduled_start_time: z
-    .string()
-    .regex(/^(\d{2}:\d{2})?$/, 'Formato HH:mm')
-    .optional()
-    .nullable(),
-  scheduled_end_time: z
-    .string()
-    .regex(/^(\d{2}:\d{2})?$/, 'Formato HH:mm')
-    .optional()
-    .nullable(),
-  notes: z.string().max(1000, 'Máximo 1000 caracteres').optional().nullable(),
-})
+export type LeaveRequestFormValues = z.infer<typeof schema>
 
-export type RegisterLeaveFormValues = z.infer<typeof schema>
-
-// ── Props / Return ──────────────────────────────────────────────────────────────
-
-export interface UseRegisterLeaveDialogProps {
-  employee: TodayAttendanceEmployee | null
-  onSuccess: () => void
-}
-
-export interface UseRegisterLeaveDialogResult {
-  form: UseFormReturn<RegisterLeaveFormValues>
+export interface UseLeaveRequestFormResult {
+  form: UseFormReturn<LeaveRequestFormValues>
   leaveTypes: LeaveType[]
   isLoadingTypes: boolean
   isProportionalHours: boolean
   isScheduled: boolean
   isPending: boolean
   handleSubmit: () => void
-  handleClose: () => void
 }
 
-// ── Hook ────────────────────────────────────────────────────────────────────────
-
-export function useRegisterLeaveDialog({
-  employee,
-  onSuccess,
-}: UseRegisterLeaveDialogProps): UseRegisterLeaveDialogResult {
+export function useLeaveRequestForm(employeeId: string, onSuccess: () => void): UseLeaveRequestFormResult {
   const { data: leaveTypes = [], isLoading: isLoadingTypes } = useLeaveTypes()
-  const mutation = useRegisterDirectLeave()
+  const mutation = useRequestLeave()
 
-  const form = useForm<RegisterLeaveFormValues>({
+  const today = todayDateCdmx()
+
+  const form = useForm<LeaveRequestFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       leave_type_id: 0,
+      start_date: today,
+      end_date: today,
       pay_percentage: null,
       time_mode: null,
       scheduled_start_time: null,
@@ -73,6 +66,7 @@ export function useRegisterLeaveDialog({
 
   const watchedTypeId = form.watch('leave_type_id')
   const watchedTimeMode = form.watch('time_mode')
+  const watchedStartDate = form.watch('start_date')
 
   const selectedType = useMemo(
     () => leaveTypes.find((t) => t.id === watchedTypeId) ?? null,
@@ -82,7 +76,13 @@ export function useRegisterLeaveDialog({
   const isProportionalHours = selectedType?.calculation_mode === 'PROPORTIONAL_HOURS'
   const isScheduled = watchedTimeMode === 'SCHEDULED'
 
-  // Reset time fields when leave type changes away from PROPORTIONAL_HOURS
+  // PROPORTIONAL_HOURS leaves must be single-day — keep end_date in sync with start_date.
+  useEffect(() => {
+    if (isProportionalHours) {
+      form.setValue('end_date', watchedStartDate)
+    }
+  }, [isProportionalHours, watchedStartDate, form])
+
   useEffect(() => {
     if (!isProportionalHours) {
       form.setValue('time_mode', null)
@@ -92,7 +92,6 @@ export function useRegisterLeaveDialog({
     }
   }, [isProportionalHours, form])
 
-  // Reset scheduled_end_time when time_mode changes to OPEN_ENDED
   useEffect(() => {
     if (watchedTimeMode !== 'SCHEDULED') {
       form.setValue('scheduled_end_time', null)
@@ -101,9 +100,6 @@ export function useRegisterLeaveDialog({
   }, [watchedTimeMode, form])
 
   const handleSubmit = form.handleSubmit((values) => {
-    if (!employee) return
-
-    // Conditional validation beyond Zod schema
     if (isProportionalHours && !values.time_mode) {
       form.setError('time_mode', { message: 'Requerido para permisos por horas' })
       return
@@ -117,10 +113,8 @@ export function useRegisterLeaveDialog({
       return
     }
 
-    const today = todayDateCdmx()
     const emptyToNull = (v: string | null | undefined) => v || null
 
-    // Validate and normalize pay_percentage
     const rawPct = emptyToNull(values.pay_percentage)
     let payPct: number | null = null
     if (rawPct !== null) {
@@ -136,15 +130,19 @@ export function useRegisterLeaveDialog({
 
     mutation.mutate(
       {
-        employee_id: employee.id,
-        leave_type_id: values.leave_type_id,
-        start_date: today,
-        end_date: today,
-        pay_percentage: payPct,
-        time_mode: timeMode,
-        scheduled_start_time: emptyToNull(values.scheduled_start_time),
-        scheduled_end_time: emptyToNull(values.scheduled_end_time),
-        notes: emptyToNull(values.notes),
+        employee_id: employeeId,
+        type: 'LEAVE',
+        auto_approve: false,
+        notes: emptyToNull(values.notes) ?? undefined,
+        payload: {
+          leave_type_id: values.leave_type_id,
+          start_date: values.start_date,
+          end_date: values.end_date,
+          pay_percentage: payPct,
+          time_mode: timeMode,
+          scheduled_start_time: emptyToNull(values.scheduled_start_time),
+          scheduled_end_time: emptyToNull(values.scheduled_end_time),
+        },
       },
       {
         onSuccess: () => {
@@ -155,10 +153,6 @@ export function useRegisterLeaveDialog({
     )
   })
 
-  const handleClose = () => {
-    form.reset()
-  }
-
   return {
     form,
     leaveTypes,
@@ -167,6 +161,5 @@ export function useRegisterLeaveDialog({
     isScheduled,
     isPending: mutation.isPending,
     handleSubmit,
-    handleClose,
   }
 }

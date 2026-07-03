@@ -110,6 +110,11 @@ vi.mock('@/lib/format', () => ({
   formatCurrency: (v: number) => `$${v.toFixed(2)}`,
 }))
 
+vi.mock('../leave-review-content', () => ({
+  LeaveReviewContent: ({ request }: { request: EmployeeRequest }) =>
+    React.createElement('div', { 'data-testid': 'leave-review-content' }, `Leave review for ${request.employee_name}`),
+}))
+
 import { ReviewRequestDialog } from '../review-request-dialog'
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
@@ -333,5 +338,31 @@ describe('ReviewRequestDialog — reject reason textarea onChange', () => {
     const rejectTextarea = textareas[textareas.length - 1]!
     fireEvent.change(rejectTextarea, { target: { value: 'No aplica' } })
     expect(mockSetValue).toHaveBeenCalledWith('reject_reason', 'No aplica')
+  })
+})
+
+describe('ReviewRequestDialog — LEAVE type', () => {
+  it('renders LeaveReviewContent instead of the extra-day form for type=LEAVE', () => {
+    const request = makeRequest({ type: 'LEAVE', employee_name: 'Ana García' })
+    render(<ReviewRequestDialog request={request} onClose={vi.fn()} />)
+
+    expect(screen.getByTestId('leave-review-content')).toBeDefined()
+    expect(screen.getByText('Leave review for Ana García')).toBeDefined()
+  })
+
+  it('does not render the extra-day salary/prima form for type=LEAVE', () => {
+    const request = makeRequest({ type: 'LEAVE' })
+    render(<ReviewRequestDialog request={request} onClose={vi.fn()} />)
+
+    expect(screen.queryByText('Salario del día')).toBeNull()
+    expect(screen.queryByText('Aprobar acuerdo')).toBeNull()
+  })
+
+  it('renders the extra-day form for type=EXTRA_DAY (unaffected)', () => {
+    const request = makeRequest({ type: 'EXTRA_DAY' })
+    render(<ReviewRequestDialog request={request} onClose={vi.fn()} />)
+
+    expect(screen.queryByTestId('leave-review-content')).toBeNull()
+    expect(screen.getByText('Aprobar acuerdo')).toBeDefined()
   })
 })
