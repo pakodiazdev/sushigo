@@ -48,3 +48,15 @@ Como Manager, quiero crear una solicitud de vacaciones para un empleado y aproba
 ## ⏱️ Estimates
 
 - **Optimistic:** `3h` · **Pessimistic:** `5h`
+
+## ⏱️ Time
+
+### 📊 Estimates
+- **Optimistic:** `3h` · **Pessimistic:** `5h` · **Tracked:** _in progress_
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-07-03", "start": "02:13", "end": "?" }
+]
+```
