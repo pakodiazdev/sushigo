@@ -49,11 +49,11 @@ Como Admin, quiero configurar cómo se valoran las horas extra de cada empleado 
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `2h` · **Pessimistic:** `4h` · **Tracked:** _in progress_
+- **Optimistic:** `2h` · **Pessimistic:** `4h` · **Tracked:** `6h46m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-03", "start": "02:18", "end": "?" }
+  { "date": "2026-07-03", "start": "02:18", "end": "09:04" }
 ]
 ```
