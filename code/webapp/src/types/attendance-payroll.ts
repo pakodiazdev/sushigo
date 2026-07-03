@@ -132,3 +132,23 @@ export interface VacationSummary {
   seniority_years: number
   next_anniversary_date: string | null
 }
+
+// ── Overtime Pay Config ─────────────────────────────────────────────────────────
+
+export type OvertimeValuationMethod = 'LFT_PROPORTIONAL' | 'AGREED_RATE'
+
+export interface OvertimePayConfig {
+  id: string
+  valuation_method: OvertimeValuationMethod
+  lft_factor: number | null
+  hourly_rate: number | null
+  effective_from: string
+  effective_to: string | null
+}
+
+export interface SetOvertimeConfigPayload {
+  valuation_method: OvertimeValuationMethod
+  lft_factor?: number
+  hourly_rate?: number
+  effective_from: string
+}

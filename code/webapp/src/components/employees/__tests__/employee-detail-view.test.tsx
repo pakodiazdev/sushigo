@@ -68,6 +68,10 @@ vi.mock('@/components/employees/vacation-section', () => ({
   VacationSection: () => <div>VacationSection</div>,
 }))
 
+vi.mock('@/components/employees/overtime-config-section', () => ({
+  OvertimeConfigSection: () => <div>OvertimeConfigSection</div>,
+}))
+
 vi.mock('@/components/employees/use-employee-detail-actions', () => ({
   useEmployeeDetailActions: () => ({
     hasActivePeriod: true,

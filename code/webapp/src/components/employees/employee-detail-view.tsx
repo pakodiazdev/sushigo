@@ -15,6 +15,7 @@ import { ExtraDaySection } from './extra-day-section'
 import { usePermissionManager } from './use-permission-manager'
 import { PermissionManagerDialog } from './permission-manager-dialog'
 import { BonusConfigSection } from './bonus-config-section'
+import { OvertimeConfigSection } from './overtime-config-section'
 import { VacationSection } from './vacation-section'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -109,6 +110,11 @@ export function EmployeeDetailView({
 
       {/* Punctuality bonus group assignment */}
       <BonusConfigSection employeeId={employee.id} />
+
+      <hr className="border-border" />
+
+      {/* Overtime pay valuation method */}
+      <OvertimeConfigSection employeeId={employee.id} />
 
       <hr className="border-border" />
 
