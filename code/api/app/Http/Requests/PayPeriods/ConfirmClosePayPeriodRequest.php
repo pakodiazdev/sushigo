@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\PayPeriods;
 
-class PreviewPayPeriodRequest extends BasePayPeriodRangeRequest
+class ConfirmClosePayPeriodRequest extends BasePayPeriodRangeRequest
 {
     protected function requiredPermission(): string
     {
-        return 'payroll.preview';
+        return 'payroll.close';
     }
 }

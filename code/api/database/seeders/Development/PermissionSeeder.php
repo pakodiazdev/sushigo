@@ -137,6 +137,7 @@ class PermissionSeeder extends LockedSeeder
 
             // Nómina
             'payroll.preview' => ['label' => 'Ver preview de cierre de nómina', 'group' => 'Nómina'],
+            'payroll.close' => ['label' => 'Confirmar cierre de nómina', 'group' => 'Nómina'],
         ];
 
         foreach ($permissions as $name => $meta) {

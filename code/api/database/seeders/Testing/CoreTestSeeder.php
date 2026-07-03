@@ -98,6 +98,7 @@ class CoreTestSeeder extends Seeder
         'reports.weekly-summary',
         'holidays.manage',
         'payroll.preview',
+        'payroll.close',
     ];
 
     /** Basic view-only user permissions shared by most roles */

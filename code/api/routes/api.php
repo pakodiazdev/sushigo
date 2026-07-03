@@ -85,6 +85,8 @@ use App\Http\Controllers\Api\V1\OperatingUnit\UpdateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\AddUserToOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\ListOperatingUnitUsersController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitController;
+use App\Http\Controllers\Api\V1\PayPeriods\ConfirmCloseController;
+use App\Http\Controllers\Api\V1\PayPeriods\PreviewPayPeriodController;
 use App\Http\Controllers\Api\V1\Punctuality\AssignBonusConfigController;
 use App\Http\Controllers\Api\V1\Punctuality\CreatePunctualityBonusGroupController;
 use App\Http\Controllers\Api\V1\Punctuality\GetEmployeeBonusConfigController;
@@ -368,7 +370,8 @@ Route::prefix('v1')->group(function () {
 
     // Pay Periods Module
     Route::middleware('auth:api')->prefix('pay-periods')->name('pay-periods.')->group(function () {
-        Route::get('/preview', \App\Http\Controllers\Api\V1\PayPeriods\PreviewPayPeriodController::class)->name('preview');
+        Route::get('/preview', PreviewPayPeriodController::class)->name('preview');
+        Route::post('/', ConfirmCloseController::class)->name('close');
     });
 
     // Punctuality config
