@@ -177,7 +177,16 @@ describe('ClockDebugPanel', () => {
         expect(screen.getByText('+5m')).toBeDefined();
         expect(screen.getByText('+30m')).toBeDefined();
         expect(screen.getByText('+1h')).toBeDefined();
+        expect(screen.getByText('-3d')).toBeDefined();
+        expect(screen.getByText('-1d')).toBeDefined();
         expect(screen.getByText('+1d')).toBeDefined();
+        expect(screen.getByText('+3d')).toBeDefined();
+        expect(screen.getByText('-1s')).toBeDefined();
+        expect(screen.getByText('+1s')).toBeDefined();
+        expect(screen.getByText('-1mes')).toBeDefined();
+        expect(screen.getByText('+1mes')).toBeDefined();
+        expect(screen.getByText('-1a')).toBeDefined();
+        expect(screen.getByText('+1a')).toBeDefined();
     });
 
     it('calls shiftClockTime when quick shift button is clicked', async () => {
@@ -235,6 +244,88 @@ describe('ClockDebugPanel', () => {
         await waitFor(() => {
             expect(mockShiftClockTime).toHaveBeenCalledWith(60 * 24);
         });
+    });
+
+    it('calls shiftClockTime with the right minutes for -3d, +3d and week buttons', async () => {
+        mockClockState = {
+            mode: 'system',
+            business_now: '2026-04-16T09:30:45-06:00',
+            business_date: '2026-04-16',
+            business_timezone: 'America/Mexico_City',
+            application_now_utc: '2026-04-16T15:30:45+00:00',
+        };
+        mockIsAvailable = true;
+
+        render(<ClockDebugPanel />);
+
+        fireEvent.click(screen.getByText('-3d'));
+        await waitFor(() => expect(mockShiftClockTime).toHaveBeenCalledWith(-3 * 60 * 24));
+
+        fireEvent.click(screen.getByText('+3d'));
+        await waitFor(() => expect(mockShiftClockTime).toHaveBeenCalledWith(3 * 60 * 24));
+
+        fireEvent.click(screen.getByText('-1s'));
+        await waitFor(() => expect(mockShiftClockTime).toHaveBeenCalledWith(-7 * 60 * 24));
+
+        fireEvent.click(screen.getByText('+1s'));
+        await waitFor(() => expect(mockShiftClockTime).toHaveBeenCalledWith(7 * 60 * 24));
+    });
+
+    it('calls setClockTime with a calendar-shifted date for month buttons', async () => {
+        mockClockState = {
+            mode: 'system',
+            business_now: '2026-04-16T09:30:45-06:00',
+            business_date: '2026-04-16',
+            business_timezone: 'America/Mexico_City',
+            application_now_utc: '2026-04-16T15:30:45.000Z',
+        };
+        mockIsAvailable = true;
+
+        render(<ClockDebugPanel />);
+
+        fireEvent.click(screen.getByText('+1mes'));
+        await waitFor(() => expect(mockSetClockTime).toHaveBeenCalledWith('2026-05-16T15:30:45.000Z'));
+
+        mockSetClockTime.mockClear();
+        fireEvent.click(screen.getByText('-1mes'));
+        await waitFor(() => expect(mockSetClockTime).toHaveBeenCalledWith('2026-03-16T15:30:45.000Z'));
+    });
+
+    it('calls setClockTime with a calendar-shifted date for year buttons', async () => {
+        mockClockState = {
+            mode: 'system',
+            business_now: '2026-04-16T09:30:45-06:00',
+            business_date: '2026-04-16',
+            business_timezone: 'America/Mexico_City',
+            application_now_utc: '2026-04-16T15:30:45.000Z',
+        };
+        mockIsAvailable = true;
+
+        render(<ClockDebugPanel />);
+
+        fireEvent.click(screen.getByText('+1a'));
+        await waitFor(() => expect(mockSetClockTime).toHaveBeenCalledWith('2027-04-16T15:30:45.000Z'));
+
+        mockSetClockTime.mockClear();
+        fireEvent.click(screen.getByText('-1a'));
+        await waitFor(() => expect(mockSetClockTime).toHaveBeenCalledWith('2025-04-16T15:30:45.000Z'));
+    });
+
+    it('does nothing for month/year shift buttons when application_now_utc is missing', () => {
+        mockClockState = {
+            mode: 'system',
+            business_now: undefined,
+            business_date: '2026-04-16',
+            business_timezone: 'America/Mexico_City',
+            application_now_utc: undefined,
+        };
+        mockIsAvailable = true;
+
+        render(<ClockDebugPanel />);
+
+        fireEvent.click(screen.getByText('+1mes'));
+
+        expect(mockSetClockTime).not.toHaveBeenCalled();
     });
 
     it('disables reset button when already in system mode', () => {

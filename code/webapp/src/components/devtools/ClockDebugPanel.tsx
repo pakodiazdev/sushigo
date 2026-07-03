@@ -48,6 +48,15 @@ export function ClockDebugPanel() {
 
     const isSimulated = clockState?.mode === 'simulated';
 
+    /** Shift by a calendar unit (month/year) — plain minute math can't express these, since months and years aren't a fixed number of minutes. Computed from the current simulated UTC time and applied via setClockTime. */
+    const shiftCalendar = (unit: 'month' | 'year', amount: number) => {
+        if (!clockState?.application_now_utc) return;
+        const date = new Date(clockState.application_now_utc);
+        if (unit === 'month') date.setUTCMonth(date.getUTCMonth() + amount);
+        if (unit === 'year') date.setUTCFullYear(date.getUTCFullYear() + amount);
+        setClockTime(date.toISOString());
+    };
+
     return (
         <div className="space-y-3 text-xs">
             {/* Mode badge */}
@@ -101,17 +110,26 @@ export function ClockDebugPanel() {
                 </p>
                 <div className="flex flex-wrap gap-1">
                     {[
-                        { label: '-1h', minutes: -60, icon: <Rewind className="h-3 w-3" /> },
-                        { label: '-30m', minutes: -30 },
-                        { label: '-5m', minutes: -5 },
-                        { label: '+5m', minutes: 5 },
-                        { label: '+30m', minutes: 30 },
-                        { label: '+1h', minutes: 60, icon: <FastForward className="h-3 w-3" /> },
-                        { label: '+1d', minutes: 60 * 24, icon: <Calendar className="h-3 w-3" /> },
-                    ].map(({ label, minutes, icon }) => (
+                        { label: '-1h', onClick: () => shiftClockTime(-60), icon: <Rewind className="h-3 w-3" /> },
+                        { label: '-30m', onClick: () => shiftClockTime(-30) },
+                        { label: '-5m', onClick: () => shiftClockTime(-5) },
+                        { label: '+5m', onClick: () => shiftClockTime(5) },
+                        { label: '+30m', onClick: () => shiftClockTime(30) },
+                        { label: '+1h', onClick: () => shiftClockTime(60), icon: <FastForward className="h-3 w-3" /> },
+                        { label: '-3d', onClick: () => shiftClockTime(-3 * 60 * 24) },
+                        { label: '-1d', onClick: () => shiftClockTime(-60 * 24) },
+                        { label: '+1d', onClick: () => shiftClockTime(60 * 24), icon: <Calendar className="h-3 w-3" /> },
+                        { label: '+3d', onClick: () => shiftClockTime(3 * 60 * 24) },
+                        { label: '-1s', onClick: () => shiftClockTime(-7 * 60 * 24) },
+                        { label: '+1s', onClick: () => shiftClockTime(7 * 60 * 24) },
+                        { label: '-1mes', onClick: () => shiftCalendar('month', -1) },
+                        { label: '+1mes', onClick: () => shiftCalendar('month', 1) },
+                        { label: '-1a', onClick: () => shiftCalendar('year', -1) },
+                        { label: '+1a', onClick: () => shiftCalendar('year', 1) },
+                    ].map(({ label, onClick, icon }) => (
                         <button
                             key={label}
-                            onClick={() => shiftClockTime(minutes)}
+                            onClick={onClick}
                             disabled={isLoading}
                             className="flex items-center gap-0.5 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 disabled:opacity-40 transition-colors"
                         >

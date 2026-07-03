@@ -14,11 +14,12 @@ import {
     GitBranch,
     Zap,
     Clock,
+    ExternalLink,
     type LucideIcon,
 } from 'lucide-react'
 import { useRouterState } from '@tanstack/react-router'
 import { gitBranch } from 'virtual:git-branch'
-import { useDevDebugger } from './use-dev-debugger'
+import { useDevDebugger, sectionElementId } from './use-dev-debugger'
 import { PayrollCloseActions } from './page-actions/payroll-close-actions'
 import { ClockDebugPanel } from '@/components/devtools/ClockDebugPanel'
 
@@ -57,9 +58,12 @@ export function DevDebugger() {
         isLoadingDevUsers,
         cacheStats,
         shortcutLabel,
+        isMobile,
+        swaggerDocsUrl,
         handleMouseDown,
         toggleSection,
         toggleMinimized,
+        jumpToSection,
         refreshQueries,
         handleDevLogin,
     } = useDevDebugger()
@@ -68,6 +72,44 @@ export function DevDebugger() {
     const pageAction = PAGE_ACTIONS[currentPath] ?? null
 
     const [permissionInputFocused, setPermissionInputFocused] = useState(false)
+
+    const sectionItems: { key: keyof typeof state.expandedSections; title: string; icon: LucideIcon }[] = [
+        { key: 'user', title: 'Usuario', icon: User },
+        ...(pageAction ? [{ key: 'pageActions' as const, title: `Acciones — ${pageAction.title}`, icon: Zap }] : []),
+        { key: 'roles', title: 'Roles y Permisos', icon: Shield },
+        ...(devLoginSectionVisible ? [{ key: 'devLogin' as const, title: 'Dev Login', icon: LogIn }] : []),
+        { key: 'clock', title: 'Reloj (Simulación)', icon: Clock },
+        { key: 'queries', title: 'Query Cache', icon: RefreshCw },
+    ]
+
+    /** Renders the Swagger link + one icon button per section, so every quick-link is directly visible (no dropdown). */
+    function renderQuickLinks(hoverBgClass: string) {
+        return (
+            <>
+                <a
+                    href={swaggerDocsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`p-1 ${hoverBgClass} rounded shrink-0`}
+                    title="Abrir documentación Swagger"
+                    aria-label="Abrir documentación Swagger"
+                >
+                    <ExternalLink className="h-4 w-4" />
+                </a>
+                {sectionItems.map((item) => (
+                    <button
+                        key={item.key}
+                        onClick={() => jumpToSection(item.key)}
+                        className={`p-1 ${hoverBgClass} rounded shrink-0`}
+                        title={item.title}
+                        aria-label={`Ir a ${item.title}`}
+                    >
+                        <item.icon className="h-4 w-4" />
+                    </button>
+                ))}
+            </>
+        )
+    }
 
     let permissionDropdownItems: string[] = []
     if (devLoginPermissionSearch.length > 0) {
@@ -81,6 +123,34 @@ export function DevDebugger() {
     }
 
     if (isMinimized) {
+        if (isMobile) {
+            return (
+                <div
+                    className="fixed inset-x-0 bottom-0 z-[9999] bg-gray-900 text-white border-t-2 border-blue-500 shadow-2xl px-3 py-2 flex items-center justify-between"
+                    data-testid="dev-debugger"
+                >
+                    <button
+                        onClick={toggleMinimized}
+                        className="flex items-center gap-2"
+                        title="Expandir debugger"
+                    >
+                        <Bug className="h-5 w-5 text-blue-400" />
+                        <span className="text-sm font-mono">Debugger</span>
+                    </button>
+                    <div className="flex items-center gap-1 min-w-0">
+                        <div className="flex items-center gap-1 overflow-x-auto">{renderQuickLinks('hover:bg-gray-800')}</div>
+                        <button
+                            onClick={toggleMinimized}
+                            className="p-1 hover:bg-gray-800 rounded shrink-0"
+                            title="Expandir debugger"
+                        >
+                            <PlusCircle className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            )
+        }
+
         return (
             <div
                 ref={dragRef}
@@ -109,35 +179,41 @@ export function DevDebugger() {
 
     return (
         <div
-            ref={dragRef}
-            style={{
-                left: state.position.x,
-                top: state.position.y,
-                width: '380px',
-                maxHeight: '80vh',
-            }}
-            className="fixed z-[9999] bg-gray-900 text-white rounded-lg shadow-2xl border-2 border-blue-500 overflow-hidden flex flex-col"
+            ref={isMobile ? undefined : dragRef}
+            style={
+                isMobile
+                    ? { maxHeight: '70vh' }
+                    : { left: state.position.x, top: state.position.y, width: '380px', maxHeight: '80vh' }
+            }
+            className={
+                isMobile
+                    ? 'fixed inset-x-0 bottom-0 z-[9999] bg-gray-900 text-white shadow-2xl border-t-2 border-blue-500 overflow-hidden flex flex-col'
+                    : 'fixed z-[9999] bg-gray-900 text-white rounded-lg shadow-2xl border-2 border-blue-500 overflow-hidden flex flex-col'
+            }
             data-testid="dev-debugger"
         >
             <div
-                className="bg-blue-600 px-4 py-2 flex items-center justify-between cursor-move"
-                onMouseDown={handleMouseDown}
+                className={`bg-blue-600 px-4 py-2 flex items-center justify-between ${isMobile ? '' : 'cursor-move'}`}
+                onMouseDown={isMobile ? undefined : handleMouseDown}
             >
                 <div className="flex items-center gap-2">
                     <Bug className="h-5 w-5" />
                     <span className="font-semibold text-sm">Dev Debugger</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 min-w-0">
+                    {isMobile && (
+                        <div className="flex items-center gap-1 overflow-x-auto">{renderQuickLinks('hover:bg-blue-700')}</div>
+                    )}
                     <button
                         onClick={refreshQueries}
-                        className="p-1 hover:bg-blue-700 rounded"
+                        className="p-1 hover:bg-blue-700 rounded shrink-0"
                         title="Refresh all queries"
                     >
                         <RefreshCw className="h-4 w-4" />
                     </button>
                     <button
                         onClick={toggleMinimized}
-                        className="p-1 hover:bg-blue-700 rounded"
+                        className="p-1 hover:bg-blue-700 rounded shrink-0"
                         title="Minimize debugger"
                         aria-label="Minimize debugger"
                     >
@@ -158,6 +234,7 @@ export function DevDebugger() {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 text-sm">
                 <Section
+                    id={sectionElementId('user')}
                     icon={User}
                     title="Usuario"
                     isExpanded={state.expandedSections.user}
@@ -186,6 +263,7 @@ export function DevDebugger() {
 
                 {pageAction && (
                     <Section
+                        id={sectionElementId('pageActions')}
                         icon={Zap}
                         title={`Acciones — ${pageAction.title}`}
                         isExpanded={state.expandedSections.pageActions}
@@ -196,6 +274,7 @@ export function DevDebugger() {
                 )}
 
                 <Section
+                    id={sectionElementId('roles')}
                     icon={Shield}
                     title="Roles y Permisos"
                     isExpanded={state.expandedSections.roles}
@@ -251,6 +330,7 @@ export function DevDebugger() {
 
                 {devLoginSectionVisible && (
                     <Section
+                        id={sectionElementId('devLogin')}
                         icon={LogIn}
                         title="Dev Login"
                         isExpanded={state.expandedSections.devLogin}
@@ -394,6 +474,7 @@ export function DevDebugger() {
                 )}
 
                 <Section
+                    id={sectionElementId('clock')}
                     icon={Clock}
                     title="Reloj (Simulación)"
                     isExpanded={state.expandedSections.clock}
@@ -403,6 +484,7 @@ export function DevDebugger() {
                 </Section>
 
                 <Section
+                    id={sectionElementId('queries')}
                     icon={RefreshCw}
                     title="Query Cache"
                     isExpanded={state.expandedSections.queries}
@@ -425,9 +507,16 @@ export function DevDebugger() {
                 </Section>
             </div>
 
-            <div className="bg-gray-800 px-4 py-2 text-xs text-gray-400 border-t border-gray-700">
-                {shortcutLabel} para ocultar o mostrar
-            </div>
+            {!isMobile && (
+                <>
+                    <div className="bg-gray-800 px-4 py-2 flex items-center justify-start gap-1 overflow-x-auto border-t border-gray-700">
+                        {renderQuickLinks('hover:bg-gray-700')}
+                    </div>
+                    <div className="bg-gray-800 px-4 py-2 text-xs text-gray-400 border-t border-gray-700">
+                        {shortcutLabel} para ocultar o mostrar
+                    </div>
+                </>
+            )}
         </div>
     )
 }
@@ -456,17 +545,18 @@ function getRoleColor(role: string, allRoles: string[]): string {
 }
 
 interface SectionProps {
-    icon: LucideIcon
-    title: string
-    isExpanded: boolean
-    onToggle: () => void
-    badge?: number
-    children: React.ReactNode
+    readonly id?: string
+    readonly icon: LucideIcon
+    readonly title: string
+    readonly isExpanded: boolean
+    readonly onToggle: () => void
+    readonly badge?: number
+    readonly children: React.ReactNode
 }
 
-function Section({ icon: Icon, title, isExpanded, onToggle, badge, children }: SectionProps) {
+function Section({ id, icon: Icon, title, isExpanded, onToggle, badge, children }: SectionProps) {
     return (
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
+        <div id={id} className="bg-gray-800 rounded-lg overflow-hidden">
             <button
                 onClick={onToggle}
                 className="w-full px-3 py-2 flex items-center justify-between hover:bg-gray-700 transition-colors"
