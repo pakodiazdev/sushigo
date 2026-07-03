@@ -302,6 +302,17 @@ class WeeklySummaryApiTest extends TestCase
     }
 
     #[Test]
+    public function returns_422_when_employee_is_soft_deleted(): void
+    {
+        $deleted = Employee::factory()->create();
+        $deleted->delete();
+
+        $this->getJson($this->url($deleted->public_id, '2026-06-16', '2026-06-22'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['employee_id']);
+    }
+
+    #[Test]
     public function returns_422_when_period_end_before_period_start(): void
     {
         $this->getJson($this->url($this->employee->public_id, '2026-06-22', '2026-06-16'))

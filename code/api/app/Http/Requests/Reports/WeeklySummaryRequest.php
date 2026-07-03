@@ -4,6 +4,7 @@ namespace App\Http\Requests\Reports;
 
 use App\Models\Employee;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class WeeklySummaryRequest extends FormRequest
 {
@@ -15,7 +16,11 @@ class WeeklySummaryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_id' => ['required', 'string', 'exists:employees,public_id'],
+            'employee_id' => [
+                'required',
+                'string',
+                Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
+            ],
             'period_start' => ['required', 'date'],
             'period_end' => ['required', 'date', 'after_or_equal:period_start'],
         ];
