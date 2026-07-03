@@ -19,9 +19,12 @@ use Illuminate\Support\Str;
 
 /**
  * Seed a full attendance history for every non-exempt employee, spanning from
- * each of their employment periods' start_date up to today (or end_date for
- * closed periods). Re-entry employees (multiple periods) get one history
- * block per period, with the natural gap between periods left empty.
+ * each of their employment periods' start_date up to yesterday (or end_date
+ * for closed periods, whichever is earlier). Today is deliberately left
+ * untouched so check-in, leave registration/approval and other attendance
+ * flows can be exercised manually against the real system clock. Re-entry
+ * employees (multiple periods) get one history block per period, with the
+ * natural gap between periods left empty.
  *
  * Each working day (per the employee's effective schedule, override-aware)
  * rolls a weighted outcome:
@@ -152,9 +155,13 @@ class AttendanceHistorySeeder extends OnceSeeder
     {
         $employeeId = $period->employee_id;
         $cursor = Carbon::parse($period->start_date);
-        $end = $period->end_date ? Carbon::parse($period->end_date) : $todayCarbon->copy();
-        if ($end->gt($todayCarbon)) {
-            $end = $todayCarbon->copy();
+
+        // Never seed today — leave it untouched so check-in, leave registration and
+        // other attendance flows can be exercised manually against the real clock.
+        $maxSeedDate = $todayCarbon->copy()->subDay();
+        $end = $period->end_date ? Carbon::parse($period->end_date) : $maxSeedDate->copy();
+        if ($end->gt($maxSeedDate)) {
+            $end = $maxSeedDate->copy();
         }
 
         if ($cursor->gt($end) || $this->periodAlreadySeeded($employeeId, $cursor, $end)) {
