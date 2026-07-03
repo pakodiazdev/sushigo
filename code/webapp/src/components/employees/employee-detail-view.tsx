@@ -103,7 +103,7 @@ export function EmployeeDetailView({
       <hr className="border-border" />
 
       {/* Vacation entitlements */}
-      <VacationSection employeeId={employee.id} />
+      <VacationSection employeeId={employee.id} employee={employee} />
 
       <hr className="border-border" />
 
