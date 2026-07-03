@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\V1\Employees\GetMyEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\GetUserPermissionsController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeeLeavesController;
 use App\Http\Controllers\Api\V1\Employees\ListEmployeesController;
+use App\Http\Controllers\Api\V1\Employees\ListEmployeeVacationRequestsController;
 use App\Http\Controllers\Api\V1\Employees\ListVacationEntitlementsController;
 use App\Http\Controllers\Api\V1\Employees\ListWagesController;
 use App\Http\Controllers\Api\V1\Employees\RehireEmployeeController;
@@ -110,6 +111,9 @@ use App\Http\Controllers\Api\V1\UnitsOfMeasure\ListUnitsOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\ListUomConversionsController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\ShowUnitOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\UpdateUnitOfMeasureController;
+use App\Http\Controllers\Api\V1\VacationRequests\ApproveVacationRequestController;
+use App\Http\Controllers\Api\V1\VacationRequests\RegisterVacationRequestController;
+use App\Http\Controllers\Api\V1\VacationRequests\RejectVacationRequestController;
 use Illuminate\Support\Facades\Route;
 
 // ── Test-only routes (never exposed in production) ───────────────────────
@@ -296,6 +300,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/{employee}/negotiated-extra-days', ListNegotiatedExtraDaysController::class)->name('employees.negotiated-extra-days.list')->middleware('permission:employees.view');
         // Vacation entitlement endpoints (auto-generated on read, no manual registration)
         Route::get('/{employee}/vacation-entitlements', ListVacationEntitlementsController::class)->name('employees.vacation-entitlements.list')->middleware('permission:employees.view');
+        // Vacation request history endpoints
+        Route::get('/{employee}/vacation-requests', ListEmployeeVacationRequestsController::class)->name('employees.vacation-requests.list')->middleware('permission:employees.view');
         // Direct permission management
         Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
         Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');
@@ -327,6 +333,13 @@ Route::prefix('v1')->group(function () {
     // leave requests go through the generic Employee Requests module (type=LEAVE).
     Route::middleware('auth:api')->prefix('leaves')->name('leaves.')->group(function () {
         Route::post('/', RegisterDirectLeaveController::class)->name('register-direct')->middleware('permission:leaves.register-direct');
+    });
+
+    // Vacation Requests Module (All Protected)
+    Route::middleware('auth:api')->prefix('vacation-requests')->name('vacation-requests.')->group(function () {
+        Route::post('/', RegisterVacationRequestController::class)->name('register')->middleware('permission:vacation-requests.request');
+        Route::patch('/{id}/approve', ApproveVacationRequestController::class)->name('approve')->middleware('permission:vacation-requests.approve');
+        Route::patch('/{id}/reject', RejectVacationRequestController::class)->name('reject')->middleware('permission:vacation-requests.reject');
     });
 
     // Employee Requests Module (All Protected)

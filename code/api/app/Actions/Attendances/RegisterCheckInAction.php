@@ -4,6 +4,7 @@ namespace App\Actions\Attendances;
 
 use App\Enums\DayStatus;
 use App\Enums\LeaveStatus;
+use App\Enums\VacationRequestStatus;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
@@ -11,6 +12,7 @@ use App\Models\Leave;
 use App\Models\NegotiatedExtraDay;
 use App\Models\ScheduleDay;
 use App\Models\ScheduleDayOverride;
+use App\Models\VacationRequest;
 use App\Support\Clock\ApplicationClock;
 use App\Support\Traits\ResolvesActiveEmploymentPeriod;
 use Carbon\Carbon;
@@ -62,6 +64,7 @@ class RegisterCheckInAction
         $checkIn = $checkInLocal->clone()->utc();
 
         $this->guardNoApprovedLeave($employee->id, $date);
+        $this->guardNoApprovedVacation($employee->id, $date);
 
         $hasApprovedExtraDay = NegotiatedExtraDay::where('employee_id', $employee->id)
             ->where('date', $date)
@@ -155,6 +158,25 @@ class RegisterCheckInAction
         if ($hasLeave) {
             throw ValidationException::withMessages([
                 'check_in' => 'El empleado tiene una ausencia aprobada para este día.',
+            ]);
+        }
+    }
+
+    /**
+     * Throw a 422 if the employee has an approved vacation request for this date.
+     *
+     * @throws ValidationException
+     */
+    private function guardNoApprovedVacation(int $employeeId, string $date): void
+    {
+        $hasVacation = VacationRequest::where('employee_id', $employeeId)
+            ->where('status', VacationRequestStatus::APPROVED)
+            ->forDate($date)
+            ->exists();
+
+        if ($hasVacation) {
+            throw ValidationException::withMessages([
+                'check_in' => 'El empleado tiene vacaciones aprobadas para este día.',
             ]);
         }
     }

@@ -76,6 +76,12 @@ class CoreTestSeeder extends Seeder
         'employees.create',
         'employees.update',
         'leaves.register-direct',
+        'leaves.request',
+        'leaves.approve',
+        'leaves.reject',
+        'vacation-requests.request',
+        'vacation-requests.approve',
+        'vacation-requests.reject',
         'employee-requests.view',
         'employee-requests.create',
         'employee-requests.approve',
@@ -115,9 +121,9 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.'],
+        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.'],
         'inventory-manager' => ['items.', 'inventory_locations.', 'stock.', ...self::SELF_SERVICE_REQUESTS],
-        'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'employee-requests.', 'attendances.', 'reports.'],
+        'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'vacation-requests.', 'employee-requests.', 'attendances.', 'reports.'],
         'cook' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
         'kitchen-assistant' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
         'delivery-driver' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
