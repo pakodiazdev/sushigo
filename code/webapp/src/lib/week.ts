@@ -18,10 +18,18 @@
  *    next month.
  */
 
+import { getFrontendTimezone } from './timezone'
+
 const WEEK_START_DAY = Number.parseInt(import.meta.env.VITE_WEEK_START_DAY ?? '1', 10)
 
+/** Formats a Date as "YYYY-MM-DD" in the local/business timezone — never UTC, to avoid day-shift near midnight. */
 function toIsoDate(d: Date): string {
-  return d.toISOString().substring(0, 10)
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: getFrontendTimezone(),
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
 }
 
 /** Shifts a `YYYY-MM-DD` date string by `n` days (negative to go back). */

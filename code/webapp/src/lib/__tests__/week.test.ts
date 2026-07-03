@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   currentWeekRange,
   weekRangeContaining,
@@ -11,6 +11,11 @@ import {
   formatWeekOrdinal,
   formatWeekTitle,
 } from '../week'
+
+// Mock the timezone module to use CDMX timezone for deterministic tests
+vi.mock('../timezone', () => ({
+  getFrontendTimezone: () => 'America/Mexico_City',
+}))
 
 describe('addDays', () => {
   it('adds days within the same month', () => {
@@ -51,9 +56,22 @@ describe('formatWeekLabel', () => {
 })
 
 describe('currentWeekRange', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('returns a 6-day span between start and end', () => {
     const { start, end } = currentWeekRange()
     expect(addDays(start, 6)).toBe(end)
+  })
+
+  it('uses the CDMX date, not the UTC date, during evening hours', () => {
+    // Sunday 2026-06-21 19:00 CDMX = Monday 2026-06-22 01:00 UTC.
+    // A UTC-based date extraction would wrongly land on Monday, the *next* week.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-22T01:00:00Z'))
+
+    expect(currentWeekRange()).toEqual({ start: '2026-06-15', end: '2026-06-21' })
   })
 })
 
