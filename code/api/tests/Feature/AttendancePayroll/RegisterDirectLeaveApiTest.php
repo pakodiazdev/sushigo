@@ -143,7 +143,7 @@ class RegisterDirectLeaveApiTest extends TestCase
     }
 
     #[Test]
-    public function registers_proportional_hours_leave_with_scheduled_mode(): void
+    public function registers_proportional_hours_leave_with_scheduled_mode_without_attendance_record(): void
     {
         $employee = $this->makeEmployee();
         $leaveType = LeaveType::where('code', LeaveType::PERMISSION_HOURS)->first();
@@ -162,15 +162,16 @@ class RegisterDirectLeaveApiTest extends TestCase
             ->assertJsonPath('data.time_mode', 'SCHEDULED')
             ->assertJsonPath('data.computed_duration_minutes', 120);
 
-        $this->assertDatabaseHas('attendances', [
+        // SCHEDULED (partial) leaves never create an Attendance record — the
+        // employee is still expected to check in/out normally that day.
+        $this->assertDatabaseMissing('attendances', [
             'employee_id' => $employee->id,
             'date' => self::DATE,
-            'day_status' => DayStatus::LEAVE->value,
         ]);
     }
 
     #[Test]
-    public function registers_proportional_hours_leave_with_open_ended_mode(): void
+    public function registers_proportional_hours_leave_with_open_ended_mode_and_creates_attendance(): void
     {
         $employee = $this->makeEmployee();
         $leaveType = LeaveType::where('code', LeaveType::PERMISSION_HOURS)->first();
@@ -187,6 +188,51 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonPath('data.time_mode', 'OPEN_ENDED')
             ->assertJsonPath('data.scheduled_end_time', null);
+
+        // OPEN_ENDED leaves have no defined end time — treated like the rest
+        // of the day is absent, so an Attendance LEAVE record is created.
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => DayStatus::LEAVE->value,
+        ]);
+    }
+
+    #[Test]
+    public function registers_scheduled_leave_even_if_employee_already_checked_in(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::PERMISSION_HOURS)->first();
+
+        // Employee already checked in today (day_status = WORKED) — express
+        // "leave early" flow: the manager registers a SCHEDULED partial leave
+        // for the remainder of the day without it being blocked.
+        Attendance::create([
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => DayStatus::WORKED,
+            'check_in' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/leaves', [
+            'employee_id' => $employee->public_id,
+            'leave_type_id' => $leaveType->id,
+            'start_date' => self::DATE,
+            'end_date' => self::DATE,
+            'time_mode' => 'SCHEDULED',
+            'scheduled_start_time' => '14:00',
+            'scheduled_end_time' => '16:00',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.time_mode', 'SCHEDULED');
+
+        // The existing WORKED attendance must be left untouched.
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => DayStatus::WORKED->value,
+        ]);
     }
 
     #[Test]

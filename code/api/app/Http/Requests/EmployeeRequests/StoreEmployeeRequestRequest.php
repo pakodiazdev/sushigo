@@ -3,6 +3,9 @@
 namespace App\Http\Requests\EmployeeRequests;
 
 use App\Enums\EmployeeRequestType;
+use App\Enums\LeaveCalculationMode;
+use App\Enums\LeaveTimeMode;
+use App\Models\LeaveType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -13,7 +16,7 @@ use Illuminate\Validation\Validator;
  *   required={"employee_id", "type", "payload"},
  *
  *   @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
- *   @OA\Property(property="type", type="string", enum={"EXTRA_DAY"}, example="EXTRA_DAY"),
+ *   @OA\Property(property="type", type="string", enum={"EXTRA_DAY", "LEAVE"}, example="EXTRA_DAY"),
  *   @OA\Property(property="auto_approve", type="boolean", example=false),
  *   @OA\Property(property="notes", type="string", nullable=true, maxLength=1000, example="Solicitud registrada por gerente"),
  *   @OA\Property(
@@ -26,7 +29,15 @@ use Illuminate\Validation\Validator;
  *      @OA\Property(property="prima", type="number", format="float", example=200.00),
  *      @OA\Property(property="seventh_day", type="number", format="float", example=200.00),
  *      @OA\Property(property="total", type="number", format="float", example=600.00),
- *      @OA\Property(property="branch_id", type="integer", nullable=true, example=1)
+ *      @OA\Property(property="branch_id", type="integer", nullable=true, example=1),
+ *      @OA\Property(property="leave_type_id", type="integer", example=1, description="Required for type=LEAVE"),
+ *      @OA\Property(property="start_date", type="string", format="date", example="2026-04-22", description="Required for type=LEAVE"),
+ *      @OA\Property(property="end_date", type="string", format="date", example="2026-04-22", description="Required for type=LEAVE"),
+ *      @OA\Property(property="pay_percentage", type="number", nullable=true, example=100),
+ *      @OA\Property(property="rest_day_factor", type="string", nullable=true, enum={"FULL", "PROPORTIONAL", "NONE"}),
+ *      @OA\Property(property="time_mode", type="string", nullable=true, enum={"SCHEDULED", "OPEN_ENDED"}, description="Required for PROPORTIONAL_HOURS leave types"),
+ *      @OA\Property(property="scheduled_start_time", type="string", nullable=true, example="14:00"),
+ *      @OA\Property(property="scheduled_end_time", type="string", nullable=true, example="16:00", description="Required when time_mode is SCHEDULED")
  *   )
  * )
  */
@@ -45,7 +56,7 @@ class StoreEmployeeRequestRequest extends FormRequest
                 'string',
                 Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
             ],
-            'type' => ['required', Rule::in([EmployeeRequestType::EXTRA_DAY->value])],
+            'type' => ['required', Rule::in([EmployeeRequestType::EXTRA_DAY->value, EmployeeRequestType::LEAVE->value])],
             'auto_approve' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payload' => ['required', 'array'],
@@ -57,32 +68,84 @@ class StoreEmployeeRequestRequest extends FormRequest
             'payload.seventh_day' => ['nullable', 'numeric', 'min:0'],
             'payload.total' => ['nullable', 'numeric', 'min:0'],
             'payload.branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            'payload.leave_type_id' => ['nullable', 'integer', Rule::exists('leave_types', 'id')->where('is_active', true)],
+            'payload.start_date' => ['nullable', 'date'],
+            'payload.end_date' => ['nullable', 'date', 'after_or_equal:payload.start_date'],
+            'payload.pay_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'payload.rest_day_factor' => ['nullable', Rule::in(['FULL', 'PROPORTIONAL', 'NONE'])],
+            'payload.time_mode' => ['nullable', Rule::in([LeaveTimeMode::SCHEDULED->value, LeaveTimeMode::OPEN_ENDED->value])],
+            'payload.scheduled_start_time' => ['nullable', 'date_format:H:i', 'required_with:payload.time_mode'],
+            'payload.scheduled_end_time' => ['nullable', 'date_format:H:i', 'after:payload.scheduled_start_time'],
         ];
     }
 
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $v) {
-            if ($this->input('type') !== EmployeeRequestType::EXTRA_DAY->value) {
-                return;
+            if ($this->input('type') === EmployeeRequestType::EXTRA_DAY->value) {
+                $this->validateExtraDayPayload($v);
             }
 
-            $requiredFields = [
-                'date',
-                'salary_pct',
-                'prima_pct',
-                'salary_day',
-                'prima',
-                'seventh_day',
-                'total',
-            ];
-
-            foreach ($requiredFields as $field) {
-                $value = data_get($this->input('payload'), $field);
-                if ($value === null || $value === '') {
-                    $v->errors()->add("payload.{$field}", "El campo payload.{$field} es requerido para solicitudes EXTRA_DAY.");
-                }
+            if ($this->input('type') === EmployeeRequestType::LEAVE->value) {
+                $this->validateLeavePayload($v);
             }
         });
+    }
+
+    private function validateExtraDayPayload(Validator $v): void
+    {
+        $requiredFields = [
+            'date',
+            'salary_pct',
+            'prima_pct',
+            'salary_day',
+            'prima',
+            'seventh_day',
+            'total',
+        ];
+
+        foreach ($requiredFields as $field) {
+            $value = data_get($this->input('payload'), $field);
+            if ($value === null || $value === '') {
+                $v->errors()->add("payload.{$field}", "El campo payload.{$field} es requerido para solicitudes EXTRA_DAY.");
+            }
+        }
+    }
+
+    private function validateLeavePayload(Validator $v): void
+    {
+        $payload = (array) $this->input('payload');
+
+        foreach (['leave_type_id', 'start_date', 'end_date'] as $field) {
+            if (! data_get($payload, $field)) {
+                $v->errors()->add("payload.{$field}", "El campo payload.{$field} es requerido para solicitudes LEAVE.");
+            }
+        }
+
+        $leaveType = LeaveType::find($payload['leave_type_id'] ?? null);
+
+        if (! $leaveType) {
+            return;
+        }
+
+        if ($leaveType->calculation_mode === LeaveCalculationMode::PROPORTIONAL_HOURS) {
+            if (! data_get($payload, 'time_mode')) {
+                $v->errors()->add('payload.time_mode', 'El modo de horario es requerido para permisos por horas.');
+            }
+
+            if (
+                data_get($payload, 'start_date') && data_get($payload, 'end_date')
+                && $payload['start_date'] !== $payload['end_date']
+            ) {
+                $v->errors()->add('payload.end_date', 'Los permisos por horas deben ser de un solo día.');
+            }
+        }
+
+        if (
+            data_get($payload, 'time_mode') === LeaveTimeMode::SCHEDULED->value
+            && ! data_get($payload, 'scheduled_end_time')
+        ) {
+            $v->errors()->add('payload.scheduled_end_time', 'La hora de fin es requerida cuando el horario es definido.');
+        }
     }
 }

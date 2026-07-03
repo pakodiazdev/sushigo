@@ -17,20 +17,6 @@ use Illuminate\Validation\ValidationException;
 trait LeaveGuards
 {
     /**
-     * Throw 422 if the leave is not in PENDING status.
-     *
-     * @throws ValidationException
-     */
-    private function guardIsPending(Leave $leave): void
-    {
-        if ($leave->status !== LeaveStatus::PENDING) {
-            throw ValidationException::withMessages([
-                'status' => 'Solo se pueden procesar solicitudes con estado PENDING.',
-            ]);
-        }
-    }
-
-    /**
      * Throw 422 if an approved leave already covers any day in the given range.
      *
      * @throws ValidationException
@@ -76,6 +62,19 @@ trait LeaveGuards
                 'start_date' => 'El empleado ya tiene asistencia trabajada registrada para alguno de los días indicados.',
             ]);
         }
+    }
+
+    /**
+     * Whether a leave with the given time mode should produce Attendance records.
+     *
+     * SCHEDULED (partial) leaves never touch Attendance — the employee is still
+     * expected to check in/out normally that day, and the context is exposed via
+     * CloseDayAction and the Today view instead. Full-day (null) and OPEN_ENDED
+     * leaves behave like a whole-day absence, so they do create the LEAVE record.
+     */
+    private function shouldCreateAttendanceRecords(?string $timeMode): bool
+    {
+        return $timeMode !== LeaveTimeMode::SCHEDULED->value;
     }
 
     /**

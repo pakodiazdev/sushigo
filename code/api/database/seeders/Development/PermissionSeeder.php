@@ -98,11 +98,9 @@ class PermissionSeeder extends LockedSeeder
             'employees.create' => ['label' => 'Crear empleado',   'group' => 'Empleados'],
             'employees.update' => ['label' => 'Editar empleado',  'group' => 'Empleados'],
 
-            // Ausencias
+            // Ausencias — anticipated leave requests go through the generic
+            // Employee Requests module (type=LEAVE), not through leaves.* directly.
             'leaves.register-direct' => ['label' => 'Registrar ausencia directa', 'group' => 'Ausencias'],
-            'leaves.request' => ['label' => 'Solicitar ausencia',          'group' => 'Ausencias'],
-            'leaves.approve' => ['label' => 'Aprobar ausencia',            'group' => 'Ausencias'],
-            'leaves.reject' => ['label' => 'Rechazar ausencia',           'group' => 'Ausencias'],
 
             // Solicitudes de empleado
             'employee-requests.view' => ['label' => 'Ver solicitudes',      'group' => 'Solicitudes'],

@@ -69,11 +69,8 @@ use App\Http\Controllers\Api\V1\Items\ShowItemController;
 use App\Http\Controllers\Api\V1\Items\ShowItemVariantController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemVariantController;
-use App\Http\Controllers\Api\V1\Leaves\ApproveLeaveController;
 use App\Http\Controllers\Api\V1\Leaves\ListLeaveTypesController;
 use App\Http\Controllers\Api\V1\Leaves\RegisterDirectLeaveController;
-use App\Http\Controllers\Api\V1\Leaves\RegisterLeaveRequestController;
-use App\Http\Controllers\Api\V1\Leaves\RejectLeaveController;
 use App\Http\Controllers\Api\V1\NegotiatedExtraDays\CancelNegotiatedExtraDayController;
 use App\Http\Controllers\Api\V1\NegotiatedExtraDays\ListNegotiatedExtraDaysController;
 use App\Http\Controllers\Api\V1\NegotiatedExtraDays\RegisterNegotiatedExtraDayController;
@@ -323,11 +320,10 @@ Route::prefix('v1')->group(function () {
     });
 
     // Leaves Module (All Protected)
+    // Only direct/express registration lives here — anticipated (PENDING → approved)
+    // leave requests go through the generic Employee Requests module (type=LEAVE).
     Route::middleware('auth:api')->prefix('leaves')->name('leaves.')->group(function () {
         Route::post('/', RegisterDirectLeaveController::class)->name('register-direct')->middleware('permission:leaves.register-direct');
-        Route::post('/requests', RegisterLeaveRequestController::class)->name('register-request')->middleware('permission:leaves.request');
-        Route::patch('/{id}/approve', ApproveLeaveController::class)->name('approve')->middleware('permission:leaves.approve');
-        Route::patch('/{id}/reject', RejectLeaveController::class)->name('reject')->middleware('permission:leaves.reject');
     });
 
     // Employee Requests Module (All Protected)
