@@ -73,6 +73,8 @@ class AttendanceHistorySeeder extends OnceSeeder
 
     private const DEFAULT_REST_DOW = 7; // Sunday
 
+    private const DB_DATETIME_FORMAT = 'Y-m-d H:i:s';
+
     private string $businessTimezone;
 
     private string $today;
@@ -133,76 +135,108 @@ class AttendanceHistorySeeder extends OnceSeeder
         $todayCarbon = Carbon::parse($this->today);
 
         foreach ($periods as $period) {
-            $employeeId = $period->employee_id;
-            $cursor = Carbon::parse($period->start_date);
-            $end = $period->end_date ? Carbon::parse($period->end_date) : $todayCarbon->copy();
-            if ($end->gt($todayCarbon)) {
-                $end = $todayCarbon->copy();
-            }
-
-            if ($cursor->gt($end)) {
-                continue;
-            }
-
-            // Idempotency guard — skip this period's range if already seeded (e.g. re-running locally).
-            $alreadySeeded = DB::table('attendances')
-                ->where('employee_id', $employeeId)
-                ->whereBetween('date', [$cursor->toDateString(), $end->toDateString()])
-                ->exists();
-            if ($alreadySeeded) {
-                continue;
-            }
-
-            $daysLeftInBlock = 0;
-
-            while ($cursor->lte($end)) {
-                $date = $cursor->toDateString();
-
-                if ($daysLeftInBlock > 0) {
-                    $rows[] = $this->simpleRow($employeeId, $date, DayStatus::LEAVE, $now);
-                    $daysLeftInBlock--;
-                    $cursor->addDay();
-
-                    continue;
-                }
-
-                $scheduleDay = $this->resolveScheduleDay($date, $cursor->dayOfWeekIso, $period);
-
-                if (! $scheduleDay) {
-                    $rows[] = $this->simpleRow($employeeId, $date, DayStatus::DAY_OFF, $now);
-                    $cursor->addDay();
-
-                    continue;
-                }
-
-                $roll = mt_rand(1, 100);
-
-                if ($roll <= self::VACATION_CHANCE) {
-                    $blockLen = mt_rand(3, 6);
-                    $blockEnd = (clone $cursor)->addDays($blockLen - 1)->min($end);
-                    $daysLeftInBlock = $cursor->diffInDays($blockEnd);
-                    $this->createLeave($employeeId, $date, $blockEnd->toDateString(), LeaveType::PERMISSION_PAID, 'Vacaciones');
-                    $leaveCount++;
-                    $rows[] = $this->simpleRow($employeeId, $date, DayStatus::LEAVE, $now);
-                } elseif ($roll <= self::VACATION_CHANCE + self::PERMISSION_CHANCE) {
-                    $blockLen = mt_rand(1, 2);
-                    $blockEnd = (clone $cursor)->addDays($blockLen - 1)->min($end);
-                    $daysLeftInBlock = $cursor->diffInDays($blockEnd);
-                    [$typeCode, $notes] = $this->randomPermissionType();
-                    $this->createLeave($employeeId, $date, $blockEnd->toDateString(), $typeCode, $notes);
-                    $leaveCount++;
-                    $rows[] = $this->simpleRow($employeeId, $date, DayStatus::LEAVE, $now);
-                } elseif ($roll <= self::VACATION_CHANCE + self::PERMISSION_CHANCE + self::ABSENCE_CHANCE) {
-                    $rows[] = $this->simpleRow($employeeId, $date, DayStatus::ABSENCE, $now);
-                } else {
-                    $rows[] = $this->workedRow($employeeId, $date, $scheduleDay, $now);
-                }
-
-                $cursor->addDay();
-            }
+            [$periodRows, $periodLeaves] = $this->buildPeriodHistory($period, $todayCarbon, $now);
+            $rows = [...$rows, ...$periodRows];
+            $leaveCount += $periodLeaves;
         }
 
         return [$rows, $leaveCount];
+    }
+
+    /**
+     * Builds attendance rows for a single employment period, day by day.
+     *
+     * @return array{0: list<array<string, mixed>>, 1: int} [attendance rows, leave count]
+     */
+    private function buildPeriodHistory(EmploymentPeriod $period, Carbon $todayCarbon, Carbon $now): array
+    {
+        $employeeId = $period->employee_id;
+        $cursor = Carbon::parse($period->start_date);
+        $end = $period->end_date ? Carbon::parse($period->end_date) : $todayCarbon->copy();
+        if ($end->gt($todayCarbon)) {
+            $end = $todayCarbon->copy();
+        }
+
+        if ($cursor->gt($end) || $this->periodAlreadySeeded($employeeId, $cursor, $end)) {
+            return [[], 0];
+        }
+
+        $rows = [];
+        $leaveCount = 0;
+        $daysLeftInBlock = 0;
+
+        while ($cursor->lte($end)) {
+            $date = $cursor->toDateString();
+
+            if ($daysLeftInBlock > 0) {
+                $rows[] = $this->simpleRow($employeeId, $date, DayStatus::LEAVE, $now);
+                $daysLeftInBlock--;
+                $cursor->addDay();
+
+                continue;
+            }
+
+            $scheduleDay = $this->resolveScheduleDay($date, $cursor->dayOfWeekIso, $period);
+
+            if (! $scheduleDay) {
+                $rows[] = $this->simpleRow($employeeId, $date, DayStatus::DAY_OFF, $now);
+                $cursor->addDay();
+
+                continue;
+            }
+
+            [$dayRows, $daysLeftInBlock, $leaveAdded] = $this->rollWorkingDay($employeeId, $date, $scheduleDay, $cursor, $end, $now);
+            $rows = [...$rows, ...$dayRows];
+            $leaveCount += $leaveAdded;
+
+            $cursor->addDay();
+        }
+
+        return [$rows, $leaveCount];
+    }
+
+    /** Idempotency guard — true if this period's range was already seeded (e.g. re-running locally). */
+    private function periodAlreadySeeded(int $employeeId, Carbon $cursor, Carbon $end): bool
+    {
+        return DB::table('attendances')
+            ->where('employee_id', $employeeId)
+            ->whereBetween('date', [$cursor->toDateString(), $end->toDateString()])
+            ->exists();
+    }
+
+    /**
+     * Rolls the weighted outcome for one working day: vacation/permission block,
+     * unexcused absence, or a normal worked day.
+     *
+     * @param  array{start: string, end: string, lunch_start: ?string, lunch_end: ?string}  $scheduleDay
+     * @return array{0: list<array<string, mixed>>, 1: int, 2: int} [rows, daysLeftInBlock, leaveCount added]
+     */
+    private function rollWorkingDay(int $employeeId, string $date, array $scheduleDay, Carbon $cursor, Carbon $end, Carbon $now): array
+    {
+        $roll = random_int(1, 100);
+        $daysLeftInBlock = 0;
+        $leaveAdded = 0;
+
+        if ($roll <= self::VACATION_CHANCE) {
+            $blockEnd = (clone $cursor)->addDays(random_int(3, 6) - 1)->min($end);
+            $this->createLeave($employeeId, $date, $blockEnd->toDateString(), LeaveType::PERMISSION_PAID, 'Vacaciones');
+            $rows = [$this->simpleRow($employeeId, $date, DayStatus::LEAVE, $now)];
+            $daysLeftInBlock = $cursor->diffInDays($blockEnd);
+            $leaveAdded = 1;
+        } elseif ($roll <= self::VACATION_CHANCE + self::PERMISSION_CHANCE) {
+            $blockEnd = (clone $cursor)->addDays(random_int(1, 2) - 1)->min($end);
+            [$typeCode, $notes] = $this->randomPermissionType();
+            $this->createLeave($employeeId, $date, $blockEnd->toDateString(), $typeCode, $notes);
+            $rows = [$this->simpleRow($employeeId, $date, DayStatus::LEAVE, $now)];
+            $daysLeftInBlock = $cursor->diffInDays($blockEnd);
+            $leaveAdded = 1;
+        } elseif ($roll <= self::VACATION_CHANCE + self::PERMISSION_CHANCE + self::ABSENCE_CHANCE) {
+            $rows = [$this->simpleRow($employeeId, $date, DayStatus::ABSENCE, $now)];
+        } else {
+            $rows = [$this->workedRow($employeeId, $date, $scheduleDay, $now)];
+        }
+
+        return [$rows, $daysLeftInBlock, $leaveAdded];
     }
 
     /**
@@ -297,15 +331,15 @@ class AttendanceHistorySeeder extends OnceSeeder
         $lunchStart = $shift['lunch_start'];
         $lunchEnd = $shift['lunch_end'];
 
-        $lateMinutes = mt_rand(1, 100) <= self::LATE_CHANCE
-            ? mt_rand(self::LATE_MIN_MINUTES, self::LATE_MAX_MINUTES)
+        $lateMinutes = random_int(1, 100) <= self::LATE_CHANCE
+            ? random_int(self::LATE_MIN_MINUTES, self::LATE_MAX_MINUTES)
             : 0;
 
         $checkIn = Carbon::parse("{$date} {$expectedStart}", $this->businessTimezone)->addMinutes($lateMinutes);
         $checkOut = Carbon::parse("{$date} {$expectedEnd}", $this->businessTimezone);
 
-        $lunchLateMinutes = ($lunchStart && $lunchEnd && mt_rand(1, 100) <= self::LUNCH_LATE_CHANCE)
-            ? mt_rand(self::LUNCH_LATE_MIN_MINUTES, self::LUNCH_LATE_MAX_MINUTES)
+        $lunchLateMinutes = ($lunchStart && $lunchEnd && random_int(1, 100) <= self::LUNCH_LATE_CHANCE)
+            ? random_int(self::LUNCH_LATE_MIN_MINUTES, self::LUNCH_LATE_MAX_MINUTES)
             : 0;
 
         $lunchStartAt = $lunchStart ? Carbon::parse("{$date} {$lunchStart}", $this->businessTimezone) : null;
@@ -318,10 +352,10 @@ class AttendanceHistorySeeder extends OnceSeeder
             'employee_id' => $employeeId,
             'public_id' => (string) Str::ulid(),
             'date' => $date,
-            'check_in' => $checkIn->clone()->utc()->format('Y-m-d H:i:s'),
-            'check_out' => $checkOut->clone()->utc()->format('Y-m-d H:i:s'),
-            'lunch_start' => $lunchStartAt?->clone()->utc()->format('Y-m-d H:i:s'),
-            'lunch_end' => $lunchEndAt?->clone()->utc()->format('Y-m-d H:i:s'),
+            'check_in' => $checkIn->clone()->utc()->format(self::DB_DATETIME_FORMAT),
+            'check_out' => $checkOut->clone()->utc()->format(self::DB_DATETIME_FORMAT),
+            'lunch_start' => $lunchStartAt?->clone()->utc()->format(self::DB_DATETIME_FORMAT),
+            'lunch_end' => $lunchEndAt?->clone()->utc()->format(self::DB_DATETIME_FORMAT),
             'entry_late_seconds' => $lateMinutes * 60,
             'lunch_late_seconds' => $lunchLateMinutes * 60,
             'net_worked_minutes' => $netWorkedMinutes,
