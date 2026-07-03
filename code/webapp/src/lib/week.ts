@@ -23,16 +23,23 @@ import { getFrontendTimezone } from './timezone'
 const WEEK_START_DAY = Number.parseInt(import.meta.env.VITE_WEEK_START_DAY ?? '1', 10)
 
 /**
- * Formats a Date as "YYYY-MM-DD" via plain UTC extraction. Only correct when
- * `d` was itself constructed as system-local midnight of a known calendar
- * date (as every caller in this file does) — local midnight and its UTC
- * calendar day always agree, regardless of the runtime's timezone, so this
- * stays self-consistent with `new Date(dateStr + 'T00:00:00')` construction.
- * Do NOT use this to extract "today" from `new Date()` (the current instant)
- * — that needs `todayInBusinessTz()` below instead.
+ * Formats a Date as "YYYY-MM-DD" using its LOCAL (system-timezone) calendar
+ * components, not UTC. Every caller in this file constructs `d` as
+ * system-local midnight of a known calendar date (`new Date(dateStr +
+ * 'T00:00:00')` or `new Date(year, month, day)`), so reading it back via
+ * local components is always self-consistent regardless of the runtime's
+ * UTC offset — unlike `toISOString()`, which shifts the date by one day for
+ * any timezone that isn't exactly UTC-0 at construction time (behind UTC:
+ * local midnight reads as the previous UTC day; ahead of UTC: the same
+ * construction reads as the next UTC day). Do NOT use this to extract
+ * "today" from `new Date()` (the current instant) — that needs
+ * `todayInBusinessTz()` below instead.
  */
 function toIsoDate(d: Date): string {
-  return d.toISOString().substring(0, 10)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /** Today's date as observed in the business timezone — "YYYY-MM-DD". */
