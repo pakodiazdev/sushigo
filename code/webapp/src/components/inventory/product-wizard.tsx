@@ -313,7 +313,11 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
 
             // Create item if not created yet
             if (!createdItemId) {
-                await createItemMutation.mutateAsync(wizardData.item)
+                try {
+                    await createItemMutation.mutateAsync(wizardData.item)
+                } catch {
+                    return
+                }
                 setCurrentStep(2)
             } else {
                 setCurrentStep(2)
@@ -323,10 +327,14 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
 
             // Create variant if not created yet
             if (!createdVariantId && createdItemId) {
-                await createVariantMutation.mutateAsync({
-                    ...wizardData.variant,
-                    item_id: createdItemId,
-                })
+                try {
+                    await createVariantMutation.mutateAsync({
+                        ...wizardData.variant,
+                        item_id: createdItemId,
+                    })
+                } catch {
+                    return
+                }
                 setCurrentStep(3)
             } else {
                 setCurrentStep(3)
