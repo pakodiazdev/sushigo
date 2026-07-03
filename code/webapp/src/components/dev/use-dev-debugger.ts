@@ -20,6 +20,25 @@ export interface DebuggerState {
 export type { DevUser } from '@/services/dev-api'
 
 const STORAGE_KEY = 'dev_debugger_state'
+const MOBILE_BREAKPOINT_QUERY = '(max-width: 767px)'
+
+/** DOM id used to scroll a given section into view — shared between the hook and the Section component. */
+export function sectionElementId(section: keyof DebuggerState['expandedSections']): string {
+    return `debugger-section-${section}`
+}
+
+/** Derives the Swagger UI URL from VITE_API_URL by swapping the `/api/v1` suffix for `/api/documentation`. */
+export function getSwaggerDocsUrl(): string {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+    return apiUrl.replace(/\/api\/v1\/?$/, '/api/documentation')
+}
+
+/** Safe matchMedia check — `matchMedia` is not implemented in the default jsdom test environment. */
+function matchesMobileBreakpoint(): boolean {
+    return typeof globalThis.matchMedia === 'function'
+        ? globalThis.matchMedia(MOBILE_BREAKPOINT_QUERY).matches
+        : false
+}
 
 function getDefaultState(): DebuggerState {
     return {
@@ -86,6 +105,8 @@ export function useDevDebugger() {
     const [devLoginPermissionSearch, setDevLoginPermissionSearch] = useState('')
     const [devLoginPermissionFilter, setDevLoginPermissionFilter] = useState<string | null>(null)
     const [loggingInUserId, setLoggingInUserId] = useState<number | null>(null)
+    const [isMobile, setIsMobile] = useState(matchesMobileBreakpoint)
+    const [scrollTarget, setScrollTarget] = useState<keyof DebuggerState['expandedSections'] | null>(null)
 
     const devLoginEnabled = isDevLoginEnabled()
     const { data: devUsers, isLoading: isLoadingDevUsers } = useQuery({
@@ -111,6 +132,26 @@ export function useDevDebugger() {
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     }, [state])
+
+    useEffect(() => {
+        if (typeof globalThis.matchMedia !== 'function') {
+            return
+        }
+
+        const mediaQuery = globalThis.matchMedia(MOBILE_BREAKPOINT_QUERY)
+        const handleChange = (event: MediaQueryListEvent) => setIsMobile(event.matches)
+
+        mediaQuery.addEventListener('change', handleChange)
+
+        return () => mediaQuery.removeEventListener('change', handleChange)
+    }, [])
+
+    useEffect(() => {
+        if (!scrollTarget) return
+
+        document.getElementById(sectionElementId(scrollTarget))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        setScrollTarget(null)
+    }, [scrollTarget, state.expandedSections])
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -193,6 +234,19 @@ export function useDevDebugger() {
 
     const toggleMinimized = () => {
         setIsMinimized((previouslyMinimized) => !previouslyMinimized)
+    }
+
+    /** Expands the debugger (if minimized), forces the given section open, and scrolls it into view. */
+    const jumpToSection = (section: keyof DebuggerState['expandedSections']) => {
+        setIsMinimized(false)
+        setState((prev) => ({
+            ...prev,
+            expandedSections: {
+                ...prev.expandedSections,
+                [section]: true,
+            },
+        }))
+        setScrollTarget(section)
     }
 
     const refreshQueries = () => {
@@ -279,9 +333,12 @@ export function useDevDebugger() {
         isLoadingDevUsers,
         cacheStats,
         shortcutLabel,
+        isMobile,
+        swaggerDocsUrl: getSwaggerDocsUrl(),
         handleMouseDown,
         toggleSection,
         toggleMinimized,
+        jumpToSection,
         refreshQueries,
         handleDevLogin,
     }

@@ -180,6 +180,79 @@ describe('useDevDebugger', () => {
         })
     })
 
+    describe('isMobile', () => {
+        it('defaults to false when window.matchMedia is unavailable (jsdom default)', () => {
+            const { result } = renderDebugger()
+            expect(result.current.isMobile).toBe(false)
+        })
+
+        it('reflects window.matchMedia when available', () => {
+            const addEventListener = vi.fn()
+            const removeEventListener = vi.fn()
+            const matchMediaMock = vi.fn().mockReturnValue({
+                matches: true,
+                addEventListener,
+                removeEventListener,
+            })
+            vi.stubGlobal('matchMedia', matchMediaMock)
+
+            const { result } = renderDebugger()
+
+            expect(result.current.isMobile).toBe(true)
+            expect(matchMediaMock).toHaveBeenCalledWith('(max-width: 767px)')
+            expect(addEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+
+            vi.unstubAllGlobals()
+        })
+    })
+
+    describe('jumpToSection', () => {
+        it('expands the debugger (if minimized) and forces the given section open', () => {
+            const { result } = renderDebugger()
+
+            act(() => {
+                result.current.toggleMinimized()
+            })
+            expect(result.current.isMinimized).toBe(true)
+            expect(result.current.state.expandedSections.queries).toBe(false)
+
+            act(() => {
+                result.current.jumpToSection('queries')
+            })
+
+            expect(result.current.isMinimized).toBe(false)
+            expect(result.current.state.expandedSections.queries).toBe(true)
+        })
+
+        it('scrolls the target section element into view', () => {
+            const scrollIntoView = vi.fn()
+            const section = document.createElement('div')
+            section.id = 'debugger-section-queries'
+            section.scrollIntoView = scrollIntoView
+            document.body.appendChild(section)
+
+            const { result } = renderDebugger()
+
+            act(() => {
+                result.current.jumpToSection('queries')
+            })
+
+            expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+
+            document.body.removeChild(section)
+        })
+
+        it('does nothing when the target element is not present in the DOM', () => {
+            const { result } = renderDebugger()
+
+            expect(() => {
+                act(() => {
+                    result.current.jumpToSection('queries')
+                })
+            }).not.toThrow()
+        })
+    })
+
     describe('refreshQueries', () => {
         it('calls queryClient.invalidateQueries()', () => {
             const { result } = renderDebugger()
@@ -509,6 +582,24 @@ describe('useDevDebugger', () => {
             const { result } = renderDebugger()
 
             expect(result.current.shortcutLabel).toBe('Cmd+Shift+D')
+        })
+    })
+
+    describe('swaggerDocsUrl', () => {
+        it('derives the Swagger docs URL from VITE_API_URL', () => {
+            vi.stubEnv('VITE_API_URL', 'https://api.sushigo.local/api/v1')
+
+            const { result } = renderDebugger()
+
+            expect(result.current.swaggerDocsUrl).toBe('https://api.sushigo.local/api/documentation')
+        })
+
+        it('falls back to the default API URL when VITE_API_URL is unset', () => {
+            vi.stubEnv('VITE_API_URL', '')
+
+            const { result } = renderDebugger()
+
+            expect(result.current.swaggerDocsUrl).toBe('http://localhost:8080/api/documentation')
         })
     })
 })

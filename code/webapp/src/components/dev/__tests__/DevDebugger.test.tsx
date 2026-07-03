@@ -306,4 +306,44 @@ describe('DevDebugger', () => {
 
     expect(mockLoginAs).toHaveBeenCalledWith(3)
   })
+
+  it('shows a Swagger docs link in the bottom bar (not duplicated in the desktop floating panel header)', async () => {
+    vi.stubEnv('VITE_API_URL', 'https://api.sushigo.local/api/v1')
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    const links = screen.getAllByTitle('Abrir documentación Swagger') as HTMLAnchorElement[]
+    expect(links).toHaveLength(1)
+    const [link] = links
+    expect(link?.tagName).toBe('A')
+    expect(link?.href).toBe('https://api.sushigo.local/api/documentation')
+    expect(link?.target).toBe('_blank')
+    expect(link?.rel).toContain('noopener')
+  })
+
+  it('shows a directly-clickable icon per section in the bottom bar that expands it', async () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView as unknown as typeof Element.prototype.scrollIntoView
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    expect(document.body.textContent).not.toContain('Total:')
+
+    const [queryCacheIcon] = screen.getAllByTitle('Query Cache')
+    fireEvent.click(queryCacheIcon as HTMLElement)
+
+    expect(document.body.textContent).toContain('Total:')
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+  })
+
+  it('renders one section icon per registered section, only in the bottom bar for the desktop floating panel', async () => {
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    for (const title of ['Usuario', 'Roles y Permisos', 'Reloj (Simulación)', 'Query Cache']) {
+      expect(screen.getAllByTitle(title)).toHaveLength(1)
+    }
+  })
 })
