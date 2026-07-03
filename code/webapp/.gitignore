@@ -26,6 +26,7 @@ dist-ssr
 src/routeTree.gen.ts
 # Coverage reports
 coverage
+.vitest-reports
 
 # Cypress
 cypress/videos
