@@ -236,6 +236,29 @@ class WeeklySummaryApiTest extends TestCase
     }
 
     #[Test]
+    public function extra_day_does_not_dilute_base_pay(): void
+    {
+        // Same 6 WORKED + 1 EXTRA shape as extra_day_pay_returns_agreed_daily_wage.
+        // The extra (rest-day) shift must not count toward scheduledWorkingDays —
+        // it is compensated separately via extra_day_pay — so base_pay should match
+        // the 6-worked + 1-day-off scenario (1120.0), not a diluted ~940.
+        $this->createWeek([
+            [DayStatus::WORKED, 0],
+            [DayStatus::WORKED, 0],
+            [DayStatus::WORKED, 0],
+            [DayStatus::WORKED, 0],
+            [DayStatus::WORKED, 0],
+            [DayStatus::WORKED, 0],
+            [DayStatus::EXTRA, 0],
+        ]);
+
+        $response = $this->getJson($this->url($this->employee->public_id, '2026-06-16', '2026-06-22'));
+        $response->assertStatus(200);
+
+        $this->assertEqualsWithDelta(1120.0, $response->json('data.base_pay'), 0.01);
+    }
+
+    #[Test]
     public function daily_evidence_has_correct_count(): void
     {
         $this->createWeek([

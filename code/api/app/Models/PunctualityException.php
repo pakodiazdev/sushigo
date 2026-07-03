@@ -44,7 +44,7 @@ class PunctualityException extends Model
             });
     }
 
-    /** True if this exception applies to the given day-of-week (0=Sun … 6=Sat). Null day_of_week = applies every day. */
+    /** True if this exception applies to the given ISO 8601 day-of-week (1=Mon … 7=Sun). Null day_of_week = applies every day. */
     public function appliesToDay(int $dayOfWeek): bool
     {
         return $this->day_of_week === null || $this->day_of_week === $dayOfWeek;
