@@ -30,6 +30,7 @@ const mockEmployee: Employee = {
     phone_country: 'MX',
     roles: ['cook'] as EmployeePositionRole[],
     is_active: true,
+    attendance_exempt: false,
     has_active_period: true,
     has_user: false,
     meta: null,

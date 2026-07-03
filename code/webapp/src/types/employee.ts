@@ -29,6 +29,8 @@ export interface Employee {
   last_name: string
   roles: EmployeePositionRole[]
   is_active: boolean
+  /** True for roles (e.g. admin, super-admin) that do not check in/out — excluded from the attendance list */
+  attendance_exempt: boolean
   has_active_period?: boolean | null
   has_user: boolean
   email?: string | null
@@ -75,6 +77,7 @@ export interface EmployeeFormData {
   meta?: Record<string, any>
   branch_id?: number
   start_date?: string
+  attendance_exempt?: boolean
 }
 
 export interface DeactivateEmployeeData {
@@ -94,6 +97,7 @@ export interface EmployeeUpdateData {
   email?: string
   phone?: string
   meta?: Record<string, any>
+  attendance_exempt?: boolean
 }
 
 // ============================================================================

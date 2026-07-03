@@ -107,6 +107,7 @@ const mockEmployee: Employee = {
   last_name: 'Pérez',
   roles: ['cook'],
   is_active: true,
+  attendance_exempt: false,
   has_user: false,
   meta: null,
   employment_periods: [

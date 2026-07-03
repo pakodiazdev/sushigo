@@ -18,6 +18,8 @@ import {
   useCloseDayPanel,
 } from '@/components/attendance'
 import { ExtraDayNegotiationDialog } from '@/components/attendance/ExtraDayNegotiationDialog'
+import { WeeklySummaryDialog } from '@/components/attendance/WeeklySummaryDialog'
+import { useWeeklySummaryDialog } from '@/components/attendance/use-weekly-summary-dialog'
 import { useAttendancePermissions } from '@/components/attendance/use-attendance-permissions'
 import { useTodayAttendancePage } from './-use-today-attendance-page'
 import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
@@ -144,8 +146,10 @@ export function AttendancePage() {
   const maxTime = useApplicationTimeLabel()
   const closeDayPanel = useCloseDayPanel(rows, branchId, maxTime)
   const isAdmin = useAuthStore(s => s.isAdmin)
+  const { can } = useAuthStore()
   const today = useBusinessDate() ?? todayDateCdmx()
   const { canEdit, requiresReason } = useAttendancePermissions(selectedDate)
+  const weeklySummary = useWeeklySummaryDialog()
 
   // Feed bulk overtime decisions from the close-day panel into the queue
   const { overtimePending, clearOvertimePending } = closeDayPanel
@@ -233,6 +237,9 @@ export function AttendancePage() {
                 onCheckOut={openCheckOut}
                 onOvertimeDecision={openOvertimeDecision}
                 onMarkDayStatus={markDayStatus}
+                onWeeklySummary={can('reports.weekly-summary')
+                  ? (emp) => weeklySummary.open(emp.id, `${emp.last_name}, ${emp.first_name}`)
+                  : undefined}
               />
             ))}
           </div>
@@ -323,6 +330,25 @@ export function AttendancePage() {
           onCancel={closeExtraDay}
         />
       )}
+
+      {/* Weekly Summary Slide Panel */}
+      <WeeklySummaryDialog
+        isOpen={weeklySummary.isOpen}
+        onClose={weeklySummary.close}
+        employeeName={weeklySummary.employeeName}
+        periodStart={weeklySummary.periodStart}
+        periodEnd={weeklySummary.periodEnd}
+        onPrevWeek={weeklySummary.prevWeek}
+        onNextWeek={weeklySummary.nextWeek}
+        onJumpToDate={weeklySummary.jumpToDate}
+        isCurrentWeek={weeklySummary.isCurrentWeek}
+        isEarliestWeek={weeklySummary.isEarliestWeek}
+        earliestWeekStart={weeklySummary.earliestWeekStart}
+        onGoToCurrentWeek={weeklySummary.goToCurrentWeek}
+        summary={weeklySummary.summary}
+        isLoading={weeklySummary.isLoading}
+        isError={weeklySummary.isError}
+      />
     </PageContainer>
   )
 }

@@ -76,11 +76,13 @@ class Employee extends Model
         'first_name',
         'last_name',
         'is_active',
+        'attendance_exempt',
         'meta',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'attendance_exempt' => 'boolean',
         'meta' => 'array',
     ];
 
@@ -122,6 +124,16 @@ class Employee extends Model
     public function employeeRequests(): HasMany
     {
         return $this->hasMany(EmployeeRequest::class)->orderBy('created_at', 'desc');
+    }
+
+    public function punctualityExceptions(): HasMany
+    {
+        return $this->hasMany(PunctualityException::class)->orderBy('effective_from', 'desc');
+    }
+
+    public function overtimeBankMovements(): HasMany
+    {
+        return $this->hasMany(OvertimeBankMovement::class)->orderBy('period_date', 'desc');
     }
 
     public function bonusConfigs(): HasMany

@@ -42,7 +42,6 @@ class EmployeeSeeder extends OnceSeeder
         }
 
         $this->seedConfigEmployees($action, $branch);
-        $this->seedFactoryEmployees($branch);
         $this->seedFactoryBaja($branch);
         $this->seedDosReingresos($action, $branch);
         $this->seedReingresoTres($action, $branch);
@@ -92,34 +91,6 @@ class EmployeeSeeder extends OnceSeeder
 
             $this->command->info("✓ Employee created: {$employee->code} - {$employee->first_name} {$employee->last_name} (hired: {$hireDate->toDateString()}, user: {$credential}, roles: {$roles})");
         }
-    }
-
-    /**
-     * Create random employees with linked user accounts via factory
-     * and assign them to the main branch with an employment period.
-     */
-    private function seedFactoryEmployees(Branch $branch): void
-    {
-        $factoryCount = config('seeders.factory_counts.employees', 5);
-        $factoryEmployees = Employee::factory($factoryCount)->withUser()->create();
-
-        foreach ($factoryEmployees as $employee) {
-            $hireDate = $this->randomDateBetween(now()->subYears(3), now());
-
-            $period = EmploymentPeriod::factory()->create([
-                'employee_id' => $employee->id,
-                'branch_id' => $branch->id,
-                'start_date' => $hireDate->toDateString(),
-                'is_active' => true,
-            ]);
-
-            // Align all timestamps to the hire date
-            $employee->update(['created_at' => $hireDate, 'updated_at' => $hireDate]);
-            $period->update(['created_at' => $hireDate, 'updated_at' => $hireDate]);
-            $employee->user?->update(['created_at' => $hireDate, 'updated_at' => $hireDate]);
-        }
-
-        $this->command->info("✓ Created {$factoryCount} random employees with users (factory) assigned to branch: {$branch->name}");
     }
 
     /**

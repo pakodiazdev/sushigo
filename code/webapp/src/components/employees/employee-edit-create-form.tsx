@@ -32,6 +32,7 @@ function buildSchema(assignableRoles: string[]) {
       roles: z.array(roleEnum).min(1, 'Selecciona al menos un puesto'),
       email: z.string().max(255).optional(),
       phone: z.string().max(10).optional(),
+      attendance_exempt: z.boolean(),
       // ── context flags (not submitted, used for conditional validation) ───────
       canEditContact: z.boolean(),
       // hasBranch reflects whether the auth store has a currentBranch selected.
@@ -146,6 +147,7 @@ export function EmployeeEditCreateForm({
         email: employee.email ?? '',
         phone: employee.phone ?? '',
         start_date: '',
+        attendance_exempt: employee.attendance_exempt,
         canEditContact,
         hasBranch,
       }
@@ -159,6 +161,8 @@ export function EmployeeEditCreateForm({
       email: '',
       phone: '',
       start_date: today,
+      // Disabled by default — most employees are tied to attendance tracking.
+      attendance_exempt: false,
       canEditContact,
       hasBranch,
     }
@@ -293,6 +297,24 @@ export function EmployeeEditCreateForm({
                 ))
               )}
             </div>
+          )}
+        />
+      </FormField>
+
+      {/* Attendance exemption — off by default; enable for roles free of attendance tracking (e.g. admin) */}
+      <FormField
+        label="Asistencia"
+        hint="Si se habilita, este empleado no aparecerá en la lista de asistencia (su asistencia se considera automática)"
+      >
+        <Controller
+          name="attendance_exempt"
+          control={control}
+          render={({ field }) => (
+            <ToggleSwitch
+              label="Libre de asistencia"
+              checked={field.value}
+              onChange={field.onChange}
+            />
           )}
         />
       </FormField>

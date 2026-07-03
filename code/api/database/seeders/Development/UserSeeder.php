@@ -56,6 +56,7 @@ class UserSeeder extends OnceSeeder
                         'first_name' => $empData['first_name'],
                         'last_name' => $empData['last_name'],
                         'is_active' => true,
+                        'attendance_exempt' => $empData['attendance_exempt'] ?? false,
                         'created_at' => $hireDate,
                         'updated_at' => $hireDate,
                     ]);
@@ -131,10 +132,6 @@ class UserSeeder extends OnceSeeder
                 }
             }
         }
-
-        $factoryCount = config('seeders.factory_counts.users', 10);
-        User::factory($factoryCount)->create();
-        $this->command->info("✓ Created {$factoryCount} random users");
 
         $this->command->info('✓ Development users seeded successfully');
     }

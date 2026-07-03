@@ -19,6 +19,7 @@ const mockEmployee: Employee = {
     phone: '555-1234',
     phone_country: '+1',
     is_active: true,
+    attendance_exempt: false,
     has_user: true,
     roles: ['manager', 'cook'],
     meta: null,

@@ -44,6 +44,27 @@ Como Manager, quiero ver el resumen semanal completo por empleado (pago base, de
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `5h` · **Pessimistic:** `9h`
+### 📊 Estimates
+- **Optimistic:** `5h` · **Pessimistic:** `9h` · **Tracked:** `8h`
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-06-24", "start": "10:00", "end": "14:00", "duration": "4h" },
+  { "date": "2026-06-24", "start": "17:00", "end": "21:00", "duration": "4h" }
+]
+```
+
+---
+
+## 📊 Retrospective
+
+**Tracked vs Estimated:** 8h tracked, 5–9h estimated. Within range.
+
+**Scope expansion:** Issue #068 required AP-020 (PartialLeave), AP-026 (PunctualityService), AP-034 (OvertimeBankMovement) as prerequisites. This added 3 migrations, 4 enums, 3 models, and a full PunctualityService — roughly 3h extra that was unaccounted in the original estimate.
+
+**Key blocker:** PostgreSQL deadlock when creating multiple FK constraints to `users` in a single `Schema::create()` transaction. Solved by separating FK creation into a subsequent `Schema::table()` call. Also required manually recreating the test DB after a partial migration left it in inconsistent state.
+
+**Rest-day formula:** User confirmed proration formula — `base_pay = worked_days × daily_rate × (1 + 1/scheduled_working_days)` — which correctly distributes the rest day proportionally by days actually worked. Implemented exactly as specified.

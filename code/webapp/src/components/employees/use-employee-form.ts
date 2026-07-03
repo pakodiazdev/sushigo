@@ -106,6 +106,7 @@ export function useEmployeeForm({
           roles: (values.roles as EmployeePositionRole[]).filter((r) =>
             assignableRoles.includes(r),
           ),
+          attendance_exempt: values.attendance_exempt,
         }
 
         if (isAdmin) {
@@ -136,6 +137,7 @@ export function useEmployeeForm({
           phone: values.phone,
           start_date: (values as { start_date: string }).start_date,
           branch_id: currentBranch.id,
+          attendance_exempt: values.attendance_exempt,
         })
         // Stay on the panel so the admin can assign a schedule right away.
         // Store the created employee for immediate rendering, then notify the

@@ -92,6 +92,7 @@ use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityBonusGroupsController
 use App\Http\Controllers\Api\V1\Punctuality\ListPunctualityRangesController;
 use App\Http\Controllers\Api\V1\Punctuality\UpdatePunctualityRangesController;
 use App\Http\Controllers\Api\V1\Reports\TodayReportController;
+use App\Http\Controllers\Api\V1\Reports\WeeklySummaryController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleDayOverrideController;
 use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
@@ -353,6 +354,7 @@ Route::prefix('v1')->group(function () {
     // Reports Module
     Route::middleware('auth:api')->prefix('reports')->name('reports.')->group(function () {
         Route::get('today', TodayReportController::class)->name('today');
+        Route::get('weekly-summary', WeeklySummaryController::class)->name('weekly-summary');
     });
 
     // Negotiated Extra Days Module (All Protected)

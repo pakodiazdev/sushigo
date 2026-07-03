@@ -95,6 +95,7 @@ class CoreTestSeeder extends Seeder
         'attendances.create',
         'punctuality.manage',
         'reports.today',
+        'reports.weekly-summary',
         'holidays.manage',
         'payroll.preview',
     ];

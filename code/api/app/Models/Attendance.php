@@ -65,24 +65,14 @@ class Attendance extends Model
         return $this->belongsTo(User::class, 'confirmed_by');
     }
 
-    /**
-     * Partial leaves linked to this attendance record.
-     *
-     * @see AP-020 — PartialLeave model (pending implementation)
-     */
     public function partialLeaves(): HasMany
     {
-        return $this->hasMany(PartialLeave::class); // AP-020
+        return $this->hasMany(PartialLeave::class);
     }
 
-    /**
-     * Overtime bank movements generated from this attendance day.
-     *
-     * @see AP-034 — OvertimeBankMovement model (pending implementation)
-     */
     public function overtimeBankMovements(): HasMany
     {
-        return $this->hasMany(OvertimeBankMovement::class); // AP-034
+        return $this->hasMany(OvertimeBankMovement::class);
     }
 
     public function scopeByDate(Builder $query, string $date): Builder

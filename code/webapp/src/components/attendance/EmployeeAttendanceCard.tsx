@@ -12,6 +12,7 @@ import {
     BedDouble,
     UserX,
     Lock,
+    BarChart3,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -240,6 +241,7 @@ export interface EmployeeAttendanceCardProps {
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
+    onWeeklySummary?: (employee: TodayAttendanceEmployee) => void
     canEdit?: boolean
 }
 
@@ -251,6 +253,7 @@ export function EmployeeAttendanceCard({
     onCheckOut,
     onOvertimeDecision,
     onMarkDayStatus,
+    onWeeklySummary,
     canEdit = true,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
@@ -306,7 +309,7 @@ export function EmployeeAttendanceCard({
                 getPhaseCardClass(phase)
             )}
         >
-            {/* Header: Name + Phase Badge */}
+            {/* Header: Name + Phase Badge + Weekly Summary */}
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                     <p className="font-semibold text-sm truncate text-foreground">
@@ -314,7 +317,20 @@ export function EmployeeAttendanceCard({
                     </p>
                     <p className="text-xs text-muted-foreground">{row.employee.code}</p>
                 </div>
-                <PhaseBadge phase={phase} />
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {onWeeklySummary && (
+                        <button
+                            type="button"
+                            data-testid="btn-weekly-summary"
+                            aria-label="Ver resumen semanal"
+                            onClick={() => onWeeklySummary(row.employee)}
+                            className="rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                            <BarChart3 className="h-4 w-4" />
+                        </button>
+                    )}
+                    <PhaseBadge phase={phase} />
+                </div>
             </div>
 
             {/* Role badges */}

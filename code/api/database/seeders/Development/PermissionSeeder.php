@@ -133,6 +133,7 @@ class PermissionSeeder extends LockedSeeder
 
             // Reportes
             'reports.today' => ['label' => 'Ver reporte operacional del día', 'group' => 'Reportes'],
+            'reports.weekly-summary' => ['label' => 'Ver resumen semanal por empleado', 'group' => 'Reportes'],
 
             // Nómina
             'payroll.preview' => ['label' => 'Ver preview de cierre de nómina', 'group' => 'Nómina'],

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { WeeklySummaryResponse } from '@/types/report'
 import { reportApi } from '@/services/report.service'
 
 vi.mock('@/lib/api-client', () => ({
@@ -64,6 +65,61 @@ describe('reportApi.getToday', () => {
     await reportApi.getToday(1)
     expect(apiClient.get).toHaveBeenCalledWith('/reports/today', {
       params: { branch_id: 1 },
+    })
+  })
+})
+
+// ── reportApi.getWeeklySummary ─────────────────────────────────────────────────
+
+const mockWeeklySummary: WeeklySummaryResponse = {
+  employee_id: 'emp-ulid-001',
+  period_start: '2026-06-16',
+  period_end: '2026-06-22',
+  base_pay: 1120.0,
+  late_deductions: 20.0,
+  unpaid_leave_deductions: 0.0,
+  overtime_pay: 0.0,
+  extra_day_pay: 0.0,
+  holiday_pay: 0.0,
+  punctuality_bonus: 110.0,
+  free_hours_earned: 1.0,
+  total_pay: 1210.0,
+  daily_evidence: [],
+}
+
+describe('reportApi.getWeeklySummary', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls GET /reports/weekly-summary with correct params', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: { status: 200, data: mockWeeklySummary },
+    } as never)
+
+    const result = await reportApi.getWeeklySummary('emp-ulid-001', '2026-06-16', '2026-06-22')
+
+    expect(apiClient.get).toHaveBeenCalledWith('/reports/weekly-summary', {
+      params: {
+        employee_id: 'emp-ulid-001',
+        period_start: '2026-06-16',
+        period_end: '2026-06-22',
+      },
+    })
+    expect(result).toEqual({ data: { status: 200, data: mockWeeklySummary } })
+  })
+
+  it('passes different employee ids and date ranges', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: {} } as never)
+
+    await reportApi.getWeeklySummary('emp-ulid-002', '2026-06-09', '2026-06-15')
+
+    expect(apiClient.get).toHaveBeenCalledWith('/reports/weekly-summary', {
+      params: {
+        employee_id: 'emp-ulid-002',
+        period_start: '2026-06-09',
+        period_end: '2026-06-15',
+      },
     })
   })
 })

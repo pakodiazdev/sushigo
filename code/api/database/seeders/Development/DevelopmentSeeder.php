@@ -36,6 +36,7 @@ class DevelopmentSeeder extends Seeder
             \Database\Seeders\UomConversionSeeder::class,
             AttendanceAuditLogSeeder::class,
             \Database\Seeders\LeaveTypeSeeder::class,
+            AttendanceHistorySeeder::class,
             PunctualityRangeSeeder::class,
             PunctualityBonusGroupSeeder::class,
             HolidayDefinitionSeeder::class,
