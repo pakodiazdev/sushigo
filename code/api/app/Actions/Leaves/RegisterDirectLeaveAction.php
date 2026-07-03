@@ -11,8 +11,10 @@ use Illuminate\Support\Facades\DB;
  * Register a direct (immediately approved) leave for an employee.
  *
  * - Sets status = APPROVED immediately (no PENDING step).
- * - Creates or updates Attendance records for each date in the range
- *   with day_status = LEAVE.
+ * - Creates or updates Attendance records for each date in the range with
+ *   day_status = LEAVE, unless the leave is SCHEDULED (partial) — the
+ *   employee is still expected to check in/out normally that day, so the
+ *   worked-attendance guard is skipped too (express "leave early" flow).
  * - Computes actual_duration_minutes for PROPORTIONAL_HOURS leaves when
  *   both actual times are provided.
  *
@@ -34,14 +36,21 @@ class RegisterDirectLeaveAction
             'approved_by' => $requestedById,
         ]);
 
-        $leave = DB::transaction(function () use ($data, $employee, $attributes) {
+        $createsAttendance = $this->shouldCreateAttendanceRecords($data['time_mode'] ?? null);
+
+        $leave = DB::transaction(function () use ($data, $employee, $attributes, $createsAttendance) {
             $this->guardNoOverlappingApprovedLeave($employee->id, $data['start_date'], $data['end_date']);
-            $this->guardNoExistingWorkedAttendance($employee->id, $data['start_date'], $data['end_date']);
+
+            if ($createsAttendance) {
+                $this->guardNoExistingWorkedAttendance($employee->id, $data['start_date'], $data['end_date']);
+            }
 
             $attributes['approved_at'] = now();
             $leave = Leave::create($attributes);
 
-            $this->createAttendanceRecords($employee->id, $data['start_date'], $data['end_date']);
+            if ($createsAttendance) {
+                $this->createAttendanceRecords($employee->id, $data['start_date'], $data['end_date']);
+            }
 
             return $leave;
         });

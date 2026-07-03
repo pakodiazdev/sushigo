@@ -67,11 +67,8 @@ class PermissionSeeder extends LockedSeeder
             'employees.create',
             'employees.update',
 
-            // Leaves
+            // Leaves — anticipated requests go through Employee Requests (type=LEAVE)
             'leaves.register-direct',
-            'leaves.request',
-            'leaves.approve',
-            'leaves.reject',
 
             // Employee Requests
             'employee-requests.view',
