@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { requirePermission } from '@/lib/route-guards'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { NoBranchState } from '@/components/attendance'
 import { useClosePreviewPage } from './use-close-preview'
 import type { PayPeriodEmployeePreview, PayPeriodLine } from '@/types/attendance-payroll'
@@ -17,8 +18,21 @@ export const Route = createFileRoute('/attendance/payroll/close')({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function PayrollClosePage() {
-  const { rows, isLoading, errorMessage, hasBranch, calculate, pendingRange, setPendingRange } =
-    useClosePreviewPage()
+  const {
+    rows,
+    isLoading,
+    errorMessage,
+    hasBranch,
+    calculate,
+    pendingRange,
+    setPendingRange,
+    activeRange,
+    isConfirmOpen,
+    openConfirm,
+    closeConfirm,
+    confirmClose,
+    isClosing,
+  } = useClosePreviewPage()
 
   if (!hasBranch) {
     return (
@@ -82,6 +96,16 @@ export function PayrollClosePage() {
           {rows.map(row => (
             <EmployeePreviewRow key={row.employee.id} row={row} />
           ))}
+
+          <div className="flex justify-end pt-4">
+            <button
+              type="button"
+              onClick={openConfirm}
+              className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            >
+              Confirmar cierre
+            </button>
+          </div>
         </div>
       )}
 
@@ -90,6 +114,28 @@ export function PayrollClosePage() {
           Selecciona un rango de fechas y presiona &ldquo;Calcular preview&rdquo;.
         </p>
       )}
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmClose}
+        title="Confirmar cierre de nómina"
+        description={
+          activeRange && (
+            <>
+              Se cerrará el periodo del <strong>{activeRange.periodStart}</strong> al{' '}
+              <strong>{activeRange.periodEnd}</strong> para <strong>{rows.length}</strong>{' '}
+              {rows.length === 1 ? 'empleado' : 'empleados'}. Esta acción congela los datos
+              calculados y no se puede modificar después.
+            </>
+          )
+        }
+        confirmLabel="Confirmar y cerrar"
+        cancelLabel="Cancelar"
+        variant="warning"
+        isLoading={isClosing}
+        container="viewport"
+      />
     </PageContainer>
   )
 }
