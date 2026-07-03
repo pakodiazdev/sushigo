@@ -22,14 +22,27 @@ import { getFrontendTimezone } from './timezone'
 
 const WEEK_START_DAY = Number.parseInt(import.meta.env.VITE_WEEK_START_DAY ?? '1', 10)
 
-/** Formats a Date as "YYYY-MM-DD" in the local/business timezone — never UTC, to avoid day-shift near midnight. */
+/**
+ * Formats a Date as "YYYY-MM-DD" via plain UTC extraction. Only correct when
+ * `d` was itself constructed as system-local midnight of a known calendar
+ * date (as every caller in this file does) — local midnight and its UTC
+ * calendar day always agree, regardless of the runtime's timezone, so this
+ * stays self-consistent with `new Date(dateStr + 'T00:00:00')` construction.
+ * Do NOT use this to extract "today" from `new Date()` (the current instant)
+ * — that needs `todayInBusinessTz()` below instead.
+ */
 function toIsoDate(d: Date): string {
+  return d.toISOString().substring(0, 10)
+}
+
+/** Today's date as observed in the business timezone — "YYYY-MM-DD". */
+function todayInBusinessTz(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: getFrontendTimezone(),
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(d)
+  }).format(new Date())
 }
 
 /** Shifts a `YYYY-MM-DD` date string by `n` days (negative to go back). */
@@ -51,7 +64,7 @@ export function weekRangeContaining(dateStr: string): { start: string; end: stri
 
 /** Returns the Monday (or configured start day) and Sunday of the current week. */
 export function currentWeekRange(): { start: string; end: string } {
-  return weekRangeContaining(toIsoDate(new Date()))
+  return weekRangeContaining(todayInBusinessTz())
 }
 
 /** Formats a week range as "16 jun – 22 jun 2026" for display. */
