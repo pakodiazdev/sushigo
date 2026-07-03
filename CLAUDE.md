@@ -268,6 +268,23 @@ Story: AP-NNN · <full story text from backlog.en.md>
 Refs:  RF-XX · <requirement text from spec.en.md>
 ```
 
+### PR Title (mandatory)
+
+Every PR title **must** include the workspace letter, in its own bracket right after the issue number bracket:
+
+```
+<emoji> [#NNN][x] - <description> <emoji>
+```
+
+- `x` is the workspace letter, lowercase, matching the `workspaces/sushigo-<x>` directory (e.g. `a`, `b`, `c`)
+- No space between the issue bracket and the workspace-letter bracket
+
+**Example:** `✨ [#073][a] - Confirm weekly payroll close ✅`
+
+**Why:** dev-lab runs up to 8 parallel workspace clones. Without the letter in the title, reviewers scanning a PR list can't tell which workspace a PR came from without opening it.
+
+---
+
 ### PR Description (mandatory)
 
 Every PR opened from dev-lab **must** include a `## Workspace` footer identifying where it was developed:
@@ -283,6 +300,22 @@ Every PR opened from dev-lab **must** include a `## Workspace` footer identifyin
 - Workspace name is the directory name under `workspaces/` (e.g. `sushigo-a`, `sushigo-e`)
 - Branch name is the full git branch name at the time the PR was opened
 - Place the `## Workspace` section just before the `🤖 Generated with` attribution line
+
+---
+
+### Manual Testing Guide (mandatory)
+
+Every PR description **must** include a manual testing guide:
+
+- **New functionality:** step-by-step instructions to exercise the new behavior manually (command to run, page/route to visit, inputs to use, expected result).
+- **Bug fix:** steps to reproduce the original bug, plus steps to confirm it no longer happens.
+
+**Why:** automated tests catch regressions, but a reviewer still needs a fast, concrete way to verify the change does what the PR claims — without re-deriving the flow themselves from the diff.
+
+**Rules:**
+- Add it as its own `## Manual Testing` section in the PR body, separate from the automated `## Test plan` checklist
+- Be concrete: exact commands, URLs, or UI steps — not "test the feature works"
+- **Never include passwords or other credentials in the PR body**, even for seeded/ephemeral test environments. Reference the test user by email/username only (e.g. "login as `admin@sushigo.com`") — the password lives in the Test Users table below, not in PR history
 
 ---
 
