@@ -162,3 +162,28 @@ export interface OvertimeLftTier {
 export interface UpdateOvertimeLftTiersPayload {
   tiers: { factor: number; up_to_hours: number | null }[]
 }
+
+// ── Vacation Request ─────────────────────────────────────────────────────────
+
+export type VacationRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+
+export interface VacationRequest {
+  id: string
+  employee_id: string
+  start_date: string
+  end_date: string
+  days_count: number
+  status: VacationRequestStatus
+  requested_by: string
+  approved_by: string | null
+  approved_at: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface RegisterVacationRequestData {
+  employee_id: string
+  start_date: string
+  end_date: string
+  notes?: string | null
+}

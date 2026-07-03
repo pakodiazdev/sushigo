@@ -8,11 +8,20 @@ import type { VacationEntitlement } from '@/types/attendance-payroll'
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 const mockGetEntitlements = vi.fn()
+const mockListEmployeeVacationRequests = vi.fn()
 
 vi.mock('@/services/vacation.service', () => ({
   vacationApi: {
     getEntitlements: (...args: unknown[]) => mockGetEntitlements(...args),
+    createVacationRequest: vi.fn(),
+    approveRequest: vi.fn(),
+    rejectRequest: vi.fn(),
+    listEmployeeVacationRequests: (...args: unknown[]) => mockListEmployeeVacationRequests(...args),
   },
+}))
+
+vi.mock('@/components/ui/toast-context', () => ({
+  useToast: () => ({ showSuccess: vi.fn(), showError: vi.fn() }),
 }))
 
 import { useVacationSection } from '@/components/employees/use-vacation-section'
@@ -41,6 +50,7 @@ const EMP_ID = 'emp-001'
 beforeEach(() => {
   vi.clearAllMocks()
   mockGetEntitlements.mockResolvedValue({ data: { data: [], meta: null } })
+  mockListEmployeeVacationRequests.mockResolvedValue({ data: { data: [], meta: { current_page: 1, last_page: 1, per_page: 10, total: 0 } } })
 })
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import type { VacationEntitlement, VacationSummary } from '@/types/attendance-payroll'
+import type { VacationEntitlement, VacationSummary, VacationRequest } from '@/types/attendance-payroll'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -9,6 +9,16 @@ let mockState = {
   entitlements: [] as VacationEntitlement[],
   summary: null as VacationSummary | null,
   isLoading: false,
+  requests: [] as VacationRequest[],
+  isLoadingRequests: false,
+  showRequestDialog: false,
+  pendingRequestEmployee: null,
+  openRequestDialog: vi.fn(),
+  closeRequestDialog: vi.fn(),
+  handleApprove: vi.fn(),
+  handleReject: vi.fn(),
+  isApproving: false,
+  isRejecting: false,
 }
 
 vi.mock('@/components/employees/use-vacation-section', () => ({
@@ -17,6 +27,10 @@ vi.mock('@/components/employees/use-vacation-section', () => ({
 
 vi.mock('@/components/ui/badge', () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}))
+
+vi.mock('@/components/employees/RegisterVacationRequestDialog', () => ({
+  RegisterVacationRequestDialog: () => null,
 }))
 
 import { VacationSection } from '@/components/employees/vacation-section'
@@ -29,6 +43,16 @@ beforeEach(() => {
     entitlements: [],
     summary: null,
     isLoading: false,
+    requests: [],
+    isLoadingRequests: false,
+    showRequestDialog: false,
+    pendingRequestEmployee: null,
+    openRequestDialog: vi.fn(),
+    closeRequestDialog: vi.fn(),
+    handleApprove: vi.fn(),
+    handleReject: vi.fn(),
+    isApproving: false,
+    isRejecting: false,
   }
 })
 
@@ -123,5 +147,42 @@ describe('VacationSection', () => {
     render(<VacationSection employeeId="emp-001" />)
 
     expect(screen.queryByText(/antigüedad/)).toBeNull()
+  })
+
+  it('renders the request vacation button', () => {
+    render(<VacationSection employeeId="emp-001" />)
+
+    expect(screen.getByText('Solicitar vacaciones')).toBeTruthy()
+  })
+
+  it('shows empty state when there are no vacation requests', () => {
+    render(<VacationSection employeeId="emp-001" />)
+
+    expect(screen.getByText('Sin solicitudes de vacaciones')).toBeTruthy()
+  })
+
+  it('renders vacation requests with status badge', () => {
+    mockState = {
+      ...mockState,
+      requests: [
+        {
+          id: 'vr-001',
+          employee_id: 'emp-001',
+          start_date: '2026-08-10',
+          end_date: '2026-08-12',
+          days_count: 3,
+          status: 'PENDING',
+          requested_by: 'Admin',
+          approved_by: null,
+          approved_at: null,
+          notes: null,
+          created_at: '2026-08-01T08:00:00+00:00',
+        },
+      ],
+    }
+    render(<VacationSection employeeId="emp-001" />)
+
+    expect(screen.getByText('3')).toBeTruthy()
+    expect(screen.getByText('Pendiente')).toBeTruthy()
   })
 })

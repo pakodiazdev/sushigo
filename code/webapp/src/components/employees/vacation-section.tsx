@@ -1,10 +1,14 @@
-import { Loader2, Palmtree } from 'lucide-react'
+import { Loader2, Palmtree, Plus, Check, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { useVacationSection } from './use-vacation-section'
-import type { VacationEntitlement } from '@/types/attendance-payroll'
+import { RegisterVacationRequestDialog } from './RegisterVacationRequestDialog'
+import type { RegisterVacationRequestEmployee } from './use-register-vacation-request-dialog'
+import type { VacationEntitlement, VacationRequest } from '@/types/attendance-payroll'
 
 interface VacationSectionProps {
   readonly employeeId: string
+  readonly employee?: RegisterVacationRequestEmployee
 }
 
 const RULE_LABELS: Record<string, string> = {
@@ -23,10 +27,25 @@ function formatDate(dateString: string): string {
   })
 }
 
+function dateRange(start: string, end: string): string {
+  return start === end ? formatDate(start) : `${formatDate(start)} — ${formatDate(end)}`
+}
+
 function remainingDaysClass(remaining: number): string {
   if (remaining <= 0) return 'text-destructive font-semibold'
   if (remaining <= 3) return 'text-amber-600 font-semibold'
   return ''
+}
+
+function statusBadge(status: string) {
+  const map: Record<string, { text: string; cls: string }> = {
+    APPROVED: { text: 'Aprobada', cls: 'bg-green-100 text-green-800' },
+    PENDING: { text: 'Pendiente', cls: 'bg-yellow-100 text-yellow-800' },
+    REJECTED: { text: 'Rechazada', cls: 'bg-red-100 text-red-800' },
+    CANCELLED: { text: 'Cancelada', cls: 'bg-gray-100 text-gray-700' },
+  }
+  const s = map[status] ?? { text: status, cls: 'bg-gray-100 text-gray-700' }
+  return <span className={`rounded px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.text}</span>
 }
 
 function EntitlementRow({ row }: { readonly row: VacationEntitlement }) {
@@ -44,41 +63,95 @@ function EntitlementRow({ row }: { readonly row: VacationEntitlement }) {
   )
 }
 
-export function VacationSection({ employeeId }: VacationSectionProps) {
-  const { entitlements, summary, isLoading } = useVacationSection(employeeId)
+function RequestRow({
+  request,
+  onApprove,
+  onReject,
+  isApproving,
+  isRejecting,
+}: {
+  readonly request: VacationRequest
+  readonly onApprove: (id: string) => void
+  readonly onReject: (id: string) => void
+  readonly isApproving: boolean
+  readonly isRejecting: boolean
+}) {
+  return (
+    <tr className="border-b last:border-0">
+      <td className="py-2 pr-3 text-sm whitespace-nowrap">{dateRange(request.start_date, request.end_date)}</td>
+      <td className="py-2 pr-3 text-sm tabular-nums">{request.days_count}</td>
+      <td className="py-2 pr-3">{statusBadge(request.status)}</td>
+      <td className="py-2">
+        {request.status === 'PENDING' && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onApprove(request.id)}
+              disabled={isApproving || isRejecting}
+              className="rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-50 dark:hover:bg-green-900/30"
+              aria-label="Aprobar vacaciones"
+              title="Aprobar"
+            >
+              <Check className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onReject(request.id)}
+              disabled={isApproving || isRejecting}
+              className="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-900/30"
+              aria-label="Rechazar vacaciones"
+              title="Rechazar"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  )
+}
+
+export function VacationSection({ employeeId, employee }: VacationSectionProps) {
+  const ctx = useVacationSection(employeeId, employee)
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-foreground">Vacaciones</h3>
-        <Badge variant="default" className="text-xs">
-          LFT México 2022
-        </Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-foreground">Vacaciones</h3>
+          <Badge variant="default" className="text-xs">
+            LFT México 2022
+          </Badge>
+        </div>
+        <Button size="sm" variant="ghost" onClick={ctx.openRequestDialog} className="h-7 gap-1 px-2 text-xs">
+          <Plus className="h-3.5 w-3.5" />
+          Solicitar vacaciones
+        </Button>
       </div>
 
-      {summary && (
+      {ctx.summary && (
         <p className="text-xs text-muted-foreground">
-          {summary.seniority_years}{' '}
-          {summary.seniority_years === 1 ? 'año de antigüedad' : 'años de antigüedad'}
-          {summary.next_anniversary_date && (
-            <> · Próximo aniversario: {formatDate(summary.next_anniversary_date)}</>
+          {ctx.summary.seniority_years}{' '}
+          {ctx.summary.seniority_years === 1 ? 'año de antigüedad' : 'años de antigüedad'}
+          {ctx.summary.next_anniversary_date && (
+            <> · Próximo aniversario: {formatDate(ctx.summary.next_anniversary_date)}</>
           )}
         </p>
       )}
 
       {/* Entitlement table */}
-      {isLoading && (
+      {ctx.isLoading && (
         <div className="flex items-center justify-center py-6">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
-      {!isLoading && entitlements.length === 0 && (
+      {!ctx.isLoading && ctx.entitlements.length === 0 && (
         <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
           <Palmtree className="h-8 w-8 mb-2" />
           <p className="text-sm">Sin derechos vacacionales registrados</p>
         </div>
       )}
-      {!isLoading && entitlements.length > 0 && (
+      {!ctx.isLoading && ctx.entitlements.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -90,18 +163,64 @@ export function VacationSection({ employeeId }: VacationSectionProps) {
               </tr>
             </thead>
             <tbody>
-              {entitlements.map((row) => (
+              {ctx.entitlements.map((row) => (
                 <EntitlementRow key={row.id} row={row} />
               ))}
             </tbody>
           </table>
-          {entitlements[0] !== undefined && (
+          {ctx.entitlements[0] !== undefined && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Regla aplicada: {ruleLabel(entitlements[0].rule_key)}
+              Regla aplicada: {ruleLabel(ctx.entitlements[0].rule_key)}
             </p>
           )}
         </div>
       )}
+
+      {/* Vacation requests */}
+      <div>
+        <p className="mb-1.5 text-xs text-muted-foreground">Solicitudes de vacaciones</p>
+        {ctx.isLoadingRequests && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {!ctx.isLoadingRequests && ctx.requests.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">Sin solicitudes de vacaciones</p>
+        )}
+        {!ctx.isLoadingRequests && ctx.requests.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-xs font-medium text-muted-foreground">
+                  <th className="pb-2 pr-3">Fecha(s)</th>
+                  <th className="pb-2 pr-3">Días</th>
+                  <th className="pb-2 pr-3">Estado</th>
+                  <th className="pb-2">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ctx.requests.map((request) => (
+                  <RequestRow
+                    key={request.id}
+                    request={request}
+                    onApprove={ctx.handleApprove}
+                    onReject={ctx.handleReject}
+                    isApproving={ctx.isApproving}
+                    isRejecting={ctx.isRejecting}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Request vacation dialog */}
+      <RegisterVacationRequestDialog
+        isOpen={ctx.showRequestDialog}
+        employee={ctx.pendingRequestEmployee}
+        onClose={ctx.closeRequestDialog}
+      />
     </div>
   )
 }
