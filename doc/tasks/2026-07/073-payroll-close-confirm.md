@@ -60,11 +60,13 @@ scope for this issue).
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `2h` · **Pessimistic:** `3h` · **Tracked:** `~5h48m`
+- **Optimistic:** `2h` · **Pessimistic:** `3h` · **Tracked:** `~7h30m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-03", "start": "02:11", "end": "07:59" }
+  { "date": "2026-07-03", "start": "01:00", "end": "02:30" },
+  { "date": "2026-07-03", "start": "07:00", "end": "10:00" },
+  { "date": "2026-07-03", "start": "13:00", "end": "16:00" }
 ]
 ```
