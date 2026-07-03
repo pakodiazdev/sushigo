@@ -156,7 +156,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
         }) => apiClient.post('/inventory/opening-balance', balance),
     })
 
-    const updateItemData = (field: keyof WizardData['item'], value: WizardData['item'][keyof WizardData['item']]) => {
+    const updateItemData = <K extends keyof WizardData['item']>(field: K, value: WizardData['item'][K]) => {
         setWizardData((prev) => ({
             ...prev,
             item: { ...prev.item, [field]: value },
@@ -164,7 +164,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
         setErrors((prev) => ({ ...prev, [field]: '' }))
     }
 
-    const updateVariantData = (field: keyof WizardData['variant'], value: WizardData['variant'][keyof WizardData['variant']]) => {
+    const updateVariantData = <K extends keyof WizardData['variant']>(field: K, value: WizardData['variant'][K]) => {
         setWizardData((prev) => ({
             ...prev,
             variant: { ...prev.variant, [field]: value },
@@ -515,7 +515,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                         <FormField label="Tipo de Producto" required>
                             <Select
                                 value={wizardData.item.type}
-                                onChange={(e) => updateItemData('type', e.target.value)}
+                                onChange={(e) => updateItemData('type', e.target.value as WizardData['item']['type'])}
                             >
                                 <option value="INSUMO">Insumo</option>
                                 <option value="PRODUCTO">Producto Terminado</option>
