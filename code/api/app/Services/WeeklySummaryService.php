@@ -38,8 +38,12 @@ class WeeklySummaryService
         $hourlyRate = $wage ? (float) $wage->hourly_rate : 0.0;
         $minuteRate = $hourlyRate / 60;
 
+        // EXTRA days are outside the regular schedule (a negotiated extra shift on
+        // what would otherwise be a rest day) and are already compensated
+        // separately via extra_day_pay below — counting them here would dilute
+        // the per-day rate for the regularly scheduled days.
         $scheduledWorkingDays = $attendances->filter(
-            fn (Attendance $a) => $a->day_status !== DayStatus::DAY_OFF
+            fn (Attendance $a) => ! in_array($a->day_status, [DayStatus::DAY_OFF, DayStatus::EXTRA], true)
         )->count();
 
         // Scheduled minutes per worked day with rest-day proration for calculateBasePay.
