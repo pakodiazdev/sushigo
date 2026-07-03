@@ -4,7 +4,9 @@ import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { DataGrid } from '@/components/ui/data-grid'
 import { EmployeeForm, EmployeeFilters, getEmployeeColumns } from '@/components/employees'
+import { WeeklySummaryDialog } from '@/components/attendance/WeeklySummaryDialog'
 import { useEmployeesSearch, type EmployeesSearch } from '@/hooks/use-employees-search'
+import { useAuthStore } from '@/stores/auth.store'
 
 export const Route = createFileRoute('/employees')({
   beforeLoad: requirePermission('employees.view'),
@@ -17,6 +19,7 @@ export const Route = createFileRoute('/employees')({
     role: typeof search.role === 'string' ? search.role : undefined,
     status: typeof search.status === 'string' ? search.status : undefined,
     form: typeof search.form === 'string' ? search.form : undefined,
+    weeklySummary: typeof search.weeklySummary === 'string' ? search.weeklySummary : undefined,
   }),
 })
 
@@ -27,9 +30,14 @@ export function EmployeesPage() {
     searchText, roleFilter, statusFilter,
     handleFilterChange, handleSortChange, handlePerPageChange,
     handlePageChange, handleNewEmployee, handleEditEmployee, handleCloseForm,
+    weeklySummary,
   } = useEmployeesSearch()
 
-  const columns = getEmployeeColumns(handleEditEmployee)
+  const can = useAuthStore((s) => s.can)
+  const columns = getEmployeeColumns(
+    handleEditEmployee,
+    can('reports.weekly-summary') ? (item) => weeklySummary.open(item.id, `${item.last_name}, ${item.first_name}`) : undefined,
+  )
 
   return (
     <PageContainer>
@@ -71,6 +79,24 @@ export function EmployeesPage() {
         onClose={handleCloseForm}
         onSuccess={handleCloseForm}
         onCreated={handleEditEmployee}
+      />
+
+      <WeeklySummaryDialog
+        isOpen={weeklySummary.isOpen}
+        onClose={weeklySummary.close}
+        employeeName={weeklySummary.employeeName}
+        periodStart={weeklySummary.periodStart}
+        periodEnd={weeklySummary.periodEnd}
+        onPrevWeek={weeklySummary.prevWeek}
+        onNextWeek={weeklySummary.nextWeek}
+        onJumpToDate={weeklySummary.jumpToDate}
+        isCurrentWeek={weeklySummary.isCurrentWeek}
+        isEarliestWeek={weeklySummary.isEarliestWeek}
+        earliestWeekStart={weeklySummary.earliestWeekStart}
+        onGoToCurrentWeek={weeklySummary.goToCurrentWeek}
+        summary={weeklySummary.summary}
+        isLoading={weeklySummary.isLoading}
+        isError={weeklySummary.isError}
       />
     </PageContainer>
   )

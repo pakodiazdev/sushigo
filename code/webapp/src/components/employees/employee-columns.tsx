@@ -1,4 +1,4 @@
-import { Eye } from 'lucide-react'
+import { Eye, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Column } from '@/components/ui/data-grid'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
@@ -22,7 +22,10 @@ function formatDate(dateString: string): string {
   })
 }
 
-export function getEmployeeColumns(onEdit: (item: Employee) => void): Column<Employee>[] {
+export function getEmployeeColumns(
+  onEdit: (item: Employee) => void,
+  onWeeklySummary?: (item: Employee) => void,
+): Column<Employee>[] {
   return [
     {
       key: 'code',
@@ -112,21 +115,38 @@ export function getEmployeeColumns(onEdit: (item: Employee) => void): Column<Emp
     {
       key: 'actions',
       header: 'Acciones',
-      width: '80px',
+      width: onWeeklySummary ? '120px' : '80px',
       align: 'center',
       render: (item) => (
-        <Button
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation()
-            onEdit(item)
-          }}
-          className="h-8 w-8 p-0"
-          title="Ver detalle"
-          aria-label="Ver detalle"
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center justify-center gap-1">
+          {onWeeklySummary && (
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                onWeeklySummary(item)
+              }}
+              className="h-8 w-8 p-0"
+              title="Ver resumen semanal"
+              aria-label="Ver resumen semanal"
+              data-testid="btn-weekly-summary"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(item)
+            }}
+            className="h-8 w-8 p-0"
+            title="Ver detalle"
+            aria-label="Ver detalle"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
       ),
       skeleton: () => <div className="mx-auto h-8 w-8 rounded bg-muted animate-pulse" />,
     },
