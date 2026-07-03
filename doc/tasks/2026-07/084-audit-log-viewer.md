@@ -16,17 +16,21 @@ Como Admin, quiero consultar el historial de cambios de un registro de asistenci
 - [ ] 🌐 `GET /api/v1/audit-logs?employee_id=&date_from=&date_to=` — changes by employee and date range
 - [ ] 🔧 Response: action (CREATE|UPDATE|DELETE), old_values, new_values (diff only), user (name), created_at, reason (nullable)
 - [ ] 🔧 Pagination
+- [ ] 🔧 Add `Auditable` trait to `App\Models\Employee` — without this, employee-filtered results are always empty
 - [ ] 🧪 Feature tests: filter by record, filter by employee/range
 
 ## ✅ Frontend Tasks
 
-- [ ] 📂 Create route `src/pages/attendance/audit.tsx`
+- [ ] 📂 Create route `src/pages/attendance/audit.tsx` — standalone search page (filters: employee, date range, record)
 - [ ] 📝 Add `AttendanceAuditLog`, `AuditAction` types to `src/types/attendance-payroll.ts`
 - [ ] 🔧 `getAuditLogs(filters)` in `src/services/audit.service.ts`
-- [ ] 📱 **Audit log panel** — accessible from: attendance record detail (shows changes for that record) + Employee Detail → "Auditoría" tab (shows all changes for the employee)
+- [ ] 🔧 `useAuditLog(filters)` hook
+- [ ] 📱 **Reusable `AuditLogPanel` component** (table + diff rendering), used in 3 places:
+  - `attendance/audit.tsx` — free search, no default filters
+  - `employees.tsx` row action → slide-over/dialog pre-filtered by `employee_id` (no new Employee Detail route/tabs)
+  - `attendance` index row action (on edited rows) → dialog pre-filtered by `auditable_type`/`auditable_id`
 - [ ] 📱 Table columns: date/time, action badge (CREATE/UPDATE/DELETE), user, changed fields (before → after), reason
 - [ ] 📱 "Changed fields" renders as a diff: `check_in: 08:15 → 08:05 (reason: Corrección de horario)`
-- [ ] 🔧 `useAuditLog(filters)` hook
 
 ---
 
@@ -44,6 +48,14 @@ Como Admin, quiero consultar el historial de cambios de un registro de asistenci
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `2h` · **Pessimistic:** `3h`
+### 📊 Estimates
+- **Optimistic:** `2h` · **Pessimistic:** `3h` · **Tracked:** _in progress_
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-07-03", "start": "02:18", "end": "?" }
+]
+```
