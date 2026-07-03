@@ -133,7 +133,7 @@ class Employee extends Model
 
     public function overtimeBankMovements(): HasMany
     {
-        return $this->hasMany(OvertimeBankMovement::class)->orderBy('period_date', 'desc');
+        return $this->hasMany(OvertimeBankMovement::class)->orderBy('date', 'desc');
     }
 
     public function bonusConfigs(): HasMany

@@ -4,6 +4,7 @@ namespace Tests\Feature\AttendancePayroll;
 
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\Employee;
+use App\Models\OvertimeBankMovement;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -237,5 +238,19 @@ class EmployeeModelTest extends TestCase
         $this->assertContains(Employee::ROLE_COOK, $resourceArray['roles']);
         $this->assertContains(Employee::ROLE_DELIVERY_DRIVER, $resourceArray['roles']);
         $this->assertArrayNotHasKey('role', $resourceArray);
+    }
+
+    #[Test]
+    public function it_lists_overtime_bank_movements_ordered_by_date_desc(): void
+    {
+        $employee = Employee::factory()->create();
+        $older = OvertimeBankMovement::factory()->for($employee)->create(['date' => now()->subDays(5)]);
+        $newer = OvertimeBankMovement::factory()->for($employee)->create(['date' => now()]);
+
+        $movements = $employee->overtimeBankMovements;
+
+        $this->assertCount(2, $movements);
+        $this->assertEquals($newer->id, $movements->first()->id);
+        $this->assertEquals($older->id, $movements->last()->id);
     }
 }
