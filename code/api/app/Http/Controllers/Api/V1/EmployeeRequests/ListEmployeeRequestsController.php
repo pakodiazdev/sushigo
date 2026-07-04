@@ -43,16 +43,25 @@ class ListEmployeeRequestsController extends Controller
     {
         $query = EmployeeRequest::query()->with(['employee', 'requestable', 'requestedBy', 'approvedBy']);
 
-        if ($request->filled('employee_id')) {
-            $employee = Employee::query()->where('public_id', $request->input('employee_id'))->firstOrFail();
-            $query->where('employee_id', $employee->id);
-        }
+        $restrictedEmployeeId = $request->restrictedEmployeeId();
 
-        $effectiveBranchId = $request->effectiveBranchId();
-        if ($effectiveBranchId !== null) {
-            $query->whereHas('employee.employmentPeriods', function ($q) use ($effectiveBranchId) {
-                $q->where('branch_id', $effectiveBranchId)->where('is_active', true);
-            });
+        if ($restrictedEmployeeId !== null) {
+            // Self-service user (no employee-requests.approve) — always scoped
+            // to their own employee, regardless of any employee_id/branch_id
+            // sent in the query.
+            $query->where('employee_id', $restrictedEmployeeId);
+        } else {
+            if ($request->filled('employee_id')) {
+                $employee = Employee::query()->where('public_id', $request->input('employee_id'))->firstOrFail();
+                $query->where('employee_id', $employee->id);
+            }
+
+            $effectiveBranchId = $request->effectiveBranchId();
+            if ($effectiveBranchId !== null) {
+                $query->whereHas('employee.employmentPeriods', function ($q) use ($effectiveBranchId) {
+                    $q->where('branch_id', $effectiveBranchId)->where('is_active', true);
+                });
+            }
         }
 
         if ($request->filled('type')) {

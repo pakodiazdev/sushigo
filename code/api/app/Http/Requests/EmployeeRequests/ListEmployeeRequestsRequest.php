@@ -75,4 +75,30 @@ class ListEmployeeRequestsRequest extends FormRequest
 
         return $this->filled('branch_id') ? $this->integer('branch_id') : null;
     }
+
+    /**
+     * Resolves the internal employee_id to force-filter by when the current
+     * user can only see their own requests (lacks employee-requests.approve).
+     * Overrides whatever employee_id/branch_id was sent in the query — a
+     * cook/kitchen-assistant/etc. self-service user must never be able to
+     * list another employee's requests.
+     *
+     * Returns null when the user is allowed to see everyone's requests
+     * (managers/admins), in which case the normal employee_id/branch_id
+     * filters from the query apply instead.
+     */
+    public function restrictedEmployeeId(): ?int
+    {
+        $user = $this->user();
+
+        if (! $user instanceof User || $user->can('employee-requests.approve')) {
+            return null;
+        }
+
+        $employee = Employee::query()->where('user_id', $user->id)->first();
+
+        // No linked employee → intentionally impossible id, so the query
+        // returns an empty result instead of silently listing everyone's.
+        return $employee?->id ?? 0;
+    }
 }

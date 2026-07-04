@@ -101,16 +101,26 @@ class CoreTestSeeder extends Seeder
     /** Basic view-only user permissions shared by most roles */
     private const BASIC_USER_VIEW = ['=users.show', '=users.index'];
 
+    /**
+     * Self-service Solicitudes access — every employee can view/create/cancel
+     * their own requests, but never approve (that stays manager/admin-only).
+     */
+    private const SELF_SERVICE_REQUESTS = [
+        '=employee-requests.view',
+        '=employee-requests.create',
+        '=employee-requests.cancel',
+    ];
+
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
         'admin' => ['users.', 'employees.', 'leaves.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.'],
-        'inventory-manager' => ['items.', 'inventory_locations.', 'stock.'],
+        'inventory-manager' => ['items.', 'inventory_locations.', 'stock.', ...self::SELF_SERVICE_REQUESTS],
         'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'employee-requests.', 'attendances.', 'reports.'],
-        'cook' => self::BASIC_USER_VIEW,
-        'kitchen-assistant' => self::BASIC_USER_VIEW,
-        'delivery-driver' => self::BASIC_USER_VIEW,
-        'acting-manager' => self::BASIC_USER_VIEW,
+        'cook' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
+        'kitchen-assistant' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
+        'delivery-driver' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
+        'acting-manager' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
     ];
 
     // ── Operating unit types (mirrored from OperatingUnit model) ───────────

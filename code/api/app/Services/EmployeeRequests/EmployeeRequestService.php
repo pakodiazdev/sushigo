@@ -134,11 +134,14 @@ class EmployeeRequestService
         return DB::transaction(function () use ($employeeRequest, $requester): EmployeeRequest {
             $employeeRequest = EmployeeRequest::query()->lockForUpdate()->findOrFail($employeeRequest->id);
 
+            // employee-requests.cancel is granted broadly for self-service (every
+            // employee can cancel their OWN request) — it only gates route access,
+            // not "can cancel someone else's". Cancelling another employee's
+            // request requires employee-requests.approve (manager/admin).
             $isRequester = $employeeRequest->requested_by === $requester->id;
-            $canCancel = $requester->hasPermissionTo('employee-requests.cancel')
-                || $requester->hasPermissionTo('employee-requests.approve');
+            $canCancelOthers = $requester->hasPermissionTo('employee-requests.approve');
 
-            if (! $isRequester && ! $canCancel) {
+            if (! $isRequester && ! $canCancelOthers) {
                 throw new AuthorizationException('Solo el solicitante, un manager o un admin puede cancelar esta solicitud.');
             }
 
