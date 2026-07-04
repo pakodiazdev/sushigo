@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/form-fields'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { groupContiguousDates } from '@/lib/format'
@@ -34,6 +35,11 @@ export function LeaveReviewContent({ request, onClose }: LeaveReviewContentProps
     setShowRejectConfirm,
     rejectReason,
     setRejectReason,
+    payType,
+    payPercentage,
+    selectUnpaid,
+    selectPaid,
+    selectCustom,
     handleApprove,
     handleReject,
     isApproving,
@@ -63,6 +69,62 @@ export function LeaveReviewContent({ request, onClose }: LeaveReviewContentProps
           {request.notes && (
             <p className="text-xs text-muted-foreground italic">"{request.notes}"</p>
           )}
+        </div>
+
+        {/* Pay percentage — decided by the admin/manager at approval time */}
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-foreground">Goce de sueldo</p>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="leave_pay_type"
+              checked={payType === 'unpaid'}
+              onChange={selectUnpaid}
+              className="accent-primary"
+            />
+            <span className="text-sm text-foreground flex-1">Sin goce de sueldo</span>
+            <span className="text-sm font-medium">0%</span>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="leave_pay_type"
+              checked={payType === 'paid'}
+              onChange={selectPaid}
+              className="accent-primary"
+            />
+            <span className="text-sm text-foreground flex-1">Con goce de sueldo</span>
+            <span className="text-sm font-medium">100%</span>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="leave_pay_type"
+              checked={payType === 'custom'}
+              onChange={() => selectCustom(payPercentage)}
+              className="accent-primary mt-0.5"
+            />
+            <div className="space-y-2 flex-1">
+              <span className="text-sm text-foreground">Porcentaje personalizado</span>
+              {payType === 'custom' && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    className="w-20"
+                    value={payPercentage}
+                    onChange={(e) => selectCustom(Number(e.target.value))}
+                  />
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+              )}
+            </div>
+          </label>
         </div>
 
         <div className="flex gap-3 justify-between pt-2">

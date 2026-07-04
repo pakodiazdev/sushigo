@@ -70,9 +70,9 @@ describe('useLeaveRequestForm', () => {
     vi.clearAllMocks()
   })
 
-  it('defaults dates to today', () => {
+  it('defaults dates to an empty selection', () => {
     const { result } = renderHook(() => useLeaveRequestForm('emp-1', vi.fn()), { wrapper: makeWrapper() })
-    expect(result.current.form.getValues('dates')).toEqual(['2026-04-09'])
+    expect(result.current.form.getValues('dates')).toEqual([])
   })
 
   it('submits a full-day leave request with type=LEAVE and auto_approve=false', async () => {
@@ -160,6 +160,7 @@ describe('useLeaveRequestForm', () => {
     const { result } = renderHook(() => useLeaveRequestForm('emp-1', vi.fn()), { wrapper: makeWrapper() })
 
     act(() => {
+      result.current.form.setValue('dates', ['2026-05-01'])
       result.current.form.setValue('leave_type_id', 4)
       result.current.form.setValue('time_mode', 'SCHEDULED')
       result.current.form.setValue('scheduled_start_time', '14:00')
@@ -182,18 +183,21 @@ describe('useLeaveRequestForm', () => {
     })
   })
 
-  it('sets error when pay_percentage is invalid', async () => {
+  it('does not include pay_percentage in the submitted payload — decided by the manager at approval time', async () => {
     const { result } = renderHook(() => useLeaveRequestForm('emp-1', vi.fn()), { wrapper: makeWrapper() })
 
     act(() => {
       result.current.form.setValue('leave_type_id', 1)
-      result.current.form.setValue('pay_percentage', 'abc')
+      result.current.form.setValue('dates', ['2026-05-01'])
     })
 
     await act(async () => {
       await result.current.handleSubmit()
     })
 
-    expect(mockMutate).not.toHaveBeenCalled()
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledOnce())
+
+    const [payload] = mockMutate.mock.calls[0] as [{ payload: Record<string, unknown> }]
+    expect(payload.payload).not.toHaveProperty('pay_percentage')
   })
 })

@@ -64,10 +64,9 @@ describe('Leave Request — submit & approve (happy path)', () => {
         cy.contains('h2', 'Solicitar permiso', { timeout: 10_000 }).should('be.visible')
         cy.wait('@leaveTypesLoad')
 
-        // 3. Fill leave type and future dates, submit
+        // 3. Fill leave type and pick a day on the calendar (no day is preselected), submit
         cy.get('select').first().select('Incapacidad médica')
-        cy.get('input[type="date"]').first().type('2026-04-20', { force: true })
-        cy.get('input[type="date"]').eq(1).type('2026-04-20', { force: true })
+        cy.get('[aria-label="2026-04-20"]').click({ force: true })
         cy.contains('button', 'Enviar solicitud').click({ force: true })
 
         cy.wait('@createRequest').its('response.statusCode').should('eq', 201)

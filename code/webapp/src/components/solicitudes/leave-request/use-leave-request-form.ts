@@ -5,13 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import { useRequestLeave } from '@/services/employee-request-hooks'
-import { todayDateCdmx } from '@/lib/datetime'
 import type { LeaveType } from '@/types/leave'
 
 const schema = z.object({
   leave_type_id: z.number().min(1, 'Selecciona un tipo de ausencia'),
   dates: z.array(z.string()).min(1, 'Selecciona al menos un día'),
-  pay_percentage: z.string().optional().nullable(),
   time_mode: z.enum(['SCHEDULED', 'OPEN_ENDED', '']).optional().nullable(),
   scheduled_start_time: z
     .string()
@@ -42,14 +40,11 @@ export function useLeaveRequestForm(employeeId: string, onSuccess: () => void): 
   const { data: leaveTypes = [], isLoading: isLoadingTypes } = useLeaveTypes()
   const mutation = useRequestLeave()
 
-  const today = todayDateCdmx()
-
   const form = useForm<LeaveRequestFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       leave_type_id: 0,
-      dates: [today],
-      pay_percentage: null,
+      dates: [],
       time_mode: null,
       scheduled_start_time: null,
       scheduled_end_time: null,
@@ -110,17 +105,6 @@ export function useLeaveRequestForm(employeeId: string, onSuccess: () => void): 
 
     const emptyToNull = (v: string | null | undefined) => v || null
 
-    const rawPct = emptyToNull(values.pay_percentage)
-    let payPct: number | null = null
-    if (rawPct !== null) {
-      const n = Number(rawPct)
-      if (Number.isNaN(n) || n < 0 || n > 100) {
-        form.setError('pay_percentage', { message: 'Debe ser un número entre 0 y 100' })
-        return
-      }
-      payPct = n
-    }
-
     const timeMode = emptyToNull(values.time_mode) as 'SCHEDULED' | 'OPEN_ENDED' | null
 
     mutation.mutate(
@@ -132,7 +116,6 @@ export function useLeaveRequestForm(employeeId: string, onSuccess: () => void): 
         payload: {
           leave_type_id: values.leave_type_id,
           dates: values.dates,
-          pay_percentage: payPct,
           time_mode: timeMode,
           scheduled_start_time: emptyToNull(values.scheduled_start_time),
           scheduled_end_time: emptyToNull(values.scheduled_end_time),

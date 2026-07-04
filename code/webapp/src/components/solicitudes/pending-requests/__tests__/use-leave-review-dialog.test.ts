@@ -14,6 +14,14 @@ vi.mock('@/services/employee-request-hooks', () => ({
   useRejectEmployeeRequest: () => ({ mutate: mockRejectMutate, isPending: false }),
 }))
 
+vi.mock('@/services/leave-hooks', () => ({
+  useLeaveTypes: () => ({
+    data: [
+      { id: 1, code: 'MEDICAL', name: 'Incapacidad médica', calculation_mode: 'FIXED_PERCENTAGE', default_pay_percentage: 0, default_rest_day_factor: 'NONE', counts_for_bonus: false },
+    ],
+  }),
+}))
+
 // ── Fixture ────────────────────────────────────────────────────────────────────
 
 const request: EmployeeRequest = {
@@ -22,7 +30,7 @@ const request: EmployeeRequest = {
   employee_name: 'Ana García',
   type: 'LEAVE',
   status: 'PENDING',
-  payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-15' },
+  payload: { leave_type_id: 1, dates: ['2026-06-15'] },
   requestable: null,
   requested_by: 'emp-1',
   approved_by: null,
@@ -37,16 +45,51 @@ describe('useLeaveReviewDialog', () => {
     vi.clearAllMocks()
   })
 
-  it('handleApprove calls approve mutation with the request id and no overrides', () => {
+  it('handleApprove calls approve mutation with the request id and the resolved pay_percentage', () => {
     const onClose = vi.fn()
     const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
 
     act(() => result.current.handleApprove())
 
     expect(mockApproveMutate).toHaveBeenCalledWith(
-      { id: 'req-1' },
+      { id: 'req-1', data: { pay_percentage: 0 } },
       expect.objectContaining({ onSuccess: expect.any(Function) })
     )
+  })
+
+  it('defaults pay type to the leave type default (unpaid for 0%)', () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
+
+    expect(result.current.payType).toBe('unpaid')
+    expect(result.current.payPercentage).toBe(0)
+  })
+
+  it('selecting "paid" updates pay type and percentage to 100', () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
+
+    act(() => result.current.selectPaid())
+
+    expect(result.current.payType).toBe('paid')
+    expect(result.current.payPercentage).toBe(100)
+
+    act(() => result.current.handleApprove())
+
+    expect(mockApproveMutate).toHaveBeenCalledWith(
+      { id: 'req-1', data: { pay_percentage: 100 } },
+      expect.objectContaining({ onSuccess: expect.any(Function) })
+    )
+  })
+
+  it('selecting a custom percentage updates pay type and value', () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
+
+    act(() => result.current.selectCustom(35))
+
+    expect(result.current.payType).toBe('custom')
+    expect(result.current.payPercentage).toBe(35)
   })
 
   it('handleApprove onSuccess calls onClose', () => {
