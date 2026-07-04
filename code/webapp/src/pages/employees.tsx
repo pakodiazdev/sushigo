@@ -4,7 +4,7 @@ import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { DataGrid } from '@/components/ui/data-grid'
 import { EmployeeForm, EmployeeFilters, getEmployeeColumns } from '@/components/employees'
-import { WeeklySummaryDialog } from '@/components/attendance/WeeklySummaryDialog'
+import { WeeklySummaryPanel } from '@/components/attendance/WeeklySummaryPanel'
 import { useEmployeesSearch, type EmployeesSearch } from '@/hooks/use-employees-search'
 
 export const Route = createFileRoute('/employees')({
@@ -79,23 +79,7 @@ export function EmployeesPage() {
         onCreated={handleEditEmployee}
       />
 
-      <WeeklySummaryDialog
-        isOpen={weeklySummary.isOpen}
-        onClose={weeklySummary.close}
-        employeeName={weeklySummary.employeeName}
-        periodStart={weeklySummary.periodStart}
-        periodEnd={weeklySummary.periodEnd}
-        onPrevWeek={weeklySummary.prevWeek}
-        onNextWeek={weeklySummary.nextWeek}
-        onJumpToDate={weeklySummary.jumpToDate}
-        isCurrentWeek={weeklySummary.isCurrentWeek}
-        isEarliestWeek={weeklySummary.isEarliestWeek}
-        earliestWeekStart={weeklySummary.earliestWeekStart}
-        onGoToCurrentWeek={weeklySummary.goToCurrentWeek}
-        summary={weeklySummary.summary}
-        isLoading={weeklySummary.isLoading}
-        isError={weeklySummary.isError}
-      />
+      <WeeklySummaryPanel weeklySummary={weeklySummary} />
     </PageContainer>
   )
 }
