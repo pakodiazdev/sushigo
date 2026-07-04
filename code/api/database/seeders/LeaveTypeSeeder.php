@@ -35,6 +35,14 @@ class LeaveTypeSeeder extends OnceSeeder
                 'counts_for_bonus' => true,
             ],
             [
+                'code' => LeaveType::PERMISSION_UNPAID,
+                'name' => 'Permiso sin goce de sueldo',
+                'calculation_mode' => 'FIXED_PERCENTAGE',
+                'default_pay_percentage' => 0.00,
+                'default_rest_day_factor' => 'NONE',
+                'counts_for_bonus' => false,
+            ],
+            [
                 'code' => LeaveType::PERMISSION_HOURS,
                 'name' => 'Permiso por horas',
                 'calculation_mode' => 'PROPORTIONAL_HOURS',

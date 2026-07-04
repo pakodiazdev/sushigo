@@ -19,6 +19,8 @@ class LeaveType extends Model
 
     const PERMISSION_PAID = 'PERMISSION_PAID';
 
+    const PERMISSION_UNPAID = 'PERMISSION_UNPAID';
+
     const PERMISSION_HOURS = 'PERMISSION_HOURS';
 
     protected $fillable = [

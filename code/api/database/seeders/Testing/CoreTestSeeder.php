@@ -451,6 +451,17 @@ class CoreTestSeeder extends Seeder
                 'updated_at' => $now,
             ],
             [
+                'code' => 'PERMISSION_UNPAID',
+                'name' => 'Permiso sin goce de sueldo',
+                'calculation_mode' => 'FIXED_PERCENTAGE',
+                'default_pay_percentage' => 0.00,
+                'default_rest_day_factor' => 'NONE',
+                'counts_for_bonus' => false,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
                 'code' => 'PERMISSION_HOURS',
                 'name' => 'Permiso por horas',
                 'calculation_mode' => 'PROPORTIONAL_HOURS',
