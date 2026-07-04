@@ -24,6 +24,8 @@ export interface ApproveEmployeeRequestData {
   prima?: number
   seventh_day?: number
   total?: number
+  /** LEAVE only — decided by the admin/manager at approval time, not at request creation */
+  pay_percentage?: number
   notes?: string
 }
 

@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { LeaveReviewContent } from '../leave-review-content'
+import type { LeavePayType } from '../use-leave-review-dialog'
 import type { EmployeeRequest } from '@/types/employee-request'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -12,12 +13,20 @@ const mockHandleApprove = vi.fn()
 const mockHandleReject = vi.fn()
 const mockSetShowRejectConfirm = vi.fn()
 const mockSetRejectReason = vi.fn()
+const mockSelectUnpaid = vi.fn()
+const mockSelectPaid = vi.fn()
+const mockSelectCustom = vi.fn()
 
 const defaultHookResult = {
   showRejectConfirm: false,
   setShowRejectConfirm: mockSetShowRejectConfirm,
   rejectReason: '',
   setRejectReason: mockSetRejectReason,
+  payType: 'unpaid' as LeavePayType,
+  payPercentage: 0,
+  selectUnpaid: mockSelectUnpaid,
+  selectPaid: mockSelectPaid,
+  selectCustom: mockSelectCustom,
   handleApprove: mockHandleApprove,
   handleReject: mockHandleReject,
   isApproving: false,
@@ -129,5 +138,33 @@ describe('LeaveReviewContent', () => {
     render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
     expect(screen.getByText('Aprobar permiso').closest('button')?.disabled).toBe(true)
     expect(screen.getByText('Rechazar').closest('button')?.disabled).toBe(true)
+  })
+
+  it('renders the goce de sueldo options with the default selection marked', () => {
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByText('Sin goce de sueldo')).toBeDefined()
+    expect(screen.getByText('Con goce de sueldo')).toBeDefined()
+    const unpaidRadio = screen.getByText('Sin goce de sueldo').closest('label')?.querySelector('input')
+    expect(unpaidRadio?.checked).toBe(true)
+  })
+
+  it('calls selectPaid when "Con goce de sueldo" is clicked', () => {
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    const paidRadio = screen.getByText('Con goce de sueldo').closest('label')?.querySelector('input')
+    fireEvent.click(paidRadio!)
+    expect(mockSelectPaid).toHaveBeenCalledOnce()
+  })
+
+  it('shows the custom percentage input only when payType is custom', () => {
+    currentHookResult = { ...defaultHookResult, payType: 'custom', payPercentage: 35 }
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByDisplayValue('35')).toBeDefined()
+  })
+
+  it('calls selectCustom when the custom percentage input changes', () => {
+    currentHookResult = { ...defaultHookResult, payType: 'custom', payPercentage: 35 }
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByDisplayValue('35'), { target: { value: '60' } })
+    expect(mockSelectCustom).toHaveBeenCalledWith(60)
   })
 })

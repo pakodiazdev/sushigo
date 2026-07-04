@@ -68,24 +68,6 @@ export function LeaveRequestForm({ isOpen, onClose, employeeId }: LeaveRequestFo
           <p className="-mt-4 text-xs text-muted-foreground">Los días no tienen que ser consecutivos</p>
         )}
 
-        {/* Pay percentage override */}
-        <FormField
-          label="% de pago (opcional)"
-          error={errors.pay_percentage?.message}
-          hint="Deja en blanco para usar el % predeterminado del tipo"
-        >
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step={0.01}
-            placeholder="Ej. 50"
-            disabled={isPending}
-            {...register('pay_percentage')}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-          />
-        </FormField>
-
         {/* PROPORTIONAL_HOURS fields */}
         {isProportionalHours && (
           <>
@@ -132,7 +114,7 @@ export function LeaveRequestForm({ isOpen, onClose, employeeId }: LeaveRequestFo
 
         {/* Warning */}
         <p className="text-sm text-muted-foreground border border-border rounded-md p-3 bg-muted/30">
-          ⚠️ Esta solicitud requiere aprobación del Manager
+          ⚠️ Esta solicitud requiere aprobación del Manager, quien decidirá el % de pago al aprobarla
         </p>
 
         {/* Actions */}
