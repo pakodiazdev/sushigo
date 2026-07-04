@@ -29,6 +29,7 @@ use App\Services\EmployeeRequests\EmployeeRequestService;
  *           @OA\Property(property="prima", type="number", nullable=true, example=200.00, description="Override: computed prima amount"),
  *           @OA\Property(property="seventh_day", type="number", nullable=true, example=200.00, description="Override: seventh-day bonus amount"),
  *           @OA\Property(property="total", type="number", nullable=true, example=600.00, description="Override: total amount"),
+ *           @OA\Property(property="pay_percentage", type="number", nullable=true, example=0, description="LEAVE only — pay percentage decided by the admin/manager at approval time (0-100)"),
  *           @OA\Property(property="notes", type="string", nullable=true, example="Acuerdo ajustado", description="Manager note for the employee")
  *       )
  *   ),

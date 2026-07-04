@@ -74,7 +74,7 @@ class EmployeeRequestService
                 ]);
             }
 
-            $payloadKeys = ['salary_pct', 'salary_day', 'prima_pct', 'prima', 'seventh_day', 'total'];
+            $payloadKeys = ['salary_pct', 'salary_day', 'prima_pct', 'prima', 'seventh_day', 'total', 'pay_percentage'];
             $payloadOverrides = array_intersect_key($overrides ?? [], array_flip($payloadKeys));
 
             $updatedFields = [
