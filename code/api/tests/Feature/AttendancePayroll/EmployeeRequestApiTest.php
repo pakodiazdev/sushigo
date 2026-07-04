@@ -694,7 +694,37 @@ class EmployeeRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function it_allows_cancel_by_user_with_cancel_permission(): void
+    public function it_allows_the_requester_to_cancel_their_own_request_with_only_cancel_permission(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $selfServiceUser = User::factory()->createOne();
+        assert($selfServiceUser instanceof User);
+
+        $selfServiceRole = Role::create(['name' => 'self-service-role', 'guard_name' => 'api']);
+        $selfServiceRole->givePermissionTo('employee-requests.create');
+        $selfServiceRole->givePermissionTo('employee-requests.cancel');
+        $selfServiceUser->assignRole('self-service-role');
+
+        Passport::actingAs($selfServiceUser);
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        $requestId = $createResponse->json('data.id');
+
+        // Same user (the requester) cancels their own request — .cancel is
+        // enough, they don't need .approve.
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::CANCELLED->value);
+    }
+
+    #[Test]
+    public function it_prevents_a_non_requester_with_only_cancel_permission_from_cancelling_someone_elses_request(): void
     {
         $employee = $this->makeEmployeeWithActivePeriod();
 
@@ -706,18 +736,24 @@ class EmployeeRequestApiTest extends TestCase
 
         $requestId = $createResponse->json('data.id');
 
-        $cancelUser = User::factory()->createOne();
-        assert($cancelUser instanceof User);
+        // A different user who only has .cancel (self-service permission,
+        // no .approve) must NOT be able to cancel someone else's request.
+        $otherSelfServiceUser = User::factory()->createOne();
+        assert($otherSelfServiceUser instanceof User);
 
-        $cancelRole = Role::create(['name' => 'cancel-role', 'guard_name' => 'api']);
-        $cancelRole->givePermissionTo('employee-requests.cancel');
-        $cancelUser->assignRole('cancel-role');
+        $selfServiceRole = Role::create(['name' => 'self-service-role-2', 'guard_name' => 'api']);
+        $selfServiceRole->givePermissionTo('employee-requests.cancel');
+        $otherSelfServiceUser->assignRole('self-service-role-2');
 
-        Passport::actingAs($cancelUser);
+        Passport::actingAs($otherSelfServiceUser);
 
         $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel")
-            ->assertOk()
-            ->assertJsonPath('data.status', EmployeeRequestStatus::CANCELLED->value);
+            ->assertStatus(403);
+
+        $this->assertDatabaseHas('employee_requests', [
+            'public_id' => $requestId,
+            'status' => EmployeeRequestStatus::PENDING->value,
+        ]);
     }
 
     #[Test]
@@ -945,6 +981,59 @@ class EmployeeRequestApiTest extends TestCase
     }
 
     #[Test]
+    public function it_scopes_list_to_the_users_own_employee_for_self_service_users(): void
+    {
+        $selfServiceEmployee = $this->makeSelfServiceEmployee();
+        $otherEmployee = $this->makeEmployeeWithActivePeriod();
+
+        // Manager creates a request for another employee, unrelated to the
+        // self-service user below.
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $otherEmployee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        // The self-service user creates their own request.
+        Passport::actingAs($selfServiceEmployee->user);
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $selfServiceEmployee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        // Listing with no filters must only return their own — not the
+        // other employee's, and not a branch-wide/global list.
+        $response = $this->getJson('/api/v1/employee-requests');
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.employee_id', $selfServiceEmployee->public_id);
+    }
+
+    #[Test]
+    public function it_ignores_employee_id_override_for_self_service_users(): void
+    {
+        $selfServiceEmployee = $this->makeSelfServiceEmployee();
+        $otherEmployee = $this->makeEmployeeWithActivePeriod();
+
+        $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $otherEmployee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ])->assertStatus(201);
+
+        Passport::actingAs($selfServiceEmployee->user);
+
+        // Attempting to pass someone else's employee_id must be ignored —
+        // the self-service user must never see another employee's requests.
+        $response = $this->getJson("/api/v1/employee-requests?employee_id={$otherEmployee->public_id}");
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 0);
+    }
+
+    #[Test]
     public function it_allows_admin_to_see_all_branches(): void
     {
         $branchA = Branch::factory()->create();
@@ -1021,6 +1110,28 @@ class EmployeeRequestApiTest extends TestCase
         ]);
 
         return $period->employee;
+    }
+
+    /**
+     * An employee whose linked User has self-service Solicitudes permissions
+     * only (view/create/cancel) — no employee-requests.approve. Mirrors the
+     * cook/kitchen-assistant/etc. role grants from PermissionSeeder.
+     */
+    private function makeSelfServiceEmployee(): Employee
+    {
+        $cookRole = Role::where('name', 'cook')->where('guard_name', 'api')->first();
+        $cookRole->givePermissionTo(['employee-requests.view', 'employee-requests.create', 'employee-requests.cancel']);
+
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => '2026-01-01',
+            'end_date' => null,
+        ]);
+
+        $employee = $period->employee;
+        $employee->load('user');
+
+        return $employee;
     }
 
     private function makeEmployeeWithActivePeriodInBranch(Branch $branch): Employee

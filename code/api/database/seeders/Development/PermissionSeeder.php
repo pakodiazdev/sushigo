@@ -24,6 +24,17 @@ class PermissionSeeder extends LockedSeeder
 
     private const PAYROLL_PATTERN = 'payroll.%';
 
+    /**
+     * Self-service Solicitudes access — every employee can view/create/cancel
+     * their own requests, but never approve (that stays manager/admin-only,
+     * granted via EMPLOYEE_REQUESTS_PATTERN above).
+     */
+    private const SELF_SERVICE_REQUESTS_PERMISSIONS = [
+        'employee-requests.view',
+        'employee-requests.create',
+        'employee-requests.cancel',
+    ];
+
     private const GROUP_INVENTARIO = 'Inventario';
 
     private const GROUP_CUENTAS_BANCARIAS = 'Cuentas bancarias';
@@ -174,6 +185,7 @@ class PermissionSeeder extends LockedSeeder
 
         // inventory-manager: full inventory management (items, locations, stock)
         // Note: does NOT include employees.* or users.* — inventory is their only scope
+        // (plus self-service Solicitudes — see SELF_SERVICE_REQUESTS below)
         $inventoryManagerRole = Role::where('name', 'inventory-manager')->where('guard_name', 'api')->first();
         if ($inventoryManagerRole) {
             $inventoryManagerRole->syncPermissions(
@@ -181,7 +193,8 @@ class PermissionSeeder extends LockedSeeder
                     ->where(function ($q) {
                         $q->where('name', 'like', self::ITEMS_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
-                            ->orWhere('name', 'like', self::STOCK_PATTERN);
+                            ->orWhere('name', 'like', self::STOCK_PATTERN)
+                            ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
                     })
                     ->get()
             );
@@ -205,12 +218,17 @@ class PermissionSeeder extends LockedSeeder
         }
 
         // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
+        // plus self-service Solicitudes (view/create/cancel their own requests —
+        // never approve, that stays manager/admin-only)
         foreach (['cook', 'kitchen-assistant', 'delivery-driver', 'acting-manager'] as $roleName) {
             $role = Role::where('name', $roleName)->where('guard_name', 'api')->first();
             if ($role) {
                 $role->syncPermissions(
                     Permission::where('guard_name', 'api')
-                        ->whereIn('name', ['users.show', 'users.index'])
+                        ->where(function ($q) {
+                            $q->whereIn('name', ['users.show', 'users.index'])
+                                ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
+                        })
                         ->get()
                 );
             }

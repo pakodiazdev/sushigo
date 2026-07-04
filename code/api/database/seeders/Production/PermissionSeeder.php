@@ -8,6 +8,16 @@ use Spatie\Permission\Models\Role;
 
 class PermissionSeeder extends LockedSeeder
 {
+    /**
+     * Self-service Solicitudes access — every employee can view/create/cancel
+     * their own requests, but never approve (that stays manager/admin-only).
+     */
+    private const SELF_SERVICE_REQUESTS_PERMISSIONS = [
+        'employee-requests.view',
+        'employee-requests.create',
+        'employee-requests.cancel',
+    ];
+
     public function run(): void
     {
         $permissions = [
@@ -154,6 +164,7 @@ class PermissionSeeder extends LockedSeeder
 
         // inventory-manager: full inventory management (items, locations, stock)
         // Note: does NOT include employees.* or users.* — inventory is their only scope
+        // (plus self-service Solicitudes)
         $inventoryManagerRole = Role::where('name', 'inventory-manager')->where('guard_name', 'api')->first();
         if ($inventoryManagerRole) {
             $inventoryManagerRole->syncPermissions(
@@ -161,19 +172,25 @@ class PermissionSeeder extends LockedSeeder
                     ->where(function ($q) {
                         $q->where('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
-                            ->orWhere('name', 'like', 'stock.%');
+                            ->orWhere('name', 'like', 'stock.%')
+                            ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
                     })
                     ->get()
             );
         }
 
         // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
+        // plus self-service Solicitudes (view/create/cancel their own requests —
+        // never approve, that stays manager/admin-only)
         foreach (['cook', 'kitchen-assistant', 'delivery-driver', 'acting-manager'] as $roleName) {
             $role = Role::where('name', $roleName)->where('guard_name', 'api')->first();
             if ($role) {
                 $role->syncPermissions(
                     Permission::where('guard_name', 'api')
-                        ->whereIn('name', ['users.show', 'users.index'])
+                        ->where(function ($q) {
+                            $q->whereIn('name', ['users.show', 'users.index'])
+                                ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
+                        })
                         ->get()
                 );
             }
