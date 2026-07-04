@@ -120,6 +120,50 @@ class LeaveEmployeeRequestApiTest extends TestCase
     }
 
     #[Test]
+    public function approves_leave_with_manager_pay_percentage_override(): void
+    {
+        $employee = $this->makeEmployee();
+        // MEDICAL defaults to 0% (sin goce) — manager overrides to 75% at approval time.
+        $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
+
+        $requestId = $this->createLeaveRequest($employee, $this->fullDayPayload($leaveType->id));
+
+        $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve", [
+            'pay_percentage' => 75,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::APPROVED->value);
+
+        $this->assertDatabaseHas('leaves', [
+            'employee_id' => $employee->id,
+            'leave_type_id' => $leaveType->id,
+            'pay_percentage' => '75.00',
+        ]);
+    }
+
+    #[Test]
+    public function approves_leave_without_override_using_the_leave_types_default_percentage(): void
+    {
+        $employee = $this->makeEmployee();
+        // PERMISSION_PAID defaults to 100% (con goce) — no override given.
+        $leaveType = LeaveType::where('code', LeaveType::PERMISSION_PAID)->first();
+
+        $requestId = $this->createLeaveRequest($employee, $this->fullDayPayload($leaveType->id));
+
+        $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve");
+
+        $response->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::APPROVED->value);
+
+        $this->assertDatabaseHas('leaves', [
+            'employee_id' => $employee->id,
+            'leave_type_id' => $leaveType->id,
+            'pay_percentage' => null,
+        ]);
+    }
+
+    #[Test]
     public function cannot_approve_full_day_leave_if_worked_attendance_exists(): void
     {
         $employee = $this->makeEmployee();

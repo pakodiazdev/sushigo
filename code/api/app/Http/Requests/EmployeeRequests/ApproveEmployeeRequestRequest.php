@@ -20,6 +20,8 @@ class ApproveEmployeeRequestRequest extends FormRequest
             'prima' => ['nullable', 'numeric', 'min:0'],
             'seventh_day' => ['nullable', 'numeric', 'min:0'],
             'total' => ['nullable', 'numeric', 'min:0'],
+            // LEAVE only — decided by the admin/manager at approval time
+            'pay_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
