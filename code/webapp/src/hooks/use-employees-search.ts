@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useSearch, useNavigate } from '@tanstack/react-router'
 import { useEmployees, useEmployee } from '@/services/employee-hooks'
 import { useWeeklySummaryDialog } from '@/components/attendance/use-weekly-summary-dialog'
+import { useAuthStore } from '@/stores/auth.store'
 import { sortSpecsToParams, parseSortParam, serializeSorts } from '@/lib/sort-utils'
 import type { SortSpec } from '@/components/ui/data-grid'
 import type { Employee, EmployeeFilters, EmployeePositionRole } from '@/types/employee'
@@ -95,9 +96,17 @@ export function useEmployeesSearch() {
 
   // Weekly summary panel — same URL-state pattern as the employee form (`form=`),
   // via `weeklySummary=<id>`, so refreshing or sharing the URL reopens it (deep linking).
+  // Gated by permission here (not just at the button) so the URL param alone can't
+  // open the panel or trigger the report request for an unauthorized user.
+  const canOpenWeeklySummary = useAuthStore((s) => s.can('reports.weekly-summary'))
   const weeklySummaryDialog = useWeeklySummaryDialog()
 
   useEffect(() => {
+    if (!canOpenWeeklySummary) {
+      if (weeklySummaryDialog.isOpen) weeklySummaryDialog.close()
+      if (search.weeklySummary) setSearch({ weeklySummary: undefined })
+      return
+    }
     if (search.weeklySummary && search.weeklySummary !== weeklySummaryDialog.employeePublicId) {
       weeklySummaryDialog.open(search.weeklySummary)
     }
@@ -105,11 +114,12 @@ export function useEmployeesSearch() {
       weeklySummaryDialog.close()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.weeklySummary])
+  }, [search.weeklySummary, canOpenWeeklySummary])
 
   const weeklySummary = {
     ...weeklySummaryDialog,
     open: (publicId: string, name?: string) => {
+      if (!canOpenWeeklySummary) return
       weeklySummaryDialog.open(publicId, name)
       setSearch({ weeklySummary: publicId })
     },
@@ -144,5 +154,6 @@ export function useEmployeesSearch() {
     handleCloseForm,
     // Weekly summary panel
     weeklySummary,
+    canOpenWeeklySummary,
   }
 }

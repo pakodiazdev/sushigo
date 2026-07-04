@@ -49,6 +49,13 @@ vi.mock('@/services/report.service', () => ({
     }),
 }))
 
+let mockCanOpenWeeklySummary = true
+
+vi.mock('@/stores/auth.store', () => ({
+    useAuthStore: (selector: (s: { can: (permission: string) => boolean }) => unknown) =>
+        selector({ can: (permission: string) => permission === 'reports.weekly-summary' && mockCanOpenWeeklySummary }),
+}))
+
 vi.mock('@/lib/sort-utils', () => ({
     sortSpecsToParams: (specs: Array<{ id: string; desc: boolean }>) => {
         if (!specs?.length) return {}
@@ -73,6 +80,7 @@ describe('useEmployeesSearch', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         currentSearch = {}
+        mockCanOpenWeeklySummary = true
     })
 
     it('returns default pagination when no URL params', () => {
@@ -331,5 +339,39 @@ describe('useEmployeesSearch', () => {
 
         expect(result.current.weeklySummary.isOpen).toBe(false)
         expect(mockNavigate).toHaveBeenCalled()
+    })
+
+    it('exposes canOpenWeeklySummary from the permission check', () => {
+        mockCanOpenWeeklySummary = false
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        expect(result.current.canOpenWeeklySummary).toBe(false)
+    })
+
+    it('does not open the weeklySummary panel from the URL id when lacking permission', () => {
+        mockCanOpenWeeklySummary = false
+        currentSearch = { weeklySummary: 'emp-01' }
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        expect(result.current.weeklySummary.isOpen).toBe(false)
+    })
+
+    it('strips the weeklySummary id from the URL when lacking permission', () => {
+        mockCanOpenWeeklySummary = false
+        currentSearch = { weeklySummary: 'emp-01' }
+        renderHook(() => useEmployeesSearch())
+
+        expect(mockNavigate).toHaveBeenCalledWith({ search: expect.any(Function) })
+    })
+
+    it('weeklySummary.open is a no-op when lacking permission', () => {
+        mockCanOpenWeeklySummary = false
+        const { result } = renderHook(() => useEmployeesSearch())
+
+        act(() => {
+            result.current.weeklySummary.open('emp-02', 'Doe, John')
+        })
+
+        expect(result.current.weeklySummary.isOpen).toBe(false)
     })
 })

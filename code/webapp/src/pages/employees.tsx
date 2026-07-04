@@ -6,7 +6,6 @@ import { DataGrid } from '@/components/ui/data-grid'
 import { EmployeeForm, EmployeeFilters, getEmployeeColumns } from '@/components/employees'
 import { WeeklySummaryDialog } from '@/components/attendance/WeeklySummaryDialog'
 import { useEmployeesSearch, type EmployeesSearch } from '@/hooks/use-employees-search'
-import { useAuthStore } from '@/stores/auth.store'
 
 export const Route = createFileRoute('/employees')({
   beforeLoad: requirePermission('employees.view'),
@@ -30,13 +29,12 @@ export function EmployeesPage() {
     searchText, roleFilter, statusFilter,
     handleFilterChange, handleSortChange, handlePerPageChange,
     handlePageChange, handleNewEmployee, handleEditEmployee, handleCloseForm,
-    weeklySummary,
+    weeklySummary, canOpenWeeklySummary,
   } = useEmployeesSearch()
 
-  const can = useAuthStore((s) => s.can)
   const columns = getEmployeeColumns(
     handleEditEmployee,
-    can('reports.weekly-summary') ? (item) => weeklySummary.open(item.id, `${item.last_name}, ${item.first_name}`) : undefined,
+    canOpenWeeklySummary ? (item) => weeklySummary.open(item.id, `${item.last_name}, ${item.first_name}`) : undefined,
   )
 
   return (
