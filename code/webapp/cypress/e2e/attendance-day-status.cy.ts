@@ -95,3 +95,37 @@ describe("Day Status — Marcar Falta (ABSENCE)", () => {
     });
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 2. Justificar una Falta ya marcada — se convierte en Ausencia con el tipo elegido
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("Day Status — Justificar Falta", () => {
+  it("convierte una Falta ya marcada en una Ausencia justificada", () => {
+    markFalta("García", "María");
+
+    getCard("García", "María").within(() => {
+      cy.contains("Falta", { timeout: 10_000 }).should("be.visible");
+    });
+
+    cy.intercept("GET", "**/leave-types*").as("leaveTypesLoad");
+    cy.intercept("POST", "**/leaves").as("registerLeave");
+
+    getCard("García", "María")
+      .find("[data-testid='btn-justify-absence']")
+      .scrollIntoView()
+      .click({ force: true });
+
+    cy.contains("h3", "Registrar ausencia", { timeout: 6_000 }).should("be.visible");
+    cy.wait("@leaveTypesLoad");
+    cy.get("dialog select").first().select("Incapacidad médica");
+    cy.get("dialog").contains("button", "Registrar ausencia").click({ force: true });
+
+    cy.wait("@registerLeave").its("response.statusCode").should("eq", 201);
+
+    getCard("García", "María").within(() => {
+      cy.contains("Ausencia", { timeout: 10_000 }).should("be.visible");
+      cy.contains("Falta").should("not.exist");
+    });
+  });
+});
