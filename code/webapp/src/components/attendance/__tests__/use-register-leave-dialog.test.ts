@@ -231,8 +231,7 @@ describe('useRegisterLeaveDialog', () => {
         expect.objectContaining({
           employee_id: '01HZTEST00000001',
           leave_type_id: 1,
-          start_date: '2026-04-09',
-          end_date: '2026-04-09',
+          dates: ['2026-04-09'],
         })
       )
     })

@@ -70,10 +70,9 @@ describe('useLeaveRequestForm', () => {
     vi.clearAllMocks()
   })
 
-  it('defaults start_date and end_date to today', () => {
+  it('defaults dates to today', () => {
     const { result } = renderHook(() => useLeaveRequestForm('emp-1', vi.fn()), { wrapper: makeWrapper() })
-    expect(result.current.form.getValues('start_date')).toBe('2026-04-09')
-    expect(result.current.form.getValues('end_date')).toBe('2026-04-09')
+    expect(result.current.form.getValues('dates')).toEqual(['2026-04-09'])
   })
 
   it('submits a full-day leave request with type=LEAVE and auto_approve=false', async () => {
@@ -82,8 +81,7 @@ describe('useLeaveRequestForm', () => {
 
     act(() => {
       result.current.form.setValue('leave_type_id', 1)
-      result.current.form.setValue('start_date', '2026-05-01')
-      result.current.form.setValue('end_date', '2026-05-03')
+      result.current.form.setValue('dates', ['2026-05-01', '2026-05-03'])
     })
 
     await act(async () => {
@@ -99,8 +97,7 @@ describe('useLeaveRequestForm', () => {
       auto_approve: false,
       payload: {
         leave_type_id: 1,
-        start_date: '2026-05-01',
-        end_date: '2026-05-03',
+        dates: ['2026-05-01', '2026-05-03'],
       },
     })
 
@@ -116,15 +113,15 @@ describe('useLeaveRequestForm', () => {
     expect(result.current.isProportionalHours).toBe(true)
   })
 
-  it('syncs end_date to start_date for PROPORTIONAL_HOURS types', async () => {
+  it('collapses to a single date for PROPORTIONAL_HOURS types', async () => {
     const { result } = renderHook(() => useLeaveRequestForm('emp-1', vi.fn()), { wrapper: makeWrapper() })
 
     act(() => {
+      result.current.form.setValue('dates', ['2026-05-10', '2026-05-12'])
       result.current.form.setValue('leave_type_id', 4)
-      result.current.form.setValue('start_date', '2026-05-10')
     })
 
-    await waitFor(() => expect(result.current.form.getValues('end_date')).toBe('2026-05-10'))
+    await waitFor(() => expect(result.current.form.getValues('dates')).toEqual(['2026-05-10']))
   })
 
   it('does not submit when PROPORTIONAL_HOURS type has no time_mode', async () => {

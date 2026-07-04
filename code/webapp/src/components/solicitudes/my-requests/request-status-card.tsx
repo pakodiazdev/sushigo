@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, groupContiguousDates } from '@/lib/format'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import type { EmployeeRequest, ExtraDayPayload, LeavePayload } from '@/types/employee-request'
 
@@ -19,8 +19,10 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function formatDateRange(startDate: string, endDate: string): string {
-  return startDate === endDate ? formatDate(startDate) : `${formatDate(startDate)} — ${formatDate(endDate)}`
+function formatDatesLabel(dates: string[]): string {
+  return groupContiguousDates(dates)
+    .map((run) => run.length === 1 ? formatDate(run[0]!) : `${formatDate(run[0]!)} — ${formatDate(run[run.length - 1]!)}`)
+    .join(', ')
 }
 
 function todayIso(): string {
@@ -92,7 +94,7 @@ function LeaveStatusBody({ request, config }: { readonly request: EmployeeReques
       </p>
       {payload && (
         <p className="text-sm text-foreground capitalize">
-          {formatDateRange(payload.start_date, payload.end_date)}
+          {formatDatesLabel(payload.dates)}
         </p>
       )}
     </>
@@ -103,7 +105,10 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const payload = request.payload as ExtraDayPayload & LeavePayload | null
-  const endDate = request.type === 'LEAVE' ? (payload?.end_date ?? '') : (payload?.date ?? '')
+  const sortedLeaveDates = [...(payload?.dates ?? [])].sort()
+  const endDate = request.type === 'LEAVE'
+    ? (sortedLeaveDates[sortedLeaveDates.length - 1] ?? '')
+    : (payload?.date ?? '')
 
   const config = STATUS_CONFIG[request.status]
 

@@ -31,8 +31,9 @@ export interface Leave {
     name: string
     calculation_mode: LeaveCalculationMode
   }
-  start_date: string                      // 'YYYY-MM-DD'
-  end_date: string
+  start_date: string                      // 'YYYY-MM-DD' — derived MIN(dates)
+  end_date: string                        // derived MAX(dates)
+  dates: string[]                         // exact individual days this leave covers
   resolved_pay_percentage: number
   resolved_rest_day_factor: RestDayFactor
   time_mode: LeaveTimeMode | null
@@ -55,8 +56,8 @@ export interface Leave {
 export interface RegisterDirectLeaveRequest {
   employee_id: string
   leave_type_id: number
-  start_date: string
-  end_date: string
+  /** Individual days this leave covers — not required to be contiguous */
+  dates: string[]
   pay_percentage?: number | null
   rest_day_factor?: RestDayFactor | null
   time_mode?: LeaveTimeMode | null

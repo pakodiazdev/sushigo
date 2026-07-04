@@ -40,8 +40,7 @@ describe('leaveApi', () => {
             const payload = {
                 employee_id: '01HZTEST00000001',
                 leave_type_id: 1,
-                start_date: '2026-04-09',
-                end_date: '2026-04-09',
+                dates: ['2026-04-09'],
                 pay_percentage: null,
                 time_mode: null,
                 scheduled_start_time: null,
@@ -62,8 +61,7 @@ describe('leaveApi', () => {
             const payload = {
                 employee_id: '01HZTEST00000001',
                 leave_type_id: 4,
-                start_date: '2026-04-09',
-                end_date: '2026-04-09',
+                dates: ['2026-04-09'],
                 pay_percentage: 50,
                 time_mode: 'SCHEDULED' as const,
                 scheduled_start_time: '10:00',

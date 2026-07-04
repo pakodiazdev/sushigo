@@ -14,9 +14,19 @@ const mockHandleSubmit = vi.fn((e?: React.BaseSyntheticEvent) => {
 const mockRegister = vi.fn((name: string) => ({ name }))
 const mockReset = vi.fn()
 
+vi.mock('react-hook-form', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('react-hook-form')>()
+    return {
+        ...actual,
+        Controller: ({ render }: { render: (args: { field: { value: string[]; onChange: (v: string[]) => void } } ) => React.ReactNode }) =>
+            render({ field: { value: ['2026-04-09'], onChange: vi.fn() } }),
+    }
+})
+
 const defaultHookResult = {
     form: {
         register: mockRegister,
+        control: {},
         formState: { errors: {} },
         reset: mockReset,
     } as unknown as UseLeaveRequestFormResult['form'],
@@ -90,11 +100,10 @@ describe('LeaveRequestForm', () => {
         expect(screen.getByText('Permiso por horas')).toBeDefined()
     })
 
-    it('renders start_date and end_date inputs', () => {
+    it('renders the days calendar field', () => {
         render(<LeaveRequestForm isOpen employeeId="emp-1" onClose={vi.fn()} />)
 
-        expect(screen.getByText('Fecha de inicio')).toBeDefined()
-        expect(screen.getByText('Fecha de fin')).toBeDefined()
+        expect(screen.getByText('Días')).toBeDefined()
     })
 
     it('does not render PROPORTIONAL_HOURS fields when isProportionalHours is false', () => {

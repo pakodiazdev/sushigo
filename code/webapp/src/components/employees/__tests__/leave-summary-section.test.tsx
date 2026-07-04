@@ -73,6 +73,7 @@ function makeLeave(overrides: Partial<Leave> = {}): Leave {
         leave_type: { id: 1, name: 'Incapacidad', code: 'MEDICAL', calculation_mode: 'FIXED_PERCENTAGE' as const },
         start_date: '2026-04-05',
         end_date: '2026-04-05',
+        dates: ['2026-04-05'],
         status: 'APPROVED',
         resolved_pay_percentage: 0,
         resolved_rest_day_factor: 'NONE',

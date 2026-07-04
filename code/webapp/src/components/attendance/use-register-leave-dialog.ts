@@ -138,8 +138,7 @@ export function useRegisterLeaveDialog({
       {
         employee_id: employee.id,
         leave_type_id: values.leave_type_id,
-        start_date: today,
-        end_date: today,
+        dates: [today],
         pay_percentage: payPct,
         time_mode: timeMode,
         scheduled_start_time: emptyToNull(values.scheduled_start_time),

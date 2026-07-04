@@ -45,7 +45,7 @@ function makeRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest 
     employee_name: 'Ana García',
     type: 'LEAVE',
     status: 'PENDING',
-    payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-15' },
+    payload: { leave_type_id: 1, dates: ['2026-06-15'] },
     requestable: null,
     requested_by: 'emp-1',
     approved_by: null,
@@ -75,7 +75,7 @@ describe('LeaveReviewContent', () => {
   })
 
   it('falls back to "Permiso" when leave type is not found', () => {
-    render(<LeaveReviewContent request={makeRequest({ payload: { leave_type_id: 999, start_date: '2026-06-15', end_date: '2026-06-15' } })} onClose={vi.fn()} />)
+    render(<LeaveReviewContent request={makeRequest({ payload: { leave_type_id: 999, dates: ['2026-06-15'] } })} onClose={vi.fn()} />)
     expect(screen.getByText('Permiso')).toBeDefined()
   })
 
@@ -86,7 +86,7 @@ describe('LeaveReviewContent', () => {
 
   it('renders SCHEDULED time info', () => {
     const request = makeRequest({
-      payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-15', time_mode: 'SCHEDULED', scheduled_start_time: '14:00', scheduled_end_time: '16:00' },
+      payload: { leave_type_id: 1, dates: ['2026-06-15'], time_mode: 'SCHEDULED', scheduled_start_time: '14:00', scheduled_end_time: '16:00' },
     })
     render(<LeaveReviewContent request={request} onClose={vi.fn()} />)
     expect(screen.getByText(/14:00.*16:00/)).toBeDefined()
@@ -94,7 +94,7 @@ describe('LeaveReviewContent', () => {
 
   it('renders OPEN_ENDED time info', () => {
     const request = makeRequest({
-      payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-15', time_mode: 'OPEN_ENDED', scheduled_start_time: '15:00' },
+      payload: { leave_type_id: 1, dates: ['2026-06-15'], time_mode: 'OPEN_ENDED', scheduled_start_time: '15:00' },
     })
     render(<LeaveReviewContent request={request} onClose={vi.fn()} />)
     expect(screen.getByText(/Sale a las 15:00/)).toBeDefined()

@@ -11,9 +11,13 @@ vi.mock('@/components/ui/button', () => ({
     React.createElement('button', { onClick }, children),
 }))
 
-vi.mock('@/lib/format', () => ({
-  formatCurrency: (v: number) => `$${v.toFixed(2)}`,
-}))
+vi.mock('@/lib/format', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/format')>()
+  return {
+    ...actual,
+    formatCurrency: (v: number) => `$${v.toFixed(2)}`,
+  }
+})
 
 vi.mock('@/services/leave-hooks', () => ({
   useLeaveTypes: () => ({
@@ -123,7 +127,7 @@ describe('PendingRequestCard — LEAVE type', () => {
   function makeLeaveRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest {
     return makeRequest({
       type: 'LEAVE',
-      payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-15' },
+      payload: { leave_type_id: 1, dates: ['2026-06-15'] },
       ...overrides,
     })
   }
@@ -140,7 +144,7 @@ describe('PendingRequestCard — LEAVE type', () => {
   })
 
   it('renders a date range for multi-day leave', () => {
-    const request = makeLeaveRequest({ payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-17' } })
+    const request = makeLeaveRequest({ payload: { leave_type_id: 1, dates: ['2026-06-15', '2026-06-16', '2026-06-17'] } })
     render(<PendingRequestCard request={request} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
     expect(screen.getByText(/15 de jun.*—.*17 de jun/)).toBeDefined()
   })
