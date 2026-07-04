@@ -59,7 +59,7 @@ class ListEmployeeLeavesController extends Controller
         ]);
 
         $query = $employee->leaves()
-            ->with(['leaveType', 'requestedBy', 'approvedBy', 'employee']);
+            ->with(['leaveType', 'requestedBy', 'approvedBy', 'employee', 'dates']);
 
         if (array_key_exists('status', $validated)) {
             $query->where('status', $validated['status']);

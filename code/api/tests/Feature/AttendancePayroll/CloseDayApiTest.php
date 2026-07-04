@@ -247,7 +247,7 @@ class CloseDayApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        Leave::create([
+        Leave::factory()->create([
             'public_id' => str_pad('1', 26, '0', STR_PAD_LEFT),
             'employee_id' => $employee->id,
             'leave_type_id' => $leaveType->id,
@@ -358,7 +358,7 @@ class CloseDayApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        Leave::create([
+        Leave::factory()->create([
             'public_id' => str_pad('2', 26, '0', STR_PAD_LEFT),
             'employee_id' => $employee->id,
             'leave_type_id' => $leaveType->id,

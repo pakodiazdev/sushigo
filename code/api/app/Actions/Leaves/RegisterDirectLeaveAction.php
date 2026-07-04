@@ -25,36 +25,38 @@ class RegisterDirectLeaveAction
     use LeaveGuards;
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $data  Must include 'dates' (array of date strings)
      */
     public function __invoke(array $data, int $requestedById): Leave
     {
         [$employee, $leaveType, $actualDurationMinutes] = $this->resolveLeaveContext($data);
+        $dates = $this->normalizeDates($data['dates']);
 
-        $attributes = $this->buildLeaveAttributes($data, $employee, $leaveType, $actualDurationMinutes, $requestedById, [
+        $attributes = $this->buildLeaveAttributes($data, $dates, $employee, $leaveType, $actualDurationMinutes, $requestedById, [
             'status' => LeaveStatus::APPROVED,
             'approved_by' => $requestedById,
         ]);
 
         $createsAttendance = $this->shouldCreateAttendanceRecords($data['time_mode'] ?? null);
 
-        $leave = DB::transaction(function () use ($data, $employee, $attributes, $createsAttendance) {
-            $this->guardNoOverlappingApprovedLeave($employee->id, $data['start_date'], $data['end_date']);
+        $leave = DB::transaction(function () use ($dates, $employee, $attributes, $createsAttendance) {
+            $this->guardNoOverlappingApprovedLeave($employee->id, $dates);
 
             if ($createsAttendance) {
-                $this->guardNoExistingWorkedAttendance($employee->id, $data['start_date'], $data['end_date']);
+                $this->guardNoExistingWorkedAttendance($employee->id, $dates);
             }
 
             $attributes['approved_at'] = now();
             $leave = Leave::create($attributes);
+            $this->persistLeaveDates($leave, $dates);
 
             if ($createsAttendance) {
-                $this->createAttendanceRecords($employee->id, $data['start_date'], $data['end_date']);
+                $this->createAttendanceRecords($employee->id, $dates);
             }
 
             return $leave;
         });
 
-        return $leave->load(['employee', 'leaveType', 'requestedBy', 'approvedBy']);
+        return $leave->load(['employee', 'leaveType', 'requestedBy', 'approvedBy', 'dates']);
     }
 }

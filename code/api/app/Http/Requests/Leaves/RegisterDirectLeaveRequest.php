@@ -13,12 +13,11 @@ use Illuminate\Validation\Validator;
 /**
  * @OA\Schema(
  *   schema="RegisterDirectLeaveRequest",
- *   required={"employee_id", "leave_type_id", "start_date", "end_date"},
+ *   required={"employee_id", "leave_type_id", "dates"},
  *
  *   @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
  *   @OA\Property(property="leave_type_id", type="integer", example=1, description="Active leave type ID"),
- *   @OA\Property(property="start_date", type="string", format="date", example="2026-03-01"),
- *   @OA\Property(property="end_date", type="string", format="date", example="2026-03-03", description="Must be >= start_date"),
+ *   @OA\Property(property="dates", type="array", @OA\Items(type="string", format="date"), example={"2026-03-01", "2026-03-03"}, description="The individual days this leave covers — not required to be contiguous"),
  *   @OA\Property(property="pay_percentage", type="number", nullable=true, example=100, description="Override pay percentage (0-100)"),
  *   @OA\Property(property="rest_day_factor", type="string", nullable=true, enum={"FULL", "PROPORTIONAL", "NONE"}, description="Override rest day factor"),
  *   @OA\Property(property="time_mode", type="string", nullable=true, enum={"SCHEDULED", "OPEN_ENDED"}, description="Required for PROPORTIONAL_HOURS leave types"),
@@ -45,8 +44,8 @@ class RegisterDirectLeaveRequest extends FormRequest
                 Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
             ],
             'leave_type_id' => ['required', 'integer', Rule::exists('leave_types', 'id')->where('is_active', true)],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'dates' => ['required', 'array', 'min:1'],
+            'dates.*' => ['required', 'date', 'distinct'],
             'pay_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'rest_day_factor' => ['nullable', Rule::in(['FULL', 'PROPORTIONAL', 'NONE'])],
             'time_mode' => ['nullable', Rule::in([LeaveTimeMode::SCHEDULED->value, LeaveTimeMode::OPEN_ENDED->value])],
@@ -72,11 +71,8 @@ class RegisterDirectLeaveRequest extends FormRequest
                     $v->errors()->add('time_mode', 'El modo de horario es requerido para permisos por horas.');
                 }
 
-                if (
-                    $this->input('start_date') && $this->input('end_date')
-                    && $this->input('start_date') !== $this->input('end_date')
-                ) {
-                    $v->errors()->add('end_date', 'Los permisos por horas deben ser de un solo día.');
+                if (is_array($this->input('dates')) && count($this->input('dates')) > 1) {
+                    $v->errors()->add('dates', 'Los permisos por horas deben ser de un solo día.');
                 }
             }
 

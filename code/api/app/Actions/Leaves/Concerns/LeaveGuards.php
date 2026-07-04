@@ -11,26 +11,44 @@ use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\LeaveType;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 
 trait LeaveGuards
 {
     /**
-     * Throw 422 if an approved leave already covers any day in the given range.
+     * Normalizes a raw list of date strings: sorted ascending, deduplicated,
+     * reindexed. Every entry point (direct registration, employee-request
+     * handler) should run its incoming dates through this before use.
+     *
+     * @param  array<int, string>  $dates
+     * @return array<int, string>
+     */
+    private function normalizeDates(array $dates): array
+    {
+        $unique = array_values(array_unique($dates));
+        sort($unique);
+
+        return $unique;
+    }
+
+    /**
+     * Throw 422 if an approved leave already covers any of the given dates.
+     *
+     * @param  array<int, string>  $dates
      *
      * @throws ValidationException
      */
     private function guardNoOverlappingApprovedLeave(
         int $employeeId,
-        string $startDate,
-        string $endDate,
+        array $dates,
         ?int $excludeLeaveId = null
     ): void {
         $query = Leave::where('employee_id', $employeeId)
             ->where('status', LeaveStatus::APPROVED)
-            ->where('start_date', '<=', $endDate)
-            ->where('end_date', '>=', $startDate);
+            ->whereHas('dates', function (Builder $q) use ($dates) {
+                $q->whereIn('date', $dates);
+            });
 
         if ($excludeLeaveId !== null) {
             $query->where('id', '!=', $excludeLeaveId);
@@ -38,28 +56,29 @@ trait LeaveGuards
 
         if ($query->lockForUpdate()->exists()) {
             throw ValidationException::withMessages([
-                'start_date' => 'El empleado ya tiene una ausencia aprobada que se traslapa con las fechas indicadas.',
+                'dates' => 'El empleado ya tiene una ausencia aprobada que se traslapa con las fechas indicadas.',
             ]);
         }
     }
 
     /**
-     * Throw 422 if any date in the range already has a WORKED attendance record.
+     * Throw 422 if any of the given dates already has a WORKED attendance record.
+     *
+     * @param  array<int, string>  $dates
      *
      * @throws ValidationException
      */
-    private function guardNoExistingWorkedAttendance(int $employeeId, string $startDate, string $endDate): void
+    private function guardNoExistingWorkedAttendance(int $employeeId, array $dates): void
     {
         $exists = Attendance::where('employee_id', $employeeId)
             ->where('day_status', DayStatus::WORKED)
-            ->where('date', '>=', $startDate)
-            ->where('date', '<=', $endDate)
+            ->whereIn('date', $dates)
             ->lockForUpdate()
             ->exists();
 
         if ($exists) {
             throw ValidationException::withMessages([
-                'start_date' => 'El empleado ya tiene asistencia trabajada registrada para alguno de los días indicados.',
+                'dates' => 'El empleado ya tiene asistencia trabajada registrada para alguno de los días indicados.',
             ]);
         }
     }
@@ -78,23 +97,40 @@ trait LeaveGuards
     }
 
     /**
-     * Create Attendance records for each day in the range with day_status = LEAVE.
+     * Create Attendance records for each selected date with day_status = LEAVE.
+     *
+     * @param  array<int, string>  $dates
      */
-    private function createAttendanceRecords(int $employeeId, string $startDate, string $endDate): void
+    private function createAttendanceRecords(int $employeeId, array $dates): void
     {
-        $period = CarbonPeriod::create($startDate, $endDate);
-
-        foreach ($period as $day) {
+        foreach ($dates as $date) {
             Attendance::updateOrCreate(
                 [
                     'employee_id' => $employeeId,
-                    'date' => $day->toDateString(),
+                    'date' => $date,
                 ],
                 [
                     'day_status' => DayStatus::LEAVE,
                 ]
             );
         }
+    }
+
+    /**
+     * Persist the exact set of days a Leave covers.
+     *
+     * @param  array<int, string>  $dates
+     */
+    private function persistLeaveDates(Leave $leave, array $dates): void
+    {
+        $now = now();
+
+        $leave->dates()->insert(array_map(fn (string $date) => [
+            'leave_id' => $leave->id,
+            'date' => $date,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $dates));
     }
 
     /**
@@ -115,12 +151,18 @@ trait LeaveGuards
     /**
      * Build the common Leave attributes array from validated request data.
      *
+     * start_date/end_date are derived as the MIN/MAX of the given dates —
+     * kept for range-based history filtering and display, but the exact
+     * selected days live in the leave_dates table (see persistLeaveDates).
+     *
      * @param  array<string, mixed>  $data
+     * @param  array<int, string>  $dates  Normalized (sorted, deduplicated)
      * @param  array<string, mixed>  $overrides  Fields that differ per action (status, approved_by, approved_at)
      * @return array<string, mixed>
      */
     private function buildLeaveAttributes(
         array $data,
+        array $dates,
         Employee $employee,
         LeaveType $leaveType,
         ?int $actualDurationMinutes,
@@ -130,8 +172,8 @@ trait LeaveGuards
         return array_merge([
             'employee_id' => $employee->id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => $data['start_date'],
-            'end_date' => $data['end_date'],
+            'start_date' => $dates[0],
+            'end_date' => $dates[count($dates) - 1],
             'pay_percentage' => $data['pay_percentage'] ?? null,
             'rest_day_factor' => isset($data['rest_day_factor'])
                 ? RestDayFactor::from($data['rest_day_factor'])

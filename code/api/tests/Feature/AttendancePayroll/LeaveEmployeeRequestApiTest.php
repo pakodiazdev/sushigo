@@ -136,7 +136,7 @@ class LeaveEmployeeRequestApiTest extends TestCase
         $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve");
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrorFor('start_date');
+            ->assertJsonValidationErrorFor('dates');
 
         // Approval must roll back — the employee_request stays PENDING.
         $this->assertDatabaseHas('employee_requests', [
@@ -308,7 +308,7 @@ class LeaveEmployeeRequestApiTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['payload.leave_type_id', 'payload.start_date', 'payload.end_date']);
+            ->assertJsonValidationErrors(['payload.leave_type_id', 'payload.dates']);
     }
 
     #[Test]
@@ -322,8 +322,7 @@ class LeaveEmployeeRequestApiTest extends TestCase
             'type' => EmployeeRequestType::LEAVE->value,
             'payload' => [
                 'leave_type_id' => $leaveType->id,
-                'start_date' => self::DATE,
-                'end_date' => self::DATE,
+                'dates' => [self::DATE],
             ],
         ]);
 
@@ -393,8 +392,7 @@ class LeaveEmployeeRequestApiTest extends TestCase
     {
         return [
             'leave_type_id' => $leaveTypeId,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ];
     }
 
@@ -402,8 +400,7 @@ class LeaveEmployeeRequestApiTest extends TestCase
     {
         return [
             'leave_type_id' => $leaveTypeId,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'time_mode' => 'SCHEDULED',
             'scheduled_start_time' => '14:00',
             'scheduled_end_time' => '16:00',

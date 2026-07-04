@@ -46,18 +46,18 @@ class LeaveRequestHandler implements RequestHandler
         $employee = $employeeRequest->employee;
         $leaveType = LeaveType::findOrFail($payload['leave_type_id']);
 
-        $startDate = $payload['start_date'];
-        $endDate = $payload['end_date'];
+        $dates = $this->normalizeDates($payload['dates']);
         $createsAttendance = $this->shouldCreateAttendanceRecords($payload['time_mode'] ?? null);
 
-        $this->guardNoOverlappingApprovedLeave($employee->id, $startDate, $endDate);
+        $this->guardNoOverlappingApprovedLeave($employee->id, $dates);
 
         if ($createsAttendance) {
-            $this->guardNoExistingWorkedAttendance($employee->id, $startDate, $endDate);
+            $this->guardNoExistingWorkedAttendance($employee->id, $dates);
         }
 
         $attributes = $this->buildLeaveAttributes(
             $payload,
+            $dates,
             $employee,
             $leaveType,
             null,
@@ -71,9 +71,10 @@ class LeaveRequestHandler implements RequestHandler
         );
 
         $leave = Leave::create($attributes);
+        $this->persistLeaveDates($leave, $dates);
 
         if ($createsAttendance) {
-            $this->createAttendanceRecords($employee->id, $startDate, $endDate);
+            $this->createAttendanceRecords($employee->id, $dates);
         }
 
         return $leave;

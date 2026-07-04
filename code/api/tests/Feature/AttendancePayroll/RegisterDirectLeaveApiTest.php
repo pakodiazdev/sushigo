@@ -72,15 +72,15 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ]);
 
         $response->assertStatus(201)
             ->assertJsonPath('data.status', LeaveStatus::APPROVED->value)
             ->assertJsonPath('data.resolved_pay_percentage', 0)
             ->assertJsonPath('data.resolved_rest_day_factor', 'NONE')
-            ->assertJsonPath('data.leave_type.code', LeaveType::MEDICAL);
+            ->assertJsonPath('data.leave_type.code', LeaveType::MEDICAL)
+            ->assertJsonPath('data.dates', [self::DATE]);
 
         $this->assertDatabaseHas('leaves', [
             'employee_id' => $employee->id,
@@ -104,8 +104,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => '2026-04-09',
-            'end_date' => '2026-04-11',
+            'dates' => ['2026-04-09', '2026-04-10', '2026-04-11'],
         ]);
 
         $response->assertStatus(201);
@@ -120,6 +119,41 @@ class RegisterDirectLeaveApiTest extends TestCase
     }
 
     #[Test]
+    public function registers_leave_for_non_contiguous_days_and_only_creates_attendance_for_those_days(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
+
+        // Monday + Wednesday, skipping Tuesday
+        $response = $this->postJson('/api/v1/leaves', [
+            'employee_id' => $employee->public_id,
+            'leave_type_id' => $leaveType->id,
+            'dates' => ['2026-04-13', '2026-04-15'],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.start_date', '2026-04-13')
+            ->assertJsonPath('data.end_date', '2026-04-15')
+            ->assertJsonPath('data.dates', ['2026-04-13', '2026-04-15']);
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => '2026-04-13',
+            'day_status' => DayStatus::LEAVE->value,
+        ]);
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => '2026-04-15',
+            'day_status' => DayStatus::LEAVE->value,
+        ]);
+        // The skipped day in between must NOT have been touched.
+        $this->assertDatabaseMissing('attendances', [
+            'employee_id' => $employee->id,
+            'date' => '2026-04-14',
+        ]);
+    }
+
+    #[Test]
     public function pay_percentage_override_is_stored_and_returned(): void
     {
         $employee = $this->makeEmployee();
@@ -128,8 +162,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'pay_percentage' => 30.00,
         ]);
 
@@ -151,8 +184,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'time_mode' => 'SCHEDULED',
             'scheduled_start_time' => '14:00',
             'scheduled_end_time' => '16:00',
@@ -179,8 +211,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'time_mode' => 'OPEN_ENDED',
             'scheduled_start_time' => '15:00',
         ]);
@@ -217,8 +248,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'time_mode' => 'SCHEDULED',
             'scheduled_start_time' => '14:00',
             'scheduled_end_time' => '16:00',
@@ -244,8 +274,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'time_mode' => 'SCHEDULED',
             'scheduled_start_time' => '14:00',
             'scheduled_end_time' => '16:00',
@@ -266,7 +295,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
 
         // Pre-existing approved leave
-        Leave::create([
+        Leave::factory()->create([
             'employee_id' => $employee->id,
             'leave_type_id' => $leaveType->id,
             'start_date' => self::DATE,
@@ -280,12 +309,11 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrorFor('start_date');
+            ->assertJsonValidationErrorFor('dates');
     }
 
     // ── Guard: check-in blocked ───────────────────────────────────────────────
@@ -300,8 +328,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ])->assertStatus(201);
 
         // Attempt check-in on the same day
@@ -312,6 +339,38 @@ class RegisterDirectLeaveApiTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrorFor('check_in');
+    }
+
+    #[Test]
+    public function does_not_block_check_in_on_the_gap_day_of_a_non_contiguous_leave(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
+
+        // Leave covers 2026-04-13 and 2026-04-15, but NOT 2026-04-14 — even
+        // though 04-14 falls within the start_date/end_date bounding range.
+        $this->postJson('/api/v1/leaves', [
+            'employee_id' => $employee->public_id,
+            'leave_type_id' => $leaveType->id,
+            'dates' => ['2026-04-13', '2026-04-15'],
+        ])->assertStatus(201);
+
+        $this->assertTrue(Leave::where('employee_id', $employee->id)->forDate('2026-04-13')->exists());
+        $this->assertTrue(Leave::where('employee_id', $employee->id)->forDate('2026-04-15')->exists());
+        $this->assertFalse(Leave::where('employee_id', $employee->id)->forDate('2026-04-14')->exists());
+
+        // The check-in guard uses the same scope, so it must not block 04-14.
+        // Same-day check-in only (retroactive check-in requires admin), so
+        // advance "now" to just after the check-in instant (15:00 UTC).
+        Carbon::setTestNow(Carbon::parse('2026-04-14 15:05:00'));
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => '2026-04-14T09:00:00-06:00',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayNotHasKey('check_in', $response->json('errors') ?? []);
     }
 
     // ── Validation ────────────────────────────────────────────────────────────
@@ -325,8 +384,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ]);
 
         $response->assertStatus(422)
@@ -342,8 +400,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'time_mode' => 'SCHEDULED',
             'scheduled_start_time' => '14:00',
         ]);
@@ -361,15 +418,14 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => '2026-04-09',
-            'end_date' => '2026-04-10',
+            'dates' => ['2026-04-09', '2026-04-10'],
             'time_mode' => 'SCHEDULED',
             'scheduled_start_time' => '14:00',
             'scheduled_end_time' => '16:00',
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrorFor('end_date');
+            ->assertJsonValidationErrorFor('dates');
     }
 
     // ── Guard: existing worked attendance ────────────────────────────────────
@@ -391,12 +447,11 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrorFor('start_date');
+            ->assertJsonValidationErrorFor('dates');
     }
 
     #[Test]
@@ -415,12 +470,11 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => '2026-04-09',
-            'end_date' => '2026-04-11',
+            'dates' => ['2026-04-09', '2026-04-10', '2026-04-11'],
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrorFor('start_date');
+            ->assertJsonValidationErrorFor('dates');
     }
 
     // ── Validation: time ordering ─────────────────────────────────────────────
@@ -434,8 +488,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $response = $this->postJson('/api/v1/leaves', [
             'employee_id' => $employee->public_id,
             'leave_type_id' => $leaveType->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'time_mode' => 'SCHEDULED',
             'scheduled_start_time' => '16:00',
             'scheduled_end_time' => '14:00',
@@ -455,8 +508,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $this->postJson('/api/v1/leaves', [
             'employee_id' => 'any-id',
             'leave_type_id' => 1,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ])->assertStatus(401);
     }
 
@@ -469,8 +521,7 @@ class RegisterDirectLeaveApiTest extends TestCase
         $this->postJson('/api/v1/leaves', [
             'employee_id' => 'any-id',
             'leave_type_id' => 1,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ])->assertStatus(403);
     }
 
