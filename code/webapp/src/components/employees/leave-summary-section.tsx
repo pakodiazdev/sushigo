@@ -2,6 +2,7 @@ import { CalendarX, Plus, ChevronLeft, ChevronRight, X, History } from 'lucide-r
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { RegisterLeaveDialog } from '@/components/attendance'
+import { groupContiguousDates } from '@/lib/format'
 import { useLeaveSummarySection } from './use-leave-summary-section'
 import { useDialogAnimation } from './use-dialog-animation'
 import type { Leave, LeaveType as LeaveTypeInterface, LeaveStatus } from '@/types/leave'
@@ -41,8 +42,10 @@ function formatDate(d: string) {
     return new Date(d + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })
 }
 
-function dateRange(start: string, end: string) {
-    return start === end ? formatDate(start) : `${formatDate(start)} — ${formatDate(end)}`
+function dateRange(dates: string[]) {
+    return groupContiguousDates(dates)
+        .map((run) => run.length === 1 ? formatDate(run[0]!) : `${formatDate(run[0]!)} — ${formatDate(run[run.length - 1]!)}`)
+        .join(', ')
 }
 
 // ── FilterBar ───────────────────────────────────────────────────────────────────
@@ -174,7 +177,7 @@ function FullHistoryDialog({
                                 <tbody>
                                     {leaves.map((leave) => (
                                         <tr key={leave.id} className="border-b last:border-0">
-                                            <td className="py-2 pr-3 whitespace-nowrap">{dateRange(leave.start_date, leave.end_date)}</td>
+                                            <td className="py-2 pr-3 whitespace-nowrap">{dateRange(leave.dates)}</td>
                                             <td className="py-2 pr-3 font-medium">{leave.leave_type.name}</td>
                                             <td className="py-2 pr-3">{payBadge(leave.resolved_pay_percentage)}</td>
                                             <td className="py-2 pr-3">{statusBadge(leave.status)}</td>
@@ -278,7 +281,7 @@ export function LeaveSummarySection({ employeeId, employee }: LeaveSummarySectio
                             {ctx.recentLeaves.map((leave) => (
                                 <div key={leave.id} className="flex items-center justify-between rounded-md border border-border px-3 py-1.5 text-xs">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-muted-foreground whitespace-nowrap">{dateRange(leave.start_date, leave.end_date)}</span>
+                                        <span className="text-muted-foreground whitespace-nowrap">{dateRange(leave.dates)}</span>
                                         <span className="font-medium">{leave.leave_type.name}</span>
                                     </div>
                                     <div className="flex items-center gap-2">

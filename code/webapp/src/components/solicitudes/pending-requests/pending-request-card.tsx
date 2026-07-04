@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatDatesLabel } from '@/lib/format'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import type { EmployeeRequest, ExtraDayPayload, LeavePayload } from '@/types/employee-request'
 
@@ -17,10 +17,6 @@ function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const date = new Date(year!, month! - 1, day!)
   return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function formatDateRange(startDate: string, endDate: string): string {
-  return startDate === endDate ? formatDate(startDate) : `${formatDate(startDate)} — ${formatDate(endDate)}`
 }
 
 function ExtraDayCardBody({ request }: { readonly request: EmployeeRequest }) {
@@ -54,7 +50,7 @@ function LeaveCardBody({ request }: { readonly request: EmployeeRequest }) {
       <p className="text-sm text-foreground font-medium">{request.employee_name}</p>
       {payload && (
         <p className="text-sm text-muted-foreground capitalize">
-          {formatDateRange(payload.start_date, payload.end_date)}
+          {formatDatesLabel(payload.dates)}
         </p>
       )}
     </>

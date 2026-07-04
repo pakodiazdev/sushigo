@@ -1,6 +1,8 @@
 import { Loader2 } from 'lucide-react'
+import { Controller } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
+import { MultiDateCalendar } from '@/components/ui/multi-date-calendar'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useLeaveRequestForm } from './use-leave-request-form'
 
@@ -21,7 +23,7 @@ export function LeaveRequestForm({ isOpen, onClose, employeeId }: LeaveRequestFo
     handleSubmit,
   } = useLeaveRequestForm(employeeId, onClose)
 
-  const { register, formState: { errors } } = form
+  const { register, control, formState: { errors } } = form
 
   const handleClose = () => {
     form.reset()
@@ -45,27 +47,25 @@ export function LeaveRequestForm({ isOpen, onClose, employeeId }: LeaveRequestFo
           </Select>
         </FormField>
 
-        {/* Date range */}
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Fecha de inicio" error={errors.start_date?.message} required>
-            <input
-              type="date"
-              disabled={isPending}
-              {...register('start_date')}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-            />
-          </FormField>
-          <FormField label="Fecha de fin" error={errors.end_date?.message} required>
-            <input
-              type="date"
-              disabled={isPending || isProportionalHours}
-              {...register('end_date')}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-            />
-          </FormField>
-        </div>
+        {/* Days */}
+        <FormField label="Días" error={errors.dates?.message} required>
+          <Controller
+            name="dates"
+            control={control}
+            render={({ field }) => (
+              <MultiDateCalendar
+                value={field.value}
+                onChange={field.onChange}
+                singleSelect={isProportionalHours}
+              />
+            )}
+          />
+        </FormField>
         {isProportionalHours && (
           <p className="-mt-4 text-xs text-muted-foreground">Los permisos por horas son de un solo día</p>
+        )}
+        {!isProportionalHours && (
+          <p className="-mt-4 text-xs text-muted-foreground">Los días no tienen que ser consecutivos</p>
         )}
 
         {/* Pay percentage override */}

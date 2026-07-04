@@ -406,8 +406,7 @@ describe('useRequestLeave', () => {
             type: 'LEAVE' as const,
             payload: {
                 leave_type_id: 1,
-                start_date: '2026-06-20',
-                end_date: '2026-06-20',
+                dates: ['2026-06-20'],
             },
         }
 
@@ -427,7 +426,7 @@ describe('useRequestLeave', () => {
             await result.current.mutateAsync({
                 employee_id: 'emp-1',
                 type: 'LEAVE',
-                payload: { leave_type_id: 1, start_date: '2026-06-20', end_date: '2026-06-20' },
+                payload: { leave_type_id: 1, dates: ['2026-06-20'] },
             })
         })
 
@@ -447,7 +446,7 @@ describe('useRequestLeave', () => {
                 await result.current.mutateAsync({
                     employee_id: 'emp-1',
                     type: 'LEAVE',
-                    payload: { leave_type_id: 1, start_date: '2026-06-20', end_date: '2026-06-20' },
+                    payload: { leave_type_id: 1, dates: ['2026-06-20'] },
                 })
             } catch {
                 // expected

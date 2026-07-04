@@ -48,8 +48,8 @@ export interface ExtraDayPayload {
 
 export interface LeavePayload {
   leave_type_id: number
-  start_date: string
-  end_date: string
+  /** Individual days this leave covers — not required to be contiguous */
+  dates: string[]
   pay_percentage?: number | null
   rest_day_factor?: 'FULL' | 'PROPORTIONAL' | 'NONE' | null
   time_mode?: 'SCHEDULED' | 'OPEN_ENDED' | null

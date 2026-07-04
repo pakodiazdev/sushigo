@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/form-fields'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { groupContiguousDates } from '@/lib/format'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import type { EmployeeRequest, LeavePayload } from '@/types/employee-request'
 import { useLeaveReviewDialog } from './use-leave-review-dialog'
@@ -12,8 +13,10 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function formatDateRange(startDate: string, endDate: string): string {
-  return startDate === endDate ? formatDate(startDate) : `${formatDate(startDate)} — ${formatDate(endDate)}`
+function formatDatesLabel(dates: string[]): string {
+  return groupContiguousDates(dates)
+    .map((run) => run.length === 1 ? formatDate(run[0]!) : `${formatDate(run[0]!)} — ${formatDate(run[run.length - 1]!)}`)
+    .join(', ')
 }
 
 interface LeaveReviewContentProps {
@@ -44,7 +47,7 @@ export function LeaveReviewContent({ request, onClose }: LeaveReviewContentProps
           <p className="text-sm font-semibold text-foreground">{leaveType?.name ?? 'Permiso'}</p>
           {payload && (
             <p className="text-sm text-foreground capitalize">
-              {formatDateRange(payload.start_date, payload.end_date)}
+              {formatDatesLabel(payload.dates)}
             </p>
           )}
           {payload?.time_mode === 'SCHEDULED' && (

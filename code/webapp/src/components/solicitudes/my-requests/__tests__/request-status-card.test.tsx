@@ -250,7 +250,7 @@ describe('RequestStatusCard — LEAVE type', () => {
   function makeLeaveRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest {
     return makeRequest({
       type: 'LEAVE',
-      payload: { leave_type_id: 1, start_date: '2026-06-15', end_date: '2026-06-15' },
+      payload: { leave_type_id: 1, dates: ['2026-06-15'] },
       ...overrides,
     })
   }
@@ -270,7 +270,7 @@ describe('RequestStatusCard — LEAVE type', () => {
     const future = '2099-01-01'
     render(
       <RequestStatusCard
-        request={makeLeaveRequest({ status: 'APPROVED', payload: { leave_type_id: 1, start_date: future, end_date: future } })}
+        request={makeLeaveRequest({ status: 'APPROVED', payload: { leave_type_id: 1, dates: [future] } })}
         onCancel={vi.fn()}
         isCancelling={false}
       />
