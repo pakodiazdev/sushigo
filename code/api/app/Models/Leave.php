@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Leave extends Model
@@ -69,6 +70,17 @@ class Leave extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    /**
+     * The exact set of days this leave covers. start_date/end_date remain as
+     * derived MIN/MAX bounds for range-based filtering and display, but the
+     * authoritative "does this leave cover day X" answer is this list —
+     * leaves may cover non-contiguous days (e.g. Monday + Wednesday).
+     */
+    public function dates(): HasMany
+    {
+        return $this->hasMany(LeaveDate::class);
+    }
+
     // ── Scopes ───────────────────────────────────────────────────────────────
 
     public function scopeApproved(Builder $query): Builder
@@ -82,12 +94,15 @@ class Leave extends Model
     }
 
     /**
-     * Leaves that cover a specific date.
+     * Leaves that cover a specific date. Checks the exact selected days
+     * (leave_dates), not the start_date/end_date bounding range — a leave
+     * covering Monday and Wednesday does NOT cover Tuesday.
      */
     public function scopeForDate(Builder $query, string $date): Builder
     {
-        return $query->where('start_date', '<=', $date)
-            ->where('end_date', '>=', $date);
+        return $query->whereHas('dates', function (Builder $q) use ($date) {
+            $q->whereDate('date', $date);
+        });
     }
 
     // ── Business logic ───────────────────────────────────────────────────────

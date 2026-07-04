@@ -176,11 +176,12 @@ class CloseDayAction
      */
     private function resolveAbsentDayStatus(int $employeeId, string $today, int $dayOfWeek): DayStatus
     {
-        // 1. Approved leave covering today
+        // 1. Approved leave covering today (checks the exact selected days,
+        //    not the start_date/end_date bounding range — a leave covering
+        //    Monday and Wednesday does NOT cover Tuesday)
         $hasApprovedLeave = Leave::where('employee_id', $employeeId)
             ->where('status', LeaveStatus::APPROVED)
-            ->whereDate('start_date', '<=', $today)
-            ->whereDate('end_date', '>=', $today)
+            ->forDate($today)
             ->exists();
 
         if ($hasApprovedLeave) {

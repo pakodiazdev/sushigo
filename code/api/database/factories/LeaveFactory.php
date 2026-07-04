@@ -8,12 +8,36 @@ use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\LeaveType;
 use App\Models\User;
+use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /** @extends Factory<Leave> */
 class LeaveFactory extends Factory
 {
     protected $model = Leave::class;
+
+    /**
+     * Every Leave needs matching leave_dates rows for start_date..end_date —
+     * scopeForDate (used by check-in guards, CloseDayAction, Today view)
+     * checks the exact selected days, not the start_date/end_date range.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Leave $leave) {
+            $now = now();
+
+            $leave->dates()->insert(
+                collect(CarbonPeriod::create($leave->start_date, $leave->end_date))
+                    ->map(fn ($day) => [
+                        'leave_id' => $leave->id,
+                        'date' => $day->toDateString(),
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ])
+                    ->all()
+            );
+        });
+    }
 
     public function definition(): array
     {

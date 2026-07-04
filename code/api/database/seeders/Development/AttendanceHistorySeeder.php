@@ -12,6 +12,7 @@ use App\Models\ScheduleDayOverride;
 use App\Models\User;
 use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Database\Seeders\Base\OnceSeeder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -313,7 +314,7 @@ class AttendanceHistorySeeder extends OnceSeeder
             return;
         }
 
-        Leave::create([
+        $leave = Leave::create([
             'employee_id' => $employeeId,
             'leave_type_id' => $typeId,
             'start_date' => $start,
@@ -324,6 +325,18 @@ class AttendanceHistorySeeder extends OnceSeeder
             'approved_at' => Carbon::parse($start)->subDay(),
             'notes' => $notes,
         ]);
+
+        $now = now();
+        $leave->dates()->insert(
+            collect(CarbonPeriod::create($start, $end))
+                ->map(fn (Carbon $day) => [
+                    'leave_id' => $leave->id,
+                    'date' => $day->toDateString(),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])
+                ->all()
+        );
     }
 
     /**
