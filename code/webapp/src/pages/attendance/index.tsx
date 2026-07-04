@@ -18,7 +18,7 @@ import {
   useCloseDayPanel,
 } from '@/components/attendance'
 import { ExtraDayNegotiationDialog } from '@/components/attendance/ExtraDayNegotiationDialog'
-import { WeeklySummaryDialog } from '@/components/attendance/WeeklySummaryDialog'
+import { WeeklySummaryPanel } from '@/components/attendance/WeeklySummaryPanel'
 import { useWeeklySummaryDialog } from '@/components/attendance/use-weekly-summary-dialog'
 import { useAttendancePermissions } from '@/components/attendance/use-attendance-permissions'
 import { useTodayAttendancePage } from './-use-today-attendance-page'
@@ -332,23 +332,7 @@ export function AttendancePage() {
       )}
 
       {/* Weekly Summary Slide Panel */}
-      <WeeklySummaryDialog
-        isOpen={weeklySummary.isOpen}
-        onClose={weeklySummary.close}
-        employeeName={weeklySummary.employeeName}
-        periodStart={weeklySummary.periodStart}
-        periodEnd={weeklySummary.periodEnd}
-        onPrevWeek={weeklySummary.prevWeek}
-        onNextWeek={weeklySummary.nextWeek}
-        onJumpToDate={weeklySummary.jumpToDate}
-        isCurrentWeek={weeklySummary.isCurrentWeek}
-        isEarliestWeek={weeklySummary.isEarliestWeek}
-        earliestWeekStart={weeklySummary.earliestWeekStart}
-        onGoToCurrentWeek={weeklySummary.goToCurrentWeek}
-        summary={weeklySummary.summary}
-        isLoading={weeklySummary.isLoading}
-        isError={weeklySummary.isError}
-      />
+      <WeeklySummaryPanel weeklySummary={weeklySummary} />
     </PageContainer>
   )
 }
