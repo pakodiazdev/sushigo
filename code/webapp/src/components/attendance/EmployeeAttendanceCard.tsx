@@ -26,6 +26,7 @@ import type {
     TodayLeave,
 } from '@/types/attendance'
 import { getPhaseCardClass } from './attendance-helpers'
+import { RegisterLeaveDialog } from './RegisterLeaveDialog'
 
 // ── Sub-components ─────────────────────────────────────────────────────���───────
 
@@ -260,6 +261,7 @@ export function EmployeeAttendanceCard({
     const att = row.attendance
     const leave = row.today_leave
     const [confirmFaltaOpen, setConfirmFaltaOpen] = useState(false)
+    const [showJustifyDialog, setShowJustifyDialog] = useState(false)
 
     const isScheduledRestDay = row.schedule?.is_day_off === true
     const isFullDayLeave = leave?.time_mode === 'OPEN_ENDED'
@@ -379,6 +381,23 @@ export function EmployeeAttendanceCard({
                 </div>
             )}
 
+            {/* Justify an already-marked falta — registers a direct leave for today,
+                which overwrites the ABSENCE attendance record with the chosen type. */}
+            {canEdit && phase === 'absence' && (
+                <div className="flex flex-col gap-1.5 mt-auto">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        data-testid="btn-justify-absence"
+                        onClick={() => setShowJustifyDialog(true)}
+                    >
+                        <CalendarX className="h-3.5 w-3.5 mr-1.5" />
+                        Justificar falta
+                    </Button>
+                </div>
+            )}
+
             {/* Confirm-falta dialog */}
             <ConfirmDialog
                 isOpen={confirmFaltaOpen}
@@ -392,6 +411,13 @@ export function EmployeeAttendanceCard({
                 confirmLabel="Confirmar falta"
                 variant="danger"
                 container="viewport"
+            />
+
+            {/* Justify-falta dialog — direct leave registration (not a request) */}
+            <RegisterLeaveDialog
+                isOpen={showJustifyDialog}
+                employee={row.employee}
+                onClose={() => setShowJustifyDialog(false)}
             />
 
             {/* Lunch-start action — only for checked-in employees */}

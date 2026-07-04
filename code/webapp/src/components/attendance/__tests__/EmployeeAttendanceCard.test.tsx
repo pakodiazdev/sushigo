@@ -3,6 +3,17 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, cleanup, fireEvent } from '@testing-library/react'
+import type { TodayAttendanceEmployee } from '@/types/attendance'
+
+// ── Mocks ──────────────────────────────────────────────────────────────────────
+
+const mockRegisterLeaveDialog = vi.fn((_props: { isOpen: boolean; employee: TodayAttendanceEmployee | null; onClose: () => void }) => null)
+
+vi.mock('../RegisterLeaveDialog', () => ({
+    RegisterLeaveDialog: (props: { isOpen: boolean; employee: TodayAttendanceEmployee | null; onClose: () => void }) =>
+        mockRegisterLeaveDialog(props),
+}))
+
 import {
     EmployeeAttendanceCard,
     PhaseBadge,
@@ -17,6 +28,7 @@ import type { TodayAttendanceRow, TodayAttendanceData, TodayScheduleDay, TodayLe
 
 afterEach(() => {
     cleanup()
+    mockRegisterLeaveDialog.mockClear()
 })
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -360,6 +372,55 @@ describe('EmployeeAttendanceCard', () => {
         fireEvent.click(getByText('Cancelar'))
 
         expect(onMarkDayStatus).not.toHaveBeenCalled()
+    })
+
+    it('renders "Justificar falta" button when day_status is ABSENCE', () => {
+        const absenceRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({ id: '01HZATTEND000009', check_in: null, day_status: 'ABSENCE' }),
+            schedule: null,
+            today_leave: null,
+        }
+        const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={absenceRow} />)
+        expect(getByTestId('btn-justify-absence')).toBeDefined()
+    })
+
+    it('does not render "Justificar falta" when canEdit is false', () => {
+        const absenceRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({ id: '01HZATTEND000009', check_in: null, day_status: 'ABSENCE' }),
+            schedule: null,
+            today_leave: null,
+        }
+        const { queryByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={absenceRow} canEdit={false} />
+        )
+        expect(queryByTestId('btn-justify-absence')).toBeNull()
+    })
+
+    it('does not render "Justificar falta" for non-absence phases', () => {
+        const { queryByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} />)
+        expect(queryByTestId('btn-justify-absence')).toBeNull()
+    })
+
+    it('opens RegisterLeaveDialog for the employee when "Justificar falta" is clicked', () => {
+        const absenceRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({ id: '01HZATTEND000009', check_in: null, day_status: 'ABSENCE' }),
+            schedule: null,
+            today_leave: null,
+        }
+        const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={absenceRow} />)
+
+        expect(mockRegisterLeaveDialog).toHaveBeenLastCalledWith(
+            expect.objectContaining({ isOpen: false, employee: mockRow.employee })
+        )
+
+        fireEvent.click(getByTestId('btn-justify-absence'))
+
+        expect(mockRegisterLeaveDialog).toHaveBeenLastCalledWith(
+            expect.objectContaining({ isOpen: true, employee: mockRow.employee })
+        )
     })
 
     it('shows "Descanso programado" indicator AND "Registrar entrada" button for rest-day employees', () => {
