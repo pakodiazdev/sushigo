@@ -3,10 +3,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/form-fields'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { groupContiguousDates } from '@/lib/format'
+import { groupContiguousDates, formatCurrency } from '@/lib/format'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import type { EmployeeRequest, LeavePayload } from '@/types/employee-request'
-import { useLeaveReviewDialog } from './use-leave-review-dialog'
+import { LEAVE_QUICK_PAY_PERCENTAGES, useLeaveReviewDialog } from './use-leave-review-dialog'
+
+function quickOptionLabel(pct: number): string {
+  if (pct === 0) return 'Sin goce de sueldo'
+  if (pct === 100) return 'Con goce de sueldo'
+  return `${pct}%`
+}
 
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number)
@@ -35,11 +41,17 @@ export function LeaveReviewContent({ request, onClose }: LeaveReviewContentProps
     setShowRejectConfirm,
     rejectReason,
     setRejectReason,
-    payType,
+    requestedPayPercentage,
+    payOption,
     payPercentage,
-    selectUnpaid,
-    selectPaid,
-    selectCustom,
+    payAmount,
+    dailyWage,
+    totalDays,
+    amountForPercentage,
+    selectQuickOption,
+    selectCustomOption,
+    setCustomPercentage,
+    setCustomAmount,
     handleApprove,
     handleReject,
     isApproving,
@@ -69,58 +81,78 @@ export function LeaveReviewContent({ request, onClose }: LeaveReviewContentProps
           {request.notes && (
             <p className="text-xs text-muted-foreground italic">"{request.notes}"</p>
           )}
+          {requestedPayPercentage !== null && (
+            <p className="text-xs text-muted-foreground">
+              El empleado solicitó: {requestedPayPercentage > 0 ? 'con goce de sueldo' : 'sin goce de sueldo'}
+            </p>
+          )}
         </div>
 
         {/* Pay percentage — decided by the admin/manager at approval time */}
         <div className="space-y-3">
           <p className="text-sm font-medium text-foreground">Goce de sueldo</p>
+          {dailyWage > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Sueldo diario registrado: {formatCurrency(dailyWage)} · {totalDays} día{totalDays === 1 ? '' : 's'} solicitado{totalDays === 1 ? '' : 's'}
+            </p>
+          )}
 
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name="leave_pay_type"
-              checked={payType === 'unpaid'}
-              onChange={selectUnpaid}
-              className="accent-primary"
-            />
-            <span className="text-sm text-foreground flex-1">Sin goce de sueldo</span>
-            <span className="text-sm font-medium">0%</span>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name="leave_pay_type"
-              checked={payType === 'paid'}
-              onChange={selectPaid}
-              className="accent-primary"
-            />
-            <span className="text-sm text-foreground flex-1">Con goce de sueldo</span>
-            <span className="text-sm font-medium">100%</span>
-          </label>
+          {LEAVE_QUICK_PAY_PERCENTAGES.map((pct) => (
+            <label key={pct} className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="leave_pay_option"
+                checked={payOption === pct}
+                onChange={() => selectQuickOption(pct)}
+                className="accent-primary"
+              />
+              <span className="text-sm text-foreground flex-1">{quickOptionLabel(pct)}</span>
+              {dailyWage > 0 && (
+                <span className="text-sm font-medium">{formatCurrency(amountForPercentage(pct))}</span>
+              )}
+            </label>
+          ))}
 
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="radio"
-              name="leave_pay_type"
-              checked={payType === 'custom'}
-              onChange={() => selectCustom(payPercentage)}
+              name="leave_pay_option"
+              checked={payOption === 'custom'}
+              onChange={selectCustomOption}
               className="accent-primary mt-0.5"
             />
             <div className="space-y-2 flex-1">
               <span className="text-sm text-foreground">Porcentaje personalizado</span>
-              {payType === 'custom' && (
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    className="w-20"
-                    value={payPercentage}
-                    onChange={(e) => selectCustom(Number(e.target.value))}
-                  />
-                  <span className="text-sm text-muted-foreground">%</span>
+              {payOption === 'custom' && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      className="w-20"
+                      value={payPercentage}
+                      onChange={(e) => setCustomPercentage(Number(e.target.value))}
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
+                  {dailyWage > 0 && (
+                    <>
+                      <span className="text-sm text-muted-foreground">=</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="w-28"
+                          value={Math.round(payAmount * 100) / 100}
+                          onChange={(e) => setCustomAmount(Number(e.target.value))}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

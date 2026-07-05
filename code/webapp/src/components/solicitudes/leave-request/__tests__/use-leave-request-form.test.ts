@@ -183,7 +183,7 @@ describe('useLeaveRequestForm', () => {
     })
   })
 
-  it('does not include pay_percentage in the submitted payload — decided by the manager at approval time', async () => {
+  it('sends pay_percentage 0 when "request_paid" is unchecked — the manager still decides at approval time', async () => {
     const { result } = renderHook(() => useLeaveRequestForm('emp-1', vi.fn()), { wrapper: makeWrapper() })
 
     act(() => {
@@ -198,6 +198,25 @@ describe('useLeaveRequestForm', () => {
     await waitFor(() => expect(mockMutate).toHaveBeenCalledOnce())
 
     const [payload] = mockMutate.mock.calls[0] as [{ payload: Record<string, unknown> }]
-    expect(payload.payload).not.toHaveProperty('pay_percentage')
+    expect(payload.payload).toMatchObject({ pay_percentage: 0 })
+  })
+
+  it('sends pay_percentage 100 when "request_paid" is checked', async () => {
+    const { result } = renderHook(() => useLeaveRequestForm('emp-1', vi.fn()), { wrapper: makeWrapper() })
+
+    act(() => {
+      result.current.form.setValue('leave_type_id', 1)
+      result.current.form.setValue('dates', ['2026-05-01'])
+      result.current.form.setValue('request_paid', true)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit()
+    })
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledOnce())
+
+    const [payload] = mockMutate.mock.calls[0] as [{ payload: Record<string, unknown> }]
+    expect(payload.payload).toMatchObject({ pay_percentage: 100 })
   })
 })

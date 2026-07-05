@@ -17,9 +17,7 @@ class LeaveType extends Model
 
     const PERSONAL = 'PERSONAL';
 
-    const PERMISSION_PAID = 'PERMISSION_PAID';
-
-    const PERMISSION_UNPAID = 'PERMISSION_UNPAID';
+    const PERMISSION = 'PERMISSION';
 
     const PERMISSION_HOURS = 'PERMISSION_HOURS';
 

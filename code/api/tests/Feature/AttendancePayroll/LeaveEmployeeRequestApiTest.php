@@ -147,7 +147,7 @@ class LeaveEmployeeRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         // PERMISSION_PAID defaults to 100% (con goce) — no override given.
-        $leaveType = LeaveType::where('code', LeaveType::PERMISSION_PAID)->first();
+        $leaveType = LeaveType::where('code', 'PERMISSION_PAID')->first();
 
         $requestId = $this->createLeaveRequest($employee, $this->fullDayPayload($leaveType->id));
 
@@ -406,7 +406,7 @@ class LeaveEmployeeRequestApiTest extends TestCase
         $types = [
             [LeaveType::MEDICAL, 'Incapacidad médica', 'FIXED_PERCENTAGE', 0.00, 'NONE', false],
             [LeaveType::PERSONAL, 'Permiso personal', 'FIXED_PERCENTAGE', 0.00, 'NONE', false],
-            [LeaveType::PERMISSION_PAID, 'Permiso con goce de sueldo', 'FIXED_PERCENTAGE', 100.00, 'FULL', true],
+            ['PERMISSION_PAID', 'Permiso con goce de sueldo', 'FIXED_PERCENTAGE', 100.00, 'FULL', true],
             [LeaveType::PERMISSION_HOURS, 'Permiso por horas', 'PROPORTIONAL_HOURS', 0.00, 'PROPORTIONAL', false],
         ];
 

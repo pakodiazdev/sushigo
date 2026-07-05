@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { LeaveReviewContent } from '../leave-review-content'
-import type { LeavePayType } from '../use-leave-review-dialog'
+import type { LeavePayOption } from '../use-leave-review-dialog'
 import type { EmployeeRequest } from '@/types/employee-request'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -13,20 +13,27 @@ const mockHandleApprove = vi.fn()
 const mockHandleReject = vi.fn()
 const mockSetShowRejectConfirm = vi.fn()
 const mockSetRejectReason = vi.fn()
-const mockSelectUnpaid = vi.fn()
-const mockSelectPaid = vi.fn()
-const mockSelectCustom = vi.fn()
+const mockSelectQuickOption = vi.fn()
+const mockSelectCustomOption = vi.fn()
+const mockSetCustomPercentage = vi.fn()
+const mockSetCustomAmount = vi.fn()
 
 const defaultHookResult = {
   showRejectConfirm: false,
   setShowRejectConfirm: mockSetShowRejectConfirm,
   rejectReason: '',
   setRejectReason: mockSetRejectReason,
-  payType: 'unpaid' as LeavePayType,
+  requestedPayPercentage: null as number | null,
+  payOption: 0 as LeavePayOption,
   payPercentage: 0,
-  selectUnpaid: mockSelectUnpaid,
-  selectPaid: mockSelectPaid,
-  selectCustom: mockSelectCustom,
+  payAmount: 0,
+  dailyWage: 0,
+  totalDays: 1,
+  amountForPercentage: (pct: number) => pct,
+  selectQuickOption: mockSelectQuickOption,
+  selectCustomOption: mockSelectCustomOption,
+  setCustomPercentage: mockSetCustomPercentage,
+  setCustomAmount: mockSetCustomAmount,
   handleApprove: mockHandleApprove,
   handleReject: mockHandleReject,
   isApproving: false,
@@ -35,9 +42,13 @@ const defaultHookResult = {
 
 let currentHookResult = { ...defaultHookResult }
 
-vi.mock('../use-leave-review-dialog', () => ({
-  useLeaveReviewDialog: () => currentHookResult,
-}))
+vi.mock('../use-leave-review-dialog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../use-leave-review-dialog')>()
+  return {
+    ...actual,
+    useLeaveReviewDialog: () => currentHookResult,
+  }
+})
 
 vi.mock('@/services/leave-hooks', () => ({
   useLeaveTypes: () => ({
@@ -140,31 +151,92 @@ describe('LeaveReviewContent', () => {
     expect(screen.getByText('Rechazar').closest('button')?.disabled).toBe(true)
   })
 
-  it('renders the goce de sueldo options with the default selection marked', () => {
+  it('renders the quick pay options with the default selection marked', () => {
     render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
     expect(screen.getByText('Sin goce de sueldo')).toBeDefined()
     expect(screen.getByText('Con goce de sueldo')).toBeDefined()
+    expect(screen.getByText('25%')).toBeDefined()
+    expect(screen.getByText('50%')).toBeDefined()
+    expect(screen.getByText('75%')).toBeDefined()
     const unpaidRadio = screen.getByText('Sin goce de sueldo').closest('label')?.querySelector('input')
     expect(unpaidRadio?.checked).toBe(true)
   })
 
-  it('calls selectPaid when "Con goce de sueldo" is clicked', () => {
+  it('calls selectQuickOption(100) when "Con goce de sueldo" is clicked', () => {
     render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
     const paidRadio = screen.getByText('Con goce de sueldo').closest('label')?.querySelector('input')
     fireEvent.click(paidRadio!)
-    expect(mockSelectPaid).toHaveBeenCalledOnce()
+    expect(mockSelectQuickOption).toHaveBeenCalledWith(100)
   })
 
-  it('shows the custom percentage input only when payType is custom', () => {
-    currentHookResult = { ...defaultHookResult, payType: 'custom', payPercentage: 35 }
+  it('calls selectQuickOption(25) when the "25%" option is clicked', () => {
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    const radio25 = screen.getByText('25%').closest('label')?.querySelector('input')
+    fireEvent.click(radio25!)
+    expect(mockSelectQuickOption).toHaveBeenCalledWith(25)
+  })
+
+  it('shows the $ amount for each quick option when the daily wage is known', () => {
+    currentHookResult = {
+      ...defaultHookResult,
+      dailyWage: 800,
+      amountForPercentage: (pct: number) => (pct / 100) * 800,
+    }
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByText('$0.00')).toBeDefined()
+    expect(screen.getByText('$800.00')).toBeDefined()
+    expect(screen.getByText('$200.00')).toBeDefined()
+    expect(screen.getByText('$400.00')).toBeDefined()
+    expect(screen.getByText('$600.00')).toBeDefined()
+  })
+
+  it('does not show $ amounts when the daily wage is unknown', () => {
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.queryByText('$0.00')).toBeNull()
+  })
+
+  it('shows the custom percentage and $ inputs only when payOption is custom', () => {
+    currentHookResult = { ...defaultHookResult, payOption: 'custom', payPercentage: 35, payAmount: 280, dailyWage: 800 }
     render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
     expect(screen.getByDisplayValue('35')).toBeDefined()
+    expect(screen.getByDisplayValue('280')).toBeDefined()
   })
 
-  it('calls selectCustom when the custom percentage input changes', () => {
-    currentHookResult = { ...defaultHookResult, payType: 'custom', payPercentage: 35 }
+  it('calls setCustomPercentage when the custom percentage input changes', () => {
+    currentHookResult = { ...defaultHookResult, payOption: 'custom', payPercentage: 35, payAmount: 280, dailyWage: 800 }
     render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
     fireEvent.change(screen.getByDisplayValue('35'), { target: { value: '60' } })
-    expect(mockSelectCustom).toHaveBeenCalledWith(60)
+    expect(mockSetCustomPercentage).toHaveBeenCalledWith(60)
+  })
+
+  it('calls setCustomAmount when the custom $ input changes', () => {
+    currentHookResult = { ...defaultHookResult, payOption: 'custom', payPercentage: 35, payAmount: 280, dailyWage: 800 }
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByDisplayValue('280'), { target: { value: '400' } })
+    expect(mockSetCustomAmount).toHaveBeenCalledWith(400)
+  })
+
+  it('does not render the custom $ input when the daily wage is unknown', () => {
+    currentHookResult = { ...defaultHookResult, payOption: 'custom', payPercentage: 35, payAmount: 0, dailyWage: 0 }
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByDisplayValue('35')).toBeDefined()
+    expect(screen.queryByDisplayValue('0')).toBeNull()
+  })
+
+  it('shows what the employee requested when the payload carries pay_percentage', () => {
+    currentHookResult = { ...defaultHookResult, requestedPayPercentage: 100 }
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByText(/El empleado solicitó: con goce de sueldo/)).toBeDefined()
+  })
+
+  it('shows "sin goce de sueldo" when the employee requested pay_percentage 0', () => {
+    currentHookResult = { ...defaultHookResult, requestedPayPercentage: 0 }
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByText(/El empleado solicitó: sin goce de sueldo/)).toBeDefined()
+  })
+
+  it('does not show the requested-pay line when the payload has no pay_percentage', () => {
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.queryByText(/El empleado solicitó/)).toBeNull()
   })
 })

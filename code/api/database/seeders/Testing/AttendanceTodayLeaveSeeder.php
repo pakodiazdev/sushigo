@@ -30,7 +30,7 @@ class AttendanceTodayLeaveSeeder extends Seeder
 
         // Resolve leave types seeded by CoreTestSeeder
         $leaveTypeMap = DB::table('leave_types')
-            ->whereIn('code', ['PERMISSION_PAID', 'PERMISSION_HOURS'])
+            ->whereIn('code', ['PERMISSION', 'PERMISSION_HOURS'])
             ->pluck('id', 'code')
             ->toArray();
 
@@ -45,10 +45,10 @@ class AttendanceTodayLeaveSeeder extends Seeder
             [
                 'public_id' => (string) Str::ulid(),
                 'employee_id' => $employeeIdMap['EMP-007'],
-                'leave_type_id' => $leaveTypeMap['PERMISSION_PAID'],
+                'leave_type_id' => $leaveTypeMap['PERMISSION'],
                 'start_date' => $testDate,
                 'end_date' => $testDate,
-                'pay_percentage' => null,   // use type default (100%)
+                'pay_percentage' => 100.00,
                 'rest_day_factor' => null,
                 'time_mode' => 'OPEN_ENDED',
                 'scheduled_start_time' => null,

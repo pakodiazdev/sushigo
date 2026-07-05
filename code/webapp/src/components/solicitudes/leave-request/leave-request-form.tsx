@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import { Controller } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
-import { FormField, Select, Textarea } from '@/components/ui/form-fields'
+import { Checkbox, FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { MultiDateCalendar } from '@/components/ui/multi-date-calendar'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useLeaveRequestForm } from './use-leave-request-form'
@@ -100,6 +100,14 @@ export function LeaveRequestForm({ isOpen, onClose, employeeId }: LeaveRequestFo
             )}
           </>
         )}
+
+        {/* Requested pay */}
+        <Checkbox
+          id="request_paid"
+          label="Solicitar con goce de sueldo"
+          disabled={isPending}
+          {...register('request_paid')}
+        />
 
         {/* Notes */}
         <FormField label="Nota para el Manager (opcional)" error={errors.notes?.message}>

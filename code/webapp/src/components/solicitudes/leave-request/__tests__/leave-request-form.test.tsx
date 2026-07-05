@@ -106,6 +106,12 @@ describe('LeaveRequestForm', () => {
         expect(screen.getByText('Días')).toBeDefined()
     })
 
+    it('renders the "request paid" checkbox', () => {
+        render(<LeaveRequestForm isOpen employeeId="emp-1" onClose={vi.fn()} />)
+
+        expect(screen.getByText('Solicitar con goce de sueldo')).toBeDefined()
+    })
+
     it('does not render PROPORTIONAL_HOURS fields when isProportionalHours is false', () => {
         render(<LeaveRequestForm isOpen employeeId="emp-1" onClose={vi.fn()} />)
 

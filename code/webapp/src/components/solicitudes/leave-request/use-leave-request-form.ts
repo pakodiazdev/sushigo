@@ -10,6 +10,7 @@ import type { LeaveType } from '@/types/leave'
 const schema = z.object({
   leave_type_id: z.number().min(1, 'Selecciona un tipo de ausencia'),
   dates: z.array(z.string()).min(1, 'Selecciona al menos un día'),
+  request_paid: z.boolean().optional(),
   time_mode: z.enum(['SCHEDULED', 'OPEN_ENDED', '']).optional().nullable(),
   scheduled_start_time: z
     .string()
@@ -45,6 +46,7 @@ export function useLeaveRequestForm(employeeId: string, onSuccess: () => void): 
     defaultValues: {
       leave_type_id: 0,
       dates: [],
+      request_paid: false,
       time_mode: null,
       scheduled_start_time: null,
       scheduled_end_time: null,
@@ -116,6 +118,7 @@ export function useLeaveRequestForm(employeeId: string, onSuccess: () => void): 
         payload: {
           leave_type_id: values.leave_type_id,
           dates: values.dates,
+          pay_percentage: values.request_paid ? 100 : 0,
           time_mode: timeMode,
           scheduled_start_time: emptyToNull(values.scheduled_start_time),
           scheduled_end_time: emptyToNull(values.scheduled_end_time),

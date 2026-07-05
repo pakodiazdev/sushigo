@@ -227,14 +227,14 @@ class AttendanceHistorySeeder extends OnceSeeder
 
         if ($roll <= self::VACATION_CHANCE) {
             $blockEnd = (clone $cursor)->addDays(random_int(3, 6) - 1)->min($end);
-            $this->createLeave($employeeId, $date, $blockEnd->toDateString(), LeaveType::PERMISSION_PAID, 'Vacaciones');
+            $this->createLeave($employeeId, $date, $blockEnd->toDateString(), LeaveType::PERMISSION, 'Vacaciones', 100.00);
             $rows = [$this->simpleRow($employeeId, $date, DayStatus::LEAVE, $now)];
             $daysLeftInBlock = $cursor->diffInDays($blockEnd);
             $leaveAdded = 1;
         } elseif ($roll <= self::VACATION_CHANCE + self::PERMISSION_CHANCE) {
             $blockEnd = (clone $cursor)->addDays(random_int(1, 2) - 1)->min($end);
-            [$typeCode, $notes] = $this->randomPermissionType();
-            $this->createLeave($employeeId, $date, $blockEnd->toDateString(), $typeCode, $notes);
+            [$typeCode, $notes, $payPercentage] = $this->randomPermissionType();
+            $this->createLeave($employeeId, $date, $blockEnd->toDateString(), $typeCode, $notes, $payPercentage);
             $rows = [$this->simpleRow($employeeId, $date, DayStatus::LEAVE, $now)];
             $daysLeftInBlock = $cursor->diffInDays($blockEnd);
             $leaveAdded = 1;
@@ -295,18 +295,18 @@ class AttendanceHistorySeeder extends OnceSeeder
     }
 
     /**
-     * @return array{0: string, 1: string} [LeaveType code, notes]
+     * @return array{0: string, 1: string, 2: ?float} [LeaveType code, notes, pay percentage override]
      */
     private function randomPermissionType(): array
     {
         return collect([
-            [LeaveType::MEDICAL, 'Incapacidad médica'],
-            [LeaveType::PERSONAL, 'Permiso personal'],
-            [LeaveType::PERMISSION_PAID, 'Permiso con goce de sueldo'],
+            [LeaveType::MEDICAL, 'Incapacidad médica', null],
+            [LeaveType::PERSONAL, 'Permiso personal', null],
+            [LeaveType::PERMISSION, 'Permiso con goce de sueldo', 100.00],
         ])->random();
     }
 
-    private function createLeave(int $employeeId, string $start, string $end, string $typeCode, string $notes): void
+    private function createLeave(int $employeeId, string $start, string $end, string $typeCode, string $notes, ?float $payPercentage = null): void
     {
         $typeId = $this->leaveTypeIds[$typeCode] ?? null;
 
@@ -319,6 +319,7 @@ class AttendanceHistorySeeder extends OnceSeeder
             'leave_type_id' => $typeId,
             'start_date' => $start,
             'end_date' => $end,
+            'pay_percentage' => $payPercentage,
             'status' => LeaveStatus::APPROVED,
             'requested_by' => $this->adminUserId,
             'approved_by' => $this->adminUserId,
