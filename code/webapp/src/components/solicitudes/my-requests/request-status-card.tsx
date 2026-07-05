@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
-import { formatCurrency, groupContiguousDates } from '@/lib/format'
+import { formatCurrency, formatDatesLabel, formatDayLabel } from '@/lib/format'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import type { EmployeeRequest, ExtraDayPayload, LeavePayload } from '@/types/employee-request'
 
@@ -13,16 +13,15 @@ interface RequestStatusCardProps {
   readonly isCancelling: boolean
 }
 
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const date = new Date(year!, month! - 1, day!)
-  return date.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function formatDatesLabel(dates: string[]): string {
-  return groupContiguousDates(dates)
-    .map((run) => run.length === 1 ? formatDate(run[0]!) : `${formatDate(run[0]!)} — ${formatDate(run[run.length - 1]!)}`)
-    .join(', ')
+function cancelDescription(type: EmployeeRequest['type'], status: EmployeeRequest['status']): string {
+  if (type === 'LEAVE') {
+    return status === 'APPROVED'
+      ? 'El permiso aprobado será eliminado. Esta acción no se puede deshacer.'
+      : 'Tu solicitud de permiso será cancelada. Esta acción no se puede deshacer.'
+  }
+  return status === 'APPROVED'
+    ? 'El día extra aprobado será eliminado. Esta acción no se puede deshacer.'
+    : 'Tu solicitud de día extra será cancelada. Esta acción no se puede deshacer.'
 }
 
 function todayIso(): string {
@@ -73,7 +72,7 @@ function ExtraDayStatusBody({ request, config }: { readonly request: EmployeeReq
         {config.icon} Día extra solicitado
       </p>
       {date && (
-        <p className="text-sm text-foreground capitalize">{formatDate(date)}</p>
+        <p className="text-sm text-foreground capitalize">{formatDayLabel(date, 'long')}</p>
       )}
       <p className="text-sm text-muted-foreground">
         Prima propuesta: {primaPct}%{primaAmount > 0 && ` · ${formatCurrency(primaAmount)}`}
@@ -94,7 +93,7 @@ function LeaveStatusBody({ request, config }: { readonly request: EmployeeReques
       </p>
       {payload && (
         <p className="text-sm text-foreground capitalize">
-          {formatDatesLabel(payload.dates)}
+          {formatDatesLabel(payload.dates, 'long')}
         </p>
       )}
     </>
@@ -105,7 +104,7 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const payload = request.payload as ExtraDayPayload & LeavePayload | null
-  const sortedLeaveDates = [...(payload?.dates ?? [])].sort()
+  const sortedLeaveDates = [...(payload?.dates ?? [])].sort((a, b) => a.localeCompare(b))
   const endDate = request.type === 'LEAVE'
     ? (sortedLeaveDates[sortedLeaveDates.length - 1] ?? '')
     : (payload?.date ?? '')
@@ -159,15 +158,7 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
           setConfirmOpen(false)
         }}
         title="¿Cancelar esta solicitud?"
-        description={
-          request.type === 'LEAVE'
-            ? request.status === 'APPROVED'
-              ? 'El permiso aprobado será eliminado. Esta acción no se puede deshacer.'
-              : 'Tu solicitud de permiso será cancelada. Esta acción no se puede deshacer.'
-            : request.status === 'APPROVED'
-              ? 'El día extra aprobado será eliminado. Esta acción no se puede deshacer.'
-              : 'Tu solicitud de día extra será cancelada. Esta acción no se puede deshacer.'
-        }
+        description={cancelDescription(request.type, request.status)}
         confirmLabel="Sí, cancelar"
         variant="danger"
         isLoading={isCancelling}

@@ -2,10 +2,10 @@ export function formatCurrency(value: number): string {
   return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
 }
 
-function formatDayLabel(dateStr: string): string {
+export function formatDayLabel(dateStr: string, weekdayAndMonth: 'short' | 'long' = 'short'): string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const date = new Date(year!, month! - 1, day!)
-  return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  return date.toLocaleDateString('es-MX', { weekday: weekdayAndMonth, day: 'numeric', month: weekdayAndMonth, year: 'numeric' })
 }
 
 function isNextDay(dateStr: string, nextDateStr: string): boolean {
@@ -23,7 +23,7 @@ function isNextDay(dateStr: string, nextDateStr: string): boolean {
 export function groupContiguousDates(dates: string[]): string[][] {
   if (dates.length === 0) return []
 
-  const sorted = [...dates].sort()
+  const sorted = [...dates].sort((a, b) => a.localeCompare(b))
   const runs: string[][] = []
   let current: string[] = [sorted[0]!]
 
@@ -46,8 +46,10 @@ export function groupContiguousDates(dates: string[]): string[][] {
  * collapsing contiguous runs into ranges (e.g. "lun 13 — mié 15 abr") while
  * keeping non-contiguous days separate (e.g. "lun 13 abr, mié 15 abr").
  */
-export function formatDatesLabel(dates: string[]): string {
+export function formatDatesLabel(dates: string[], weekdayAndMonth: 'short' | 'long' = 'short'): string {
   return groupContiguousDates(dates)
-    .map((run) => run.length === 1 ? formatDayLabel(run[0]!) : `${formatDayLabel(run[0]!)} — ${formatDayLabel(run[run.length - 1]!)}`)
+    .map((run) => run.length === 1
+      ? formatDayLabel(run[0]!, weekdayAndMonth)
+      : `${formatDayLabel(run[0]!, weekdayAndMonth)} — ${formatDayLabel(run[run.length - 1]!, weekdayAndMonth)}`)
     .join(', ')
 }

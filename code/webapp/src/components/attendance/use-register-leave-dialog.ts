@@ -1,10 +1,11 @@
-import { useMemo, useEffect } from 'react'
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import type { UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useLeaveTypes, useRegisterDirectLeave } from '@/services/leave-hooks'
 import { todayDateCdmx } from '@/lib/datetime'
+import { useResetLeaveTimeFields } from '@/lib/use-reset-leave-time-fields'
 import type { LeaveType } from '@/types/leave'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
 
@@ -82,23 +83,7 @@ export function useRegisterLeaveDialog({
   const isProportionalHours = selectedType?.calculation_mode === 'PROPORTIONAL_HOURS'
   const isScheduled = watchedTimeMode === 'SCHEDULED'
 
-  // Reset time fields when leave type changes away from PROPORTIONAL_HOURS
-  useEffect(() => {
-    if (!isProportionalHours) {
-      form.setValue('time_mode', null)
-      form.setValue('scheduled_start_time', null)
-      form.setValue('scheduled_end_time', null)
-      form.clearErrors(['time_mode', 'scheduled_start_time', 'scheduled_end_time'])
-    }
-  }, [isProportionalHours, form])
-
-  // Reset scheduled_end_time when time_mode changes to OPEN_ENDED
-  useEffect(() => {
-    if (watchedTimeMode !== 'SCHEDULED') {
-      form.setValue('scheduled_end_time', null)
-      form.clearErrors('scheduled_end_time')
-    }
-  }, [watchedTimeMode, form])
+  useResetLeaveTimeFields(form, isProportionalHours, watchedTimeMode)
 
   const handleSubmit = form.handleSubmit((values) => {
     if (!employee) return

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/form-fields'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { groupContiguousDates, formatCurrency } from '@/lib/format'
+import { formatCurrency, formatDatesLabel } from '@/lib/format'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import type { EmployeeRequest, LeavePayload } from '@/types/employee-request'
 import { LEAVE_QUICK_PAY_PERCENTAGES, useLeaveReviewDialog } from './use-leave-review-dialog'
@@ -12,18 +12,6 @@ function quickOptionLabel(pct: number): string {
   if (pct === 0) return 'Sin goce de sueldo'
   if (pct === 100) return 'Con goce de sueldo'
   return `${pct}%`
-}
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const date = new Date(year!, month! - 1, day!)
-  return date.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function formatDatesLabel(dates: string[]): string {
-  return groupContiguousDates(dates)
-    .map((run) => run.length === 1 ? formatDate(run[0]!) : `${formatDate(run[0]!)} — ${formatDate(run[run.length - 1]!)}`)
-    .join(', ')
 }
 
 interface LeaveReviewContentProps {
@@ -65,7 +53,7 @@ export function LeaveReviewContent({ request, onClose }: LeaveReviewContentProps
           <p className="text-sm font-semibold text-foreground">{leaveType?.name ?? 'Permiso'}</p>
           {payload && (
             <p className="text-sm text-foreground capitalize">
-              {formatDatesLabel(payload.dates)}
+              {formatDatesLabel(payload.dates, 'long')}
             </p>
           )}
           {payload?.time_mode === 'SCHEDULED' && (

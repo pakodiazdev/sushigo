@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MONTH_LABELS_FULL, DAY_HEADERS, toIso, todayIso, mondayFirstIndex, buildMonthCells } from './calendar-shared'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -28,26 +29,7 @@ const MONTH_LABELS = [
   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
 ]
 
-const MONTH_LABELS_FULL = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-]
-
-const DAY_HEADERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function toIso(date: Date): string {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-')
-}
-
-function todayIso(): string {
-  return toIso(new Date())
-}
 
 function formatDisplay(iso: string): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString('es-MX', {
@@ -56,10 +38,6 @@ function formatDisplay(iso: string): string {
     month: 'short',
     year: 'numeric',
   })
-}
-
-function mondayFirstIndex(jsDay: number): number {
-  return (jsDay + 6) % 7
 }
 
 function isoToMondayIndex(isoDow: number): number {
@@ -91,20 +69,7 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
 
   // ── Day view helpers ────────────────────────────────────────────────────────
 
-  const firstDayOfMonth = new Date(year, month, 1)
-  const startOffset = mondayFirstIndex(firstDayOfMonth.getDay())
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-  const cells: Array<{ kind: 'pad'; key: string } | { kind: 'day'; day: number }> = [
-    ...Array.from({ length: startOffset }, (_, slot) => ({
-      kind: 'pad' as const,
-      key: `pad-${year}-${month}-${slot}`,
-    })),
-    ...Array.from({ length: daysInMonth }, (_, i) => ({
-      kind: 'day' as const,
-      day: i + 1,
-    })),
-  ]
+  const cells = buildMonthCells(year, month)
 
   function prevDay() {
     if (month === 0) { setMonth(11); setYear((y) => y - 1) }

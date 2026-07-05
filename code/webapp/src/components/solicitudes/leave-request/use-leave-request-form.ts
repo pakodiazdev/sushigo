@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import { useRequestLeave } from '@/services/employee-request-hooks'
+import { useResetLeaveTimeFields } from '@/lib/use-reset-leave-time-fields'
 import type { LeaveType } from '@/types/leave'
 
 const schema = z.object({
@@ -75,21 +76,7 @@ export function useLeaveRequestForm(employeeId: string, onSuccess: () => void): 
     }
   }, [isProportionalHours, watchedDates, form])
 
-  useEffect(() => {
-    if (!isProportionalHours) {
-      form.setValue('time_mode', null)
-      form.setValue('scheduled_start_time', null)
-      form.setValue('scheduled_end_time', null)
-      form.clearErrors(['time_mode', 'scheduled_start_time', 'scheduled_end_time'])
-    }
-  }, [isProportionalHours, form])
-
-  useEffect(() => {
-    if (watchedTimeMode !== 'SCHEDULED') {
-      form.setValue('scheduled_end_time', null)
-      form.clearErrors('scheduled_end_time')
-    }
-  }, [watchedTimeMode, form])
+  useResetLeaveTimeFields(form, isProportionalHours, watchedTimeMode)
 
   const handleSubmit = form.handleSubmit((values) => {
     if (isProportionalHours && !values.time_mode) {
