@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DayStatus;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveTimeMode;
 use App\Enums\RestDayFactor;
@@ -79,6 +80,26 @@ class Leave extends Model
     public function dates(): HasMany
     {
         return $this->hasMany(LeaveDate::class);
+    }
+
+    /**
+     * Cancellation (EmployeeRequestService::cancel()) and the Employee-deletion
+     * cascade (Employee::booted()) both forceDelete() a Leave directly, without
+     * going through a dedicated "revert" step. Attendance LEAVE records have no
+     * FK to leaves, so without this hook they'd be orphaned — still blocking
+     * check-ins and hiding the employee from CloseDayAction/reports for those
+     * dates even after the leave itself is gone.
+     */
+    protected static function booted(): void
+    {
+        static::forceDeleting(function (Leave $leave) {
+            $dates = $leave->dates()->pluck('date')->map(fn (Carbon $date) => $date->toDateString());
+
+            Attendance::where('employee_id', $leave->employee_id)
+                ->where('day_status', DayStatus::LEAVE)
+                ->whereIn('date', $dates)
+                ->delete();
+        });
     }
 
     // ── Scopes ───────────────────────────────────────────────────────────────
