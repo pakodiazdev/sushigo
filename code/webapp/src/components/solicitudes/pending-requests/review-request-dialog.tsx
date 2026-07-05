@@ -257,7 +257,7 @@ export function ReviewRequestDialog({ request, onClose }: ReviewRequestDialogPro
       title={request ? `Solicitud de ${request.employee_name}` : ''}
       size="sm"
     >
-      {request && request.type === 'LEAVE' && (
+      {request?.type === 'LEAVE' && (
         <LeaveReviewContent request={request} onClose={onClose} />
       )}
       {request && request.type !== 'LEAVE' && (
