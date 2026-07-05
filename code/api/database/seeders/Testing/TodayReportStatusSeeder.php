@@ -133,7 +133,7 @@ class TodayReportStatusSeeder extends Seeder
 
     private function seedLeave(int $employeeId, int $leaveTypeId, int $adminUserId, mixed $now): void
     {
-        DB::table('leaves')->insert([
+        $leaveId = DB::table('leaves')->insertGetId([
             'public_id' => (string) Str::ulid(),
             'employee_id' => $employeeId,
             'leave_type_id' => $leaveTypeId,
@@ -152,6 +152,15 @@ class TodayReportStatusSeeder extends Seeder
             'approved_by' => $adminUserId,
             'approved_at' => $now,
             'notes' => 'Permiso de prueba (today-report-statuses)',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        // scopeForDate (check-in guards, CloseDayAction, Today view) checks
+        // leave_dates rows, not the start_date/end_date range.
+        DB::table('leave_dates')->insert([
+            'leave_id' => $leaveId,
+            'date' => self::TEST_DATE,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
