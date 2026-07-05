@@ -321,6 +321,29 @@ class LeaveEmployeeRequestApiTest extends TestCase
         ]);
     }
 
+    #[Test]
+    public function cancelling_an_approved_leave_request_removes_its_attendance_leave_records(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
+        $requestId = $this->createLeaveRequest($employee, $this->fullDayPayload($leaveType->id));
+
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/approve")->assertOk();
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => DayStatus::LEAVE->value,
+        ]);
+
+        $this->patchJson("/api/v1/employee-requests/{$requestId}/cancel")->assertOk();
+
+        $this->assertDatabaseMissing('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+        ]);
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Guards / validation
     // ══════════════════════════════════════════════════════════════════════════
