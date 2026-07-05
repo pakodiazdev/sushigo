@@ -22,7 +22,7 @@ class NegotiatedExtraDayFactory extends Factory
         return [
             'employee_id' => Employee::factory(),
             'branch_id' => Branch::factory(),
-            'date' => $this->faker->unique()->dateTimeBetween('-6 months', 'now')->format('Y-m-d'),
+            'date' => now()->subDays($this->faker->unique()->numberBetween(0, 180))->format('Y-m-d'),
             'agreed_daily_wage' => $wage,
             'prima_percent' => $primaPct,
             'prima_amount' => $primaAmount,
