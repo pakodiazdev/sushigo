@@ -40,55 +40,62 @@ class AttendanceTodayLeaveSeeder extends Seeder
         // Test date matches what the Cypress spec sends via X-Test-Time
         $testDate = '2026-04-09';
 
-        DB::table('leaves')->insert([
+        // scopeForDate (check-in guards, CloseDayAction, Today view) checks
+        // leave_dates rows, not the start_date/end_date range — every leave
+        // needs a matching row for each date it covers.
+        $fullDayLeaveId = DB::table('leaves')->insertGetId([
             // EMP-007: approved full-day paid leave (OPEN_ENDED, FIXED_PERCENTAGE 100%)
-            [
-                'public_id' => (string) Str::ulid(),
-                'employee_id' => $employeeIdMap['EMP-007'],
-                'leave_type_id' => $leaveTypeMap['PERMISSION'],
-                'start_date' => $testDate,
-                'end_date' => $testDate,
-                'pay_percentage' => 100.00,
-                'rest_day_factor' => null,
-                'time_mode' => 'OPEN_ENDED',
-                'scheduled_start_time' => null,
-                'scheduled_end_time' => null,
-                'actual_start_time' => null,
-                'actual_end_time' => null,
-                'actual_duration_minutes' => null,
-                'status' => 'APPROVED',
-                'requested_by' => $adminUserId,
-                'approved_by' => $adminUserId,
-                'approved_at' => $now,
-                'notes' => 'Permiso con goce de sueldo (test)',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            // EMP-008: approved partial unpaid leave (SCHEDULED, PROPORTIONAL_HOURS)
-            // Shift is 13:00-22:00 CDMX; leave covers 13:00-16:00
-            // → employee is absent 13:00-16:00, arrives at work at 16:00 (ends_at)
-            [
-                'public_id' => (string) Str::ulid(),
-                'employee_id' => $employeeIdMap['EMP-008'],
-                'leave_type_id' => $leaveTypeMap['PERMISSION_HOURS'],
-                'start_date' => $testDate,
-                'end_date' => $testDate,
-                'pay_percentage' => null,   // use type default (0%)
-                'rest_day_factor' => null,
-                'time_mode' => 'SCHEDULED',
-                'scheduled_start_time' => '13:00:00',
-                'scheduled_end_time' => '16:00:00',
-                'actual_start_time' => null,
-                'actual_end_time' => null,
-                'actual_duration_minutes' => null,
-                'status' => 'APPROVED',
-                'requested_by' => $adminUserId,
-                'approved_by' => $adminUserId,
-                'approved_at' => $now,
-                'notes' => 'Permiso por horas (test)',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
+            'public_id' => (string) Str::ulid(),
+            'employee_id' => $employeeIdMap['EMP-007'],
+            'leave_type_id' => $leaveTypeMap['PERMISSION'],
+            'start_date' => $testDate,
+            'end_date' => $testDate,
+            'pay_percentage' => 100.00,
+            'rest_day_factor' => null,
+            'time_mode' => 'OPEN_ENDED',
+            'scheduled_start_time' => null,
+            'scheduled_end_time' => null,
+            'actual_start_time' => null,
+            'actual_end_time' => null,
+            'actual_duration_minutes' => null,
+            'status' => 'APPROVED',
+            'requested_by' => $adminUserId,
+            'approved_by' => $adminUserId,
+            'approved_at' => $now,
+            'notes' => 'Permiso con goce de sueldo (test)',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        // EMP-008: approved partial unpaid leave (SCHEDULED, PROPORTIONAL_HOURS)
+        // Shift is 13:00-22:00 CDMX; leave covers 13:00-16:00
+        // → employee is absent 13:00-16:00, arrives at work at 16:00 (ends_at)
+        $partialLeaveId = DB::table('leaves')->insertGetId([
+            'public_id' => (string) Str::ulid(),
+            'employee_id' => $employeeIdMap['EMP-008'],
+            'leave_type_id' => $leaveTypeMap['PERMISSION_HOURS'],
+            'start_date' => $testDate,
+            'end_date' => $testDate,
+            'pay_percentage' => null,   // use type default (0%)
+            'rest_day_factor' => null,
+            'time_mode' => 'SCHEDULED',
+            'scheduled_start_time' => '13:00:00',
+            'scheduled_end_time' => '16:00:00',
+            'actual_start_time' => null,
+            'actual_end_time' => null,
+            'actual_duration_minutes' => null,
+            'status' => 'APPROVED',
+            'requested_by' => $adminUserId,
+            'approved_by' => $adminUserId,
+            'approved_at' => $now,
+            'notes' => 'Permiso por horas (test)',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        DB::table('leave_dates')->insert([
+            ['leave_id' => $fullDayLeaveId, 'date' => $testDate, 'created_at' => $now, 'updated_at' => $now],
+            ['leave_id' => $partialLeaveId, 'date' => $testDate, 'created_at' => $now, 'updated_at' => $now],
         ]);
     }
 }
