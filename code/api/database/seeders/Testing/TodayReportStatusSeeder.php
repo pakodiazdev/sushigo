@@ -51,7 +51,7 @@ class TodayReportStatusSeeder extends Seeder
         $adminUserId = DB::table('users')->where('email', 'admin@sushigo.com')->value('id');
 
         $leaveTypeId = DB::table('leave_types')
-            ->where('code', 'PERMISSION_PAID')
+            ->where('code', 'PERMISSION')
             ->value('id');
 
         $this->seedAttendances($employeeIdMap, $now);

@@ -22,6 +22,12 @@ vi.mock('@/services/leave-hooks', () => ({
   }),
 }))
 
+let mockWages: Array<{ hourly_rate: string; weekly_scheduled_hours: number }> = []
+
+vi.mock('@/services/employee-hooks', () => ({
+  useWageHistory: () => ({ data: mockWages }),
+}))
+
 // ── Fixture ────────────────────────────────────────────────────────────────────
 
 const request: EmployeeRequest = {
@@ -43,6 +49,7 @@ const request: EmployeeRequest = {
 describe('useLeaveReviewDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockWages = []
   })
 
   it('handleApprove calls approve mutation with the request id and the resolved pay_percentage', () => {
@@ -57,21 +64,21 @@ describe('useLeaveReviewDialog', () => {
     )
   })
 
-  it('defaults pay type to the leave type default (unpaid for 0%)', () => {
+  it('defaults pay option to the leave type default (0%)', () => {
     const onClose = vi.fn()
     const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
 
-    expect(result.current.payType).toBe('unpaid')
+    expect(result.current.payOption).toBe(0)
     expect(result.current.payPercentage).toBe(0)
   })
 
-  it('selecting "paid" updates pay type and percentage to 100', () => {
+  it('selecting the 100% quick option updates pay option and percentage', () => {
     const onClose = vi.fn()
     const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
 
-    act(() => result.current.selectPaid())
+    act(() => result.current.selectQuickOption(100))
 
-    expect(result.current.payType).toBe('paid')
+    expect(result.current.payOption).toBe(100)
     expect(result.current.payPercentage).toBe(100)
 
     act(() => result.current.handleApprove())
@@ -82,14 +89,76 @@ describe('useLeaveReviewDialog', () => {
     )
   })
 
-  it('selecting a custom percentage updates pay type and value', () => {
+  it('selecting the 25%, 50% and 75% quick options works', () => {
     const onClose = vi.fn()
     const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
 
-    act(() => result.current.selectCustom(35))
+    act(() => result.current.selectQuickOption(25))
+    expect(result.current.payOption).toBe(25)
+    expect(result.current.payPercentage).toBe(25)
 
-    expect(result.current.payType).toBe('custom')
+    act(() => result.current.selectQuickOption(50))
+    expect(result.current.payOption).toBe(50)
+    expect(result.current.payPercentage).toBe(50)
+
+    act(() => result.current.selectQuickOption(75))
+    expect(result.current.payOption).toBe(75)
+    expect(result.current.payPercentage).toBe(75)
+  })
+
+  it('setting a custom percentage switches to custom mode and updates the value', () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
+
+    act(() => result.current.setCustomPercentage(35))
+
+    expect(result.current.payOption).toBe('custom')
     expect(result.current.payPercentage).toBe(35)
+  })
+
+  it('computes the daily wage and the $ amount for each percentage from wage history', () => {
+    mockWages = [{ hourly_rate: '100.00', weekly_scheduled_hours: 48 }]
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
+
+    // dailyWage = 100 * (48 / 6) = 800; totalDays = 1 (single date in payload)
+    expect(result.current.dailyWage).toBe(800)
+    expect(result.current.totalWage).toBe(800)
+    expect(result.current.amountForPercentage(50)).toBe(400)
+
+    act(() => result.current.selectQuickOption(50))
+    expect(result.current.payAmount).toBe(400)
+  })
+
+  it('defaults to the pay_percentage the employee requested at creation, overriding the leave type default', () => {
+    const onClose = vi.fn()
+    const requestedPaid: EmployeeRequest = {
+      ...request,
+      payload: { leave_type_id: 1, dates: ['2026-06-15'], pay_percentage: 100 },
+    }
+    const { result } = renderHook(() => useLeaveReviewDialog(requestedPaid, onClose))
+
+    expect(result.current.requestedPayPercentage).toBe(100)
+    expect(result.current.payOption).toBe(100)
+    expect(result.current.payPercentage).toBe(100)
+  })
+
+  it('requestedPayPercentage is null when the request payload has no pay_percentage', () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
+
+    expect(result.current.requestedPayPercentage).toBeNull()
+  })
+
+  it('setCustomAmount derives the equivalent percentage from the daily wage', () => {
+    mockWages = [{ hourly_rate: '100.00', weekly_scheduled_hours: 48 }]
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useLeaveReviewDialog(request, onClose))
+
+    act(() => result.current.setCustomAmount(200))
+
+    expect(result.current.payOption).toBe('custom')
+    expect(result.current.payPercentage).toBe(25)
   })
 
   it('handleApprove onSuccess calls onClose', () => {

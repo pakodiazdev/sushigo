@@ -107,7 +107,7 @@ class ListEmployeeLeavesApiTest extends TestCase
     {
         $this->createLeave($this->employee, LeaveType::MEDICAL, '2026-03-01');
         $this->createLeave($this->employee, LeaveType::PERSONAL, '2026-04-05');
-        $this->createLeave($this->employee, LeaveType::PERMISSION_PAID, '2026-03-15');
+        $this->createLeave($this->employee, 'PERMISSION_PAID', '2026-03-15');
 
         $response = $this->getJson("/api/v1/employees/{$this->employee->public_id}/leaves");
 
@@ -162,7 +162,7 @@ class ListEmployeeLeavesApiTest extends TestCase
     {
         $this->createLeave($this->employee, LeaveType::MEDICAL, '2026-02-15');
         $this->createLeave($this->employee, LeaveType::PERSONAL, '2026-03-10');
-        $this->createLeave($this->employee, LeaveType::PERMISSION_PAID, '2026-04-05');
+        $this->createLeave($this->employee, 'PERMISSION_PAID', '2026-04-05');
 
         $response = $this->getJson("/api/v1/employees/{$this->employee->public_id}/leaves?date_from=2026-03-01&date_to=2026-03-31");
 
@@ -236,7 +236,7 @@ class ListEmployeeLeavesApiTest extends TestCase
         // Leave spanning March → April (cross-boundary)
         $this->createLeave($this->employee, LeaveType::PERSONAL, '2026-03-28', LeaveStatus::APPROVED, '2026-04-05');
         // Leave entirely in April
-        $this->createLeave($this->employee, LeaveType::PERMISSION_PAID, '2026-04-10', LeaveStatus::APPROVED, '2026-04-10');
+        $this->createLeave($this->employee, 'PERMISSION_PAID', '2026-04-10', LeaveStatus::APPROVED, '2026-04-10');
         // Leave entirely in May
         $this->createLeave($this->employee, LeaveType::MEDICAL, '2026-05-01', LeaveStatus::APPROVED, '2026-05-01');
 
@@ -315,7 +315,7 @@ class ListEmployeeLeavesApiTest extends TestCase
         $types = [
             [LeaveType::MEDICAL, 'Incapacidad médica', 'FIXED_PERCENTAGE', 0.00, 'NONE', false],
             [LeaveType::PERSONAL, 'Permiso personal', 'FIXED_PERCENTAGE', 0.00, 'NONE', false],
-            [LeaveType::PERMISSION_PAID, 'Permiso con goce de sueldo', 'FIXED_PERCENTAGE', 100.00, 'FULL', true],
+            ['PERMISSION_PAID', 'Permiso con goce de sueldo', 'FIXED_PERCENTAGE', 100.00, 'FULL', true],
             [LeaveType::PERMISSION_HOURS, 'Permiso por horas', 'PROPORTIONAL_HOURS', 0.00, 'PROPORTIONAL', false],
         ];
 
