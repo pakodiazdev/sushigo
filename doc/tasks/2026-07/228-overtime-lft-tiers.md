@@ -54,11 +54,12 @@ Como Admin, al autorizar el pago de horas extra fuera de horario, quiero elegir 
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `3h` · **Pessimistic:** `6h` · **Tracked:** _in progress_
+- **Optimistic:** `3h` · **Pessimistic:** `6h` · **Tracked:** `4h43m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-04", "start": "23:23", "end": "?" }
+  { "date": "2026-07-04", "start": "23:23", "end": "01:20" },
+  { "date": "2026-07-05", "start": "16:30", "end": "19:16" }
 ]
 ```
