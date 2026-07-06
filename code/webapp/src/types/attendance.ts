@@ -1,3 +1,12 @@
+export type OvertimeValuationMethod = 'LFT_PROPORTIONAL' | 'AGREED_RATE' | 'SALARY_FACTOR'
+
+export interface OvertimeValuationPreview {
+  valuation_method: OvertimeValuationMethod
+  rate_applied: number
+  amount: number
+  accumulated_hours: number | null
+}
+
 export interface AttendanceRecord {
   id: string                           // ULID public_id
   employee_id: string
@@ -15,6 +24,9 @@ export interface AttendanceRecord {
   overtime_minutes: number
   overtime_authorized: boolean
   overtime_authorized_at: string | null
+  overtime_valuation_method: OvertimeValuationMethod | null
+  overtime_rate_applied: number | null
+  overtime_amount: number | null
   requires_overtime_decision: boolean
   created_at: string
   updated_at: string
@@ -79,6 +91,9 @@ export interface TodayAttendanceData {
   overtime_minutes: number
   overtime_authorized: boolean
   overtime_authorized_at: string | null
+  overtime_valuation_method: OvertimeValuationMethod | null
+  overtime_rate_applied: number | null
+  overtime_amount: number | null
   requires_overtime_decision: boolean
 }
 

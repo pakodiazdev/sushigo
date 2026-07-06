@@ -46,6 +46,9 @@ const makeAttendance = (overrides: Partial<TodayAttendanceData> = {}): TodayAtte
     overtime_minutes: 0,
     overtime_authorized: false,
     overtime_authorized_at: null,
+    overtime_valuation_method: null,
+    overtime_rate_applied: null,
+    overtime_amount: null,
     requires_overtime_decision: false,
     ...overrides,
 })

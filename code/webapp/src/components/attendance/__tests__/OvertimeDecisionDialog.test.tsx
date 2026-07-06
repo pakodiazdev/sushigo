@@ -2,17 +2,27 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, cleanup, fireEvent } from '@testing-library/react'
+import { render, cleanup, fireEvent, waitFor } from '@testing-library/react'
+
+vi.mock('@/services/attendance-hooks', () => ({
+  useOvertimeValuationPreview: vi.fn(() => ({ data: undefined, isFetching: false })),
+}))
+
 import { OvertimeDecisionDialog } from '../OvertimeDecisionDialog'
+import * as attendanceHooks from '@/services/attendance-hooks'
 
 afterEach(() => {
   cleanup()
   // Restore body overflow after each test
   document.body.style.overflow = 'unset'
+  vi.mocked(attendanceHooks.useOvertimeValuationPreview).mockReturnValue(
+    { data: undefined, isFetching: false } as unknown as ReturnType<typeof attendanceHooks.useOvertimeValuationPreview>,
+  )
 })
 
 const defaultProps = {
   isOpen: true,
+  attendanceId: 'att-1',
   employeeName: 'Carlos Mendoza',
   overtimeMinutes: 35,
   isLoading: false,
@@ -53,13 +63,75 @@ describe('OvertimeDecisionDialog — rendering', () => {
 })
 
 describe('OvertimeDecisionDialog — actions', () => {
-  it('calls onAuthorize when Pagar button is clicked', () => {
+  it('shows the valuation method step when Pagar button is clicked', () => {
+    const { getByTestId, getByLabelText } = render(<OvertimeDecisionDialog {...defaultProps} />)
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    expect(getByLabelText('Método')).toBeDefined()
+  })
+
+  it('calls onAuthorize with LFT_PROPORTIONAL by default when confirming', async () => {
     const onAuthorize = vi.fn()
     const { getByTestId } = render(
       <OvertimeDecisionDialog {...defaultProps} onAuthorize={onAuthorize} />
     )
     fireEvent.click(getByTestId('btn-authorize-overtime'))
-    expect(onAuthorize).toHaveBeenCalledOnce()
+    fireEvent.click(getByTestId('btn-confirm-valuation'))
+    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('LFT_PROPORTIONAL', undefined, undefined))
+  })
+
+  it('requires agreed_rate when AGREED_RATE method is selected', async () => {
+    const onAuthorize = vi.fn()
+    const { getByTestId, getByLabelText, findByText } = render(
+      <OvertimeDecisionDialog {...defaultProps} onAuthorize={onAuthorize} />
+    )
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    fireEvent.change(getByLabelText('Método'), { target: { value: 'AGREED_RATE' } })
+    fireEvent.click(getByTestId('btn-confirm-valuation'))
+    expect(await findByText('La tarifa pactada es requerida')).toBeDefined()
+    expect(onAuthorize).not.toHaveBeenCalled()
+  })
+
+  it('calls onAuthorize with AGREED_RATE and the given rate', async () => {
+    const onAuthorize = vi.fn()
+    const { getByTestId, getByLabelText } = render(
+      <OvertimeDecisionDialog {...defaultProps} onAuthorize={onAuthorize} />
+    )
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    fireEvent.change(getByLabelText('Método'), { target: { value: 'AGREED_RATE' } })
+    fireEvent.change(getByLabelText('Tarifa por hora'), { target: { value: '90' } })
+    fireEvent.click(getByTestId('btn-confirm-valuation'))
+    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('AGREED_RATE', 90, undefined))
+  })
+
+  it('requires agreed_factor when SALARY_FACTOR method is selected', async () => {
+    const onAuthorize = vi.fn()
+    const { getByTestId, getByLabelText, findByText } = render(
+      <OvertimeDecisionDialog {...defaultProps} onAuthorize={onAuthorize} />
+    )
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    fireEvent.change(getByLabelText('Método'), { target: { value: 'SALARY_FACTOR' } })
+    fireEvent.click(getByTestId('btn-confirm-valuation'))
+    expect(await findByText('El factor es requerido')).toBeDefined()
+    expect(onAuthorize).not.toHaveBeenCalled()
+  })
+
+  it('calls onAuthorize with SALARY_FACTOR and the given factor', async () => {
+    const onAuthorize = vi.fn()
+    const { getByTestId, getByLabelText } = render(
+      <OvertimeDecisionDialog {...defaultProps} onAuthorize={onAuthorize} />
+    )
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    fireEvent.change(getByLabelText('Método'), { target: { value: 'SALARY_FACTOR' } })
+    fireEvent.change(getByLabelText(/Factor/), { target: { value: '1.5' } })
+    fireEvent.click(getByTestId('btn-confirm-valuation'))
+    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('SALARY_FACTOR', undefined, 1.5))
+  })
+
+  it('returns to the confirm step when Regresar is clicked', () => {
+    const { getByTestId, getByText } = render(<OvertimeDecisionDialog {...defaultProps} />)
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    fireEvent.click(getByText('Regresar'))
+    expect(getByTestId('btn-authorize-overtime')).toBeDefined()
   })
 
   it('calls onReject when No pagar button is clicked', () => {
@@ -160,6 +232,50 @@ describe('OvertimeDecisionDialog — OvertimeDecisionBadge (via EmployeeAttendan
   it('renders without crashing', () => {
     const { container } = render(<OvertimeDecisionDialog {...defaultProps} />)
     expect(container).toBeDefined()
+  })
+})
+
+describe('OvertimeDecisionDialog — cost preview', () => {
+  it('shows a placeholder message when no preview is available yet', () => {
+    const { getByTestId, getByText } = render(<OvertimeDecisionDialog {...defaultProps} />)
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    expect(getByText('Completa los datos para ver el monto estimado.')).toBeDefined()
+  })
+
+  it('shows a loading indicator while the preview is fetching', () => {
+    vi.mocked(attendanceHooks.useOvertimeValuationPreview).mockReturnValue({
+      data: undefined,
+      isFetching: true,
+    } as unknown as ReturnType<typeof attendanceHooks.useOvertimeValuationPreview>)
+
+    const { getByTestId, getByText } = render(<OvertimeDecisionDialog {...defaultProps} />)
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    expect(getByText('Calculando...')).toBeDefined()
+  })
+
+  it('shows the estimated amount once the preview resolves', () => {
+    vi.mocked(attendanceHooks.useOvertimeValuationPreview).mockReturnValue({
+      data: { valuation_method: 'AGREED_RATE', rate_applied: 90, amount: 45, accumulated_hours: null },
+      isFetching: false,
+    } as unknown as ReturnType<typeof attendanceHooks.useOvertimeValuationPreview>)
+
+    const { getByTestId } = render(<OvertimeDecisionDialog {...defaultProps} />)
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    expect(getByTestId('overtime-preview').textContent).toContain('45')
+  })
+
+  it('shows the real error message when the preview fails (e.g. no LFT tiers configured)', () => {
+    vi.mocked(attendanceHooks.useOvertimeValuationPreview).mockReturnValue({
+      data: undefined,
+      isFetching: false,
+      isError: true,
+      error: new Error('No hay un tramo LFT configurado para las horas acumuladas de este empleado.'),
+    } as unknown as ReturnType<typeof attendanceHooks.useOvertimeValuationPreview>)
+
+    const { getByTestId, getByText, queryByText } = render(<OvertimeDecisionDialog {...defaultProps} />)
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    expect(getByText('No hay un tramo LFT configurado para las horas acumuladas de este empleado.')).toBeDefined()
+    expect(queryByText(/Completa los datos/)).toBeNull()
   })
 })
 

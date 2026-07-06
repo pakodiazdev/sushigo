@@ -259,6 +259,20 @@ describe('attendanceApi.overtimeDecision', () => {
     await attendanceApi.overtimeDecision('att-456', { authorize: false })
     expect(apiClient.patch).toHaveBeenCalledWith('/attendances/att-456/overtime-decision', { authorize: false })
   })
+
+  it('sends valuation_method and agreed_rate when authorizing with AGREED_RATE', async () => {
+    await attendanceApi.overtimeDecision('att-789', {
+      authorize: true,
+      valuation_method: 'AGREED_RATE',
+      agreed_rate: 90,
+    })
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/att-789/overtime-decision', {
+      authorize: true,
+      valuation_method: 'AGREED_RATE',
+      agreed_rate: 90,
+    })
+  })
 })
 
 // ── attendanceApi.markDayStatus ──────────────────────────────────────────────
@@ -326,5 +340,30 @@ describe('attendanceApi.closeDay', () => {
       branch_id: 1,
       close_time: '17:00',
     })
+  })
+})
+
+// ── attendanceApi.previewOvertimeValuation ──────────────────────────────────
+
+describe('attendanceApi.previewOvertimeValuation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls GET /attendances/{id}/overtime-preview with query params', async () => {
+    const mockResponse = {
+      data: { status: 200, data: { valuation_method: 'SALARY_FACTOR', rate_applied: 1.5, amount: 180, accumulated_hours: null } },
+    }
+    vi.mocked(apiClient.get).mockResolvedValueOnce(mockResponse as never)
+
+    const result = await attendanceApi.previewOvertimeValuation('att-123', {
+      valuation_method: 'SALARY_FACTOR',
+      agreed_factor: 1.5,
+    })
+
+    expect(apiClient.get).toHaveBeenCalledWith('/attendances/att-123/overtime-preview', {
+      params: { valuation_method: 'SALARY_FACTOR', agreed_factor: 1.5 },
+    })
+    expect(result).toEqual(mockResponse)
   })
 })

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useOvertimeDecision } from '@/services/attendance-hooks'
+import { useOvertimeDecision, useOvertimeValuationPreview } from '@/services/attendance-hooks'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ vi.mock('@/services/attendance-api', () => ({
     checkOut: vi.fn(),
     closeDay: vi.fn(),
     overtimeDecision: vi.fn(),
+    previewOvertimeValuation: vi.fn(),
   },
 }))
 
@@ -107,6 +108,27 @@ describe('useOvertimeDecision', () => {
     expect(attendanceApi.overtimeDecision).toHaveBeenCalledWith('att-456', { authorize: false })
   })
 
+  it('passes valuation_method and agreed_rate through to attendanceApi.overtimeDecision', async () => {
+    vi.mocked(attendanceApi.overtimeDecision).mockResolvedValueOnce(mockAuthorizeResponse as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useOvertimeDecision(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        attendance_id: 'att-789',
+        authorize: true,
+        valuation_method: 'AGREED_RATE',
+        agreed_rate: 90,
+      })
+    })
+
+    expect(attendanceApi.overtimeDecision).toHaveBeenCalledWith('att-789', {
+      authorize: true,
+      valuation_method: 'AGREED_RATE',
+      agreed_rate: 90,
+    })
+  })
+
   it('shows success toast with "autorizadas" message when authorize=true', async () => {
     vi.mocked(attendanceApi.overtimeDecision).mockResolvedValueOnce(mockAuthorizeResponse as never)
     const { wrapper } = makeWrapper()
@@ -171,5 +193,48 @@ describe('useOvertimeDecision', () => {
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ['attendances', 'daily'] })
     )
+  })
+})
+
+// ── useOvertimeValuationPreview ─────────────────────────────────────────────────
+
+describe('useOvertimeValuationPreview', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls attendanceApi.previewOvertimeValuation with attendanceId and params', async () => {
+    vi.mocked(attendanceApi.previewOvertimeValuation).mockResolvedValueOnce({
+      data: { status: 200, data: { valuation_method: 'AGREED_RATE', rate_applied: 90, amount: 45, accumulated_hours: null } },
+    } as never)
+    const { wrapper } = makeWrapper()
+
+    const { result } = renderHook(
+      () => useOvertimeValuationPreview('att-1', { valuation_method: 'AGREED_RATE', agreed_rate: 90 }),
+      { wrapper },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(attendanceApi.previewOvertimeValuation).toHaveBeenCalledWith('att-1', {
+      valuation_method: 'AGREED_RATE',
+      agreed_rate: 90,
+    })
+    expect(result.current.data).toEqual({ valuation_method: 'AGREED_RATE', rate_applied: 90, amount: 45, accumulated_hours: null })
+  })
+
+  it('does not call the API when attendanceId is null', () => {
+    const { wrapper } = makeWrapper()
+    renderHook(
+      () => useOvertimeValuationPreview(null, { valuation_method: 'AGREED_RATE', agreed_rate: 90 }),
+      { wrapper },
+    )
+    expect(attendanceApi.previewOvertimeValuation).not.toHaveBeenCalled()
+  })
+
+  it('does not call the API when params is null', () => {
+    const { wrapper } = makeWrapper()
+    renderHook(() => useOvertimeValuationPreview('att-1', null), { wrapper })
+    expect(attendanceApi.previewOvertimeValuation).not.toHaveBeenCalled()
   })
 })

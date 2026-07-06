@@ -159,8 +159,14 @@ describe("Overtime Decision — Authorize (Pagar)", () => {
     cy.contains("Carlos Mendoza").should("be.visible");
     cy.contains("35 min extra").should("be.visible");
 
-    // Click "Pagar horas extra"
+    // Click "Pagar horas extra" — opens the valuation method step
     cy.get("[data-testid='btn-authorize-overtime']").click();
+    cy.contains("Método de valoración").should("be.visible");
+
+    // Choose an agreed rate for this specific case (e.g. an exceptional accommodation)
+    cy.get("select#valuation_method").select("AGREED_RATE");
+    cy.get("input#agreed_rate").type("90");
+    cy.get("[data-testid='btn-confirm-valuation']").click();
 
     cy.wait("@overtimeDecision").its("response.statusCode").should("eq", 200);
     cy.wait("@refetchAfterDecision");
@@ -169,6 +175,97 @@ describe("Overtime Decision — Authorize (Pagar)", () => {
     getCard("Mendoza", "Carlos").within(() => {
       cy.contains("Pagadas", { timeout: 10_000 }).should("be.visible");
       cy.get("[data-testid='btn-overtime-decision']").should("not.exist");
+    });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 3. Authorize overtime valued per LFT tier (Proporcional LFT)
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("Overtime Decision — LFT Proportional tier", () => {
+  it("autoriza usando el tramo LFT configurado y calcula el monto automáticamente", () => {
+    // Seed a single unbounded LFT tier (factor 2) so the decision resolves without a manual rate.
+    // Reuses the admin session already established by the beforeEach loginByApi call.
+    cy.get("@authStorage").then((authStorage) => {
+      const { token } = (authStorage as unknown as { state: { token: string } }).state;
+      cy.request({
+        method: "PUT",
+        url: `${Cypress.env("apiUrl")}/overtime/lft-tiers`,
+        headers: { Authorization: `Bearer ${token}` },
+        body: { tiers: [{ factor: 2, up_to_hours: null }] },
+      });
+    });
+
+    setupAttendanceWithOvertime("López", "Pedro");
+
+    getCard("López", "Pedro").within(() => {
+      cy.get("[data-testid='btn-overtime-decision']", { timeout: 10_000 })
+        .should("be.visible")
+        .and("contain", "35 min");
+    });
+
+    cy.intercept("PATCH", "**/attendances/**/overtime-decision").as("overtimeDecision");
+    cy.intercept("GET", "**/attendances/today*").as("refetchAfterDecision");
+
+    getCard("López", "Pedro")
+      .find("[data-testid='btn-overtime-decision']")
+      .click();
+
+    cy.get("[data-testid='btn-authorize-overtime']").click();
+    cy.contains("Método de valoración").should("be.visible");
+
+    // LFT_PROPORTIONAL is the default selection — just confirm
+    cy.get("[data-testid='btn-confirm-valuation']").click();
+
+    cy.wait("@overtimeDecision").its("response.statusCode").should("eq", 200);
+    cy.wait("@refetchAfterDecision");
+
+    getCard("López", "Pedro").within(() => {
+      cy.contains("Pagadas", { timeout: 10_000 }).should("be.visible");
+    });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 3b. Authorize overtime valued with a custom factor over salary + live preview
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("Overtime Decision — Salary Factor with live preview", () => {
+  it("muestra el preview del monto y autoriza usando el factor sobre salario", () => {
+    setupAttendanceWithOvertime("Ramírez", "Ana");
+
+    getCard("Ramírez", "Ana").within(() => {
+      cy.get("[data-testid='btn-overtime-decision']", { timeout: 10_000 })
+        .should("be.visible")
+        .and("contain", "35 min");
+    });
+
+    cy.intercept("GET", "**/attendances/**/overtime-preview*").as("overtimePreview");
+    cy.intercept("PATCH", "**/attendances/**/overtime-decision").as("overtimeDecision");
+    cy.intercept("GET", "**/attendances/today*").as("refetchAfterDecision");
+
+    getCard("Ramírez", "Ana")
+      .find("[data-testid='btn-overtime-decision']")
+      .click();
+
+    cy.get("[data-testid='btn-authorize-overtime']").click();
+    cy.contains("Método de valoración").should("be.visible");
+
+    cy.get("select#valuation_method").select("SALARY_FACTOR");
+    cy.get("input#agreed_factor").type("1.5");
+
+    // The live preview should resolve to a non-empty estimated amount
+    cy.wait("@overtimePreview");
+    cy.get("[data-testid='overtime-preview']").should("contain", "Monto estimado");
+
+    cy.get("[data-testid='btn-confirm-valuation']").click();
+
+    cy.wait("@overtimeDecision").its("response.statusCode").should("eq", 200);
+    cy.wait("@refetchAfterDecision");
+
+    getCard("Ramírez", "Ana").within(() => {
+      cy.contains("Pagadas", { timeout: 10_000 }).should("be.visible");
     });
   });
 });
