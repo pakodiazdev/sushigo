@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DayStatus;
+use App\Enums\OvertimeValuationMethod;
 use App\Models\Concerns\Auditable;
 use App\Support\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +30,9 @@ class Attendance extends Model
         'overtime_authorized',
         'overtime_authorized_by',
         'overtime_authorized_at',
+        'overtime_valuation_method',
+        'overtime_rate_applied',
+        'overtime_amount',
         'day_status',
         'confirmed_by',
         'meta',
@@ -46,6 +50,9 @@ class Attendance extends Model
         'overtime_minutes' => 'integer',
         'overtime_authorized' => 'boolean',
         'overtime_authorized_at' => 'datetime',
+        'overtime_valuation_method' => OvertimeValuationMethod::class,
+        'overtime_rate_applied' => 'decimal:2',
+        'overtime_amount' => 'decimal:2',
         'day_status' => DayStatus::class,
         'meta' => 'array',
     ];

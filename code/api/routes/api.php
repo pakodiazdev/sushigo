@@ -4,6 +4,7 @@ use App\Contracts\PasswordResetTokenRecorder;
 use App\Http\Controllers\Api\V1\Attendances\CloseDayController;
 use App\Http\Controllers\Api\V1\Attendances\MarkDayStatusController;
 use App\Http\Controllers\Api\V1\Attendances\OvertimeDecisionController;
+use App\Http\Controllers\Api\V1\Attendances\PreviewOvertimeValuationController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckInController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
@@ -82,6 +83,8 @@ use App\Http\Controllers\Api\V1\OperatingUnit\UpdateOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\AddUserToOperatingUnitController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\ListOperatingUnitUsersController;
 use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitController;
+use App\Http\Controllers\Api\V1\Overtime\ListOvertimeLftTiersController;
+use App\Http\Controllers\Api\V1\Overtime\UpdateOvertimeLftTiersController;
 use App\Http\Controllers\Api\V1\PayPeriods\ConfirmCloseController;
 use App\Http\Controllers\Api\V1\PayPeriods\PreviewPayPeriodController;
 use App\Http\Controllers\Api\V1\Punctuality\AssignBonusConfigController;
@@ -347,6 +350,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('{id}/lunch-return', RegisterLunchReturnController::class)->name('lunch-return');
         Route::patch('{id}/check-out', RegisterCheckOutController::class)->name('check-out');
         Route::patch('{id}/overtime-decision', OvertimeDecisionController::class)->name('overtime-decision');
+        Route::get('{id}/overtime-preview', PreviewOvertimeValuationController::class)->name('overtime-preview');
     });
 
     // Reports Module
@@ -376,6 +380,12 @@ Route::prefix('v1')->group(function () {
         Route::put('/ranges', UpdatePunctualityRangesController::class)->name('ranges.update')->middleware('permission:punctuality.manage');
         Route::get('/bonus-groups', ListPunctualityBonusGroupsController::class)->name('bonus-groups.index')->middleware('permission:punctuality.manage|employees.update');
         Route::post('/bonus-groups', CreatePunctualityBonusGroupController::class)->name('bonus-groups.store')->middleware('permission:punctuality.manage');
+    });
+
+    // Overtime Module (All Protected)
+    Route::middleware('auth:api')->prefix('overtime')->name('overtime.')->group(function () {
+        Route::get('/lft-tiers', ListOvertimeLftTiersController::class)->name('lft-tiers.index')->middleware('permission:overtime.manage');
+        Route::put('/lft-tiers', UpdateOvertimeLftTiersController::class)->name('lft-tiers.update')->middleware('permission:overtime.manage');
     });
 
     // Holidays Module (All Protected — requires holidays.manage)

@@ -207,6 +207,8 @@ class AttendanceEditPermissionsTest extends TestCase
 
         $response = $this->patchJson("/api/v1/attendances/{$attendance->public_id}/overtime-decision", [
             'authorize' => true,
+            'valuation_method' => 'AGREED_RATE',
+            'agreed_rate' => 90,
             'reason' => 'Autorización retroactiva',
         ]);
 
