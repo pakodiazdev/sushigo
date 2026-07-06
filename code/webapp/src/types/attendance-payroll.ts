@@ -149,3 +149,16 @@ export interface VacationSummary {
   seniority_years: number
   next_anniversary_date: string | null
 }
+
+// ── Overtime LFT Tiers ───────────────────────────────────────────────────────
+
+export interface OvertimeLftTier {
+  id: string
+  factor: number
+  up_to_hours: number | null
+  sort_order: number
+}
+
+export interface UpdateOvertimeLftTiersPayload {
+  tiers: { factor: number; up_to_hours: number | null }[]
+}

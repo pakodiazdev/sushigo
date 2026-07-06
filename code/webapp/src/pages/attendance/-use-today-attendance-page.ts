@@ -6,7 +6,7 @@ import { getAttendancePhase } from '@/types/attendance'
 import { todayDateCdmx } from '@/lib/datetime'
 import { timeToIsoWithOffset } from '@/lib/timezone'
 import { useBusinessDate } from '@/stores/clock.store'
-import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
 
 // Re-export from shared utilities for backwards compatibility
@@ -96,11 +96,11 @@ export interface UseTodayAttendancePageResult {
   isRecordingOvertimeDecision: boolean
   openOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
   closeOvertimeDecision: () => void
-  confirmOvertimeDecision: (authorize: boolean) => void
+  confirmOvertimeDecision: (authorize: boolean, valuationMethod?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
   // Bulk overtime queue (from bulk day close)
   currentBulkOvertime: OvertimePendingEntry | null
   enqueueBulkOvertime: (entries: OvertimePendingEntry[]) => void
-  confirmBulkOvertimeDecision: (authorize: boolean) => void
+  confirmBulkOvertimeDecision: (authorize: boolean, valuationMethod?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
   closeBulkOvertimeDecision: () => void
   // Mark day status action
   isMarkingDayStatus: boolean
@@ -240,10 +240,21 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     setPendingOvertimeDecision(null)
   }, [])
 
-  const confirmOvertimeDecision = useCallback((authorize: boolean) => {
+  const confirmOvertimeDecision = useCallback((
+    authorize: boolean,
+    valuationMethod?: OvertimeValuationMethod,
+    agreedRate?: number,
+    agreedFactor?: number,
+  ) => {
     if (!pendingOvertimeDecision) return
     overtimeDecisionMutation.mutate(
-      { attendance_id: pendingOvertimeDecision.attendanceId, authorize },
+      {
+        attendance_id: pendingOvertimeDecision.attendanceId,
+        authorize,
+        valuation_method: valuationMethod,
+        agreed_rate: agreedRate,
+        agreed_factor: agreedFactor,
+      },
       { onSettled: closeOvertimeDecision }
     )
   }, [pendingOvertimeDecision, overtimeDecisionMutation, closeOvertimeDecision])
@@ -261,10 +272,21 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     setBulkOvertimeQueue(queue => [...queue, ...entries])
   }, [])
 
-  const confirmBulkOvertimeDecision = useCallback((authorize: boolean) => {
+  const confirmBulkOvertimeDecision = useCallback((
+    authorize: boolean,
+    valuationMethod?: OvertimeValuationMethod,
+    agreedRate?: number,
+    agreedFactor?: number,
+  ) => {
     if (!currentBulkOvertime) return
     overtimeDecisionMutation.mutate(
-      { attendance_id: currentBulkOvertime.attendance_id, authorize },
+      {
+        attendance_id: currentBulkOvertime.attendance_id,
+        authorize,
+        valuation_method: valuationMethod,
+        agreed_rate: agreedRate,
+        agreed_factor: agreedFactor,
+      },
       { onSuccess: () => setBulkOvertimeQueue(q => q.slice(1)) },
     )
   }, [currentBulkOvertime, overtimeDecisionMutation])

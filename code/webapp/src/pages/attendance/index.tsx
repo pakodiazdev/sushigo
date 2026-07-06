@@ -27,7 +27,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { todayDateCdmx } from '@/lib/datetime'
 import { useBusinessDate } from '@/stores/clock.store'
 import type { PendingAttendanceData } from './-use-today-attendance-page'
-import type { TodayAttendanceEmployee, OvertimePendingEntry } from '@/types/attendance'
+import type { TodayAttendanceEmployee, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
 
 // ── Module-level helpers (keep complexity out of the component) ───────────────
 
@@ -45,9 +45,10 @@ function pendingName(pending: PendingAttendanceData | null): string {
 
 interface OvertimeDialogState {
   isOpen: boolean
+  attendanceId: string | null
   employeeName: string
   overtimeMinutes: number
-  onAuthorize: () => void
+  onAuthorize: (method: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
   onReject: () => void
   onClose: () => void
 }
@@ -57,26 +58,28 @@ function resolveOvertimeDialog(
   individual: PendingAttendanceData | null,
   bulk: OvertimePendingEntry | null,
   individualMinutes: number,
-  confirmIndividual: (auth: boolean) => void,
+  confirmIndividual: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void,
   closeIndividual: () => void,
-  confirmBulk: (auth: boolean) => void,
+  confirmBulk: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void,
   closeBulk: () => void,
 ): OvertimeDialogState {
   if (individual) {
     return {
       isOpen: true,
+      attendanceId: individual.attendanceId,
       employeeName: `${individual.employee.first_name} ${individual.employee.last_name}`,
       overtimeMinutes: individualMinutes,
-      onAuthorize: () => confirmIndividual(true),
+      onAuthorize: (method, agreedRate, agreedFactor) => confirmIndividual(true, method, agreedRate, agreedFactor),
       onReject: () => confirmIndividual(false),
       onClose: closeIndividual,
     }
   }
   return {
     isOpen: !!bulk,
+    attendanceId: bulk?.attendance_id ?? null,
     employeeName: bulk?.employee_name ?? '',
     overtimeMinutes: bulk?.overtime_minutes ?? 0,
-    onAuthorize: () => confirmBulk(true),
+    onAuthorize: (method, agreedRate, agreedFactor) => confirmBulk(true, method, agreedRate, agreedFactor),
     onReject: () => confirmBulk(false),
     onClose: closeBulk,
   }

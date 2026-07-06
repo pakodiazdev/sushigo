@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse } from '@/types/attendance'
+import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse, OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
 
 export const attendanceApi = {
   /**
@@ -51,12 +51,40 @@ export const attendanceApi = {
 
   /**
    * PATCH /attendances/{id}/overtime-decision
-   * Body: { authorize: boolean, reason?: string }
+   * Body: { authorize: boolean, valuation_method?, agreed_rate?, agreed_factor?, reason? }
+   * valuation_method is required when authorize=true; agreed_rate/agreed_factor are
+   * required depending on the chosen method.
    */
-  overtimeDecision: (attendanceId: string, data: { authorize: boolean; reason?: string }) =>
+  overtimeDecision: (
+    attendanceId: string,
+    data: {
+      authorize: boolean
+      valuation_method?: OvertimeValuationMethod
+      agreed_rate?: number
+      agreed_factor?: number
+      reason?: string
+    },
+  ) =>
     apiClient.patch<{ status: number; data: AttendanceRecord }>(
       `/attendances/${attendanceId}/overtime-decision`,
       data,
+    ),
+
+  /**
+   * GET /attendances/{id}/overtime-preview?valuation_method=...&agreed_rate=...&agreed_factor=...
+   * Read-only preview of the amount that would be paid — nothing is persisted.
+   */
+  previewOvertimeValuation: (
+    attendanceId: string,
+    params: {
+      valuation_method: OvertimeValuationMethod
+      agreed_rate?: number
+      agreed_factor?: number
+    },
+  ) =>
+    apiClient.get<{ status: number; data: OvertimeValuationPreview }>(
+      `/attendances/${attendanceId}/overtime-preview`,
+      { params },
     ),
 
   /**

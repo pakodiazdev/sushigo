@@ -25,6 +25,9 @@ describe('getAttendancePhase', () => {
             overtime_minutes: 0,
             overtime_authorized: false,
             overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('pending')
@@ -44,6 +47,9 @@ describe('getAttendancePhase', () => {
             overtime_minutes: 0,
             overtime_authorized: false,
             overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('done')
@@ -63,6 +69,9 @@ describe('getAttendancePhase', () => {
             overtime_minutes: 0,
             overtime_authorized: false,
             overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('checked-in')
@@ -82,6 +91,9 @@ describe('getAttendancePhase', () => {
             overtime_minutes: 0,
             overtime_authorized: false,
             overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('at-lunch')
@@ -101,6 +113,9 @@ describe('getAttendancePhase', () => {
             overtime_minutes: 0,
             overtime_authorized: false,
             overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('returned')
@@ -120,6 +135,9 @@ describe('getAttendancePhase', () => {
             overtime_minutes: 0,
             overtime_authorized: false,
             overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('day-off')
@@ -139,6 +157,9 @@ describe('getAttendancePhase', () => {
             overtime_minutes: 0,
             overtime_authorized: false,
             overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('absence')
