@@ -136,6 +136,7 @@ class PermissionSeeder extends LockedSeeder
             // Asistencia — configuración
             'punctuality.manage' => ['label' => 'Gestionar rangos de puntualidad', 'group' => 'Asistencia'],
             'holidays.manage' => ['label' => 'Gestionar días festivos', 'group' => 'Asistencia'],
+            'overtime.manage' => ['label' => 'Gestionar tramos LFT de horas extra', 'group' => 'Asistencia'],
 
             // Configuración del sistema
             'settings.manage' => ['label' => 'Gestionar configuración del sistema', 'group' => 'Configuración'],
@@ -177,7 +178,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN)
-                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'settings.manage']);
+                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'settings.manage', 'overtime.manage']);
                     })
                     ->get()
             );

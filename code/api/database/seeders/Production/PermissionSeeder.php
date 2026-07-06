@@ -93,6 +93,7 @@ class PermissionSeeder extends LockedSeeder
             // Asistencia — configuración
             'punctuality.manage',
             'holidays.manage',
+            'overtime.manage',
 
             // Nómina
             'payroll.preview',
@@ -156,7 +157,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
-                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close']);
+                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'overtime.manage']);
                     })
                     ->get()
             );

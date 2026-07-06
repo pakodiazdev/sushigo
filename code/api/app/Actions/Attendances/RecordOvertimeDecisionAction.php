@@ -3,6 +3,7 @@
 namespace App\Actions\Attendances;
 
 use App\Enums\AuditAction;
+use App\Enums\OvertimeValuationMethod;
 use App\Models\Attendance;
 use App\Models\AttendanceAuditLog;
 use App\Models\User;
@@ -28,12 +29,13 @@ use Illuminate\Validation\ValidationException;
 class RecordOvertimeDecisionAction
 {
     public function __construct(
-        private readonly ApplicationClock $clock
+        private readonly ApplicationClock $clock,
+        private readonly ResolveOvertimeValuationAction $resolveValuation,
     ) {}
 
     /**
      * @param  Attendance  $attendance  Already-loaded attendance record
-     * @param  array{authorize: bool, reason?: string}  $data  Validated request data
+     * @param  array{authorize: bool, valuation_method?: string, agreed_rate?: float, agreed_factor?: float, reason?: string}  $data  Validated request data
      * @param  User  $decidedBy  Authenticated user recording the decision
      *
      * @throws ValidationException
@@ -45,6 +47,22 @@ class RecordOvertimeDecisionAction
         $authorize = (bool) $data['authorize'];
         $now = $this->clock->nowUtc();
 
+        $valuationMethod = null;
+        $rateApplied = null;
+        $amount = null;
+
+        if ($authorize) {
+            $valuationMethod = OvertimeValuationMethod::from($data['valuation_method']);
+            $resolved = ($this->resolveValuation)(
+                $attendance,
+                $valuationMethod,
+                isset($data['agreed_rate']) ? (float) $data['agreed_rate'] : null,
+                isset($data['agreed_factor']) ? (float) $data['agreed_factor'] : null,
+            );
+            $rateApplied = $resolved['rate_applied'];
+            $amount = $resolved['amount'];
+        }
+
         // Atomic update: only affects rows where no decision has been recorded yet.
         // If 0 rows are affected, a concurrent request already recorded the decision.
         $affected = Attendance::where('id', $attendance->id)
@@ -53,6 +71,9 @@ class RecordOvertimeDecisionAction
                 'overtime_authorized' => $authorize,
                 'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
                 'overtime_authorized_at' => $now,
+                'overtime_valuation_method' => $valuationMethod?->value,
+                'overtime_rate_applied' => $rateApplied,
+                'overtime_amount' => $amount,
             ]);
 
         if ($affected === 0) {
@@ -72,11 +93,17 @@ class RecordOvertimeDecisionAction
                 'overtime_authorized' => $attendance->getRawOriginal('overtime_authorized'),
                 'overtime_authorized_by' => $attendance->getRawOriginal('overtime_authorized_by'),
                 'overtime_authorized_at' => $attendance->getRawOriginal('overtime_authorized_at'),
+                'overtime_valuation_method' => $attendance->getRawOriginal('overtime_valuation_method'),
+                'overtime_rate_applied' => $attendance->getRawOriginal('overtime_rate_applied'),
+                'overtime_amount' => $attendance->getRawOriginal('overtime_amount'),
             ],
             'new_values' => [
                 'overtime_authorized' => $authorize,
                 'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
                 'overtime_authorized_at' => $now->toDateTimeString(),
+                'overtime_valuation_method' => $valuationMethod?->value,
+                'overtime_rate_applied' => $rateApplied,
+                'overtime_amount' => $amount,
             ],
             'user_id' => $decidedBy->id,
             'reason' => $data['reason'] ?? null,
