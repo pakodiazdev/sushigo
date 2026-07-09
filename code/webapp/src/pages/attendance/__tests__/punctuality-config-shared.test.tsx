@@ -38,7 +38,6 @@ vi.mock('@/lib/route-guards', () => ({
 }))
 
 import { PunctualityConfigSection } from '@/components/settings/punctuality-config-section'
-import { PunctualityConfigPage } from '../punctuality-config'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -222,30 +221,5 @@ describe('PunctualityConfigSection — bonus groups', () => {
             weekly_bonus_amount: 150,
             working_days_divisor: 6,
         }))
-    })
-})
-
-// ── PunctualityConfigPage (route) ────────────────────────────────────────────
-
-describe('PunctualityConfigPage', () => {
-    function renderPage() {
-        return render(<PunctualityConfigPage />, { wrapper: makeWrapper() })
-    }
-
-    it('shows the page-level loading header before ranges resolve', () => {
-        mockListRanges.mockReturnValue(new Promise(() => {}))
-        renderPage()
-
-        expect(screen.getByText('Configuración de Puntualidad')).toBeDefined()
-        expect(screen.getByText('Cargando configuración...')).toBeDefined()
-    })
-
-    it('renders the h2 heading and the saved-ranges preview once loaded', async () => {
-        renderPage()
-
-        await waitFor(() => expect(document.querySelector('h2')).not.toBeNull())
-        const headings = Array.from(document.querySelectorAll('h2')).map((h) => h.textContent)
-        expect(headings).toContain('Rangos de Puntualidad')
-        expect(screen.getByText(/Rangos actuales guardados:/)).toBeDefined()
     })
 })

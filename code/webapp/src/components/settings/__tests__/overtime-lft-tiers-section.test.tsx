@@ -22,15 +22,7 @@ vi.mock('@/components/ui/toast-context', () => ({
   useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
 }))
 
-vi.mock('@tanstack/react-router', () => ({
-  createFileRoute: () => () => ({ component: null }),
-}))
-
-vi.mock('@/lib/route-guards', () => ({
-  requirePermission: () => () => undefined,
-}))
-
-import { OvertimeLftTiersConfigPage } from '../overtime-lft-tiers-config'
+import { OvertimeLftTiersSection } from '../overtime-lft-tiers-section'
 
 function makeWrapper() {
   const qc = new QueryClient({
@@ -40,8 +32,8 @@ function makeWrapper() {
     React.createElement(QueryClientProvider, { client: qc }, children)
 }
 
-function renderPage() {
-  return render(<OvertimeLftTiersConfigPage />, { wrapper: makeWrapper() })
+function renderSection() {
+  return render(<OvertimeLftTiersSection />, { wrapper: makeWrapper() })
 }
 
 const fakeTiers: OvertimeLftTier[] = [
@@ -58,23 +50,22 @@ afterEach(() => {
   cleanup()
 })
 
-describe('OvertimeLftTiersConfigPage', () => {
-  it('shows the loading header before tiers resolve', () => {
+describe('OvertimeLftTiersSection', () => {
+  it('shows a loading message before tiers resolve', () => {
     mockList.mockReturnValue(new Promise(() => {}))
-    renderPage()
+    renderSection()
 
-    expect(screen.getByText('Tramos LFT de Horas Extra')).toBeDefined()
     expect(screen.getByText('Cargando configuración...')).toBeDefined()
   })
 
   it('renders one row per existing tier once loaded', async () => {
-    renderPage()
+    renderSection()
 
     await waitFor(() => expect(screen.getAllByLabelText('Eliminar tramo').length).toBe(2))
   })
 
   it('adds a new row when "Agregar tramo" is clicked', async () => {
-    renderPage()
+    renderSection()
 
     await waitFor(() => expect(screen.getAllByLabelText('Eliminar tramo').length).toBe(2))
     fireEvent.click(screen.getByText('Agregar tramo'))
@@ -84,14 +75,14 @@ describe('OvertimeLftTiersConfigPage', () => {
 
   it('disables the delete button when only one tier remains', async () => {
     mockList.mockResolvedValue({ data: { data: [fakeTiers[0]] } })
-    renderPage()
+    renderSection()
 
     await waitFor(() => expect(screen.getAllByLabelText('Eliminar tramo').length).toBe(1))
     expect((screen.getByLabelText('Eliminar tramo') as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('removes a row when its delete button is clicked', async () => {
-    renderPage()
+    renderSection()
 
     await waitFor(() => expect(screen.getAllByLabelText('Eliminar tramo').length).toBe(2))
     fireEvent.click(screen.getAllByLabelText('Eliminar tramo')[1]!)
@@ -101,7 +92,7 @@ describe('OvertimeLftTiersConfigPage', () => {
 
   it('enables submit and calls update after a field changes', async () => {
     mockUpdate.mockResolvedValue({ data: { data: fakeTiers } })
-    renderPage()
+    renderSection()
 
     await waitFor(() => expect(screen.getAllByLabelText('Eliminar tramo').length).toBe(2))
 

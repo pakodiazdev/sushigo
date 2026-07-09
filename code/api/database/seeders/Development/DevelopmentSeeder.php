@@ -3,6 +3,7 @@
 namespace Database\Seeders\Development;
 
 use Database\Seeders\HolidaySeeder;
+use Database\Seeders\OvertimeLftTierSeeder;
 use Database\Seeders\PunctualityBonusGroupSeeder;
 use Database\Seeders\PunctualityRangeSeeder;
 use Illuminate\Database\Seeder;
@@ -39,6 +40,7 @@ class DevelopmentSeeder extends Seeder
             AttendanceHistorySeeder::class,
             PunctualityRangeSeeder::class,
             PunctualityBonusGroupSeeder::class,
+            OvertimeLftTierSeeder::class,
             HolidayDefinitionSeeder::class,
             HolidaySeeder::class,
         ];
