@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Contracts\PasswordResetTokenRecorder;
 use Database\Seeders\Fakes\FakeEmployeesSeeder;
+use Database\Seeders\OvertimeLftTierSeeder;
 use Database\Seeders\PunctualityBonusGroupSeeder;
 use Database\Seeders\PunctualityRangeSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
@@ -38,6 +39,7 @@ class TestReset extends Command
             CoreTestSeeder::class,
             PunctualityRangeSeeder::class,
             PunctualityBonusGroupSeeder::class,
+            OvertimeLftTierSeeder::class,
         ],
         'attendance' => [
             AttendanceTestSeeder::class,

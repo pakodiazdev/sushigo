@@ -6,7 +6,7 @@
  * Seeder group: 'core' (always included — seeds PunctualityRangeSeeder with 5 default ranges)
  *
  * Happy path:
- *   1. Admin navigates to /attendance/punctuality-config via the sidebar.
+ *   1. Admin opens /configuracion and the "Puntualidad" tab.
  *   2. All 5 default ranges are rendered.
  *   3. Admin edits the first range bonus (100% → 95%) and saves — toast appears.
  *   4. Persisted value survives a page reload.
@@ -22,6 +22,12 @@ import users from '../fixtures/users.json'
 
 const { email: adminEmail, password: adminPassword } = users.admin
 
+function visitPuntualidadTab() {
+  cy.visitWithAuth('/configuracion')
+  cy.closeDevDebugger()
+  cy.contains('nav button', 'Puntualidad').click()
+}
+
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 })
@@ -31,18 +37,13 @@ describe('Punctuality Ranges Config — admin happy path', () => {
     cy.loginByApi(adminEmail, adminPassword)
   })
 
-  it('navigates to the config page via the Asistencia sidebar', () => {
-    cy.visitWithAuth('/')
-    cy.closeDevDebugger()
-    cy.contains('Asistencia').click()
-    cy.contains('Puntualidad').click()
-    cy.url().should('include', '/attendance/punctuality-config', { timeout: 10_000 })
+  it('opens the Puntualidad tab on the Configuración page', () => {
+    visitPuntualidadTab()
     cy.contains('Rangos de Puntualidad', { timeout: 10_000 }).should('be.visible')
   })
 
   it('displays all 5 default ranges', () => {
-    cy.visitWithAuth('/attendance/punctuality-config')
-    cy.closeDevDebugger()
+    visitPuntualidadTab()
     cy.contains('Rangos de Puntualidad', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').find('[type="number"]').should('have.length', 10) // 5 rows × 2 inputs (threshold + bonus)
@@ -53,8 +54,7 @@ describe('Punctuality Ranges Config — admin happy path', () => {
   })
 
   it('saves an updated bonus percentage and shows a success toast', () => {
-    cy.visitWithAuth('/attendance/punctuality-config')
-    cy.closeDevDebugger()
+    visitPuntualidadTab()
     cy.contains('Rangos de Puntualidad', { timeout: 10_000 }).should('be.visible')
 
     // Edit first row's bonus (second input, index 1)
@@ -65,16 +65,14 @@ describe('Punctuality Ranges Config — admin happy path', () => {
   })
 
   it('persists the saved bonus after a page reload', () => {
-    cy.visitWithAuth('/attendance/punctuality-config')
-    cy.closeDevDebugger()
+    visitPuntualidadTab()
     cy.contains('Rangos de Puntualidad', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').find('[type="number"]').eq(1).should('have.value', '95')
   })
 
   it('adds a new level and shows one more row', () => {
-    cy.visitWithAuth('/attendance/punctuality-config')
-    cy.closeDevDebugger()
+    visitPuntualidadTab()
     cy.contains('Rangos de Puntualidad', { timeout: 10_000 }).should('be.visible')
 
     // Count initial rows (5 default ranges = 10 number inputs)
@@ -87,8 +85,7 @@ describe('Punctuality Ranges Config — admin happy path', () => {
   })
 
   it('removes a level and shows one fewer row', () => {
-    cy.visitWithAuth('/attendance/punctuality-config')
-    cy.closeDevDebugger()
+    visitPuntualidadTab()
     cy.contains('Rangos de Puntualidad', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').find('[type="number"]').should('have.length', 10)

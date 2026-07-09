@@ -34,8 +34,6 @@ import { Route as InventoryItemVariantsRouteImport } from './pages/inventory/ite
 import { Route as CashTerminalsRouteImport } from './pages/cash/terminals'
 import { Route as CashRegistersRouteImport } from './pages/cash/registers'
 import { Route as CashBankAccountsRouteImport } from './pages/cash/bank-accounts'
-import { Route as AttendancePunctualityConfigRouteImport } from './pages/attendance/punctuality-config'
-import { Route as AttendanceOvertimeLftTiersConfigRouteImport } from './pages/attendance/overtime-lft-tiers-config'
 import { Route as AttendanceReportsTodayRouteImport } from './pages/attendance/reports/today'
 import { Route as AttendancePayrollCloseRouteImport } from './pages/attendance/payroll/close'
 import { Route as AttendanceConfigHolidaysRouteImport } from './pages/attendance/config/holidays'
@@ -165,18 +163,6 @@ const CashBankAccountsRoute = CashBankAccountsRouteImport.update({
   path: '/bank-accounts',
   getParentRoute: () => CashRoute,
 } as any)
-const AttendancePunctualityConfigRoute =
-  AttendancePunctualityConfigRouteImport.update({
-    id: '/attendance/punctuality-config',
-    path: '/attendance/punctuality-config',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AttendanceOvertimeLftTiersConfigRoute =
-  AttendanceOvertimeLftTiersConfigRouteImport.update({
-    id: '/attendance/overtime-lft-tiers-config',
-    path: '/attendance/overtime-lft-tiers-config',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AttendanceReportsTodayRoute = AttendanceReportsTodayRouteImport.update({
   id: '/attendance/reports/today',
   path: '/attendance/reports/today',
@@ -211,8 +197,6 @@ export interface FileRoutesByFullPath {
   '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
-  '/attendance/overtime-lft-tiers-config': typeof AttendanceOvertimeLftTiersConfigRoute
-  '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
   '/cash/terminals': typeof CashTerminalsRoute
@@ -241,8 +225,6 @@ export interface FileRoutesByTo {
   '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
-  '/attendance/overtime-lft-tiers-config': typeof AttendanceOvertimeLftTiersConfigRoute
-  '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
   '/cash/terminals': typeof CashTerminalsRoute
@@ -274,8 +256,6 @@ export interface FileRoutesById {
   '/solicitudes': typeof SolicitudesRoute
   '/stock-dashboard': typeof StockDashboardRoute
   '/unauthorized': typeof UnauthorizedRoute
-  '/attendance/overtime-lft-tiers-config': typeof AttendanceOvertimeLftTiersConfigRoute
-  '/attendance/punctuality-config': typeof AttendancePunctualityConfigRoute
   '/cash/bank-accounts': typeof CashBankAccountsRoute
   '/cash/registers': typeof CashRegistersRoute
   '/cash/terminals': typeof CashTerminalsRoute
@@ -308,8 +288,6 @@ export interface FileRouteTypes {
     | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
-    | '/attendance/overtime-lft-tiers-config'
-    | '/attendance/punctuality-config'
     | '/cash/bank-accounts'
     | '/cash/registers'
     | '/cash/terminals'
@@ -338,8 +316,6 @@ export interface FileRouteTypes {
     | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
-    | '/attendance/overtime-lft-tiers-config'
-    | '/attendance/punctuality-config'
     | '/cash/bank-accounts'
     | '/cash/registers'
     | '/cash/terminals'
@@ -370,8 +346,6 @@ export interface FileRouteTypes {
     | '/solicitudes'
     | '/stock-dashboard'
     | '/unauthorized'
-    | '/attendance/overtime-lft-tiers-config'
-    | '/attendance/punctuality-config'
     | '/cash/bank-accounts'
     | '/cash/registers'
     | '/cash/terminals'
@@ -403,8 +377,6 @@ export interface RootRouteChildren {
   SolicitudesRoute: typeof SolicitudesRoute
   StockDashboardRoute: typeof StockDashboardRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
-  AttendanceOvertimeLftTiersConfigRoute: typeof AttendanceOvertimeLftTiersConfigRoute
-  AttendancePunctualityConfigRoute: typeof AttendancePunctualityConfigRoute
   AttendanceIndexRoute: typeof AttendanceIndexRoute
   AttendanceConfigHolidaysRoute: typeof AttendanceConfigHolidaysRoute
   AttendancePayrollCloseRoute: typeof AttendancePayrollCloseRoute
@@ -588,20 +560,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CashBankAccountsRouteImport
       parentRoute: typeof CashRoute
     }
-    '/attendance/punctuality-config': {
-      id: '/attendance/punctuality-config'
-      path: '/attendance/punctuality-config'
-      fullPath: '/attendance/punctuality-config'
-      preLoaderRoute: typeof AttendancePunctualityConfigRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/attendance/overtime-lft-tiers-config': {
-      id: '/attendance/overtime-lft-tiers-config'
-      path: '/attendance/overtime-lft-tiers-config'
-      fullPath: '/attendance/overtime-lft-tiers-config'
-      preLoaderRoute: typeof AttendanceOvertimeLftTiersConfigRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/attendance/reports/today': {
       id: '/attendance/reports/today'
       path: '/attendance/reports/today'
@@ -677,8 +635,6 @@ const rootRouteChildren: RootRouteChildren = {
   SolicitudesRoute: SolicitudesRoute,
   StockDashboardRoute: StockDashboardRoute,
   UnauthorizedRoute: UnauthorizedRoute,
-  AttendanceOvertimeLftTiersConfigRoute: AttendanceOvertimeLftTiersConfigRoute,
-  AttendancePunctualityConfigRoute: AttendancePunctualityConfigRoute,
   AttendanceIndexRoute: AttendanceIndexRoute,
   AttendanceConfigHolidaysRoute: AttendanceConfigHolidaysRoute,
   AttendancePayrollCloseRoute: AttendancePayrollCloseRoute,
