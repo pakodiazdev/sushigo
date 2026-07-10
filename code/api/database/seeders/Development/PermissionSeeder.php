@@ -28,13 +28,15 @@ class PermissionSeeder extends LockedSeeder
 
     /**
      * Self-service Solicitudes access — every employee can view/create/cancel
-     * their own requests, but never approve (that stays manager/admin-only,
-     * granted via EMPLOYEE_REQUESTS_PATTERN above).
+     * their own requests and request their own vacations, but never approve
+     * (that stays manager/admin-only, granted via EMPLOYEE_REQUESTS_PATTERN /
+     * VACATION_REQUESTS_PATTERN above).
      */
     private const SELF_SERVICE_REQUESTS_PERMISSIONS = [
         'employee-requests.view',
         'employee-requests.create',
         'employee-requests.cancel',
+        'vacation-requests.request',
     ];
 
     private const GROUP_INVENTARIO = 'Inventario';

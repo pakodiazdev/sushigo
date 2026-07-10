@@ -10,6 +10,7 @@ export function useSolicitudesPage() {
   const [activeTab, setActiveTab] = useState<TabId>('mine')
   const [showExtraDayForm, setShowExtraDayForm] = useState(false)
   const [showLeaveForm, setShowLeaveForm] = useState(false)
+  const [showVacationForm, setShowVacationForm] = useState(false)
 
   const { data: pendingCount = 0 } = usePendingRequestsCount({ enabled: canApprove })
   const { data: myEmployee, isLoading: isLoadingEmployee, isError: isEmployeeError } = useMyEmployee()
@@ -25,6 +26,9 @@ export function useSolicitudesPage() {
     showLeaveForm,
     openLeaveForm: () => setShowLeaveForm(true),
     closeLeaveForm: () => setShowLeaveForm(false),
+    showVacationForm,
+    openVacationForm: () => setShowVacationForm(true),
+    closeVacationForm: () => setShowVacationForm(false),
     myEmployeeId: myEmployee?.id,
     isLoadingEmployee,
     isEmployeeError,

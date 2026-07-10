@@ -299,9 +299,11 @@ Route::prefix('v1')->group(function () {
         // Negotiated extra days history endpoints
         Route::get('/{employee}/negotiated-extra-days', ListNegotiatedExtraDaysController::class)->name('employees.negotiated-extra-days.list')->middleware('permission:employees.view');
         // Vacation entitlement endpoints (auto-generated on read, no manual registration)
-        Route::get('/{employee}/vacation-entitlements', ListVacationEntitlementsController::class)->name('employees.vacation-entitlements.list')->middleware('permission:employees.view');
-        // Vacation request history endpoints
-        Route::get('/{employee}/vacation-requests', ListEmployeeVacationRequestsController::class)->name('employees.vacation-requests.list')->middleware('permission:employees.view');
+        // employees.view sees any employee; vacation-requests.request only unlocks the route,
+        // the controller itself restricts those callers to their own linked employee.
+        Route::get('/{employee}/vacation-entitlements', ListVacationEntitlementsController::class)->name('employees.vacation-entitlements.list')->middleware('permission:employees.view|vacation-requests.request');
+        // Vacation request history endpoints (same self-service scoping as above)
+        Route::get('/{employee}/vacation-requests', ListEmployeeVacationRequestsController::class)->name('employees.vacation-requests.list')->middleware('permission:employees.view|vacation-requests.request');
         // Direct permission management
         Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
         Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');

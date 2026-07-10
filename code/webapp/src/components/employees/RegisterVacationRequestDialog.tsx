@@ -5,6 +5,7 @@ import { Controller } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { FormField, Textarea } from '@/components/ui/form-fields'
 import { MultiDateCalendar } from '@/components/ui/multi-date-calendar'
+import { useAuthStore } from '@/stores/auth.store'
 import { useRegisterVacationRequestDialog } from './use-register-vacation-request-dialog'
 import type { RegisterVacationRequestEmployee } from './use-register-vacation-request-dialog'
 
@@ -51,6 +52,9 @@ export function RegisterVacationRequestDialog({
   })
 
   const { register, control, formState: { errors } } = form
+
+  const { can } = useAuthStore()
+  const willAutoApprove = can('vacation-requests.approve')
 
   // Animation
   useEffect(() => {
@@ -115,7 +119,11 @@ export function RegisterVacationRequestDialog({
               Solicitar vacaciones
             </h3>
             <p className="mt-0.5 text-sm text-muted-foreground">{employeeName}</p>
-            <p className="mt-0.5 text-xs text-amber-600">Solicitud — requiere aprobación</p>
+            {willAutoApprove ? (
+              <p className="mt-0.5 text-xs text-emerald-600">Se registrará como aprobada de inmediato</p>
+            ) : (
+              <p className="mt-0.5 text-xs text-amber-600">Solicitud — requiere aprobación</p>
+            )}
           </div>
           <button
             type="button"
@@ -186,7 +194,7 @@ export function RegisterVacationRequestDialog({
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Solicitar vacaciones
+              {willAutoApprove ? 'Registrar vacaciones' : 'Solicitar vacaciones'}
             </Button>
           </div>
         </form>

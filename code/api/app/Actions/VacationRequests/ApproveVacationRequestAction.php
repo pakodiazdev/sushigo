@@ -3,8 +3,6 @@
 namespace App\Actions\VacationRequests;
 
 use App\Actions\VacationRequests\Concerns\VacationRequestGuards;
-use App\Enums\VacationRequestStatus;
-use App\Models\VacationEntitlement;
 use App\Models\VacationRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -40,17 +38,7 @@ class ApproveVacationRequestAction
             $this->guardNoExistingWorkedAttendance($vacationRequest->employee_id, $dates);
             $this->guardNoOverlappingApprovedVacation($vacationRequest->employee_id, $dates, $vacationRequest->id);
 
-            VacationEntitlement::where('id', $vacationRequest->vacation_entitlement_id)
-                ->lockForUpdate()
-                ->increment('used_days', $vacationRequest->days_count);
-
-            $vacationRequest->update([
-                'status' => VacationRequestStatus::APPROVED,
-                'approved_by' => $approvedById,
-                'approved_at' => now(),
-            ]);
-
-            $this->createAttendanceRecords($vacationRequest->employee_id, $dates);
+            $this->finalizeApproval($vacationRequest, $dates, $approvedById);
 
             return $vacationRequest;
         });

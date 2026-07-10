@@ -14,6 +14,9 @@ class ListVacationEntitlementsController extends Controller
 
     public function __invoke(Employee $employee): ResponseEntity
     {
+        $user = auth()->user();
+        abort_unless($user->can('employees.view') || $employee->user_id === $user->id, 403);
+
         $this->entitlements->generateMissing($employee);
 
         $entitlements = $employee->vacationEntitlements()

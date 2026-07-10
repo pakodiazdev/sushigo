@@ -6,6 +6,7 @@ import { RequestTypeBar } from '@/components/solicitudes/RequestTypeBar'
 import { SolicitudesLayout } from '@/components/solicitudes/SolicitudesLayout'
 import { ExtraDayRequestForm } from '@/components/solicitudes/extra-day-request/extra-day-request-form'
 import { LeaveRequestForm } from '@/components/solicitudes/leave-request/leave-request-form'
+import { VacationRequestForm } from '@/components/solicitudes/vacation-request/vacation-request-form'
 import { MyRequestsList } from '@/components/solicitudes/my-requests/my-requests-list'
 import { PendingRequestsList } from '@/components/solicitudes/pending-requests/pending-requests-list'
 import { useSolicitudesPage } from '@/components/solicitudes/use-solicitudes-page'
@@ -28,6 +29,9 @@ export function SolicitudesPage() {
     showLeaveForm,
     openLeaveForm,
     closeLeaveForm,
+    showVacationForm,
+    openVacationForm,
+    closeVacationForm,
     myEmployeeId,
     isLoadingEmployee,
     isEmployeeError,
@@ -70,7 +74,11 @@ export function SolicitudesPage() {
       />
 
       <div className="mt-6">
-        <RequestTypeBar onExtraDayClick={openExtraDayForm} onLeaveClick={openLeaveForm} />
+        <RequestTypeBar
+          onExtraDayClick={openExtraDayForm}
+          onLeaveClick={openLeaveForm}
+          onVacationClick={openVacationForm}
+        />
       </div>
 
       <div className="mt-8">
@@ -105,6 +113,14 @@ export function SolicitudesPage() {
         <LeaveRequestForm
           isOpen={showLeaveForm}
           onClose={closeLeaveForm}
+          employeeId={myEmployeeId}
+        />
+      )}
+
+      {myEmployeeId && (
+        <VacationRequestForm
+          isOpen={showVacationForm}
+          onClose={closeVacationForm}
           employeeId={myEmployeeId}
         />
       )}

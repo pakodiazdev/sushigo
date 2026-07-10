@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button'
 interface RequestTypeBarProps {
   readonly onExtraDayClick: () => void
   readonly onLeaveClick: () => void
+  readonly onVacationClick: () => void
 }
 
-export function RequestTypeBar({ onExtraDayClick, onLeaveClick }: RequestTypeBarProps) {
+export function RequestTypeBar({ onExtraDayClick, onLeaveClick, onVacationClick }: RequestTypeBarProps) {
   return (
     <div>
       <h3 className="text-sm font-medium text-muted-foreground mb-3">Nueva solicitud</h3>
@@ -20,12 +21,10 @@ export function RequestTypeBar({ onExtraDayClick, onLeaveClick }: RequestTypeBar
           <span>Permiso</span>
         </Button>
 
-        <span title="Próximamente" className="cursor-not-allowed">
-          <Button variant="outline" disabled className="gap-2 pointer-events-none">
-            <span aria-hidden="true">🌴</span>
-            <span>Vacaciones</span>
-          </Button>
-        </span>
+        <Button variant="outline" onClick={onVacationClick} className="gap-2">
+          <span aria-hidden="true">🌴</span>
+          <span>Vacaciones</span>
+        </Button>
       </div>
     </div>
   )

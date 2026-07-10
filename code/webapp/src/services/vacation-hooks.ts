@@ -43,9 +43,13 @@ export function useCreateVacationRequest() {
   return useMutation({
     mutationFn: (data: RegisterVacationRequestData) =>
       vacationApi.createVacationRequest(data),
-    onSuccess: (_response, variables) => {
+    onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['employees', variables.employee_id, 'vacation-requests'] })
-      showSuccess('Solicitud de vacaciones creada. Pendiente de aprobación.', 'Solicitud')
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY(variables.employee_id) })
+      const message = response.data.data.status === 'APPROVED'
+        ? 'Vacaciones registradas y aprobadas.'
+        : 'Solicitud de vacaciones creada. Pendiente de aprobación.'
+      showSuccess(message, 'Solicitud')
     },
     onError: (error: unknown) => {
       showError(

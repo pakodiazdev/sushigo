@@ -25,6 +25,8 @@ class VacationRequestApiTest extends TestCase
 
     protected User $user;
 
+    protected User $selfServiceUser;
+
     private const DATE = '2026-08-10';
 
     private const YEAR = 2026;
@@ -45,13 +47,20 @@ class VacationRequestApiTest extends TestCase
         $role->givePermissionTo('vacation-requests.approve');
         $role->givePermissionTo('vacation-requests.reject');
 
-        Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
+        // Self-service role: can request their own vacation, but cannot approve —
+        // mirrors a regular employee, so requests they create stay PENDING.
+        $employeeRole = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
+        $employeeRole->givePermissionTo('vacation-requests.request');
+
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
 
         $this->user = User::factory()->create();
         $this->user->assignRole('manager');
+
+        $this->selfServiceUser = User::factory()->create();
+        $this->selfServiceUser->assignRole('employee');
 
         Passport::actingAs($this->user);
 
@@ -69,8 +78,10 @@ class VacationRequestApiTest extends TestCase
     // ══════════════════════════════════════════════════════════════════════════
 
     #[Test]
-    public function creates_pending_vacation_request_without_attendance_records(): void
+    public function self_service_request_stays_pending_without_attendance_records(): void
     {
+        Passport::actingAs($this->selfServiceUser);
+
         $employee = $this->makeEmployee();
         $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
 
@@ -98,8 +109,10 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function creates_multi_day_pending_request_without_attendance(): void
+    public function self_service_multi_day_request_stays_pending_without_attendance(): void
     {
+        Passport::actingAs($this->selfServiceUser);
+
         $employee = $this->makeEmployee();
         $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
 
@@ -121,8 +134,10 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function creates_request_covering_non_contiguous_days(): void
+    public function self_service_request_covering_non_contiguous_days_stays_pending(): void
     {
+        Passport::actingAs($this->selfServiceUser);
+
         $employee = $this->makeEmployee();
         $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
 
@@ -151,6 +166,80 @@ class VacationRequestApiTest extends TestCase
             'vacation_request_id' => $vacationRequest->id,
             'date' => '2026-08-11',
         ]);
+    }
+
+    #[Test]
+    public function admin_registering_on_behalf_auto_approves_immediately(): void
+    {
+        $employee = $this->makeEmployee();
+        $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        $response = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => [self::DATE],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.status', VacationRequestStatus::APPROVED->value)
+            ->assertJsonPath('data.approved_by', $this->user->name)
+            ->assertJsonPath('data.approved_at', fn ($v) => $v !== null);
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => DayStatus::VACATION->value,
+        ]);
+
+        $this->assertSame(1, $entitlement->fresh()->used_days);
+    }
+
+    #[Test]
+    public function admin_registering_multi_day_on_behalf_auto_approves_every_day(): void
+    {
+        $employee = $this->makeEmployee();
+        $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        $response = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => ['2026-08-10', '2026-08-11', '2026-08-12'],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.status', VacationRequestStatus::APPROVED->value);
+
+        foreach (['2026-08-10', '2026-08-11', '2026-08-12'] as $date) {
+            $this->assertDatabaseHas('attendances', [
+                'employee_id' => $employee->id,
+                'date' => $date,
+                'day_status' => DayStatus::VACATION->value,
+            ]);
+        }
+
+        $this->assertSame(3, $entitlement->fresh()->used_days);
+    }
+
+    #[Test]
+    public function admin_registering_on_behalf_rejects_when_worked_attendance_exists(): void
+    {
+        $employee = $this->makeEmployee();
+        $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        Attendance::create([
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => DayStatus::WORKED,
+            'check_in' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => [self::DATE],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('dates');
+
+        $this->assertSame(0, $entitlement->fresh()->used_days);
     }
 
     #[Test]
@@ -540,10 +629,12 @@ class VacationRequestApiTest extends TestCase
     // ══════════════════════════════════════════════════════════════════════════
 
     #[Test]
-    public function full_workflow_request_then_approve_then_check_in_blocked(): void
+    public function full_workflow_self_service_request_then_manager_approve_then_check_in_blocked(): void
     {
         $employee = $this->makeEmployee();
         $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        Passport::actingAs($this->selfServiceUser);
 
         $requestResponse = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
@@ -559,6 +650,8 @@ class VacationRequestApiTest extends TestCase
             'employee_id' => $employee->id,
             'date' => self::DATE,
         ]);
+
+        Passport::actingAs($this->user);
 
         $approveResponse = $this->patchJson("/api/v1/vacation-requests/{$vacationRequestId}/approve");
         $approveResponse->assertOk()
@@ -579,10 +672,12 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function full_workflow_request_then_reject_no_attendance(): void
+    public function full_workflow_self_service_request_then_manager_reject_no_attendance(): void
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        Passport::actingAs($this->selfServiceUser);
 
         $requestResponse = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
@@ -590,8 +685,11 @@ class VacationRequestApiTest extends TestCase
             'notes' => 'Necesito el día libre',
         ]);
 
-        $requestResponse->assertStatus(201);
+        $requestResponse->assertStatus(201)
+            ->assertJsonPath('data.status', 'PENDING');
         $vacationRequestId = $requestResponse->json('data.id');
+
+        Passport::actingAs($this->user);
 
         $rejectResponse = $this->patchJson("/api/v1/vacation-requests/{$vacationRequestId}/reject");
         $rejectResponse->assertOk()
@@ -603,6 +701,35 @@ class VacationRequestApiTest extends TestCase
         ]);
 
         $this->assertSame(0, $entitlement->fresh()->used_days);
+    }
+
+    #[Test]
+    public function full_workflow_admin_registers_on_behalf_no_separate_approval_needed(): void
+    {
+        $employee = $this->makeEmployee();
+        $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        $requestResponse = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => [self::DATE],
+        ]);
+
+        $requestResponse->assertStatus(201)
+            ->assertJsonPath('data.status', 'APPROVED');
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => self::DATE,
+            'day_status' => DayStatus::VACATION->value,
+        ]);
+        $this->assertSame(1, $entitlement->fresh()->used_days);
+
+        $checkInResponse = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => self::DATE.'T09:00:00-06:00',
+        ]);
+
+        $checkInResponse->assertStatus(422);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

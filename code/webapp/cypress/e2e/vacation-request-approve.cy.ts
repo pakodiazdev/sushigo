@@ -1,10 +1,11 @@
 /**
- * Vacation Request — Submit & Approve flow — E2E test (Issue #082)
+ * Vacation Request — Admin registers on behalf, auto-approved — E2E test (Issue #082)
  *
  * Happy-path: admin opens an employee's "Vacaciones" section (which
- * auto-generates the reached entitlement), submits a vacation request by
- * picking 3 days on the calendar, then approves it — verifying the balance
- * is deducted and the request status updates to APPROVED.
+ * auto-generates the reached entitlement) and registers a vacation request
+ * by picking 3 days on the calendar — since the admin already holds
+ * vacation-requests.approve, the request is approved immediately (no
+ * separate approval step) and the balance is deducted right away.
  *
  * DB reset strategy
  * ─────────────────
@@ -84,14 +85,13 @@ beforeEach(() => {
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Happy path — request vacation → PENDING → approve → balance deducted
+// Happy path — admin registers vacation on behalf → auto-approved, balance deducted
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('Vacation Request — submit & approve (happy path)', () => {
-  it('creates a vacation request as PENDING, then approves it and deducts the balance', () => {
+describe('Vacation Request — admin registers on behalf (happy path)', () => {
+  it('registers a vacation request as an admin and it is approved immediately', () => {
     cy.intercept('GET', '**/vacation-entitlements*').as('entitlementsLoad')
     cy.intercept('POST', '**/vacation-requests').as('createRequest')
-    cy.intercept('PATCH', '**/vacation-requests/*/approve').as('approveRequest')
 
     // 1. Open employee detail panel and scroll to Vacaciones
     openEmp001Detail()
@@ -102,31 +102,26 @@ describe('Vacation Request — submit & approve (happy path)', () => {
     // 2. Entitlement auto-generated: 12 days available
     cy.contains('td', '12').should('be.visible')
 
-    // 3. Click "Solicitar vacaciones"
+    // 3. Click "Solicitar vacaciones" — admin sees the auto-approve notice
     cy.contains('button', 'Solicitar vacaciones').click({ force: true })
     cy.contains('h3', 'Solicitar vacaciones').should('be.visible')
-    cy.contains('Solicitud — requiere aprobación').should('be.visible')
+    cy.contains('Se registrará como aprobada de inmediato').should('be.visible')
 
     // 4. Pick 3 days on the calendar and submit
     pickCalendarDays([startDate, addDays(startDate, 1), endDate])
 
     cy.contains('3 días solicitados').should('be.visible')
 
-    cy.get('dialog').contains('button', 'Solicitar vacaciones').click({ force: true })
+    cy.get('dialog').contains('button', 'Registrar vacaciones').click({ force: true })
 
     // 5. Verify API response
     cy.wait('@createRequest').its('response.statusCode').should('eq', 201)
 
-    // 6. PENDING request appears in the requests list
+    // 6. The request appears already APPROVED — no separate approval step
     cy.contains('Solicitudes de vacaciones').should('be.visible')
-    cy.contains('td', 'Pendiente', { timeout: 10_000 }).should('be.visible')
-
-    // 7. Approve the request
-    cy.get('button[aria-label="Aprobar vacaciones"]').first().click({ force: true })
-    cy.wait('@approveRequest').its('response.statusCode').should('eq', 200)
-
-    // 8. Status updates to APPROVED and the balance is deducted (12 → 9 remaining)
     cy.contains('td', 'Aprobada', { timeout: 10_000 }).should('be.visible')
+
+    // 7. Balance is deducted immediately (12 → 9 remaining)
     cy.contains('td', '9').should('be.visible')
   })
 })
