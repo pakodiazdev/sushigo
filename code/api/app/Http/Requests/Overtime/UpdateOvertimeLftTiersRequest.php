@@ -21,8 +21,8 @@ use Illuminate\Validation\Validator;
  *
  *         @OA\Items(
  *
- *             @OA\Property(property="factor", type="number", format="float", minimum=0, example=2.0),
- *             @OA\Property(property="up_to_hours", type="number", format="float", nullable=true, minimum=0, example=9.0)
+ *             @OA\Property(property="factor", type="number", format="float", minimum=0, exclusiveMinimum=true, example=2.0),
+ *             @OA\Property(property="up_to_hours", type="number", format="float", nullable=true, minimum=0, exclusiveMinimum=true, example=9.0)
  *         )
  *     )
  * )
