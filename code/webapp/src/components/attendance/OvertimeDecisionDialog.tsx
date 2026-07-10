@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle, XCircle, ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useOvertimeDecisionDialog } from './use-overtime-decision-dialog'
-import type { OvertimeValuationMethod } from '@/types/attendance'
+import type { OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
 
 export interface OvertimeDecisionDialogProps {
   isOpen: boolean
@@ -18,6 +18,36 @@ export interface OvertimeDecisionDialogProps {
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount)
+}
+
+function renderOvertimePreview(
+  isPreviewLoading: boolean,
+  previewError: string | null,
+  preview: OvertimeValuationPreview | undefined,
+): ReactNode {
+  if (isPreviewLoading) {
+    return (
+      <span className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Calculando...
+      </span>
+    )
+  }
+
+  if (previewError) {
+    return <span className="text-destructive">{previewError}</span>
+  }
+
+  if (preview) {
+    return (
+      <span className="text-foreground">
+        Monto estimado:{' '}
+        <span className="font-semibold">{formatCurrency(preview.amount)}</span>
+      </span>
+    )
+  }
+
+  return <span className="text-muted-foreground">Completa los datos para ver el monto estimado.</span>
 }
 
 /**
@@ -205,21 +235,7 @@ export function OvertimeDecisionDialog({
               }
               data-testid="overtime-preview"
             >
-              {isPreviewLoading ? (
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Calculando...
-                </span>
-              ) : previewError ? (
-                <span className="text-destructive">{previewError}</span>
-              ) : preview ? (
-                <span className="text-foreground">
-                  Monto estimado:{' '}
-                  <span className="font-semibold">{formatCurrency(preview.amount)}</span>
-                </span>
-              ) : (
-                <span className="text-muted-foreground">Completa los datos para ver el monto estimado.</span>
-              )}
+              {renderOvertimePreview(isPreviewLoading, previewError, preview)}
             </div>
 
             <div className="flex flex-col gap-2">
