@@ -144,4 +144,15 @@ describe('useSolicitudesPage', () => {
         act(() => result.current.closeLeaveForm())
         expect(result.current.showLeaveForm).toBe(false)
     })
+
+    it('showVacationForm starts closed and toggles via open/closeVacationForm', () => {
+        const { result } = renderHook(() => useSolicitudesPage())
+        expect(result.current.showVacationForm).toBe(false)
+
+        act(() => result.current.openVacationForm())
+        expect(result.current.showVacationForm).toBe(true)
+
+        act(() => result.current.closeVacationForm())
+        expect(result.current.showVacationForm).toBe(false)
+    })
 })

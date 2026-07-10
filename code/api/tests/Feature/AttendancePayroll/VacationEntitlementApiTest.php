@@ -28,9 +28,13 @@ class VacationEntitlementApiTest extends TestCase
 
         Permission::create(['name' => 'employees.view', 'guard_name' => 'api']);
         Permission::create(['name' => 'employees.update', 'guard_name' => 'api']);
+        Permission::create(['name' => 'vacation-requests.request', 'guard_name' => 'api']);
 
         $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $role->givePermissionTo(['employees.view', 'employees.update']);
+
+        $selfServiceRole = Role::create(['name' => 'employee', 'guard_name' => 'api']);
+        $selfServiceRole->givePermissionTo('vacation-requests.request');
 
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
@@ -125,6 +129,36 @@ class VacationEntitlementApiTest extends TestCase
     {
         $employee = $this->employeeStartedOn(Carbon::today()->subYears(1)->toDateString());
         Passport::actingAs(User::factory()->create());
+
+        $response = $this->getJson("/api/v1/employees/{$employee->public_id}/vacation-entitlements");
+
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function self_service_user_can_view_their_own_entitlements(): void
+    {
+        $employee = $this->employeeStartedOn(Carbon::today()->subYears(1)->toDateString());
+        $user = User::factory()->create();
+        $user->assignRole('employee');
+        $employee->update(['user_id' => $user->id]);
+
+        Passport::actingAs($user);
+
+        $response = $this->getJson("/api/v1/employees/{$employee->public_id}/vacation-entitlements");
+
+        $response->assertStatus(200);
+    }
+
+    #[Test]
+    public function self_service_user_cannot_view_another_employees_entitlements(): void
+    {
+        $employee = $this->employeeStartedOn(Carbon::today()->subYears(1)->toDateString());
+        $user = User::factory()->create();
+        $user->assignRole('employee');
+        // Note: $user is not linked to $employee (no matching user_id)
+
+        Passport::actingAs($user);
 
         $response = $this->getJson("/api/v1/employees/{$employee->public_id}/vacation-entitlements");
 

@@ -43,6 +43,9 @@ class ListEmployeeVacationRequestsController extends Controller
 {
     public function __invoke(Request $request, Employee $employee): ResponsePaginated
     {
+        $user = $request->user();
+        abort_unless($user->can('employees.view') || $employee->user_id === $user->id, 403);
+
         $validated = $request->validate([
             'status' => ['sometimes', 'string', Rule::in(array_column(VacationRequestStatus::cases(), 'value'))],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],

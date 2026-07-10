@@ -164,4 +164,27 @@ trait VacationRequestGuards
             'updated_at' => $now,
         ], $dates));
     }
+
+    /**
+     * Marks a vacation request as approved: increments the entitlement's
+     * used_days, creates Attendance VACATION records for each selected date,
+     * and sets status/approver. Shared by both the approve endpoint and the
+     * auto-approve path taken when an admin/manager registers a request.
+     *
+     * @param  array<int, string>  $dates
+     */
+    private function finalizeApproval(VacationRequest $vacationRequest, array $dates, int $approvedById): void
+    {
+        VacationEntitlement::where('id', $vacationRequest->vacation_entitlement_id)
+            ->lockForUpdate()
+            ->increment('used_days', $vacationRequest->days_count);
+
+        $vacationRequest->update([
+            'status' => VacationRequestStatus::APPROVED,
+            'approved_by' => $approvedById,
+            'approved_at' => now(),
+        ]);
+
+        $this->createAttendanceRecords($vacationRequest->employee_id, $dates);
+    }
 }

@@ -11,7 +11,7 @@ use App\Http\Resources\VacationRequests\VacationRequestResource;
  * @OA\Post(
  *   path="/api/v1/vacation-requests",
  *   summary="Register Vacation Request",
- *   description="Creates a vacation request with PENDING status that requires approval. Validates sufficient vacation balance. Requires vacation-requests.request permission.",
+ *   description="Creates a vacation request. Validates sufficient vacation balance. Requires vacation-requests.request permission. If the requester also holds vacation-requests.approve (admin/manager registering on behalf of an employee), the request is approved immediately instead of staying PENDING.",
  *   tags={"Vacation Requests"},
  *   security={{"passport": {}}},
  *
@@ -40,7 +40,11 @@ class RegisterVacationRequestController extends Controller
         RegisterVacationRequestRequest $request,
         RegisterVacationRequestAction $action
     ): VacationRequestResource {
-        $vacationRequest = $action($request->validated(), auth()->id());
+        $vacationRequest = $action(
+            $request->validated(),
+            auth()->id(),
+            auth()->user()->can('vacation-requests.approve')
+        );
 
         return (new VacationRequestResource($vacationRequest))->setStatusCode(201);
     }

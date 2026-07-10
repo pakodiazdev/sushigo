@@ -110,12 +110,14 @@ class CoreTestSeeder extends Seeder
 
     /**
      * Self-service Solicitudes access — every employee can view/create/cancel
-     * their own requests, but never approve (that stays manager/admin-only).
+     * their own requests and request their own vacations, but never approve
+     * (that stays manager/admin-only).
      */
     private const SELF_SERVICE_REQUESTS = [
         '=employee-requests.view',
         '=employee-requests.create',
         '=employee-requests.cancel',
+        '=vacation-requests.request',
     ];
 
     /** role name => permission name prefixes or exact names */
