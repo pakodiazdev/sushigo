@@ -1,5 +1,5 @@
 export type EmployeeRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
-export type EmployeeRequestType = 'EXTRA_DAY' | 'LEAVE' | 'VACATION' | 'SCHEDULE_CHANGE'
+export type EmployeeRequestType = 'EXTRA_DAY' | 'LEAVE' | 'SCHEDULE_CHANGE'
 
 export interface EmployeeRequest {
   id: string
