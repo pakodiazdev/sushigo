@@ -76,13 +76,13 @@ class VacationRequestApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ]);
 
         $response->assertStatus(201)
             ->assertJsonPath('data.status', VacationRequestStatus::PENDING->value)
             ->assertJsonPath('data.days_count', 1)
+            ->assertJsonPath('data.dates', [self::DATE])
             ->assertJsonPath('data.approved_by', null)
             ->assertJsonPath('data.approved_at', null);
 
@@ -105,8 +105,7 @@ class VacationRequestApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
-            'start_date' => '2026-08-10',
-            'end_date' => '2026-08-12',
+            'dates' => ['2026-08-10', '2026-08-11', '2026-08-12'],
         ]);
 
         $response->assertStatus(201)
@@ -122,6 +121,66 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
+    public function creates_request_covering_non_contiguous_days(): void
+    {
+        $employee = $this->makeEmployee();
+        $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        $response = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => ['2026-08-10', '2026-08-12'],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.status', VacationRequestStatus::PENDING->value)
+            ->assertJsonPath('data.days_count', 2)
+            ->assertJsonPath('data.start_date', '2026-08-10')
+            ->assertJsonPath('data.end_date', '2026-08-12')
+            ->assertJsonPath('data.dates', ['2026-08-10', '2026-08-12']);
+
+        $vacationRequest = VacationRequest::first();
+        $this->assertDatabaseHas('vacation_request_dates', [
+            'vacation_request_id' => $vacationRequest->id,
+            'date' => '2026-08-10',
+        ]);
+        $this->assertDatabaseHas('vacation_request_dates', [
+            'vacation_request_id' => $vacationRequest->id,
+            'date' => '2026-08-12',
+        ]);
+        $this->assertDatabaseMissing('vacation_request_dates', [
+            'vacation_request_id' => $vacationRequest->id,
+            'date' => '2026-08-11',
+        ]);
+    }
+
+    #[Test]
+    public function approving_non_contiguous_days_only_marks_selected_days_as_vacation(): void
+    {
+        $employee = $this->makeEmployee();
+        $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, ['2026-08-10', '2026-08-12']);
+
+        $response = $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/approve");
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => '2026-08-10',
+            'day_status' => DayStatus::VACATION->value,
+        ]);
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'date' => '2026-08-12',
+            'day_status' => DayStatus::VACATION->value,
+        ]);
+        $this->assertDatabaseMissing('attendances', [
+            'employee_id' => $employee->id,
+            'date' => '2026-08-11',
+        ]);
+    }
+
+    #[Test]
     public function vacation_request_stores_notes(): void
     {
         $employee = $this->makeEmployee();
@@ -129,8 +188,7 @@ class VacationRequestApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'notes' => 'Vacaciones familiares',
         ]);
 
@@ -146,12 +204,11 @@ class VacationRequestApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
-            'start_date' => '2026-08-10',
-            'end_date' => '2026-08-12',
+            'dates' => ['2026-08-10', '2026-08-11', '2026-08-12'],
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrorFor('start_date');
+            ->assertJsonValidationErrorFor('dates');
 
         $this->assertDatabaseMissing('vacation_requests', [
             'employee_id' => $employee->id,
@@ -165,12 +222,41 @@ class VacationRequestApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ]);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrorFor('employee_id');
+    }
+
+    #[Test]
+    public function vacation_request_rejects_duplicate_dates(): void
+    {
+        $employee = $this->makeEmployee();
+        $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        $response = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => [self::DATE, self::DATE],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('dates.0');
+    }
+
+    #[Test]
+    public function vacation_request_rejects_empty_dates(): void
+    {
+        $employee = $this->makeEmployee();
+        $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
+
+        $response = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => [],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('dates');
     }
 
     #[Test]
@@ -179,26 +265,15 @@ class VacationRequestApiTest extends TestCase
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
 
-        VacationRequest::create([
-            'employee_id' => $employee->id,
-            'vacation_entitlement_id' => $entitlement->id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
-            'days_count' => 1,
-            'status' => VacationRequestStatus::APPROVED,
-            'requested_by' => $this->user->id,
-            'approved_by' => $this->user->id,
-            'approved_at' => now(),
-        ]);
+        $this->createApprovedVacation($employee, $entitlement, [self::DATE]);
 
         $response = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrorFor('start_date');
+            ->assertJsonValidationErrorFor('dates');
     }
 
     #[Test]
@@ -208,8 +283,7 @@ class VacationRequestApiTest extends TestCase
 
         $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => 'any-id',
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ])->assertStatus(401);
     }
 
@@ -221,8 +295,7 @@ class VacationRequestApiTest extends TestCase
 
         $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => 'any-id',
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ])->assertStatus(403);
     }
 
@@ -235,7 +308,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, self::DATE, self::DATE, 1);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
 
         $response = $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/approve");
 
@@ -263,7 +336,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, '2026-08-10', '2026-08-12', 3);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, ['2026-08-10', '2026-08-11', '2026-08-12']);
 
         $response = $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/approve");
 
@@ -286,7 +359,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, self::DATE, self::DATE, 1);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
 
         $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/approve")->assertOk();
 
@@ -301,7 +374,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, self::DATE, self::DATE, 1);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
 
         $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/reject")->assertOk();
 
@@ -316,7 +389,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, self::DATE, self::DATE, 1);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
 
         Attendance::create([
             'employee_id' => $employee->id,
@@ -328,7 +401,7 @@ class VacationRequestApiTest extends TestCase
         $response = $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/approve");
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrorFor('start_date');
+            ->assertJsonValidationErrorFor('dates');
     }
 
     #[Test]
@@ -336,7 +409,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, self::DATE, self::DATE, 1);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
 
         $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/approve")->assertOk();
 
@@ -384,7 +457,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, self::DATE, self::DATE, 1);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
 
         $response = $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/reject");
 
@@ -411,7 +484,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, self::DATE, self::DATE, 1);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
 
         $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/approve")->assertOk();
 
@@ -426,7 +499,7 @@ class VacationRequestApiTest extends TestCase
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
-        $vacationRequest = $this->createPendingVacation($employee, $entitlement, self::DATE, self::DATE, 1);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
 
         $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/reject")->assertOk();
 
@@ -474,8 +547,7 @@ class VacationRequestApiTest extends TestCase
 
         $requestResponse = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
         ]);
 
         $requestResponse->assertStatus(201)
@@ -514,8 +586,7 @@ class VacationRequestApiTest extends TestCase
 
         $requestResponse = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
-            'start_date' => self::DATE,
-            'end_date' => self::DATE,
+            'dates' => [self::DATE],
             'notes' => 'Necesito el día libre',
         ]);
 
@@ -557,21 +628,66 @@ class VacationRequestApiTest extends TestCase
         ]);
     }
 
+    /**
+     * @param  array<int, string>  $dates
+     */
     private function createPendingVacation(
         Employee $employee,
         VacationEntitlement $entitlement,
-        string $startDate,
-        string $endDate,
-        int $daysCount
+        array $dates
     ): VacationRequest {
-        return VacationRequest::create([
+        $vacationRequest = VacationRequest::create([
             'employee_id' => $employee->id,
             'vacation_entitlement_id' => $entitlement->id,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'days_count' => $daysCount,
+            'start_date' => $dates[0],
+            'end_date' => $dates[count($dates) - 1],
+            'days_count' => count($dates),
             'status' => VacationRequestStatus::PENDING,
             'requested_by' => $this->user->id,
         ]);
+
+        $this->persistDates($vacationRequest, $dates);
+
+        return $vacationRequest;
+    }
+
+    /**
+     * @param  array<int, string>  $dates
+     */
+    private function createApprovedVacation(
+        Employee $employee,
+        VacationEntitlement $entitlement,
+        array $dates
+    ): VacationRequest {
+        $vacationRequest = VacationRequest::create([
+            'employee_id' => $employee->id,
+            'vacation_entitlement_id' => $entitlement->id,
+            'start_date' => $dates[0],
+            'end_date' => $dates[count($dates) - 1],
+            'days_count' => count($dates),
+            'status' => VacationRequestStatus::APPROVED,
+            'requested_by' => $this->user->id,
+            'approved_by' => $this->user->id,
+            'approved_at' => now(),
+        ]);
+
+        $this->persistDates($vacationRequest, $dates);
+
+        return $vacationRequest;
+    }
+
+    /**
+     * @param  array<int, string>  $dates
+     */
+    private function persistDates(VacationRequest $vacationRequest, array $dates): void
+    {
+        $now = now();
+
+        $vacationRequest->dates()->insert(array_map(fn (string $date) => [
+            'vacation_request_id' => $vacationRequest->id,
+            'date' => $date,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $dates));
     }
 }

@@ -172,6 +172,7 @@ export interface VacationRequest {
   employee_id: string
   start_date: string
   end_date: string
+  dates: string[]
   days_count: number
   status: VacationRequestStatus
   requested_by: string
@@ -183,7 +184,6 @@ export interface VacationRequest {
 
 export interface RegisterVacationRequestData {
   employee_id: string
-  start_date: string
-  end_date: string
+  dates: string[]
   notes?: string | null
 }

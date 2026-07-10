@@ -9,13 +9,28 @@ use App\Models\Employee;
 use App\Models\VacationEntitlement;
 use App\Models\VacationRequest;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 
 trait VacationRequestGuards
 {
     /**
-     * Throw 422 if the vacation request is not in PENDING status.
+     * Normalizes a raw list of date strings: sorted ascending, deduplicated,
+     * reindexed.
+     *
+     * @param  array<int, string>  $dates
+     * @return array<int, string>
+     */
+    private function normalizeDates(array $dates): array
+    {
+        $unique = array_values(array_unique($dates));
+        sort($unique);
+
+        return $unique;
+    }
+
+    /**
+     * Throw a 422 if the vacation request is not in PENDING status.
      *
      * @throws ValidationException
      */
@@ -29,20 +44,22 @@ trait VacationRequestGuards
     }
 
     /**
-     * Throw 422 if an approved vacation request already covers any day in the given range.
+     * Throw a 422 if an approved vacation request already covers any of the given dates.
+     *
+     * @param  array<int, string>  $dates
      *
      * @throws ValidationException
      */
     private function guardNoOverlappingApprovedVacation(
         int $employeeId,
-        string $startDate,
-        string $endDate,
+        array $dates,
         ?int $excludeVacationRequestId = null
     ): void {
         $query = VacationRequest::where('employee_id', $employeeId)
             ->where('status', VacationRequestStatus::APPROVED)
-            ->where('start_date', '<=', $endDate)
-            ->where('end_date', '>=', $startDate);
+            ->whereHas('dates', function (Builder $q) use ($dates) {
+                $q->whereIn('date', $dates);
+            });
 
         if ($excludeVacationRequestId !== null) {
             $query->where('id', '!=', $excludeVacationRequestId);
@@ -50,34 +67,35 @@ trait VacationRequestGuards
 
         if ($query->lockForUpdate()->exists()) {
             throw ValidationException::withMessages([
-                'start_date' => 'El empleado ya tiene vacaciones aprobadas que se traslapan con las fechas indicadas.',
+                'dates' => 'El empleado ya tiene vacaciones aprobadas que se traslapan con las fechas indicadas.',
             ]);
         }
     }
 
     /**
-     * Throw 422 if any date in the range already has a WORKED attendance record.
+     * Throw a 422 if any of the given dates already has a WORKED attendance record.
+     *
+     * @param  array<int, string>  $dates
      *
      * @throws ValidationException
      */
-    private function guardNoExistingWorkedAttendance(int $employeeId, string $startDate, string $endDate): void
+    private function guardNoExistingWorkedAttendance(int $employeeId, array $dates): void
     {
         $exists = Attendance::where('employee_id', $employeeId)
             ->where('day_status', DayStatus::WORKED)
-            ->where('date', '>=', $startDate)
-            ->where('date', '<=', $endDate)
+            ->whereIn('date', $dates)
             ->lockForUpdate()
             ->exists();
 
         if ($exists) {
             throw ValidationException::withMessages([
-                'start_date' => 'El empleado ya tiene asistencia trabajada registrada para alguno de los días indicados.',
+                'dates' => 'El empleado ya tiene asistencia trabajada registrada para alguno de los días indicados.',
             ]);
         }
     }
 
     /**
-     * Throw 422 if the entitlement does not have enough remaining days.
+     * Throw a 422 if the entitlement does not have enough remaining days.
      *
      * @throws ValidationException
      */
@@ -85,20 +103,20 @@ trait VacationRequestGuards
     {
         if ($entitlement->remainingDays() < $daysCount) {
             throw ValidationException::withMessages([
-                'start_date' => 'El empleado no tiene saldo de vacaciones suficiente para las fechas indicadas.',
+                'dates' => 'El empleado no tiene saldo de vacaciones suficiente para las fechas indicadas.',
             ]);
         }
     }
 
     /**
-     * Resolve the employee's VacationEntitlement for the calendar year of the given start date.
+     * Resolve the employee's VacationEntitlement for the calendar year of the given reference date.
      *
      * @throws ValidationException
      */
-    private function resolveEntitlementForYear(Employee $employee, string $startDate): VacationEntitlement
+    private function resolveEntitlementForYear(Employee $employee, string $referenceDate): VacationEntitlement
     {
         $entitlement = VacationEntitlement::where('employee_id', $employee->id)
-            ->where('year', Carbon::parse($startDate)->year)
+            ->where('year', Carbon::parse($referenceDate)->year)
             ->first();
 
         if (! $entitlement) {
@@ -111,30 +129,39 @@ trait VacationRequestGuards
     }
 
     /**
-     * Number of calendar days covered by the range, inclusive of both ends.
+     * Create Attendance records for each selected date with day_status = VACATION.
+     *
+     * @param  array<int, string>  $dates
      */
-    private function computeDaysCount(string $startDate, string $endDate): int
+    private function createAttendanceRecords(int $employeeId, array $dates): void
     {
-        return Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
-    }
-
-    /**
-     * Create Attendance records for each day in the range with day_status = VACATION.
-     */
-    private function createAttendanceRecords(int $employeeId, string $startDate, string $endDate): void
-    {
-        $period = CarbonPeriod::create($startDate, $endDate);
-
-        foreach ($period as $day) {
+        foreach ($dates as $date) {
             Attendance::updateOrCreate(
                 [
                     'employee_id' => $employeeId,
-                    'date' => $day->toDateString(),
+                    'date' => $date,
                 ],
                 [
                     'day_status' => DayStatus::VACATION,
                 ]
             );
         }
+    }
+
+    /**
+     * Persist the exact set of days a VacationRequest covers.
+     *
+     * @param  array<int, string>  $dates
+     */
+    private function persistVacationRequestDates(VacationRequest $vacationRequest, array $dates): void
+    {
+        $now = now();
+
+        $vacationRequest->dates()->insert(array_map(fn (string $date) => [
+            'vacation_request_id' => $vacationRequest->id,
+            'date' => $date,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $dates));
     }
 }

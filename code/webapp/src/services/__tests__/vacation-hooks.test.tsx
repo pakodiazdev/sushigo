@@ -90,6 +90,7 @@ const fakeVacationRequest: VacationRequest = {
   employee_id: 'emp-001',
   start_date: '2026-08-10',
   end_date: '2026-08-12',
+  dates: ['2026-08-10', '2026-08-11', '2026-08-12'],
   days_count: 3,
   status: 'PENDING',
   requested_by: 'Admin User',
@@ -140,8 +141,7 @@ describe('useCreateVacationRequest', () => {
 
     result.current.mutate({
       employee_id: 'emp-001',
-      start_date: '2026-08-10',
-      end_date: '2026-08-12',
+      dates: ['2026-08-10', '2026-08-11', '2026-08-12'],
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -161,8 +161,7 @@ describe('useCreateVacationRequest', () => {
 
     result.current.mutate({
       employee_id: 'emp-001',
-      start_date: '2026-08-10',
-      end_date: '2026-08-12',
+      dates: ['2026-08-10', '2026-08-11', '2026-08-12'],
     })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
