@@ -60,7 +60,7 @@ export function OvertimeLftTiersFields({
               <div>
                 <Input
                   type="number"
-                  min={0}
+                  min={0.01}
                   step={0.01}
                   {...register(`rows.${index}.factor`, { valueAsNumber: true })}
                 />
@@ -72,7 +72,7 @@ export function OvertimeLftTiersFields({
               <div>
                 <Input
                   type="number"
-                  min={0}
+                  min={0.01}
                   step={0.01}
                   placeholder={isLast ? 'Sin tope' : undefined}
                   {...register(`rows.${index}.up_to_hours`)}
