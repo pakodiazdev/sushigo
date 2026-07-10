@@ -87,10 +87,14 @@ describe('useOvertimeDecision', () => {
       await result.current.mutateAsync({
         attendance_id: 'att-123',
         authorize: true,
+        valuation_method: 'LFT_PROPORTIONAL',
       })
     })
 
-    expect(attendanceApi.overtimeDecision).toHaveBeenCalledWith('att-123', { authorize: true })
+    expect(attendanceApi.overtimeDecision).toHaveBeenCalledWith('att-123', {
+      authorize: true,
+      valuation_method: 'LFT_PROPORTIONAL',
+    })
   })
 
   it('calls attendanceApi.overtimeDecision with correct params (reject)', async () => {
@@ -135,7 +139,11 @@ describe('useOvertimeDecision', () => {
     const { result } = renderHook(() => useOvertimeDecision(), { wrapper })
 
     await act(async () => {
-      await result.current.mutateAsync({ attendance_id: 'att-123', authorize: true })
+      await result.current.mutateAsync({
+        attendance_id: 'att-123',
+        authorize: true,
+        valuation_method: 'LFT_PROPORTIONAL',
+      })
     })
 
     expect(mockShowSuccess).toHaveBeenCalledWith(
@@ -168,7 +176,11 @@ describe('useOvertimeDecision', () => {
 
     await act(async () => {
       try {
-        await result.current.mutateAsync({ attendance_id: 'att-123', authorize: true })
+        await result.current.mutateAsync({
+          attendance_id: 'att-123',
+          authorize: true,
+          valuation_method: 'LFT_PROPORTIONAL',
+        })
       } catch {
         // expected
       }
@@ -187,7 +199,11 @@ describe('useOvertimeDecision', () => {
     const { result } = renderHook(() => useOvertimeDecision(), { wrapper })
 
     await act(async () => {
-      await result.current.mutateAsync({ attendance_id: 'att-123', authorize: true })
+      await result.current.mutateAsync({
+        attendance_id: 'att-123',
+        authorize: true,
+        valuation_method: 'LFT_PROPORTIONAL',
+      })
     })
 
     expect(invalidateSpy).toHaveBeenCalledWith(

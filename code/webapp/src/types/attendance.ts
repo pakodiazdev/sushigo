@@ -1,5 +1,17 @@
 export type OvertimeValuationMethod = 'LFT_PROPORTIONAL' | 'AGREED_RATE' | 'SALARY_FACTOR'
 
+/**
+ * PATCH /attendances/{id}/overtime-decision body.
+ * `valuation_method` (and the matching `agreed_rate`/`agreed_factor`) is only
+ * meaningful — and required by the API — when `authorize` is true, so this is
+ * modeled as a discriminated union instead of a loose bag of optional fields.
+ */
+export type OvertimeDecisionPayload =
+  | { authorize: false; reason?: string }
+  | { authorize: true; reason?: string; valuation_method: 'LFT_PROPORTIONAL' }
+  | { authorize: true; reason?: string; valuation_method: 'AGREED_RATE'; agreed_rate: number }
+  | { authorize: true; reason?: string; valuation_method: 'SALARY_FACTOR'; agreed_factor: number }
+
 export interface OvertimeValuationPreview {
   valuation_method: OvertimeValuationMethod
   rate_applied: number

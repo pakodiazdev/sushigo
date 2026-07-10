@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse, OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
+import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse, OvertimeDecisionPayload, OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
 
 export const attendanceApi = {
   /**
@@ -55,16 +55,7 @@ export const attendanceApi = {
    * valuation_method is required when authorize=true; agreed_rate/agreed_factor are
    * required depending on the chosen method.
    */
-  overtimeDecision: (
-    attendanceId: string,
-    data: {
-      authorize: boolean
-      valuation_method?: OvertimeValuationMethod
-      agreed_rate?: number
-      agreed_factor?: number
-      reason?: string
-    },
-  ) =>
+  overtimeDecision: (attendanceId: string, data: OvertimeDecisionPayload) =>
     apiClient.patch<{ status: number; data: AttendanceRecord }>(
       `/attendances/${attendanceId}/overtime-decision`,
       data,

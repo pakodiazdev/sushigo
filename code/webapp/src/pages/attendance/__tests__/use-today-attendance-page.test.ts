@@ -772,11 +772,14 @@ describe('useTodayAttendancePage', () => {
       })
 
       await act(async () => {
-        result.current.confirmBulkOvertimeDecision(true)
+        result.current.confirmBulkOvertimeDecision(true, 'LFT_PROPORTIONAL')
       })
 
       await waitFor(() => {
-        expect(attendanceApi.overtimeDecision).toHaveBeenCalledWith('att-001', { authorize: true })
+        expect(attendanceApi.overtimeDecision).toHaveBeenCalledWith('att-001', {
+          authorize: true,
+          valuation_method: 'LFT_PROPORTIONAL',
+        })
       })
     })
 

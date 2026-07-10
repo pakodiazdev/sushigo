@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
 import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { TodayAttendanceRow, CloseDayRequest, OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
+import type { TodayAttendanceRow, CloseDayRequest, OvertimeDecisionPayload, OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
 
 /**
  * Fetch attendance for all active employees of a branch for a given date.
@@ -131,21 +131,8 @@ export function useOvertimeDecision() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (data: {
-      attendance_id: string
-      authorize: boolean
-      valuation_method?: OvertimeValuationMethod
-      agreed_rate?: number
-      agreed_factor?: number
-      reason?: string
-    }) =>
-      attendanceApi.overtimeDecision(data.attendance_id, {
-        authorize: data.authorize,
-        valuation_method: data.valuation_method,
-        agreed_rate: data.agreed_rate,
-        agreed_factor: data.agreed_factor,
-        reason: data.reason,
-      }),
+    mutationFn: ({ attendance_id, ...decision }: { attendance_id: string } & OvertimeDecisionPayload) =>
+      attendanceApi.overtimeDecision(attendance_id, decision),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       const label = variables.authorize ? 'Horas extra autorizadas.' : 'Horas extra no pagadas.'
