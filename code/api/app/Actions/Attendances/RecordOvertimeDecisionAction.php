@@ -58,11 +58,11 @@ class RecordOvertimeDecisionAction
         $now = $this->clock->nowUtc();
 
         return DB::transaction(function () use ($attendance, $data, $decidedBy, $authorize, $now) {
-            [$valuationMethod, $rateApplied, $amount] = $authorize
+            $valuation = $authorize
                 ? $this->resolveAuthorizedValuation($attendance, $data)
-                : [null, null, null];
+                : ['method' => null, 'rate_applied' => null, 'amount' => null];
 
-            $this->applyDecision($attendance, $authorize, $decidedBy, $now, $valuationMethod, $rateApplied, $amount, $data['reason'] ?? null);
+            $this->applyDecision($attendance, $authorize, $decidedBy, $now, $valuation, $data['reason'] ?? null);
 
             return $attendance->fresh(['employee']);
         });
@@ -73,7 +73,7 @@ class RecordOvertimeDecisionAction
      * first when the method reads cross-attendance weekly state (LFT_PROPORTIONAL),
      * so concurrent decisions for the same employee can't both use stale hours.
      *
-     * @return array{0: OvertimeValuationMethod, 1: float, 2: float}
+     * @return array{method: OvertimeValuationMethod, rate_applied: float, amount: float}
      *
      * @throws ValidationException
      */
@@ -92,12 +92,18 @@ class RecordOvertimeDecisionAction
             isset($data['agreed_factor']) ? (float) $data['agreed_factor'] : null,
         );
 
-        return [$valuationMethod, $resolved['rate_applied'], $resolved['amount']];
+        return [
+            'method' => $valuationMethod,
+            'rate_applied' => $resolved['rate_applied'],
+            'amount' => $resolved['amount'],
+        ];
     }
 
     /**
      * Persists the decision atomically (only if not already decided) and writes the
      * audit trail entry.
+     *
+     * @param  array{method: ?OvertimeValuationMethod, rate_applied: ?float, amount: ?float}  $valuation
      *
      * @throws ValidationException
      */
@@ -106,11 +112,13 @@ class RecordOvertimeDecisionAction
         bool $authorize,
         User $decidedBy,
         CarbonImmutable $now,
-        ?OvertimeValuationMethod $valuationMethod,
-        ?float $rateApplied,
-        ?float $amount,
+        array $valuation,
         ?string $reason,
     ): void {
+        $valuationMethod = $valuation['method'];
+        $rateApplied = $valuation['rate_applied'];
+        $amount = $valuation['amount'];
+
         // Atomic update: only affects rows where no decision has been recorded yet.
         // If 0 rows are affected, a concurrent request already recorded the decision.
         $affected = Attendance::where('id', $attendance->id)
