@@ -2,9 +2,9 @@
  * Vacation Request — Submit & Approve flow — E2E test (Issue #082)
  *
  * Happy-path: admin opens an employee's "Vacaciones" section (which
- * auto-generates the reached entitlement), submits a vacation request for a
- * date range, then approves it — verifying the balance is deducted and the
- * request status updates to APPROVED.
+ * auto-generates the reached entitlement), submits a vacation request by
+ * picking 3 days on the calendar, then approves it — verifying the balance
+ * is deducted and the request status updates to APPROVED.
  *
  * DB reset strategy
  * ─────────────────
@@ -39,6 +39,30 @@ function addDays(dateString: string, days: number): string {
   const date = new Date(`${dateString}T00:00:00`)
   date.setDate(date.getDate() + days)
   return date.toISOString().slice(0, 10)
+}
+
+/** Months forward from today's calendar month to the given ISO date's month. */
+function monthsForwardFromToday(iso: string): number {
+  const now = new Date()
+  const target = new Date(`${iso}T00:00:00`)
+  return (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth())
+}
+
+/**
+ * Clicks days on the inline MultiDateCalendar, which always starts on
+ * today's month. Advances forward the exact delta between consecutive
+ * picks so it never re-navigates past an already-visible month.
+ */
+function pickCalendarDays(isoDates: string[]) {
+  let monthsAdvanced = 0
+
+  for (const iso of isoDates) {
+    const targetMonthsForward = monthsForwardFromToday(iso)
+    for (; monthsAdvanced < targetMonthsForward; monthsAdvanced++) {
+      cy.get('[aria-label="Mes siguiente"]').click({ force: true })
+    }
+    cy.get(`[aria-label="${iso}"]`).click({ force: true })
+  }
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -83,9 +107,8 @@ describe('Vacation Request — submit & approve (happy path)', () => {
     cy.contains('h3', 'Solicitar vacaciones').should('be.visible')
     cy.contains('Solicitud — requiere aprobación').should('be.visible')
 
-    // 4. Fill the date range (3 days) and submit
-    cy.contains('label', 'Fecha de inicio').parent().find('input[type="date"]').type(startDate, { force: true })
-    cy.contains('label', 'Fecha de fin').parent().find('input[type="date"]').type(endDate, { force: true })
+    // 4. Pick 3 days on the calendar and submit
+    pickCalendarDays([startDate, addDays(startDate, 1), endDate])
 
     cy.contains('3 días solicitados').should('be.visible')
 

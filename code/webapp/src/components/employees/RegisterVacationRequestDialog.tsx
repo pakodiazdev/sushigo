@@ -1,8 +1,10 @@
 import { Loader2, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
+import { Controller } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { FormField, Textarea } from '@/components/ui/form-fields'
+import { MultiDateCalendar } from '@/components/ui/multi-date-calendar'
 import { useRegisterVacationRequestDialog } from './use-register-vacation-request-dialog'
 import type { RegisterVacationRequestEmployee } from './use-register-vacation-request-dialog'
 
@@ -48,7 +50,7 @@ export function RegisterVacationRequestDialog({
     onSuccess: onClose,
   })
 
-  const { register, formState: { errors } } = form
+  const { register, control, formState: { errors } } = form
 
   // Animation
   useEffect(() => {
@@ -128,33 +130,19 @@ export function RegisterVacationRequestDialog({
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-6 py-5">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              label="Fecha de inicio"
-              error={errors.start_date?.message}
-              required
-            >
-              <input
-                type="date"
-                disabled={isPending}
-                {...register('start_date')}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              />
-            </FormField>
-
-            <FormField
-              label="Fecha de fin"
-              error={errors.end_date?.message}
-              required
-            >
-              <input
-                type="date"
-                disabled={isPending}
-                {...register('end_date')}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              />
-            </FormField>
-          </div>
+          <FormField
+            label="Días de vacaciones"
+            error={errors.dates?.message}
+            required
+          >
+            <Controller
+              name="dates"
+              control={control}
+              render={({ field }) => (
+                <MultiDateCalendar value={field.value} onChange={field.onChange} />
+              )}
+            />
+          </FormField>
 
           {daysCount > 0 && (
             <p className="text-sm text-muted-foreground">

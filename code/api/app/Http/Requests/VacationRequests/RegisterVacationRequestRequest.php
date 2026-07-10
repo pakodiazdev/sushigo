@@ -9,11 +9,10 @@ use Illuminate\Validation\Rule;
 /**
  * @OA\Schema(
  *   schema="RegisterVacationRequestRequest",
- *   required={"employee_id", "start_date", "end_date"},
+ *   required={"employee_id", "dates"},
  *
  *   @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
- *   @OA\Property(property="start_date", type="string", format="date", example="2026-08-01"),
- *   @OA\Property(property="end_date", type="string", format="date", example="2026-08-05", description="Must be >= start_date"),
+ *   @OA\Property(property="dates", type="array", @OA\Items(type="string", format="date"), example={"2026-08-01", "2026-08-05"}, description="Individual selected days, do not need to be contiguous"),
  *   @OA\Property(property="notes", type="string", nullable=true, maxLength=1000, example="Vacaciones familiares")
  * )
  */
@@ -32,8 +31,8 @@ class RegisterVacationRequestRequest extends FormRequest
                 'string',
                 Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
             ],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'dates' => ['required', 'array', 'min:1'],
+            'dates.*' => ['required', 'date', 'distinct'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

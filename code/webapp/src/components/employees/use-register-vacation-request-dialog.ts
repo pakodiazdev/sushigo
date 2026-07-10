@@ -6,12 +6,8 @@ import { z } from 'zod'
 import { useVacationEntitlements, useCreateVacationRequest } from '@/services/vacation-hooks'
 
 const schema = z.object({
-  start_date: z.string().min(1, 'La fecha de inicio es requerida'),
-  end_date: z.string().min(1, 'La fecha de fin es requerida'),
+  dates: z.array(z.string()).min(1, 'Selecciona al menos un día'),
   notes: z.string().max(1000, 'Máximo 1000 caracteres').optional().nullable(),
-}).refine((data) => data.end_date >= data.start_date, {
-  message: 'La fecha de fin debe ser posterior o igual a la fecha de inicio',
-  path: ['end_date'],
 })
 
 export type RegisterVacationRequestFormValues = z.infer<typeof schema>
@@ -37,15 +33,6 @@ export interface UseRegisterVacationRequestDialogResult {
   handleClose: () => void
 }
 
-function inclusiveDaysCount(start: string, end: string): number {
-  if (!start || !end) return 0
-  const startDate = new Date(`${start}T00:00:00`)
-  const endDate = new Date(`${end}T00:00:00`)
-  const diffMs = endDate.getTime() - startDate.getTime()
-  if (Number.isNaN(diffMs) || diffMs < 0) return 0
-  return Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1
-}
-
 export function useRegisterVacationRequestDialog({
   employee,
   onSuccess,
@@ -56,26 +43,22 @@ export function useRegisterVacationRequestDialog({
   const form = useForm<RegisterVacationRequestFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      start_date: '',
-      end_date: '',
+      dates: [],
       notes: null,
     },
   })
 
-  const watchedStartDate = form.watch('start_date')
-  const watchedEndDate = form.watch('end_date')
+  const watchedDates = form.watch('dates')
 
-  const daysCount = useMemo(
-    () => inclusiveDaysCount(watchedStartDate, watchedEndDate),
-    [watchedStartDate, watchedEndDate]
-  )
+  const daysCount = watchedDates.length
 
   const remainingDays = useMemo(() => {
-    if (!watchedStartDate || !entitlementsData?.entitlements) return null
-    const year = new Date(`${watchedStartDate}T00:00:00`).getFullYear()
+    if (watchedDates.length === 0 || !entitlementsData?.entitlements) return null
+    const firstDate = [...watchedDates].sort((a, b) => a.localeCompare(b))[0]
+    const year = new Date(`${firstDate}T00:00:00`).getFullYear()
     const entitlement = entitlementsData.entitlements.find((e) => e.year === year)
     return entitlement ? entitlement.remaining_days : null
-  }, [watchedStartDate, entitlementsData])
+  }, [watchedDates, entitlementsData])
 
   const isInsufficientBalance = remainingDays !== null && daysCount > 0 && daysCount > remainingDays
 
@@ -85,8 +68,7 @@ export function useRegisterVacationRequestDialog({
     mutation.mutate(
       {
         employee_id: employee.id,
-        start_date: values.start_date,
-        end_date: values.end_date,
+        dates: values.dates,
         notes: values.notes || null,
       },
       {

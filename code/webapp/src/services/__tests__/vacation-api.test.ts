@@ -41,8 +41,7 @@ describe('vacationApi', () => {
 
       const payload = {
         employee_id: EMP_ID,
-        start_date: '2026-08-10',
-        end_date: '2026-08-12',
+        dates: ['2026-08-10', '2026-08-11', '2026-08-12'],
         notes: 'Vacaciones familiares',
       }
 

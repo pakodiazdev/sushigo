@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VacationRequest extends Model
 {
@@ -56,6 +57,17 @@ class VacationRequest extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    /**
+     * The exact set of days this vacation request covers. start_date/end_date
+     * remain as derived MIN/MAX bounds for range-based filtering and display,
+     * but the authoritative "does this request cover day X" answer is this
+     * list — a request may cover non-contiguous days (e.g. Monday + Wednesday).
+     */
+    public function dates(): HasMany
+    {
+        return $this->hasMany(VacationRequestDate::class);
+    }
+
     // ── Scopes ───────────────────────────────────────────────────────────────
 
     public function scopeApproved(Builder $query): Builder
@@ -69,11 +81,14 @@ class VacationRequest extends Model
     }
 
     /**
-     * Vacation requests that cover a specific date.
+     * Vacation requests that cover a specific date. Checks the exact selected
+     * days (vacation_request_dates), not the start_date/end_date bounding
+     * range — a request covering Monday and Wednesday does NOT cover Tuesday.
      */
     public function scopeForDate(Builder $query, string $date): Builder
     {
-        return $query->where('start_date', '<=', $date)
-            ->where('end_date', '>=', $date);
+        return $query->whereHas('dates', function (Builder $q) use ($date) {
+            $q->whereDate('date', $date);
+        });
     }
 }

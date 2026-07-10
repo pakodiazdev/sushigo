@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
  *
  * - Sets status = APPROVED, approved_by, approved_at.
  * - Increments used_days on the linked VacationEntitlement.
- * - Creates/updates Attendance records for each date in range with day_status = VACATION.
+ * - Creates/updates Attendance records for each selected date with day_status = VACATION.
  * - Guards: only PENDING requests may be approved; no worked attendance overlap.
  *
  * @see AP-055, RF-28
@@ -31,18 +31,14 @@ class ApproveVacationRequestAction
         $vacationRequest = DB::transaction(function () use ($vacationRequest, $approvedById) {
             $vacationRequest = VacationRequest::lockForUpdate()->findOrFail($vacationRequest->id);
 
+            $dates = $vacationRequest->dates()
+                ->pluck('date')
+                ->map(fn ($date) => $date->toDateString())
+                ->all();
+
             $this->guardIsPending($vacationRequest);
-            $this->guardNoExistingWorkedAttendance(
-                $vacationRequest->employee_id,
-                $vacationRequest->start_date->toDateString(),
-                $vacationRequest->end_date->toDateString()
-            );
-            $this->guardNoOverlappingApprovedVacation(
-                $vacationRequest->employee_id,
-                $vacationRequest->start_date->toDateString(),
-                $vacationRequest->end_date->toDateString(),
-                $vacationRequest->id
-            );
+            $this->guardNoExistingWorkedAttendance($vacationRequest->employee_id, $dates);
+            $this->guardNoOverlappingApprovedVacation($vacationRequest->employee_id, $dates, $vacationRequest->id);
 
             VacationEntitlement::where('id', $vacationRequest->vacation_entitlement_id)
                 ->lockForUpdate()
@@ -54,15 +50,11 @@ class ApproveVacationRequestAction
                 'approved_at' => now(),
             ]);
 
-            $this->createAttendanceRecords(
-                $vacationRequest->employee_id,
-                $vacationRequest->start_date->toDateString(),
-                $vacationRequest->end_date->toDateString()
-            );
+            $this->createAttendanceRecords($vacationRequest->employee_id, $dates);
 
             return $vacationRequest;
         });
 
-        return $vacationRequest->load(['employee', 'vacationEntitlement', 'requestedBy', 'approvedBy']);
+        return $vacationRequest->load(['employee', 'vacationEntitlement', 'requestedBy', 'approvedBy', 'dates']);
     }
 }
