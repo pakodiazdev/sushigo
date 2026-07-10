@@ -87,7 +87,7 @@ describe('OvertimeDecisionDialog — actions', () => {
     fireEvent.click(getByTestId('btn-authorize-overtime'))
     fireEvent.change(getByLabelText('Método'), { target: { value: 'AGREED_RATE' } })
     fireEvent.click(getByTestId('btn-confirm-valuation'))
-    expect(await findByText('La tarifa pactada es requerida')).toBeDefined()
+    expect(await findByText('La tarifa pactada debe ser un número mayor a 0')).toBeDefined()
     expect(onAuthorize).not.toHaveBeenCalled()
   })
 
@@ -111,7 +111,7 @@ describe('OvertimeDecisionDialog — actions', () => {
     fireEvent.click(getByTestId('btn-authorize-overtime'))
     fireEvent.change(getByLabelText('Método'), { target: { value: 'SALARY_FACTOR' } })
     fireEvent.click(getByTestId('btn-confirm-valuation'))
-    expect(await findByText('El factor es requerido')).toBeDefined()
+    expect(await findByText('El factor debe ser un número mayor a 0')).toBeDefined()
     expect(onAuthorize).not.toHaveBeenCalled()
   })
 
