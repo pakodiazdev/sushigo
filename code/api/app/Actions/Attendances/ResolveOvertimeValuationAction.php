@@ -16,8 +16,11 @@ use Illuminate\Validation\ValidationException;
  * Shared by RecordOvertimeDecisionAction (persists the result) and
  * PreviewOvertimeValuationController (read-only preview for the UI).
  *
- * LFT_PROPORTIONAL: the tier is resolved from hours already authorized this
- *   week (before this decision) — the whole decision is valued under that tier.
+ * LFT_PROPORTIONAL: strictly follows Art. 66-68 LFT — minutes are split across
+ *   tiers as the employee's weekly accumulated overtime crosses each tier's
+ *   hour cap, so a single day's overtime that straddles the 9h/week boundary
+ *   is partly paid at 2x and partly at 3x, instead of the whole day falling
+ *   under one bucket. `rate_applied` is the resulting weighted-average factor.
  * AGREED_RATE: a flat hourly rate negotiated for this specific case.
  * SALARY_FACTOR: a custom multiplier of the employee's own minute rate,
  *   negotiated for this specific case (e.g. 1.5x instead of the LFT tier).
@@ -59,22 +62,66 @@ class ResolveOvertimeValuationAction
             ];
         }
 
+        return $this->resolveLftProportional($attendance, $minutes, $minuteRate);
+    }
+
+    /**
+     * Splits this decision's overtime minutes across the configured LFT tiers
+     * as the weekly accumulated hours (before this decision) cross each
+     * tier's `up_to_hours` cap, pricing every minute at the factor of the
+     * tier it actually falls in.
+     *
+     * @return array{rate_applied: float, amount: float, accumulated_hours: float}
+     *
+     * @throws ValidationException
+     */
+    private function resolveLftProportional(Attendance $attendance, int $minutes, float $minuteRate): array
+    {
         $accumulatedHours = $this->accumulatedOvertimeHoursThisWeek($attendance);
+        $tiers = OvertimeLftTier::orderBy('sort_order')->get();
 
-        $tier = OvertimeLftTier::orderBy('sort_order')->get()
-            ->first(fn (OvertimeLftTier $t) => $t->matches($accumulatedHours));
+        $amount = 0.0;
+        $remainingMinutes = $minutes;
+        $hoursSoFar = $accumulatedHours;
 
-        if (! $tier) {
+        foreach ($tiers as $tier) {
+            if ($remainingMinutes <= 0) {
+                break;
+            }
+
+            $capHours = $tier->up_to_hours !== null ? (float) $tier->up_to_hours : null;
+
+            if ($capHours !== null && $hoursSoFar >= $capHours) {
+                continue;
+            }
+
+            $minutesInTier = $capHours !== null
+                ? min($remainingMinutes, (int) round(($capHours - $hoursSoFar) * 60))
+                : $remainingMinutes;
+
+            if ($minutesInTier <= 0) {
+                continue;
+            }
+
+            $amount += $minuteRate * (float) $tier->factor * $minutesInTier;
+            $remainingMinutes -= $minutesInTier;
+            $hoursSoFar += $minutesInTier / 60;
+        }
+
+        if ($remainingMinutes > 0) {
             throw ValidationException::withMessages([
                 'valuation_method' => 'No hay un tramo LFT configurado para las horas acumuladas de este empleado.',
             ]);
         }
 
-        $factor = (float) $tier->factor;
+        $amount = round($amount, 2);
+        $effectiveFactor = $minutes > 0 && $minuteRate > 0
+            ? round($amount / ($minuteRate * $minutes), 2)
+            : 0.0;
 
         return [
-            'rate_applied' => $factor,
-            'amount' => round($minuteRate * $factor * $minutes, 2),
+            'rate_applied' => $effectiveFactor,
+            'amount' => $amount,
             'accumulated_hours' => $accumulatedHours,
         ];
     }

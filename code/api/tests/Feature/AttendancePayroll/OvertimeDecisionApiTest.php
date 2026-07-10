@@ -182,6 +182,47 @@ class OvertimeDecisionApiTest extends TestCase
     }
 
     #[Test]
+    public function lft_proportional_splits_a_single_decision_across_tiers_when_it_crosses_the_weekly_cap(): void
+    {
+        $employee = Employee::factory()->create();
+        WageHistory::factory()->create([
+            'employee_id' => $employee->id,
+            'hourly_rate' => '120.00',
+            'effective_from' => '2026-01-01',
+            'effective_to' => null,
+        ]);
+
+        OvertimeLftTier::insert([
+            ['public_id' => '01LFTE', 'factor' => '2.00', 'up_to_hours' => '9.00', 'sort_order' => 1, 'created_at' => now(), 'updated_at' => now()],
+            ['public_id' => '01LFTF', 'factor' => '3.00', 'up_to_hours' => null, 'sort_order' => 2, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        // 6 hours already authorized earlier this same week (week of 2026-02-23, Monday–Sunday)
+        Attendance::factory()->withOvertime(360)->create([
+            'employee_id' => $employee->id,
+            'date' => '2026-02-24',
+            'overtime_authorized' => true,
+        ]);
+
+        // 4 more hours today: the first 3 complete the 9h cap (2x), the last 1 exceeds it (3x)
+        $attendance = Attendance::factory()->withOvertime(240)->create([
+            'employee_id' => $employee->id,
+            'date' => '2026-02-25',
+        ]);
+
+        $response = $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/overtime-decision",
+            ['authorize' => true, 'valuation_method' => 'LFT_PROPORTIONAL'],
+        );
+
+        // 180 min @ 2x (120/60 * 2 * 180 = 720) + 60 min @ 3x (120/60 * 3 * 60 = 360) = 1080
+        // Weighted-average factor: 1080 / (2 * 240) = 2.25
+        $response->assertStatus(200)
+            ->assertJsonPath('data.overtime_rate_applied', 2.25)
+            ->assertJsonPath('data.overtime_amount', 1080);
+    }
+
+    #[Test]
     public function lft_proportional_ignores_agreed_rate_field_if_present(): void
     {
         $employee = Employee::factory()->create();

@@ -96,6 +96,37 @@ class ResolveOvertimeValuationActionTest extends TestCase
     }
 
     #[Test]
+    public function lft_proportional_splits_minutes_across_tiers_when_crossing_the_weekly_cap(): void
+    {
+        $employee = $this->employeeWithWage('120.00');
+
+        OvertimeLftTier::insert([
+            ['public_id' => '01TESTC0000000000000000C', 'factor' => '2.00', 'up_to_hours' => '9.00', 'sort_order' => 1, 'created_at' => now(), 'updated_at' => now()],
+            ['public_id' => '01TESTD0000000000000000D', 'factor' => '3.00', 'up_to_hours' => null, 'sort_order' => 2, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        // 6 hours already authorized earlier this same week
+        Attendance::factory()->withOvertime(360)->create([
+            'employee_id' => $employee->id,
+            'date' => '2026-02-24',
+            'overtime_authorized' => true,
+        ]);
+
+        // 4 more hours today: 3 complete the 9h cap (2x), 1 exceeds it (3x)
+        $attendance = Attendance::factory()->withOvertime(240)->create([
+            'employee_id' => $employee->id,
+            'date' => '2026-02-25',
+        ]);
+
+        $result = (new ResolveOvertimeValuationAction)($attendance, OvertimeValuationMethod::LFT_PROPORTIONAL);
+
+        // 180 min @ 2x + 60 min @ 3x, minuteRate = 2.0 → (2*2*180) + (2*3*60) = 720 + 360 = 1080
+        $this->assertSame(2.25, $result['rate_applied']);
+        $this->assertSame(1080.0, $result['amount']);
+        $this->assertSame(6.0, $result['accumulated_hours']);
+    }
+
+    #[Test]
     public function lft_proportional_throws_when_no_tier_is_configured(): void
     {
         $employee = $this->employeeWithWage('120.00');
