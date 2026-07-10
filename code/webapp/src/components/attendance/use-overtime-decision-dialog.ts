@@ -14,11 +14,11 @@ const methodSchema = z
   })
   .refine(
     (data) => data.valuation_method !== 'AGREED_RATE' || Number(data.agreed_rate) > 0,
-    { message: 'La tarifa pactada es requerida', path: ['agreed_rate'] },
+    { message: 'La tarifa pactada debe ser un número mayor a 0', path: ['agreed_rate'] },
   )
   .refine(
     (data) => data.valuation_method !== 'SALARY_FACTOR' || Number(data.agreed_factor) > 0,
-    { message: 'El factor es requerido', path: ['agreed_factor'] },
+    { message: 'El factor debe ser un número mayor a 0', path: ['agreed_factor'] },
   )
 
 export type OvertimeMethodFormValues = z.infer<typeof methodSchema>
