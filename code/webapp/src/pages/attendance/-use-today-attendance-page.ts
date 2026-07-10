@@ -6,7 +6,7 @@ import { getAttendancePhase } from '@/types/attendance'
 import { todayDateCdmx } from '@/lib/datetime'
 import { timeToIsoWithOffset } from '@/lib/timezone'
 import { useBusinessDate } from '@/stores/clock.store'
-import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimeDecisionPayload, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
 import type { AttendanceSummary } from '@/components/attendance'
 
 // Re-export from shared utilities for backwards compatibility
@@ -40,6 +40,29 @@ export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
  */
 export function todayCdmxDate(): string {
   return todayDateCdmx()
+}
+
+/**
+ * Builds the discriminated overtime-decision payload from the dialog's loose
+ * positional args. `valuation_method` (and its matching rate/factor) is only
+ * attached when authorizing, so a reject never carries stale method state.
+ * Exported for testing.
+ */
+export function buildOvertimeDecisionPayload(
+  authorize: boolean,
+  valuationMethod?: OvertimeValuationMethod,
+  agreedRate?: number,
+  agreedFactor?: number,
+): OvertimeDecisionPayload {
+  if (!authorize) return { authorize: false }
+
+  if (valuationMethod === 'AGREED_RATE') {
+    return { authorize: true, valuation_method: 'AGREED_RATE', agreed_rate: agreedRate ?? 0 }
+  }
+  if (valuationMethod === 'SALARY_FACTOR') {
+    return { authorize: true, valuation_method: 'SALARY_FACTOR', agreed_factor: agreedFactor ?? 0 }
+  }
+  return { authorize: true, valuation_method: 'LFT_PROPORTIONAL' }
 }
 
 /**
@@ -250,10 +273,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     overtimeDecisionMutation.mutate(
       {
         attendance_id: pendingOvertimeDecision.attendanceId,
-        authorize,
-        valuation_method: valuationMethod,
-        agreed_rate: agreedRate,
-        agreed_factor: agreedFactor,
+        ...buildOvertimeDecisionPayload(authorize, valuationMethod, agreedRate, agreedFactor),
       },
       { onSettled: closeOvertimeDecision }
     )
@@ -282,10 +302,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     overtimeDecisionMutation.mutate(
       {
         attendance_id: currentBulkOvertime.attendance_id,
-        authorize,
-        valuation_method: valuationMethod,
-        agreed_rate: agreedRate,
-        agreed_factor: agreedFactor,
+        ...buildOvertimeDecisionPayload(authorize, valuationMethod, agreedRate, agreedFactor),
       },
       { onSuccess: () => setBulkOvertimeQueue(q => q.slice(1)) },
     )

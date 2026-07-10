@@ -243,9 +243,15 @@ describe('attendanceApi.overtimeDecision', () => {
     }
     vi.mocked(apiClient.patch).mockResolvedValueOnce(mockResponse as never)
 
-    const result = await attendanceApi.overtimeDecision('att-123', { authorize: true })
+    const result = await attendanceApi.overtimeDecision('att-123', {
+      authorize: true,
+      valuation_method: 'LFT_PROPORTIONAL',
+    })
 
-    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/att-123/overtime-decision', { authorize: true })
+    expect(apiClient.patch).toHaveBeenCalledWith('/attendances/att-123/overtime-decision', {
+      authorize: true,
+      valuation_method: 'LFT_PROPORTIONAL',
+    })
     expect(result).toEqual(mockResponse)
   })
 
