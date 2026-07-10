@@ -9,6 +9,7 @@ use App\Models\AttendanceAuditLog;
 use App\Models\Employee;
 use App\Models\User;
 use App\Support\Clock\ApplicationClock;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -57,75 +58,104 @@ class RecordOvertimeDecisionAction
         $now = $this->clock->nowUtc();
 
         return DB::transaction(function () use ($attendance, $data, $decidedBy, $authorize, $now) {
-            $valuationMethod = null;
-            $rateApplied = null;
-            $amount = null;
+            [$valuationMethod, $rateApplied, $amount] = $authorize
+                ? $this->resolveAuthorizedValuation($attendance, $data)
+                : [null, null, null];
 
-            if ($authorize) {
-                $valuationMethod = OvertimeValuationMethod::from($data['valuation_method']);
-
-                if ($valuationMethod === OvertimeValuationMethod::LFT_PROPORTIONAL) {
-                    Employee::where('id', $attendance->employee_id)->lockForUpdate()->first();
-                }
-
-                $resolved = ($this->resolveValuation)(
-                    $attendance,
-                    $valuationMethod,
-                    isset($data['agreed_rate']) ? (float) $data['agreed_rate'] : null,
-                    isset($data['agreed_factor']) ? (float) $data['agreed_factor'] : null,
-                );
-                $rateApplied = $resolved['rate_applied'];
-                $amount = $resolved['amount'];
-            }
-
-            // Atomic update: only affects rows where no decision has been recorded yet.
-            // If 0 rows are affected, a concurrent request already recorded the decision.
-            $affected = Attendance::where('id', $attendance->id)
-                ->whereNull('overtime_authorized_at')
-                ->update([
-                    'overtime_authorized' => $authorize,
-                    'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
-                    'overtime_authorized_at' => $now,
-                    'overtime_valuation_method' => $valuationMethod?->value,
-                    'overtime_rate_applied' => $rateApplied,
-                    'overtime_amount' => $amount,
-                ]);
-
-            if ($affected === 0) {
-                throw ValidationException::withMessages([
-                    'authorize' => 'Ya se registró una decisión sobre las horas extra de este empleado.',
-                ]);
-            }
-
-            // The atomic query-builder update bypasses Eloquent model events, so the
-            // Auditable trait never fires. We write the audit entry manually to ensure
-            // overtime decisions are included in the audit trail (RF-19).
-            AttendanceAuditLog::create([
-                'auditable_type' => Attendance::class,
-                'auditable_id' => $attendance->id,
-                'action' => AuditAction::UPDATE,
-                'old_values' => [
-                    'overtime_authorized' => $attendance->getRawOriginal('overtime_authorized'),
-                    'overtime_authorized_by' => $attendance->getRawOriginal('overtime_authorized_by'),
-                    'overtime_authorized_at' => $attendance->getRawOriginal('overtime_authorized_at'),
-                    'overtime_valuation_method' => $attendance->getRawOriginal('overtime_valuation_method'),
-                    'overtime_rate_applied' => $attendance->getRawOriginal('overtime_rate_applied'),
-                    'overtime_amount' => $attendance->getRawOriginal('overtime_amount'),
-                ],
-                'new_values' => [
-                    'overtime_authorized' => $authorize,
-                    'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
-                    'overtime_authorized_at' => $now->toDateTimeString(),
-                    'overtime_valuation_method' => $valuationMethod?->value,
-                    'overtime_rate_applied' => $rateApplied,
-                    'overtime_amount' => $amount,
-                ],
-                'user_id' => $decidedBy->id,
-                'reason' => $data['reason'] ?? null,
-            ]);
+            $this->applyDecision($attendance, $authorize, $decidedBy, $now, $valuationMethod, $rateApplied, $amount, $data['reason'] ?? null);
 
             return $attendance->fresh(['employee']);
         });
+    }
+
+    /**
+     * Resolves the valuation for an authorize=true decision. Locks the employee row
+     * first when the method reads cross-attendance weekly state (LFT_PROPORTIONAL),
+     * so concurrent decisions for the same employee can't both use stale hours.
+     *
+     * @return array{0: OvertimeValuationMethod, 1: float, 2: float}
+     *
+     * @throws ValidationException
+     */
+    private function resolveAuthorizedValuation(Attendance $attendance, array $data): array
+    {
+        $valuationMethod = OvertimeValuationMethod::from($data['valuation_method']);
+
+        if ($valuationMethod === OvertimeValuationMethod::LFT_PROPORTIONAL) {
+            Employee::where('id', $attendance->employee_id)->lockForUpdate()->first();
+        }
+
+        $resolved = ($this->resolveValuation)(
+            $attendance,
+            $valuationMethod,
+            isset($data['agreed_rate']) ? (float) $data['agreed_rate'] : null,
+            isset($data['agreed_factor']) ? (float) $data['agreed_factor'] : null,
+        );
+
+        return [$valuationMethod, $resolved['rate_applied'], $resolved['amount']];
+    }
+
+    /**
+     * Persists the decision atomically (only if not already decided) and writes the
+     * audit trail entry.
+     *
+     * @throws ValidationException
+     */
+    private function applyDecision(
+        Attendance $attendance,
+        bool $authorize,
+        User $decidedBy,
+        CarbonImmutable $now,
+        ?OvertimeValuationMethod $valuationMethod,
+        ?float $rateApplied,
+        ?float $amount,
+        ?string $reason,
+    ): void {
+        // Atomic update: only affects rows where no decision has been recorded yet.
+        // If 0 rows are affected, a concurrent request already recorded the decision.
+        $affected = Attendance::where('id', $attendance->id)
+            ->whereNull('overtime_authorized_at')
+            ->update([
+                'overtime_authorized' => $authorize,
+                'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
+                'overtime_authorized_at' => $now,
+                'overtime_valuation_method' => $valuationMethod?->value,
+                'overtime_rate_applied' => $rateApplied,
+                'overtime_amount' => $amount,
+            ]);
+
+        if ($affected === 0) {
+            throw ValidationException::withMessages([
+                'authorize' => 'Ya se registró una decisión sobre las horas extra de este empleado.',
+            ]);
+        }
+
+        // The atomic query-builder update bypasses Eloquent model events, so the
+        // Auditable trait never fires. We write the audit entry manually to ensure
+        // overtime decisions are included in the audit trail (RF-19).
+        AttendanceAuditLog::create([
+            'auditable_type' => Attendance::class,
+            'auditable_id' => $attendance->id,
+            'action' => AuditAction::UPDATE,
+            'old_values' => [
+                'overtime_authorized' => $attendance->getRawOriginal('overtime_authorized'),
+                'overtime_authorized_by' => $attendance->getRawOriginal('overtime_authorized_by'),
+                'overtime_authorized_at' => $attendance->getRawOriginal('overtime_authorized_at'),
+                'overtime_valuation_method' => $attendance->getRawOriginal('overtime_valuation_method'),
+                'overtime_rate_applied' => $attendance->getRawOriginal('overtime_rate_applied'),
+                'overtime_amount' => $attendance->getRawOriginal('overtime_amount'),
+            ],
+            'new_values' => [
+                'overtime_authorized' => $authorize,
+                'overtime_authorized_by' => $authorize ? $decidedBy->id : null,
+                'overtime_authorized_at' => $now->toDateTimeString(),
+                'overtime_valuation_method' => $valuationMethod?->value,
+                'overtime_rate_applied' => $rateApplied,
+                'overtime_amount' => $amount,
+            ],
+            'user_id' => $decidedBy->id,
+            'reason' => $reason,
+        ]);
     }
 
     /**
