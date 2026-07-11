@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { VacationEntitlement } from '@/types/attendance-payroll'
@@ -9,13 +9,15 @@ import type { VacationEntitlement } from '@/types/attendance-payroll'
 
 const mockGetEntitlements = vi.fn()
 const mockListEmployeeVacationRequests = vi.fn()
+const mockApproveRequest = vi.fn()
+const mockRejectRequest = vi.fn()
 
 vi.mock('@/services/vacation.service', () => ({
   vacationApi: {
     getEntitlements: (...args: unknown[]) => mockGetEntitlements(...args),
     createVacationRequest: vi.fn(),
-    approveRequest: vi.fn(),
-    rejectRequest: vi.fn(),
+    approveRequest: (...args: unknown[]) => mockApproveRequest(...args),
+    rejectRequest: (...args: unknown[]) => mockRejectRequest(...args),
     listEmployeeVacationRequests: (...args: unknown[]) => mockListEmployeeVacationRequests(...args),
   },
 }))
@@ -47,10 +49,14 @@ const fakeEntitlement: VacationEntitlement = {
 
 const EMP_ID = 'emp-001'
 
+const fakeEmployee = { id: EMP_ID, first_name: 'Carlos', last_name: 'Mendoza' }
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockGetEntitlements.mockResolvedValue({ data: { data: [], meta: null } })
   mockListEmployeeVacationRequests.mockResolvedValue({ data: { data: [], meta: { current_page: 1, last_page: 1, per_page: 10, total: 0 } } })
+  mockApproveRequest.mockResolvedValue({ data: {} })
+  mockRejectRequest.mockResolvedValue({ data: {} })
 })
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -86,5 +92,108 @@ describe('useVacationSection', () => {
     })
 
     await waitFor(() => expect(result.current.summary).toEqual(summary))
+  })
+
+  it('pendingRequestEmployee is null when no employee is provided', () => {
+    const { result } = renderHook(() => useVacationSection(EMP_ID), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.pendingRequestEmployee).toBeNull()
+  })
+
+  it('pendingRequestEmployee reflects the provided employee', () => {
+    const { result } = renderHook(() => useVacationSection(EMP_ID, fakeEmployee), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.pendingRequestEmployee).toEqual(fakeEmployee)
+  })
+
+  it('openRequestDialog does nothing without an employee', () => {
+    const { result } = renderHook(() => useVacationSection(EMP_ID), {
+      wrapper: createWrapper(),
+    })
+
+    result.current.openRequestDialog()
+
+    expect(result.current.showRequestDialog).toBe(false)
+  })
+
+  it('openRequestDialog shows the dialog when an employee is provided', () => {
+    const { result } = renderHook(() => useVacationSection(EMP_ID, fakeEmployee), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => result.current.openRequestDialog())
+
+    expect(result.current.showRequestDialog).toBe(true)
+  })
+
+  it('closeRequestDialog hides the dialog', () => {
+    const { result } = renderHook(() => useVacationSection(EMP_ID, fakeEmployee), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => result.current.openRequestDialog())
+    act(() => result.current.closeRequestDialog())
+
+    expect(result.current.showRequestDialog).toBe(false)
+  })
+
+  it('handleApprove calls the approve action when confirmed', async () => {
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))
+
+    const { result } = renderHook(() => useVacationSection(EMP_ID), {
+      wrapper: createWrapper(),
+    })
+
+    result.current.handleApprove('vac-req-1')
+
+    await waitFor(() => expect(mockApproveRequest).toHaveBeenCalledWith('vac-req-1'))
+
+    vi.unstubAllGlobals()
+  })
+
+  it('handleApprove does not call the approve action when cancelled', () => {
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(false))
+
+    const { result } = renderHook(() => useVacationSection(EMP_ID), {
+      wrapper: createWrapper(),
+    })
+
+    result.current.handleApprove('vac-req-1')
+
+    expect(mockApproveRequest).not.toHaveBeenCalled()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('handleReject calls the reject action when confirmed', async () => {
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))
+
+    const { result } = renderHook(() => useVacationSection(EMP_ID), {
+      wrapper: createWrapper(),
+    })
+
+    result.current.handleReject('vac-req-1')
+
+    await waitFor(() => expect(mockRejectRequest).toHaveBeenCalledWith('vac-req-1'))
+
+    vi.unstubAllGlobals()
+  })
+
+  it('handleReject does not call the reject action when cancelled', () => {
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(false))
+
+    const { result } = renderHook(() => useVacationSection(EMP_ID), {
+      wrapper: createWrapper(),
+    })
+
+    result.current.handleReject('vac-req-1')
+
+    expect(mockRejectRequest).not.toHaveBeenCalled()
+
+    vi.unstubAllGlobals()
   })
 })
