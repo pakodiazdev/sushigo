@@ -6,11 +6,15 @@ namespace App\Services;
 
 use App\Contracts\VacationEntitlementRule;
 use App\Models\Employee;
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 
 class SeniorityService
 {
-    public function __construct(private readonly VacationEntitlementRule $rule) {}
+    public function __construct(
+        private readonly VacationEntitlementRule $rule,
+        private readonly ApplicationClock $clock,
+    ) {}
 
     /**
      * Effective seniority start date considering employment period continuity.
@@ -44,11 +48,13 @@ class SeniorityService
     }
 
     /**
-     * Number of complete seniority years as of the given date (defaults to today).
+     * Number of complete seniority years as of the given date (defaults to
+     * today per the Application Clock, not the OS clock — respects simulated
+     * time so manual QA/demo time-travel affects vacation entitlement too).
      */
     public function completedYears(Employee $employee, ?Carbon $at = null): int
     {
-        $at ??= Carbon::today();
+        $at ??= Carbon::parse($this->clock->todayInBusinessTz());
         $start = $this->effectiveStartDate($employee);
 
         return (int) $start->diffInYears($at);
@@ -59,7 +65,7 @@ class SeniorityService
      */
     public function nextAnniversary(Employee $employee, ?Carbon $at = null): array
     {
-        $at ??= Carbon::today();
+        $at ??= Carbon::parse($this->clock->todayInBusinessTz());
         $start = $this->effectiveStartDate($employee);
         $completedYears = (int) $start->diffInYears($at);
 

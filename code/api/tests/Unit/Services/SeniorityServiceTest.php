@@ -2,12 +2,15 @@
 
 namespace Tests\Unit\Services;
 
+use App\Enums\ClockMode;
 use App\Enums\TerminationType;
+use App\Models\ApplicationClockState;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Services\SeniorityService;
 use App\Services\VacationRules\VacationsLFTMX;
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -32,7 +35,7 @@ class SeniorityServiceTest extends TestCase
 
         $this->branch = Branch::factory()->create();
 
-        $this->service = new SeniorityService(new VacationsLFTMX);
+        $this->service = new SeniorityService(new VacationsLFTMX, app(ApplicationClock::class));
     }
 
     private function employeeWithPeriod(string $startDate, bool $active = true): Employee
@@ -176,6 +179,45 @@ class SeniorityServiceTest extends TestCase
         $result = $this->service->completedYears($employee, Carbon::parse('2026-08-19'));
 
         $this->assertEquals(3, $result);
+    }
+
+    // ── default $at reads the Application Clock, not the OS clock ──────────────
+
+    #[Test]
+    public function completed_years_defaults_to_the_simulated_application_clock_date(): void
+    {
+        // No Carbon::setTestNow() here on purpose — this proves completedYears()'s
+        // default reads the DB-backed simulated clock, not PHP's real system time.
+        ApplicationClockState::current()->update([
+            'mode' => ClockMode::SIMULATED,
+            'base_datetime_utc' => '2026-12-01T12:00:00Z',
+            'started_real_datetime_utc' => now(),
+        ]);
+
+        // Anniversary reached one day before the simulated "now" (2026-12-01) —
+        // would NOT be reached yet under the real system clock during normal test runs.
+        $employee = $this->employeeWithPeriod('2025-11-30');
+
+        $result = $this->service->completedYears($employee);
+
+        $this->assertEquals(1, $result);
+    }
+
+    #[Test]
+    public function next_anniversary_defaults_to_the_simulated_application_clock_date(): void
+    {
+        ApplicationClockState::current()->update([
+            'mode' => ClockMode::SIMULATED,
+            'base_datetime_utc' => '2026-12-01T12:00:00Z',
+            'started_real_datetime_utc' => now(),
+        ]);
+
+        $employee = $this->employeeWithPeriod('2025-11-30');
+
+        $result = $this->service->nextAnniversary($employee);
+
+        $this->assertEquals('2027-11-30', $result['date']);
+        $this->assertEquals(2, $result['seniority_year']);
     }
 
     // ── nextAnniversary ───────────────────────────────────────────────────────

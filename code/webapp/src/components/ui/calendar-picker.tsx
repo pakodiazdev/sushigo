@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useBusinessDate } from '@/stores/clock.store'
 import { MONTH_LABELS_FULL, DAY_HEADERS, toIso, todayIso, mondayFirstIndex, buildMonthCells } from './calendar-shared'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -59,8 +60,12 @@ interface CalendarGridProps {
 }
 
 function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarGridProps) {
-  const today = todayIso()
-  const initial = value ? new Date(`${value}T12:00:00`) : new Date()
+  // Respects the Application Clock (simulated time) when available, so the
+  // "today" marker and the default viewed month match the simulated date
+  // instead of the browser's real clock.
+  const businessDate = useBusinessDate()
+  const today = businessDate ?? todayIso()
+  const initial = new Date(`${value || today}T12:00:00`)
 
   const [view, setView] = useState<View>('day')
   const [year, setYear] = useState(initial.getFullYear())

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useBusinessDate } from '@/stores/clock.store'
 import { MONTH_LABELS_FULL, DAY_HEADERS, toIso, todayIso, buildMonthCells } from './calendar-shared'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -36,8 +37,12 @@ function sortDates(dates: string[]): string[] {
  * single permiso don't have to be contiguous (e.g. Monday + Wednesday).
  */
 export function MultiDateCalendar({ value, onChange, singleSelect = false, className }: MultiDateCalendarProps) {
-  const today = todayIso()
-  const initial = value[0] ? new Date(`${value[0]}T12:00:00`) : new Date()
+  // Respects the Application Clock (simulated time) when available, so the
+  // "today" marker and the default viewed month match the simulated date
+  // instead of the browser's real clock.
+  const businessDate = useBusinessDate()
+  const today = businessDate ?? todayIso()
+  const initial = new Date(`${value[0] ?? today}T12:00:00`)
 
   const [year, setYear] = useState(initial.getFullYear())
   const [month, setMonth] = useState(initial.getMonth())
