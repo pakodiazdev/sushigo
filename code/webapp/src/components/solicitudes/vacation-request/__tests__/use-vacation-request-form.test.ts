@@ -8,9 +8,13 @@ import { useVacationRequestForm } from '../use-vacation-request-form'
 const mockMutate = vi.fn()
 const mockEntitlementsQuery = vi.fn()
 
-vi.mock('@/services/vacation-hooks', () => ({
-  useVacationEntitlements: () => mockEntitlementsQuery(),
-}))
+vi.mock('@/services/vacation-hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/vacation-hooks')>()
+  return {
+    ...actual,
+    useVacationEntitlements: () => mockEntitlementsQuery(),
+  }
+})
 
 vi.mock('@/services/employee-request-hooks', () => ({
   useRequestVacation: () => ({ mutate: mockMutate, isPending: false }),

@@ -1,9 +1,8 @@
-import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import type { UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useVacationEntitlements } from '@/services/vacation-hooks'
+import { useVacationEntitlements, useVacationBalancePreview } from '@/services/vacation-hooks'
 import { useRequestVacation } from '@/services/employee-request-hooks'
 
 const schema = z.object({
@@ -35,17 +34,11 @@ export function useVacationRequestForm(employeeId: string, onSuccess: () => void
   })
 
   const watchedDates = form.watch('dates')
-  const daysCount = watchedDates.length
 
-  const remainingDays = useMemo(() => {
-    if (watchedDates.length === 0 || !entitlementsData?.entitlements) return null
-    const firstDate = [...watchedDates].sort((a, b) => a.localeCompare(b))[0]
-    const year = new Date(`${firstDate}T00:00:00`).getFullYear()
-    const entitlement = entitlementsData.entitlements.find((e) => e.year === year)
-    return entitlement ? entitlement.remaining_days : null
-  }, [watchedDates, entitlementsData])
-
-  const isInsufficientBalance = remainingDays !== null && daysCount > 0 && daysCount > remainingDays
+  const { daysCount, remainingDays, isInsufficientBalance } = useVacationBalancePreview(
+    watchedDates,
+    entitlementsData?.entitlements
+  )
 
   const handleSubmit = form.handleSubmit((values) => {
     mutation.mutate(

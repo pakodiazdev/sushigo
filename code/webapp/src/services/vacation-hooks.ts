@@ -1,9 +1,10 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { vacationApi } from '@/services/vacation.service'
 import type { VacationRequestFilters } from '@/services/vacation.service'
 import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { RegisterVacationRequestData, VacationRequest } from '@/types/attendance-payroll'
+import type { RegisterVacationRequestData, VacationEntitlement, VacationRequest } from '@/types/attendance-payroll'
 
 const QUERY_KEY = (employeeId: string) => ['vacation-entitlements', employeeId]
 
@@ -16,6 +17,35 @@ export function useVacationEntitlements(employeeId: string) {
     },
     enabled: !!employeeId,
   })
+}
+
+export interface VacationBalancePreview {
+  daysCount: number
+  remainingDays: number | null
+  isInsufficientBalance: boolean
+}
+
+/**
+ * Days-selected/remaining-balance preview shown while picking vacation dates —
+ * shared by the admin scheduling dialog and the self-service request form.
+ */
+export function useVacationBalancePreview(
+  dates: string[],
+  entitlements: VacationEntitlement[] | undefined
+): VacationBalancePreview {
+  const daysCount = dates.length
+
+  const remainingDays = useMemo(() => {
+    if (dates.length === 0 || !entitlements) return null
+    const firstDate = [...dates].sort((a, b) => a.localeCompare(b))[0]
+    const year = new Date(`${firstDate}T00:00:00`).getFullYear()
+    const entitlement = entitlements.find((e) => e.year === year)
+    return entitlement ? entitlement.remaining_days : null
+  }, [dates, entitlements])
+
+  const isInsufficientBalance = remainingDays !== null && daysCount > 0 && daysCount > remainingDays
+
+  return { daysCount, remainingDays, isInsufficientBalance }
 }
 
 /**
