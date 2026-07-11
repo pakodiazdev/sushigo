@@ -125,14 +125,21 @@ trait VacationRequestGuards
      * are generated on demand here, so approval doesn't depend on someone
      * having previously opened the employee's Vacaciones section.
      *
+     * All dates must fall within the resolved entitlement's window — a
+     * request cannot silently charge days that belong to a different service
+     * year (e.g. selecting days before and after an anniversary) against a
+     * single entitlement.
+     *
+     * @param  array<int, string>  $dates  Normalized (sorted ascending)
+     *
      * @throws ValidationException
      */
-    private function resolveEntitlementForYear(Employee $employee, string $referenceDate): VacationEntitlement
+    private function resolveEntitlementForYear(Employee $employee, array $dates): VacationEntitlement
     {
         $seniority = app(SeniorityService::class);
         app(VacationEntitlementService::class)->generateMissing($employee);
 
-        $referenceCarbon = Carbon::parse($referenceDate);
+        $referenceCarbon = Carbon::parse($dates[0]);
 
         try {
             $seniorityYear = $seniority->completedYears($employee, $referenceCarbon);
@@ -150,6 +157,18 @@ trait VacationRequestGuards
             throw ValidationException::withMessages([
                 'employee_id' => 'El empleado no tiene una asignación de vacaciones para el año de la fecha indicada.',
             ]);
+        }
+
+        $windowStart = $seniority->anniversaryDateForYear($employee, $seniorityYear);
+        $windowEnd = $seniority->anniversaryDateForYear($employee, $seniorityYear + 1);
+
+        foreach ($dates as $date) {
+            $carbonDate = Carbon::parse($date);
+            if ($carbonDate->lt($windowStart) || $carbonDate->gte($windowEnd)) {
+                throw ValidationException::withMessages([
+                    'dates' => 'Todas las fechas deben pertenecer al mismo período de antigüedad (a partir del '.$windowStart->toDateString().').',
+                ]);
+            }
         }
 
         return $entitlement;
@@ -198,13 +217,24 @@ trait VacationRequestGuards
      * and sets status/approver. Shared by both the approve endpoint and the
      * auto-approve path taken when an admin/manager registers a request.
      *
+     * Re-validates the balance under a row lock immediately before
+     * incrementing — the request may have sat PENDING for a while, during
+     * which other approved requests could have consumed the balance that was
+     * available when this one was created.
+     *
      * @param  array<int, string>  $dates
+     *
+     * @throws ValidationException
      */
     private function finalizeApproval(VacationRequest $vacationRequest, array $dates, int $approvedById): void
     {
-        VacationEntitlement::where('id', $vacationRequest->vacation_entitlement_id)
+        $entitlement = VacationEntitlement::where('id', $vacationRequest->vacation_entitlement_id)
             ->lockForUpdate()
-            ->increment('used_days', $vacationRequest->days_count);
+            ->firstOrFail();
+
+        $this->guardSufficientBalance($entitlement, $vacationRequest->days_count);
+
+        $entitlement->increment('used_days', $vacationRequest->days_count);
 
         $vacationRequest->update([
             'status' => VacationRequestStatus::APPROVED,
@@ -238,7 +268,7 @@ trait VacationRequestGuards
     ): VacationRequest {
         $daysCount = count($dates);
 
-        $entitlement = $this->resolveEntitlementForYear($employee, $dates[0]);
+        $entitlement = $this->resolveEntitlementForYear($employee, $dates);
         $this->guardSufficientBalance($entitlement, $daysCount);
         $this->guardNoOverlappingApprovedVacation($employee->id, $dates);
         $this->guardNoExistingWorkedAttendance($employee->id, $dates);

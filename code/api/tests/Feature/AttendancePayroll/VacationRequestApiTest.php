@@ -409,6 +409,30 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
+    public function vacation_request_rejects_dates_spanning_two_entitlement_years(): void
+    {
+        // Anniversary falls on Aug 15 — selecting a day right before and a day right
+        // after it would silently charge both against the same (earlier) entitlement
+        // if the window weren't validated.
+        $employee = $this->employeeStartedOn('2024-08-15');
+        VacationEntitlement::create([
+            'employee_id' => $employee->id,
+            'year' => 2025,
+            'entitled_days' => 12,
+            'used_days' => 0,
+            'rule_key' => 'VacationsLFTMX',
+        ]);
+
+        $response = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => ['2026-08-14', '2026-08-16'],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('dates');
+    }
+
+    #[Test]
     public function vacation_request_rejects_unauthenticated(): void
     {
         auth()->forgetGuards();
@@ -548,6 +572,31 @@ class VacationRequestApiTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrorFor('dates');
+    }
+
+    #[Test]
+    public function cannot_approve_if_balance_was_consumed_after_request_was_created(): void
+    {
+        // Balance is validated when a PENDING request is created, but another
+        // request against the same entitlement could be approved first and
+        // consume it in the meantime — approval must re-check under a lock,
+        // not blindly increment past entitled_days.
+        $employee = $this->makeEmployee();
+        $entitlement = $this->makeEntitlement($employee, entitledDays: 5, usedDays: 0);
+        $vacationRequest = $this->createPendingVacation($employee, $entitlement, [self::DATE]);
+
+        $entitlement->update(['used_days' => 5]);
+
+        $response = $this->patchJson("/api/v1/vacation-requests/{$vacationRequest->public_id}/approve");
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrorFor('dates');
+
+        $this->assertSame(5, $entitlement->fresh()->used_days);
+        $this->assertDatabaseHas('vacation_requests', [
+            'id' => $vacationRequest->id,
+            'status' => VacationRequestStatus::PENDING->value,
+        ]);
     }
 
     #[Test]

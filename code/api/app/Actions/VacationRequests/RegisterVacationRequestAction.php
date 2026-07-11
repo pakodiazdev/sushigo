@@ -39,7 +39,7 @@ class RegisterVacationRequestAction
             }
 
             $daysCount = count($dates);
-            $entitlement = $this->resolveEntitlementForYear($employee, $dates[0]);
+            $entitlement = $this->resolveEntitlementForYear($employee, $dates);
             $this->guardSufficientBalance($entitlement, $daysCount);
             $this->guardNoOverlappingApprovedVacation($employee->id, $dates);
 
