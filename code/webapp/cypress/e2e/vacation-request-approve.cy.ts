@@ -102,9 +102,9 @@ describe('Vacation Request — admin registers on behalf (happy path)', () => {
     // 2. Entitlement auto-generated: 12 days available
     cy.contains('td', '12').should('be.visible')
 
-    // 3. Click "Solicitar vacaciones" — admin sees the auto-approve notice
-    cy.contains('button', 'Solicitar vacaciones').click({ force: true })
-    cy.contains('h3', 'Solicitar vacaciones').should('be.visible')
+    // 3. Click "Programar vacaciones" — admin sees the auto-approve notice
+    cy.contains('button', 'Programar vacaciones').click({ force: true })
+    cy.contains('h3', 'Programar vacaciones').should('be.visible')
     cy.contains('Se registrará como aprobada de inmediato').should('be.visible')
 
     // 4. Pick 3 days on the calendar and submit

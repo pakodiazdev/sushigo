@@ -28,15 +28,15 @@ class PermissionSeeder extends LockedSeeder
 
     /**
      * Self-service Solicitudes access — every employee can view/create/cancel
-     * their own requests and request their own vacations, but never approve
-     * (that stays manager/admin-only, granted via EMPLOYEE_REQUESTS_PATTERN /
-     * VACATION_REQUESTS_PATTERN above).
+     * their own requests, including self-service vacation requests (via the
+     * generic employee-requests.create), but never approve or directly
+     * schedule vacations on behalf of someone else (that stays admin-only —
+     * see VACATION_REQUESTS_PATTERN above, granted only to admin).
      */
     private const SELF_SERVICE_REQUESTS_PERMISSIONS = [
         'employee-requests.view',
         'employee-requests.create',
         'employee-requests.cancel',
-        'vacation-requests.request',
     ];
 
     private const GROUP_INVENTARIO = 'Inventario';
@@ -118,7 +118,7 @@ class PermissionSeeder extends LockedSeeder
             'leaves.register-direct' => ['label' => 'Registrar ausencia directa', 'group' => 'Ausencias'],
 
             // Vacaciones
-            'vacation-requests.request' => ['label' => 'Solicitar vacaciones', 'group' => 'Ausencias'],
+            'vacation-requests.schedule' => ['label' => 'Programar vacaciones', 'group' => 'Ausencias'],
             'vacation-requests.approve' => ['label' => 'Aprobar vacaciones',   'group' => 'Ausencias'],
             'vacation-requests.reject' => ['label' => 'Rechazar vacaciones',  'group' => 'Ausencias'],
 
@@ -211,7 +211,10 @@ class PermissionSeeder extends LockedSeeder
             );
         }
 
-        // manager (position role): jefe de piso — can view/manage employees
+        // manager (position role): jefe de piso — can view/manage employees.
+        // Does NOT get VACATION_REQUESTS_PATTERN — directly scheduling vacations
+        // on behalf of an employee is admin/super-admin-only; manager still
+        // reviews self-service vacation requests via employee-requests.approve.
         $managerRole = Role::where('name', 'manager')->where('guard_name', 'api')->first();
         if ($managerRole) {
             $managerRole->syncPermissions(
@@ -220,7 +223,6 @@ class PermissionSeeder extends LockedSeeder
                         $q->whereIn('name', ['users.show', 'users.index'])
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', self::LEAVES_PATTERN)
-                            ->orWhere('name', 'like', self::VACATION_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN);

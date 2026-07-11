@@ -5,6 +5,12 @@ import type { VacationEntitlement, VacationSummary, VacationRequest } from '@/ty
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
+const mockCan = vi.fn().mockReturnValue(true)
+
+vi.mock('@/stores/auth.store', () => ({
+  useAuthStore: () => ({ can: mockCan }),
+}))
+
 let mockState = {
   entitlements: [] as VacationEntitlement[],
   summary: null as VacationSummary | null,
@@ -39,6 +45,7 @@ import { VacationSection } from '@/components/employees/vacation-section'
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockCan.mockReturnValue(true)
   mockState = {
     entitlements: [],
     summary: null,
@@ -149,10 +156,17 @@ describe('VacationSection', () => {
     expect(screen.queryByText(/antigüedad/)).toBeNull()
   })
 
-  it('renders the request vacation button', () => {
+  it('renders the "Programar vacaciones" button when the user holds vacation-requests.schedule', () => {
     render(<VacationSection employeeId="emp-001" />)
 
-    expect(screen.getByText('Solicitar vacaciones')).toBeTruthy()
+    expect(screen.getByText('Programar vacaciones')).toBeTruthy()
+  })
+
+  it('hides the "Programar vacaciones" button when the user lacks vacation-requests.schedule', () => {
+    mockCan.mockReturnValue(false)
+    render(<VacationSection employeeId="emp-001" />)
+
+    expect(screen.queryByText('Programar vacaciones')).toBeNull()
   })
 
   it('shows empty state when there are no vacation requests', () => {

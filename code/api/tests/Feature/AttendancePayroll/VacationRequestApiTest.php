@@ -25,7 +25,9 @@ class VacationRequestApiTest extends TestCase
 
     protected User $user;
 
-    protected User $selfServiceUser;
+    protected User $schedulerWithoutApprove;
+
+    protected User $employeeUser;
 
     private const DATE = '2026-08-10';
 
@@ -38,29 +40,43 @@ class VacationRequestApiTest extends TestCase
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
-        Permission::create(['name' => 'vacation-requests.request', 'guard_name' => 'api']);
+        Permission::create(['name' => 'vacation-requests.schedule', 'guard_name' => 'api']);
         Permission::create(['name' => 'vacation-requests.approve', 'guard_name' => 'api']);
         Permission::create(['name' => 'vacation-requests.reject', 'guard_name' => 'api']);
-        $role = Role::create(['name' => 'manager', 'guard_name' => 'api']);
+        Permission::create(['name' => 'employee-requests.create', 'guard_name' => 'api']);
+
+        // admin-like role: can directly schedule vacations on behalf of an employee
+        // AND approve — the endpoint auto-approves for this role, per real seeder config.
+        $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $role->givePermissionTo('attendances.create');
-        $role->givePermissionTo('vacation-requests.request');
+        $role->givePermissionTo('vacation-requests.schedule');
         $role->givePermissionTo('vacation-requests.approve');
         $role->givePermissionTo('vacation-requests.reject');
 
-        // Self-service role: can request their own vacation, but cannot approve —
-        // mirrors a regular employee, so requests they create stay PENDING.
+        // Hypothetical role: can reach the direct endpoint but not approve — exercises
+        // the $autoApprove=false branch. No real seeded role holds schedule without
+        // approve today, but the action must still support it correctly.
+        $schedulerRole = Role::create(['name' => 'scheduler-without-approve', 'guard_name' => 'api']);
+        $schedulerRole->givePermissionTo('vacation-requests.schedule');
+
+        // Regular self-service employee: no vacation-requests.schedule at all — they
+        // request their own vacation via POST /employee-requests instead, and must be
+        // rejected if they try to hit the direct-registration endpoint.
         $employeeRole = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'api']);
-        $employeeRole->givePermissionTo('vacation-requests.request');
+        $employeeRole->givePermissionTo('employee-requests.create');
 
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
         }
 
         $this->user = User::factory()->create();
-        $this->user->assignRole('manager');
+        $this->user->assignRole('admin');
 
-        $this->selfServiceUser = User::factory()->create();
-        $this->selfServiceUser->assignRole('employee');
+        $this->schedulerWithoutApprove = User::factory()->create();
+        $this->schedulerWithoutApprove->assignRole('scheduler-without-approve');
+
+        $this->employeeUser = User::factory()->create();
+        $this->employeeUser->assignRole('employee');
 
         Passport::actingAs($this->user);
 
@@ -78,9 +94,9 @@ class VacationRequestApiTest extends TestCase
     // ══════════════════════════════════════════════════════════════════════════
 
     #[Test]
-    public function self_service_request_stays_pending_without_attendance_records(): void
+    public function stays_pending_when_scheduler_lacks_approve_permission(): void
     {
-        Passport::actingAs($this->selfServiceUser);
+        Passport::actingAs($this->schedulerWithoutApprove);
 
         $employee = $this->makeEmployee();
         $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
@@ -109,9 +125,9 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function self_service_multi_day_request_stays_pending_without_attendance(): void
+    public function multi_day_request_stays_pending_when_scheduler_lacks_approve_permission(): void
     {
-        Passport::actingAs($this->selfServiceUser);
+        Passport::actingAs($this->schedulerWithoutApprove);
 
         $employee = $this->makeEmployee();
         $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
@@ -134,9 +150,9 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function self_service_request_covering_non_contiguous_days_stays_pending(): void
+    public function non_contiguous_request_stays_pending_when_scheduler_lacks_approve_permission(): void
     {
-        Passport::actingAs($this->selfServiceUser);
+        Passport::actingAs($this->schedulerWithoutApprove);
 
         $employee = $this->makeEmployee();
         $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
@@ -415,6 +431,20 @@ class VacationRequestApiTest extends TestCase
         ])->assertStatus(403);
     }
 
+    #[Test]
+    public function self_service_employee_cannot_hit_the_direct_registration_endpoint(): void
+    {
+        // A regular self-service employee (employee-requests.create only, no
+        // vacation-requests.schedule) must request their own vacation through
+        // POST /employee-requests — this direct endpoint stays admin-only.
+        Passport::actingAs($this->employeeUser);
+
+        $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => 'any-id',
+            'dates' => [self::DATE],
+        ])->assertStatus(403);
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // PATCH /api/v1/vacation-requests/{id}/approve — Approve Vacation Request
     // ══════════════════════════════════════════════════════════════════════════
@@ -656,12 +686,12 @@ class VacationRequestApiTest extends TestCase
     // ══════════════════════════════════════════════════════════════════════════
 
     #[Test]
-    public function full_workflow_self_service_request_then_manager_approve_then_check_in_blocked(): void
+    public function full_workflow_scheduler_without_approve_then_admin_approves_then_check_in_blocked(): void
     {
         $employee = $this->makeEmployee();
         $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
 
-        Passport::actingAs($this->selfServiceUser);
+        Passport::actingAs($this->schedulerWithoutApprove);
 
         $requestResponse = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
@@ -699,12 +729,12 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function full_workflow_self_service_request_then_manager_reject_no_attendance(): void
+    public function full_workflow_scheduler_without_approve_then_admin_rejects_no_attendance(): void
     {
         $employee = $this->makeEmployee();
         $entitlement = $this->makeEntitlement($employee, entitledDays: 12, usedDays: 0);
 
-        Passport::actingAs($this->selfServiceUser);
+        Passport::actingAs($this->schedulerWithoutApprove);
 
         $requestResponse = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,

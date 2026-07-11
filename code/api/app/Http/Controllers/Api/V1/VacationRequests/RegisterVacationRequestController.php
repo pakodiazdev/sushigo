@@ -11,7 +11,7 @@ use App\Http\Resources\VacationRequests\VacationRequestResource;
  * @OA\Post(
  *   path="/api/v1/vacation-requests",
  *   summary="Register Vacation Request",
- *   description="Creates a vacation request. Validates sufficient vacation balance. Requires vacation-requests.request permission. If the requester also holds vacation-requests.approve (admin/manager registering on behalf of an employee), the request is approved immediately instead of staying PENDING.",
+ *   description="Registers a vacation request directly on behalf of an employee. Requires vacation-requests.schedule permission (admin/super-admin by default) — self-service employees request their own vacation through POST /employee-requests instead. If the requester also holds vacation-requests.approve, the request is approved immediately instead of staying PENDING.",
  *   tags={"Vacation Requests"},
  *   security={{"passport": {}}},
  *

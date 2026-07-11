@@ -116,7 +116,7 @@ export function RegisterVacationRequestDialog({
               id="register-vacation-request-title"
               className="text-base font-semibold text-foreground"
             >
-              Solicitar vacaciones
+              Programar vacaciones
             </h3>
             <p className="mt-0.5 text-sm text-muted-foreground">{employeeName}</p>
             {willAutoApprove ? (
@@ -194,7 +194,7 @@ export function RegisterVacationRequestDialog({
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {willAutoApprove ? 'Registrar vacaciones' : 'Solicitar vacaciones'}
+              {willAutoApprove ? 'Registrar vacaciones' : 'Programar vacaciones'}
             </Button>
           </div>
         </form>
