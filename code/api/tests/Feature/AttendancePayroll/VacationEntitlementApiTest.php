@@ -28,13 +28,13 @@ class VacationEntitlementApiTest extends TestCase
 
         Permission::create(['name' => 'employees.view', 'guard_name' => 'api']);
         Permission::create(['name' => 'employees.update', 'guard_name' => 'api']);
-        Permission::create(['name' => 'vacation-requests.request', 'guard_name' => 'api']);
+        Permission::create(['name' => 'employee-requests.create', 'guard_name' => 'api']);
 
         $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
         $role->givePermissionTo(['employees.view', 'employees.update']);
 
         $selfServiceRole = Role::create(['name' => 'employee', 'guard_name' => 'api']);
-        $selfServiceRole->givePermissionTo('vacation-requests.request');
+        $selfServiceRole->givePermissionTo('employee-requests.create');
 
         foreach (Employee::POSITION_ROLES as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);

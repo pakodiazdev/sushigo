@@ -10,14 +10,15 @@ class PermissionSeeder extends LockedSeeder
 {
     /**
      * Self-service Solicitudes access — every employee can view/create/cancel
-     * their own requests and request their own vacations, but never approve
-     * (that stays manager/admin-only).
+     * their own requests, including self-service vacation requests (via the
+     * generic employee-requests.create), but never approve or directly
+     * schedule vacations on behalf of someone else (that stays admin-only —
+     * see vacation-requests.schedule).
      */
     private const SELF_SERVICE_REQUESTS_PERMISSIONS = [
         'employee-requests.view',
         'employee-requests.create',
         'employee-requests.cancel',
-        'vacation-requests.request',
     ];
 
     public function run(): void
@@ -83,7 +84,7 @@ class PermissionSeeder extends LockedSeeder
             'leaves.register-direct',
 
             // Vacation Requests
-            'vacation-requests.request',
+            'vacation-requests.schedule',
             'vacation-requests.approve',
             'vacation-requests.reject',
 
@@ -134,7 +135,10 @@ class PermissionSeeder extends LockedSeeder
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
 
-        // manager (position role): jefe de piso — can view/manage employees and attendances
+        // manager (position role): jefe de piso — can view/manage employees and attendances.
+        // Does NOT get vacation-requests.% — directly scheduling vacations on behalf
+        // of an employee is admin/super-admin-only; manager still reviews self-service
+        // vacation requests via employee-requests.approve.
         $managerRole = Role::where('name', 'manager')->where('guard_name', 'api')->first();
         if ($managerRole) {
             $managerRole->syncPermissions(
@@ -143,7 +147,6 @@ class PermissionSeeder extends LockedSeeder
                         $q->whereIn('name', ['users.show', 'users.index'])
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
-                            ->orWhere('name', 'like', 'vacation-requests.%')
                             ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', 'attendances.%');
                     })

@@ -79,7 +79,7 @@ class CoreTestSeeder extends Seeder
         'leaves.request',
         'leaves.approve',
         'leaves.reject',
-        'vacation-requests.request',
+        'vacation-requests.schedule',
         'vacation-requests.approve',
         'vacation-requests.reject',
         'employee-requests.view',
@@ -110,14 +110,15 @@ class CoreTestSeeder extends Seeder
 
     /**
      * Self-service Solicitudes access — every employee can view/create/cancel
-     * their own requests and request their own vacations, but never approve
-     * (that stays manager/admin-only).
+     * their own requests, including self-service vacation requests (via the
+     * generic employee-requests.create), but never approve or directly
+     * schedule vacations on behalf of someone else (that stays admin-only —
+     * see vacation-requests.schedule).
      */
     private const SELF_SERVICE_REQUESTS = [
         '=employee-requests.view',
         '=employee-requests.create',
         '=employee-requests.cancel',
-        '=vacation-requests.request',
     ];
 
     /** role name => permission name prefixes or exact names */
@@ -125,7 +126,7 @@ class CoreTestSeeder extends Seeder
         'super-admin' => '*',  // all permissions
         'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.'],
         'inventory-manager' => ['items.', 'inventory_locations.', 'stock.', ...self::SELF_SERVICE_REQUESTS],
-        'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'vacation-requests.', 'employee-requests.', 'attendances.', 'reports.'],
+        'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'employee-requests.', 'attendances.', 'reports.'],
         'cook' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
         'kitchen-assistant' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
         'delivery-driver' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],

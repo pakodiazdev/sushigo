@@ -1,6 +1,7 @@
 import { Loader2, Palmtree, Plus, Check, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/stores/auth.store'
 import { useVacationSection } from './use-vacation-section'
 import { RegisterVacationRequestDialog } from './RegisterVacationRequestDialog'
 import type { RegisterVacationRequestEmployee } from './use-register-vacation-request-dialog'
@@ -113,6 +114,8 @@ function RequestRow({
 
 export function VacationSection({ employeeId, employee }: VacationSectionProps) {
   const ctx = useVacationSection(employeeId, employee)
+  const { can } = useAuthStore()
+  const canSchedule = can('vacation-requests.schedule')
 
   return (
     <div className="space-y-4">
@@ -123,10 +126,12 @@ export function VacationSection({ employeeId, employee }: VacationSectionProps) 
             LFT México 2022
           </Badge>
         </div>
-        <Button size="sm" variant="ghost" onClick={ctx.openRequestDialog} className="h-7 gap-1 px-2 text-xs">
-          <Plus className="h-3.5 w-3.5" />
-          Solicitar vacaciones
-        </Button>
+        {canSchedule && (
+          <Button size="sm" variant="ghost" onClick={ctx.openRequestDialog} className="h-7 gap-1 px-2 text-xs">
+            <Plus className="h-3.5 w-3.5" />
+            Programar vacaciones
+          </Button>
+        )}
       </div>
 
       {ctx.summary && (
