@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('public_id', 26)->unique();
             $table->foreignId('employee_id')->constrained('employees');
-            $table->enum('type', ['EXTRA_DAY', 'LEAVE', 'SCHEDULE_CHANGE']);
+            $table->enum('type', ['EXTRA_DAY', 'LEAVE', 'VACATION', 'SCHEDULE_CHANGE']);
             $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'])->default('PENDING');
             $table->nullableMorphs('requestable');
             $table->json('payload');

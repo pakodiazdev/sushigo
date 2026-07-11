@@ -15,7 +15,7 @@ use App\Models\EmployeeRequest;
  *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
  *     @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
  *     @OA\Property(property="employee_name", type="string", example="Ana García", description="Employee full name"),
- *     @OA\Property(property="type", type="string", enum={"EXTRA_DAY", "LEAVE", "SCHEDULE_CHANGE"}, example="EXTRA_DAY"),
+ *     @OA\Property(property="type", type="string", enum={"EXTRA_DAY", "LEAVE", "VACATION", "SCHEDULE_CHANGE"}, example="EXTRA_DAY"),
  *     @OA\Property(property="status", type="string", enum={"PENDING", "APPROVED", "REJECTED", "CANCELLED"}, example="PENDING"),
  *     @OA\Property(property="payload", type="object"),
  *     @OA\Property(property="requestable", type="object", nullable=true,

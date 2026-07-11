@@ -155,3 +155,29 @@ describe('PendingRequestCard — LEAVE type', () => {
     expect(screen.getByText(/Se cancelará la solicitud de permiso/)).toBeDefined()
   })
 })
+
+describe('PendingRequestCard — VACATION type', () => {
+  function makeVacationRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest {
+    return makeRequest({
+      type: 'VACATION',
+      payload: { dates: ['2026-08-10', '2026-08-12'] },
+      ...overrides,
+    })
+  }
+
+  it('renders the "Vacaciones" label', () => {
+    render(<PendingRequestCard request={makeVacationRequest()} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/🌴 Vacaciones/)).toBeDefined()
+  })
+
+  it('renders the requested dates', () => {
+    render(<PendingRequestCard request={makeVacationRequest()} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/10 de ago.*12 de ago/)).toBeDefined()
+  })
+
+  it('cancel confirmation mentions "vacaciones"', () => {
+    render(<PendingRequestCard request={makeVacationRequest()} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
+    fireEvent.click(screen.getByLabelText('Cancelar solicitud'))
+    expect(screen.getByText(/Se cancelará la solicitud de vacaciones/)).toBeDefined()
+  })
+})

@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
+use App\Enums\DayStatus;
 use App\Enums\VacationRequestStatus;
 use App\Support\Traits\HasPublicId;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class VacationRequest extends Model
 {
-    use HasFactory, HasPublicId;
+    use HasFactory, HasPublicId, SoftDeletes;
 
     protected $fillable = [
         'employee_id',
@@ -66,6 +69,32 @@ class VacationRequest extends Model
     public function dates(): HasMany
     {
         return $this->hasMany(VacationRequestDate::class);
+    }
+
+    /**
+     * Cancellation (EmployeeRequestService::cancel()) force-deletes an
+     * approved VacationRequest directly, without a dedicated "revert" step.
+     * Attendance VACATION records have no FK to vacation_requests, and the
+     * balance deducted on approval isn't reverted automatically, so without
+     * this hook both would be left stale — still blocking check-ins and
+     * showing the days as taken even after the vacation itself is gone.
+     */
+    protected static function booted(): void
+    {
+        static::forceDeleting(function (VacationRequest $vacationRequest) {
+            $dates = $vacationRequest->dates()->pluck('date')->map(fn (Carbon $date) => $date->toDateString());
+
+            Attendance::where('employee_id', $vacationRequest->employee_id)
+                ->where('day_status', DayStatus::VACATION)
+                ->whereIn('date', $dates)
+                ->delete();
+
+            if ($vacationRequest->status === VacationRequestStatus::APPROVED) {
+                VacationEntitlement::where('id', $vacationRequest->vacation_entitlement_id)
+                    ->lockForUpdate()
+                    ->decrement('used_days', $vacationRequest->days_count);
+            }
+        });
     }
 
     // ── Scopes ───────────────────────────────────────────────────────────────

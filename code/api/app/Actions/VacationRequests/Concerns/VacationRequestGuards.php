@@ -187,4 +187,56 @@ trait VacationRequestGuards
 
         $this->createAttendanceRecords($vacationRequest->employee_id, $dates);
     }
+
+    /**
+     * Creates a VacationRequest directly in APPROVED status: resolves the
+     * entitlement, runs all the approval guards, persists the exact dates,
+     * deducts the balance and creates Attendance VACATION records.
+     *
+     * Used both by the direct admin-registration auto-approve path and by
+     * VacationRequestHandler when materializing a self-service employee
+     * request that a manager just approved.
+     *
+     * @param  array<int, string>  $dates  Already normalized (sorted, deduplicated)
+     *
+     * @throws ValidationException
+     */
+    private function createApprovedVacationRequest(
+        Employee $employee,
+        array $dates,
+        int $requestedById,
+        int $approvedById,
+        ?string $notes,
+        ?Carbon $approvedAt = null
+    ): VacationRequest {
+        $daysCount = count($dates);
+
+        $entitlement = $this->resolveEntitlementForYear($employee, $dates[0]);
+        $this->guardSufficientBalance($entitlement, $daysCount);
+        $this->guardNoOverlappingApprovedVacation($employee->id, $dates);
+        $this->guardNoExistingWorkedAttendance($employee->id, $dates);
+
+        $vacationRequest = VacationRequest::create([
+            'employee_id' => $employee->id,
+            'vacation_entitlement_id' => $entitlement->id,
+            'start_date' => $dates[0],
+            'end_date' => $dates[count($dates) - 1],
+            'days_count' => $daysCount,
+            'status' => VacationRequestStatus::APPROVED,
+            'requested_by' => $requestedById,
+            'approved_by' => $approvedById,
+            'approved_at' => $approvedAt ?? now(),
+            'notes' => $notes,
+        ]);
+
+        $this->persistVacationRequestDates($vacationRequest, $dates);
+
+        VacationEntitlement::where('id', $entitlement->id)
+            ->lockForUpdate()
+            ->increment('used_days', $daysCount);
+
+        $this->createAttendanceRecords($employee->id, $dates);
+
+        return $vacationRequest;
+    }
 }

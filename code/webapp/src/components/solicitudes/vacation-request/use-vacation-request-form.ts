@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form'
 import type { UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useVacationEntitlements, useCreateVacationRequest } from '@/services/vacation-hooks'
+import { useVacationEntitlements } from '@/services/vacation-hooks'
+import { useRequestVacation } from '@/services/employee-request-hooks'
 
 const schema = z.object({
   dates: z.array(z.string()).min(1, 'Selecciona al menos un día'),
@@ -23,7 +24,7 @@ export interface UseVacationRequestFormResult {
 
 export function useVacationRequestForm(employeeId: string, onSuccess: () => void): UseVacationRequestFormResult {
   const { data: entitlementsData } = useVacationEntitlements(employeeId)
-  const mutation = useCreateVacationRequest()
+  const mutation = useRequestVacation()
 
   const form = useForm<VacationRequestFormValues>({
     resolver: zodResolver(schema),
@@ -50,8 +51,10 @@ export function useVacationRequestForm(employeeId: string, onSuccess: () => void
     mutation.mutate(
       {
         employee_id: employeeId,
-        dates: values.dates,
-        notes: values.notes || null,
+        type: 'VACATION',
+        auto_approve: false,
+        notes: values.notes || undefined,
+        payload: { dates: values.dates },
       },
       {
         onSuccess: () => {

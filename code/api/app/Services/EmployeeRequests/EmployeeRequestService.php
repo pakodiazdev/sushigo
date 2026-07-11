@@ -17,6 +17,7 @@ class EmployeeRequestService
     public function __construct(
         private readonly ExtraDayRequestHandler $extraDayRequestHandler,
         private readonly LeaveRequestHandler $leaveRequestHandler,
+        private readonly VacationRequestHandler $vacationRequestHandler,
     ) {}
 
     /**
@@ -203,6 +204,7 @@ class EmployeeRequestService
         return match ($employeeRequest->type) {
             EmployeeRequestType::EXTRA_DAY => $this->extraDayRequestHandler,
             EmployeeRequestType::LEAVE => $this->leaveRequestHandler,
+            EmployeeRequestType::VACATION => $this->vacationRequestHandler,
             default => throw ValidationException::withMessages([
                 'type' => 'No hay handler implementado para este tipo de solicitud.',
             ]),
