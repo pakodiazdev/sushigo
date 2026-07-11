@@ -8,6 +8,8 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\VacationEntitlement;
 use App\Models\VacationRequest;
+use App\Services\SeniorityService;
+use App\Services\VacationEntitlementService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
@@ -109,15 +111,40 @@ trait VacationRequestGuards
     }
 
     /**
-     * Resolve the employee's VacationEntitlement for the calendar year of the given reference date.
+     * Resolve the employee's VacationEntitlement whose service-year window
+     * (from one anniversary up to, but not including, the next) contains the
+     * given reference date.
+     *
+     * An entitlement earned on an anniversary is valid to use throughout the
+     * following service year, which usually spans two calendar years (e.g. an
+     * anniversary on Nov 20 grants days usable through the following Nov 19)
+     * — so this matches by anniversary window, not the literal calendar year
+     * of the reference date.
+     *
+     * Missing entitlements for anniversaries the employee has already reached
+     * are generated on demand here, so approval doesn't depend on someone
+     * having previously opened the employee's Vacaciones section.
      *
      * @throws ValidationException
      */
     private function resolveEntitlementForYear(Employee $employee, string $referenceDate): VacationEntitlement
     {
-        $entitlement = VacationEntitlement::where('employee_id', $employee->id)
-            ->where('year', Carbon::parse($referenceDate)->year)
-            ->first();
+        $seniority = app(SeniorityService::class);
+        app(VacationEntitlementService::class)->generateMissing($employee);
+
+        $referenceCarbon = Carbon::parse($referenceDate);
+
+        try {
+            $seniorityYear = $seniority->completedYears($employee, $referenceCarbon);
+        } catch (\LogicException) {
+            $seniorityYear = 0;
+        }
+
+        $entitlement = $seniorityYear >= 1
+            ? VacationEntitlement::where('employee_id', $employee->id)
+                ->where('year', $seniority->anniversaryDateForYear($employee, $seniorityYear)->year)
+                ->first()
+            : null;
 
         if (! $entitlement) {
             throw ValidationException::withMessages([
