@@ -305,9 +305,11 @@ class VacationRequestApiTest extends TestCase
     }
 
     #[Test]
-    public function vacation_request_rejects_when_no_entitlement_for_year(): void
+    public function vacation_request_rejects_when_employee_has_not_completed_a_full_year(): void
     {
-        $employee = $this->makeEmployee();
+        // Hired one month before self::DATE — zero completed seniority years, so no
+        // anniversary has been reached yet and no entitlement can be generated.
+        $employee = $this->employeeStartedOn(Carbon::parse(self::DATE)->subMonth()->toDateString());
 
         $response = $this->postJson('/api/v1/vacation-requests', [
             'employee_id' => $employee->public_id,
@@ -316,6 +318,31 @@ class VacationRequestApiTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrorFor('employee_id');
+    }
+
+    #[Test]
+    public function resolves_entitlement_by_anniversary_window_not_calendar_year_of_the_request(): void
+    {
+        // Anniversary reached Sep 2025 (seniority year 1, entitlement tagged year=2025) —
+        // that entitlement stays the active one through Aug 2026 (the day before the
+        // 2026 anniversary), even though the requested date's calendar year (2026)
+        // differs from the entitlement's own calendar year (2025). Also verifies the
+        // entitlement is generated on demand — nobody visited the Vacaciones section first.
+        $employee = $this->employeeStartedOn('2024-09-01');
+        $this->assertDatabaseCount('vacation_entitlements', 0);
+
+        $response = $this->postJson('/api/v1/vacation-requests', [
+            'employee_id' => $employee->public_id,
+            'dates' => [self::DATE],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.status', VacationRequestStatus::APPROVED->value);
+
+        $this->assertDatabaseHas('vacation_entitlements', [
+            'employee_id' => $employee->id,
+            'year' => 2025,
+        ]);
     }
 
     #[Test]
@@ -739,6 +766,16 @@ class VacationRequestApiTest extends TestCase
         $period = EmploymentPeriod::factory()->create([
             'is_active' => true,
             'start_date' => '2020-01-01',
+        ]);
+
+        return $period->employee;
+    }
+
+    private function employeeStartedOn(string $startDate): Employee
+    {
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => $startDate,
         ]);
 
         return $period->employee;

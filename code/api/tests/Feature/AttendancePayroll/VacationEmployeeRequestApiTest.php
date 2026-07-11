@@ -203,6 +203,34 @@ class VacationEmployeeRequestApiTest extends TestCase
             ->assertJsonValidationErrorFor('dates');
     }
 
+    #[Test]
+    public function approves_using_the_anniversary_entitlement_even_when_request_dates_fall_in_the_next_calendar_year(): void
+    {
+        // Reproduces the real-world case: an employee's anniversary (and thus their
+        // VacationEntitlement) falls in one calendar year, but they self-service a
+        // vacation request for dates in the following calendar year — still within
+        // that same service-year window. No entitlement was ever pre-generated
+        // (nobody visited the Vacaciones section) — it must be generated on approval.
+        $employee = $this->employeeStartedOn('2024-09-01');
+        $this->assertDatabaseCount('vacation_entitlements', 0);
+
+        $requestId = $this->createVacationRequest($employee, ['dates' => [self::DATE]]);
+
+        $response = $this->patchJson("/api/v1/employee-requests/{$requestId}/approve");
+
+        $response->assertOk()
+            ->assertJsonPath('data.status', EmployeeRequestStatus::APPROVED->value);
+
+        $this->assertDatabaseHas('vacation_entitlements', [
+            'employee_id' => $employee->id,
+            'year' => 2025,
+        ]);
+        $this->assertDatabaseHas('vacation_requests', [
+            'employee_id' => $employee->id,
+            'status' => 'APPROVED',
+        ]);
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Reject
     // ══════════════════════════════════════════════════════════════════════════
@@ -295,6 +323,16 @@ class VacationEmployeeRequestApiTest extends TestCase
         $period = EmploymentPeriod::factory()->create([
             'is_active' => true,
             'start_date' => '2020-01-01',
+        ]);
+
+        return $period->employee;
+    }
+
+    private function employeeStartedOn(string $startDate): Employee
+    {
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => true,
+            'start_date' => $startDate,
         ]);
 
         return $period->employee;
