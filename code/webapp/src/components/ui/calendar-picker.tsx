@@ -133,7 +133,7 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
         <button
           type="button"
           onClick={cycleView}
-          className="flex-1 rounded px-1 py-0.5 text-center text-sm font-medium capitalize hover:bg-muted"
+          className="flex-1 rounded px-1 py-0.5 text-center text-sm font-medium capitalize text-foreground hover:bg-muted"
           title="Click para cambiar vista"
         >
           {view === 'day' && `${MONTH_LABELS_FULL[month]} ${year}`}
@@ -165,7 +165,8 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
               type="button"
               onClick={() => selectYear(y)}
               className={cn(
-                'rounded py-1.5 text-sm transition-colors hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300',
+                'rounded py-1.5 text-sm transition-colors',
+                y !== year && 'text-foreground hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300',
                 y === year && 'bg-emerald-600 font-semibold text-white hover:bg-emerald-700',
               )}
             >
@@ -184,7 +185,8 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
               type="button"
               onClick={() => selectMonth(i)}
               className={cn(
-                'rounded py-2 text-sm transition-colors hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300',
+                'rounded py-2 text-sm transition-colors',
+                i !== month && 'text-foreground hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300',
                 i === month && 'bg-emerald-600 font-semibold text-white hover:bg-emerald-700',
               )}
             >
@@ -237,7 +239,7 @@ function CalendarGrid({ value, onSelect, disabledSet, disabledCount }: CalendarG
                   className={cn(
                     'flex h-8 w-full items-center justify-center rounded text-sm transition-colors',
                     isDisabled && 'cursor-not-allowed text-muted-foreground/25',
-                    !isDisabled && !isSelected && 'hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300',
+                    !isDisabled && !isSelected && 'text-foreground hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300',
                     isSelected && 'bg-emerald-600 font-semibold text-white hover:bg-emerald-700',
                     isToday && !isSelected && 'ring-1 ring-emerald-400',
                   )}

@@ -86,7 +86,7 @@ export function MultiDateCalendar({ value, onChange, singleSelect = false, class
             <ChevronLeft className="h-4 w-4" />
           </button>
 
-          <span className="flex-1 text-center text-sm font-medium capitalize">
+          <span className="flex-1 text-center text-sm font-medium capitalize text-foreground">
             {MONTH_LABELS_FULL[month]} {year}
           </span>
 
@@ -128,7 +128,7 @@ export function MultiDateCalendar({ value, onChange, singleSelect = false, class
                 aria-pressed={isSelected}
                 className={cn(
                   'flex h-8 w-full items-center justify-center rounded text-sm transition-colors',
-                  !isSelected && 'hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300',
+                  !isSelected && 'text-foreground hover:bg-emerald-50 hover:text-emerald-800 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-300',
                   isSelected && 'bg-emerald-600 font-semibold text-white hover:bg-emerald-700',
                   isToday && !isSelected && 'ring-1 ring-emerald-400',
                 )}
