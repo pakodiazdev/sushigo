@@ -43,6 +43,7 @@ import {
     useCreateEmployeeRequest,
     useRequestExtraDay,
     useRequestLeave,
+    useRequestVacation,
     useCancelEmployeeRequest,
     useMyRequests,
     usePendingRequests,
@@ -61,6 +62,18 @@ function createWrapper() {
     return ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
+}
+
+function makeWrapper() {
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: { retry: false },
+        },
+    })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    return { wrapper, queryClient }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -457,6 +470,72 @@ describe('useRequestLeave', () => {
     })
 })
 
+describe('useRequestVacation', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('calls employeeRequestApi.create with the given VACATION data', async () => {
+        mockCreate.mockResolvedValue({ data: { data: { id: 'req-new' } } })
+
+        const { result } = renderHook(() => useRequestVacation(), { wrapper: createWrapper() })
+
+        const payload = {
+            employee_id: 'emp-1',
+            type: 'VACATION' as const,
+            auto_approve: false,
+            payload: { dates: ['2026-08-10', '2026-08-12'] },
+        }
+
+        await act(async () => {
+            await result.current.mutateAsync(payload)
+        })
+
+        expect(mockCreate).toHaveBeenCalledWith(payload)
+    })
+
+    it('shows success toast with vacation-specific message on success', async () => {
+        mockCreate.mockResolvedValue({ data: { data: { id: 'req-new' } } })
+
+        const { result } = renderHook(() => useRequestVacation(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            await result.current.mutateAsync({
+                employee_id: 'emp-1',
+                type: 'VACATION',
+                auto_approve: false,
+                payload: { dates: ['2026-08-10'] },
+            })
+        })
+
+        expect(mockShowSuccess).toHaveBeenCalledWith(
+            expect.stringContaining('vacaciones'),
+            expect.any(String),
+        )
+    })
+
+    it('shows error toast when mutation fails', async () => {
+        mockCreate.mockRejectedValue(new Error('Network error'))
+
+        const { result } = renderHook(() => useRequestVacation(), { wrapper: createWrapper() })
+
+        await act(async () => {
+            try {
+                await result.current.mutateAsync({
+                    employee_id: 'emp-1',
+                    type: 'VACATION',
+                    auto_approve: false,
+                    payload: { dates: ['2026-08-10'] },
+                })
+            } catch {
+                // expected
+            }
+        })
+
+        await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+    })
+})
+
 describe('useCancelEmployeeRequest', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -594,6 +673,40 @@ describe('useApproveEmployeeRequest', () => {
         })
 
         await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+    })
+
+    it('invalidates vacation-entitlement and vacation-history queries when the approved request is VACATION', async () => {
+        mockApprove.mockResolvedValue({
+            data: { data: { id: 'req-1', status: 'APPROVED', type: 'VACATION', employee_id: 'emp-9' } },
+        })
+        const { wrapper, queryClient } = makeWrapper()
+        const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+        const { result } = renderHook(() => useApproveEmployeeRequest(), { wrapper })
+
+        await act(async () => {
+            await result.current.mutateAsync({ id: 'req-1' })
+        })
+
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['vacation-entitlements', 'emp-9'] })
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['employees', 'emp-9', 'vacation-requests'] })
+    })
+
+    it('does not invalidate vacation queries when the approved request is not VACATION', async () => {
+        mockApprove.mockResolvedValue({
+            data: { data: { id: 'req-1', status: 'APPROVED', type: 'EXTRA_DAY', employee_id: 'emp-9' } },
+        })
+        const { wrapper, queryClient } = makeWrapper()
+        const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+        const { result } = renderHook(() => useApproveEmployeeRequest(), { wrapper })
+
+        await act(async () => {
+            await result.current.mutateAsync({ id: 'req-1' })
+        })
+
+        expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['vacation-entitlements', 'emp-9'] })
+        expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['employees', 'emp-9', 'vacation-requests'] })
     })
 })
 
