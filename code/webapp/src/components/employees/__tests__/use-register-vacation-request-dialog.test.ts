@@ -8,10 +8,14 @@ import { useRegisterVacationRequestDialog } from '../use-register-vacation-reque
 const mockMutate = vi.fn()
 const mockEntitlementsQuery = vi.fn()
 
-vi.mock('@/services/vacation-hooks', () => ({
-  useVacationEntitlements: () => mockEntitlementsQuery(),
-  useCreateVacationRequest: () => ({ mutate: mockMutate, isPending: false }),
-}))
+vi.mock('@/services/vacation-hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/vacation-hooks')>()
+  return {
+    ...actual,
+    useVacationEntitlements: () => mockEntitlementsQuery(),
+    useCreateVacationRequest: () => ({ mutate: mockMutate, isPending: false }),
+  }
+})
 
 const mockEmployee = { id: 'emp-1', first_name: 'Carlos', last_name: 'Mendoza' }
 

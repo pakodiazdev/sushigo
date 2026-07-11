@@ -1,23 +1,13 @@
 import { Loader2, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { useEffect, useRef, useState } from 'react'
 import { Controller } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { FormField, Textarea } from '@/components/ui/form-fields'
 import { MultiDateCalendar } from '@/components/ui/multi-date-calendar'
 import { useAuthStore } from '@/stores/auth.store'
+import { useDialogAnimation } from './use-dialog-animation'
 import { useRegisterVacationRequestDialog } from './use-register-vacation-request-dialog'
 import type { RegisterVacationRequestEmployee } from './use-register-vacation-request-dialog'
-
-function getAnimationClass(
-  state: 'enter' | 'exit' | null,
-  enterClass: string,
-  exitClass: string,
-): string {
-  if (state === 'enter') return enterClass
-  if (state === 'exit') return exitClass
-  return ''
-}
 
 // ── Props ───────────────────────────────────────────────────────────────────────
 
@@ -34,10 +24,6 @@ export function RegisterVacationRequestDialog({
   employee,
   onClose,
 }: Readonly<RegisterVacationRequestDialogProps>) {
-  const [visible, setVisible] = useState(false)
-  const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null)
-  const dialogRef = useRef<HTMLDialogElement>(null)
-
   const {
     form,
     daysCount,
@@ -56,37 +42,15 @@ export function RegisterVacationRequestDialog({
   const { can } = useAuthStore()
   const willAutoApprove = can('vacation-requests.approve')
 
-  // Animation
-  useEffect(() => {
-    if (isOpen) {
-      setVisible(true)
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setAnimating('enter'))
-      })
-    } else if (visible) {
-      setAnimating('exit')
-      const timer = setTimeout(() => {
-        setVisible(false)
-        setAnimating(null)
-        handleClose()
-      }, 200)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen, visible, handleClose])
+  const close = () => {
+    if (isPending) return
+    handleClose()
+    onClose()
+  }
 
-  // Escape key
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isPending) onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [isOpen, isPending, onClose])
+  const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, close)
 
   if (!visible) return null
-
-  const backdropAnim = getAnimationClass(animating, 'animate-dialog-backdrop-in', 'animate-dialog-backdrop-out')
-  const panelAnim = getAnimationClass(animating, 'animate-dialog-in', 'animate-dialog-out')
 
   const employeeName = employee
     ? `${employee.last_name}, ${employee.first_name}`
@@ -97,17 +61,16 @@ export function RegisterVacationRequestDialog({
       {/* Backdrop */}
       <button
         type="button"
-        className={`absolute inset-0 bg-black/50 ${backdropAnim} cursor-default appearance-none border-none p-0`}
-        onClick={() => { if (!isPending) onClose() }}
+        className={`absolute inset-0 bg-black/50 ${backdropCls} cursor-default appearance-none border-none p-0`}
+        onClick={close}
         aria-label="Cerrar diálogo"
       />
 
       {/* Dialog */}
       <dialog
-        ref={dialogRef}
         open
         aria-labelledby="register-vacation-request-title"
-        className={`relative z-10 w-full max-w-lg rounded-lg border border-border bg-background shadow-xl ${panelAnim}`}
+        className={`relative z-10 w-full max-w-lg rounded-lg border border-border bg-background shadow-xl ${panelCls}`}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-2 border-b border-border px-6 py-4">
@@ -127,7 +90,7 @@ export function RegisterVacationRequestDialog({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             disabled={isPending}
             className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
             aria-label="Cerrar"
@@ -182,7 +145,7 @@ export function RegisterVacationRequestDialog({
           <div className="flex justify-end gap-3 pt-1">
             <Button
               type="button"
-              onClick={onClose}
+              onClick={close}
               disabled={isPending}
               className="bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >

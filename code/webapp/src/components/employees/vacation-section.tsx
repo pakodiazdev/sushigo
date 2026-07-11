@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/auth.store'
 import { useVacationSection } from './use-vacation-section'
 import { RegisterVacationRequestDialog } from './RegisterVacationRequestDialog'
+import { RequestStatusBadge } from './request-status-badge'
 import type { RegisterVacationRequestEmployee } from './use-register-vacation-request-dialog'
 import type { VacationEntitlement, VacationRequest } from '@/types/attendance-payroll'
 
@@ -38,17 +39,6 @@ function remainingDaysClass(remaining: number): string {
   return ''
 }
 
-function statusBadge(status: string) {
-  const map: Record<string, { text: string; cls: string }> = {
-    APPROVED: { text: 'Aprobada', cls: 'bg-green-100 text-green-800' },
-    PENDING: { text: 'Pendiente', cls: 'bg-yellow-100 text-yellow-800' },
-    REJECTED: { text: 'Rechazada', cls: 'bg-red-100 text-red-800' },
-    CANCELLED: { text: 'Cancelada', cls: 'bg-gray-100 text-gray-700' },
-  }
-  const s = map[status] ?? { text: status, cls: 'bg-gray-100 text-gray-700' }
-  return <span className={`rounded px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.text}</span>
-}
-
 function EntitlementRow({ row }: { readonly row: VacationEntitlement }) {
   return (
     <tr className="border-b last:border-0">
@@ -81,7 +71,7 @@ function RequestRow({
     <tr className="border-b last:border-0">
       <td className="py-2 pr-3 text-sm whitespace-nowrap">{dateRange(request.start_date, request.end_date)}</td>
       <td className="py-2 pr-3 text-sm tabular-nums">{request.days_count}</td>
-      <td className="py-2 pr-3">{statusBadge(request.status)}</td>
+      <td className="py-2 pr-3"><RequestStatusBadge status={request.status} /></td>
       <td className="py-2">
         {request.status === 'PENDING' && (
           <div className="flex items-center gap-1">
