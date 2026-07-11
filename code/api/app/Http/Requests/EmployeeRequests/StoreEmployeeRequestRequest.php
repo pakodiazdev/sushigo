@@ -16,7 +16,7 @@ use Illuminate\Validation\Validator;
  *   required={"employee_id", "type", "payload"},
  *
  *   @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
- *   @OA\Property(property="type", type="string", enum={"EXTRA_DAY", "LEAVE"}, example="EXTRA_DAY"),
+ *   @OA\Property(property="type", type="string", enum={"EXTRA_DAY", "LEAVE", "VACATION"}, example="EXTRA_DAY"),
  *   @OA\Property(property="auto_approve", type="boolean", example=false),
  *   @OA\Property(property="notes", type="string", nullable=true, maxLength=1000, example="Solicitud registrada por gerente"),
  *   @OA\Property(
@@ -31,7 +31,7 @@ use Illuminate\Validation\Validator;
  *      @OA\Property(property="total", type="number", format="float", example=600.00),
  *      @OA\Property(property="branch_id", type="integer", nullable=true, example=1),
  *      @OA\Property(property="leave_type_id", type="integer", example=1, description="Required for type=LEAVE"),
- *      @OA\Property(property="dates", type="array", @OA\Items(type="string", format="date"), example={"2026-04-22", "2026-04-24"}, description="Required for type=LEAVE — the individual days requested, not required to be contiguous"),
+ *      @OA\Property(property="dates", type="array", @OA\Items(type="string", format="date"), example={"2026-04-22", "2026-04-24"}, description="Required for type=LEAVE and type=VACATION — the individual days requested, not required to be contiguous"),
  *      @OA\Property(property="pay_percentage", type="number", nullable=true, example=100),
  *      @OA\Property(property="rest_day_factor", type="string", nullable=true, enum={"FULL", "PROPORTIONAL", "NONE"}),
  *      @OA\Property(property="time_mode", type="string", nullable=true, enum={"SCHEDULED", "OPEN_ENDED"}, description="Required for PROPORTIONAL_HOURS leave types"),
@@ -55,7 +55,7 @@ class StoreEmployeeRequestRequest extends FormRequest
                 'string',
                 Rule::exists('employees', 'public_id')->whereNull('deleted_at'),
             ],
-            'type' => ['required', Rule::in([EmployeeRequestType::EXTRA_DAY->value, EmployeeRequestType::LEAVE->value])],
+            'type' => ['required', Rule::in([EmployeeRequestType::EXTRA_DAY->value, EmployeeRequestType::LEAVE->value, EmployeeRequestType::VACATION->value])],
             'auto_approve' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payload' => ['required', 'array'],
@@ -87,6 +87,10 @@ class StoreEmployeeRequestRequest extends FormRequest
 
             if ($this->input('type') === EmployeeRequestType::LEAVE->value) {
                 $this->validateLeavePayload($v);
+            }
+
+            if ($this->input('type') === EmployeeRequestType::VACATION->value) {
+                $this->validateVacationPayload($v);
             }
         });
     }
@@ -144,6 +148,15 @@ class StoreEmployeeRequestRequest extends FormRequest
             && ! data_get($payload, 'scheduled_end_time')
         ) {
             $v->errors()->add('payload.scheduled_end_time', 'La hora de fin es requerida cuando el horario es definido.');
+        }
+    }
+
+    private function validateVacationPayload(Validator $v): void
+    {
+        $payload = (array) $this->input('payload');
+
+        if (empty($payload['dates'])) {
+            $v->errors()->add('payload.dates', 'El campo payload.dates es requerido para solicitudes VACATION.');
         }
     }
 }

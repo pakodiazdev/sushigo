@@ -4,6 +4,7 @@ import { getApiErrorMessage } from '@/lib/api-error'
 import { useAuthStore } from '@/stores/auth.store'
 import { employeeRequestApi } from './employee-request-api'
 import type {
+  EmployeeRequest,
   EmployeeRequestFilters,
   CreateEmployeeRequestData,
   ApproveEmployeeRequestData,
@@ -97,6 +98,22 @@ export function useRequestLeave() {
   })
 }
 
+export function useRequestVacation() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: CreateEmployeeRequestData) => employeeRequestApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-requests'] })
+      showSuccess('Tu solicitud de vacaciones ha sido enviada al Manager.', 'Solicitud enviada')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo enviar la solicitud.'), 'Error')
+    },
+  })
+}
+
 export function useCancelEmployeeRequest() {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
@@ -132,6 +149,15 @@ export function usePendingRequests() {
   })
 }
 
+/** VACATION requests materialize into a real VacationRequest on approval — refresh
+ * the employee's entitlement balance and vacation history so the Employee panel
+ * (Vacaciones section) reflects it immediately, without waiting for a manual refetch. */
+function invalidateVacationQueriesIfApplicable(queryClient: ReturnType<typeof useQueryClient>, employeeRequest: EmployeeRequest) {
+  if (employeeRequest.type !== 'VACATION') return
+  queryClient.invalidateQueries({ queryKey: ['vacation-entitlements', employeeRequest.employee_id] })
+  queryClient.invalidateQueries({ queryKey: ['employees', employeeRequest.employee_id, 'vacation-requests'] })
+}
+
 export function useApproveEmployeeRequest() {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
@@ -139,8 +165,9 @@ export function useApproveEmployeeRequest() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data?: ApproveEmployeeRequestData }) =>
       employeeRequestApi.approve(id, data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['employee-requests'] })
+      invalidateVacationQueriesIfApplicable(queryClient, response.data.data)
       showSuccess('La solicitud ha sido aprobada.', 'Solicitud aprobada')
     },
     onError: (error: unknown) => {

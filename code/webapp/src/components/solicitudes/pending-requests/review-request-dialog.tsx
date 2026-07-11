@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/format'
 import type { EmployeeRequest, ExtraDayPayload } from '@/types/employee-request'
 import { useReviewRequestDialog } from './use-review-request-dialog'
 import { LeaveReviewContent } from './leave-review-content'
+import { VacationReviewContent } from './vacation-review-content'
 
 interface ReviewRequestDialogProps {
   readonly request: EmployeeRequest | null
@@ -260,7 +261,10 @@ export function ReviewRequestDialog({ request, onClose }: ReviewRequestDialogPro
       {request?.type === 'LEAVE' && (
         <LeaveReviewContent request={request} onClose={onClose} />
       )}
-      {request && request.type !== 'LEAVE' && (
+      {request?.type === 'VACATION' && (
+        <VacationReviewContent request={request} onClose={onClose} />
+      )}
+      {request && request.type !== 'LEAVE' && request.type !== 'VACATION' && (
         <InnerDialog request={request} onClose={onClose} />
       )}
     </SlidePanel>

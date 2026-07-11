@@ -31,16 +31,17 @@ class RegisterVacationRequestAction
     {
         $employee = Employee::where('public_id', $data['employee_id'])->firstOrFail();
         $dates = $this->normalizeDates($data['dates']);
-        $daysCount = count($dates);
+        $notes = $data['notes'] ?? null;
 
-        $vacationRequest = DB::transaction(function () use ($dates, $data, $employee, $daysCount, $requestedById, $autoApprove) {
+        $vacationRequest = DB::transaction(function () use ($dates, $employee, $notes, $requestedById, $autoApprove) {
+            if ($autoApprove) {
+                return $this->createApprovedVacationRequest($employee, $dates, $requestedById, $requestedById, $notes);
+            }
+
+            $daysCount = count($dates);
             $entitlement = $this->resolveEntitlementForYear($employee, $dates[0]);
             $this->guardSufficientBalance($entitlement, $daysCount);
             $this->guardNoOverlappingApprovedVacation($employee->id, $dates);
-
-            if ($autoApprove) {
-                $this->guardNoExistingWorkedAttendance($employee->id, $dates);
-            }
 
             $vacationRequest = VacationRequest::create([
                 'employee_id' => $employee->id,
@@ -50,14 +51,10 @@ class RegisterVacationRequestAction
                 'days_count' => $daysCount,
                 'status' => VacationRequestStatus::PENDING,
                 'requested_by' => $requestedById,
-                'notes' => $data['notes'] ?? null,
+                'notes' => $notes,
             ]);
 
             $this->persistVacationRequestDates($vacationRequest, $dates);
-
-            if ($autoApprove) {
-                $this->finalizeApproval($vacationRequest, $dates, $requestedById);
-            }
 
             return $vacationRequest;
         });

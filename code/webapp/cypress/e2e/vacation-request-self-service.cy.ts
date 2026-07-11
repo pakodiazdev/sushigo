@@ -2,12 +2,14 @@
  * Vacation Request — Self-service submit & admin approve — E2E test (Issue #082)
  *
  * Happy-path: a regular employee (EMP-002, cook role — no approve permission)
- * self-services their own vacation request from /solicitudes, which stays
- * PENDING. An admin then opens that employee's detail panel, sees the
- * pending request and approves it — verifying the balance is deducted and
- * the request status updates to APPROVED. This is the most common flow:
- * requester and approver are different people, so the two-step
- * PENDING→approve process is genuinely exercised here.
+ * self-services their own vacation request from /solicitudes, exactly like a
+ * Permiso — it goes through the unified employee-requests system and shows up
+ * under "Pendientes de aprobación" for a manager/admin to review. An admin
+ * approves it there, which materializes a real VacationRequest — verifying
+ * the balance is deducted and the request also appears as APPROVED in the
+ * employee's "Vacaciones" section. This is the most common flow: requester
+ * and approver are different people, so the two-step PENDING→approve
+ * process is genuinely exercised here.
  *
  * DB reset strategy
  * ─────────────────
@@ -26,6 +28,7 @@ import users from '../fixtures/users.json'
 const { email: adminEmail, password: adminPassword } = users.admin
 const employeeEmail = 'maria.garcia@sushigo.com'
 const employeePassword = 'employee123456'
+const employeeName = 'María García'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,18 +72,18 @@ before(() => {
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Happy path — employee self-services → PENDING → admin approves → balance deducted
+// Happy path — employee self-services → PENDING → admin approves via Solicitudes
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Vacation Request — self-service submit & admin approve (happy path)', () => {
-  it('creates a PENDING vacation request as a regular employee, then the admin approves it', () => {
+  it('creates a PENDING vacation request as a regular employee, then the admin approves it from Pendientes de aprobación', () => {
     // 1. Employee logs in and opens Solicitudes
     cy.loginByApi(employeeEmail, employeePassword)
     cy.visitWithAuth('/solicitudes')
     cy.url().should('include', '/solicitudes', { timeout: 10_000 })
     cy.closeDevDebugger()
 
-    cy.intercept('POST', '**/vacation-requests').as('createRequest')
+    cy.intercept('POST', '**/employee-requests').as('createRequest')
 
     // 2. Click "Vacaciones" — self-service employee sees the "requires approval" notice
     cy.contains('h3', 'Nueva solicitud', { timeout: 10_000 }).should('be.visible')
@@ -96,25 +99,37 @@ describe('Vacation Request — self-service submit & admin approve (happy path)'
 
     cy.wait('@createRequest').its('response.statusCode').should('eq', 201)
 
-    // 4. Admin logs in, opens EMP-002 detail, and sees the PENDING request
+    // 4. Admin logs in and opens the Solicitudes "Pendientes de aprobación" tab
     cy.loginByApi(adminEmail, adminPassword)
-    cy.visitWithAuth('/employees')
+    cy.visitWithAuth('/solicitudes')
+    cy.url().should('include', '/solicitudes', { timeout: 10_000 })
     cy.closeDevDebugger()
 
-    cy.intercept('PATCH', '**/vacation-requests/*/approve').as('approveRequest')
+    cy.intercept('PATCH', '**/employee-requests/*/approve').as('approveRequest')
 
+    cy.contains('button', 'Pendientes de aprobación', { timeout: 10_000 }).click({ force: true })
+    cy.contains('🌴 Vacaciones', { timeout: 10_000 }).should('be.visible')
+    cy.contains(employeeName).should('be.visible')
+
+    // 5. Admin reviews and approves it
+    cy.contains('button', 'Revisar').click({ force: true })
+    cy.contains('h2', /Solicitud de/, { timeout: 10_000 }).should('be.visible')
+    cy.contains('button', 'Aprobar vacaciones').click({ force: true })
+
+    cy.wait('@approveRequest').its('response.statusCode').should('eq', 200)
+
+    // 6. The pending list no longer shows the request
+    cy.contains('🌴 Vacaciones', { timeout: 10_000 }).should('not.exist')
+
+    // 7. The materialized VacationRequest shows APPROVED and the balance is
+    //    deducted (12 → 11 remaining) in the employee's Vacaciones section
+    cy.visitWithAuth('/employees')
+    cy.closeDevDebugger()
     openEmp002Detail()
     cy.closeDevDebugger()
     cy.contains('h3', 'Vacaciones', { timeout: 10_000 }).scrollIntoView().should('be.visible')
 
     cy.contains('Solicitudes de vacaciones').should('be.visible')
-    cy.contains('td', 'Pendiente', { timeout: 10_000 }).should('be.visible')
-
-    // 5. Admin approves it
-    cy.get('button[aria-label="Aprobar vacaciones"]').first().click({ force: true })
-    cy.wait('@approveRequest').its('response.statusCode').should('eq', 200)
-
-    // 6. Status updates to APPROVED and the balance is deducted (12 → 11 remaining)
     cy.contains('td', 'Aprobada', { timeout: 10_000 }).should('be.visible')
     cy.contains('td', '11').should('be.visible')
   })

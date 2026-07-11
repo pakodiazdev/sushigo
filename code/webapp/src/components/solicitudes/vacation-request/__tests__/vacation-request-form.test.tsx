@@ -13,7 +13,6 @@ const mockHandleSubmit = vi.fn((e?: React.BaseSyntheticEvent) => {
 })
 const mockRegister = vi.fn((name: string) => ({ name }))
 const mockReset = vi.fn()
-const mockCan = vi.fn().mockReturnValue(false)
 
 vi.mock('react-hook-form', async (importOriginal) => {
     const actual = await importOriginal<typeof import('react-hook-form')>()
@@ -24,10 +23,6 @@ vi.mock('react-hook-form', async (importOriginal) => {
     }
 })
 
-vi.mock('@/stores/auth.store', () => ({
-    useAuthStore: () => ({ can: mockCan }),
-}))
-
 const defaultHookResult = {
     form: {
         register: mockRegister,
@@ -36,7 +31,7 @@ const defaultHookResult = {
         reset: mockReset,
     } as unknown as UseVacationRequestFormResult['form'],
     daysCount: 0,
-    remainingDays: null,
+    remainingDays: null as number | null,
     isInsufficientBalance: false,
     isPending: false,
     handleSubmit: mockHandleSubmit,
@@ -63,7 +58,6 @@ vi.mock('@/components/ui/slide-panel', () => ({
 describe('VacationRequestForm', () => {
     beforeEach(() => {
         currentHookResult = { ...defaultHookResult, form: { ...defaultHookResult.form } }
-        mockCan.mockReturnValue(false)
     })
 
     afterEach(() => {
@@ -100,18 +94,10 @@ describe('VacationRequestForm', () => {
         expect(screen.getByText(/No tienes saldo de vacaciones suficiente/)).toBeDefined()
     })
 
-    it('shows the "requires approval" notice when the requester cannot approve', () => {
-        mockCan.mockReturnValue(false)
+    it('shows the "requires approval" notice', () => {
         render(<VacationRequestForm isOpen employeeId="emp-1" onClose={vi.fn()} />)
 
         expect(screen.getByText(/requiere aprobación del Manager/)).toBeDefined()
-    })
-
-    it('shows the "auto-approved" notice when the requester can approve', () => {
-        mockCan.mockReturnValue(true)
-        render(<VacationRequestForm isOpen employeeId="emp-1" onClose={vi.fn()} />)
-
-        expect(screen.getByText(/se aprobará de inmediato/)).toBeDefined()
     })
 
     it('calls handleSubmit on form submission', () => {

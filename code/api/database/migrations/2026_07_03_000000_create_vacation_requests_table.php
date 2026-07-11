@@ -24,6 +24,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
 
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['employee_id', 'start_date', 'end_date']);
             $table->index(['employee_id', 'status']);

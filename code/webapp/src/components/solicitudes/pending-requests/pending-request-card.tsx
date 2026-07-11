@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatCurrency, formatDatesLabel } from '@/lib/format'
 import { useLeaveTypes } from '@/services/leave-hooks'
-import type { EmployeeRequest, ExtraDayPayload, LeavePayload } from '@/types/employee-request'
+import type { EmployeeRequest, ExtraDayPayload, LeavePayload, VacationPayload } from '@/types/employee-request'
 
 interface PendingRequestCardProps {
   readonly request: EmployeeRequest
@@ -57,6 +57,40 @@ function LeaveCardBody({ request }: { readonly request: EmployeeRequest }) {
   )
 }
 
+function VacationCardBody({ request }: { readonly request: EmployeeRequest }) {
+  const payload = request.payload as VacationPayload | null
+
+  return (
+    <>
+      <p className="text-sm font-medium text-foreground">🌴 Vacaciones</p>
+      <p className="text-sm text-foreground font-medium">{request.employee_name}</p>
+      {payload && (
+        <p className="text-sm text-muted-foreground capitalize">
+          {formatDatesLabel(payload.dates)}
+        </p>
+      )}
+    </>
+  )
+}
+
+const REQUEST_TYPE_LABELS: Record<EmployeeRequest['type'], string> = {
+  EXTRA_DAY: 'día extra',
+  LEAVE: 'permiso',
+  VACATION: 'vacaciones',
+  SCHEDULE_CHANGE: 'cambio de horario',
+}
+
+function CardBody({ request }: { readonly request: EmployeeRequest }) {
+  switch (request.type) {
+    case 'LEAVE':
+      return <LeaveCardBody request={request} />
+    case 'VACATION':
+      return <VacationCardBody request={request} />
+    default:
+      return <ExtraDayCardBody request={request} />
+  }
+}
+
 export function PendingRequestCard({ request, onReview, onCancel, isCancelling }: PendingRequestCardProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -65,9 +99,7 @@ export function PendingRequestCard({ request, onReview, onCancel, isCancelling }
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            {request.type === 'LEAVE'
-              ? <LeaveCardBody request={request} />
-              : <ExtraDayCardBody request={request} />}
+            <CardBody request={request} />
             {request.notes && (
               <p className="text-xs text-muted-foreground italic truncate">"{request.notes}"</p>
             )}
@@ -105,7 +137,7 @@ export function PendingRequestCard({ request, onReview, onCancel, isCancelling }
           setConfirmOpen(false)
         }}
         title="¿Cancelar esta solicitud?"
-        description={`Se cancelará la solicitud de ${request.type === 'LEAVE' ? 'permiso' : 'día extra'} de ${request.employee_name}. Esta acción no se puede deshacer.`}
+        description={`Se cancelará la solicitud de ${REQUEST_TYPE_LABELS[request.type]} de ${request.employee_name}. Esta acción no se puede deshacer.`}
         confirmLabel="Sí, cancelar"
         variant="danger"
         isLoading={isCancelling}

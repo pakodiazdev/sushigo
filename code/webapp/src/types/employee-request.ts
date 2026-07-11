@@ -1,5 +1,5 @@
 export type EmployeeRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
-export type EmployeeRequestType = 'EXTRA_DAY' | 'LEAVE' | 'SCHEDULE_CHANGE'
+export type EmployeeRequestType = 'EXTRA_DAY' | 'LEAVE' | 'VACATION' | 'SCHEDULE_CHANGE'
 
 export interface EmployeeRequest {
   id: string
@@ -59,6 +59,11 @@ export interface LeavePayload {
   scheduled_end_time?: string | null
 }
 
+export interface VacationPayload {
+  /** Individual days this vacation request covers — not required to be contiguous */
+  dates: string[]
+}
+
 export type CreateEmployeeRequestData =
   | {
       employee_id: string
@@ -73,4 +78,11 @@ export type CreateEmployeeRequestData =
       auto_approve?: boolean
       notes?: string
       payload: LeavePayload
+    }
+  | {
+      employee_id: string
+      type: 'VACATION'
+      auto_approve?: boolean
+      notes?: string
+      payload: VacationPayload
     }

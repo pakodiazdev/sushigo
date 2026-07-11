@@ -18,7 +18,7 @@ use App\Models\EmployeeRequest;
  *
  *   @OA\Parameter(name="employee_id", in="query", @OA\Schema(type="string"), description="Employee public_id (ULID)"),
  *   @OA\Parameter(name="branch_id", in="query", required=false, @OA\Schema(type="integer"), description="Filter by branch ID"),
- *   @OA\Parameter(name="type", in="query", @OA\Schema(type="string", enum={"EXTRA_DAY", "LEAVE", "SCHEDULE_CHANGE"})),
+ *   @OA\Parameter(name="type", in="query", @OA\Schema(type="string", enum={"EXTRA_DAY", "LEAVE", "VACATION", "SCHEDULE_CHANGE"})),
  *   @OA\Parameter(name="status", in="query", @OA\Schema(type="string", enum={"PENDING", "APPROVED", "REJECTED"})),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15)),
  *   @OA\Parameter(name="sort[]", in="query", @OA\Schema(type="array", @OA\Items(type="string", example="created_at:desc"))),

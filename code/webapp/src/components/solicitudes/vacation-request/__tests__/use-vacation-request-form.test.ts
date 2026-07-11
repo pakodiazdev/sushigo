@@ -10,7 +10,10 @@ const mockEntitlementsQuery = vi.fn()
 
 vi.mock('@/services/vacation-hooks', () => ({
   useVacationEntitlements: () => mockEntitlementsQuery(),
-  useCreateVacationRequest: () => ({ mutate: mockMutate, isPending: false }),
+}))
+
+vi.mock('@/services/employee-request-hooks', () => ({
+  useRequestVacation: () => ({ mutate: mockMutate, isPending: false }),
 }))
 
 describe('useVacationRequestForm', () => {
@@ -57,7 +60,7 @@ describe('useVacationRequestForm', () => {
     expect(result.current.isInsufficientBalance).toBe(true)
   })
 
-  it('submits employee_id, dates and notes', async () => {
+  it('submits type=VACATION with auto_approve=false and the dates/notes payload', async () => {
     const onSuccess = vi.fn()
     const { result } = renderHook(() => useVacationRequestForm('emp-1', onSuccess))
 
@@ -75,8 +78,10 @@ describe('useVacationRequestForm', () => {
     const [payload, options] = mockMutate.mock.calls[0] as [Record<string, unknown>, { onSuccess: () => void }]
     expect(payload).toEqual({
       employee_id: 'emp-1',
-      dates: ['2026-08-10', '2026-08-12'],
+      type: 'VACATION',
+      auto_approve: false,
       notes: 'Vacaciones familiares',
+      payload: { dates: ['2026-08-10', '2026-08-12'] },
     })
 
     options.onSuccess()

@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { FormField, Textarea } from '@/components/ui/form-fields'
 import { MultiDateCalendar } from '@/components/ui/multi-date-calendar'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useAuthStore } from '@/stores/auth.store'
 import { useVacationRequestForm } from './use-vacation-request-form'
 
 interface VacationRequestFormProps {
@@ -24,8 +23,6 @@ export function VacationRequestForm({ isOpen, onClose, employeeId }: VacationReq
   } = useVacationRequestForm(employeeId, onClose)
 
   const { register, control, formState: { errors } } = form
-  const { can } = useAuthStore()
-  const willAutoApprove = can('vacation-requests.approve')
 
   const handleClose = () => {
     form.reset()
@@ -72,15 +69,9 @@ export function VacationRequestForm({ isOpen, onClose, employeeId }: VacationReq
         </FormField>
 
         {/* Warning */}
-        {willAutoApprove ? (
-          <p className="text-sm text-muted-foreground border border-border rounded-md p-3 bg-muted/30">
-            ✅ Tu solicitud se aprobará de inmediato
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground border border-border rounded-md p-3 bg-muted/30">
-            ⚠️ Esta solicitud requiere aprobación del Manager
-          </p>
-        )}
+        <p className="text-sm text-muted-foreground border border-border rounded-md p-3 bg-muted/30">
+          ⚠️ Esta solicitud requiere aprobación del Manager
+        </p>
 
         {/* Actions */}
         <div className="flex gap-3 justify-end pt-2">
