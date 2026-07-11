@@ -5,7 +5,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDatesLabel, formatDayLabel } from '@/lib/format'
 import { useLeaveTypes } from '@/services/leave-hooks'
-import type { EmployeeRequest, ExtraDayPayload, LeavePayload } from '@/types/employee-request'
+import type { EmployeeRequest, ExtraDayPayload, LeavePayload, VacationPayload } from '@/types/employee-request'
 
 interface RequestStatusCardProps {
   readonly request: EmployeeRequest
@@ -13,15 +13,28 @@ interface RequestStatusCardProps {
   readonly isCancelling: boolean
 }
 
+const CANCEL_DESCRIPTIONS: Record<EmployeeRequest['type'], { approved: string; pending: string }> = {
+  EXTRA_DAY: {
+    approved: 'El día extra aprobado será eliminado. Esta acción no se puede deshacer.',
+    pending: 'Tu solicitud de día extra será cancelada. Esta acción no se puede deshacer.',
+  },
+  LEAVE: {
+    approved: 'El permiso aprobado será eliminado. Esta acción no se puede deshacer.',
+    pending: 'Tu solicitud de permiso será cancelada. Esta acción no se puede deshacer.',
+  },
+  VACATION: {
+    approved: 'Las vacaciones aprobadas serán eliminadas y el saldo se restituirá. Esta acción no se puede deshacer.',
+    pending: 'Tu solicitud de vacaciones será cancelada. Esta acción no se puede deshacer.',
+  },
+  SCHEDULE_CHANGE: {
+    approved: 'El cambio de horario aprobado será eliminado. Esta acción no se puede deshacer.',
+    pending: 'Tu solicitud de cambio de horario será cancelada. Esta acción no se puede deshacer.',
+  },
+}
+
 function cancelDescription(type: EmployeeRequest['type'], status: EmployeeRequest['status']): string {
-  if (type === 'LEAVE') {
-    return status === 'APPROVED'
-      ? 'El permiso aprobado será eliminado. Esta acción no se puede deshacer.'
-      : 'Tu solicitud de permiso será cancelada. Esta acción no se puede deshacer.'
-  }
-  return status === 'APPROVED'
-    ? 'El día extra aprobado será eliminado. Esta acción no se puede deshacer.'
-    : 'Tu solicitud de día extra será cancelada. Esta acción no se puede deshacer.'
+  const { approved, pending } = CANCEL_DESCRIPTIONS[type]
+  return status === 'APPROVED' ? approved : pending
 }
 
 function todayIso(): string {
@@ -100,13 +113,42 @@ function LeaveStatusBody({ request, config }: { readonly request: EmployeeReques
   )
 }
 
+function VacationStatusBody({ request, config }: { readonly request: EmployeeRequest; readonly config: (typeof STATUS_CONFIG)[keyof typeof STATUS_CONFIG] }) {
+  const payload = request.payload as VacationPayload | null
+
+  return (
+    <>
+      <p className="text-sm font-medium text-foreground">
+        {config.icon} Vacaciones solicitadas
+      </p>
+      {payload && (
+        <p className="text-sm text-foreground capitalize">
+          {formatDatesLabel(payload.dates, 'long')}
+        </p>
+      )}
+    </>
+  )
+}
+
+function StatusBody({ request, config }: { readonly request: EmployeeRequest; readonly config: (typeof STATUS_CONFIG)[keyof typeof STATUS_CONFIG] }) {
+  switch (request.type) {
+    case 'LEAVE':
+      return <LeaveStatusBody request={request} config={config} />
+    case 'VACATION':
+      return <VacationStatusBody request={request} config={config} />
+    default:
+      return <ExtraDayStatusBody request={request} config={config} />
+  }
+}
+
 export function RequestStatusCard({ request, onCancel, isCancelling }: RequestStatusCardProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const payload = request.payload as ExtraDayPayload & LeavePayload | null
-  const sortedLeaveDates = [...(payload?.dates ?? [])].sort((a, b) => a.localeCompare(b))
-  const endDate = request.type === 'LEAVE'
-    ? (sortedLeaveDates[sortedLeaveDates.length - 1] ?? '')
+  const hasDatesArray = request.type === 'LEAVE' || request.type === 'VACATION'
+  const sortedDates = [...(payload?.dates ?? [])].sort((a, b) => a.localeCompare(b))
+  const endDate = hasDatesArray
+    ? (sortedDates[sortedDates.length - 1] ?? '')
     : (payload?.date ?? '')
 
   const config = STATUS_CONFIG[request.status]
@@ -120,9 +162,7 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
       <div className={cn('rounded-lg border p-4 space-y-2', config.className)}>
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            {request.type === 'LEAVE'
-              ? <LeaveStatusBody request={request} config={config} />
-              : <ExtraDayStatusBody request={request} config={config} />}
+            <StatusBody request={request} config={config} />
             <p className={cn('text-xs font-medium', config.labelClass)}>{config.label}</p>
 
             {request.status === 'PENDING' && request.notes && (

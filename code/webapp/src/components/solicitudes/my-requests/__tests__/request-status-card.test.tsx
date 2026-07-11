@@ -284,3 +284,48 @@ describe('RequestStatusCard — LEAVE type', () => {
     expect(screen.getByText(/Tu solicitud de permiso será cancelada/)).toBeDefined()
   })
 })
+
+describe('RequestStatusCard — VACATION type', () => {
+  function makeVacationRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest {
+    return makeRequest({
+      type: 'VACATION',
+      payload: { dates: ['2026-08-10', '2026-08-12'] },
+      ...overrides,
+    })
+  }
+
+  it('renders "Vacaciones solicitadas" instead of "Día extra solicitado"', () => {
+    render(<RequestStatusCard request={makeVacationRequest()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/Vacaciones solicitadas/)).toBeDefined()
+    expect(screen.queryByText(/Día extra solicitado/)).toBeNull()
+  })
+
+  it('renders the requested dates', () => {
+    render(<RequestStatusCard request={makeVacationRequest()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByText(/10 de agosto.*12 de agosto/)).toBeDefined()
+  })
+
+  it('is cancellable when APPROVED and the last date is in the future', () => {
+    const future = '2099-01-01'
+    render(
+      <RequestStatusCard
+        request={makeVacationRequest({ status: 'APPROVED', payload: { dates: [future] } })}
+        onCancel={vi.fn()}
+        isCancelling={false}
+      />
+    )
+    expect(screen.getByText('Cancelar')).toBeDefined()
+  })
+
+  it('cancel confirmation mentions "vacaciones" and the balance restitution', () => {
+    render(<RequestStatusCard request={makeVacationRequest()} onCancel={vi.fn()} isCancelling={false} />)
+    fireEvent.click(screen.getByText('Cancelar'))
+    expect(screen.getByText(/Tu solicitud de vacaciones será cancelada/)).toBeDefined()
+  })
+
+  it('approved cancel confirmation mentions balance restitution', () => {
+    render(<RequestStatusCard request={makeVacationRequest({ status: 'APPROVED', payload: { dates: ['2099-01-01'] } })} onCancel={vi.fn()} isCancelling={false} />)
+    fireEvent.click(screen.getByText('Cancelar'))
+    expect(screen.getByText(/el saldo se restituirá/)).toBeDefined()
+  })
+})
