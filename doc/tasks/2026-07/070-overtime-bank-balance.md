@@ -45,3 +45,17 @@ Como Manager o Admin, quiero ver el saldo del banco de horas extra de un emplead
 ## ⏱️ Estimates
 
 - **Optimistic:** `3h` · **Pessimistic:** `5h`
+
+---
+
+## ⏱️ Time
+
+### 📊 Estimates
+- **Optimistic:** `3h` · **Pessimistic:** `5h` · **Tracked:** _in progress_
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-07-12", "start": "17:15", "end": "?" }
+]
+```
