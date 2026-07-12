@@ -107,6 +107,9 @@ class PermissionSeeder extends LockedSeeder
             'payroll.preview',
             'payroll.close',
 
+            // Auditoría
+            'audit-logs.view',
+
             // Inventario — Ítems y variantes
             'items.view',
             'items.create',
@@ -169,6 +172,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
+                            ->orWhere('name', 'like', 'audit-logs.%')
                             ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'overtime.manage']);
                     })
                     ->get()

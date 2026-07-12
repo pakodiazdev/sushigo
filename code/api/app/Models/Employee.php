@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use App\Support\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Employee extends Model
 {
-    use HasFactory, HasPublicId, SoftDeletes;
+    use Auditable, HasFactory, HasPublicId, SoftDeletes;
 
     // Position roles: reflect the person's role in the organization.
     // Assigned to the linked User (the authenticated identity), not to Employee directly.

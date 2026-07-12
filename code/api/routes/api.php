@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Attendances\RegisterCheckOutController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchReturnController;
 use App\Http\Controllers\Api\V1\Attendances\RegisterLunchStartController;
 use App\Http\Controllers\Api\V1\Attendances\TodayAttendanceController;
+use App\Http\Controllers\Api\V1\AuditLogs\ListAuditLogsController;
 use App\Http\Controllers\Api\V1\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\LogoutController;
@@ -374,6 +375,11 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('reports')->name('reports.')->group(function () {
         Route::get('today', TodayReportController::class)->name('today');
         Route::get('weekly-summary', WeeklySummaryController::class)->name('weekly-summary');
+    });
+
+    // Audit Logs Module (All Protected)
+    Route::middleware('auth:api')->prefix('audit-logs')->name('audit-logs.')->group(function () {
+        Route::get('/', ListAuditLogsController::class)->name('index')->middleware('permission:audit-logs.view');
     });
 
     // Negotiated Extra Days Module (All Protected)

@@ -13,6 +13,7 @@ import {
     UserX,
     Lock,
     BarChart3,
+    History,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -243,6 +244,7 @@ export interface EmployeeAttendanceCardProps {
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
     onWeeklySummary?: (employee: TodayAttendanceEmployee) => void
+    onViewAudit?: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     canEdit?: boolean
 }
 
@@ -255,6 +257,7 @@ export function EmployeeAttendanceCard({
     onOvertimeDecision,
     onMarkDayStatus,
     onWeeklySummary,
+    onViewAudit,
     canEdit = true,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const phase = getAttendancePhase(row.attendance)
@@ -329,6 +332,17 @@ export function EmployeeAttendanceCard({
                             className="rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         >
                             <BarChart3 className="h-4 w-4" />
+                        </button>
+                    )}
+                    {onViewAudit && att?.id && (
+                        <button
+                            type="button"
+                            data-testid="btn-view-audit"
+                            aria-label="Ver historial de auditoría"
+                            onClick={() => onViewAudit(row.employee, att.id)}
+                            className="rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                            <History className="h-4 w-4" />
                         </button>
                     )}
                     <PhaseBadge phase={phase} />

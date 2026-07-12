@@ -228,6 +228,47 @@ describe('getEmployeeColumns', () => {
         expect(parentClickHandler).not.toHaveBeenCalled()
     })
 
+    it('does not render the audit button when onViewAudit is not provided', () => {
+        const columns = getEmployeeColumns(mockOnEdit)
+        const actionsColumn = columns.find((c) => c.key === 'actions')!
+
+        render(<>{actionsColumn.render!(mockEmployee)}</>)
+
+        expect(screen.queryByLabelText('Ver auditoría')).toBeNull()
+    })
+
+    it('renders the audit button and calls onViewAudit when provided', () => {
+        const mockOnViewAudit = vi.fn()
+        const columns = getEmployeeColumns(mockOnEdit, undefined, mockOnViewAudit)
+        const actionsColumn = columns.find((c) => c.key === 'actions')!
+
+        render(<>{actionsColumn.render!(mockEmployee)}</>)
+
+        const button = screen.getByLabelText('Ver auditoría')
+        fireEvent.click(button)
+
+        expect(mockOnViewAudit).toHaveBeenCalledWith(mockEmployee)
+        expect(mockOnEdit).not.toHaveBeenCalled()
+    })
+
+    it('stops event propagation on the audit button click', () => {
+        const parentClickHandler = vi.fn()
+        const mockOnViewAudit = vi.fn()
+        const columns = getEmployeeColumns(mockOnEdit, undefined, mockOnViewAudit)
+        const actionsColumn = columns.find((c) => c.key === 'actions')!
+
+        render(
+            <div onClick={parentClickHandler}>
+                {actionsColumn.render!(mockEmployee)}
+            </div>,
+        )
+        const button = screen.getByLabelText('Ver auditoría')
+        fireEvent.click(button)
+
+        expect(mockOnViewAudit).toHaveBeenCalled()
+        expect(parentClickHandler).not.toHaveBeenCalled()
+    })
+
     it('all columns have skeleton functions', () => {
         const columns = getEmployeeColumns(mockOnEdit)
 

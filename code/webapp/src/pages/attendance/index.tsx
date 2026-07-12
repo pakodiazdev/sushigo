@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
 import { RefreshCw, DoorClosed } from 'lucide-react'
@@ -21,6 +21,8 @@ import { ExtraDayNegotiationDialog } from '@/components/attendance/ExtraDayNegot
 import { WeeklySummaryPanel } from '@/components/attendance/WeeklySummaryPanel'
 import { useWeeklySummaryDialog } from '@/components/attendance/use-weekly-summary-dialog'
 import { useAttendancePermissions } from '@/components/attendance/use-attendance-permissions'
+import { AuditLogDialog } from '@/components/audit'
+import { AUDITABLE_TYPE_ATTENDANCE } from '@/services/audit.service'
 import { useTodayAttendancePage } from './-use-today-attendance-page'
 import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
 import { useAuthStore } from '@/stores/auth.store'
@@ -153,6 +155,7 @@ export function AttendancePage() {
   const today = useBusinessDate() ?? todayDateCdmx()
   const { canEdit, requiresReason } = useAttendancePermissions(selectedDate)
   const weeklySummary = useWeeklySummaryDialog()
+  const [auditRecord, setAuditRecord] = useState<{ employeeName: string; attendanceId: string } | null>(null)
 
   // Feed bulk overtime decisions from the close-day panel into the queue
   const { overtimePending, clearOvertimePending } = closeDayPanel
@@ -242,6 +245,12 @@ export function AttendancePage() {
                 onMarkDayStatus={markDayStatus}
                 onWeeklySummary={can('reports.weekly-summary')
                   ? (emp) => weeklySummary.open(emp.id, `${emp.last_name}, ${emp.first_name}`)
+                  : undefined}
+                onViewAudit={can('audit-logs.view')
+                  ? (emp, attendanceId) => setAuditRecord({
+                    employeeName: `${emp.last_name}, ${emp.first_name}`,
+                    attendanceId,
+                  })
                   : undefined}
               />
             ))}
@@ -336,6 +345,16 @@ export function AttendancePage() {
 
       {/* Weekly Summary Slide Panel */}
       <WeeklySummaryPanel weeklySummary={weeklySummary} />
+
+      {/* Audit Log Slide Panel — history for a single attendance record */}
+      {auditRecord && (
+        <AuditLogDialog
+          isOpen={!!auditRecord}
+          onClose={() => setAuditRecord(null)}
+          title={`Auditoría — ${auditRecord.employeeName}`}
+          filters={{ auditable_type: AUDITABLE_TYPE_ATTENDANCE, auditable_id: auditRecord.attendanceId }}
+        />
+      )}
     </PageContainer>
   )
 }
