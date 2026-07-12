@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  *   tags={"AuditLogs"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="auditable_type", in="query", @OA\Schema(type="string", enum={"App\\Models\\Attendance", "App\\Models\\Employee"})),
+ *   @OA\Parameter(name="auditable_type", in="query", @OA\Schema(type="string", enum={"App\Models\Attendance", "App\Models\Employee"})),
  *   @OA\Parameter(name="auditable_id", in="query", @OA\Schema(type="string"), description="Public ID (ULID) of the audited record"),
  *   @OA\Parameter(name="employee_id", in="query", @OA\Schema(type="string"), description="Employee public_id (ULID)"),
  *   @OA\Parameter(name="date_from", in="query", @OA\Schema(type="string", format="date")),
