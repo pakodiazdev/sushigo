@@ -1,4 +1,4 @@
-import { Eye, BarChart3 } from 'lucide-react'
+import { Eye, BarChart3, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Column } from '@/components/ui/data-grid'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
@@ -25,6 +25,7 @@ function formatDate(dateString: string): string {
 export function getEmployeeColumns(
   onEdit: (item: Employee) => void,
   onWeeklySummary?: (item: Employee) => void,
+  onViewAudit?: (item: Employee) => void,
 ): Column<Employee>[] {
   return [
     {
@@ -115,13 +116,14 @@ export function getEmployeeColumns(
     {
       key: 'actions',
       header: 'Acciones',
-      width: onWeeklySummary ? '120px' : '80px',
+      width: `${80 + (onWeeklySummary ? 40 : 0) + (onViewAudit ? 40 : 0)}px`,
       align: 'center',
       render: (item) => (
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-center gap-1.5">
           {onWeeklySummary && (
             <Button
               size="sm"
+              variant="outline"
               onClick={(e) => {
                 e.stopPropagation()
                 onWeeklySummary(item)
@@ -136,6 +138,7 @@ export function getEmployeeColumns(
           )}
           <Button
             size="sm"
+            variant="outline"
             onClick={(e) => {
               e.stopPropagation()
               onEdit(item)
@@ -146,6 +149,21 @@ export function getEmployeeColumns(
           >
             <Eye className="h-4 w-4" />
           </Button>
+          {onViewAudit && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation()
+                onViewAudit(item)
+              }}
+              className="h-8 w-8 p-0"
+              title="Ver auditoría"
+              aria-label="Ver auditoría"
+            >
+              <History className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       ),
       skeleton: () => <div className="mx-auto h-8 w-8 rounded bg-muted animate-pulse" />,

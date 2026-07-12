@@ -1,11 +1,15 @@
+import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
+import { useAuthStore } from '@/stores/auth.store'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { DataGrid } from '@/components/ui/data-grid'
 import { EmployeeForm, EmployeeFilters, getEmployeeColumns } from '@/components/employees'
 import { WeeklySummaryPanel } from '@/components/attendance/WeeklySummaryPanel'
+import { AuditLogDialog } from '@/components/audit'
 import { useEmployeesSearch, type EmployeesSearch } from '@/hooks/use-employees-search'
+import type { Employee } from '@/types/employee'
 
 export const Route = createFileRoute('/employees')({
   beforeLoad: requirePermission('employees.view'),
@@ -32,9 +36,13 @@ export function EmployeesPage() {
     weeklySummary, canOpenWeeklySummary,
   } = useEmployeesSearch()
 
+  const canViewAuditLog = useAuthStore((s) => s.can('audit-logs.view'))
+  const [auditEmployee, setAuditEmployee] = useState<Employee | null>(null)
+
   const columns = getEmployeeColumns(
     handleEditEmployee,
     canOpenWeeklySummary ? (item) => weeklySummary.open(item.id, `${item.last_name}, ${item.first_name}`) : undefined,
+    canViewAuditLog ? setAuditEmployee : undefined,
   )
 
   return (
@@ -80,6 +88,15 @@ export function EmployeesPage() {
       />
 
       <WeeklySummaryPanel weeklySummary={weeklySummary} />
+
+      {auditEmployee && (
+        <AuditLogDialog
+          isOpen={!!auditEmployee}
+          onClose={() => setAuditEmployee(null)}
+          title={`Auditoría — ${auditEmployee.first_name} ${auditEmployee.last_name}`}
+          filters={{ employee_id: auditEmployee.id }}
+        />
+      )}
     </PageContainer>
   )
 }

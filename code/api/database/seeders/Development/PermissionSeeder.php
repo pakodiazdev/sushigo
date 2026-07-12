@@ -157,6 +157,9 @@ class PermissionSeeder extends LockedSeeder
             // Nómina
             'payroll.preview' => ['label' => 'Ver preview de cierre de nómina', 'group' => 'Nómina'],
             'payroll.close' => ['label' => 'Confirmar cierre de nómina', 'group' => 'Nómina'],
+
+            // Auditoría
+            'audit-logs.view' => ['label' => 'Ver bitácora de auditoría', 'group' => 'Auditoría'],
         ];
 
         foreach ($permissions as $name => $meta) {
@@ -188,6 +191,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN)
+                            ->orWhere('name', 'like', 'audit-logs.%')
                             ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'settings.manage', 'overtime.manage']);
                     })
                     ->get()

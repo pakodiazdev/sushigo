@@ -37,6 +37,10 @@ class AuditableTraitTest extends TestCase
 
         $this->employee = Employee::factory()->create();
         $this->actor = User::factory()->create();
+
+        // Employee is also Auditable — clear the CREATE/UPDATE noise from fixture
+        // setup so tests below only see logs written by the Attendance under test.
+        AttendanceAuditLog::truncate();
     }
 
     // #region CREATE

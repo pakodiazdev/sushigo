@@ -245,6 +245,10 @@ class AttendanceAuditLogTest extends TestCase
         $user = User::factory()->create();
         $employee = Employee::factory()->create();
 
+        // Employee is also Auditable — clear the CREATE/UPDATE noise from fixture
+        // setup so only the two manually-created logs below are counted.
+        AttendanceAuditLog::truncate();
+
         AttendanceAuditLog::factory()->create_action()->create([
             'auditable_type' => Employee::class,
             'auditable_id' => $employee->id,

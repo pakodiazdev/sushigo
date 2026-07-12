@@ -187,3 +187,29 @@ export interface RegisterVacationRequestData {
   dates: string[]
   notes?: string | null
 }
+
+// ── Audit Log ──────────────────────────────────────────────────────────────────
+
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE'
+
+export interface AttendanceAuditLog {
+  id: number
+  auditable_type: string
+  auditable_id: string | null
+  action: AuditAction
+  old_values: Record<string, unknown> | null
+  new_values: Record<string, unknown> | null
+  user: string | null
+  reason: string | null
+  created_at: string
+}
+
+export interface AuditLogFilters {
+  auditable_type?: string
+  auditable_id?: string
+  employee_id?: string
+  date_from?: string
+  date_to?: string
+  per_page?: number
+  page?: number
+}

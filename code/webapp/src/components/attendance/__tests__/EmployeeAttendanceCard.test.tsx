@@ -549,6 +549,42 @@ describe('EmployeeAttendanceCard', () => {
         expect(getByText(/No pagadas/)).toBeDefined()
     })
 
+    it('calls onWeeklySummary with the employee when the weekly summary button is clicked', () => {
+        const onWeeklySummary = vi.fn()
+        const { getByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} onWeeklySummary={onWeeklySummary} />
+        )
+
+        fireEvent.click(getByTestId('btn-weekly-summary'))
+
+        expect(onWeeklySummary).toHaveBeenCalledWith(mockRowWithAttendance.employee)
+    })
+
+    it('does not render the weekly summary button when onWeeklySummary is not provided', () => {
+        const { queryByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} />
+        )
+        expect(queryByTestId('btn-weekly-summary')).toBeNull()
+    })
+
+    it('calls onViewAudit with the employee and attendance id when the audit button is clicked', () => {
+        const onViewAudit = vi.fn()
+        const { getByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} onViewAudit={onViewAudit} />
+        )
+
+        fireEvent.click(getByTestId('btn-view-audit'))
+
+        expect(onViewAudit).toHaveBeenCalledWith(mockRowWithAttendance.employee, mockRowWithAttendance.attendance?.id)
+    })
+
+    it('does not render the audit button when there is no attendance record', () => {
+        const { queryByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRow} onViewAudit={vi.fn()} />
+        )
+        expect(queryByTestId('btn-view-audit')).toBeNull()
+    })
+
     it('shows pending authorization alert when canEdit is false and overtime decision is pending', () => {
         const pendingRow: TodayAttendanceRow = {
             employee: mockRow.employee,
