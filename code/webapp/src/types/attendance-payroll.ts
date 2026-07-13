@@ -163,6 +163,30 @@ export interface UpdateOvertimeLftTiersPayload {
   tiers: { factor: number; up_to_hours: number | null }[]
 }
 
+// ── Overtime Bank ───────────────────────────────────────────────────────────
+
+export type OvertimeMovementType = 'EARNED' | 'USED' | 'PAID' | 'ADJUSTMENT'
+export type OvertimeOrigin = 'AUTO' | 'MANUAL'
+
+export interface OvertimeBankMovement {
+  id: string
+  date: string
+  movement_type: OvertimeMovementType
+  origin: OvertimeOrigin
+  minutes: number
+  valuation_method: string | null
+  applied_rate: number | null
+  amount: number | null
+  authorized_by: string | null
+  authorized_at: string | null
+  reason: string | null
+}
+
+export interface OvertimeBankSummary {
+  balance_minutes: number
+  balance_formatted: string
+}
+
 // ── Vacation Request ─────────────────────────────────────────────────────────
 
 export type VacationRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
