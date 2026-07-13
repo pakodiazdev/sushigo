@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Models\User;
 use App\Models\VacationEntitlement;
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -46,6 +47,16 @@ class VacationEntitlementApiTest extends TestCase
         Passport::actingAs($this->admin);
     }
 
+    /**
+     * "Today" per the business timezone the seniority calculation uses —
+     * not Carbon::today() (server/UTC timezone), which can be a day ahead
+     * of the business timezone and produce off-by-one anniversary counts.
+     */
+    private function businessToday(): Carbon
+    {
+        return Carbon::parse(app(ApplicationClock::class)->todayInBusinessTz());
+    }
+
     private function employeeStartedOn(string $startDate): Employee
     {
         $employee = Employee::factory()->create();
@@ -62,11 +73,11 @@ class VacationEntitlementApiTest extends TestCase
     #[Test]
     public function it_lists_vacation_entitlements_for_employee(): void
     {
-        $employee = $this->employeeStartedOn(Carbon::today()->subYears(1)->toDateString());
+        $employee = $this->employeeStartedOn($this->businessToday()->subYears(1)->toDateString());
 
         VacationEntitlement::create([
             'employee_id' => $employee->id,
-            'year' => Carbon::today()->year,
+            'year' => $this->businessToday()->year,
             'entitled_days' => 20,
             'used_days' => 5,
             'rule_key' => 'VacationsLFTMX',
@@ -84,7 +95,7 @@ class VacationEntitlementApiTest extends TestCase
     public function it_auto_generates_missing_entitlements_when_a_new_anniversary_is_reached(): void
     {
         // Started 2 years ago → 2 completed anniversaries, none registered yet
-        $employee = $this->employeeStartedOn(Carbon::today()->subYears(2)->toDateString());
+        $employee = $this->employeeStartedOn($this->businessToday()->subYears(2)->toDateString());
 
         $this->assertDatabaseCount('vacation_entitlements', 0);
 
@@ -100,7 +111,7 @@ class VacationEntitlementApiTest extends TestCase
     #[Test]
     public function it_includes_seniority_summary_in_meta(): void
     {
-        $startDate = Carbon::today()->subYears(2);
+        $startDate = $this->businessToday()->subYears(2);
         $employee = $this->employeeStartedOn($startDate->toDateString());
 
         $response = $this->getJson("/api/v1/employees/{$employee->public_id}/vacation-entitlements");
@@ -116,7 +127,7 @@ class VacationEntitlementApiTest extends TestCase
     #[Test]
     public function it_does_not_duplicate_entitlements_on_repeated_requests(): void
     {
-        $employee = $this->employeeStartedOn(Carbon::today()->subYears(2)->toDateString());
+        $employee = $this->employeeStartedOn($this->businessToday()->subYears(2)->toDateString());
 
         $this->getJson("/api/v1/employees/{$employee->public_id}/vacation-entitlements")->assertStatus(200);
         $this->getJson("/api/v1/employees/{$employee->public_id}/vacation-entitlements")->assertStatus(200);
@@ -127,7 +138,7 @@ class VacationEntitlementApiTest extends TestCase
     #[Test]
     public function it_returns_403_for_unauthorized_request(): void
     {
-        $employee = $this->employeeStartedOn(Carbon::today()->subYears(1)->toDateString());
+        $employee = $this->employeeStartedOn($this->businessToday()->subYears(1)->toDateString());
         Passport::actingAs(User::factory()->create());
 
         $response = $this->getJson("/api/v1/employees/{$employee->public_id}/vacation-entitlements");
@@ -138,7 +149,7 @@ class VacationEntitlementApiTest extends TestCase
     #[Test]
     public function self_service_user_can_view_their_own_entitlements(): void
     {
-        $employee = $this->employeeStartedOn(Carbon::today()->subYears(1)->toDateString());
+        $employee = $this->employeeStartedOn($this->businessToday()->subYears(1)->toDateString());
         $user = User::factory()->create();
         $user->assignRole('employee');
         $employee->update(['user_id' => $user->id]);
@@ -153,7 +164,7 @@ class VacationEntitlementApiTest extends TestCase
     #[Test]
     public function self_service_user_cannot_view_another_employees_entitlements(): void
     {
-        $employee = $this->employeeStartedOn(Carbon::today()->subYears(1)->toDateString());
+        $employee = $this->employeeStartedOn($this->businessToday()->subYears(1)->toDateString());
         $user = User::factory()->create();
         $user->assignRole('employee');
         // Note: $user is not linked to $employee (no matching user_id)

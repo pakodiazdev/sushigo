@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Models\VacationEntitlement;
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -29,6 +30,16 @@ class GenerateAnniversaryEntitlementsTest extends TestCase
         $this->branch = Branch::factory()->create();
     }
 
+    /**
+     * "Today" per the business timezone the seniority calculation uses —
+     * not Carbon::today() (server/UTC timezone), which can be a day ahead
+     * of the business timezone and produce off-by-one anniversary counts.
+     */
+    private function businessToday(): Carbon
+    {
+        return Carbon::parse(app(ApplicationClock::class)->todayInBusinessTz());
+    }
+
     private function employeeStartedOn(string $startDate): Employee
     {
         $employee = Employee::factory()->create(['is_active' => true]);
@@ -50,7 +61,7 @@ class GenerateAnniversaryEntitlementsTest extends TestCase
     public function it_creates_entitlements_for_all_past_anniversaries(): void
     {
         // Employee started 3 years ago → should create 3 entitlements
-        $startDate = Carbon::today()->subYears(3)->toDateString();
+        $startDate = $this->businessToday()->subYears(3)->toDateString();
         $employee = $this->employeeStartedOn($startDate);
 
         $this->artisan('vacation:generate-entitlements')
@@ -71,7 +82,7 @@ class GenerateAnniversaryEntitlementsTest extends TestCase
     #[Test]
     public function it_skips_employees_with_no_completed_years(): void
     {
-        $this->employeeStartedOn(Carbon::today()->subMonths(6)->toDateString());
+        $this->employeeStartedOn($this->businessToday()->subMonths(6)->toDateString());
 
         $this->artisan('vacation:generate-entitlements')
             ->assertExitCode(0);
@@ -82,7 +93,7 @@ class GenerateAnniversaryEntitlementsTest extends TestCase
     #[Test]
     public function it_skips_years_already_registered(): void
     {
-        $startDate = Carbon::today()->subYears(2)->toDateString();
+        $startDate = $this->businessToday()->subYears(2)->toDateString();
         $employee = $this->employeeStartedOn($startDate);
 
         // Pre-existing entitlement for year 1
@@ -105,7 +116,7 @@ class GenerateAnniversaryEntitlementsTest extends TestCase
     #[Test]
     public function it_filters_by_employee_option(): void
     {
-        $startDate = Carbon::today()->subYears(2)->toDateString();
+        $startDate = $this->businessToday()->subYears(2)->toDateString();
         $employeeA = $this->employeeStartedOn($startDate);
         $employeeB = $this->employeeStartedOn($startDate);
 
@@ -119,7 +130,7 @@ class GenerateAnniversaryEntitlementsTest extends TestCase
     #[Test]
     public function dry_run_does_not_persist_records(): void
     {
-        $startDate = Carbon::today()->subYears(2)->toDateString();
+        $startDate = $this->businessToday()->subYears(2)->toDateString();
         $this->employeeStartedOn($startDate);
 
         $this->artisan('vacation:generate-entitlements', ['--dry-run' => true])
