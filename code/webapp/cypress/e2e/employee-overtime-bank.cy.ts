@@ -52,6 +52,10 @@ before(() => {
 beforeEach(() => {
   cy.loginByApi(email, password)
   cy.visitWithAuth('/employees')
+  // Wait for the employee table (meaningful page content) before closing the debugger —
+  // closeDevDebugger() takes a synchronous DOM snapshot and can no-op if it runs before
+  // the DevDebugger has mounted.
+  cy.contains('tr', 'EMP-001', { timeout: 10_000 })
   cy.closeDevDebugger()
 })
 
