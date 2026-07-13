@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\DayStatus;
+use App\Enums\OvertimeMovementType;
+use App\Enums\OvertimeOrigin;
 use App\Enums\SeedScenario;
 use App\Models\Attendance;
 use App\Models\Employee;
@@ -211,7 +213,8 @@ class PayrollSeedService
                 ],
                 'partial_leave' => null,
                 'overtime' => [
-                    'type' => OvertimeBankMovement::TYPE_PAID,
+                    'movement_type' => OvertimeMovementType::PAID,
+                    'origin' => OvertimeOrigin::AUTO,
                     'minutes' => self::OVERTIME_MINUTES,
                     'reference' => 'payroll-seed',
                 ],
@@ -339,7 +342,8 @@ class PayrollSeedService
                 ],
                 'partial_leave' => null,
                 'overtime' => [
-                    'type' => OvertimeBankMovement::TYPE_PAID,
+                    'movement_type' => OvertimeMovementType::PAID,
+                    'origin' => OvertimeOrigin::AUTO,
                     'minutes' => self::OVERTIME_MINUTES,
                     'reference' => 'payroll-seed',
                 ],

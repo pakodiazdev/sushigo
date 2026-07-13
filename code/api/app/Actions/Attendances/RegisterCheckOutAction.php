@@ -3,8 +3,12 @@
 namespace App\Actions\Attendances;
 
 use App\Actions\Attendances\Concerns\ResolvesEffectiveScheduleDay;
+use App\Enums\OvertimeMovementType;
+use App\Enums\OvertimeOrigin;
 use App\Models\Attendance;
+use App\Models\OvertimeBankMovement;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -20,10 +24,11 @@ use Illuminate\Validation\ValidationException;
  *      If the schedule cannot be resolved, overtime_minutes = 0 (non-blocking)
  *      ScheduleDayOverride takes precedence over the base ScheduleDay when present
  *   5. Persists check_out, net_worked_minutes, overtime_minutes
+ *   6. If overtime_minutes > 0, auto-creates an EARNED OvertimeBankMovement (origin=AUTO)
  *
  * All business rule violations are surfaced as 422 ValidationException.
  *
- * @see AP-015, RF-12, RF-14, RF-42
+ * @see AP-015, AP-034, RF-12, RF-14, RF-42
  */
 class RegisterCheckOutAction
 {
@@ -46,14 +51,27 @@ class RegisterCheckOutAction
         $netWorkedMinutes = $this->calculateNetWorkedMinutes($attendance, $checkOut);
         $overtimeMinutes = $this->calculateOvertimeMinutes($attendance, $checkOut, $checkOutLocal);
 
-        $attendance->auditReason = $data['reason'] ?? null;
-        $attendance->update([
-            'check_out' => $checkOut,
-            'net_worked_minutes' => $netWorkedMinutes,
-            'overtime_minutes' => $overtimeMinutes,
-        ]);
+        return DB::transaction(function () use ($attendance, $data, $checkOut, $netWorkedMinutes, $overtimeMinutes) {
+            $attendance->auditReason = $data['reason'] ?? null;
+            $attendance->update([
+                'check_out' => $checkOut,
+                'net_worked_minutes' => $netWorkedMinutes,
+                'overtime_minutes' => $overtimeMinutes,
+            ]);
 
-        return $attendance->load('employee');
+            if ($overtimeMinutes > 0) {
+                OvertimeBankMovement::create([
+                    'employee_id' => $attendance->employee_id,
+                    'attendance_id' => $attendance->id,
+                    'date' => $attendance->date,
+                    'movement_type' => OvertimeMovementType::EARNED,
+                    'origin' => OvertimeOrigin::AUTO,
+                    'minutes' => $overtimeMinutes,
+                ]);
+            }
+
+            return $attendance->load('employee');
+        });
     }
 
     /**

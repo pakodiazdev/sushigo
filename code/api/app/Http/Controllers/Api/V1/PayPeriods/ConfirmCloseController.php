@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\PayPeriods;
 
+use App\Actions\Payroll\CreateOvertimePaidMovementsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ConfirmClosePayPeriodRequest;
 use App\Http\Responses\Common\ResponseEntity;
@@ -48,7 +49,10 @@ class ConfirmCloseController extends Controller
 {
     private const DUPLICATE_PERIOD_MESSAGE = 'Ya existe un cierre para este periodo.';
 
-    public function __construct(private PayPeriodPreviewService $previewService) {}
+    public function __construct(
+        private PayPeriodPreviewService $previewService,
+        private CreateOvertimePaidMovementsAction $createOvertimePaidMovements,
+    ) {}
 
     public function __invoke(ConfirmClosePayPeriodRequest $request): ResponseEntity
     {
@@ -92,6 +96,8 @@ class ConfirmCloseController extends Controller
                 ]);
 
                 foreach ($employees as $employee) {
+                    ($this->createOvertimePaidMovements)($employee, $periodStart, $periodEnd);
+
                     $preview = $this->previewService->buildEmployeePreview(
                         $employee,
                         $periodStart,

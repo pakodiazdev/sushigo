@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\OvertimeMovementType;
+use App\Enums\OvertimeOrigin;
+use App\Enums\OvertimeValuationMethod;
 use App\Support\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,27 +16,32 @@ class OvertimeBankMovement extends Model
     use HasFactory;
     use HasPublicId;
 
-    const TYPE_EARNED = 'EARNED';
-
-    const TYPE_PAID = 'PAID';
-
-    const TYPE_EXPIRED = 'EXPIRED';
-
-    const TYPE_TRANSFERRED = 'TRANSFERRED';
-
     protected $fillable = [
         'employee_id',
         'attendance_id',
         'date',
-        'type',
+        'movement_type',
+        'origin',
         'minutes',
+        'valuation_method',
+        'applied_rate',
+        'amount',
+        'authorized_by',
+        'authorized_at',
+        'reason',
         'reference',
         'meta',
     ];
 
     protected $casts = [
         'date' => 'date',
+        'movement_type' => OvertimeMovementType::class,
+        'origin' => OvertimeOrigin::class,
         'minutes' => 'integer',
+        'valuation_method' => OvertimeValuationMethod::class,
+        'applied_rate' => 'decimal:2',
+        'amount' => 'decimal:2',
+        'authorized_at' => 'datetime',
         'meta' => 'array',
     ];
 
@@ -47,14 +55,25 @@ class OvertimeBankMovement extends Model
         return $this->belongsTo(Attendance::class);
     }
 
+    public function authorizedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'authorized_by');
+    }
+
+    /** Positive impact = minutes added to the bank; negative = minutes removed. */
+    public function balanceImpact(): int
+    {
+        return $this->movement_type->balanceImpact((int) $this->minutes);
+    }
+
     public function scopePaid(Builder $query): Builder
     {
-        return $query->where('type', self::TYPE_PAID);
+        return $query->where('movement_type', OvertimeMovementType::PAID);
     }
 
     public function scopeEarned(Builder $query): Builder
     {
-        return $query->where('type', self::TYPE_EARNED);
+        return $query->where('movement_type', OvertimeMovementType::EARNED);
     }
 
     public function scopeInPeriod(Builder $query, string $start, string $end): Builder
