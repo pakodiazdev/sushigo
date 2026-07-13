@@ -262,10 +262,9 @@ class PreviewPayPeriodApiTest extends TestCase
             'employee_id' => $employee->id,
             'hourly_rate' => 60.00,
         ]);
-        OvertimeBankMovement::factory()->create([
+        OvertimeBankMovement::factory()->paid()->create([
             'employee_id' => $employee->id,
             'date' => '2026-06-22',
-            'type' => OvertimeBankMovement::TYPE_PAID,
             'minutes' => 60,
         ]);
 

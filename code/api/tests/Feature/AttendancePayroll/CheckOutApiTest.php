@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\AttendancePayroll;
 
+use App\Enums\OvertimeMovementType;
+use App\Enums\OvertimeOrigin;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
+use App\Models\OvertimeBankMovement;
 use App\Models\ScheduleDay;
 use App\Models\User;
 use Carbon\Carbon;
@@ -187,6 +190,43 @@ class CheckOutApiTest extends TestCase
             ]);
 
         $this->assertEquals(26, strlen($response->json('data.id')));
+    }
+
+    // #endregion
+
+    // #region Overtime bank
+
+    #[Test]
+    public function checkout_with_overtime_creates_earned_bank_movement(): void
+    {
+        ['attendance' => $attendance, 'employee' => $employee] = $this->makeAttendanceWithLunch();
+
+        $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-23T17:35:00'],
+        )->assertStatus(200);
+
+        $this->assertDatabaseCount('overtime_bank_movements', 1);
+
+        $movement = OvertimeBankMovement::first();
+        $this->assertSame($employee->id, $movement->employee_id);
+        $this->assertSame($attendance->id, $movement->attendance_id);
+        $this->assertSame(OvertimeMovementType::EARNED, $movement->movement_type);
+        $this->assertSame(OvertimeOrigin::AUTO, $movement->origin);
+        $this->assertSame(35, $movement->minutes);
+    }
+
+    #[Test]
+    public function checkout_without_overtime_creates_no_bank_movement(): void
+    {
+        ['attendance' => $attendance] = $this->makeAttendanceWithLunch();
+
+        $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-23T17:00:00'],
+        )->assertStatus(200);
+
+        $this->assertDatabaseCount('overtime_bank_movements', 0);
     }
 
     // #endregion

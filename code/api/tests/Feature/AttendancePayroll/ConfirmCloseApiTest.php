@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\AttendancePayroll;
 
+use App\Enums\OvertimeValuationMethod;
 use App\Models\Attendance;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
+use App\Models\OvertimeBankMovement;
 use App\Models\PayPeriod;
 use App\Models\PayPeriodLine;
 use App\Models\ScheduleDay;
@@ -116,6 +118,71 @@ class ConfirmCloseApiTest extends TestCase
         $this->assertTrue($payPeriod->isClosed());
         $this->assertEquals($this->user->id, $payPeriod->closed_by);
         $this->assertNotNull($payPeriod->closed_at);
+    }
+
+    public function test_confirm_close_creates_paid_overtime_movement_for_authorized_overtime(): void
+    {
+        $employee = $this->createActiveEmployee();
+        $manager = User::factory()->create();
+
+        $attendance = Attendance::where('employee_id', $employee->id)->first();
+        $attendance->update([
+            'overtime_minutes' => 60,
+            'overtime_authorized' => true,
+            'overtime_authorized_by' => $manager->id,
+            'overtime_authorized_at' => now(),
+            'overtime_valuation_method' => OvertimeValuationMethod::AGREED_RATE->value,
+            'overtime_rate_applied' => 90.00,
+            'overtime_amount' => 90.00,
+        ]);
+
+        OvertimeBankMovement::factory()->earned()->create([
+            'employee_id' => $employee->id,
+            'attendance_id' => $attendance->id,
+            'date' => $attendance->date,
+            'minutes' => 60,
+        ]);
+
+        $response = $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-28',
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseCount('overtime_bank_movements', 2);
+        $this->assertDatabaseHas('overtime_bank_movements', [
+            'employee_id' => $employee->id,
+            'attendance_id' => $attendance->id,
+            'movement_type' => 'PAID',
+            'minutes' => 60,
+            'amount' => 90.00,
+            'authorized_by' => $manager->id,
+        ]);
+    }
+
+    public function test_confirm_close_does_not_create_paid_movement_for_unauthorized_overtime(): void
+    {
+        $employee = $this->createActiveEmployee();
+
+        $attendance = Attendance::where('employee_id', $employee->id)->first();
+        $attendance->update(['overtime_minutes' => 60]);
+
+        OvertimeBankMovement::factory()->earned()->create([
+            'employee_id' => $employee->id,
+            'attendance_id' => $attendance->id,
+            'date' => $attendance->date,
+            'minutes' => 60,
+        ]);
+
+        $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-28',
+        ])->assertStatus(201);
+
+        $this->assertDatabaseCount('overtime_bank_movements', 1);
     }
 
     public function test_confirm_close_rejects_duplicate_period_for_same_branch(): void

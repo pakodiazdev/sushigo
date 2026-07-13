@@ -13,6 +13,7 @@ use Database\Seeders\Testing\CloseDayHappyPathSeeder;
 use Database\Seeders\Testing\CloseDayPendingLunchSeeder;
 use Database\Seeders\Testing\CoreTestSeeder;
 use Database\Seeders\Testing\NegotiatedExtraDaysSeeder;
+use Database\Seeders\Testing\OvertimeBankTestSeeder;
 use Database\Seeders\Testing\PayrollPreviewSeeder;
 use Database\Seeders\Testing\ScheduleSummaryOverrideSeeder;
 use Database\Seeders\Testing\TodayReportStatusSeeder;
@@ -81,6 +82,10 @@ class TestReset extends Command
         ],
         'payroll-preview' => [
             PayrollPreviewSeeder::class,
+        ],
+        'overtime-bank' => [
+            AttendanceTestSeeder::class,
+            OvertimeBankTestSeeder::class,
         ],
     ];
 

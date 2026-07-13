@@ -187,11 +187,11 @@ class SeedPayrollEndpointTest extends TestCase
             'scenario' => 'with_overtime',
         ])->assertOk();
 
-        // Tue, Thu, Fri (3 days) get OvertimeBankMovement TYPE_PAID
+        // Tue, Thu, Fri (3 days) get OvertimeBankMovement PAID
         $this->assertDatabaseCount('overtime_bank_movements', 3);
         $this->assertDatabaseHas('overtime_bank_movements', [
             'employee_id' => $employee->id,
-            'type' => 'PAID',
+            'movement_type' => 'PAID',
             'minutes' => 120,
         ]);
     }
