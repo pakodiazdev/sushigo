@@ -4,7 +4,6 @@ namespace App\Services\CashAdjustments;
 
 use App\Models\CashRegister;
 use App\Models\CashSession;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class CashSessionService
@@ -186,23 +185,5 @@ class CashSessionService
                 'calculated_current' => $session->calculateCurrentBalance(),
             ],
         ];
-    }
-
-    /**
-     * Get or create today's session for a register
-     */
-    public function getOrCreateTodaySession(CashRegister $cashRegister, ?string $date = null): CashSession
-    {
-        $date = $date ?? Carbon::today()->format('Y-m-d');
-
-        $session = CashSession::where('cash_register_id', $cashRegister->id)
-            ->where('operating_date', $date)
-            ->first();
-
-        if (! $session) {
-            $session = $this->openSession($cashRegister, $date);
-        }
-
-        return $session;
     }
 }
