@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Enums\OvertimeMovementType;
 use App\Models\Holiday;
 use App\Services\PayrollCalculator;
 use Carbon\Carbon;
@@ -284,7 +285,7 @@ class PayrollCalculatorTest extends TestCase
     #[Test]
     public function sums_paid_overtime_movements(): void
     {
-        $movement = (object) ['type' => 'PAID', 'minutes' => 120];
+        $movement = (object) ['movement_type' => OvertimeMovementType::PAID, 'minutes' => 120];
 
         $result = PayrollCalculator::calculateOvertimePay(collect([$movement]), 2.0);
 
@@ -292,11 +293,11 @@ class PayrollCalculatorTest extends TestCase
     }
 
     #[Test]
-    public function skips_earned_and_expired_overtime_movements(): void
+    public function skips_earned_and_used_overtime_movements(): void
     {
         $movements = collect([
-            (object) ['type' => 'EARNED', 'minutes' => 60],
-            (object) ['type' => 'EXPIRED', 'minutes' => 60],
+            (object) ['movement_type' => OvertimeMovementType::EARNED, 'minutes' => 60],
+            (object) ['movement_type' => OvertimeMovementType::USED, 'minutes' => 60],
         ]);
 
         $result = PayrollCalculator::calculateOvertimePay($movements, 2.0);
