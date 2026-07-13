@@ -16,6 +16,7 @@ import { usePermissionManager } from './use-permission-manager'
 import { PermissionManagerDialog } from './permission-manager-dialog'
 import { BonusConfigSection } from './bonus-config-section'
 import { VacationSection } from './vacation-section'
+import { OvertimeBankSection } from './overtime-bank-section'
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,11 @@ export function EmployeeDetailView({
 
       {/* Vacation entitlements */}
       <VacationSection employeeId={employee.id} employee={employee} />
+
+      <hr className="border-border" />
+
+      {/* Overtime bank balance + movement history */}
+      <OvertimeBankSection employeeId={employee.id} />
 
       <hr className="border-border" />
 
