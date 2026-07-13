@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\V1\Employees\ListVacationEntitlementsController;
 use App\Http\Controllers\Api\V1\Employees\ListWagesController;
 use App\Http\Controllers\Api\V1\Employees\RehireEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\ShowEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\ShowOvertimeBankController;
 use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
 use App\Http\Controllers\Api\V1\Employees\SyncUserDirectPermissionsController;
 use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
@@ -307,6 +308,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/{employee}/vacation-entitlements', ListVacationEntitlementsController::class)->name('employees.vacation-entitlements.list')->middleware('permission:employees.view|employee-requests.create');
         // Vacation request history endpoints (same self-service scoping as above)
         Route::get('/{employee}/vacation-requests', ListEmployeeVacationRequestsController::class)->name('employees.vacation-requests.list')->middleware('permission:employees.view|employee-requests.create');
+        // Overtime bank balance + movement history (same self-service scoping as above)
+        Route::get('/{employee}/overtime-bank', ShowOvertimeBankController::class)->name('employees.overtime-bank.show')->middleware('permission:employees.view|employee-requests.create');
         // Direct permission management
         Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
         Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');

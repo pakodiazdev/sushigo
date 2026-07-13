@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\OvertimeMovementType;
 use App\Models\Employee;
 use App\Models\EmployeeBonusConfig;
 use App\Models\EmployeeSchedule;
@@ -222,7 +223,7 @@ class PayPeriodPreviewService
         }
 
         foreach ($overtimeMovements as $movement) {
-            if ($movement->type === OvertimeBankMovement::TYPE_PAID) {
+            if ($movement->movement_type === OvertimeMovementType::PAID) {
                 $amount = round((int) $movement->minutes * $ctx['minuteRate'], 2);
                 $lines[] = [
                     'date' => $movement->date->toDateString(),

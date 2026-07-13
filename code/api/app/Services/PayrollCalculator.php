@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\OvertimeMovementType;
 use App\Models\Holiday;
 use Illuminate\Support\Collection;
 
@@ -83,7 +84,7 @@ class PayrollCalculator
         $total = 0.0;
 
         foreach ($overtimeMovements as $movement) {
-            if ($movement->type === 'PAID') {
+            if ($movement->movement_type === OvertimeMovementType::PAID) {
                 $total += (int) $movement->minutes * $minuteRate;
             }
         }
@@ -115,7 +116,7 @@ class PayrollCalculator
         $minutes = 0;
 
         foreach ($overtimeMovements as $movement) {
-            if ($movement->type === 'EARNED') {
+            if ($movement->movement_type === OvertimeMovementType::EARNED) {
                 $minutes += (int) $movement->minutes;
             }
         }
