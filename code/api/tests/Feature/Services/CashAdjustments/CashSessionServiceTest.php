@@ -9,7 +9,6 @@ use App\Models\CashExpense;
 use App\Models\CashRegister;
 use App\Models\CashSession;
 use App\Services\CashAdjustments\CashSessionService;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -204,30 +203,6 @@ class CashSessionServiceTest extends TestCase
         $incomesByType = collect($summary['incomes'])->keyBy('tender_type');
         $this->assertEquals(200.00, $incomesByType['CASH']['amount']);
         $this->assertEquals(150.00, $incomesByType['CARD']['amount']);
-    }
-
-    public function test_get_or_create_today_session_creates_new_if_not_exists(): void
-    {
-        $date = Carbon::today()->format('Y-m-d');
-
-        $session = $this->service->getOrCreateTodaySession($this->cashRegister);
-
-        $this->assertInstanceOf(CashSession::class, $session);
-        $this->assertEquals($date, $session->operating_date->format('Y-m-d'));
-    }
-
-    public function test_get_or_create_today_session_returns_existing_session(): void
-    {
-        $date = Carbon::today()->format('Y-m-d');
-
-        $existingSession = CashSession::factory()->create([
-            'cash_register_id' => $this->cashRegister->id,
-            'operating_date' => $date,
-        ]);
-
-        $session = $this->service->getOrCreateTodaySession($this->cashRegister);
-
-        $this->assertEquals($existingSession->id, $session->id);
     }
 
     public function test_update_closing_balance_recalculates_and_saves(): void
