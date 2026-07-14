@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V1\EmployeeRequests\ListEmployeeRequestsController;
 use App\Http\Controllers\Api\V1\EmployeeRequests\RejectEmployeeRequestController;
 use App\Http\Controllers\Api\V1\Employees\AssignableRolesController;
 use App\Http\Controllers\Api\V1\Employees\CreateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\CreateManualOvertimeMovementController;
 use App\Http\Controllers\Api\V1\Employees\CreateWageController;
 use App\Http\Controllers\Api\V1\Employees\DeactivateEmployeeController;
 use App\Http\Controllers\Api\V1\Employees\GetMyEmployeeController;
@@ -310,6 +311,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/{employee}/vacation-requests', ListEmployeeVacationRequestsController::class)->name('employees.vacation-requests.list')->middleware('permission:employees.view|employee-requests.create');
         // Overtime bank balance + movement history (same self-service scoping as above)
         Route::get('/{employee}/overtime-bank', ShowOvertimeBankController::class)->name('employees.overtime-bank.show')->middleware('permission:employees.view|employee-requests.create');
+        Route::post('/{employee}/overtime-bank/movements', CreateManualOvertimeMovementController::class)->name('employees.overtime-bank.movements.create')->middleware('permission:employees.update');
         // Direct permission management
         Route::get('/{employee}/permissions', GetUserPermissionsController::class)->name('employees.permissions.get')->middleware('permission:users.show');
         Route::put('/{employee}/permissions', SyncUserDirectPermissionsController::class)->name('employees.permissions.sync')->middleware('permission:users.update');

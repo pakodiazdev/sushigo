@@ -41,6 +41,14 @@ Como Admin, quiero registrar un movimiento manual USADO o AJUSTE en el banco de 
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `1h` · **Pessimistic:** `2h`
+### 📊 Estimates
+- **Optimistic:** `1h` · **Pessimistic:** `2h` · **Tracked:** _in progress_
+
+### 📅 Sessions
+```json
+[
+  { "date": "2026-07-13", "start": "18:58", "end": "?" }
+]
+```
