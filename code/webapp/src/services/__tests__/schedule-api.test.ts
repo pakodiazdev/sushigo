@@ -6,6 +6,7 @@ vi.mock('@/lib/api-client', () => ({
   apiClient: {
     post: vi.fn().mockResolvedValue({ data: {} }),
     get: vi.fn().mockResolvedValue({ data: {} }),
+    put: vi.fn().mockResolvedValue({ data: {} }),
   },
 }))
 
@@ -137,6 +138,18 @@ describe('scheduleApi', () => {
     }
     await scheduleApi.createPayload('period-1', payload)
     expect(apiClient.post).toHaveBeenCalledWith('/employment-periods/period-1/schedules', payload)
+  })
+
+  it('update calls PUT with raw payload', async () => {
+    const { apiClient } = await import('@/lib/api-client')
+    const payload = {
+      effective_from: '2026-03-01',
+      workday_type: 'FULL',
+      working_days_per_week: 6,
+      days: [],
+    }
+    await scheduleApi.update('sched-1', payload)
+    expect(apiClient.put).toHaveBeenCalledWith('/schedules/sched-1', payload)
   })
 
   it('createDayOverride calls POST to schedule-day-overrides', async () => {

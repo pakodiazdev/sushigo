@@ -14,6 +14,7 @@ import type { EmployeeSchedule } from '@/types/schedule'
 vi.mock('@/services/schedule-api', () => ({
   scheduleApi: {
     createPayload: vi.fn().mockResolvedValue({ data: { data: { id: 'sched-1' } } }),
+    update: vi.fn().mockResolvedValue({ data: { data: { id: 'sched-1' } } }),
   },
 }))
 
@@ -344,5 +345,41 @@ describe('useCreateScheduleInline', () => {
     expect(effectiveFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     const effectiveDate = new Date(effectiveFrom + 'T00:00:00')
     expect(effectiveDate.getDay()).toBe(1) // Monday
+  })
+
+  // ── Edit mode ──────────────────────────────────────────────────────────────
+
+  it('pre-fills effective_from with the schedule own date in edit mode (not next Monday)', () => {
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn(), mockSchedule, undefined, 'sched-123'),
+      { wrapper: createWrapper() }
+    )
+    expect(result.current.form.getValues('effective_from')).toBe('2026-01-01')
+    expect(result.current.mode).toBe('edit')
+  })
+
+  it('submits via scheduleApi.update when editScheduleId is provided', async () => {
+    const onSuccess = vi.fn()
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', onSuccess, mockSchedule, undefined, 'sched-123'),
+      { wrapper: createWrapper() }
+    )
+
+    await act(async () => {
+      await result.current.onSubmit({ preventDefault: vi.fn() } as unknown as React.BaseSyntheticEvent)
+      await new Promise((r) => setTimeout(r, 50))
+    })
+
+    const { scheduleApi } = await import('@/services/schedule-api')
+    expect(scheduleApi.update).toHaveBeenCalledWith('sched-123', expect.objectContaining({ effective_from: '2026-01-01' }))
+    expect(onSuccess).toHaveBeenCalled()
+  })
+
+  it('defaults to create mode when editScheduleId is not provided', () => {
+    const { result } = renderHook(
+      () => useCreateScheduleInline('emp-1', 'period-1', vi.fn()),
+      { wrapper: createWrapper() }
+    )
+    expect(result.current.mode).toBe('create')
   })
 })

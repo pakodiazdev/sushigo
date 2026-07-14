@@ -14,13 +14,15 @@ export interface CreateScheduleFormProps {
   readonly currentSchedule?: EmployeeSchedule | null
   /** Start date of the active employment period (for first-time schedule creation). */
   readonly periodStartDate?: string
+  /** When set, the form edits this schedule in place instead of creating a new one. */
+  readonly editScheduleId?: string
   readonly onSuccess: () => void
   readonly onCancel: () => void
 }
 
-export function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, currentSchedule, periodStartDate, onSuccess, onCancel }: CreateScheduleFormProps) {
-  const { form, onSubmit, isPending, dowKeys, dayLabels, lunchOptions } =
-    useCreateScheduleInline(employeeId, periodId, onSuccess, currentSchedule, periodStartDate)
+export function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, currentSchedule, periodStartDate, editScheduleId, onSuccess, onCancel }: CreateScheduleFormProps) {
+  const { form, onSubmit, isPending, dowKeys, dayLabels, lunchOptions, mode } =
+    useCreateScheduleInline(employeeId, periodId, onSuccess, currentSchedule, periodStartDate, editScheduleId)
 
   const { register, formState: { errors }, watch } = form
 
@@ -31,7 +33,7 @@ export function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, 
     <form onSubmit={onSubmit}>
       <div className="space-y-5 p-5">
         {/* Warning when replacing existing schedule */}
-        {hasExistingSchedule && (
+        {mode === 'create' && hasExistingSchedule && (
           <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>Si existe un horario activo, se cerrará automáticamente al guardar.</span>
@@ -106,7 +108,7 @@ export function CreateScheduleForm({ employeeId, periodId, hasExistingSchedule, 
         <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={isPending}>
           Cancelar
         </Button>
-        <Button type="submit" size="sm" disabled={isPending || !periodId}>
+        <Button type="submit" size="sm" disabled={isPending || (mode === 'create' && !periodId)}>
           {isPending ? 'Guardando…' : 'Guardar horario'}
         </Button>
       </div>
