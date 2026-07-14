@@ -44,18 +44,20 @@ Como Admin, quiero registrar un movimiento manual USADO o AJUSTE en el banco de 
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `1h` · **Pessimistic:** `2h` · **Tracked:** `1h08m`
+- **Optimistic:** `1h` · **Pessimistic:** `2h` · **Tracked:** `1h57m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-13", "start": "18:58", "end": "20:06" }
+  { "date": "2026-07-13", "start": "18:58", "end": "20:06" },
+  { "date": "2026-07-13", "start": "20:07", "end": "20:29" },
+  { "date": "2026-07-13", "start": "20:48", "end": "21:15" }
 ]
 ```
 
 ## 📊 Retrospective
-- **Actual total:** 1h 08m (68m)
-- **vs optimistic:** +8m
-- **vs pessimistic:** −52m
+- **Actual total:** 1h 57m (68m + 22m + 27m)
+- **vs optimistic:** +57m
+- **vs pessimistic:** −3m
 
-**Justification:** Landed close to the optimistic estimate. The schema and enum values from #070 already covered USED/ADJUSTMENT, so no migration was needed, and the closest existing UI/backend analogs (RegisterVacationRequestDialog, CreateWageController, VacationRequestGuards) gave a direct pattern to follow for the request/action/dialog/hook, which kept implementation and test-writing straightforward with no unplanned rework.
+**Justification:** Session 1 (implementation, 68m) landed close to the optimistic estimate — the schema and enum values from #070 already covered USED/ADJUSTMENT, so no migration was needed, and the closest existing UI/backend analogs (RegisterVacationRequestDialog, CreateWageController, VacationRequestGuards) gave a direct pattern to follow for the request/action/dialog/hook. Session 2 (22m) addressed the 2 automated Copilot review comments on the PR; SonarCloud quality gates passed clean on both `api` and `webapp` with no further fixes needed. Session 3 (27m) is this closing pass (task file + issue update) after the user merged the PR.
