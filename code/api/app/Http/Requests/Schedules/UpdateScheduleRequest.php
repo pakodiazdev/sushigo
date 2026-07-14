@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * @OA\Schema(
- *   schema="StoreScheduleRequest",
+ *   schema="UpdateScheduleRequest",
  *   required={"effective_from","workday_type","working_days_per_week","days"},
  *
  *   @OA\Property(property="effective_from", type="string", format="date", example="2026-03-01"),
@@ -35,7 +35,7 @@ use Illuminate\Foundation\Http\FormRequest;
  *   )
  * )
  */
-class StoreScheduleRequest extends FormRequest
+class UpdateScheduleRequest extends FormRequest
 {
     use ValidatesScheduleDays;
 
@@ -52,31 +52,50 @@ class StoreScheduleRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($v) {
+            $this->validateScheduleIsActive($v);
+            $this->validatePreviousScheduleBoundary($v);
             $this->validateWorkingDayFields($v, $this->input('days', []));
-            $this->validateEffectiveDateConflict($v);
         });
     }
 
-    private function validateEffectiveDateConflict($validator): void
+    private function validateScheduleIsActive($validator): void
     {
-        $period = $this->route('employmentPeriod');
+        $schedule = $this->route('schedule');
+
+        if ($schedule && $schedule->effective_to !== null) {
+            $validator->errors()->add(
+                'schedule',
+                'Solo se puede editar el horario activo (sin fecha de cierre).'
+            );
+        }
+    }
+
+    /**
+     * When effective_from is moved, UpdateScheduleAction realigns the immediately
+     * preceding schedule's effective_to to keep the timeline contiguous. That only
+     * works if the new date stays strictly after the previous schedule's own
+     * effective_from — otherwise the previous schedule would need effective_to
+     * before its own effective_from, violating the DB CHECK constraint.
+     */
+    private function validatePreviousScheduleBoundary($validator): void
+    {
+        $schedule = $this->route('schedule');
         $newFrom = $this->input('effective_from');
 
-        if (! $period || ! $newFrom) {
+        if (! $schedule || ! $newFrom) {
             return;
         }
 
-        // Validate that the new effective_from is strictly after any existing open-ended
-        // schedule's effective_from. This prevents CreateScheduleAction from computing
-        // effective_to < effective_from, which would violate the DB CHECK constraint.
-        $existingFrom = $period->employeeSchedules()
-            ->whereNull('effective_to')
+        $previousFrom = $schedule->employmentPeriod
+            ->employeeSchedules()
+            ->where('id', '!=', $schedule->id)
+            ->orderByDesc('effective_from')
             ->value('effective_from');
 
-        if ($existingFrom && Carbon::parse($newFrom)->toDateString() <= Carbon::parse($existingFrom)->toDateString()) {
+        if ($previousFrom && Carbon::parse($newFrom)->toDateString() <= Carbon::parse($previousFrom)->toDateString()) {
             $validator->errors()->add(
                 'effective_from',
-                'La fecha de inicio debe ser posterior al inicio del horario activo ('.Carbon::parse($existingFrom)->toDateString().').'
+                'La fecha de inicio debe ser posterior al inicio del horario anterior ('.Carbon::parse($previousFrom)->toDateString().').'
             );
         }
     }
