@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Contracts\VacationEntitlementRule;
 use App\Models\Employee;
 use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
@@ -12,7 +11,7 @@ use Carbon\Carbon;
 class SeniorityService
 {
     public function __construct(
-        private readonly VacationEntitlementRule $rule,
+        private readonly VacationEntitlementResolver $resolver,
         private readonly ApplicationClock $clock,
     ) {}
 
@@ -75,14 +74,9 @@ class SeniorityService
         return [
             'date' => $nextAnniversaryDate->toDateString(),
             'seniority_year' => $nextSeniorityYear,
-            'entitled_days' => $this->rule->calculate($nextSeniorityYear),
+            'entitled_days' => $this->resolver->resolve($employee)->calculate($nextSeniorityYear),
             'days_until' => (int) $at->diffInDays($nextAnniversaryDate, false),
         ];
-    }
-
-    public function entitledDaysForSeniorityYear(int $year): int
-    {
-        return $this->rule->calculate($year);
     }
 
     /**

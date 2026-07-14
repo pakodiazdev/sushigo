@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\V1\Employees\SuggestEmployeeCodeController;
 use App\Http\Controllers\Api\V1\Employees\SyncUserDirectPermissionsController;
 use App\Http\Controllers\Api\V1\Employees\ToggleEmployeeActiveController;
 use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeController;
+use App\Http\Controllers\Api\V1\Employees\UpdateEmployeeVacationPolicyController;
 use App\Http\Controllers\Api\V1\Holidays\CreateHolidayController;
 use App\Http\Controllers\Api\V1\Holidays\CreateHolidayDefinitionController;
 use App\Http\Controllers\Api\V1\Holidays\DeleteHolidayController;
@@ -120,6 +121,8 @@ use App\Http\Controllers\Api\V1\UnitsOfMeasure\ListUnitsOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\ListUomConversionsController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\ShowUnitOfMeasureController;
 use App\Http\Controllers\Api\V1\UnitsOfMeasure\UpdateUnitOfMeasureController;
+use App\Http\Controllers\Api\V1\VacationPolicy\ListVacationPolicyController;
+use App\Http\Controllers\Api\V1\VacationPolicy\UpdateVacationPolicyController;
 use App\Http\Controllers\Api\V1\VacationRequests\ApproveVacationRequestController;
 use App\Http\Controllers\Api\V1\VacationRequests\RegisterVacationRequestController;
 use App\Http\Controllers\Api\V1\VacationRequests\RejectVacationRequestController;
@@ -313,6 +316,8 @@ Route::prefix('v1')->group(function () {
         // balance while filling the self-service form — the controller itself
         // restricts those callers to their own linked employee.
         Route::get('/{employee}/vacation-entitlements', ListVacationEntitlementsController::class)->name('employees.vacation-entitlements.list')->middleware('permission:employees.view|employee-requests.create');
+        // Per-employee vacation policy override (contractual entitlement beyond the tenant default)
+        Route::put('/{employee}/vacation-policy-override', UpdateEmployeeVacationPolicyController::class)->name('employees.vacation-policy-override.update')->middleware('permission:employees.update');
         // Vacation request history endpoints (same self-service scoping as above)
         Route::get('/{employee}/vacation-requests', ListEmployeeVacationRequestsController::class)->name('employees.vacation-requests.list')->middleware('permission:employees.view|employee-requests.create');
         // Overtime bank balance + movement history (same self-service scoping as above)
@@ -432,6 +437,12 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->prefix('overtime')->name('overtime.')->group(function () {
         Route::get('/lft-tiers', ListOvertimeLftTiersController::class)->name('lft-tiers.index')->middleware('permission:overtime.manage');
         Route::put('/lft-tiers', UpdateOvertimeLftTiersController::class)->name('lft-tiers.update')->middleware('permission:overtime.manage');
+    });
+
+    // Vacation Policy Settings (tenant-level — All Protected)
+    Route::middleware('auth:api')->prefix('vacation-policy')->name('vacation-policy.')->group(function () {
+        Route::get('/', ListVacationPolicyController::class)->name('index')->middleware('permission:vacation-policy.manage');
+        Route::put('/', UpdateVacationPolicyController::class)->name('update')->middleware('permission:vacation-policy.manage');
     });
 
     // Holidays Module (All Protected — requires holidays.manage)

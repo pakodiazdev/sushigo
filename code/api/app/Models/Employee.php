@@ -79,12 +79,15 @@ class Employee extends Model
         'is_active',
         'attendance_exempt',
         'meta',
+        'vacation_entitlement_rule_key',
+        'vacation_entitlement_custom_table',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'attendance_exempt' => 'boolean',
         'meta' => 'array',
+        'vacation_entitlement_custom_table' => 'array',
     ];
 
     public function user(): BelongsTo

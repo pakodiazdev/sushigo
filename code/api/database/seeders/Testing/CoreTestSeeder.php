@@ -105,6 +105,7 @@ class CoreTestSeeder extends Seeder
         'payroll.reopen',
         'payroll.reclose',
         'overtime.manage',
+        'vacation-policy.manage',
         'audit-logs.view',
     ];
 
@@ -127,7 +128,7 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.'],
+        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'inventory_locations.', 'stock.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.'],
         'inventory-manager' => ['items.', 'inventory_locations.', 'stock.', ...self::SELF_SERVICE_REQUESTS],
         'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'employee-requests.', 'attendances.', 'reports.', '=payroll.preview', '=payroll.close'],
         'cook' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
