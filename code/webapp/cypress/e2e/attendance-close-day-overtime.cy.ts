@@ -109,8 +109,12 @@ describe("Close day with overtime — decision queue after bulk close", () => {
     cy.contains("Decisión de horas extra", { timeout: 10_000 }).should("be.visible");
     cy.contains("35 min extra").should("be.visible");
 
-    // ── First employee: Authorize (Pagar) ──
+    // ── First employee: Authorize (Pagar) → advances to valuation-method step ──
     cy.get("[data-testid='btn-authorize-overtime']").should("be.visible").click();
+    cy.contains("Método de valoración").should("be.visible");
+
+    // LFT_PROPORTIONAL is the default selection — just confirm
+    cy.get("[data-testid='btn-confirm-valuation']").click();
 
     cy.wait("@overtimeDecision", { timeout: 10_000 })
       .its("response.statusCode")

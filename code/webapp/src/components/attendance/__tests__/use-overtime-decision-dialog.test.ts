@@ -46,6 +46,18 @@ describe('useOvertimeDecisionDialog', () => {
     expect(result.current.step).toBe('confirm')
   })
 
+  it('resets to confirm step when attendanceId changes while isOpen stays true (bulk queue advancing)', () => {
+    const { result, rerender } = renderHook(
+      ({ attendanceId }) => useOvertimeDecisionDialog({ isOpen: true, attendanceId, onAuthorize: vi.fn() }),
+      { initialProps: { attendanceId: 'att-1' } },
+    )
+    act(() => { result.current.handlePagar() })
+    expect(result.current.step).toBe('method')
+
+    rerender({ attendanceId: 'att-2' })
+    expect(result.current.step).toBe('confirm')
+  })
+
   it('onSubmitMethod calls onAuthorize with LFT_PROPORTIONAL and no rate/factor', async () => {
     const onAuthorize = vi.fn()
     const { result } = renderHook(() =>
