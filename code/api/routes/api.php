@@ -103,6 +103,7 @@ use App\Http\Controllers\Api\V1\Schedules\CreateScheduleController;
 use App\Http\Controllers\Api\V1\Schedules\CreateScheduleDayOverrideController;
 use App\Http\Controllers\Api\V1\Schedules\CurrentScheduleController;
 use App\Http\Controllers\Api\V1\Schedules\ListSchedulesController;
+use App\Http\Controllers\Api\V1\Schedules\UpdateScheduleController;
 use App\Http\Controllers\Api\V1\Stock\ListStockController;
 use App\Http\Controllers\Api\V1\Stock\StockByLocationController;
 use App\Http\Controllers\Api\V1\Stock\StockByVariantController;
@@ -330,6 +331,13 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:employees.update');
         Route::post('/{employmentPeriod}/schedule-day-overrides', CreateScheduleDayOverrideController::class)
             ->name('schedule-day-overrides.create')
+            ->middleware('permission:employees.update');
+    });
+
+    // Schedules — direct access by schedule id (All Protected)
+    Route::middleware('auth:api')->prefix('schedules')->name('schedules.')->group(function () {
+        Route::put('/{schedule}', UpdateScheduleController::class)
+            ->name('update')
             ->middleware('permission:employees.update');
     });
 
