@@ -32,7 +32,7 @@ class UserSeeder extends OnceSeeder
             [
                 'name' => 'Sistema Admin',
                 'email' => 'admin@sushigo.com',
-                'password' => 'Admin123!', // ⚠️ Change this password immediately after first login
+                'password' => config('seeders.passwords.admin'), // ⚠️ Change this password immediately after first login
                 'role' => 'super-admin',
             ],
         ];

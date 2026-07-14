@@ -24,6 +24,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Seeder Passwords
+    |--------------------------------------------------------------------------
+    |
+    | Single source of truth for passwords used by dev/test/production
+    | seeders. Override via env vars without touching seeder source code.
+    |
+    */
+
+    'passwords' => [
+        'admin' => env('SEEDER_ADMIN_PASSWORD', 'admin123456'),
+        'employee' => env('SEEDER_EMPLOYEE_PASSWORD', 'employee123456'),
+        'inventory' => env('SEEDER_INVENTORY_PASSWORD', 'inventory123456'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Development Users
     |--------------------------------------------------------------------------
     |

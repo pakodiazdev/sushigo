@@ -50,7 +50,7 @@ class PayrollPreviewSeeder extends Seeder
         $now = now();
         $branchId = DB::table('branches')->where('code', 'MAIN')->value('id');
         $roleMap = DB::table('roles')->where('guard_name', 'api')->pluck('id', 'name')->toArray();
-        $hashedPassword = Hash::make('employee123456');
+        $hashedPassword = Hash::make(config('seeders.passwords.employee'));
 
         $employees = [
             ['code' => 'PAY-001', 'first_name' => 'Ana',    'last_name' => 'Payroll',   'email' => 'pay001@sushigo.com'],

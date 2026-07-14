@@ -118,7 +118,7 @@ class EmployeeSeeder extends OnceSeeder
             'roles' => ['cook'],
             'email' => 'luis.reingresos2@sushigo.com',
             'phone' => '5512349902',
-            'password' => 'employee123456',
+            'password' => config('seeders.passwords.employee'),
             'branch_id' => $branch->id,
             'start_date' => $firstHire->toDateString(),
         ]);
@@ -183,7 +183,7 @@ class EmployeeSeeder extends OnceSeeder
             'roles' => ['kitchen-assistant'],
             'email' => 'sofia.reingresos3@sushigo.com',
             'phone' => '5512349903',
-            'password' => 'employee123456',
+            'password' => config('seeders.passwords.employee'),
             'branch_id' => $branch->id,
             'start_date' => $firstHire->toDateString(),
         ]);
