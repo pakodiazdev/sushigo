@@ -83,6 +83,12 @@ export const scheduleApi = {
       payload
     ),
 
+  update: (scheduleId: string, payload: CreateSchedulePayload) =>
+    apiClient.put<EntityResponse<EmployeeSchedule>>(
+      `/schedules/${scheduleId}`,
+      payload
+    ),
+
   createDayOverride: (periodId: string, payload: CreateDayOverridePayload) =>
     apiClient.post<EntityResponse<ScheduleDayOverride>>(
       `/employment-periods/${periodId}/schedule-day-overrides`,

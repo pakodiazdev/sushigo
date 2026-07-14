@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { scheduleApi } from '@/services/schedule-api'
 
-export type ScheduleDialogView = 'schedule' | 'create'
+export type ScheduleDialogView = 'schedule' | 'create' | 'edit'
 
 export function useScheduleSection(employeeId: string) {
   const [isOpen, setIsOpen] = useState(false)
@@ -61,8 +61,10 @@ export function useScheduleSection(employeeId: string) {
   }
 
   function showCreate() { switchView('create') }
+  function showEdit() { switchView('edit') }
   function showSchedule() { switchView('schedule') }
   function onScheduleCreated() { switchView('schedule') }
+  function onScheduleUpdated() { switchView('schedule') }
 
   const hasSchedule = scheduleQuery.data === undefined
     ? undefined // still loading (unknown)
@@ -76,8 +78,10 @@ export function useScheduleSection(employeeId: string) {
     view,
     isTransitioning,
     showCreate,
+    showEdit,
     showSchedule,
     onScheduleCreated,
+    onScheduleUpdated,
     schedule,
     periodId,
     hasSchedule,

@@ -70,14 +70,20 @@ export function getNextMonday(): string {
 /**
  * Extracts default form values from an existing schedule.
  * Uses the first working day (by day_of_week order) as the reference for work hours.
+ *
+ * In 'edit' mode the schedule's own effective_from is kept (correcting the active
+ * schedule in place); in 'create' mode it defaults to next Monday (replacing it).
  */
-function extractDefaultsFromSchedule(schedule: EmployeeSchedule): Partial<CreateScheduleSimpleValues> {
+function extractDefaultsFromSchedule(
+  schedule: EmployeeSchedule,
+  mode: 'create' | 'edit' = 'create',
+): Partial<CreateScheduleSimpleValues> {
   // Sort days by day_of_week and find the first working day to extract times
   const sortedDays = [...schedule.days].sort((a, b) => a.day_of_week - b.day_of_week)
   const workingDay = sortedDays.find(d => !d.is_day_off)
 
   return {
-    effective_from: getNextMonday(),
+    effective_from: mode === 'edit' ? schedule.effective_from : getNextMonday(),
     expected_start: workingDay?.expected_start ?? '13:00',
     expected_lunch_start: workingDay?.expected_lunch_start ?? '',
     lunch_duration_minutes: workingDay?.lunch_duration_minutes == null
@@ -141,9 +147,11 @@ export function useCreateScheduleInline(
   onSuccess: () => void,
   currentSchedule?: EmployeeSchedule | null,
   periodStartDate?: string,
+  editScheduleId?: string,
 ) {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
+  const mode: 'create' | 'edit' = editScheduleId ? 'edit' : 'create'
 
   // Build default values: from current schedule if exists, otherwise sensible defaults
   const baseDefaults: CreateScheduleSimpleValues = {
@@ -162,7 +170,7 @@ export function useCreateScheduleInline(
   }
 
   const defaultValues = currentSchedule
-    ? { ...baseDefaults, ...extractDefaultsFromSchedule(currentSchedule) }
+    ? { ...baseDefaults, ...extractDefaultsFromSchedule(currentSchedule, mode) }
     : { ...baseDefaults, effective_from: periodStartDate ?? getNextMonday() }
 
   const form = useForm<CreateScheduleSimpleValues>({
@@ -172,6 +180,10 @@ export function useCreateScheduleInline(
 
   const mutation = useMutation({
     mutationFn: (values: CreateScheduleSimpleValues) => {
+      if (mode === 'edit') {
+        if (!editScheduleId) return Promise.reject(new Error('Sin horario'))
+        return scheduleApi.update(editScheduleId, buildPayload(values))
+      }
       if (!periodId) return Promise.reject(new Error('Sin período laboral'))
       return scheduleApi.createPayload(periodId, buildPayload(values))
     },
@@ -179,11 +191,15 @@ export function useCreateScheduleInline(
       queryClient.invalidateQueries({ queryKey: ['employees', employeeId, 'current-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['schedule-history', periodId] })
       form.reset()
-      showSuccess('Horario creado correctamente')
+      showSuccess(mode === 'edit' ? 'Horario actualizado correctamente' : 'Horario creado correctamente')
       startTransition(() => onSuccess())
     },
     onError: () => {
-      showError('Error al crear el horario. Verifica los datos e intenta de nuevo.')
+      showError(
+        mode === 'edit'
+          ? 'Error al actualizar el horario. Verifica los datos e intenta de nuevo.'
+          : 'Error al crear el horario. Verifica los datos e intenta de nuevo.'
+      )
     },
   })
 
@@ -197,5 +213,6 @@ export function useCreateScheduleInline(
     dowKeys: DOW_KEYS,
     dayLabels: DAY_LABELS,
     lunchOptions: LUNCH_DURATION_OPTIONS,
+    mode,
   }
 }

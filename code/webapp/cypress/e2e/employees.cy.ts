@@ -205,7 +205,7 @@ describe('Login nuevo empleado', () => {
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 3. Pre-llenado del formulario de nuevo horario (#061)
+// 3. Pre-llenado del formulario de nuevo horario
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Nuevo horario pre-llenado', () => {
@@ -285,6 +285,71 @@ describe('Nuevo horario pre-llenado', () => {
       // El historial debe mostrar el nuevo horario con entrada a las 2:00 PM (14:00)
       cy.contains('button', 'Historial').click()
       cy.contains(/2:00\s*PM|14:00/, { timeout: 10_000 }).should('exist')
+    })
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 4. Editar horario activo (#061)
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('Editar horario activo', () => {
+  beforeEach(() => {
+    cy.login(adminEmail, adminPassword)
+    cy.url().should('not.include', '/login', { timeout: 10_000 })
+    cy.visit('/employees')
+    cy.url().should('include', '/employees', { timeout: 10_000 })
+    cy.get('table', { timeout: 10_000 }).should('exist')
+    cy.closeDevDebugger()
+  })
+
+  it('permite editar el horario activo sin crear una nueva versión', () => {
+    // ── 1. Seleccionar empleado Carlos Mendoza (EMP-001) que tiene horario ────
+    cy.contains('tr', 'EMP-001', { timeout: 10_000 }).find('button[title="Ver detalle"]').click()
+    cy.contains('tr', 'EMP-001').should('exist')
+
+    // ── 2. Abrir diálogo de horario ────────────────────────────────────────────
+    cy.contains('button', /Ver horario/i, { timeout: 10_000 }).click()
+    cy.get('dialog[open]', { timeout: 10_000 }).should('exist')
+    cy.get('dialog').within(() => {
+      cy.contains('Horarios').should('exist')
+    })
+
+    // ── 2b. Registrar cuántas versiones tiene el historial antes de editar ─────
+    // (no asumimos un valor fijo: otros tests del archivo pueden haber creado
+    // versiones adicionales del horario de EMP-001 antes de este)
+    cy.get('dialog').contains('button', 'Historial').click()
+    cy.get('.rounded.border.bg-card', { timeout: 10_000 }).its('length').as('historyCountBefore')
+    cy.get('dialog').contains('button', 'Configuración').click()
+
+    // ── 3. Click en "Editar" ────────────────────────────────────────────────────
+    cy.get('dialog').contains('button', 'Editar', { timeout: 10_000 }).click()
+    cy.get('dialog').within(() => {
+      cy.contains('Editar horario', { timeout: 10_000 }).should('exist')
+      cy.contains('Horario laboral', { timeout: 10_000 }).should('exist')
+    })
+
+    // ── 4. El formulario debe venir pre-llenado (campo de entrada no vacío) ────
+    cy.get('input[name="expected_start"]').invoke('val').should('match', /^\d{2}:\d{2}$/)
+    cy.get('input[name="expected_end"]').invoke('val').should('match', /^\d{2}:\d{2}$/)
+    // No debe mostrar la advertencia de reemplazo (no aplica en modo edición)
+    cy.get('dialog').contains('se cerrará automáticamente').should('not.exist')
+
+    // ── 5. Modificar la hora de entrada a un valor distinto y guardar ─────────
+    cy.get('input[name="expected_start"]').clear({ force: true }).type('11:11', { force: true })
+    cy.get('dialog').contains('button', 'Guardar horario').click({ force: true })
+
+    // ── 6. El diálogo vuelve a modo vista mostrando el valor actualizado ───────
+    cy.get('input[name="expected_start"]', { timeout: 10_000 }).should('not.exist')
+    cy.get('dialog[open]', { timeout: 10_000 }).within(() => {
+      cy.contains('Horarios', { timeout: 10_000 }).should('exist')
+      cy.contains(/11:11\s*AM|11:11/, { timeout: 10_000 }).should('exist')
+
+      // No debe haberse creado una nueva versión — el historial mantiene el mismo conteo
+      cy.contains('button', 'Historial').click()
+      cy.get('@historyCountBefore').then((countBefore) => {
+        cy.get('.rounded.border.bg-card', { timeout: 10_000 }).should('have.length', countBefore as unknown as number)
+      })
     })
   })
 })
