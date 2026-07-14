@@ -32,6 +32,10 @@ export type { AttendanceSummaryBarProps, AttendanceSummary } from './AttendanceS
 
 export { EmptyState, ErrorState, NoBranchState, SkeletonGrid } from './AttendanceStates'
 
+// Pay Period Status Badge
+export { PayPeriodStatusBadge } from './PayPeriodStatusBadge'
+export type { PayPeriodStatusBadgeProps } from './PayPeriodStatusBadge'
+
 // Close Day Panel
 export { CloseDayPanel } from './CloseDayPanel'
 export { useCloseDayPanel } from './use-close-day-panel'

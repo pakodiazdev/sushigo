@@ -1,5 +1,11 @@
 import { apiClient } from '@/lib/api-client'
-import type { ConfirmClosePayPeriodResponse, PayPeriodPreviewResponse } from '@/types/attendance-payroll'
+import type {
+  ConfirmClosePayPeriodResponse,
+  PayPeriodDetailResponse,
+  PayPeriodListFilters,
+  PayPeriodListResponse,
+  PayPeriodPreviewResponse,
+} from '@/types/attendance-payroll'
 
 export const payrollApi = {
   getClosePreview: (branchId: number, periodStart: string, periodEnd: string) =>
@@ -13,4 +19,10 @@ export const payrollApi = {
       period_start: periodStart,
       period_end: periodEnd,
     }),
+
+  getPayPeriods: (filters: PayPeriodListFilters) =>
+    apiClient.get<PayPeriodListResponse>('/pay-periods', { params: filters }),
+
+  getPayPeriodDetail: (periodId: string) =>
+    apiClient.get<PayPeriodDetailResponse>(`/pay-periods/${periodId}`),
 }

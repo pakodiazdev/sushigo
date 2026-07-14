@@ -132,6 +132,51 @@ export interface ConfirmClosePayPeriodResponse {
   }
 }
 
+export interface PayPeriodListItem {
+  id: string
+  branch_id: number
+  period_start: string
+  period_end: string
+  status: PayPeriodStatus
+  closed_by: string | null
+  closed_at: string | null
+  reopened_by: string | null
+  reopened_at: string | null
+  reopen_reason: string | null
+  total_employees: number
+}
+
+export interface PayPeriodDetail extends PayPeriodListItem {
+  employees: PayPeriodEmployeePreview[]
+}
+
+export interface PayPeriodListMeta {
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+}
+
+export interface PayPeriodListResponse {
+  status: number
+  data: PayPeriodListItem[]
+  meta: PayPeriodListMeta
+}
+
+export interface PayPeriodDetailResponse {
+  status: number
+  data: PayPeriodDetail
+}
+
+export interface PayPeriodListFilters {
+  branch_id?: number
+  status?: PayPeriodStatus
+  period_start?: string
+  period_end?: string
+  per_page?: number
+  page?: number
+}
+
 // ── Vacation Entitlement ───────────────────────────────────────────────────────
 
 export type TerminationType = 'resignation' | 'dismissal' | 'contract_end' | 'internal_transfer' | 'other'

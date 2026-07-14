@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-context'
 import { getApiFieldError } from '@/lib/api-error'
 import { payrollApi } from './payroll.service'
-import type { ConfirmClosePayPeriodResponse, PayPeriodEmployeePreview } from '@/types/attendance-payroll'
+import type {
+  ConfirmClosePayPeriodResponse,
+  PayPeriodDetail,
+  PayPeriodEmployeePreview,
+  PayPeriodListFilters,
+  PayPeriodListItem,
+  PayPeriodListMeta,
+} from '@/types/attendance-payroll'
 
 export interface ClosePreviewRange {
   periodStart: string
@@ -39,6 +46,7 @@ export function useConfirmClose() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll', 'preview'] })
+      queryClient.invalidateQueries({ queryKey: ['payroll', 'periods'] })
       showSuccess('El cierre semanal de nómina ha sido confirmado.', 'Cierre confirmado')
     },
     onError: (error: unknown) => {
@@ -47,5 +55,28 @@ export function useConfirmClose() {
         'Error',
       )
     },
+  })
+}
+
+export function usePayPeriods(filters: PayPeriodListFilters) {
+  return useQuery<{ data: PayPeriodListItem[]; meta: PayPeriodListMeta }>({
+    queryKey: ['payroll', 'periods', filters],
+    queryFn: async () => {
+      const res = await payrollApi.getPayPeriods(filters)
+      return { data: res.data.data, meta: res.data.meta }
+    },
+    enabled: Boolean(filters.branch_id),
+  })
+}
+
+export function usePayPeriodDetail(periodId: string | null) {
+  return useQuery<PayPeriodDetail | null>({
+    queryKey: ['payroll', 'periods', periodId],
+    queryFn: async () => {
+      if (!periodId) return null
+      const res = await payrollApi.getPayPeriodDetail(periodId)
+      return res.data.data
+    },
+    enabled: Boolean(periodId),
   })
 }
