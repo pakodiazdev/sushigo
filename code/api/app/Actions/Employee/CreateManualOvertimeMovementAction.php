@@ -32,7 +32,7 @@ class CreateManualOvertimeMovementAction
                 ]);
             }
 
-            return OvertimeBankMovement::create([
+            $movement = OvertimeBankMovement::create([
                 'employee_id' => $employee->id,
                 'date' => $data['date'],
                 'movement_type' => $data['movement_type'],
@@ -42,6 +42,10 @@ class CreateManualOvertimeMovementAction
                 'authorized_at' => now(),
                 'reason' => $data['reason'],
             ]);
+
+            $movement->setRelation('authorizedBy', $authorizedBy);
+
+            return $movement;
         });
     }
 }

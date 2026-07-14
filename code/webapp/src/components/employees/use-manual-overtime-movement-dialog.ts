@@ -8,7 +8,7 @@ const schema = z
   .object({
     date: z.string().min(1, 'La fecha es requerida'),
     movement_type: z.enum(['USED', 'ADJUSTMENT']),
-    minutes: z.number({ error: 'Los minutos son requeridos' }).int('Debe ser un número entero'),
+    minutes: z.number().int('Debe ser un número entero'),
     reason: z.string().min(1, 'El motivo es requerido').max(500, 'Máximo 500 caracteres'),
   })
   .refine((data) => data.movement_type !== 'USED' || data.minutes > 0, {
