@@ -32,6 +32,11 @@ class VacationsLFTMX implements VacationEntitlementRule
         return 'LFT México 2022';
     }
 
+    public function key(): string
+    {
+        return 'VacationsLFTMX';
+    }
+
     public function table(): array
     {
         return [

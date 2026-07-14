@@ -9,7 +9,7 @@ use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Services\SeniorityService;
-use App\Services\VacationRules\VacationsLFTMX;
+use App\Services\VacationEntitlementResolver;
 use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,7 +35,7 @@ class SeniorityServiceTest extends TestCase
 
         $this->branch = Branch::factory()->create();
 
-        $this->service = new SeniorityService(new VacationsLFTMX, app(ApplicationClock::class));
+        $this->service = new SeniorityService(new VacationEntitlementResolver, app(ApplicationClock::class));
     }
 
     private function employeeWithPeriod(string $startDate, bool $active = true): Employee

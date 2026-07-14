@@ -16,6 +16,8 @@ use App\Http\Resources\BaseResource;
  *     @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}), example={"cook"}, description="Position roles"),
  *     @OA\Property(property="is_active", type="boolean", example=true),
  *     @OA\Property(property="attendance_exempt", type="boolean", example=false, description="True for roles (e.g. admin, super-admin) that do not check in/out — excluded from the attendance list"),
+ *     @OA\Property(property="vacation_entitlement_rule_key", type="string", nullable=true, example="ContractualPolicy", description="null = inherits the tenant-wide vacation policy"),
+ *     @OA\Property(property="vacation_entitlement_custom_table", type="array", nullable=true, @OA\Items(@OA\Property(property="years_from", type="integer"), @OA\Property(property="days", type="integer"))),
  *     @OA\Property(property="has_active_period", type="boolean", nullable=true, example=true, description="True when employee has at least one active employment period"),
  *     @OA\Property(property="has_user", type="boolean", example=true, description="Whether the employee has a linked user account"),
  *     @OA\Property(property="email", type="string", format="email", nullable=true, example="juan@sushigo.com"),
@@ -54,6 +56,8 @@ class EmployeeResource extends BaseResource
             'roles' => $this->getPositionRoles(),
             'is_active' => $this->is_active,
             'attendance_exempt' => $this->attendance_exempt,
+            'vacation_entitlement_rule_key' => $this->vacation_entitlement_rule_key,
+            'vacation_entitlement_custom_table' => $this->vacation_entitlement_custom_table,
             'has_active_period' => $this->active_employment_periods_count !== null
                 ? $this->active_employment_periods_count > 0
                 : ($this->relationLoaded('employmentPeriods')
