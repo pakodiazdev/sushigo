@@ -1,4 +1,6 @@
-# ✏️ Task #061: Pre-fill Schedule Form with Current Values
+> **⚠️ Numbering note:** This task was originally filed as `061-schedule-update.md` and its commits/PR title reference `[#061]`, but that was a mislabeling error — GitHub issue #61 ("Update Current Schedule") is an unrelated, separate task and was never touched by this work. The PR that shipped this (`#119`) actually closed issue `#17` in its body. This file was renamed to remove the false `061` association and free that number for the real issue #61.
+
+# ✏️ Task: Pre-fill Schedule Form with Current Values
 
 ## 📖 Story
 
