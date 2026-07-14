@@ -20,6 +20,8 @@ const mockEmployee: Employee = {
     phone_country: '+1',
     is_active: true,
     attendance_exempt: false,
+    vacation_entitlement_rule_key: null,
+    vacation_entitlement_custom_table: null,
     has_user: true,
     roles: ['manager', 'cook'],
     meta: null,

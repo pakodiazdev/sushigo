@@ -197,6 +197,44 @@ export interface VacationEntitlement {
 export interface VacationSummary {
   seniority_years: number
   next_anniversary_date: string | null
+  active_rule_label: string
+}
+
+// ── Vacation Policy Settings (tenant-level) ─────────────────────────────────
+
+export type VacationPolicyRuleKey = 'VacationsLFTMX' | 'CustomCompanyPolicy'
+
+export interface VacationPolicyTier {
+  id: string
+  years_from: number
+  days: number
+  sort_order: number
+}
+
+export interface VacationPolicySettings {
+  active_rule_key: VacationPolicyRuleKey
+  active_rule_label: string
+  tiers: VacationPolicyTier[]
+}
+
+export interface UpdateVacationPolicyPayload {
+  active_rule_key: VacationPolicyRuleKey
+  tiers?: { years_from: number; days: number }[]
+}
+
+// ── Employee Vacation Policy Override ───────────────────────────────────────
+
+export type EmployeeVacationRuleKey = 'ContractualPolicy' | null
+
+export interface EmployeeVacationPolicyOverride {
+  rule_key: EmployeeVacationRuleKey
+  tiers: { years_from: number; days: number }[]
+  active_rule_label: string
+}
+
+export interface UpdateEmployeeVacationPolicyPayload {
+  rule_key: EmployeeVacationRuleKey
+  tiers?: { years_from: number; days: number }[]
 }
 
 // ── Overtime LFT Tiers ───────────────────────────────────────────────────────

@@ -5,16 +5,23 @@ import { useAuthStore } from '@/stores/auth.store'
 import { useVacationSection } from './use-vacation-section'
 import { RegisterVacationRequestDialog } from './RegisterVacationRequestDialog'
 import { RequestStatusBadge } from './request-status-badge'
+import { VacationPolicyOverride } from './vacation-policy-override'
 import type { RegisterVacationRequestEmployee } from './use-register-vacation-request-dialog'
 import type { VacationEntitlement, VacationRequest } from '@/types/attendance-payroll'
+import type { Employee } from '@/types/employee'
+
+type VacationSectionEmployee = RegisterVacationRequestEmployee
+  & Pick<Employee, 'vacation_entitlement_rule_key' | 'vacation_entitlement_custom_table'>
 
 interface VacationSectionProps {
   readonly employeeId: string
-  readonly employee?: RegisterVacationRequestEmployee
+  readonly employee?: VacationSectionEmployee
 }
 
 const RULE_LABELS: Record<string, string> = {
   VacationsLFTMX: 'LFT México 2022',
+  CustomCompanyPolicy: 'Política de la empresa',
+  ContractualPolicy: 'Política contractual',
 }
 
 function ruleLabel(key: string): string {
@@ -106,14 +113,15 @@ export function VacationSection({ employeeId, employee }: VacationSectionProps) 
   const ctx = useVacationSection(employeeId, employee)
   const { can } = useAuthStore()
   const canSchedule = can('vacation-requests.schedule')
+  const canManagePolicy = can('employees.update')
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="vacation-section">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-foreground">Vacaciones</h3>
           <Badge variant="default" className="text-xs">
-            LFT México 2022
+            {ctx.summary?.active_rule_label ?? 'LFT México 2022'}
           </Badge>
         </div>
         {canSchedule && (
@@ -169,6 +177,16 @@ export function VacationSection({ employeeId, employee }: VacationSectionProps) 
             </p>
           )}
         </div>
+      )}
+
+      {canManagePolicy && employee && (
+        <VacationPolicyOverride
+          employee={{
+            id: employee.id,
+            vacation_entitlement_rule_key: employee.vacation_entitlement_rule_key,
+            vacation_entitlement_custom_table: employee.vacation_entitlement_custom_table,
+          }}
+        />
       )}
 
       {/* Vacation requests */}
