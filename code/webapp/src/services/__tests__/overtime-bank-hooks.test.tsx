@@ -7,14 +7,22 @@ import React from 'react'
 import type { OvertimeBankMovement, OvertimeBankSummary } from '@/types/attendance-payroll'
 
 const mockGetBank = vi.fn()
+const mockCreateManualMovement = vi.fn()
+const mockShowSuccess = vi.fn()
+const mockShowError = vi.fn()
 
 vi.mock('@/services/overtime-bank-api', () => ({
   overtimeBankApi: {
     getBank: (...args: unknown[]) => mockGetBank(...args),
+    createManualMovement: (...args: unknown[]) => mockCreateManualMovement(...args),
   },
 }))
 
-import { useOvertimeBank } from '../overtime-bank-hooks'
+vi.mock('@/components/ui/toast-context', () => ({
+  useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
+}))
+
+import { useOvertimeBank, useCreateManualOvertimeMovement } from '../overtime-bank-hooks'
 
 function makeWrapper() {
   const qc = new QueryClient({
@@ -65,5 +73,32 @@ describe('useOvertimeBank', () => {
     const { result } = renderHook(() => useOvertimeBank(''), { wrapper: makeWrapper() })
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockGetBank).not.toHaveBeenCalled()
+  })
+})
+
+describe('useCreateManualOvertimeMovement', () => {
+  const payload = { date: '2026-07-13', movement_type: 'USED' as const, minutes: 60, reason: 'Time off' }
+
+  it('calls createManualMovement with the employeeId and payload, then shows a success toast', async () => {
+    mockCreateManualMovement.mockResolvedValue({ data: { data: { ...fakeMovement, ...payload } } })
+
+    const { result } = renderHook(() => useCreateManualOvertimeMovement('emp-123'), { wrapper: makeWrapper() })
+
+    result.current.mutate(payload)
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mockCreateManualMovement).toHaveBeenCalledWith('emp-123', payload)
+    expect(mockShowSuccess).toHaveBeenCalled()
+  })
+
+  it('shows an error toast when the request fails', async () => {
+    mockCreateManualMovement.mockRejectedValue(new Error('boom'))
+
+    const { result } = renderHook(() => useCreateManualOvertimeMovement('emp-123'), { wrapper: makeWrapper() })
+
+    result.current.mutate(payload)
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(mockShowError).toHaveBeenCalled()
   })
 })

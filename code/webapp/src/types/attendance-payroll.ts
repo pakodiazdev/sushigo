@@ -187,6 +187,15 @@ export interface OvertimeBankSummary {
   balance_formatted: string
 }
 
+export type ManualOvertimeMovementType = Extract<OvertimeMovementType, 'USED' | 'ADJUSTMENT'>
+
+export interface CreateManualOvertimeMovementData {
+  date: string
+  movement_type: ManualOvertimeMovementType
+  minutes: number
+  reason: string
+}
+
 // ── Vacation Request ─────────────────────────────────────────────────────────
 
 export type VacationRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'

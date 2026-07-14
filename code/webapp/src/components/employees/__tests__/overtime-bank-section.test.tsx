@@ -7,17 +7,40 @@ let mockState = {
   movements: [] as OvertimeBankMovement[],
   summary: null as OvertimeBankSummary | null,
   isLoading: false,
+  showManualMovementDialog: false,
+  manualMovementEmployee: null,
+  openManualMovementDialog: vi.fn(),
+  closeManualMovementDialog: vi.fn(),
 }
 
 vi.mock('@/components/employees/use-overtime-bank-section', () => ({
   useOvertimeBankSection: () => mockState,
 }))
 
+vi.mock('@/components/employees/ManualOvertimeMovementDialog', () => ({
+  ManualOvertimeMovementDialog: () => null,
+}))
+
+const mockCan = vi.fn().mockReturnValue(true)
+
+vi.mock('@/stores/auth.store', () => ({
+  useAuthStore: () => ({ can: mockCan }),
+}))
+
 import { OvertimeBankSection } from '@/components/employees/overtime-bank-section'
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockState = { movements: [], summary: null, isLoading: false }
+  mockCan.mockReturnValue(true)
+  mockState = {
+    movements: [],
+    summary: null,
+    isLoading: false,
+    showManualMovementDialog: false,
+    manualMovementEmployee: null,
+    openManualMovementDialog: vi.fn(),
+    closeManualMovementDialog: vi.fn(),
+  }
 })
 
 afterEach(() => {
@@ -123,5 +146,27 @@ describe('OvertimeBankSection', () => {
 
     expect(screen.getByText('Manual')).toBeTruthy()
     expect(screen.getByText('Ajuste')).toBeTruthy()
+  })
+
+  it('shows the "Movimiento manual" button when the actor can update employees', () => {
+    mockCan.mockReturnValue(true)
+    render(<OvertimeBankSection employeeId="emp-001" />)
+
+    expect(screen.getByText('Movimiento manual')).toBeTruthy()
+  })
+
+  it('hides the "Movimiento manual" button when the actor cannot update employees', () => {
+    mockCan.mockReturnValue(false)
+    render(<OvertimeBankSection employeeId="emp-001" />)
+
+    expect(screen.queryByText('Movimiento manual')).toBeNull()
+  })
+
+  it('calls openManualMovementDialog when the button is clicked', () => {
+    render(<OvertimeBankSection employeeId="emp-001" />)
+
+    screen.getByText('Movimiento manual').click()
+
+    expect(mockState.openManualMovementDialog).toHaveBeenCalledOnce()
   })
 })
