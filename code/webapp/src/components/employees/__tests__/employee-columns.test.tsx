@@ -13,6 +13,8 @@ const mockEmployee: Employee = {
     last_name: 'Pérez',
     is_active: true,
     attendance_exempt: false,
+    vacation_entitlement_rule_key: null,
+    vacation_entitlement_custom_table: null,
     has_active_period: true,
     has_user: true,
     roles: ['manager', 'cook'] as EmployeePositionRole[],

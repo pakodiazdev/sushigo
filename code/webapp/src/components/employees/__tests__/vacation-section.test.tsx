@@ -75,6 +75,17 @@ describe('VacationSection', () => {
     expect(screen.getByText('LFT México 2022')).toBeTruthy()
   })
 
+  it('shows the active rule label from summary once loaded', () => {
+    mockState = {
+      ...mockState,
+      summary: { seniority_years: 2, next_anniversary_date: null, active_rule_label: 'Política de la empresa' },
+    }
+    render(<VacationSection employeeId="emp-001" />)
+
+    expect(screen.getByText('Política de la empresa')).toBeTruthy()
+    expect(screen.queryByText('LFT México 2022')).toBeNull()
+  })
+
   it('shows empty state when no entitlements', () => {
     render(<VacationSection employeeId="emp-001" />)
 
@@ -132,7 +143,7 @@ describe('VacationSection', () => {
   it('shows seniority years and next anniversary date when summary is present', () => {
     mockState = {
       ...mockState,
-      summary: { seniority_years: 2, next_anniversary_date: '2027-03-15' },
+      summary: { seniority_years: 2, next_anniversary_date: '2027-03-15', active_rule_label: 'LFT México 2022' },
     }
     render(<VacationSection employeeId="emp-001" />)
 
@@ -143,7 +154,7 @@ describe('VacationSection', () => {
   it('uses singular wording for a single year of seniority', () => {
     mockState = {
       ...mockState,
-      summary: { seniority_years: 1, next_anniversary_date: null },
+      summary: { seniority_years: 1, next_anniversary_date: null, active_rule_label: 'LFT México 2022' },
     }
     render(<VacationSection employeeId="emp-001" />)
 

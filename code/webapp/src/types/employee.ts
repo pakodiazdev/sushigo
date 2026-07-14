@@ -31,6 +31,9 @@ export interface Employee {
   is_active: boolean
   /** True for roles (e.g. admin, super-admin) that do not check in/out — excluded from the attendance list */
   attendance_exempt: boolean
+  /** null = inherits the tenant-wide vacation policy; 'ContractualPolicy' = this employee has a contractual override */
+  vacation_entitlement_rule_key: 'ContractualPolicy' | null
+  vacation_entitlement_custom_table: { years_from: number; days: number }[] | null
   has_active_period?: boolean | null
   has_user: boolean
   email?: string | null

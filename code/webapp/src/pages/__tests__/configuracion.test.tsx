@@ -25,6 +25,10 @@ vi.mock('@/components/settings/overtime-lft-tiers-section', () => ({
   OvertimeLftTiersSection: () => <div>Horas Extra Section</div>,
 }))
 
+vi.mock('@/components/settings/vacation-policy-section', () => ({
+  VacationPolicySection: () => <div>Vacaciones Section</div>,
+}))
+
 import { ConfiguracionPage } from '../configuracion'
 
 afterEach(() => {
@@ -33,13 +37,30 @@ afterEach(() => {
 })
 
 describe('ConfiguracionPage', () => {
-  it('shows both tabs when the user has both permissions', () => {
+  it('shows all tabs when the user has every permission', () => {
     mockCan.mockReturnValue(true)
     render(<ConfiguracionPage />)
 
     expect(screen.getByText('Puntualidad')).toBeDefined()
     expect(screen.getByText('Horas Extra')).toBeDefined()
+    expect(screen.getByText('Vacaciones')).toBeDefined()
     expect(screen.getByText('Puntualidad Section')).toBeDefined()
+  })
+
+  it('hides the Vacaciones tab when the user lacks vacation-policy.manage', () => {
+    mockCan.mockImplementation((permission: string) => permission === 'punctuality.manage')
+    render(<ConfiguracionPage />)
+
+    expect(screen.getByText('Puntualidad')).toBeDefined()
+    expect(screen.queryByText('Vacaciones')).toBeNull()
+  })
+
+  it('shows the Vacaciones tab and section when the user has vacation-policy.manage', () => {
+    mockCan.mockImplementation((permission: string) => permission === 'vacation-policy.manage')
+    render(<ConfiguracionPage />)
+
+    expect(screen.getByText('Vacaciones')).toBeDefined()
+    expect(screen.getByText('Vacaciones Section')).toBeDefined()
   })
 
   it('hides the Horas Extra tab when the user lacks overtime.manage', () => {

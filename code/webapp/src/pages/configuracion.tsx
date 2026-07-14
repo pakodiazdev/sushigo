@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Tabs, TabPanel } from '@/components/ui/tabs'
 import { PunctualityConfigSection } from '@/components/settings/punctuality-config-section'
 import { OvertimeLftTiersSection } from '@/components/settings/overtime-lft-tiers-section'
+import { VacationPolicySection } from '@/components/settings/vacation-policy-section'
 import { useAuthStore } from '@/stores/auth.store'
 
 export const Route = createFileRoute('/configuracion')({
@@ -19,6 +20,7 @@ export function ConfiguracionPage() {
     const tabs = [
         can('punctuality.manage') && { id: 'puntualidad', label: 'Puntualidad' },
         can('overtime.manage') && { id: 'horas-extra', label: 'Horas Extra' },
+        can('vacation-policy.manage') && { id: 'vacaciones', label: 'Vacaciones' },
     ].filter((tab): tab is { id: string; label: string } => tab !== false)
 
     const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? '')
@@ -39,6 +41,9 @@ export function ConfiguracionPage() {
                     </TabPanel>
                     <TabPanel id="horas-extra" activeTab={activeTab}>
                         <OvertimeLftTiersSection />
+                    </TabPanel>
+                    <TabPanel id="vacaciones" activeTab={activeTab}>
+                        <VacationPolicySection />
                     </TabPanel>
                 </div>
             </div>
