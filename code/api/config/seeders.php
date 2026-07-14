@@ -1,5 +1,23 @@
 <?php
 
+/*
+|--------------------------------------------------------------------------
+| Seeder Passwords
+|--------------------------------------------------------------------------
+|
+| Single source of truth for passwords used by dev/test/production
+| seeders. Override via env vars without touching seeder source code.
+| Declared here (not inline in the returned array) so every config key
+| below — including development_users/development_employees — can
+| reference the same values and stay in sync with env overrides.
+|
+*/
+$seederPasswords = [
+    'admin' => env('SEEDER_ADMIN_PASSWORD', 'admin123456'),
+    'employee' => env('SEEDER_EMPLOYEE_PASSWORD', 'employee123456'),
+    'inventory' => env('SEEDER_INVENTORY_PASSWORD', 'inventory123456'),
+];
+
 return [
 
     /*
@@ -22,21 +40,7 @@ return [
         'testing' => Database\Seeders\Development\DevelopmentSeeder::class,
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Seeder Passwords
-    |--------------------------------------------------------------------------
-    |
-    | Single source of truth for passwords used by dev/test/production
-    | seeders. Override via env vars without touching seeder source code.
-    |
-    */
-
-    'passwords' => [
-        'admin' => env('SEEDER_ADMIN_PASSWORD', 'admin123456'),
-        'employee' => env('SEEDER_EMPLOYEE_PASSWORD', 'employee123456'),
-        'inventory' => env('SEEDER_INVENTORY_PASSWORD', 'inventory123456'),
-    ],
+    'passwords' => $seederPasswords,
 
     /*
     |--------------------------------------------------------------------------
@@ -51,14 +55,14 @@ return [
         [
             'name' => 'Super Admin',
             'email' => 'superadmin@sushigo.com',
-            'password' => 'admin123456',
+            'password' => $seederPasswords['admin'],
             'role' => 'super-admin',
             // super-admin is not an employee — system-level account only
         ],
         [
             'name' => 'Admin User',
             'email' => 'admin@sushigo.com',
-            'password' => 'admin123456',
+            'password' => $seederPasswords['admin'],
             'role' => 'admin',
             'employee' => [
                 'code' => 'ADM-001',
@@ -72,7 +76,7 @@ return [
         [
             'name' => 'Inventory Manager',
             'email' => 'inventory@sushigo.com',
-            'password' => 'inventory123456',
+            'password' => $seederPasswords['inventory'],
             'role' => 'inventory-manager',
             'employee' => [
                 'code' => 'ADM-002',
@@ -102,7 +106,7 @@ return [
             'roles' => ['manager'],
             'email' => 'carlos.mendoza@sushigo.com',
             'phone' => '5512340001',
-            'password' => 'employee123456',
+            'password' => $seederPasswords['employee'],
         ],
         [
             'code' => 'EMP-002',
@@ -111,7 +115,7 @@ return [
             'roles' => ['cook'],
             'email' => 'maria.garcia@sushigo.com',
             'phone' => '5512340002',
-            'password' => 'employee123456',
+            'password' => $seederPasswords['employee'],
         ],
         [
             'code' => 'EMP-003',
@@ -120,7 +124,7 @@ return [
             'roles' => ['kitchen-assistant'],
             'email' => 'pedro.lopez@sushigo.com',
             'phone' => '5512340003',
-            'password' => 'employee123456',
+            'password' => $seederPasswords['employee'],
         ],
         [
             'code' => 'EMP-004',
@@ -129,7 +133,7 @@ return [
             'roles' => ['delivery-driver'],
             'email' => 'ana.ramirez@sushigo.com',
             'phone' => '5512340004',
-            'password' => 'employee123456',
+            'password' => $seederPasswords['employee'],
         ],
         [
             'code' => 'EMP-005',
@@ -138,7 +142,7 @@ return [
             'roles' => ['cook'],
             'email' => 'roberto.sanchez@sushigo.com',
             'phone' => '5512340005',
-            'password' => 'employee123456',
+            'password' => $seederPasswords['employee'],
             'meta' => ['notes' => 'Part-time employee'],
         ],
         [
@@ -148,7 +152,7 @@ return [
             'roles' => ['cook'],
             'email' => 'laura.torres@sushigo.com',
             'phone' => '5512340006',
-            'password' => 'employee123456',
+            'password' => $seederPasswords['employee'],
         ],
         [
             'code' => 'EMP-007',
@@ -157,7 +161,7 @@ return [
             'roles' => ['kitchen-assistant'],
             'email' => 'miguel.flores@sushigo.com',
             'phone' => '5512340007',
-            'password' => 'employee123456',
+            'password' => $seederPasswords['employee'],
         ],
         [
             'code' => 'EMP-008',
@@ -166,7 +170,7 @@ return [
             'roles' => ['delivery-driver'],
             'email' => 'sofia.vargas@sushigo.com',
             'phone' => '5512340008',
-            'password' => 'employee123456',
+            'password' => $seederPasswords['employee'],
         ],
     ],
 
