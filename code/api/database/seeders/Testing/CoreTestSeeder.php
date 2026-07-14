@@ -336,9 +336,9 @@ class CoreTestSeeder extends Seeder
     private function seedUsers(array $roleMap, array $unitIds): void
     {
         $now = now();
-        $adminHash = Hash::make('admin123456');
-        $inventoryHash = Hash::make('inventory123456');
-        $employeeHash = Hash::make('employee123456');
+        $adminHash = Hash::make(config('seeders.passwords.admin'));
+        $inventoryHash = Hash::make(config('seeders.passwords.inventory'));
+        $employeeHash = Hash::make(config('seeders.passwords.employee'));
 
         $userModel = User::class;
         $allUnitIds = array_values($unitIds);

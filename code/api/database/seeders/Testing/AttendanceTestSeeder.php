@@ -43,7 +43,7 @@ class AttendanceTestSeeder extends Seeder
     {
         $now = now();
         $hireDate = $now->copy()->subYear()->toDateString();
-        $hashedPassword = Hash::make('employee123456');
+        $hashedPassword = Hash::make(config('seeders.passwords.employee'));
 
         $branchId = DB::table('branches')->where('code', 'MAIN')->value('id');
         $roleMap = DB::table('roles')->where('guard_name', 'api')->pluck('id', 'name')->toArray();
