@@ -49,14 +49,15 @@ export function useOvertimeDecisionDialog({ isOpen, attendanceId, onAuthorize }:
     defaultValues: { valuation_method: 'LFT_PROPORTIONAL', agreed_rate: '', agreed_factor: '' },
   })
 
-  // Reset to the first step and clear the form whenever a new decision opens.
+  // Reset to the first step whenever a new decision opens, and also when the
+  // bulk queue advances to the next attendanceId while isOpen stays true.
   useEffect(() => {
     if (isOpen) {
       setStep('confirm')
       form.reset({ valuation_method: 'LFT_PROPORTIONAL', agreed_rate: '', agreed_factor: '' })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen])
+  }, [isOpen, attendanceId])
 
   const handlePagar = () => setStep('method')
   const handleBack = () => setStep('confirm')
