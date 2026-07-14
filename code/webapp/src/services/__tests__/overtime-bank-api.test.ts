@@ -27,3 +27,33 @@ describe('overtimeBankApi.getBank', () => {
     expect(result).toEqual(mockResponse)
   })
 })
+
+describe('overtimeBankApi.createManualMovement', () => {
+  it('calls POST /employees/{employeeId}/overtime-bank/movements', async () => {
+    const payload = { date: '2026-07-13', movement_type: 'USED' as const, minutes: 60, reason: 'Time off' }
+    const mockResponse = {
+      data: {
+        status: 201,
+        data: {
+          id: 'mov-1',
+          date: '2026-07-13',
+          movement_type: 'USED',
+          origin: 'MANUAL',
+          minutes: 60,
+          valuation_method: null,
+          applied_rate: null,
+          amount: null,
+          authorized_by: 'Admin',
+          authorized_at: '2026-07-13T18:00:00Z',
+          reason: 'Time off',
+        },
+      },
+    }
+    vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
+
+    const result = await overtimeBankApi.createManualMovement('emp-123', payload)
+
+    expect(apiClient.post).toHaveBeenCalledWith('/employees/emp-123/overtime-bank/movements', payload)
+    expect(result).toEqual(mockResponse)
+  })
+})

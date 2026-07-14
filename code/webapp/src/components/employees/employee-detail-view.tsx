@@ -109,7 +109,7 @@ export function EmployeeDetailView({
       <hr className="border-border" />
 
       {/* Overtime bank balance + movement history */}
-      <OvertimeBankSection employeeId={employee.id} />
+      <OvertimeBankSection employeeId={employee.id} employee={employee} />
 
       <hr className="border-border" />
 

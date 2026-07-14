@@ -1,10 +1,15 @@
-import { Clock3, Loader2 } from 'lucide-react'
+import { Clock3, Loader2, Plus } from 'lucide-react'
 import type { OvertimeBankMovement } from '@/types/attendance-payroll'
+import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/stores/auth.store'
 import { useOvertimeBankSection } from './use-overtime-bank-section'
 import { OvertimeMovementTypeBadge, OvertimeOriginBadge } from './overtime-movement-badges'
+import { ManualOvertimeMovementDialog } from './ManualOvertimeMovementDialog'
+import type { ManualOvertimeMovementEmployee } from './use-manual-overtime-movement-dialog'
 
 interface OvertimeBankSectionProps {
   readonly employeeId: string
+  readonly employee?: ManualOvertimeMovementEmployee
 }
 
 function formatDate(dateString: string): string {
@@ -40,13 +45,30 @@ function MovementRow({ movement }: { readonly movement: OvertimeBankMovement }) 
   )
 }
 
-export function OvertimeBankSection({ employeeId }: OvertimeBankSectionProps) {
-  const { movements, summary, isLoading } = useOvertimeBankSection(employeeId)
+export function OvertimeBankSection({ employeeId, employee }: OvertimeBankSectionProps) {
+  const {
+    movements,
+    summary,
+    isLoading,
+    showManualMovementDialog,
+    manualMovementEmployee,
+    openManualMovementDialog,
+    closeManualMovementDialog,
+  } = useOvertimeBankSection(employeeId, employee)
+
+  const { can } = useAuthStore()
+  const canRegisterManualMovement = can('employees.update')
 
   return (
     <div className="space-y-4" data-testid="overtime-bank-section">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Banco de horas extra</h3>
+        {canRegisterManualMovement && (
+          <Button size="sm" variant="ghost" onClick={openManualMovementDialog} className="h-7 gap-1 px-2 text-xs">
+            <Plus className="h-3.5 w-3.5" />
+            Movimiento manual
+          </Button>
+        )}
       </div>
 
       {isLoading && (
@@ -94,6 +116,12 @@ export function OvertimeBankSection({ employeeId }: OvertimeBankSectionProps) {
           </table>
         </div>
       )}
+
+      <ManualOvertimeMovementDialog
+        isOpen={showManualMovementDialog}
+        employee={manualMovementEmployee}
+        onClose={closeManualMovementDialog}
+      />
     </div>
   )
 }
