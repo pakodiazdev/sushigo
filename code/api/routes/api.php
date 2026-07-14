@@ -90,7 +90,9 @@ use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitCon
 use App\Http\Controllers\Api\V1\Overtime\ListOvertimeLftTiersController;
 use App\Http\Controllers\Api\V1\Overtime\UpdateOvertimeLftTiersController;
 use App\Http\Controllers\Api\V1\PayPeriods\ConfirmCloseController;
+use App\Http\Controllers\Api\V1\PayPeriods\ListPayPeriodsController;
 use App\Http\Controllers\Api\V1\PayPeriods\PreviewPayPeriodController;
+use App\Http\Controllers\Api\V1\PayPeriods\ShowPayPeriodController;
 use App\Http\Controllers\Api\V1\Punctuality\AssignBonusConfigController;
 use App\Http\Controllers\Api\V1\Punctuality\CreatePunctualityBonusGroupController;
 use App\Http\Controllers\Api\V1\Punctuality\GetEmployeeBonusConfigController;
@@ -407,7 +409,9 @@ Route::prefix('v1')->group(function () {
     // Pay Periods Module
     Route::middleware('auth:api')->prefix('pay-periods')->name('pay-periods.')->group(function () {
         Route::get('/preview', PreviewPayPeriodController::class)->name('preview');
+        Route::get('/', ListPayPeriodsController::class)->name('index');
         Route::post('/', ConfirmCloseController::class)->name('close');
+        Route::get('/{payPeriod}', ShowPayPeriodController::class)->name('show');
     });
 
     // Punctuality config
