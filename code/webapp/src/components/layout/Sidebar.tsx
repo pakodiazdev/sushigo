@@ -70,6 +70,7 @@ const menuItems: MenuItem[] = [
             { label: 'Asistencia', path: '/attendance' },
             { label: 'Reporte del Día', path: '/attendance/reports/today', requiredPermission: 'reports.today' },
             { label: 'Cierre de Nómina', path: '/attendance/payroll/close', requiredPermission: 'payroll.preview' },
+            { label: 'Periodos de Nómina', path: '/attendance/payroll', requiredPermission: 'payroll.preview' },
             { label: 'Festivos', path: '/attendance/config/holidays', requiredPermission: 'holidays.manage' },
         ]
     },
