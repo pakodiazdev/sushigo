@@ -37,42 +37,43 @@ Since there is no tenant/company model in this codebase yet (single-instance app
 
 ## ✅ Backend Tasks
 
-- [ ] 🔧 `VacationEntitlementRule` interface — add `key(): string`
-- [ ] 🔧 `VacationsLFTMX::key()` → `'VacationsLFTMX'`
-- [ ] ✨ `app/Services/VacationRules/CustomVacationPolicy.php` — generic table-driven strategy
-- [ ] ✨ `app/Services/VacationEntitlementResolver.php` — employee override → tenant custom → LFT default
-- [ ] 🔨 `VacationEntitlementService` — inject resolver instead of fixed rule; resolve per employee in `pendingAnniversaries`, `generateMissing`, `summary` (adds `active_rule_label` to summary)
-- [ ] 🔨 `SeniorityService` — inject resolver instead of fixed rule; resolve per employee in `nextAnniversary`; remove unused `entitledDaysForSeniorityYear` (no employee context, no callers)
-- [ ] 📂 Migration `create_vacation_policy_settings_table` — singleton row (`active_rule_key` default `VacationsLFTMX`)
-- [ ] 📂 Migration `create_vacation_policy_tiers_table` — `years_from`, `days`, `sort_order` (mirrors `overtime_lft_tiers`)
-- [ ] 📂 Migration `add_vacation_entitlement_rule_to_employees_table` — `vacation_entitlement_rule_key` (nullable), `vacation_entitlement_custom_table` (nullable json)
-- [ ] 🔧 `VacationPolicySetting` model (+ `current()` singleton accessor), `VacationPolicyTier` model
-- [ ] 🌐 `GET/PUT /api/v1/vacation-policy` — `ListVacationPolicyController` / `UpdateVacationPolicyController` (full-replace tiers, atomic transaction)
-- [ ] 🌐 `PUT /api/v1/employees/{employee}/vacation-policy-override` — `UpdateEmployeeVacationPolicyController`
-- [ ] 🔑 New permission `vacation-policy.manage` in Production/Development/Testing seeders (group "Asistencia", granted to admin + super-admin)
-- [ ] 🧪 Unit tests: `CustomVacationPolicyTest`, `VacationEntitlementResolverTest`
-- [ ] 🧪 Feature tests: `VacationPolicySettingsApiTest`, `EmployeeVacationPolicyOverrideApiTest`
-- [ ] 🧪 Update `SeniorityServiceTest` for the new resolver-based constructor
+- [x] 🔧 `VacationEntitlementRule` interface — add `key(): string`
+- [x] 🔧 `VacationsLFTMX::key()` → `'VacationsLFTMX'`
+- [x] ✨ `app/Services/VacationRules/CustomVacationPolicy.php` — generic table-driven strategy
+- [x] ✨ `app/Services/VacationEntitlementResolver.php` — employee override → tenant custom → LFT default
+- [x] 🔨 `VacationEntitlementService` — inject resolver instead of fixed rule; resolve per employee in `pendingAnniversaries`, `generateMissing`, `summary` (adds `active_rule_label` to summary)
+- [x] 🔨 `SeniorityService` — inject resolver instead of fixed rule; resolve per employee in `nextAnniversary`; removed unused `entitledDaysForSeniorityYear` (no employee context, no callers)
+- [x] 📂 Migration `create_vacation_policy_settings_table` — singleton row (`active_rule_key` default `VacationsLFTMX`)
+- [x] 📂 Migration `create_vacation_policy_tiers_table` — `years_from`, `days`, `sort_order` (mirrors `overtime_lft_tiers`)
+- [x] 📂 Migration `add_vacation_entitlement_rule_to_employees_table` — `vacation_entitlement_rule_key` (nullable), `vacation_entitlement_custom_table` (nullable json)
+- [x] 🔧 `VacationPolicySetting` model (+ `current()` singleton accessor), `VacationPolicyTier` model
+- [x] 🌐 `GET/PUT /api/v1/vacation-policy` — `ListVacationPolicyController` / `UpdateVacationPolicyController` (full-replace tiers, atomic transaction)
+- [x] 🌐 `PUT /api/v1/employees/{employee}/vacation-policy-override` — `UpdateEmployeeVacationPolicyController`
+- [x] 🔑 New permission `vacation-policy.manage` in Production/Development/Testing seeders (group "Asistencia", granted to admin + super-admin)
+- [x] 🧪 Unit tests: `CustomVacationPolicyTest`, `VacationEntitlementResolverTest`
+- [x] 🧪 Feature tests: `VacationPolicySettingsApiTest`, `EmployeeVacationPolicyOverrideApiTest`
+- [x] 🧪 Update `SeniorityServiceTest` for the new resolver-based constructor
 
 ## ✅ Frontend Tasks
 
-- [ ] 📝 Types: `VacationPolicyTier`, `VacationPolicySettings`, `UpdateVacationPolicyPayload`, employee override payload/response
-- [ ] 🔧 `src/services/vacation-policy-api.ts` + `vacation-policy-hooks.ts` (mirrors `overtime-lft-tiers-*`)
-- [ ] 🔧 `use-vacation-policy-config-page.ts` + `vacation-policy-shared.tsx` — rule selector (LFT / personalizada) + conditional tiers editor
-- [ ] 📱 `vacation-policy-section.tsx` wired into `configuracion.tsx` as a new "Vacaciones" tab, gated by `vacation-policy.manage`
-- [ ] 🔧 Employee-level override service/hook + small section in employee detail (toggle "Política contractual" + tiers editor)
-- [ ] 📱 Replace hardcoded "LFT México 2022" badge in `vacation-section.tsx` with the backend-resolved `active_rule_label`
-- [ ] ✅ Vitest coverage for all new services/hooks/components
+- [x] 📝 Types: `VacationPolicyTier`, `VacationPolicySettings`, `UpdateVacationPolicyPayload`, employee override payload/response
+- [x] 🔧 `src/services/vacation-policy-api.ts` + `vacation-policy-hooks.ts` (mirrors `overtime-lft-tiers-*`)
+- [x] 🔧 `components/settings/use-vacation-policy-section.ts` + `vacation-policy-section.tsx` — rule selector (LFT / personalizada) + conditional tiers editor (kept alongside the component per the Custom Hook Convention, unlike overtime's `pages/attendance/` split)
+- [x] 📱 `vacation-policy-section.tsx` wired into `configuracion.tsx` as a new "Vacaciones" tab, gated by `vacation-policy.manage`
+- [x] 🔧 `employee-vacation-policy-api.ts`/`hooks.ts` + `VacationPolicyOverride` component in the employee's Vacaciones section (toggle "Política contractual" + tiers editor)
+- [x] 📱 Replace hardcoded "LFT México 2022" badge in `vacation-section.tsx` with the backend-resolved `active_rule_label`
+- [x] ✅ Vitest coverage for all new services/hooks/components
+- [x] ✅ E2E: `cypress/e2e/vacation-policy-settings.cy.ts` — verified passing against the sushigo-d E2E stack
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Tenant admin can select an active vacation rule from a "Reglas aplicables" dropdown in company settings
-- [ ] A custom policy allows defining a day table (years_from → days) via UI
-- [ ] Per-employee override field exists and takes precedence over the tenant default
-- [ ] `VacationsLFTMX` remains the default and requires zero configuration
-- [ ] All existing entitlement calculations continue to work unchanged
+- [x] Tenant admin can select an active vacation rule from a "Reglas aplicables" dropdown in company settings
+- [x] A custom policy allows defining a day table (years_from → days) via UI
+- [x] Per-employee override field exists and takes precedence over the tenant default
+- [x] `VacationsLFTMX` remains the default and requires zero configuration
+- [x] All existing entitlement calculations continue to work unchanged
 
 ---
 
@@ -86,11 +87,26 @@ Since there is no tenant/company model in this codebase yet (single-instance app
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `4h` · **Pessimistic:** `7h` · **Tracked:** _in progress_
+- **Optimistic:** `4h` · **Pessimistic:** `7h` · **Tracked:** `7h09m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-14", "start": "02:25", "end": "?" }
+  { "date": "2026-07-14", "start": "02:25", "end": "09:34" }
 ]
 ```
+
+---
+
+## 📊 Retrospective
+
+**Estimated:** 4h–7h · **Tracked:** 7h09m · **Overrun:** +9m (within pessimistic estimate)
+
+**Why it took the full pessimistic estimate:**
+
+- **No existing tenant/settings infrastructure:** the issue assumed a `tenant_settings`/`company_configs` table would exist to extend — it didn't. Had to design and build the singleton `vacation_policy_settings` table from scratch, closely mirroring the `overtime_lft_tiers` admin-editable-table pattern found during research.
+- **Two-level resolution, one generic strategy:** per the user's direction, both the tenant-level `CustomCompanyPolicy` and the employee-level `ContractualPolicy` had to reuse a single `CustomVacationPolicy` class — required adding a `key()` method to the `VacationEntitlementRule` interface and refactoring both `VacationEntitlementService` and `SeniorityService` off a fixed constructor-injected rule onto a per-employee `VacationEntitlementResolver`.
+- **Shared test-database collision (+10-15m):** `phpunit.xml` hardcodes `DB_DATABASE=mydb_test` for every workspace instead of the per-workspace `sushigo_ws_<letter>` used in dev mode — another workspace (sushigo-e) running its own test suite concurrently caused deadlocks and corrupted migration state. Worked around it by creating a workspace-local `sushigo_ws_d_test` database and exporting `DB_DATABASE` for test runs, without touching the shared `phpunit.xml`.
+- **E2E stack cold start:** no E2E Docker stack was running for this workspace; `make e2e WORKSPACE=sushigo-d` (build + start) plus two iterations to fix Cypress selector scoping (an unscoped `cy.contains('td', ...)` matched a hidden column in the background employee list table instead of the intended entitlement row) added time but caught a real selector bug before merge.
+
+**What went well:** the `overtime_lft_tiers` precedent (found during Phase 2 research) made the tenant-level tiers table, its full-replace PUT endpoint, and its frontend editor nearly a direct port — no design iteration needed there. All 1177 PHPUnit tests and 3326 Vitest tests passed on first full-suite run after the refactor; the resolver change required no production behavior fixes, only test fixture updates (new required `Employee` fields) and one `SeniorityServiceTest` constructor-signature update. The E2E spec confirmed the full stack — tenant policy change → per-employee entitlement calculation → UI display — works correctly end-to-end on the first fully-scoped run.
