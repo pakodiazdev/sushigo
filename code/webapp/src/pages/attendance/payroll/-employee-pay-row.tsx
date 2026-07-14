@@ -74,14 +74,14 @@ export function EmployeePayRow({ row, testId }: Readonly<EmployeePayRowProps>) {
 // D L M X J V S — Sunday-first to align with Date#getDay(). X for Miércoles to avoid clash with Martes (M).
 const DAY_INITIALS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'] as const
 
-export function dayInitial(dateStr: string | null): string {
+function dayInitial(dateStr: string | null): string {
   if (!dateStr) return ''
   const parts = dateStr.split('-').map(Number)
   const [year, month, day] = parts as [number, number, number]
   return DAY_INITIALS[new Date(year, month - 1, day).getDay()] ?? ''
 }
 
-export function sortLines(lines: PayPeriodLine[]): PayPeriodLine[] {
+function sortLines(lines: PayPeriodLine[]): PayPeriodLine[] {
   return [...lines].sort((a, b) => {
     if (!a.date && !b.date) return 0
     if (!a.date) return 1
