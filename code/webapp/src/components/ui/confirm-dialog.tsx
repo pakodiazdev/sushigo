@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Button } from '@/components/ui/button'
+import { Button, type ButtonProps } from '@/components/ui/button'
 import { Loader2, AlertTriangle, Info } from 'lucide-react'
 import { SlidePanelOverlayContext } from '@/components/ui/slide-panel-context'
 
@@ -25,24 +25,24 @@ export interface ConfirmDialogProps {
   container?: 'viewport'
 }
 
-const variantStyles = {
+const variantStyles: Record<NonNullable<ConfirmDialogProps['variant']>, { icon: typeof AlertTriangle; iconBg: string; iconColor: string; confirmVariant: ButtonProps['variant'] }> = {
   danger: {
     icon: AlertTriangle,
     iconBg: 'bg-red-100 dark:bg-red-900/40',
     iconColor: 'text-red-600 dark:text-red-400',
-    confirmBtn: 'bg-red-600 text-white hover:bg-red-700',
+    confirmVariant: 'destructive',
   },
   warning: {
     icon: AlertTriangle,
     iconBg: 'bg-amber-100 dark:bg-amber-900/40',
     iconColor: 'text-amber-600 dark:text-amber-400',
-    confirmBtn: 'bg-amber-600 text-white hover:bg-amber-700',
+    confirmVariant: 'warning',
   },
   info: {
     icon: Info,
     iconBg: 'bg-blue-100 dark:bg-blue-900/40',
     iconColor: 'text-blue-600 dark:text-blue-400',
-    confirmBtn: 'bg-blue-600 text-white hover:bg-blue-700',
+    confirmVariant: 'info',
   },
 }
 
@@ -181,17 +181,17 @@ export function ConfirmDialog({
         <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
           <Button
             type="button"
+            variant="neutral"
             onClick={onClose}
             disabled={isLoading}
-            className="bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
           >
             {cancelLabel}
           </Button>
           <Button
             type="button"
+            variant={styles.confirmVariant}
             onClick={onConfirm}
             disabled={isLoading || confirmDisabled}
-            className={styles.confirmBtn}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {confirmLabel}

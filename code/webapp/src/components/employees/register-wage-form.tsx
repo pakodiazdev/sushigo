@@ -238,18 +238,20 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
                     <div className="flex justify-end gap-2">
                         <Button
                             type="button"
+                            variant="neutral"
                             size="sm"
                             onClick={onCancel}
                             disabled={createWage.isPending}
-                            className="bg-gray-200 text-gray-800 hover:bg-gray-300 text-xs"
+                            className="text-xs"
                         >
                             Cancelar
                         </Button>
                         <Button
                             type="submit"
+                            variant="info"
                             size="sm"
                             disabled={createWage.isPending}
-                            className="bg-blue-600 text-white hover:bg-blue-700 text-xs"
+                            className="text-xs"
                         >
                             {createWage.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                             Guardar Salario

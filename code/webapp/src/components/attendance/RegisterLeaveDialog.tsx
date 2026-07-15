@@ -236,16 +236,16 @@ export function RegisterLeaveDialog({
           <div className="flex justify-end gap-3 pt-1">
             <Button
               type="button"
+              variant="neutral"
               onClick={onClose}
               disabled={isPending}
-              className="bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
+              variant="warning"
               disabled={isPending}
-              className="bg-amber-600 text-white hover:bg-amber-700"
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Registrar ausencia

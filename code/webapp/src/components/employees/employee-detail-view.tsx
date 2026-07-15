@@ -178,9 +178,9 @@ export function EmployeeDetailView({
       <div className="flex flex-wrap gap-3">
         <Button
           type="button"
+          variant="info"
           onClick={onEdit}
           disabled={isLoading}
-          className="bg-blue-600 text-white hover:bg-blue-700"
         >
           <Edit className="mr-2 h-4 w-4" />
           Editar
@@ -190,13 +190,9 @@ export function EmployeeDetailView({
         {hasActivePeriod && !showDeactivateForm && !showRehireForm && (
           <Button
             type="button"
+            variant={employee.is_active ? 'neutral-dark' : 'success'}
             onClick={openToggleConfirm}
             disabled={isLoading}
-            className={
-              employee.is_active
-                ? 'bg-gray-600 text-white hover:bg-gray-700'
-                : 'bg-emerald-600 text-white hover:bg-emerald-700'
-            }
           >
             {isTogglingActive ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -213,9 +209,9 @@ export function EmployeeDetailView({
         {hasActivePeriod && !showDeactivateForm && !showRehireForm && (
           <Button
             type="button"
+            variant="warning"
             onClick={openDeactivateForm}
             disabled={isLoading}
-            className="bg-amber-600 text-white hover:bg-amber-700"
           >
             <UserMinus className="mr-2 h-4 w-4" />
             Dar de Baja
@@ -226,9 +222,9 @@ export function EmployeeDetailView({
         {!hasActivePeriod && !showRehireForm && !showDeactivateForm && (
           <Button
             type="button"
+            variant="success"
             onClick={openRehireForm}
             disabled={isLoading}
-            className="bg-green-600 text-white hover:bg-green-700"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Reingreso

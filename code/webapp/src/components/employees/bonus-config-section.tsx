@@ -115,7 +115,7 @@ export function BonusConfigSection({ employeeId }: BonusConfigSectionProps) {
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={isPending} className="bg-blue-600 text-white hover:bg-blue-700">
+            <Button type="submit" size="sm" variant="info" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Asignar
             </Button>

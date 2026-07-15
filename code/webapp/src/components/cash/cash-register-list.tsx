@@ -98,7 +98,7 @@ export function CashRegisterList({ onEdit, onCreate }: CashRegisterListProps) {
             <div className="flex justify-end">
                 <Button
                     onClick={onCreate}
-                    className="bg-blue-600 text-white hover:bg-blue-700"
+                    variant="info"
                 >
                     <Plus className="mr-2 h-4 w-4" />
                     Nueva Caja

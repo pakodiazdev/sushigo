@@ -2,10 +2,9 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
+import { FormField, Select } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
+import { CashFormFooter } from '@/components/cash/cash-form-footer'
 import { useCreateCashTerminal, useUpdateCashTerminal } from '@/services/cash-hooks'
 import type { CashTerminal } from '@/types/cash'
 
@@ -198,32 +197,13 @@ export function CashTerminalForm({
                     />
                 </FormField>
 
-                <FormField label="Estado">
-                    <Checkbox
-                        checked={isActive}
-                        onChange={(e) => setValue('is_active', e.target.checked)}
-                        label="Activa"
-                    />
-                </FormField>
-
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                    <Button
-                        type="button"
-                        onClick={onClose}
-                        disabled={isLoading}
-                        className="bg-gray-200 text-gray-800 hover:bg-gray-300"
-                    >
-                        Cancelar
-                    </Button>
-                    <Button
-                        type="submit"
-                        disabled={isLoading}
-                        className="bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isEditing ? 'Actualizar' : 'Crear'}
-                    </Button>
-                </div>
+                <CashFormFooter
+                    isActive={isActive}
+                    onActiveChange={(checked) => setValue('is_active', checked)}
+                    onCancel={onClose}
+                    isLoading={isLoading}
+                    isEditing={isEditing}
+                />
             </form>
         </SlidePanel>
     )

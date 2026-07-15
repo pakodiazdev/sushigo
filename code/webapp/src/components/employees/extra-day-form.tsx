@@ -211,8 +211,8 @@ export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
           </Button>
           <Button
             type="submit"
+            variant="success"
             disabled={isPending || isLoadingWages || hasNoWage}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
           >
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Registrar acuerdo

@@ -187,17 +187,17 @@ export function PermissionManagerDialog({
         <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
           <Button
             type="button"
+            variant="neutral"
             onClick={onClose}
             disabled={isSaving}
-            className="bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
           >
             Cancelar
           </Button>
           <Button
             type="button"
+            variant="info"
             onClick={onSave}
             disabled={isSaving || !hasChanges}
-            className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Guardar cambios

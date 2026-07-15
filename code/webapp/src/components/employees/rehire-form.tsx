@@ -63,18 +63,20 @@ export function RehireForm({ isLoading, onSubmit, onCancel }: RehireFormProps) {
         <div className="flex justify-end gap-2">
           <Button
             type="button"
+            variant="neutral"
             size="sm"
             onClick={onCancel}
             disabled={isLoading}
-            className="bg-gray-200 text-gray-800 hover:bg-gray-300 text-xs"
+            className="text-xs"
           >
             Cancelar
           </Button>
           <Button
             type="submit"
+            variant="success"
             size="sm"
             disabled={isLoading || !effectiveBranch}
-            className="bg-green-600 text-white hover:bg-green-700 text-xs"
+            className="text-xs"
           >
             {isLoading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
             Confirmar Reingreso
