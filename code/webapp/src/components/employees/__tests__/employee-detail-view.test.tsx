@@ -176,4 +176,11 @@ describe('EmployeeDetailView', () => {
     expect(screen.queryByText('Permisos directos del usuario')).toBeNull()
     expect(screen.queryByText('Gestionar →')).toBeNull()
   })
+
+  it('renders the Habilitar toggle button when the employee is inactive', () => {
+    render(<EmployeeDetailView {...baseProps} employee={{ ...employee, is_active: false } as Employee} />)
+
+    expect(screen.getByText('Habilitar')).toBeTruthy()
+    expect(screen.queryByText('Deshabilitar')).toBeNull()
+  })
 })

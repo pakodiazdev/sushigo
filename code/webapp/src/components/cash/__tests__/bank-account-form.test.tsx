@@ -118,6 +118,17 @@ describe('BankAccountForm', () => {
         })
     })
 
+    describe('estado checkbox', () => {
+        it('toggles the active checkbox', () => {
+            const { container } = render(<BankAccountForm {...defaultProps} />)
+            const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement
+
+            expect(checkbox.checked).toBe(true)
+            fireEvent.click(checkbox)
+            expect(checkbox.checked).toBe(false)
+        })
+    })
+
     describe('form interactions', () => {
         it('calls onClose when cancel button is clicked', () => {
             const onClose = vi.fn()
