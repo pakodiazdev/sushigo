@@ -64,18 +64,20 @@ export function DeactivateForm({ isLoading, onSubmit, onCancel }: DeactivateForm
         <div className="flex justify-end gap-2">
           <Button
             type="button"
+            variant="neutral"
             size="sm"
             onClick={onCancel}
             disabled={isLoading}
-            className="bg-gray-200 text-gray-800 hover:bg-gray-300 text-xs"
+            className="text-xs"
           >
             Cancelar
           </Button>
           <Button
             type="submit"
+            variant="warning"
             size="sm"
             disabled={isLoading}
-            className="bg-amber-600 text-white hover:bg-amber-700 text-xs"
+            className="text-xs"
           >
             {isLoading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
             Confirmar Baja

@@ -217,8 +217,7 @@ export function ItemDetails({
       <SlidePanel.Footer>
         <div className="flex justify-between">
           <Button
-            variant="outline"
-            className="text-red-600 hover:text-red-700"
+            variant="outline-danger"
             onClick={onDelete}
           >
             <Trash2 className="mr-2 h-4 w-4" />

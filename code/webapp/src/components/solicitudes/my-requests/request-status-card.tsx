@@ -176,9 +176,9 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
 
           {cancellable && (
             <Button
-              variant="ghost"
+              variant="ghost-danger"
               size="sm"
-              className="text-red-400 hover:bg-red-50 hover:text-red-600 shrink-0"
+              className="shrink-0"
               onClick={() => setConfirmOpen(true)}
               disabled={isCancelling}
             >

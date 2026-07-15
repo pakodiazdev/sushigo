@@ -183,8 +183,8 @@ function SessionCard({ session, onRegisterAdjustment }: { session: CashSession; 
                     </Button>
                     <Button
                         size="sm"
+                        variant="info"
                         onClick={() => onRegisterAdjustment(session.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Registrar Ajuste
@@ -297,15 +297,15 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-3">
                     <Button
+                        variant="success"
                         onClick={handleOpenSession}
-                        className="bg-green-600 hover:bg-green-700 text-white"
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Abrir Sesión de Caja
                     </Button>
                     <Button
+                        variant="info"
                         onClick={() => handleCreateAdjustment()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
                         disabled={!sessionsData?.data || sessionsData.data.length === 0}
                     >
                         <DollarSign className="mr-2 h-4 w-4" />
@@ -365,7 +365,7 @@ export default function Dashboard() {
                             <Button
                                 onClick={handleOpenSession}
                                 size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white"
+                                variant="success"
                             >
                                 <Plus className="mr-2 h-4 w-4" />
                                 Abrir Sesión

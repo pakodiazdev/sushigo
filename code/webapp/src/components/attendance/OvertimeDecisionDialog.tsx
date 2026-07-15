@@ -145,8 +145,8 @@ export function OvertimeDecisionDialog({
               </Button>
 
               <Button
-                variant="outline"
-                className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                variant="outline-danger"
+                className="w-full"
                 onClick={onReject}
                 disabled={isLoading}
                 data-testid="btn-reject-overtime"

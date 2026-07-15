@@ -294,8 +294,8 @@ export function EmployeeAttendanceCard({
                 {!isScheduledRestDay && (
                     <Button
                         size="sm"
-                        variant="outline"
-                        className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                        variant="outline-danger"
+                        className="w-full"
                         data-testid="btn-mark-falta"
                         onClick={() => setConfirmFaltaOpen(true)}
                     >
@@ -479,8 +479,8 @@ export function EmployeeAttendanceCard({
                     return (
                         <Button
                             size="sm"
-                            variant="outline"
-                            className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-950/30"
+                            variant="outline-warning"
+                            className="w-full"
                             onClick={() => onOvertimeDecision(row.employee, att.id)}
                             data-testid="btn-overtime-decision"
                         >

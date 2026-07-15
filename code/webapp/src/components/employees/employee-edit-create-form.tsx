@@ -396,16 +396,16 @@ export function EmployeeEditCreateForm({
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button
           type="button"
+          variant="neutral"
           onClick={onCancel}
           disabled={isLoading}
-          className="bg-gray-200 text-gray-800 hover:bg-gray-300"
         >
           Cancelar
         </Button>
         <Button
           type="submit"
+          variant="info"
           disabled={isLoading}
-          className="bg-blue-600 text-white hover:bg-blue-700"
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {mode === 'edit' ? 'Actualizar' : 'Crear'}
