@@ -2,17 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\PayPeriods;
 
-use App\Actions\Payroll\CreateOvertimePaidMovementsAction;
+use App\Actions\Payroll\ClosePayPeriodForEmployeeAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ConfirmClosePayPeriodRequest;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\PayPeriod;
-use App\Models\PayPeriodEmployee;
-use App\Models\PayPeriodLine;
 use App\Models\PunctualityRange;
-use App\Services\PayPeriodPreviewService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -50,8 +47,7 @@ class ConfirmCloseController extends Controller
     private const DUPLICATE_PERIOD_MESSAGE = 'Ya existe un cierre para este periodo.';
 
     public function __construct(
-        private PayPeriodPreviewService $previewService,
-        private CreateOvertimePaidMovementsAction $createOvertimePaidMovements,
+        private ClosePayPeriodForEmployeeAction $closePayPeriodForEmployee,
     ) {}
 
     public function __invoke(ConfirmClosePayPeriodRequest $request): ResponseEntity
@@ -96,41 +92,14 @@ class ConfirmCloseController extends Controller
                 ]);
 
                 foreach ($employees as $employee) {
-                    ($this->createOvertimePaidMovements)($employee, $periodStart, $periodEnd);
-
-                    $preview = $this->previewService->buildEmployeePreview(
+                    ($this->closePayPeriodForEmployee)(
                         $employee,
+                        $payPeriod,
                         $periodStart,
                         $periodEnd,
                         $holidays,
                         $punctualityRanges
                     );
-
-                    $payPeriodEmployee = PayPeriodEmployee::create([
-                        'pay_period_id' => $payPeriod->id,
-                        'employee_id' => $employee->id,
-                        'base_pay' => $preview['base_pay'],
-                        'late_deductions' => $preview['late_deductions'],
-                        'unpaid_leave_deductions' => $preview['unpaid_leave_deductions'],
-                        'overtime_pay' => $preview['overtime_pay'],
-                        'extra_day_pay' => $preview['extra_day_pay'],
-                        'punctuality_bonus' => $preview['punctuality_bonus'],
-                        'holiday_pay' => $preview['holiday_pay'],
-                        'other_adjustments' => $preview['other_adjustments'],
-                        'total_pay' => $preview['total_pay'],
-                        'free_hours_earned' => $preview['free_hours_earned'],
-                    ]);
-
-                    foreach ($preview['pay_period_lines'] as $line) {
-                        PayPeriodLine::create([
-                            'pay_period_employee_id' => $payPeriodEmployee->id,
-                            'date' => $line['date'],
-                            'concept' => $line['concept'],
-                            'description' => $line['description'],
-                            'amount' => $line['amount'],
-                            'minutes' => $line['minutes'],
-                        ]);
-                    }
                 }
 
                 return $payPeriod;

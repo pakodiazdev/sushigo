@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiFieldError } from '@/lib/api-error'
+import { getApiErrorMessage, getApiFieldError } from '@/lib/api-error'
 import { payrollApi } from './payroll.service'
 import type {
   ConfirmClosePayPeriodResponse,
@@ -78,5 +78,38 @@ export function usePayPeriodDetail(periodId: string | null) {
       return res.data.data
     },
     enabled: Boolean(periodId),
+  })
+}
+
+function filenameFromContentDisposition(contentDisposition: string | undefined): string {
+  const match = contentDisposition?.match(/filename="?([^"\s;]+)"?/)
+  return match?.[1] ?? 'periodo-nomina.csv'
+}
+
+export function useExportPayPeriod() {
+  const { showSuccess, showError } = useToast()
+
+  return useMutation<void, unknown, string>({
+    mutationFn: async (periodId: string) => {
+      const res = await payrollApi.exportCsv(periodId)
+      const filename = filenameFromContentDisposition(res.headers['content-disposition'])
+      const url = URL.createObjectURL(res.data)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      try {
+        link.click()
+      } finally {
+        link.remove()
+        setTimeout(() => URL.revokeObjectURL(url), 0)
+      }
+    },
+    onSuccess: () => {
+      showSuccess('Archivo descargado', 'Exportación completa')
+    },
+    onError: (error: unknown) => {
+      showError(getApiErrorMessage(error, 'No se pudo exportar el periodo a CSV.'), 'Error')
+    },
   })
 }

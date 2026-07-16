@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -27,6 +27,7 @@ const mockGetClosePreview = vi.fn()
 const mockConfirmClose = vi.fn()
 const mockGetPayPeriods = vi.fn()
 const mockGetPayPeriodDetail = vi.fn()
+const mockExportCsv = vi.fn()
 const mockShowSuccess = vi.fn()
 const mockShowError = vi.fn()
 
@@ -36,6 +37,7 @@ vi.mock('@/services/payroll.service', () => ({
     confirmClose: (...args: unknown[]) => mockConfirmClose(...args),
     getPayPeriods: (...args: unknown[]) => mockGetPayPeriods(...args),
     getPayPeriodDetail: (...args: unknown[]) => mockGetPayPeriodDetail(...args),
+    exportCsv: (...args: unknown[]) => mockExportCsv(...args),
   },
 }))
 
@@ -43,7 +45,13 @@ vi.mock('@/components/ui/toast-context', () => ({
   useToast: () => ({ showSuccess: mockShowSuccess, showError: mockShowError }),
 }))
 
-import { useClosePreview, useConfirmClose, usePayPeriods, usePayPeriodDetail } from '../payroll-hooks'
+import {
+  useClosePreview,
+  useConfirmClose,
+  usePayPeriods,
+  usePayPeriodDetail,
+  useExportPayPeriod,
+} from '../payroll-hooks'
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -257,5 +265,42 @@ describe('usePayPeriodDetail', () => {
     expect(mockGetPayPeriodDetail).toHaveBeenCalledWith('pp-ulid-1')
     expect(result.current.data?.employees).toHaveLength(1)
     expect(result.current.data?.status).toBe('CLOSED')
+  })
+})
+
+describe('useExportPayPeriod', () => {
+  beforeEach(() => {
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url')
+    global.URL.revokeObjectURL = vi.fn()
+  })
+
+  it('downloads the CSV blob and shows a success toast', async () => {
+    const mockBlob = new Blob(['csv content'], { type: 'text/csv' })
+    mockExportCsv.mockResolvedValue({
+      data: mockBlob,
+      headers: { 'content-disposition': 'attachment; filename="periodo-nomina-2026-06-22-2026-06-28.csv"' },
+    })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useExportPayPeriod(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync('pp-ulid-1')
+    })
+
+    expect(mockExportCsv).toHaveBeenCalledWith('pp-ulid-1')
+    expect(global.URL.createObjectURL).toHaveBeenCalledWith(mockBlob)
+    expect(mockShowSuccess).toHaveBeenCalled()
+  })
+
+  it('shows an error toast on failure', async () => {
+    mockExportCsv.mockRejectedValue(createAxiosError('Export failed', undefined, 500))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useExportPayPeriod(), { wrapper })
+
+    await act(async () => {
+      await expect(result.current.mutateAsync('pp-ulid-1')).rejects.toBeDefined()
+    })
+
+    expect(mockShowError).toHaveBeenCalled()
   })
 })

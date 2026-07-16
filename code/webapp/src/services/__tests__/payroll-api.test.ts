@@ -164,3 +164,26 @@ describe('payrollApi.getPayPeriodDetail', () => {
     expect(result.data.data.employees).toEqual([])
   })
 })
+
+describe('payrollApi.exportCsv', () => {
+  it('calls GET /pay-periods/:id/export as a blob with format=csv', async () => {
+    const mockBlob = new Blob(['csv content'], { type: 'text/csv' })
+    mockGet.mockResolvedValue({ data: mockBlob, headers: {} })
+
+    await payrollApi.exportCsv('pp-ulid-1')
+
+    expect(mockGet).toHaveBeenCalledWith('/pay-periods/pp-ulid-1/export', {
+      params: { format: 'csv' },
+      responseType: 'blob',
+    })
+  })
+
+  it('returns the raw blob response', async () => {
+    const mockBlob = new Blob(['csv content'], { type: 'text/csv' })
+    mockGet.mockResolvedValue({ data: mockBlob, headers: {} })
+
+    const result = await payrollApi.exportCsv('pp-ulid-1')
+
+    expect(result.data).toBe(mockBlob)
+  })
+})

@@ -43,6 +43,7 @@ class DevelopmentSeeder extends Seeder
             OvertimeLftTierSeeder::class,
             HolidayDefinitionSeeder::class,
             HolidaySeeder::class,
+            PayPeriodHistorySeeder::class,
         ];
 
         foreach ($seeders as $seederClass) {
