@@ -25,4 +25,10 @@ export const payrollApi = {
 
   getPayPeriodDetail: (periodId: string) =>
     apiClient.get<PayPeriodDetailResponse>(`/pay-periods/${periodId}`),
+
+  exportCsv: (periodId: string) =>
+    apiClient.get<Blob>(`/pay-periods/${periodId}/export`, {
+      params: { format: 'csv' },
+      responseType: 'blob',
+    }),
 }

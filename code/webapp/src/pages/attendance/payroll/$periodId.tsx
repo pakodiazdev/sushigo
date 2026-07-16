@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
+import { Button } from '@/components/ui/button'
 import { PayPeriodStatusBadge } from '@/components/attendance'
 import { usePayPeriodDetailPage } from './use-pay-period-detail'
 import { EmployeePayRow, PayRowSkeleton } from './-employee-pay-row'
@@ -17,7 +18,8 @@ export const Route = createFileRoute('/attendance/payroll/$periodId')({
 
 export function ClosedPeriodDetailPage() {
   const { periodId } = Route.useParams()
-  const { payPeriod, isLoading, errorMessage } = usePayPeriodDetailPage(periodId)
+  const { payPeriod, isLoading, errorMessage, canExport, isExporting, exportCsv } =
+    usePayPeriodDetailPage(periodId)
 
   return (
     <PageContainer>
@@ -25,9 +27,16 @@ export function ClosedPeriodDetailPage() {
         title="Detalle de Periodo de Nómina"
         description={payPeriod ? `${payPeriod.period_start} — ${payPeriod.period_end}` : 'Cargando periodo...'}
         action={
-          <Link to="/attendance/payroll" className="text-sm font-medium text-indigo-600 hover:underline">
-            ← Volver al listado
-          </Link>
+          <div className="flex items-center gap-4">
+            {payPeriod && canExport && (
+              <Button size="sm" variant="outline" disabled={isExporting} onClick={exportCsv}>
+                {isExporting ? 'Exportando...' : 'Exportar CSV'}
+              </Button>
+            )}
+            <Link to="/attendance/payroll" className="text-sm font-medium text-indigo-600 hover:underline">
+              ← Volver al listado
+            </Link>
+          </div>
         }
       />
 

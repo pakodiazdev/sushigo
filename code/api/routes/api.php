@@ -90,6 +90,7 @@ use App\Http\Controllers\Api\V1\OperatingUnitUser\RemoveUserFromOperatingUnitCon
 use App\Http\Controllers\Api\V1\Overtime\ListOvertimeLftTiersController;
 use App\Http\Controllers\Api\V1\Overtime\UpdateOvertimeLftTiersController;
 use App\Http\Controllers\Api\V1\PayPeriods\ConfirmCloseController;
+use App\Http\Controllers\Api\V1\PayPeriods\ExportPayPeriodController;
 use App\Http\Controllers\Api\V1\PayPeriods\ListPayPeriodsController;
 use App\Http\Controllers\Api\V1\PayPeriods\PreviewPayPeriodController;
 use App\Http\Controllers\Api\V1\PayPeriods\ShowPayPeriodController;
@@ -412,6 +413,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/', ListPayPeriodsController::class)->name('index');
         Route::post('/', ConfirmCloseController::class)->name('close');
         Route::get('/{payPeriod}', ShowPayPeriodController::class)->name('show');
+        Route::get('/{payPeriod}/export', ExportPayPeriodController::class)->name('export');
     });
 
     // Punctuality config
