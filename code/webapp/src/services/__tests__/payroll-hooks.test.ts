@@ -28,6 +28,8 @@ const mockConfirmClose = vi.fn()
 const mockGetPayPeriods = vi.fn()
 const mockGetPayPeriodDetail = vi.fn()
 const mockExportCsv = vi.fn()
+const mockReopenPeriod = vi.fn()
+const mockReclosePeriod = vi.fn()
 const mockShowSuccess = vi.fn()
 const mockShowError = vi.fn()
 
@@ -38,6 +40,8 @@ vi.mock('@/services/payroll.service', () => ({
     getPayPeriods: (...args: unknown[]) => mockGetPayPeriods(...args),
     getPayPeriodDetail: (...args: unknown[]) => mockGetPayPeriodDetail(...args),
     exportCsv: (...args: unknown[]) => mockExportCsv(...args),
+    reopenPeriod: (...args: unknown[]) => mockReopenPeriod(...args),
+    reclosePeriod: (...args: unknown[]) => mockReclosePeriod(...args),
   },
 }))
 
@@ -51,6 +55,8 @@ import {
   usePayPeriods,
   usePayPeriodDetail,
   useExportPayPeriod,
+  useReopenPayPeriod,
+  useReclosePayPeriod,
 } from '../payroll-hooks'
 
 afterEach(() => {
@@ -302,5 +308,99 @@ describe('useExportPayPeriod', () => {
     })
 
     expect(mockShowError).toHaveBeenCalled()
+  })
+})
+
+const mockReopenedDetail = {
+  ...mockPeriodListItem,
+  status: 'REOPENED',
+  reopened_by: 'Ana García',
+  reopened_at: '2026-06-30T00:00:00+00:00',
+  reopen_reason: 'Corrección de horas extra',
+}
+
+describe('useReopenPayPeriod', () => {
+  it('calls payrollApi.reopenPeriod with the given variables and shows a success toast', async () => {
+    mockReopenPeriod.mockResolvedValue({ data: { status: 200, data: mockReopenedDetail } })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useReopenPayPeriod(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ periodId: 'pp-ulid-1', reason: 'Corrección de horas extra' })
+    })
+
+    expect(mockReopenPeriod).toHaveBeenCalledWith('pp-ulid-1', { reason: 'Corrección de horas extra' })
+    expect(mockShowSuccess).toHaveBeenCalled()
+  })
+
+  it('invalidates the periods cache on success', async () => {
+    mockReopenPeriod.mockResolvedValue({ data: { status: 200, data: mockReopenedDetail } })
+    const { wrapper, queryClient } = makeWrapper()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+    const { result } = renderHook(() => useReopenPayPeriod(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ periodId: 'pp-ulid-1', reason: 'Corrección de horas extra' })
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['payroll', 'periods'] })
+  })
+
+  it('shows an error toast on failure', async () => {
+    mockReopenPeriod.mockRejectedValue(
+      createAxiosError('The given data was invalid.', { reason: ['El motivo es requerido.'] }),
+    )
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useReopenPayPeriod(), { wrapper })
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ periodId: 'pp-ulid-1', reason: '' }),
+      ).rejects.toBeDefined()
+    })
+
+    expect(mockShowError).toHaveBeenCalledWith('El motivo es requerido.', 'Error')
+  })
+})
+
+describe('useReclosePayPeriod', () => {
+  it('calls payrollApi.reclosePeriod with the period id and shows a success toast', async () => {
+    mockReclosePeriod.mockResolvedValue({ data: { status: 200, data: mockPeriodListItem } })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useReclosePayPeriod(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync('pp-ulid-1')
+    })
+
+    expect(mockReclosePeriod).toHaveBeenCalledWith('pp-ulid-1')
+    expect(mockShowSuccess).toHaveBeenCalled()
+  })
+
+  it('invalidates the periods cache on success', async () => {
+    mockReclosePeriod.mockResolvedValue({ data: { status: 200, data: mockPeriodListItem } })
+    const { wrapper, queryClient } = makeWrapper()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+    const { result } = renderHook(() => useReclosePayPeriod(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync('pp-ulid-1')
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['payroll', 'periods'] })
+  })
+
+  it('shows an error toast on failure', async () => {
+    mockReclosePeriod.mockRejectedValue(
+      createAxiosError('The given data was invalid.', { status: ['Solo se pueden volver a cerrar periodos reabiertos.'] }),
+    )
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useReclosePayPeriod(), { wrapper })
+
+    await act(async () => {
+      await expect(result.current.mutateAsync('pp-ulid-1')).rejects.toBeDefined()
+    })
+
+    expect(mockShowError).toHaveBeenCalledWith('Solo se pueden volver a cerrar periodos reabiertos.', 'Error')
   })
 })

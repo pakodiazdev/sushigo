@@ -5,6 +5,7 @@ import type {
   PayPeriodListFilters,
   PayPeriodListResponse,
   PayPeriodPreviewResponse,
+  ReopenPayPeriodPayload,
 } from '@/types/attendance-payroll'
 
 export const payrollApi = {
@@ -31,4 +32,10 @@ export const payrollApi = {
       params: { format: 'csv' },
       responseType: 'blob',
     }),
+
+  reopenPeriod: (periodId: string, payload: ReopenPayPeriodPayload) =>
+    apiClient.patch<PayPeriodDetailResponse>(`/pay-periods/${periodId}/reopen`, payload),
+
+  reclosePeriod: (periodId: string) =>
+    apiClient.patch<PayPeriodDetailResponse>(`/pay-periods/${periodId}/reclose`),
 }

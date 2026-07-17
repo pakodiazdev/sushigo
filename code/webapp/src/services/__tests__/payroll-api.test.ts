@@ -3,11 +3,13 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 
 const mockGet = vi.fn()
 const mockPost = vi.fn()
+const mockPatch = vi.fn()
 
 vi.mock('@/lib/api-client', () => ({
   apiClient: {
     get: (...args: unknown[]) => mockGet(...args),
     post: (...args: unknown[]) => mockPost(...args),
+    patch: (...args: unknown[]) => mockPatch(...args),
   },
 }))
 
@@ -185,5 +187,56 @@ describe('payrollApi.exportCsv', () => {
     const result = await payrollApi.exportCsv('pp-ulid-1')
 
     expect(result.data).toBe(mockBlob)
+  })
+})
+
+const mockReopenedDetailData = {
+  status: 200,
+  data: {
+    ...mockListData.data[0],
+    status: 'REOPENED',
+    reopened_by: 'Ana García',
+    reopened_at: '2026-06-30T00:00:00+00:00',
+    reopen_reason: 'Corrección de horas extra',
+    employees: [],
+  },
+}
+
+describe('payrollApi.reopenPeriod', () => {
+  it('calls PATCH /pay-periods/:id/reopen with the reason', async () => {
+    mockPatch.mockResolvedValue({ data: mockReopenedDetailData })
+
+    await payrollApi.reopenPeriod('pp-ulid-1', { reason: 'Corrección de horas extra' })
+
+    expect(mockPatch).toHaveBeenCalledWith('/pay-periods/pp-ulid-1/reopen', {
+      reason: 'Corrección de horas extra',
+    })
+  })
+
+  it('returns the full response data', async () => {
+    mockPatch.mockResolvedValue({ data: mockReopenedDetailData })
+
+    const result = await payrollApi.reopenPeriod('pp-ulid-1', { reason: 'Corrección de horas extra' })
+
+    expect(result.data.data.status).toBe('REOPENED')
+    expect(result.data.data.reopen_reason).toBe('Corrección de horas extra')
+  })
+})
+
+describe('payrollApi.reclosePeriod', () => {
+  it('calls PATCH /pay-periods/:id/reclose with no body', async () => {
+    mockPatch.mockResolvedValue({ data: mockDetailData })
+
+    await payrollApi.reclosePeriod('pp-ulid-1')
+
+    expect(mockPatch).toHaveBeenCalledWith('/pay-periods/pp-ulid-1/reclose')
+  })
+
+  it('returns the full response data', async () => {
+    mockPatch.mockResolvedValue({ data: mockDetailData })
+
+    const result = await payrollApi.reclosePeriod('pp-ulid-1')
+
+    expect(result.data.data.status).toBe('CLOSED')
   })
 })

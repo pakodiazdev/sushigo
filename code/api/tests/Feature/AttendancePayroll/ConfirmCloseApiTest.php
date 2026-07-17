@@ -205,6 +205,31 @@ class ConfirmCloseApiTest extends TestCase
         $this->assertDatabaseCount('pay_periods', 1);
     }
 
+    public function test_confirm_close_returns_actionable_message_when_period_is_reopened(): void
+    {
+        $this->createActiveEmployee();
+
+        PayPeriod::create([
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-28',
+            'status' => PayPeriod::STATUS_REOPENED,
+            'reopen_reason' => 'Corrección de horas',
+            'reopened_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-28',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonFragment(['period_start' => ["Este periodo fue reabierto — usa 'Volver a cerrar' para cerrarlo nuevamente."]]);
+        $this->assertDatabaseCount('pay_periods', 1);
+        $this->assertDatabaseCount('pay_period_employees', 0);
+    }
+
     public function test_confirm_close_allows_closing_when_an_open_period_exists_for_the_same_range(): void
     {
         $this->createActiveEmployee();
