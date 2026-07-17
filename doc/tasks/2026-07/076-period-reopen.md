@@ -45,7 +45,7 @@ Como Admin, quiero reabrir un periodo de nómina cerrado con una justificación,
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `2h` · **Pessimistic:** `3h` · **Tracked:** `7h07m`
+- **Optimistic:** `2h` · **Pessimistic:** `3h` · **Tracked:** `8h12m`
 
 ### 📅 Sessions
 ```json
@@ -53,14 +53,15 @@ Como Admin, quiero reabrir un periodo de nómina cerrado con una justificación,
   { "date": "2026-07-14", "start": "02:13", "end": "07:10" },
   { "date": "2026-07-15", "start": "00:00", "end": "00:25" },
   { "date": "2026-07-15", "start": "16:10", "end": "16:45" },
-  { "date": "2026-07-15", "start": "17:05", "end": "18:15" }
+  { "date": "2026-07-15", "start": "17:05", "end": "18:15" },
+  { "date": "2026-07-17", "start": "11:10", "end": "12:15" }
 ]
 ```
 
 ## 📊 Retrospective
-- **Actual total:** 7h 07m (297m + 25m + 35m + 70m)
-- **vs optimistic:** +5h 07m
-- **vs pessimistic:** +4h 07m
+- **Actual total:** 8h 12m (297m + 25m + 35m + 70m + 65m)
+- **vs optimistic:** +6h 12m
+- **vs pessimistic:** +5h 12m
 
 **Justification:**
 Most of the scaffolding for this feature (migration columns, model fields, resource
@@ -103,3 +104,22 @@ pre-check only matched `STATUS_CLOSED`, so attempting to close a `REOPENED` peri
 through to a generic "duplicate close" unique-constraint error instead of pointing the
 admin at reclose — fixed with an explicit `STATUS_REOPENED` branch and an actionable
 message, covered by a new feature test.
+
+Session 2026-07-17 11:10–12:15 rebased the branch onto `main` (which had picked up two
+new merges, #229 and #075) and then squashed the branch's own history into a single
+commit — neither was in the original estimate. The rebase hit real conflicts, not
+just noisy ones: PR #075 (CSV export) had independently extracted the same close-time
+persistence logic into `ClosePayPeriodForEmployeeAction` (per-employee, also reused by
+its history-backfill seeder), competing with this task's own
+`RecalculatePayPeriodEmployeesAction` (loops a collection, shared by close and reclose).
+Reconciled by keeping `ClosePayPeriodForEmployeeAction` as the canonical per-employee
+primitive and turning `RecalculatePayPeriodEmployeesAction` into a thin wrapper that
+loops and delegates to it, preserving both the reclose flow and the CSV history seeder.
+#075 also touched the same six webapp files (`$periodId.tsx`, `use-pay-period-detail.ts`
+and its test, `payroll.service.ts`, `payroll-hooks.ts` and its test, `payroll-api.test.ts`)
+for the export button/hook — those conflicts were additive (export + reopen/reclose UI
+coexisting) rather than competing designs, resolved by merging both feature's imports,
+destructured hook fields, and test blocks. Verified with the full API payroll suite (709
+tests), Pint, webapp typecheck, ESLint, and the 54 webapp payroll tests before pushing.
+The branch was then squashed from 9 commits into one (`--force-with-lease` push, since
+the branch had already been pushed with the prior multi-commit history).
