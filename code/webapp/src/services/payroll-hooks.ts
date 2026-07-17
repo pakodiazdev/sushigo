@@ -9,6 +9,7 @@ import type {
   PayPeriodListFilters,
   PayPeriodListItem,
   PayPeriodListMeta,
+  ReopenPayPeriodPayload,
 } from '@/types/attendance-payroll'
 
 export interface ClosePreviewRange {
@@ -110,6 +111,50 @@ export function useExportPayPeriod() {
     },
     onError: (error: unknown) => {
       showError(getApiErrorMessage(error, 'No se pudo exportar el periodo a CSV.'), 'Error')
+    },
+  })
+}
+
+export interface ReopenPayPeriodVariables {
+  periodId: string
+  reason: string
+}
+
+export function useReopenPayPeriod() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation<PayPeriodDetail, unknown, ReopenPayPeriodVariables>({
+    mutationFn: async ({ periodId, reason }: ReopenPayPeriodVariables) => {
+      const payload: ReopenPayPeriodPayload = { reason }
+      const res = await payrollApi.reopenPeriod(periodId, payload)
+      return res.data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll', 'periods'] })
+      showSuccess('El periodo ha sido reabierto.', 'Periodo reabierto')
+    },
+    onError: (error: unknown) => {
+      showError(getApiFieldError(error, 'reason', 'No se pudo reabrir el periodo.'), 'Error')
+    },
+  })
+}
+
+export function useReclosePayPeriod() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation<PayPeriodDetail, unknown, string>({
+    mutationFn: async (periodId: string) => {
+      const res = await payrollApi.reclosePeriod(periodId)
+      return res.data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll', 'periods'] })
+      showSuccess('El periodo ha sido cerrado nuevamente.', 'Periodo cerrado')
+    },
+    onError: (error: unknown) => {
+      showError(getApiFieldError(error, 'status', 'No se pudo volver a cerrar el periodo.'), 'Error')
     },
   })
 }

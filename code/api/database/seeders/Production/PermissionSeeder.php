@@ -106,6 +106,8 @@ class PermissionSeeder extends LockedSeeder
             // Nómina
             'payroll.preview',
             'payroll.close',
+            'payroll.reopen',
+            'payroll.reclose',
 
             // Auditoría
             'audit-logs.view',
@@ -173,7 +175,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'audit-logs.%')
-                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'overtime.manage']);
+                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'payroll.reopen', 'payroll.reclose', 'overtime.manage']);
                     })
                     ->get()
             );

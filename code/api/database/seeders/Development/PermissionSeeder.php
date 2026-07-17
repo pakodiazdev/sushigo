@@ -49,6 +49,8 @@ class PermissionSeeder extends LockedSeeder
 
     private const GROUP_GASTOS_DE_CAJA = 'Gastos de caja';
 
+    private const GROUP_NOMINA = 'Nómina';
+
     public function run(): void
     {
         $permissions = [
@@ -155,8 +157,10 @@ class PermissionSeeder extends LockedSeeder
             'reports.weekly-summary' => ['label' => 'Ver resumen semanal por empleado', 'group' => 'Reportes'],
 
             // Nómina
-            'payroll.preview' => ['label' => 'Ver preview de cierre de nómina', 'group' => 'Nómina'],
-            'payroll.close' => ['label' => 'Confirmar cierre de nómina', 'group' => 'Nómina'],
+            'payroll.preview' => ['label' => 'Ver preview de cierre de nómina', 'group' => self::GROUP_NOMINA],
+            'payroll.close' => ['label' => 'Confirmar cierre de nómina', 'group' => self::GROUP_NOMINA],
+            'payroll.reopen' => ['label' => 'Reabrir periodo de nómina cerrado', 'group' => self::GROUP_NOMINA],
+            'payroll.reclose' => ['label' => 'Volver a cerrar un periodo de nómina reabierto', 'group' => self::GROUP_NOMINA],
 
             // Auditoría
             'audit-logs.view' => ['label' => 'Ver bitácora de auditoría', 'group' => 'Auditoría'],
@@ -219,6 +223,8 @@ class PermissionSeeder extends LockedSeeder
         // Does NOT get VACATION_REQUESTS_PATTERN — directly scheduling vacations
         // on behalf of an employee is admin/super-admin-only; manager still
         // reviews self-service vacation requests via employee-requests.approve.
+        // Payroll is scoped explicitly (not the PAYROLL_PATTERN wildcard) so that
+        // reopen/reclose — admin-only per AP-047 — never leak in here by accident.
         $managerRole = Role::where('name', 'manager')->where('guard_name', 'api')->first();
         if ($managerRole) {
             $managerRole->syncPermissions(
@@ -229,7 +235,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::LEAVES_PATTERN)
                             ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
-                            ->orWhere('name', 'like', self::PAYROLL_PATTERN);
+                            ->orWhereIn('name', ['payroll.preview', 'payroll.close']);
                     })
                     ->get()
             );

@@ -168,6 +168,10 @@ export interface PayPeriodDetailResponse {
   data: PayPeriodDetail
 }
 
+export interface ReopenPayPeriodPayload {
+  reason: string
+}
+
 export interface PayPeriodListFilters {
   branch_id?: number
   status?: PayPeriodStatus

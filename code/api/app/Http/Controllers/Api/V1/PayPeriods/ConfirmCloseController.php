@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\PayPeriods;
 
-use App\Actions\Payroll\ClosePayPeriodForEmployeeAction;
+use App\Actions\Payroll\RecalculatePayPeriodEmployeesAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ConfirmClosePayPeriodRequest;
 use App\Http\Responses\Common\ResponseEntity;
@@ -46,8 +46,10 @@ class ConfirmCloseController extends Controller
 {
     private const DUPLICATE_PERIOD_MESSAGE = 'Ya existe un cierre para este periodo.';
 
+    private const REOPENED_PERIOD_MESSAGE = "Este periodo fue reabierto — usa 'Volver a cerrar' para cerrarlo nuevamente.";
+
     public function __construct(
-        private ClosePayPeriodForEmployeeAction $closePayPeriodForEmployee,
+        private RecalculatePayPeriodEmployeesAction $recalculate,
     ) {}
 
     public function __invoke(ConfirmClosePayPeriodRequest $request): ResponseEntity
@@ -56,13 +58,18 @@ class ConfirmCloseController extends Controller
         $periodStart = $request->periodStart();
         $periodEnd = $request->periodEnd();
 
-        $alreadyClosed = PayPeriod::where('branch_id', $branchId)
+        $existingPeriod = PayPeriod::where('branch_id', $branchId)
             ->where('period_start', $periodStart)
             ->where('period_end', $periodEnd)
-            ->where('status', PayPeriod::STATUS_CLOSED)
-            ->exists();
+            ->first();
 
-        if ($alreadyClosed) {
+        if ($existingPeriod?->status === PayPeriod::STATUS_REOPENED) {
+            throw ValidationException::withMessages([
+                'period_start' => self::REOPENED_PERIOD_MESSAGE,
+            ]);
+        }
+
+        if ($existingPeriod?->status === PayPeriod::STATUS_CLOSED) {
             throw ValidationException::withMessages([
                 'period_start' => self::DUPLICATE_PERIOD_MESSAGE,
             ]);
@@ -91,16 +98,7 @@ class ConfirmCloseController extends Controller
                     'closed_at' => now(),
                 ]);
 
-                foreach ($employees as $employee) {
-                    ($this->closePayPeriodForEmployee)(
-                        $employee,
-                        $payPeriod,
-                        $periodStart,
-                        $periodEnd,
-                        $holidays,
-                        $punctualityRanges
-                    );
-                }
+                ($this->recalculate)($payPeriod, $employees, $holidays, $punctualityRanges);
 
                 return $payPeriod;
             });
