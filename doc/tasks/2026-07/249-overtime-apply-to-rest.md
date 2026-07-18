@@ -57,13 +57,14 @@ When many employees end up with the same decision (e.g. everyone gets paid at th
 
 ---
 
-## ⏱️ Estimates
+## ⏱️ Time
 
-- **Optimistic:** `5h` · **Pessimistic:** `9h`
+### 📊 Estimates
+- **Optimistic:** `5h` · **Pessimistic:** `9h` · **Tracked:** _in progress_
 
----
-
-## ⏱️ Sessions
+### 📅 Sessions
 ```json
-[]
+[
+  { "date": "2026-07-18", "start": "17:34", "end": "?" }
+]
 ```
