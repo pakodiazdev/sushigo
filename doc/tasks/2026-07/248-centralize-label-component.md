@@ -54,7 +54,14 @@ This is the same class of problem as [#247](https://github.com/pakodiazdev/sushi
 
 ---
 
-## ⏱️ Sessions
+## ⏱️ Time
+
+### 📊 Estimates
+- **Optimistic:** `2h` · **Pessimistic:** `4h` · **Tracked:** _in progress_
+
+### 📅 Sessions
 ```json
-[]
+[
+  { "date": "2026-07-18", "start": "17:39", "end": "?" }
+]
 ```
