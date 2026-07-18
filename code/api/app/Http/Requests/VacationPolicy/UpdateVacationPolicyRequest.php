@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\VacationPolicy;
 
+use App\Http\Requests\Concerns\ValidatesVacationPolicyTiers;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -28,6 +29,8 @@ use Illuminate\Validation\Validator;
  */
 class UpdateVacationPolicyRequest extends FormRequest
 {
+    use ValidatesVacationPolicyTiers;
+
     public function authorize(): bool
     {
         return $this->user()->can('vacation-policy.manage');
@@ -35,26 +38,14 @@ class UpdateVacationPolicyRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
-            'active_rule_key' => ['required', 'string', Rule::in(['VacationsLFTMX', 'CustomCompanyPolicy'])],
-            'tiers' => ['required_if:active_rule_key,CustomCompanyPolicy', 'nullable', 'array', 'min:1'],
-            'tiers.*.years_from' => ['required', 'integer', 'min:1'],
-            'tiers.*.days' => ['required', 'integer', 'min:0'],
-        ];
+        return array_merge(
+            ['active_rule_key' => ['required', 'string', Rule::in(['VacationsLFTMX', 'CustomCompanyPolicy'])]],
+            $this->vacationPolicyTierRules('active_rule_key', 'CustomCompanyPolicy'),
+        );
     }
 
     public function withValidator(Validator $validator): void
     {
-        $validator->after(function (Validator $v) {
-            if ($this->input('active_rule_key') !== 'CustomCompanyPolicy') {
-                return;
-            }
-
-            $yearsFrom = collect($this->input('tiers', []))->pluck('years_from');
-
-            if ($yearsFrom->duplicates()->isNotEmpty()) {
-                $v->errors()->add('tiers', 'Los valores de years_from deben ser únicos.');
-            }
-        });
+        $this->validateUniqueTierYears($validator, 'active_rule_key', 'CustomCompanyPolicy');
     }
 }
