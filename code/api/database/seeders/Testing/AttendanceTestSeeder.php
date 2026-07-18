@@ -3,6 +3,8 @@
 namespace Database\Seeders\Testing;
 
 use App\Models\User;
+use App\Support\Clock\ApplicationClock;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -21,6 +23,8 @@ use Illuminate\Support\Str;
  */
 class AttendanceTestSeeder extends Seeder
 {
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     /** Staggered lunch templates: 30 min each, every 30 min from 15:00 to 20:00 */
     private const LUNCH_TEMPLATES = [
         ['15:00:00', '15:30:00'],
@@ -42,7 +46,10 @@ class AttendanceTestSeeder extends Seeder
     public function run(): void
     {
         $now = now();
-        $hireDate = $now->copy()->subYear()->toDateString();
+        // Hire date must be exactly one seniority year behind "today" as the business
+        // clock (SeniorityService) sees it, not the raw UTC now() — otherwise a UTC/
+        // business-timezone day-boundary mismatch can leave the anniversary one day away.
+        $hireDate = Carbon::parse($this->clock->todayInBusinessTz())->subYear()->toDateString();
         $hashedPassword = Hash::make(config('seeders.passwords.employee'));
 
         $branchId = DB::table('branches')->where('code', 'MAIN')->value('id');
