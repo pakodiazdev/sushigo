@@ -36,6 +36,7 @@ const { email: adminEmail, password: adminPassword } = users.admin
 
 function visitVacacionesTab() {
   cy.visitWithAuth('/configuracion')
+  cy.url().should('include', '/configuracion', { timeout: 10_000 })
   cy.closeDevDebugger()
   cy.contains('nav button', 'Vacaciones').click()
 }

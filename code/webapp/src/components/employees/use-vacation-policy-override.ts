@@ -61,8 +61,7 @@ export function useVacationPolicyOverride(employee: OverrideEmployee) {
         ? employee.vacation_entitlement_custom_table
         : [DEFAULT_TIER],
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employee.id, employee.vacation_entitlement_rule_key, reset])
+  }, [employee.id, employee.vacation_entitlement_rule_key, employee.vacation_entitlement_custom_table, reset])
 
   const enabled = watch('enabled')
 
