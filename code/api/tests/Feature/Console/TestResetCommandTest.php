@@ -192,6 +192,41 @@ class TestResetCommandTest extends TestCase
         $this->assertDatabaseMissing('employees', ['code' => 'ADM-001']);
     }
 
+    #[Test]
+    public function attendance_seeder_reads_a_sane_clock_even_if_previously_simulated(): void
+    {
+        // Simulate a stale clock left over from a prior manual "time travel" QA
+        // session, pointing 5 years in the past. AttendanceTestSeeder now derives
+        // its hire date from the ApplicationClock (not raw now()), so if test:reset
+        // didn't truncate application_clock_state, the seeder would wrongly derive
+        // the hire date from this stale simulated instant instead of the real "today".
+        DB::table('application_clock_state')->delete();
+        DB::table('application_clock_state')->insert([
+            'mode' => 'simulated',
+            'base_datetime_utc' => now()->subYears(5),
+            'started_real_datetime_utc' => now(),
+            'timezone' => 'America/Mexico_City',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->artisan('test:reset', ['--seeders' => 'attendance'])->assertExitCode(0);
+
+        // The clock table gets truncated and reset to its sane SYSTEM default.
+        $this->assertDatabaseHas('application_clock_state', ['id' => 1, 'mode' => 'system']);
+
+        // EMP-001's hire date must be exactly one seniority year behind the real
+        // "today" in business tz — not the stale simulated date from 5 years ago.
+        $businessTz = config('app.business_timezone', 'America/Mexico_City');
+        $expectedHireDate = now($businessTz)->subYear()->toDateString();
+        $employeeId = DB::table('employees')->where('code', 'EMP-001')->value('id');
+
+        $this->assertDatabaseHas('employment_periods', [
+            'employee_id' => $employeeId,
+            'start_date' => $expectedHireDate,
+        ]);
+    }
+
     // ── Test artifact cleanup ──────────────────────────────────────────────
 
     #[Test]
