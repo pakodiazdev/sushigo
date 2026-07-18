@@ -1,7 +1,82 @@
-# SushiGo Tenant Platform
+# SushiGo Platform
 
-Full-stack workspace that powers the SushiGo tenant inside the ComandaFlow ecosystem.
-The repository bundles a Laravel API (inventory, auth and future operational modules), a React/Vite admin webapp, and Docker tooling for a one-command local environment.
+SushiGo is the operations platform for a single restaurant tenant inside the ComandaFlow ecosystem — one business running across multiple branches and temporary events from a single system. It currently covers four live domains: **Inventory & Stock** (multi-location, transfers, auditable movements), **Cash Management** (sessions, adjustments, expenses, card terminals), **Attendance & Payroll** (schedules, check-in/out, overtime, vacations, leave requests, payroll close) and **User & Access Control** (OAuth, roles, granular permissions). The repository bundles the Laravel 12 API, the React 19 admin webapp, and the Docker tooling to run all of it locally in one command — a Flutter mobile app is planned to extend attendance operations into a full point-of-sale with on-device ticket printing.
+
+## Engineering Highlights
+
+*A quick read for reviewers — every claim below is backed by a badge or a linked doc further down.*
+
+- **Testing discipline, not just volume** — a strict PHPUnit → Vitest → Cypress pyramid (112 / 237 / 45 test files) with SonarCloud enforcing ≥80% coverage on new code as a hard merge gate, not a suggestion.
+- **Clean backend architecture** — Single Action Controllers, dedicated Actions/Services layers, effective-dated domain modeling for wage/schedule history, real Laravel Policy-based authorization (`$user->can(...)`), OpenAPI docs generated from code.
+- **Full CI/CD pipeline** — 5 GitHub Actions workflows gate every PR (backend/frontend tests + lint), plus a one-click manual Cloud Run preview deploy via GCP Workload Identity Federation.
+- **A genuinely distinctive workflow** — [`sushigo-dev-lab`](https://github.com/pakodiazdev/sushigo-dev-lab) orchestrates up to 8 parallel git-worktree "workspaces," each a fully independent Laravel + Vite stack sharing Postgres/Redis/Mailpit, so multiple issues ship as parallel waves instead of one branch at a time.
+- **A real business domain, not a CRUD toy** — multi-location inventory, cash sessions, and a full attendance/payroll system (schedules, overtime banking, punctuality bonuses, vacations, leave requests, payroll close/reopen/export) built for a multi-branch restaurant operation.
+
+---
+
+**Backend Quality:**
+
+[![Tests](https://github.com/pakodiazdev/sushigo/actions/workflows/api-tests.yml/badge.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/api-tests.yml)
+[![Lint](https://github.com/pakodiazdev/sushigo/actions/workflows/api-lint.yml/badge.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/api-lint.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-api&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-api)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-api&metric=coverage)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-api)
+
+**Backend stack:**
+![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?logo=php&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?logo=laravel&logoColor=white)
+![Passport](https://img.shields.io/badge/Passport-OAuth2-3178C6?logo=oauth&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+
+---
+
+**Frontend Quality:**
+
+[![Tests](https://github.com/pakodiazdev/sushigo/actions/workflows/webapp-tests.yml/badge.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/webapp-tests.yml)
+[![Lint](https://github.com/pakodiazdev/sushigo/actions/workflows/webapp-lint.yml/badge.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/webapp-lint.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-webapp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-webapp)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-webapp&metric=coverage)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-webapp)
+
+**Frontend stack:**  
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)
+![TanStack Query](https://img.shields.io/badge/TanStack%20Query-5-FF4154?logo=reactquery&logoColor=white)
+![TanStack Router](https://img.shields.io/badge/TanStack%20Router-1-FF4154?logo=reactrouter&logoColor=white)
+![Zustand](https://img.shields.io/badge/Zustand-5-443E38?logo=react&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-06B6D4?logo=tailwindcss&logoColor=white)
+
+---
+
+**Infra:**
+  
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+
+---
+
+[![License: Elastic-2.0](https://img.shields.io/badge/license-Elastic--2.0-blue.svg)](LICENSE)
+
+---
+
+## Table of contents
+
+- [SushiGo Platform](#sushigo-platform)
+  - [Engineering Highlights](#engineering-highlights)
+  - [Table of contents](#table-of-contents)
+  - [Project layout](#project-layout)
+  - [Tech stack](#tech-stack)
+  - [Getting started (Docker Compose)](#getting-started-docker-compose)
+  - [Running services manually](#running-services-manually)
+    - [Backend (Laravel)](#backend-laravel)
+    - [Frontend (React)](#frontend-react)
+  - [Testing](#testing)
+  - [Make commands](#make-commands)
+    - [E2E testing — dev-lab stack](#e2e-testing--dev-lab-stack)
+    - [E2E testing — devtest Docker stack](#e2e-testing--devtest-docker-stack)
+    - [Database](#database)
+    - [Local setup](#local-setup)
+  - [Architecture \& domain documentation](#architecture--domain-documentation)
+  - [Development tips](#development-tips)
+  - [License](#license)
 
 ## Project layout
 
@@ -84,6 +159,36 @@ npm run build       # production build into dist/
 ```
 
 The webapp relies on the API base URL configured in `src/lib/api-client.ts`.
+
+## Testing
+
+Testing follows a strict pyramid — see [`doc/conventions/testing/testing-strategy.md`](doc/conventions/testing/testing-strategy.md) for the full rationale.
+
+```
+         ┌──────────┐
+         │ Cypress   │  E2E – happy path only
+        ─┼───────────┼─
+        │  Vitest     │  Frontend integration + unit
+       ─┼─────────────┼─
+       │   PHPUnit     │  Backend Feature + Unit
+       └───────────────┘
+```
+
+| Layer | What it covers | Command |
+|---|---|---|
+| **PHPUnit** (`code/api/tests/`) | API endpoints (happy path + unauthorized access), validation rules, business logic edge cases | `cd code/api && php artisan test` |
+| **Vitest** (`code/webapp/src/**/__tests__/`) | Route guards/redirects (required), custom hooks with 3+ state vars or mutations, error feedback | `cd code/webapp && npx vitest run` |
+| **Cypress** (`code/webapp/cypress/e2e/`) | One happy-path spec per delivered feature — never error/validation/security cases | `make cypress-run` (see below) |
+
+**Coverage is a merge gate**: SonarCloud requires ≥80% coverage on new code for both `pakodiazdev_sushigo-api` and `pakodiazdev_sushigo-webapp` — see the badges above.
+
+```bash
+# Backend, with coverage
+cd code/api && php artisan test --coverage
+
+# Frontend, with coverage
+cd code/webapp && npx vitest run --coverage
+```
 
 ## Make commands
 
