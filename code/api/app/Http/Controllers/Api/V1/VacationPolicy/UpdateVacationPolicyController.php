@@ -6,10 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\VacationPolicy\UpdateVacationPolicyRequest;
 use App\Http\Resources\VacationPolicy\VacationPolicyTierResource;
 use App\Http\Responses\Common\ResponseEntity;
-use App\Models\VacationPolicySetting;
 use App\Models\VacationPolicyTier;
 use App\Services\VacationEntitlementResolver;
-use Illuminate\Support\Facades\DB;
+use App\Services\VacationPolicySettingService;
 
 /**
  * @OA\Put(
@@ -29,30 +28,19 @@ use Illuminate\Support\Facades\DB;
  */
 class UpdateVacationPolicyController extends Controller
 {
-    public function __invoke(UpdateVacationPolicyRequest $request, VacationEntitlementResolver $resolver): ResponseEntity
-    {
-        $activeRuleKey = $request->input('active_rule_key');
+    public function __invoke(
+        UpdateVacationPolicyRequest $request,
+        VacationEntitlementResolver $resolver,
+        VacationPolicySettingService $policyService,
+    ): ResponseEntity {
+        $data = $request->policyData();
 
-        DB::transaction(function () use ($request, $activeRuleKey) {
-            VacationPolicySetting::current()->update(['active_rule_key' => $activeRuleKey]);
-
-            if ($activeRuleKey === 'CustomCompanyPolicy') {
-                $sorted = collect($request->input('tiers'))->sortBy('years_from')->values();
-
-                VacationPolicyTier::query()->delete();
-
-                $sorted->each(fn (array $item, int $index) => VacationPolicyTier::create([
-                    'years_from' => $item['years_from'],
-                    'days' => $item['days'],
-                    'sort_order' => $index + 1,
-                ]));
-            }
-        });
+        $policyService->update($data['active_rule_key'], $data['tiers']);
 
         $tiers = VacationPolicyTier::orderBy('years_from')->get();
 
         return new ResponseEntity(data: [
-            'active_rule_key' => $activeRuleKey,
+            'active_rule_key' => $data['active_rule_key'],
             'active_rule_label' => $resolver->resolveTenantDefault()->label(),
             'tiers' => VacationPolicyTierResource::collection($tiers)->toArray(request()),
         ]);

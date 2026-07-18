@@ -26,8 +26,9 @@ function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return ({ children }: { children: ReactNode }) =>
+  const wrapper = ({ children }: { children: ReactNode }) =>
     React.createElement(QueryClientProvider, { client: qc }, children)
+  return { wrapper, qc }
 }
 
 const fakeOverride: EmployeeVacationPolicyOverride = {
@@ -45,7 +46,8 @@ describe('useUpdateEmployeeVacationPolicy', () => {
 
   it('calls employeeVacationPolicyApi.updateOverride with employeeId and payload', async () => {
     mockUpdateOverride.mockResolvedValue({ data: { data: fakeOverride } })
-    const { result } = renderHook(() => useUpdateEmployeeVacationPolicy('emp-001'), { wrapper: makeWrapper() })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useUpdateEmployeeVacationPolicy('emp-001'), { wrapper })
 
     act(() => { result.current.mutate(payload) })
 
@@ -55,7 +57,8 @@ describe('useUpdateEmployeeVacationPolicy', () => {
 
   it('shows success toast on success', async () => {
     mockUpdateOverride.mockResolvedValue({ data: { data: fakeOverride } })
-    const { result } = renderHook(() => useUpdateEmployeeVacationPolicy('emp-001'), { wrapper: makeWrapper() })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useUpdateEmployeeVacationPolicy('emp-001'), { wrapper })
 
     act(() => { result.current.mutate(payload) })
 
@@ -63,9 +66,23 @@ describe('useUpdateEmployeeVacationPolicy', () => {
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
+  it('invalidates the vacation-entitlements and employee queries on success', async () => {
+    mockUpdateOverride.mockResolvedValue({ data: { data: fakeOverride } })
+    const { wrapper, qc } = makeWrapper()
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+    const { result } = renderHook(() => useUpdateEmployeeVacationPolicy('emp-001'), { wrapper })
+
+    act(() => { result.current.mutate(payload) })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['vacation-entitlements', 'emp-001'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['employees', 'emp-001'] })
+  })
+
   it('shows error toast on failure', async () => {
     mockUpdateOverride.mockRejectedValue(new Error('Network error'))
-    const { result } = renderHook(() => useUpdateEmployeeVacationPolicy('emp-001'), { wrapper: makeWrapper() })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useUpdateEmployeeVacationPolicy('emp-001'), { wrapper })
 
     act(() => { result.current.mutate(payload) })
 

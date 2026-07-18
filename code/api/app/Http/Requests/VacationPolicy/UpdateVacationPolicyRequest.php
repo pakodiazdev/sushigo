@@ -48,4 +48,20 @@ class UpdateVacationPolicyRequest extends FormRequest
     {
         $this->validateUniqueTierYears($validator, 'active_rule_key', 'CustomCompanyPolicy');
     }
+
+    /**
+     * Ready-to-persist policy data: the active rule key, and the tiers sorted
+     * by years_from (null when the tenant isn't switching to a custom policy).
+     */
+    public function policyData(): array
+    {
+        $data = $this->validated();
+
+        return [
+            'active_rule_key' => $data['active_rule_key'],
+            'tiers' => $data['active_rule_key'] === 'CustomCompanyPolicy'
+                ? collect($data['tiers'])->sortBy('years_from')->values()->all()
+                : null,
+        ];
+    }
 }
