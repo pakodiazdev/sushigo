@@ -143,7 +143,7 @@ Se construyo el modulo completo de Asistencia desde cero, abarcando backend y fr
 | Actions | 2 | 15 | 31 | +16 |
 | Request Validators | 12 | 49 | 88 | +39 |
 | API Resources | — | 7 | 28 | +21 |
-| PHPUnit test files | ~50 | 442* | 112 | ver nota* |
+| PHPUnit tests | ~50 | 442* | 112 | ver nota* |
 
 \* El numero de abril (442) conto casos de prueba individuales via `php artisan test`; el de julio
 cuenta **archivos** de test via `git ls-tree` (no se corrio la suite completa esta pasada) — no son
@@ -156,8 +156,8 @@ un numero de casos real.
 |---------|----------|----------|----------|--------|
 | Componentes (.tsx) | 38 | 112 | 293 | +181 |
 | Paginas | 18 | 27 | 42 | +15 |
-| Vitest test files | — | 1,123* | 237 | ver nota* |
-| Cypress specs | — | 21* | 45 | ver nota* |
+| Vitest tests | — | 1,123* | 237 | ver nota* |
+| Cypress tests | — | 21* | 45 | ver nota* |
 
 \* Mismo caveat que arriba: abril conto casos de prueba (`it()`/`test()` individuales), julio cuenta
 **archivos** `.test.ts(x)` / `.cy.ts`. No comparar directamente sin recorrer la suite.
@@ -259,7 +259,7 @@ completo** salvo las 2 excepciones explicitamente diferidas. El backlog real hoy
 | # | Tarea | Resuelto por |
 |---|-------|--------------|
 | 216 | Remove explicit `any` / react-refresh warnings | PR #217 (mergeado 2026-07-03) — cerrado con comentario referenciando el PR |
-| 55 | Mark Day Status (redesign) | PR #103 (mergeado 2026-04-13) — checklist del issue nunca se actualizo tras el merge; follow-ups #096/#104/[#098]/#57/#58 tambien ya cerrados — cerrado con comentario referenciando el PR |
+| 055 | Mark Day Status (redesign) | PR #103 (mergeado 2026-04-13) — checklist del issue nunca se actualizo tras el merge; follow-ups #096/#104/[#098]/#57/#58 tambien ya cerrados — cerrado con comentario referenciando el PR |
 
 > Nota de higiene: `doc/tasks/backlog/066-punctuality-exceptions.md`, `069-overtime-config.md` y
 > `121-indefinite-exception-summary.md` corresponden a issues cerrados hace semanas pero nunca se
