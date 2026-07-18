@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle, XCircle, ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { useOvertimeDecisionDialog } from './use-overtime-decision-dialog'
 import type { OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
 
@@ -179,7 +180,7 @@ export function OvertimeDecisionDialog({
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="valuation_method" className="text-sm font-medium">Método</label>
+              <Label htmlFor="valuation_method">Método</Label>
               <select
                 id="valuation_method"
                 {...register('valuation_method')}
@@ -194,7 +195,7 @@ export function OvertimeDecisionDialog({
 
             {selectedMethod === 'AGREED_RATE' && (
               <div className="space-y-1">
-                <label htmlFor="agreed_rate" className="text-sm font-medium">Tarifa por hora</label>
+                <Label htmlFor="agreed_rate">Tarifa por hora</Label>
                 <input
                   id="agreed_rate"
                   type="number"
@@ -211,7 +212,7 @@ export function OvertimeDecisionDialog({
 
             {selectedMethod === 'SALARY_FACTOR' && (
               <div className="space-y-1">
-                <label htmlFor="agreed_factor" className="text-sm font-medium">Factor (ej. 1.5 = 1.5x su salario)</label>
+                <Label htmlFor="agreed_factor">Factor (ej. 1.5 = 1.5x su salario)</Label>
                 <input
                   id="agreed_factor"
                   type="number"
