@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\VacationEntitlementRule;
 use App\Models\Employee;
 use App\Models\VacationEntitlement;
 use Illuminate\Support\Collection;
@@ -20,7 +21,7 @@ class VacationEntitlementService
      *
      * @return array<int, array{calendar_year: int, seniority_year: int, entitled_days: int}>
      */
-    public function pendingAnniversaries(Employee $employee): array
+    public function pendingAnniversaries(Employee $employee, ?VacationEntitlementRule $rule = null): array
     {
         try {
             $completedYears = $this->seniority->completedYears($employee);
@@ -34,7 +35,7 @@ class VacationEntitlementService
 
         $start = $this->seniority->effectiveStartDate($employee);
         $existingYears = VacationEntitlement::where('employee_id', $employee->id)->pluck('year')->all();
-        $rule = $this->resolver->resolve($employee);
+        $rule ??= $this->resolver->resolve($employee);
 
         $pending = [];
 
@@ -62,15 +63,15 @@ class VacationEntitlementService
      */
     public function generateMissing(Employee $employee): Collection
     {
-        $ruleKey = $this->resolver->resolve($employee)->key();
+        $rule = $this->resolver->resolve($employee);
 
-        return collect($this->pendingAnniversaries($employee))
+        return collect($this->pendingAnniversaries($employee, $rule))
             ->map(fn (array $pending) => VacationEntitlement::create([
                 'employee_id' => $employee->id,
                 'year' => $pending['calendar_year'],
                 'entitled_days' => $pending['entitled_days'],
                 'used_days' => 0,
-                'rule_key' => $ruleKey,
+                'rule_key' => $rule->key(),
             ]));
     }
 
