@@ -13,6 +13,7 @@ export function useUpdateEmployeeVacationPolicy(employeeId: string) {
       employeeVacationPolicyApi.updateOverride(employeeId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vacation-entitlements', employeeId] })
+      queryClient.invalidateQueries({ queryKey: ['employees', employeeId] })
       showSuccess('Política de vacaciones del empleado actualizada.', 'Vacaciones')
     },
     onError: (error: unknown) => {

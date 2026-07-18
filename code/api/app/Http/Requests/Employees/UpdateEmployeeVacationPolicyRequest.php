@@ -47,4 +47,19 @@ class UpdateEmployeeVacationPolicyRequest extends FormRequest
     {
         $this->validateUniqueTierYears($validator, 'rule_key', 'ContractualPolicy');
     }
+
+    /**
+     * Ready-to-persist employee data: the override rule key, and its custom
+     * table (null when the override is cleared or not ContractualPolicy).
+     */
+    public function updateData(): array
+    {
+        $data = $this->validated();
+        $ruleKey = $data['rule_key'] ?? null;
+
+        return [
+            'vacation_entitlement_rule_key' => $ruleKey,
+            'vacation_entitlement_custom_table' => $ruleKey === 'ContractualPolicy' ? ($data['tiers'] ?? null) : null,
+        ];
+    }
 }

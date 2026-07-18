@@ -31,12 +31,7 @@ class UpdateEmployeeVacationPolicyController extends Controller
         Employee $employee,
         VacationEntitlementResolver $resolver,
     ): ResponseEntity {
-        $ruleKey = $request->input('rule_key');
-
-        $employee->update([
-            'vacation_entitlement_rule_key' => $ruleKey,
-            'vacation_entitlement_custom_table' => $ruleKey === 'ContractualPolicy' ? $request->input('tiers') : null,
-        ]);
+        $employee->update($request->updateData());
 
         return new ResponseEntity(data: [
             'rule_key' => $employee->vacation_entitlement_rule_key,
