@@ -37,8 +37,9 @@ export function RehireForm({ isLoading, onSubmit, onCancel }: RehireFormProps) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Fecha de reingreso */}
         <div className="space-y-1">
-          <Label className="block">Fecha de reingreso</Label>
+          <Label htmlFor="rehire-start-date" className="block">Fecha de reingreso</Label>
           <input
+            id="rehire-start-date"
             type="date"
             max={today}
             {...register('start_date')}
