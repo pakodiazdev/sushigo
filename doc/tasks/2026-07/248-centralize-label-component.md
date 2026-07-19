@@ -57,11 +57,23 @@ This is the same class of problem as [#247](https://github.com/pakodiazdev/sushi
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `2h` · **Pessimistic:** `4h` · **Tracked:** `~0.15h`
+- **Optimistic:** `2h` · **Pessimistic:** `4h` · **Tracked:** `1h 4m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-18", "start": "17:39", "end": "17:46" }
+  { "date": "2026-07-18", "start": "17:39", "end": "17:46" },
+  { "date": "2026-07-19", "start": "14:10", "end": "15:07" }
 ]
 ```
+
+---
+
+## 📊 Retrospective
+- **Actual total:** 1h 4m (7 min + 57 min)
+- **vs optimistic:** −56m
+- **vs pessimistic:** −2h 56m
+
+**Justification:**
+
+The first session (7 min) built the `Label` component, migrated `OvertimeDecisionDialog.tsx`, and wrote the convention doc — fast because it followed the exact pattern already established by `Input`/`Button` in `src/components/ui/`, with no design decisions to make. The second session (57 min, next day) was not new feature work: it covered responding to a Copilot PR review comment (tried the suggested `interface` refactor, reverted it after confirming it breaks `@typescript-eslint/no-empty-object-type`, and replied with justification), then a `/sonar-review` cycle to fix a `typescript:S6853` false positive on the same file (investigate the rule, apply a `NOSONAR` comment, commit, push, and wait for CI + SonarCloud re-scan to confirm). Most of that second session was CI/SonarCloud wait time rather than coding time.
