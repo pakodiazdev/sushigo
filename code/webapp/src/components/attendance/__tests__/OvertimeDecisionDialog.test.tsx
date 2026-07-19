@@ -76,7 +76,7 @@ describe('OvertimeDecisionDialog — actions', () => {
     )
     fireEvent.click(getByTestId('btn-authorize-overtime'))
     fireEvent.click(getByTestId('btn-confirm-valuation'))
-    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('LFT_PROPORTIONAL', undefined, undefined))
+    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('LFT_PROPORTIONAL', undefined, undefined, false))
   })
 
   it('requires agreed_rate when AGREED_RATE method is selected', async () => {
@@ -100,7 +100,7 @@ describe('OvertimeDecisionDialog — actions', () => {
     fireEvent.change(getByLabelText('Método'), { target: { value: 'AGREED_RATE' } })
     fireEvent.change(getByLabelText('Tarifa por hora'), { target: { value: '90' } })
     fireEvent.click(getByTestId('btn-confirm-valuation'))
-    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('AGREED_RATE', 90, undefined))
+    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('AGREED_RATE', 90, undefined, false))
   })
 
   it('requires agreed_factor when SALARY_FACTOR method is selected', async () => {
@@ -124,7 +124,7 @@ describe('OvertimeDecisionDialog — actions', () => {
     fireEvent.change(getByLabelText('Método'), { target: { value: 'SALARY_FACTOR' } })
     fireEvent.change(getByLabelText(/Factor/), { target: { value: '1.5' } })
     fireEvent.click(getByTestId('btn-confirm-valuation'))
-    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('SALARY_FACTOR', undefined, 1.5))
+    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('SALARY_FACTOR', undefined, 1.5, false))
   })
 
   it('returns to the confirm step when Regresar is clicked', () => {
@@ -276,6 +276,61 @@ describe('OvertimeDecisionDialog — cost preview', () => {
     fireEvent.click(getByTestId('btn-authorize-overtime'))
     expect(getByText('No hay un tramo LFT configurado para las horas acumuladas de este empleado.')).toBeDefined()
     expect(queryByText(/Completa los datos/)).toBeNull()
+  })
+})
+
+describe('OvertimeDecisionDialog — apply to rest (bulk flow)', () => {
+  it('does not render the checkbox when remainingCount is not provided', () => {
+    const { queryByTestId } = render(<OvertimeDecisionDialog {...defaultProps} />)
+    expect(queryByTestId('checkbox-apply-to-rest')).toBeNull()
+  })
+
+  it('does not render the checkbox when remainingCount is 1 (individual flow)', () => {
+    const { queryByTestId } = render(<OvertimeDecisionDialog {...defaultProps} remainingCount={1} />)
+    expect(queryByTestId('checkbox-apply-to-rest')).toBeNull()
+  })
+
+  it('renders the checkbox on the confirm step when remainingCount is greater than 1', () => {
+    const { getByTestId, getByText } = render(<OvertimeDecisionDialog {...defaultProps} remainingCount={4} />)
+    expect(getByTestId('checkbox-apply-to-rest')).toBeDefined()
+    expect(getByText(/Aplicar para el resto/)).toBeDefined()
+    expect(getByText(/3 empleados/)).toBeDefined()
+  })
+
+  it('renders the checkbox on the method step when remainingCount is greater than 1', () => {
+    const { getByTestId } = render(<OvertimeDecisionDialog {...defaultProps} remainingCount={3} />)
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    expect(getByTestId('checkbox-apply-to-rest')).toBeDefined()
+  })
+
+  it('calls onReject with applyToRest=true when the checkbox is checked', () => {
+    const onReject = vi.fn()
+    const { getByTestId } = render(
+      <OvertimeDecisionDialog {...defaultProps} remainingCount={3} onReject={onReject} />
+    )
+    fireEvent.click(getByTestId('checkbox-apply-to-rest'))
+    fireEvent.click(getByTestId('btn-reject-overtime'))
+    expect(onReject).toHaveBeenCalledWith(true)
+  })
+
+  it('calls onReject with applyToRest=false when the checkbox is left unchecked', () => {
+    const onReject = vi.fn()
+    const { getByTestId } = render(
+      <OvertimeDecisionDialog {...defaultProps} remainingCount={3} onReject={onReject} />
+    )
+    fireEvent.click(getByTestId('btn-reject-overtime'))
+    expect(onReject).toHaveBeenCalledWith(false)
+  })
+
+  it('calls onAuthorize with applyToRest=true when the checkbox is checked on the method step', async () => {
+    const onAuthorize = vi.fn()
+    const { getByTestId } = render(
+      <OvertimeDecisionDialog {...defaultProps} remainingCount={3} onAuthorize={onAuthorize} />
+    )
+    fireEvent.click(getByTestId('btn-authorize-overtime'))
+    fireEvent.click(getByTestId('checkbox-apply-to-rest'))
+    fireEvent.click(getByTestId('btn-confirm-valuation'))
+    await waitFor(() => expect(onAuthorize).toHaveBeenCalledWith('LFT_PROPORTIONAL', undefined, undefined, true))
   })
 })
 

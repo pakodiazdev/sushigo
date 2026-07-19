@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
-import { useDailyAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
+import { useDailyAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useBulkOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { useExtraDayExpress } from '@/components/attendance/use-extra-day-express'
 import { getAttendancePhase } from '@/types/attendance'
 import { todayDateCdmx } from '@/lib/datetime'
@@ -122,8 +122,9 @@ export interface UseTodayAttendancePageResult {
   confirmOvertimeDecision: (authorize: boolean, valuationMethod?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
   // Bulk overtime queue (from bulk day close)
   currentBulkOvertime: OvertimePendingEntry | null
+  bulkOvertimeQueueLength: number
   enqueueBulkOvertime: (entries: OvertimePendingEntry[]) => void
-  confirmBulkOvertimeDecision: (authorize: boolean, valuationMethod?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
+  confirmBulkOvertimeDecision: (authorize: boolean, valuationMethod?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number, applyToRest?: boolean) => void
   closeBulkOvertimeDecision: () => void
   // Mark day status action
   isMarkingDayStatus: boolean
@@ -154,6 +155,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const lunchReturnMutation = useLunchReturn()
   const checkOutMutation = useCheckOut()
   const overtimeDecisionMutation = useOvertimeDecision()
+  const bulkOvertimeDecisionMutation = useBulkOvertimeDecision()
   const markDayStatusMutation = useMarkDayStatus()
   const extraDayMutation = useExtraDayExpress()
 
@@ -297,8 +299,21 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     valuationMethod?: OvertimeValuationMethod,
     agreedRate?: number,
     agreedFactor?: number,
+    applyToRest?: boolean,
   ) => {
     if (!currentBulkOvertime) return
+
+    if (applyToRest) {
+      bulkOvertimeDecisionMutation.mutate(
+        {
+          attendance_ids: bulkOvertimeQueue.map(entry => entry.attendance_id),
+          ...buildOvertimeDecisionPayload(authorize, valuationMethod, agreedRate, agreedFactor),
+        },
+        { onSuccess: () => setBulkOvertimeQueue([]) },
+      )
+      return
+    }
+
     overtimeDecisionMutation.mutate(
       {
         attendance_id: currentBulkOvertime.attendance_id,
@@ -306,7 +321,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
       },
       { onSuccess: () => setBulkOvertimeQueue(q => q.slice(1)) },
     )
-  }, [currentBulkOvertime, overtimeDecisionMutation])
+  }, [currentBulkOvertime, bulkOvertimeQueue, overtimeDecisionMutation, bulkOvertimeDecisionMutation])
 
   const closeBulkOvertimeDecision = useCallback(() => {
     setBulkOvertimeQueue([])
@@ -401,12 +416,13 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     // Overtime decision (individual)
     pendingOvertimeDecision,
     pendingOvertimeMinutes,
-    isRecordingOvertimeDecision: overtimeDecisionMutation.isPending,
+    isRecordingOvertimeDecision: overtimeDecisionMutation.isPending || bulkOvertimeDecisionMutation.isPending,
     openOvertimeDecision,
     closeOvertimeDecision,
     confirmOvertimeDecision,
     // Bulk overtime queue
     currentBulkOvertime,
+    bulkOvertimeQueueLength: bulkOvertimeQueue.length,
     enqueueBulkOvertime,
     confirmBulkOvertimeDecision,
     closeBulkOvertimeDecision,

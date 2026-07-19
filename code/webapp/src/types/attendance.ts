@@ -12,6 +12,23 @@ export type OvertimeDecisionPayload =
   | { authorize: true; reason?: string; valuation_method: 'AGREED_RATE'; agreed_rate: number }
   | { authorize: true; reason?: string; valuation_method: 'SALARY_FACTOR'; agreed_factor: number }
 
+/**
+ * POST /attendances/overtime-decisions/bulk body.
+ * Applies the same OvertimeDecisionPayload to every attendance in `attendance_ids`.
+ */
+export type BulkOvertimeDecisionPayload = { attendance_ids: string[] } & OvertimeDecisionPayload
+
+export interface BulkOvertimeDecisionResult {
+  attendance_id: string
+  success: boolean
+  attendance: AttendanceRecord | null
+  error: string | null
+}
+
+export interface BulkOvertimeDecisionResponse {
+  results: BulkOvertimeDecisionResult[]
+}
+
 export interface OvertimeValuationPreview {
   valuation_method: OvertimeValuationMethod
   rate_applied: number

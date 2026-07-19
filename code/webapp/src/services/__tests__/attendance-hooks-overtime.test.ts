@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useOvertimeDecision, useOvertimeValuationPreview } from '@/services/attendance-hooks'
+import { useOvertimeDecision, useOvertimeValuationPreview, useBulkOvertimeDecision } from '@/services/attendance-hooks'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ vi.mock('@/services/attendance-api', () => ({
     checkOut: vi.fn(),
     closeDay: vi.fn(),
     overtimeDecision: vi.fn(),
+    bulkOvertimeDecision: vi.fn(),
     previewOvertimeValuation: vi.fn(),
   },
 }))
@@ -209,6 +210,120 @@ describe('useOvertimeDecision', () => {
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ['attendances', 'daily'] })
     )
+  })
+})
+
+// ── useBulkOvertimeDecision ───────────────────────────────────────────────────
+
+const mockBulkResponse = {
+  data: {
+    status: 200,
+    data: {
+      results: [
+        { attendance_id: 'att-1', success: true, attendance: { id: 'att-1' }, error: null },
+        { attendance_id: 'att-2', success: true, attendance: { id: 'att-2' }, error: null },
+      ],
+    },
+  },
+}
+
+describe('useBulkOvertimeDecision', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls attendanceApi.bulkOvertimeDecision with attendance_ids and decision fields', async () => {
+    vi.mocked(attendanceApi.bulkOvertimeDecision).mockResolvedValueOnce(mockBulkResponse as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useBulkOvertimeDecision(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        attendance_ids: ['att-1', 'att-2'],
+        authorize: true,
+        valuation_method: 'AGREED_RATE',
+        agreed_rate: 90,
+      })
+    })
+
+    expect(attendanceApi.bulkOvertimeDecision).toHaveBeenCalledWith({
+      attendance_ids: ['att-1', 'att-2'],
+      authorize: true,
+      valuation_method: 'AGREED_RATE',
+      agreed_rate: 90,
+    })
+  })
+
+  it('invalidates today attendance queries on success', async () => {
+    vi.mocked(attendanceApi.bulkOvertimeDecision).mockResolvedValueOnce(mockBulkResponse as never)
+    const { wrapper, queryClient } = makeWrapper()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+    const { result } = renderHook(() => useBulkOvertimeDecision(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ attendance_ids: ['att-1'], authorize: false })
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['attendances', 'daily'] })
+    )
+  })
+
+  it('shows a success toast when every result succeeds', async () => {
+    vi.mocked(attendanceApi.bulkOvertimeDecision).mockResolvedValueOnce(mockBulkResponse as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useBulkOvertimeDecision(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ attendance_ids: ['att-1', 'att-2'], authorize: false })
+    })
+
+    expect(mockShowSuccess).toHaveBeenCalledWith(
+      expect.stringContaining('2'),
+      'Decisión aplicada'
+    )
+    expect(mockShowError).not.toHaveBeenCalled()
+  })
+
+  it('shows an error toast listing failed employees when some results fail', async () => {
+    vi.mocked(attendanceApi.bulkOvertimeDecision).mockResolvedValueOnce({
+      data: {
+        status: 200,
+        data: {
+          results: [
+            { attendance_id: 'att-1', success: true, attendance: { id: 'att-1' }, error: null },
+            { attendance_id: 'att-2', success: false, attendance: null, error: 'Ya se registró una decisión.' },
+          ],
+        },
+      },
+    } as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useBulkOvertimeDecision(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ attendance_ids: ['att-1', 'att-2'], authorize: false })
+    })
+
+    expect(mockShowError).toHaveBeenCalledWith(
+      expect.stringContaining('Ya se registró una decisión.'),
+      'Algunos registros no se pudieron actualizar'
+    )
+  })
+
+  it('shows an error toast on request failure', async () => {
+    vi.mocked(attendanceApi.bulkOvertimeDecision).mockRejectedValueOnce(new Error('Server error'))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useBulkOvertimeDecision(), { wrapper })
+
+    await act(async () => {
+      try {
+        await result.current.mutateAsync({ attendance_ids: ['att-1'], authorize: false })
+      } catch {
+        // expected
+      }
+    })
+
+    expect(mockShowError).toHaveBeenCalledWith(expect.any(String), 'Error al registrar')
   })
 })
 

@@ -143,4 +143,47 @@ describe("Close day with overtime — decision queue after bulk close", () => {
       cy.contains("Salida", { timeout: 10_000 }).should("be.visible");
     });
   });
+
+  // ════════════════════════════════════════════════════════════════════════
+  // #249 — "Aplicar para el resto" checkbox
+  // ════════════════════════════════════════════════════════════════════════
+
+  it("applies the same decision to the rest of the queue in a single bulk request", () => {
+    cy.intercept("POST", "**/attendances/close-day").as("closeDay");
+    cy.intercept("POST", "**/attendances/overtime-decisions/bulk").as("bulkOvertimeDecision");
+    cy.intercept("PATCH", "**/attendances/**/overtime-decision").as("overtimeDecision");
+    cy.intercept("GET", "**/attendances/today*").as("refetchAttendance");
+
+    cy.contains("button", "Cerrar día").scrollIntoView().click();
+    cy.contains("Confirmar cierre del día", { timeout: 5_000 }).should("be.visible");
+    cy.get('input[type="time"]').clear({ force: true }).type("22:35", { force: true });
+    cy.contains("button", "Confirmar cierre").click();
+
+    cy.wait("@closeDay", { timeout: 10_000 }).its("response.statusCode").should("eq", 200);
+    cy.wait("@refetchAttendance", { timeout: 10_000 });
+
+    // First employee's dialog — with 2 entries in the queue, the checkbox offers
+    // to apply the same decision to the other 1 employee left.
+    cy.contains("Decisión de horas extra", { timeout: 10_000 }).should("be.visible");
+    cy.contains("Aplicar para el resto (1 empleados)").should("be.visible");
+
+    cy.get("[data-testid='checkbox-apply-to-rest']").check({ force: true });
+    cy.get("[data-testid='btn-reject-overtime']").click();
+
+    cy.wait("@bulkOvertimeDecision", { timeout: 10_000 })
+      .its("response.statusCode")
+      .should("eq", 200);
+
+    // No per-item PATCH calls, and no further dialogs — the whole queue was
+    // resolved by the single batch request.
+    cy.get("@overtimeDecision.all").should("have.length", 0);
+    cy.contains("Decisión de horas extra").should("not.exist");
+
+    getCard("Sánchez", "Roberto").within(() => {
+      cy.contains("Salida", { timeout: 10_000 }).should("be.visible");
+    });
+    getCard("Torres", "Laura").within(() => {
+      cy.contains("Salida", { timeout: 10_000 }).should("be.visible");
+    });
+  });
 });

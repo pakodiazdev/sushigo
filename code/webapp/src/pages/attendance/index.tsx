@@ -50,8 +50,9 @@ interface OvertimeDialogState {
   attendanceId: string | null
   employeeName: string
   overtimeMinutes: number
-  onAuthorize: (method: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
-  onReject: () => void
+  remainingCount?: number
+  onAuthorize: (method: OvertimeValuationMethod, agreedRate: number | undefined, agreedFactor: number | undefined, applyToRest: boolean) => void
+  onReject: (applyToRest: boolean) => void
   onClose: () => void
 }
 
@@ -60,9 +61,10 @@ function resolveOvertimeDialog(
   individual: PendingAttendanceData | null,
   bulk: OvertimePendingEntry | null,
   individualMinutes: number,
+  bulkQueueLength: number,
   confirmIndividual: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void,
   closeIndividual: () => void,
-  confirmBulk: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void,
+  confirmBulk: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number, applyToRest?: boolean) => void,
   closeBulk: () => void,
 ): OvertimeDialogState {
   if (individual) {
@@ -81,8 +83,9 @@ function resolveOvertimeDialog(
     attendanceId: bulk?.attendance_id ?? null,
     employeeName: bulk?.employee_name ?? '',
     overtimeMinutes: bulk?.overtime_minutes ?? 0,
-    onAuthorize: (method, agreedRate, agreedFactor) => confirmBulk(true, method, agreedRate, agreedFactor),
-    onReject: () => confirmBulk(false),
+    remainingCount: bulkQueueLength,
+    onAuthorize: (method, agreedRate, agreedFactor, applyToRest) => confirmBulk(true, method, agreedRate, agreedFactor, applyToRest),
+    onReject: (applyToRest) => confirmBulk(false, undefined, undefined, undefined, applyToRest),
     onClose: closeBulk,
   }
 }
@@ -136,6 +139,7 @@ export function AttendancePage() {
     confirmOvertimeDecision,
     // Bulk overtime queue
     currentBulkOvertime,
+    bulkOvertimeQueueLength,
     enqueueBulkOvertime,
     confirmBulkOvertimeDecision,
     closeBulkOvertimeDecision,
@@ -170,6 +174,7 @@ export function AttendancePage() {
     pendingOvertimeDecision,
     currentBulkOvertime,
     pendingOvertimeMinutes,
+    bulkOvertimeQueueLength,
     confirmOvertimeDecision,
     closeOvertimeDecision,
     confirmBulkOvertimeDecision,

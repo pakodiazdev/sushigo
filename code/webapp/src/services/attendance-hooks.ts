@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
 import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { TodayAttendanceRow, CloseDayRequest, OvertimeDecisionPayload, OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
+import type { TodayAttendanceRow, CloseDayRequest, OvertimeDecisionPayload, OvertimeValuationMethod, OvertimeValuationPreview, BulkOvertimeDecisionPayload } from '@/types/attendance'
 
 /**
  * Fetch attendance for all active employees of a branch for a given date.
@@ -141,6 +141,43 @@ export function useOvertimeDecision() {
     onError: (error: unknown) => {
       showError(
         getApiErrorMessage(error, 'No se pudo registrar la decisión.'),
+        'Error al registrar'
+      )
+    },
+  })
+}
+
+/**
+ * Mutation: apply the same overtime decision to a batch of attendances in a
+ * single request. Used by the bulk day-close flow's "Aplicar para el resto"
+ * checkbox. A failed item is reported per-attendance and does not block the
+ * rest — the toast surfaces those failures instead of silently dropping them.
+ */
+export function useBulkOvertimeDecision() {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+
+  return useMutation({
+    mutationFn: (data: BulkOvertimeDecisionPayload) => attendanceApi.bulkOvertimeDecision(data),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
+
+      const results = response.data.data.results
+      const failed = results.filter(r => !r.success)
+
+      if (failed.length === 0) {
+        showSuccess(`Decisión aplicada a ${results.length} empleados.`, 'Decisión aplicada')
+        return
+      }
+
+      showError(
+        failed.map(r => r.error).filter(Boolean).join(' '),
+        'Algunos registros no se pudieron actualizar'
+      )
+    },
+    onError: (error: unknown) => {
+      showError(
+        getApiErrorMessage(error, 'No se pudo registrar la decisión en lote.'),
         'Error al registrar'
       )
     },

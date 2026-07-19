@@ -35,6 +35,7 @@ vi.mock('@/services/attendance-api', () => ({
     lunchReturn: vi.fn(),
     checkOut: vi.fn(),
     overtimeDecision: vi.fn().mockResolvedValue({ data: { status: 200, data: {} } }),
+    bulkOvertimeDecision: vi.fn().mockResolvedValue({ data: { status: 200, data: { results: [] } } }),
     closeDay: vi.fn(),
     markDayStatus: vi.fn(),
   },
@@ -891,6 +892,66 @@ describe('useTodayAttendancePage', () => {
       await waitFor(() => {
         expect(result.current.currentBulkOvertime).toBeNull()
       })
+    })
+
+    // ── applyToRest=true ("Aplicar para el resto" checkbox) ──────────────────
+
+    it('confirmBulkOvertimeDecision(applyToRest=true) calls the bulk endpoint with every queued attendance_id', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.enqueueBulkOvertime([
+          { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+          { attendance_id: 'att-002', employee_name: 'María García', overtime_minutes: 20 },
+          { attendance_id: 'att-003', employee_name: 'Ana López', overtime_minutes: 15 },
+        ])
+      })
+
+      await act(async () => {
+        result.current.confirmBulkOvertimeDecision(true, 'AGREED_RATE', 90, undefined, true)
+      })
+
+      await waitFor(() => {
+        expect(attendanceApi.bulkOvertimeDecision).toHaveBeenCalledWith({
+          attendance_ids: ['att-001', 'att-002', 'att-003'],
+          authorize: true,
+          valuation_method: 'AGREED_RATE',
+          agreed_rate: 90,
+        })
+      })
+      expect(attendanceApi.overtimeDecision).not.toHaveBeenCalled()
+    })
+
+    it('confirmBulkOvertimeDecision(applyToRest=true) clears the whole queue on success', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.enqueueBulkOvertime([
+          { attendance_id: 'att-001', employee_name: 'Carlos Mendoza', overtime_minutes: 35 },
+          { attendance_id: 'att-002', employee_name: 'María García', overtime_minutes: 20 },
+        ])
+      })
+
+      await act(async () => {
+        result.current.confirmBulkOvertimeDecision(false, undefined, undefined, undefined, true)
+      })
+
+      await waitFor(() => {
+        expect(result.current.currentBulkOvertime).toBeNull()
+      })
+    })
+
+    it('confirmBulkOvertimeDecision(applyToRest=true) does nothing when queue is empty', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.confirmBulkOvertimeDecision(true, undefined, undefined, undefined, true)
+      })
+
+      expect(attendanceApi.bulkOvertimeDecision).not.toHaveBeenCalled()
     })
   })
 
