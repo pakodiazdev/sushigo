@@ -12,8 +12,10 @@ export interface OvertimeDecisionDialogProps {
   employeeName: string
   overtimeMinutes: number
   isLoading: boolean
-  onAuthorize: (method: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
-  onReject: () => void
+  /** Total entries left in the bulk queue (current included). Only pass this from the bulk (day-close) flow — the checkbox never shows for a single decision. */
+  remainingCount?: number
+  onAuthorize: (method: OvertimeValuationMethod, agreedRate: number | undefined, agreedFactor: number | undefined, applyToRest: boolean) => void
+  onReject: (applyToRest: boolean) => void
   onClose: () => void
 }
 
@@ -66,14 +68,30 @@ export function OvertimeDecisionDialog({
   employeeName,
   overtimeMinutes,
   isLoading,
+  remainingCount,
   onAuthorize,
   onReject,
   onClose,
 }: Readonly<OvertimeDecisionDialogProps>) {
-  const { step, form, handlePagar, handleBack, onSubmitMethod, preview, isPreviewLoading, previewError } =
+  const { step, form, handlePagar, handleBack, onSubmitMethod, applyToRest, setApplyToRest, preview, isPreviewLoading, previewError } =
     useOvertimeDecisionDialog({ isOpen, attendanceId, onAuthorize })
   const { register, handleSubmit, watch, formState: { errors } } = form
   const selectedMethod = watch('valuation_method')
+  const showApplyToRest = (remainingCount ?? 0) > 1
+
+  const applyToRestCheckbox = showApplyToRest ? (
+    <label className="flex items-start gap-2 text-sm text-muted-foreground">
+      <input
+        type="checkbox"
+        data-testid="checkbox-apply-to-rest"
+        checked={applyToRest}
+        onChange={(e) => setApplyToRest(e.target.checked)}
+        disabled={isLoading}
+        className="mt-0.5"
+      />
+      <span>Aplicar para el resto ({(remainingCount ?? 1) - 1} empleados)</span>
+    </label>
+  ) : null
 
   // Escape key handler
   useEffect(() => {
@@ -134,6 +152,8 @@ export function OvertimeDecisionDialog({
               </p>
             </div>
 
+            {applyToRestCheckbox}
+
             <div className="flex flex-col gap-2">
               <Button
                 className="w-full"
@@ -148,7 +168,7 @@ export function OvertimeDecisionDialog({
               <Button
                 variant="outline-danger"
                 className="w-full"
-                onClick={onReject}
+                onClick={() => onReject(applyToRest)}
                 disabled={isLoading}
                 data-testid="btn-reject-overtime"
               >
@@ -238,6 +258,8 @@ export function OvertimeDecisionDialog({
             >
               {renderOvertimePreview(isPreviewLoading, previewError, preview)}
             </div>
+
+            {applyToRestCheckbox}
 
             <div className="flex flex-col gap-2">
               <Button type="submit" className="w-full" disabled={isLoading} data-testid="btn-confirm-valuation">

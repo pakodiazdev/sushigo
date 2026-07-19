@@ -32,7 +32,7 @@ interface PreviewParams {
 interface UseOvertimeDecisionDialogArgs {
   isOpen: boolean
   attendanceId: string | null
-  onAuthorize: (method: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
+  onAuthorize: (method: OvertimeValuationMethod, agreedRate: number | undefined, agreedFactor: number | undefined, applyToRest: boolean) => void
 }
 
 const PREVIEW_DEBOUNCE_MS = 400
@@ -43,6 +43,7 @@ const PREVIEW_DEBOUNCE_MS = 400
  */
 export function useOvertimeDecisionDialog({ isOpen, attendanceId, onAuthorize }: UseOvertimeDecisionDialogArgs) {
   const [step, setStep] = useState<'confirm' | 'method'>('confirm')
+  const [applyToRest, setApplyToRest] = useState(false)
 
   const form = useForm<OvertimeMethodFormValues>({
     resolver: zodResolver(methodSchema),
@@ -54,6 +55,7 @@ export function useOvertimeDecisionDialog({ isOpen, attendanceId, onAuthorize }:
   useEffect(() => {
     if (isOpen) {
       setStep('confirm')
+      setApplyToRest(false)
       form.reset({ valuation_method: 'LFT_PROPORTIONAL', agreed_rate: '', agreed_factor: '' })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,6 +69,7 @@ export function useOvertimeDecisionDialog({ isOpen, attendanceId, onAuthorize }:
       values.valuation_method,
       values.valuation_method === 'AGREED_RATE' ? Number(values.agreed_rate) : undefined,
       values.valuation_method === 'SALARY_FACTOR' ? Number(values.agreed_factor) : undefined,
+      applyToRest,
     )
   }
 
@@ -111,6 +114,8 @@ export function useOvertimeDecisionDialog({ isOpen, attendanceId, onAuthorize }:
     handlePagar,
     handleBack,
     onSubmitMethod,
+    applyToRest,
+    setApplyToRest,
     preview: previewQuery.data,
     isPreviewLoading: previewQuery.isFetching,
     previewError,

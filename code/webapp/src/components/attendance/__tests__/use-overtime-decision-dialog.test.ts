@@ -68,7 +68,7 @@ describe('useOvertimeDecisionDialog', () => {
       await result.current.onSubmitMethod({ valuation_method: 'LFT_PROPORTIONAL', agreed_rate: '', agreed_factor: '' })
     })
 
-    expect(onAuthorize).toHaveBeenCalledWith('LFT_PROPORTIONAL', undefined, undefined)
+    expect(onAuthorize).toHaveBeenCalledWith('LFT_PROPORTIONAL', undefined, undefined, false)
   })
 
   it('onSubmitMethod calls onAuthorize with AGREED_RATE and the numeric rate', async () => {
@@ -81,7 +81,7 @@ describe('useOvertimeDecisionDialog', () => {
       await result.current.onSubmitMethod({ valuation_method: 'AGREED_RATE', agreed_rate: '90', agreed_factor: '' })
     })
 
-    expect(onAuthorize).toHaveBeenCalledWith('AGREED_RATE', 90, undefined)
+    expect(onAuthorize).toHaveBeenCalledWith('AGREED_RATE', 90, undefined, false)
   })
 
   it('onSubmitMethod calls onAuthorize with SALARY_FACTOR and the numeric factor', async () => {
@@ -94,7 +94,7 @@ describe('useOvertimeDecisionDialog', () => {
       await result.current.onSubmitMethod({ valuation_method: 'SALARY_FACTOR', agreed_rate: '', agreed_factor: '1.5' })
     })
 
-    expect(onAuthorize).toHaveBeenCalledWith('SALARY_FACTOR', undefined, 1.5)
+    expect(onAuthorize).toHaveBeenCalledWith('SALARY_FACTOR', undefined, 1.5, false)
   })
 
   it('form defaults to LFT_PROPORTIONAL', async () => {
@@ -102,5 +102,48 @@ describe('useOvertimeDecisionDialog', () => {
       useOvertimeDecisionDialog({ isOpen: true, attendanceId: 'att-1', onAuthorize: vi.fn() }),
     )
     await waitFor(() => expect(result.current.form.getValues('valuation_method')).toBe('LFT_PROPORTIONAL'))
+  })
+
+  // ── applyToRest (bulk "apply to the rest" checkbox) ──────────────────────
+
+  it('applyToRest defaults to false', () => {
+    const { result } = renderHook(() =>
+      useOvertimeDecisionDialog({ isOpen: true, attendanceId: 'att-1', onAuthorize: vi.fn() }),
+    )
+    expect(result.current.applyToRest).toBe(false)
+  })
+
+  it('setApplyToRest toggles the checkbox state', () => {
+    const { result } = renderHook(() =>
+      useOvertimeDecisionDialog({ isOpen: true, attendanceId: 'att-1', onAuthorize: vi.fn() }),
+    )
+    act(() => { result.current.setApplyToRest(true) })
+    expect(result.current.applyToRest).toBe(true)
+  })
+
+  it('resets applyToRest to false when attendanceId changes (bulk queue advancing)', () => {
+    const { result, rerender } = renderHook(
+      ({ attendanceId }) => useOvertimeDecisionDialog({ isOpen: true, attendanceId, onAuthorize: vi.fn() }),
+      { initialProps: { attendanceId: 'att-1' } },
+    )
+    act(() => { result.current.setApplyToRest(true) })
+    expect(result.current.applyToRest).toBe(true)
+
+    rerender({ attendanceId: 'att-2' })
+    expect(result.current.applyToRest).toBe(false)
+  })
+
+  it('onSubmitMethod reports applyToRest alongside the decision', async () => {
+    const onAuthorize = vi.fn()
+    const { result } = renderHook(() =>
+      useOvertimeDecisionDialog({ isOpen: true, attendanceId: 'att-1', onAuthorize }),
+    )
+
+    act(() => { result.current.setApplyToRest(true) })
+    await act(async () => {
+      await result.current.onSubmitMethod({ valuation_method: 'LFT_PROPORTIONAL', agreed_rate: '', agreed_factor: '' })
+    })
+
+    expect(onAuthorize).toHaveBeenCalledWith('LFT_PROPORTIONAL', undefined, undefined, true)
   })
 })

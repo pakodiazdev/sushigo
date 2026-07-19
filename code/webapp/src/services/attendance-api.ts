@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse, OvertimeDecisionPayload, OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
+import type { TodayAttendanceResponse, AttendanceRecord, CloseDayRequest, CloseDayResponse, OvertimeDecisionPayload, OvertimeValuationMethod, OvertimeValuationPreview, BulkOvertimeDecisionPayload, BulkOvertimeDecisionResponse } from '@/types/attendance'
 
 export const attendanceApi = {
   /**
@@ -58,6 +58,18 @@ export const attendanceApi = {
   overtimeDecision: (attendanceId: string, data: OvertimeDecisionPayload) =>
     apiClient.patch<{ status: number; data: AttendanceRecord }>(
       `/attendances/${attendanceId}/overtime-decision`,
+      data,
+    ),
+
+  /**
+   * POST /attendances/overtime-decisions/bulk
+   * Body: { attendance_ids: string[], authorize, valuation_method?, agreed_rate?, agreed_factor?, reason? }
+   * Applies the same decision to every attendance in attendance_ids in a single
+   * request. Returns a per-attendance result — a failed item does not block the rest.
+   */
+  bulkOvertimeDecision: (data: BulkOvertimeDecisionPayload) =>
+    apiClient.post<{ status: number; data: BulkOvertimeDecisionResponse }>(
+      '/attendances/overtime-decisions/bulk',
       data,
     ),
 
