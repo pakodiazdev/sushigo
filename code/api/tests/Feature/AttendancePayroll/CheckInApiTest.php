@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
+use App\Models\PayPeriod;
 use App\Models\ScheduleDay;
 use App\Models\ScheduleDayOverride;
 use App\Models\User;
@@ -385,6 +386,53 @@ class CheckInApiTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('check_in', $response->json('errors'));
+    }
+
+    #[Test]
+    public function rejects_check_in_when_date_is_covered_by_a_closed_pay_period(): void
+    {
+        ['employee' => $employee, 'period' => $period] = $this->makeEmployeeWithSchedule(
+            date: self::DATE,
+            expectedStart: self::START,
+        );
+
+        PayPeriod::create([
+            'branch_id' => $period->branch_id,
+            'period_start' => '2026-02-22',
+            'period_end' => '2026-02-28',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => self::CHECK_IN,
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('check_in', $response->json('errors'));
+    }
+
+    #[Test]
+    public function allows_check_in_when_covering_period_is_reopened(): void
+    {
+        ['employee' => $employee, 'period' => $period] = $this->makeEmployeeWithSchedule(
+            date: self::DATE,
+            expectedStart: self::START,
+        );
+
+        PayPeriod::create([
+            'branch_id' => $period->branch_id,
+            'period_start' => '2026-02-22',
+            'period_end' => '2026-02-28',
+            'status' => PayPeriod::STATUS_REOPENED,
+        ]);
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => self::CHECK_IN,
+        ]);
+
+        $response->assertStatus(201);
     }
 
     // #endregion

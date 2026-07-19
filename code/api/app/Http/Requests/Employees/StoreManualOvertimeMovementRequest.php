@@ -3,11 +3,16 @@
 namespace App\Http\Requests\Employees;
 
 use App\Enums\OvertimeMovementType;
+use App\Http\Requests\Concerns\GuardsClosedPayPeriod;
+use App\Models\Employee;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreManualOvertimeMovementRequest extends FormRequest
 {
+    use GuardsClosedPayPeriod;
+
     public function authorize(): bool
     {
         return (bool) $this->user()?->can('employees.update');
@@ -36,5 +41,15 @@ class StoreManualOvertimeMovementRequest extends FormRequest
         $data['movement_type'] = OvertimeMovementType::from($data['movement_type']);
 
         return $data;
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $employee = $this->route('employee');
+        if (! $employee instanceof Employee) {
+            return;
+        }
+
+        $this->guardClosedPeriod($validator, $employee->id, $this->input('date'));
     }
 }

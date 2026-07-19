@@ -5,6 +5,8 @@ namespace Tests\Feature\AttendancePayroll;
 use App\Enums\DayStatus;
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\EmploymentPeriod;
+use App\Models\PayPeriod;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -222,6 +224,28 @@ class MarkDayStatusApiTest extends TestCase
         $this->assertArrayHasKey('employee_id', $response->json('errors'));
         $this->assertArrayHasKey('date', $response->json('errors'));
         $this->assertArrayHasKey('day_status', $response->json('errors'));
+    }
+
+    #[Test]
+    public function rejects_day_status_when_date_is_covered_by_a_closed_pay_period(): void
+    {
+        $period = EmploymentPeriod::factory()->create(['is_active' => true, 'start_date' => '2026-04-01']);
+
+        PayPeriod::create([
+            'branch_id' => $period->branch_id,
+            'period_start' => '2026-04-06',
+            'period_end' => '2026-04-12',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->postJson('/api/v1/attendances/day-status', [
+            'employee_id' => $period->employee->public_id,
+            'date' => self::DATE,
+            'day_status' => 'ABSENCE',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('date', $response->json('errors'));
     }
 
     // #endregion

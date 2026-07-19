@@ -3,9 +3,11 @@
 namespace App\Http\Requests\Attendances;
 
 use App\Enums\DayStatus;
+use App\Http\Requests\Concerns\GuardsClosedPayPeriod;
 use App\Support\Clock\ApplicationClock;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * @OA\Schema(
@@ -42,6 +44,8 @@ use Illuminate\Validation\Rule;
  */
 class DayStatusRequest extends FormRequest
 {
+    use GuardsClosedPayPeriod;
+
     public function __construct(private readonly ApplicationClock $clock)
     {
         parent::__construct();
@@ -86,6 +90,18 @@ class DayStatusRequest extends FormRequest
             'day_status.in' => 'Solo se permite el estado ABSENCE. El estado DAY_OFF es asignado automáticamente al cerrar el día.',
             'reason.required' => 'Se requiere un motivo para editar registros de días anteriores.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $date = $this->input('date');
+        if (! $date) {
+            return;
+        }
+
+        $employeeId = $this->employeeIdFromPublicId($this->input('employee_id'));
+
+        $this->guardClosedPeriod($validator, $employeeId, $date);
     }
 
     private function reasonRules(): array

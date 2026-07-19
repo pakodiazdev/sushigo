@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\OvertimeBankMovement;
+use App\Models\PayPeriod;
 use App\Models\ScheduleDay;
 use App\Models\User;
 use Carbon\Carbon;
@@ -279,6 +280,27 @@ class CheckOutApiTest extends TestCase
         );
 
         $response->assertStatus(404);
+    }
+
+    #[Test]
+    public function rejects_checkout_when_date_is_covered_by_a_closed_pay_period(): void
+    {
+        ['attendance' => $attendance, 'employee' => $employee] = $this->makeAttendanceWithLunch();
+
+        PayPeriod::create([
+            'branch_id' => $employee->employmentPeriods()->first()->branch_id,
+            'period_start' => '2026-02-22',
+            'period_end' => '2026-02-28',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-23T17:00:00'],
+        );
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('date', $response->json('errors'));
     }
 
     // #endregion

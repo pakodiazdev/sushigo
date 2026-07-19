@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Attendances;
 
+use App\Http\Requests\Concerns\GuardsClosedPayPeriod;
 use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
+use Throwable;
 
 /**
  * @OA\Schema(
@@ -35,6 +38,8 @@ use Illuminate\Validation\Rule;
  */
 class CheckInRequest extends FormRequest
 {
+    use GuardsClosedPayPeriod;
+
     public function __construct(private readonly ApplicationClock $clock)
     {
         parent::__construct();
@@ -49,7 +54,7 @@ class CheckInRequest extends FormRequest
 
         try {
             $date = Carbon::parse($checkInInput)->toDateString();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return true; // unparseable date — let validation reject it with 422
         }
 
@@ -83,6 +88,24 @@ class CheckInRequest extends FormRequest
         ];
     }
 
+    public function withValidator(Validator $validator): void
+    {
+        $checkInInput = $this->input('check_in');
+        if (! $checkInInput) {
+            return;
+        }
+
+        try {
+            $date = Carbon::parse($checkInInput)->toDateString();
+        } catch (Throwable) {
+            return;
+        }
+
+        $employeeId = $this->employeeIdFromPublicId($this->input('employee_id'));
+
+        $this->guardClosedPeriod($validator, $employeeId, $date, 'check_in');
+    }
+
     private function reasonRules(): array
     {
         $checkInInput = $this->input('check_in');
@@ -96,7 +119,7 @@ class CheckInRequest extends FormRequest
 
         try {
             $date = Carbon::parse($checkInInput)->toDateString();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return ['nullable', 'string', 'max:500']; // unparseable — validation will reject
         }
 

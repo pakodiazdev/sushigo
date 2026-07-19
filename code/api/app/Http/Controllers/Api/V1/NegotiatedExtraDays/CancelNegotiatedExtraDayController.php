@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\NegotiatedExtraDays;
 
+use App\Actions\Payroll\EnsurePeriodIsEditableAction;
 use App\Enums\EmployeeRequestStatus;
 use App\Http\Controllers\Controller;
 use App\Models\NegotiatedExtraDay;
@@ -35,7 +36,8 @@ use Illuminate\Validation\ValidationException;
 class CancelNegotiatedExtraDayController extends Controller
 {
     public function __construct(
-        private readonly ApplicationClock $clock
+        private readonly ApplicationClock $clock,
+        private readonly EnsurePeriodIsEditableAction $ensurePeriodIsEditable,
     ) {}
 
     public function __invoke(Request $request, string $id): JsonResponse
@@ -58,6 +60,12 @@ class CancelNegotiatedExtraDayController extends Controller
         if ($recordDate < $todayInBusinessTz) {
             throw ValidationException::withMessages([
                 'date' => 'No se puede cancelar un día extra que ya ocurrió.',
+            ]);
+        }
+
+        if (! ($this->ensurePeriodIsEditable)($record->branch_id, $recordDate)) {
+            throw ValidationException::withMessages([
+                'date' => 'No se puede cancelar un día extra dentro de un periodo de nómina ya cerrado. Reabra el periodo primero.',
             ]);
         }
 

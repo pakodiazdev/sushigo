@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\NegotiatedExtraDay;
 
+use App\Http\Requests\Concerns\GuardsClosedPayPeriod;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * @OA\Schema(
@@ -48,6 +50,8 @@ use Illuminate\Validation\Rule;
  */
 class StoreNegotiatedExtraDayRequest extends FormRequest
 {
+    use GuardsClosedPayPeriod;
+
     public function authorize(): bool
     {
         return true;
@@ -77,5 +81,17 @@ class StoreNegotiatedExtraDayRequest extends FormRequest
             'prima_percent.min' => 'El porcentaje de prima no puede ser negativo.',
             'prima_percent.max' => 'El porcentaje de prima no puede ser mayor a 200.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $date = $this->input('date');
+        if (! $date) {
+            return;
+        }
+
+        $employeeId = $this->employeeIdFromPublicId($this->input('employee_id'));
+
+        $this->guardClosedPeriod($validator, $employeeId, $date);
     }
 }

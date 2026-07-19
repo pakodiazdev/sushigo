@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\LeaveType;
+use App\Models\PayPeriod;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -496,6 +497,55 @@ class RegisterDirectLeaveApiTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrorFor('scheduled_end_time');
+    }
+
+    // ── Closed pay period ─────────────────────────────────────────────────────
+
+    #[Test]
+    public function rejects_leave_when_date_is_covered_by_a_closed_pay_period(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
+
+        PayPeriod::create([
+            'branch_id' => $employee->employmentPeriods()->first()->branch_id,
+            'period_start' => '2026-04-06',
+            'period_end' => '2026-04-12',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->postJson('/api/v1/leaves', [
+            'employee_id' => $employee->public_id,
+            'leave_type_id' => $leaveType->id,
+            'dates' => [self::DATE],
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('dates', $response->json('errors'));
+    }
+
+    #[Test]
+    public function rejects_multi_day_leave_when_any_date_is_covered_by_a_closed_pay_period(): void
+    {
+        $employee = $this->makeEmployee();
+        $leaveType = LeaveType::where('code', LeaveType::MEDICAL)->first();
+
+        // self::DATE (2026-04-09) is NOT covered; only 2026-04-12 falls inside the closed period
+        PayPeriod::create([
+            'branch_id' => $employee->employmentPeriods()->first()->branch_id,
+            'period_start' => '2026-04-10',
+            'period_end' => '2026-04-16',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->postJson('/api/v1/leaves', [
+            'employee_id' => $employee->public_id,
+            'leave_type_id' => $leaveType->id,
+            'dates' => [self::DATE, '2026-04-12'],
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('dates', $response->json('errors'));
     }
 
     // ── Auth ──────────────────────────────────────────────────────────────────

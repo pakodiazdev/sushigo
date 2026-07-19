@@ -4,6 +4,7 @@ namespace Tests\Feature\NegotiatedExtraDay;
 
 use App\Models\EmployeeRequest;
 use App\Models\NegotiatedExtraDay;
+use App\Models\PayPeriod;
 use App\Models\User;
 use Carbon\Carbon;
 use Laravel\Passport\Passport;
@@ -100,6 +101,27 @@ class CancelNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
         Carbon::setTestNow('2026-04-26');
 
         $record = $this->makeRecord(self::PAST_DATE);
+
+        $this->deleteJson($this->url($record))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrorFor('date');
+
+        $this->assertNotSoftDeleted('negotiated_extra_days', ['id' => $record->id]);
+    }
+
+    #[Test]
+    public function rejects_cancellation_when_date_is_covered_by_a_closed_pay_period(): void
+    {
+        Carbon::setTestNow('2026-04-26');
+
+        $record = $this->makeRecord(self::FUTURE_DATE);
+
+        PayPeriod::create([
+            'branch_id' => $record->branch_id,
+            'period_start' => '2026-05-08',
+            'period_end' => '2026-05-14',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
 
         $this->deleteJson($this->url($record))
             ->assertUnprocessable()
