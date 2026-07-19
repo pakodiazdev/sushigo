@@ -1,6 +1,7 @@
 <?php
 
 use App\Contracts\PasswordResetTokenRecorder;
+use App\Http\Controllers\Api\V1\Attendances\BulkOvertimeDecisionController;
 use App\Http\Controllers\Api\V1\Attendances\CloseDayController;
 use App\Http\Controllers\Api\V1\Attendances\MarkDayStatusController;
 use App\Http\Controllers\Api\V1\Attendances\OvertimeDecisionController;
@@ -386,6 +387,7 @@ Route::prefix('v1')->group(function () {
         Route::post('check-in', RegisterCheckInController::class)->name('check-in');
         Route::post('day-status', MarkDayStatusController::class)->name('day-status');
         Route::post('close-day', CloseDayController::class)->name('close-day');
+        Route::post('overtime-decisions/bulk', BulkOvertimeDecisionController::class)->name('overtime-decisions.bulk');
         // Per-attendance actions (identified by public_id)
         Route::patch('{id}/lunch-start', RegisterLunchStartController::class)->name('lunch-start');
         Route::patch('{id}/lunch-return', RegisterLunchReturnController::class)->name('lunch-return');
