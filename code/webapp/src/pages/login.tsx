@@ -3,6 +3,7 @@ import { useState, FormEvent } from 'react';
 import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Logo } from '@/components/ui/logo';
 import { Loader2 } from 'lucide-react';
@@ -51,9 +52,9 @@ export function LoginPage() {
                         )}
 
                         <div className="space-y-2">
-                            <label htmlFor="identifier" className="text-sm font-medium">
+                            <Label htmlFor="identifier">
                                 Correo electrónico o teléfono
-                            </label>
+                            </Label>
                             <Input
                                 id="identifier"
                                 type="text"
@@ -68,9 +69,9 @@ export function LoginPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label htmlFor="password" className="text-sm font-medium">
+                            <Label htmlFor="password">
                                 Contraseña
-                            </label>
+                            </Label>
                             <Input
                                 id="password"
                                 type="password"

@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
 import { useRehireForm } from './use-rehire-form'
 import type { RehireFormValues } from './use-rehire-form'
@@ -36,7 +37,7 @@ export function RehireForm({ isLoading, onSubmit, onCancel }: RehireFormProps) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Fecha de reingreso */}
         <div className="space-y-1">
-          <label className="block text-sm font-medium">Fecha de reingreso</label>
+          <Label className="block">Fecha de reingreso</Label>
           <input
             type="date"
             max={today}

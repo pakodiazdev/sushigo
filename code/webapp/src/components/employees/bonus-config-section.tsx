@@ -1,6 +1,7 @@
 import { Loader2, Award, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { useBonusConfigSection } from './use-bonus-config-section'
 
 interface BonusConfigSectionProps {
@@ -81,7 +82,7 @@ export function BonusConfigSection({ employeeId }: BonusConfigSectionProps) {
       {showForm && (
         <form onSubmit={handleSubmit(onSubmit)} className="rounded-md border border-border p-4 space-y-3">
           <div className="space-y-1">
-            <label htmlFor="bonus_group_id" className="text-sm font-medium">Grupo de bono</label>
+            <Label htmlFor="bonus_group_id">Grupo de bono</Label>
             <select
               id="bonus_group_id"
               {...register('bonus_group_id')}
@@ -101,7 +102,7 @@ export function BonusConfigSection({ employeeId }: BonusConfigSectionProps) {
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="effective_from" className="text-sm font-medium">Fecha de vigencia</label>
+            <Label htmlFor="effective_from">Fecha de vigencia</Label>
             <input
               id="effective_from"
               type="date"

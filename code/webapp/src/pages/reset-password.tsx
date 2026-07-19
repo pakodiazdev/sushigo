@@ -5,6 +5,7 @@ import { getApiFieldError } from '@/lib/api-error'
 import { useAuthStore } from '@/stores/auth.store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Logo } from '@/components/ui/logo'
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
@@ -203,9 +204,9 @@ function ResetPasswordPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label htmlFor="password" className="text-sm font-medium">
+                            <Label htmlFor="password">
                                 Nueva contraseña
-                            </label>
+                            </Label>
                             <Input
                                 id="password"
                                 type="password"
@@ -220,9 +221,9 @@ function ResetPasswordPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label htmlFor="password_confirmation" className="text-sm font-medium">
+                            <Label htmlFor="password_confirmation">
                                 Confirmar contraseña
-                            </label>
+                            </Label>
                             <Input
                                 id="password_confirmation"
                                 type="password"

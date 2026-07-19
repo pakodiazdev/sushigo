@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
+import { Label } from '@/components/ui/label'
 import {
   useHolidayManagement,
   type HolidayEditValues,
@@ -337,9 +338,9 @@ function AddHolidayForm({
       )}
 
       <div className="flex items-center gap-3">
-        <label htmlFor="add-is-annual" className="text-sm font-medium cursor-pointer">
+        <Label htmlFor="add-is-annual" className="cursor-pointer">
           ¿Se repite cada año?
-        </label>
+        </Label>
         <input
           id="add-is-annual"
           type="checkbox"

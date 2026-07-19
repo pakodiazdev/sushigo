@@ -38,17 +38,23 @@ If a label needs a `className` with `text-*` color classes to stay readable, tha
 
 `OvertimeDecisionDialog.tsx` ("Método", "Tarifa por hora", "Factor...") is the reference migration for issue #248.
 
-The following files still use the same unstyled `<label>` pattern and are candidates for a follow-up migration (not in scope for #248):
+Issue #259 migrated every remaining `<label>` usage that had **no explicit text color at all** (the same contrast-loss risk as #248):
 
 - `src/components/employees/rehire-form.tsx`
 - `src/components/employees/deactivate-form.tsx`
 - `src/components/employees/bonus-config-section.tsx`
 - `src/components/employees/register-wage-form.tsx`
+- `src/components/employees/vacation-policy-override.tsx`
+- `src/pages/login.tsx`, `src/pages/forgot-password.tsx`, `src/pages/reset-password.tsx`
+- `src/components/employees/override-scope-dialog.tsx` (partial — only the two color-less labels; see below)
+- `src/pages/attendance/config/holidays.tsx` (partial — only the "¿Se repite cada año?" label; see below)
+
+The following files still use `<label>` directly and are candidates for a follow-up migration (not in scope for #248 or #259 — these already set an explicit `text-foreground`/`text-muted-foreground` color, or are structural labels wrapping a checkbox/radio "pill" option that `Label`'s plain-text styling doesn't fit as-is):
+
 - `src/components/attendance/AttendanceTimeDialog.tsx`
 - `src/components/attendance/ExtraDayNegotiationDialog.tsx`
 - `src/components/employees/create-schedule-form.tsx`
-- `src/components/employees/override-scope-dialog.tsx`
-- `src/components/employees/vacation-policy-override.tsx`
+- `src/components/employees/override-scope-dialog.tsx` (remaining option-pill label and the already-colored "Motivo" label)
 - `src/components/settings/vacation-policy-section.tsx`
 - `src/components/solicitudes/pending-requests/leave-review-content.tsx`
 - `src/components/solicitudes/pending-requests/review-request-dialog.tsx`
@@ -56,10 +62,9 @@ The following files still use the same unstyled `<label>` pattern and are candid
 - `src/components/ui/filter-select.tsx`
 - `src/components/ui/form-fields.tsx` (`FormField` and `Checkbox` both inline their own label markup)
 - `src/pages/attendance/audit.tsx`
-- `src/pages/attendance/config/holidays.tsx`
+- `src/pages/attendance/config/holidays.tsx` (remaining `text-xs font-medium text-muted-foreground uppercase tracking-wide` labels)
 - `src/pages/attendance/payroll/$periodId.tsx`
 - `src/pages/attendance/payroll/close.tsx` and `src/pages/attendance/payroll/index.tsx` (use hardcoded `text-gray-700` instead of `text-foreground` — worth flagging separately, doesn't follow theme tokens at all)
 - `src/pages/attendance/punctuality-config-shared.tsx`
-- `src/pages/forgot-password.tsx`, `src/pages/login.tsx`, `src/pages/reset-password.tsx`
 
-See issue #248.
+See issues #248 and #259.

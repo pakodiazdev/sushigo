@@ -4,6 +4,7 @@ import { apiClient } from '@/lib/api-client'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Logo } from '@/components/ui/logo'
 import { Loader2, CheckCircle, ArrowLeft } from 'lucide-react'
@@ -103,9 +104,9 @@ function ForgotPasswordPage() {
                         )}
 
                         <div className="space-y-2">
-                            <label htmlFor="identifier" className="text-sm font-medium">
+                            <Label htmlFor="identifier">
                                 Correo electrónico o teléfono
-                            </label>
+                            </Label>
                             <Input
                                 id="identifier"
                                 type="text"
