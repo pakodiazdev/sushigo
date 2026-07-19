@@ -2,18 +2,23 @@
 
 namespace App\Http\Requests\Attendances;
 
+use App\Http\Requests\Concerns\GuardsClosedPayPeriod;
 use App\Models\Attendance;
 use App\Support\Clock\ApplicationClock;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Validator;
 
 /**
  * Base request for attendance-edit endpoints that share:
  *  - authorization via AttendancePolicy::edit
  *  - optional/required reason field based on admin + past-day detection
+ *  - a guard blocking edits to dates already frozen in a CLOSED PayPeriod
  */
 abstract class AttendanceFormRequest extends FormRequest
 {
+    use GuardsClosedPayPeriod;
+
     public function __construct(private readonly ApplicationClock $clock)
     {
         parent::__construct();
@@ -31,6 +36,16 @@ abstract class AttendanceFormRequest extends FormRequest
         }
 
         return Gate::allows('edit', $attendance);
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $attendance = $this->resolveAttendance();
+        if (! $attendance) {
+            return;
+        }
+
+        $this->guardClosedPeriod($validator, $attendance->employee_id, $attendance->date->toDateString());
     }
 
     protected function resolveAttendance(): ?Attendance

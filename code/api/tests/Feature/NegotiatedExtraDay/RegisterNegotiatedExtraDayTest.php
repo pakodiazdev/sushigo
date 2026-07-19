@@ -5,6 +5,7 @@ namespace Tests\Feature\NegotiatedExtraDay;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\NegotiatedExtraDay;
+use App\Models\PayPeriod;
 use App\Models\ScheduleDay;
 use App\Models\User;
 use Carbon\Carbon;
@@ -117,6 +118,24 @@ class RegisterNegotiatedExtraDayTest extends NegotiatedExtraDayTestCase
 
         $response->assertStatus(422);
         $this->assertArrayHasKey('prima_percent', $response->json('errors'));
+    }
+
+    #[Test]
+    public function rejects_registration_when_date_is_covered_by_a_closed_pay_period(): void
+    {
+        ['employee' => $employee, 'period' => $period] = $this->makeEmployeeWithDayOff(self::DATE);
+
+        PayPeriod::create([
+            'branch_id' => $period->branch_id,
+            'period_start' => '2026-02-22',
+            'period_end' => '2026-02-28',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->postExtraDay($employee->public_id);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('date', $response->json('errors'));
     }
 
     #[Test]

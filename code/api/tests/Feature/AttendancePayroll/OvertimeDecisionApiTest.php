@@ -4,7 +4,9 @@ namespace Tests\Feature\AttendancePayroll;
 
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\EmploymentPeriod;
 use App\Models\OvertimeLftTier;
+use App\Models\PayPeriod;
 use App\Models\User;
 use App\Models\WageHistory;
 use Carbon\Carbon;
@@ -483,6 +485,30 @@ class OvertimeDecisionApiTest extends TestCase
     // #endregion
 
     // #region 404 / 401
+
+    #[Test]
+    public function returns_422_when_date_is_covered_by_a_closed_pay_period(): void
+    {
+        $period = EmploymentPeriod::factory()->create(['is_active' => true, 'start_date' => '2026-01-01']);
+        $attendance = Attendance::factory()
+            ->withOvertime(45)
+            ->create(['employee_id' => $period->employee_id]);
+
+        PayPeriod::create([
+            'branch_id' => $period->branch_id,
+            'period_start' => '2026-02-22',
+            'period_end' => '2026-02-28',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/overtime-decision",
+            ['authorize' => true, 'valuation_method' => 'AGREED_RATE', 'agreed_rate' => 90],
+        );
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('date', $response->json('errors'));
+    }
 
     #[Test]
     public function returns_404_for_unknown_attendance_id(): void

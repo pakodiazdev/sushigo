@@ -4,6 +4,7 @@ namespace App\Http\Requests\Leaves;
 
 use App\Enums\LeaveCalculationMode;
 use App\Enums\LeaveTimeMode;
+use App\Http\Requests\Concerns\GuardsClosedPayPeriod;
 use App\Models\Employee;
 use App\Models\LeaveType;
 use Illuminate\Foundation\Http\FormRequest;
@@ -30,6 +31,8 @@ use Illuminate\Validation\Validator;
  */
 class RegisterDirectLeaveRequest extends FormRequest
 {
+    use GuardsClosedPayPeriod;
+
     public function authorize(): bool
     {
         return true;
@@ -59,6 +62,9 @@ class RegisterDirectLeaveRequest extends FormRequest
 
     public function withValidator(Validator $validator): void
     {
+        $employeeId = $this->employeeIdFromPublicId($this->input('employee_id'));
+        $this->guardClosedPeriod($validator, $employeeId, $this->input('dates'), 'dates');
+
         $validator->after(function (Validator $v) {
             $leaveType = LeaveType::find($this->input('leave_type_id'));
 

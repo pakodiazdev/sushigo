@@ -69,4 +69,16 @@ class PayPeriod extends Model
     {
         return $this->status === self::STATUS_CLOSED;
     }
+
+    /**
+     * Find the pay period (any status) that covers a given branch + date.
+     */
+    public static function coveringDate(int $branchId, string $date): ?self
+    {
+        return static::query()
+            ->where('branch_id', $branchId)
+            ->where('period_start', '<=', $date)
+            ->where('period_end', '>=', $date)
+            ->first();
+    }
 }

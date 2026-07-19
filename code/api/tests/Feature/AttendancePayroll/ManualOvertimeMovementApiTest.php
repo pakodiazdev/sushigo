@@ -5,7 +5,9 @@ namespace Tests\Feature\AttendancePayroll;
 use App\Enums\OvertimeMovementType;
 use App\Enums\OvertimeOrigin;
 use App\Models\Employee;
+use App\Models\EmploymentPeriod;
 use App\Models\OvertimeBankMovement;
+use App\Models\PayPeriod;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -179,6 +181,61 @@ class ManualOvertimeMovementApiTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['movement_type']);
+    }
+
+    #[Test]
+    public function rejects_movement_when_date_is_covered_by_a_closed_pay_period(): void
+    {
+        $period = EmploymentPeriod::factory()->create(['is_active' => true, 'start_date' => '2026-01-01']);
+        $employee = $period->employee;
+
+        PayPeriod::create([
+            'branch_id' => $period->branch_id,
+            'period_start' => '2026-07-12',
+            'period_end' => '2026-07-18',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->postJson($this->endpoint($employee), [
+            'date' => '2026-07-13',
+            'minutes' => 45,
+            'movement_type' => 'ADJUSTMENT',
+            'reason' => 'Correcting under-counted balance',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('date', $response->json('errors'));
+    }
+
+    #[Test]
+    public function rejects_movement_for_a_terminated_employee_whose_covering_period_is_inactive(): void
+    {
+        // The employment period covering the target date has already been closed out
+        // by termination (is_active=false, end_date set) — the guard must still apply.
+        $period = EmploymentPeriod::factory()->create([
+            'is_active' => false,
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-07-15',
+            'termination_type' => 'resignation',
+        ]);
+        $employee = $period->employee;
+
+        PayPeriod::create([
+            'branch_id' => $period->branch_id,
+            'period_start' => '2026-07-12',
+            'period_end' => '2026-07-18',
+            'status' => PayPeriod::STATUS_CLOSED,
+        ]);
+
+        $response = $this->postJson($this->endpoint($employee), [
+            'date' => '2026-07-13',
+            'minutes' => 45,
+            'movement_type' => 'ADJUSTMENT',
+            'reason' => 'Settling final pay for terminated employee',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertArrayHasKey('date', $response->json('errors'));
     }
 
     #[Test]
