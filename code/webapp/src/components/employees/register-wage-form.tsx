@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { Loader2, Info, AlertCircle } from 'lucide-react'
 import { useCreateWage } from '@/services/employee-hooks'
 import { InfoTooltip } from '@/components/ui/info-tooltip'
@@ -64,10 +65,10 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
                     <div className="grid grid-cols-3 gap-3">
                         {/* Input Bruto Semanal */}
                         <div className="space-y-1">
-                            <label className="block text-sm font-medium flex items-center gap-1">
+                            <Label className="block flex items-center gap-1">
                                 Bruto semanal
                                 <InfoTooltip text="Salario antes de deducciones (IMSS e ISR). Incluye el día de descanso semanal." />
-                            </label>
+                            </Label>
                             <input
                                 type="number"
                                 step="0.001"
@@ -85,10 +86,10 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
 
                         {/* Input Salario Diario */}
                         <div className="space-y-1">
-                            <label className="block text-sm font-medium flex items-center gap-1">
+                            <Label className="block flex items-center gap-1">
                                 Salario diario
                                 <InfoTooltip text="Salario bruto dividido entre 7 días. Base para cálculos de IMSS, prestaciones e incidencias." />
-                            </label>
+                            </Label>
                             <input
                                 type="number"
                                 step="0.001"
@@ -106,10 +107,10 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
 
                         {/* Input Neto Semanal */}
                         <div className="space-y-1">
-                            <label className="block text-sm font-medium flex items-center gap-1">
+                            <Label className="block flex items-center gap-1">
                                 Neto semanal
                                 <InfoTooltip text="Lo que el trabajador recibirá en mano después de descuentos de IMSS e ISR." />
-                            </label>
+                            </Label>
                             <input
                                 type="number"
                                 step="0.001"
@@ -137,10 +138,10 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
 
                     {/* Jornada semanal (horas) */}
                     <div className="space-y-1">
-                        <label className="block text-sm font-medium flex items-center gap-1">
+                        <Label className="block flex items-center gap-1">
                             Jornada semanal (horas)
                             <InfoTooltip text="Horas que el colaborador tiene programadas por semana. Se usan para calcular la tarifa por hora y prorratear incidencias como faltas o retardos." />
-                        </label>
+                        </Label>
                         <input
                             type="number"
                             min="1"
@@ -165,10 +166,10 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
 
                     {/* Tarifa por hora (referencia) */}
                     <div className="space-y-1">
-                        <label className="block text-sm font-medium flex items-center gap-1">
+                        <Label className="block flex items-center gap-1">
                             Tarifa por hora (referencia)
                             <InfoTooltip text="No es el salario formal. Solo se usa internamente para calcular descuentos o pagos proporcionales por incidencias de asistencia." />
-                        </label>
+                        </Label>
                         <input
                             type="number"
                             step="0.001"
@@ -199,7 +200,7 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
 
                     {/* Fecha de inicio */}
                     <div className="space-y-1">
-                        <label className="block text-sm font-medium">Fecha de inicio</label>
+                        <Label className="block">Fecha de inicio</Label>
                         <input
                             type="date"
                             value={formData.effective_from}
@@ -217,7 +218,7 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
 
                     {/* Observaciones */}
                     <div className="space-y-1">
-                        <label className="block text-sm font-medium">Observaciones (opcional)</label>
+                        <Label className="block">Observaciones (opcional)</Label>
                         <textarea
                             value={formData.notes || ''}
                             onChange={(e) => handleNotesChange(e.target.value)}

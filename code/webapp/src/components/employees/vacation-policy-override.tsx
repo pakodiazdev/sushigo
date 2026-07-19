@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   VacationPolicyTiersEditor,
   type VacationPolicyTiersFormValues,
@@ -22,10 +23,10 @@ export function VacationPolicyOverride({ employee }: VacationPolicyOverrideProps
 
   return (
     <div className="space-y-3 rounded-lg border border-border p-4">
-      <label className="flex items-center gap-2 text-sm font-medium">
+      <Label className="flex items-center gap-2">
         <input type="checkbox" {...register('enabled')} />{' '}
         Política contractual
-      </label>
+      </Label>
       <p className="text-xs text-muted-foreground">
         Activa para otorgar a este empleado un derecho vacacional distinto al de la política de la
         empresa, tomando precedencia sobre ella.

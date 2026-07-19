@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom'
 import { X, Zap, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { ScheduleDayOverride } from '@/types/schedule'
 import type { OverrideScope } from './use-create-day-override'
 import { useOverrideScopeDialog } from './use-override-scope-dialog'
@@ -97,16 +98,16 @@ export function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, is
               </fieldset>
 
               <div className="space-y-2">
-                <label htmlFor="scope-effective-from" className="block text-xs font-medium">
+                <Label htmlFor="scope-effective-from" className="block text-xs">
                   {dateLabel}<span className="ml-0.5 text-red-500">*</span>
-                </label>
+                </Label>
                 <Input id="scope-effective-from" type="date" min={today} {...register('effectiveFrom')} />
                 {errors.effectiveFrom && <p className="text-[10px] text-red-600">{errors.effectiveFrom.message}</p>}
               </div>
 
               {scope === 'range' && (
                 <div className="space-y-2">
-                  <label htmlFor="scope-effective-to" className="block text-xs font-medium">Hasta<span className="ml-0.5 text-red-500">*</span></label>
+                  <Label htmlFor="scope-effective-to" className="block text-xs">Hasta<span className="ml-0.5 text-red-500">*</span></Label>
                   <Input id="scope-effective-to" type="date" min={effectiveFrom || today} {...register('effectiveTo')} />
                   {errors.effectiveTo && <p className="text-[10px] text-red-600">{errors.effectiveTo.message}</p>}
                 </div>

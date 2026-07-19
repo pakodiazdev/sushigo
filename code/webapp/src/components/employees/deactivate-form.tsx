@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
 import { useDeactivateForm } from './use-deactivate-form'
 import type { DeactivateFormValues } from './use-deactivate-form'
@@ -34,7 +35,7 @@ export function DeactivateForm({ isLoading, onSubmit, onCancel }: DeactivateForm
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Fecha de baja */}
         <div className="space-y-1">
-          <label className="block text-sm font-medium">Fecha de baja</label>
+          <Label className="block">Fecha de baja</Label>
           <input
             type="date"
             max={today}
@@ -48,7 +49,7 @@ export function DeactivateForm({ isLoading, onSubmit, onCancel }: DeactivateForm
 
         {/* Motivo */}
         <div className="space-y-1">
-          <label className="block text-sm font-medium">Motivo (opcional)</label>
+          <Label className="block">Motivo (opcional)</Label>
           <textarea
             {...register('termination_reason')}
             placeholder="Renuncia voluntaria, despido, etc."
