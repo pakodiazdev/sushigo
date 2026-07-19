@@ -14,7 +14,7 @@ Como desarrollador frontend, necesito que los `<label>` restantes sin color de t
 
 ## 🧠 Context
 
-Issue #248 created the centralized `Label` component and migrated `OvertimeDecisionDialog.tsx` as the reference example, deliberately scoping out the rest of the codebase. A full repo scan (`grep -rn "<label" src`) found 89 `<label>` usages total. Of those, 17 across 10 files have no explicit text color at all — the exact same bug class fixed in #248, currently only "working" because none of them happen to sit inside a native `<dialog>` yet.
+Issue #248 created the centralized `Label` component and migrated `OvertimeDecisionDialog.tsx` as the reference example, deliberately scoping out the rest of the codebase. A full repo scan (`grep -rn "<label" src`) found 89 `<label>` usages total. Of those, 21 across 10 files have no explicit text color at all — the exact same bug class fixed in #248, currently only "working" because none of them happen to sit inside a native `<dialog>` yet.
 
 This issue covers only that highest-risk subset. Two other groups were found and are explicitly out of scope here:
 - Labels that already set `text-foreground`/`text-muted-foreground` (lower urgency, consistency-only)
@@ -44,7 +44,7 @@ This issue covers only that highest-risk subset. Two other groups were found and
 
 ## 🎯 Acceptance Criteria
 
-- [ ] All 17 listed `<label>` usages render via the centralized `Label` component instead of hand-written `className="text-sm font-medium"` (or equivalent color-less variants)
+- [ ] All 21 listed `<label>` usages render via the centralized `Label` component instead of hand-written `className="text-sm font-medium"` (or equivalent color-less variants)
 - [ ] No visual regression — labels keep their existing layout classes (`block`, `flex items-center gap-1`, etc.) via `className` passthrough
 - [ ] Existing Vitest/Cypress suites for the touched forms still pass
 
