@@ -2,13 +2,12 @@
 
 namespace App\Http\Requests\Attendances;
 
-use App\Enums\OvertimeValuationMethod;
+use App\Http\Requests\Concerns\ValidatesOvertimeDecisionFields;
 use App\Models\Attendance;
 use App\Support\Clock\ApplicationClock;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rule;
 
 /**
  * Validate the bulk overtime authorization/rejection payload.
@@ -70,6 +69,8 @@ use Illuminate\Validation\Rule;
  */
 class BulkOvertimeDecisionRequest extends FormRequest
 {
+    use ValidatesOvertimeDecisionFields;
+
     public function __construct(private readonly ApplicationClock $clock)
     {
         parent::__construct();
@@ -102,10 +103,7 @@ class BulkOvertimeDecisionRequest extends FormRequest
         return [
             'attendance_ids' => ['required', 'array', 'min:1'],
             'attendance_ids.*' => ['required', 'string', 'distinct', 'exists:attendances,public_id'],
-            'authorize' => ['required', 'boolean'],
-            'valuation_method' => ['nullable', 'required_if:authorize,true', Rule::enum(OvertimeValuationMethod::class)],
-            'agreed_rate' => ['nullable', 'required_if:valuation_method,AGREED_RATE', 'numeric', 'gt:0'],
-            'agreed_factor' => ['nullable', 'required_if:valuation_method,SALARY_FACTOR', 'numeric', 'gt:0'],
+            ...$this->overtimeDecisionRules(),
             'reason' => $this->reasonRules(),
         ];
     }
@@ -120,11 +118,7 @@ class BulkOvertimeDecisionRequest extends FormRequest
             'attendance_ids.min' => 'Debes seleccionar al menos un empleado.',
             'attendance_ids.*.distinct' => 'No se puede repetir el mismo empleado en el lote.',
             'attendance_ids.*.exists' => 'Uno de los registros de asistencia no existe.',
-            'authorize.required' => 'La decisión sobre horas extra es requerida.',
-            'authorize.boolean' => 'La decisión debe ser verdadero o falso.',
-            'valuation_method.required_if' => 'El método de valoración es requerido al autorizar el pago.',
-            'agreed_rate.required_if' => 'La tarifa pactada es requerida cuando el método es Tarifa Pactada.',
-            'agreed_factor.required_if' => 'El factor es requerido cuando el método es Factor sobre Salario.',
+            ...$this->overtimeDecisionMessages(),
             'reason.required' => 'Se requiere un motivo para editar registros de días anteriores.',
         ];
     }

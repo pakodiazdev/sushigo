@@ -56,17 +56,28 @@ interface OvertimeDialogState {
   onClose: () => void
 }
 
+interface ResolveOvertimeDialogArgs {
+  individual: PendingAttendanceData | null
+  bulk: OvertimePendingEntry | null
+  individualMinutes: number
+  bulkQueueLength: number
+  confirmIndividual: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void
+  closeIndividual: () => void
+  confirmBulk: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number, applyToRest?: boolean) => void
+  closeBulk: () => void
+}
+
 /** Resolve overtime dialog props — individual flow takes priority over bulk queue. */
-function resolveOvertimeDialog(
-  individual: PendingAttendanceData | null,
-  bulk: OvertimePendingEntry | null,
-  individualMinutes: number,
-  bulkQueueLength: number,
-  confirmIndividual: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number) => void,
-  closeIndividual: () => void,
-  confirmBulk: (auth: boolean, method?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number, applyToRest?: boolean) => void,
-  closeBulk: () => void,
-): OvertimeDialogState {
+function resolveOvertimeDialog({
+  individual,
+  bulk,
+  individualMinutes,
+  bulkQueueLength,
+  confirmIndividual,
+  closeIndividual,
+  confirmBulk,
+  closeBulk,
+}: ResolveOvertimeDialogArgs): OvertimeDialogState {
   if (individual) {
     return {
       isOpen: true,
@@ -170,16 +181,16 @@ export function AttendancePage() {
     }
   }, [overtimePending, enqueueBulkOvertime, clearOvertimePending])
 
-  const overtimeDialog = resolveOvertimeDialog(
-    pendingOvertimeDecision,
-    currentBulkOvertime,
-    pendingOvertimeMinutes,
-    bulkOvertimeQueueLength,
-    confirmOvertimeDecision,
-    closeOvertimeDecision,
-    confirmBulkOvertimeDecision,
-    closeBulkOvertimeDecision,
-  )
+  const overtimeDialog = resolveOvertimeDialog({
+    individual: pendingOvertimeDecision,
+    bulk: currentBulkOvertime,
+    individualMinutes: pendingOvertimeMinutes,
+    bulkQueueLength: bulkOvertimeQueueLength,
+    confirmIndividual: confirmOvertimeDecision,
+    closeIndividual: closeOvertimeDecision,
+    confirmBulk: confirmBulkOvertimeDecision,
+    closeBulk: closeBulkOvertimeDecision,
+  })
 
   if (!hasBranch) {
     return (

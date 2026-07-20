@@ -2,8 +2,7 @@
 
 namespace App\Http\Requests\Attendances;
 
-use App\Enums\OvertimeValuationMethod;
-use Illuminate\Validation\Rule;
+use App\Http\Requests\Concerns\ValidatesOvertimeDecisionFields;
 
 /**
  * Validate the overtime authorization/rejection payload.
@@ -52,13 +51,12 @@ use Illuminate\Validation\Rule;
  */
 class OvertimeDecisionRequest extends AttendanceFormRequest
 {
+    use ValidatesOvertimeDecisionFields;
+
     public function rules(): array
     {
         return [
-            'authorize' => ['required', 'boolean'],
-            'valuation_method' => ['nullable', 'required_if:authorize,true', Rule::enum(OvertimeValuationMethod::class)],
-            'agreed_rate' => ['nullable', 'required_if:valuation_method,AGREED_RATE', 'numeric', 'gt:0'],
-            'agreed_factor' => ['nullable', 'required_if:valuation_method,SALARY_FACTOR', 'numeric', 'gt:0'],
+            ...$this->overtimeDecisionRules(),
             'reason' => $this->reasonRules(),
         ];
     }
@@ -66,11 +64,7 @@ class OvertimeDecisionRequest extends AttendanceFormRequest
     public function messages(): array
     {
         return [
-            'authorize.required' => 'La decisión sobre horas extra es requerida.',
-            'authorize.boolean' => 'La decisión debe ser verdadero o falso.',
-            'valuation_method.required_if' => 'El método de valoración es requerido al autorizar el pago.',
-            'agreed_rate.required_if' => 'La tarifa pactada es requerida cuando el método es Tarifa Pactada.',
-            'agreed_factor.required_if' => 'El factor es requerido cuando el método es Factor sobre Salario.',
+            ...$this->overtimeDecisionMessages(),
             'reason.required' => 'Se requiere un motivo para editar registros de días anteriores.',
         ];
     }
