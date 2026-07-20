@@ -165,7 +165,7 @@ describe("Close day with overtime — decision queue after bulk close", () => {
     // First employee's dialog — with 2 entries in the queue, the checkbox offers
     // to apply the same decision to the other 1 employee left.
     cy.contains("Decisión de horas extra", { timeout: 10_000 }).should("be.visible");
-    cy.contains("Aplicar para el resto (1 empleados)").should("be.visible");
+    cy.contains("Aplicar para el resto (1 empleado)").should("be.visible");
 
     cy.get("[data-testid='checkbox-apply-to-rest']").check({ force: true });
     cy.get("[data-testid='btn-reject-overtime']").click();

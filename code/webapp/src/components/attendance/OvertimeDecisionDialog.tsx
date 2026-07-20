@@ -78,6 +78,7 @@ export function OvertimeDecisionDialog({
   const { register, handleSubmit, watch, formState: { errors } } = form
   const selectedMethod = watch('valuation_method')
   const showApplyToRest = (remainingCount ?? 0) > 1
+  const restCount = (remainingCount ?? 1) - 1
 
   const applyToRestCheckbox = showApplyToRest ? (
     <label className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -89,7 +90,7 @@ export function OvertimeDecisionDialog({
         disabled={isLoading}
         className="mt-0.5"
       />
-      <span>Aplicar para el resto ({(remainingCount ?? 1) - 1} empleados)</span>
+      <span>Aplicar para el resto ({restCount} {restCount === 1 ? 'empleado' : 'empleados'})</span>
     </label>
   ) : null
 

@@ -297,6 +297,11 @@ describe('OvertimeDecisionDialog — apply to rest (bulk flow)', () => {
     expect(getByText(/3 empleados/)).toBeDefined()
   })
 
+  it('uses singular "empleado" when only one other entry remains in the queue', () => {
+    const { getByText } = render(<OvertimeDecisionDialog {...defaultProps} remainingCount={2} />)
+    expect(getByText('Aplicar para el resto (1 empleado)')).toBeDefined()
+  })
+
   it('renders the checkbox on the method step when remainingCount is greater than 1', () => {
     const { getByTestId } = render(<OvertimeDecisionDialog {...defaultProps} remainingCount={3} />)
     fireEvent.click(getByTestId('btn-authorize-overtime'))

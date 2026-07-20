@@ -88,9 +88,11 @@ class BulkOvertimeDecisionApiTest extends TestCase
             ->assertJsonPath('data.results.0.attendance_id', $a1->public_id)
             ->assertJsonPath('data.results.0.success', true)
             ->assertJsonPath('data.results.0.attendance.overtime_authorized', true)
+            ->assertJsonPath('data.results.0.error', null)
             ->assertJsonPath('data.results.1.attendance_id', $a2->public_id)
             ->assertJsonPath('data.results.1.success', true)
-            ->assertJsonPath('data.results.1.attendance.overtime_authorized', true);
+            ->assertJsonPath('data.results.1.attendance.overtime_authorized', true)
+            ->assertJsonPath('data.results.1.error', null);
 
         $a1->refresh();
         $a2->refresh();
@@ -145,6 +147,7 @@ class BulkOvertimeDecisionApiTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('data.results.0.attendance_id', $decided->public_id)
             ->assertJsonPath('data.results.0.success', false)
+            ->assertJsonPath('data.results.0.attendance', null)
             ->assertJsonPath('data.results.1.attendance_id', $pending->public_id)
             ->assertJsonPath('data.results.1.success', true);
 
@@ -221,6 +224,16 @@ class BulkOvertimeDecisionApiTest extends TestCase
     {
         $this->postJson('/api/v1/attendances/overtime-decisions/bulk', [
             'attendance_ids' => [],
+            'authorize' => false,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['attendance_ids']);
+    }
+
+    #[Test]
+    public function returns_422_instead_of_500_when_attendance_ids_is_not_an_array(): void
+    {
+        $this->postJson('/api/v1/attendances/overtime-decisions/bulk', [
+            'attendance_ids' => 'not-an-array',
             'authorize' => false,
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['attendance_ids']);
