@@ -171,7 +171,7 @@ export function useBulkOvertimeDecision() {
       }
 
       showError(
-        failed.map(r => `${r.attendance_id}: ${r.error ?? 'Error desconocido'}`).join(' '),
+        failed.map(r => `${r.employee_name}: ${r.error ?? 'Error desconocido'}`).join(' '),
         'Algunos registros no se pudieron actualizar'
       )
     },

@@ -20,6 +20,7 @@ export type BulkOvertimeDecisionPayload = { attendance_ids: string[] } & Overtim
 
 export interface BulkOvertimeDecisionResult {
   attendance_id: string
+  employee_name: string
   success: boolean
   attendance: AttendanceRecord | null
   error: string | null
