@@ -24,29 +24,29 @@ When many employees end up with the same decision (e.g. everyone gets paid at th
 
 ## ✅ Backend Tasks
 
-- [ ] 🔧 Add a bulk endpoint, e.g. `POST /api/v1/attendances/overtime-decisions/bulk`, via a new `BulkOvertimeDecisionController` + `BulkOvertimeDecisionRequest` — accepts `attendance_ids: string[]` (ULIDs) plus the same decision fields as `OvertimeDecisionRequest` (`authorize`, `valuation_method`, `agreed_rate`, `agreed_factor`, `reason`)
-- [ ] 🔧 Add `RecordBulkOvertimeDecisionAction` that applies `RecordOvertimeDecisionAction` per attendance, keeping each attendance's own DB transaction and the existing per-employee `lockForUpdate()` for `LFT_PROPORTIONAL`, so one failed/already-decided item doesn't abort the rest of the batch
-- [ ] 📤 Response reports a per-attendance result (success + updated attendance, or the validation error) rather than all-or-nothing, so the frontend can show which employees (if any) failed
-- [ ] 🧪 Feature tests: full batch success, a batch where one attendance was already decided by another manager (partial success, rest still applied), unauthorized access, and `LFT_PROPORTIONAL` across multiple employees in the same batch
-- [ ] 📝 Swagger schema for the new endpoint request/response
+- [x] 🔧 Add a bulk endpoint, e.g. `POST /api/v1/attendances/overtime-decisions/bulk`, via a new `BulkOvertimeDecisionController` + `BulkOvertimeDecisionRequest` — accepts `attendance_ids: string[]` (ULIDs) plus the same decision fields as `OvertimeDecisionRequest` (`authorize`, `valuation_method`, `agreed_rate`, `agreed_factor`, `reason`)
+- [x] 🔧 Add `RecordBulkOvertimeDecisionAction` that applies `RecordOvertimeDecisionAction` per attendance, keeping each attendance's own DB transaction and the existing per-employee `lockForUpdate()` for `LFT_PROPORTIONAL`, so one failed/already-decided item doesn't abort the rest of the batch
+- [x] 📤 Response reports a per-attendance result (success + updated attendance, or the validation error) rather than all-or-nothing, so the frontend can show which employees (if any) failed
+- [x] 🧪 Feature tests: full batch success, a batch where one attendance was already decided by another manager (partial success, rest still applied), unauthorized access, and `LFT_PROPORTIONAL` across multiple employees in the same batch
+- [x] 📝 Swagger schema for the new endpoint request/response
 
 ## ✅ Frontend Tasks
 
-- [ ] 🔲 Add an "Aplicar para el resto (N empleados)" checkbox to `OvertimeDecisionDialog.tsx`, shown only when opened from the bulk flow and the queue has more than one remaining entry (not shown for the single/individual `pendingOvertimeDecision` flow)
-- [ ] 🔧 Extend `onAuthorize`/`onReject` (or add an `applyToRest: boolean` param) so the dialog reports the checkbox state alongside the decision
-- [ ] 🔁 In `-use-today-attendance-page.ts`, when `applyToRest` is true, call the new bulk endpoint once with every remaining `attendance_id` in `bulkOvertimeQueue` and the chosen `authorize`/`valuation_method`/`agreed_rate`/`agreed_factor`, instead of looping the single-decision mutation; clear the queue once the response comes back
-- [ ] 🎨 Surface any partial failures reported by the bulk response (e.g. toast listing employees that couldn't be updated) instead of silently dropping them
-- [ ] 🧪 Cover both paths: "Pagar" + valuation method + apply-to-rest, and "No pagar" + apply-to-rest
+- [x] 🔲 Add an "Aplicar para el resto (N empleados)" checkbox to `OvertimeDecisionDialog.tsx`, shown only when opened from the bulk flow and the queue has more than one remaining entry (not shown for the single/individual `pendingOvertimeDecision` flow)
+- [x] 🔧 Extend `onAuthorize`/`onReject` (or add an `applyToRest: boolean` param) so the dialog reports the checkbox state alongside the decision
+- [x] 🔁 In `-use-today-attendance-page.ts`, when `applyToRest` is true, call the new bulk endpoint once with every remaining `attendance_id` in `bulkOvertimeQueue` and the chosen `authorize`/`valuation_method`/`agreed_rate`/`agreed_factor`, instead of looping the single-decision mutation; clear the queue once the response comes back
+- [x] 🎨 Surface any partial failures reported by the bulk response (e.g. toast listing employees that couldn't be updated) instead of silently dropping them
+- [x] 🧪 Cover both paths: "Pagar" + valuation method + apply-to-rest, and "No pagar" + apply-to-rest
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] The "Aplicar para el resto" checkbox only appears in the bulk (day-close) flow, and only when there's more than one pending entry left
-- [ ] Checking it and confirming sends a single batch request that applies the exact same decision to every remaining employee in the queue, without showing further dialogs
-- [ ] Leaving it unchecked preserves current behavior — one dialog and one request per employee
-- [ ] Works from both the initial "¿Se pagan?" step (No pagar) and the "Método de valoración" step (Pagar)
-- [ ] A partial failure in the batch (e.g. an attendance already decided concurrently) is reported to the admin and doesn't block the rest of the batch from being applied
+- [x] The "Aplicar para el resto" checkbox only appears in the bulk (day-close) flow, and only when there's more than one pending entry left
+- [x] Checking it and confirming sends a single batch request that applies the exact same decision to every remaining employee in the queue, without showing further dialogs
+- [x] Leaving it unchecked preserves current behavior — one dialog and one request per employee
+- [x] Works from both the initial "¿Se pagan?" step (No pagar) and the "Método de valoración" step (Pagar)
+- [x] A partial failure in the batch (e.g. an attendance already decided concurrently) is reported to the admin and doesn't block the rest of the batch from being applied
 
 ---
 
@@ -60,11 +60,22 @@ When many employees end up with the same decision (e.g. everyone gets paid at th
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `5h` · **Pessimistic:** `9h` · **Tracked:** `~1h`
+- **Optimistic:** `5h` · **Pessimistic:** `9h` · **Tracked:** `4h 5m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-18", "start": "17:34", "end": "18:29" }
+  { "date": "2026-07-18", "start": "17:34", "end": "18:29" },
+  { "date": "2026-07-19", "start": "19:15", "end": "21:45" },
+  { "date": "2026-07-20", "start": "16:15", "end": "16:55" }
 ]
 ```
+
+## 📊 Retrospective
+- **Actual total:** 4h 5m (55m + 150m + 40m)
+- **vs optimistic:** −55m
+- **vs pessimistic:** −4h 35m
+
+**Justification:**
+
+The original scope (bulk endpoint + action, dialog checkbox, hook wiring, and the Cypress happy path) landed in the first session, close to the optimistic estimate. The second session covered unplanned rework surfaced during PR review: addressing reviewer comments on the bulk decision flow, and tightening validation to require a `reason` when applying a past-day decision in bulk (parity with the single-decision endpoint's audit trail), plus a follow-up SonarCloud quality-gate cleanup across `api` and `webapp`. The third session was administrative — rebasing the branch onto an updated `main` (10 upstream commits) and force-pushing to close out the task. None of this changed the original design; it was review-driven hardening, so the task still closed comfortably under both bounds.
