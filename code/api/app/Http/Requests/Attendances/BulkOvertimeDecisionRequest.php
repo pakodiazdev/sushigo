@@ -73,9 +73,15 @@ class BulkOvertimeDecisionRequest extends FormRequest
 
     public function authorize(): bool
     {
+        $ids = $this->input('attendance_ids');
+
+        if (! is_array($ids)) {
+            return true; // wrong type — let the 'array' validation rule report it as 422
+        }
+
         $attendances = $this->resolveAttendances();
 
-        if ($attendances->count() !== count($this->input('attendance_ids', []))) {
+        if ($attendances->count() !== count($ids)) {
             return true; // some IDs don't exist — let validation report it as 422
         }
 

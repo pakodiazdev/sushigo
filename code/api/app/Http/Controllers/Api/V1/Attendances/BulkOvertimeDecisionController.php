@@ -69,10 +69,8 @@ class BulkOvertimeDecisionController extends Controller
         $results = ($this->action)($attendances, $request->decisionData(), $request->user());
 
         $results = array_map(function (array $result) {
-            if ($result['success']) {
+            if ($result['attendance'] !== null) {
                 $result['attendance'] = new AttendanceResource($result['attendance']);
-            } else {
-                $result['attendance'] = null;
             }
 
             return $result;
