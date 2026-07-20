@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Composer dependencies
         if: steps.changes.outputs.api == 'true'
-        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts --ignore-platform-req=php
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
 
       - name: Copy .env and generate app key
         if: steps.changes.outputs.api == 'true'
