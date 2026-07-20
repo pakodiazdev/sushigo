@@ -220,8 +220,8 @@ const mockBulkResponse = {
     status: 200,
     data: {
       results: [
-        { attendance_id: 'att-1', success: true, attendance: { id: 'att-1' }, error: null },
-        { attendance_id: 'att-2', success: true, attendance: { id: 'att-2' }, error: null },
+        { attendance_id: 'att-1', employee_name: 'Carlos Mendoza', success: true, attendance: { id: 'att-1' }, error: null },
+        { attendance_id: 'att-2', employee_name: 'María García', success: true, attendance: { id: 'att-2' }, error: null },
       ],
     },
   },
@@ -291,8 +291,8 @@ describe('useBulkOvertimeDecision', () => {
         status: 200,
         data: {
           results: [
-            { attendance_id: 'att-1', success: true, attendance: { id: 'att-1' }, error: null },
-            { attendance_id: 'att-2', success: false, attendance: null, error: 'Ya se registró una decisión.' },
+            { attendance_id: 'att-1', employee_name: 'Carlos Mendoza', success: true, attendance: { id: 'att-1' }, error: null },
+            { attendance_id: 'att-2', employee_name: 'María García', success: false, attendance: null, error: 'Ya se registró una decisión.' },
           ],
         },
       },
@@ -305,7 +305,7 @@ describe('useBulkOvertimeDecision', () => {
     })
 
     expect(mockShowError).toHaveBeenCalledWith(
-      expect.stringContaining('Ya se registró una decisión.'),
+      expect.stringContaining('María García: Ya se registró una decisión.'),
       'Algunos registros no se pudieron actualizar'
     )
   })

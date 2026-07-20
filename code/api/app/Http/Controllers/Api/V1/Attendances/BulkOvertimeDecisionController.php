@@ -44,6 +44,7 @@ use App\Http\Responses\Common\ResponseEntity;
  *                         type="object",
  *
  *                         @OA\Property(property="attendance_id", type="string", example="01JN4Z8RFPQRSTUV0WXYZ12345"),
+ *                         @OA\Property(property="employee_name", type="string", example="Ana López"),
  *                         @OA\Property(property="success", type="boolean", example=true),
  *                         @OA\Property(property="attendance", ref="#/components/schemas/AttendanceResponse", nullable=true),
  *                         @OA\Property(property="error", type="string", nullable=true, example="Ya se registró una decisión sobre las horas extra de este empleado.")

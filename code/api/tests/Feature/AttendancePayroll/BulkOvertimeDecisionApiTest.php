@@ -122,6 +122,24 @@ class BulkOvertimeDecisionApiTest extends TestCase
         $this->assertFalse($a2->overtime_authorized);
     }
 
+    #[Test]
+    public function each_result_includes_the_employee_name_for_success_and_failure(): void
+    {
+        $employee = Employee::factory()->create(['first_name' => 'Ana', 'last_name' => 'López']);
+        $attendance = Attendance::factory()->withOvertime(30)->create([
+            'employee_id' => $employee->id,
+            'date' => '2026-02-23',
+        ]);
+
+        $response = $this->postJson('/api/v1/attendances/overtime-decisions/bulk', [
+            'attendance_ids' => [$attendance->public_id],
+            'authorize' => false,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.results.0.employee_name', 'Ana López');
+    }
+
     // #endregion
 
     // #region Partial success
@@ -284,6 +302,60 @@ class BulkOvertimeDecisionApiTest extends TestCase
             'authorize' => true,
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['valuation_method']);
+    }
+
+    // #endregion
+
+    // #region Past-day reason requirement (mirrors the single-decision endpoint)
+
+    #[Test]
+    public function returns_422_when_admin_decides_a_past_day_attendance_without_a_reason(): void
+    {
+        $attendance = Attendance::factory()->withOvertime(30)->create(['date' => '2026-02-20']);
+
+        $this->postJson('/api/v1/attendances/overtime-decisions/bulk', [
+            'attendance_ids' => [$attendance->public_id],
+            'authorize' => false,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['reason']);
+    }
+
+    #[Test]
+    public function returns_422_when_batch_mixes_today_and_past_day_attendances_without_a_reason(): void
+    {
+        $today = Attendance::factory()->withOvertime(30)->create(['date' => '2026-02-23']);
+        $pastDay = Attendance::factory()->withOvertime(30)->create(['date' => '2026-02-20']);
+
+        $this->postJson('/api/v1/attendances/overtime-decisions/bulk', [
+            'attendance_ids' => [$today->public_id, $pastDay->public_id],
+            'authorize' => false,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['reason']);
+    }
+
+    #[Test]
+    public function admin_can_decide_a_past_day_attendance_when_a_reason_is_supplied(): void
+    {
+        $attendance = Attendance::factory()->withOvertime(30)->create(['date' => '2026-02-20']);
+
+        $this->postJson('/api/v1/attendances/overtime-decisions/bulk', [
+            'attendance_ids' => [$attendance->public_id],
+            'authorize' => false,
+            'reason' => 'Autorización retroactiva aprobada por gerencia',
+        ])->assertStatus(200)
+            ->assertJsonPath('data.results.0.success', true);
+    }
+
+    #[Test]
+    public function admin_does_not_need_a_reason_when_every_attendance_is_from_today(): void
+    {
+        $attendance = Attendance::factory()->withOvertime(30)->create(['date' => '2026-02-23']);
+
+        $this->postJson('/api/v1/attendances/overtime-decisions/bulk', [
+            'attendance_ids' => [$attendance->public_id],
+            'authorize' => false,
+        ])->assertStatus(200)
+            ->assertJsonPath('data.results.0.success', true);
     }
 
     // #endregion

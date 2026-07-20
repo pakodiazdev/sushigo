@@ -4,6 +4,7 @@ namespace App\Http\Requests\Attendances;
 
 use App\Enums\OvertimeValuationMethod;
 use App\Models\Attendance;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -63,12 +64,17 @@ use Illuminate\Validation\Rule;
  *         property="reason",
  *         type="string",
  *         example="Autorización retroactiva aprobada por gerencia",
- *         description="Optional reason recorded on every attendance's audit entry."
+ *         description="Required when an Admin decides overtime for any past-day attendance in the batch. Recorded on every attendance's audit entry."
  *     )
  * )
  */
 class BulkOvertimeDecisionRequest extends FormRequest
 {
+    public function __construct(private readonly ApplicationClock $clock)
+    {
+        parent::__construct();
+    }
+
     private ?Collection $resolvedAttendances = null;
 
     public function authorize(): bool
@@ -100,7 +106,7 @@ class BulkOvertimeDecisionRequest extends FormRequest
             'valuation_method' => ['nullable', 'required_if:authorize,true', Rule::enum(OvertimeValuationMethod::class)],
             'agreed_rate' => ['nullable', 'required_if:valuation_method,AGREED_RATE', 'numeric', 'gt:0'],
             'agreed_factor' => ['nullable', 'required_if:valuation_method,SALARY_FACTOR', 'numeric', 'gt:0'],
-            'reason' => ['nullable', 'string', 'max:500'],
+            'reason' => $this->reasonRules(),
         ];
     }
 
@@ -119,7 +125,34 @@ class BulkOvertimeDecisionRequest extends FormRequest
             'valuation_method.required_if' => 'El método de valoración es requerido al autorizar el pago.',
             'agreed_rate.required_if' => 'La tarifa pactada es requerida cuando el método es Tarifa Pactada.',
             'agreed_factor.required_if' => 'El factor es requerido cuando el método es Factor sobre Salario.',
+            'reason.required' => 'Se requiere un motivo para editar registros de días anteriores.',
         ];
+    }
+
+    /**
+     * Mirrors AttendanceFormRequest::reasonRules() for a batch: an admin deciding
+     * overtime for ANY past-day attendance in the batch must supply a reason,
+     * same as the single-decision endpoint. Managers never reach this — past-day
+     * attendances are already blocked earlier by AttendancePolicy::edit in authorize().
+     *
+     * @return array<int, string>
+     */
+    private function reasonRules(): array
+    {
+        $user = $this->user();
+        $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
+
+        if (! $isAdmin) {
+            return ['nullable', 'string', 'max:500'];
+        }
+
+        $today = $this->clock->todayInBusinessTz();
+        $hasPastDayAttendance = $this->resolveAttendances()
+            ->contains(fn (Attendance $attendance) => $attendance->date->toDateString() < $today);
+
+        return $hasPastDayAttendance
+            ? ['required', 'string', 'min:5', 'max:500']
+            : ['nullable', 'string', 'max:500'];
     }
 
     /**
@@ -130,11 +163,15 @@ class BulkOvertimeDecisionRequest extends FormRequest
     public function resolveAttendances(): Collection
     {
         if ($this->resolvedAttendances === null) {
-            $byId = Attendance::whereIn('public_id', $this->input('attendance_ids', []))
+            $ids = $this->input('attendance_ids');
+            $ids = is_array($ids) ? $ids : [];
+
+            $byId = Attendance::with('employee')
+                ->whereIn('public_id', $ids)
                 ->get()
                 ->keyBy('public_id');
 
-            $this->resolvedAttendances = collect($this->input('attendance_ids', []))
+            $this->resolvedAttendances = collect($ids)
                 ->map(fn (string $id) => $byId->get($id))
                 ->filter()
                 ->values();
