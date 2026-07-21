@@ -25,8 +25,8 @@ export type ManualOvertimeMovementFormValues = z.infer<typeof schema>
 export interface ManualOvertimeMovementEmployee {
   id: string
   user: {
-    first_name: string
-    last_name: string
+    first_name: string | null
+    last_name: string | null
   }
 }
 

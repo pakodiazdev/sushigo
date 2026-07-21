@@ -14,8 +14,8 @@ export type RegisterVacationRequestFormValues = z.infer<typeof schema>
 export interface RegisterVacationRequestEmployee {
   id: string
   user: {
-    first_name: string
-    last_name: string
+    first_name: string | null
+    last_name: string | null
   }
 }
 

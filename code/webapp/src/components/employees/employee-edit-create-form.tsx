@@ -140,8 +140,8 @@ export function EmployeeEditCreateForm({
       return {
         mode: 'edit',
         code: employee.code,
-        first_name: employee.user.first_name,
-        last_name: employee.user.last_name,
+        first_name: employee.user.first_name ?? '',
+        last_name: employee.user.last_name ?? '',
         // Only include roles the current user can assign (others are preserved server-side).
         roles: (employee.roles || []).filter((r) => assignableRoles.includes(r)),
         email: employee.user.email ?? '',
