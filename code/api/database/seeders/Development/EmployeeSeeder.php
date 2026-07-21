@@ -288,6 +288,6 @@ class EmployeeSeeder extends OnceSeeder
 
         $days = $from->diffInDays($to);
 
-        return $from->copy()->addDays(rand(0, $days));
+        return $from->copy()->addDays(random_int(0, $days));
     }
 }
