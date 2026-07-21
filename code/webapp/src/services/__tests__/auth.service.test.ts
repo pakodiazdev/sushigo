@@ -76,7 +76,8 @@ describe('authService', () => {
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const registerData = {
-                name: 'New User',
+                first_name: 'New',
+                last_name: 'User',
                 email: 'new@test.com',
                 password: 'password123',
                 password_confirmation: 'password123',
