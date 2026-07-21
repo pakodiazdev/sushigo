@@ -88,6 +88,13 @@ describe('Button', () => {
             expect(button.className).toContain('text-white')
         })
 
+        it('renders indigo variant', () => {
+            const { container } = render(<Button variant="indigo">Calcular</Button>)
+            const button = container.firstChild as HTMLElement
+            expect(button.className).toContain('bg-indigo-600')
+            expect(button.className).toContain('text-white')
+        })
+
         it('renders ghost-danger variant with dark-mode-safe red contrast', () => {
             const { container } = render(<Button variant="ghost-danger">Cancelar</Button>)
             const button = container.firstChild as HTMLElement
@@ -178,6 +185,12 @@ describe('Button', () => {
             const { container } = render(<Button type="submit">Submit</Button>)
             const button = container.firstChild as HTMLButtonElement
             expect(button.type).toBe('submit')
+        })
+
+        it('defaults type to "button" when not passed', () => {
+            const { container } = render(<Button>No Type</Button>)
+            const button = container.firstChild as HTMLButtonElement
+            expect(button.type).toBe('button')
         })
     })
 })

@@ -14,6 +14,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
         | "info"
         | "warning"
         | "success"
+        | "indigo"
         | "ghost"
         | "ghost-danger"
         | "link"
@@ -21,7 +22,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-    ({ className, variant = "default", size = "default", ...props }, ref) => {
+    ({ className, variant = "default", size = "default", type = "button", ...props }, ref) => {
         const variants = {
             default: "bg-primary text-primary-foreground hover:bg-primary/90",
             destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
@@ -38,6 +39,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             info: "bg-blue-600 text-white hover:bg-blue-700",
             warning: "bg-amber-600 text-white hover:bg-amber-700",
             success: "bg-green-600 text-white hover:bg-green-700",
+            indigo: "bg-indigo-600 text-white hover:bg-indigo-700",
             ghost: "hover:bg-accent hover:text-accent-foreground",
             "ghost-danger":
                 "text-red-400 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300",
@@ -60,6 +62,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                     className
                 )}
                 ref={ref}
+                type={type}
                 {...props}
             />
         )

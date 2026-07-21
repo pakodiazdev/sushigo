@@ -97,23 +97,15 @@ export function ClosedPeriodDetailPage() {
             <span className="text-sm text-gray-500">{payPeriod.total_employees} empleados</span>
 
             {isAdmin && payPeriod.status === 'CLOSED' && (
-              <button
-                type="button"
-                onClick={openReopenConfirm}
-                className="ml-auto rounded bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
-              >
+              <Button variant="warning" className="ml-auto" onClick={openReopenConfirm}>
                 Reabrir periodo
-              </button>
+              </Button>
             )}
 
             {isAdmin && payPeriod.status === 'REOPENED' && (
-              <button
-                type="button"
-                onClick={openRecloseConfirm}
-                className="ml-auto rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-              >
+              <Button variant="success" className="ml-auto" onClick={openRecloseConfirm}>
                 Volver a cerrar
-              </button>
+              </Button>
             )}
           </div>
 

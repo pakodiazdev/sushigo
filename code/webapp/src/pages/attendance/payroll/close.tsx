@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
+import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { NoBranchState } from '@/components/attendance'
 import { useClosePreviewPage } from './use-close-preview'
@@ -73,14 +74,9 @@ export function PayrollClosePage() {
             onChange={e => setPendingRange({ ...pendingRange, periodEnd: e.target.value })}
           />
         </div>
-        <button
-          type="button"
-          onClick={calculate}
-          disabled={isLoading}
-          className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <Button variant="indigo" onClick={calculate} disabled={isLoading}>
           {isLoading ? 'Calculando...' : 'Calcular preview'}
-        </button>
+        </Button>
       </div>
 
       {errorMessage && (
@@ -98,13 +94,9 @@ export function PayrollClosePage() {
           ))}
 
           <div className="flex justify-end pt-4">
-            <button
-              type="button"
-              onClick={openConfirm}
-              className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-            >
+            <Button variant="success" onClick={openConfirm}>
               Confirmar cierre
-            </button>
+            </Button>
           </div>
         </div>
       )}
