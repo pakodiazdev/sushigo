@@ -2,8 +2,8 @@ export function formatCurrency(value: number): string {
   return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
 }
 
-export function formatLastFirst(user: { first_name: string; last_name: string } | null | undefined): string {
-  return user ? `${user.last_name}, ${user.first_name}` : ''
+export function formatLastFirst(user: { first_name: string | null; last_name: string | null } | null | undefined): string {
+  return user ? `${user.last_name ?? ''}, ${user.first_name ?? ''}` : ''
 }
 
 export function formatDayLabel(dateStr: string, weekdayAndMonth: 'short' | 'long' = 'short'): string {

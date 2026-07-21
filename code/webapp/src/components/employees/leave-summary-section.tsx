@@ -216,7 +216,7 @@ function FullHistoryDialog({
 
 interface LeaveSummarySectionProps {
     readonly employeeId: string
-    readonly employee: { id: string; code: string; user: { first_name: string; last_name: string } } | undefined
+    readonly employee: { id: string; code: string; user: { first_name: string | null; last_name: string | null } } | undefined
 }
 
 export function LeaveSummarySection({ employeeId, employee }: LeaveSummarySectionProps) {
