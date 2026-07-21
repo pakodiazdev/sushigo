@@ -2,6 +2,10 @@ export function formatCurrency(value: number): string {
   return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
 }
 
+export function formatLastFirst(user: { first_name: string; last_name: string } | null | undefined): string {
+  return user ? `${user.last_name}, ${user.first_name}` : ''
+}
+
 export function formatDayLabel(dateStr: string, weekdayAndMonth: 'short' | 'long' = 'short'): string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const date = new Date(year!, month! - 1, day!)

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useEmployeeForm } from '@/components/employees/use-employee-form'
 import type { Employee } from '@/types/employee'
+import type { EmployeeFormValues } from '@/components/employees/employee-edit-create-form'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -230,5 +231,56 @@ describe('useEmployeeForm — handleToggleActive', () => {
     const { result } = renderHook(() => useEmployeeForm({ ...BASE_PARAMS, employee: null }))
     await act(async () => { await result.current.handleToggleActive() })
     expect(mockToggleActiveMutateAsync).not.toHaveBeenCalled()
+  })
+})
+
+describe('useEmployeeForm — handleFormSubmit (edit mode)', () => {
+  afterEach(() => { vi.clearAllMocks() })
+
+  const editValues: EmployeeFormValues = {
+    mode: 'edit',
+    first_name: 'Juan',
+    last_name: 'García',
+    roles: [],
+    attendance_exempt: false,
+    canEditContact: true,
+    hasBranch: true,
+    email: 'new@example.com',
+    phone: '5512345678',
+  }
+
+  it('sends email and phone when they differ from the linked user (admin)', async () => {
+    mockUpdateMutateAsync.mockResolvedValueOnce({})
+    const { result } = renderHook(() =>
+      useEmployeeForm({ ...BASE_PARAMS, employee: mockEmployee })
+    )
+    act(() => { result.current.setMode('edit') })
+
+    await act(async () => { await result.current.handleFormSubmit(editValues) })
+
+    expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
+      id: 'emp-1',
+      data: expect.objectContaining({ email: 'new@example.com', phone: '5512345678' }),
+    })
+  })
+
+  it('omits email and phone when unchanged from the linked user (admin)', async () => {
+    mockUpdateMutateAsync.mockResolvedValueOnce({})
+    const { result } = renderHook(() =>
+      useEmployeeForm({ ...BASE_PARAMS, employee: mockEmployee })
+    )
+    act(() => { result.current.setMode('edit') })
+
+    await act(async () => {
+      await result.current.handleFormSubmit({
+        ...editValues,
+        email: mockEmployee.user.email ?? '',
+        phone: mockEmployee.user.phone ?? '',
+      })
+    })
+
+    const sentData = mockUpdateMutateAsync.mock.calls[0]?.[0]?.data
+    expect(sentData).not.toHaveProperty('email')
+    expect(sentData).not.toHaveProperty('phone')
   })
 })
