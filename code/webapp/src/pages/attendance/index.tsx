@@ -28,6 +28,7 @@ import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
 import { useAuthStore } from '@/stores/auth.store'
 import { todayDateCdmx } from '@/lib/datetime'
 import { useBusinessDate } from '@/stores/clock.store'
+import { formatFirstLast, formatLastFirst } from '@/lib/format'
 import type { PendingAttendanceData } from './-use-today-attendance-page'
 import type { TodayAttendanceEmployee, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
 
@@ -36,13 +37,13 @@ import type { TodayAttendanceEmployee, OvertimePendingEntry, OvertimeValuationMe
 /** Full name from a check-in pending employee (direct TodayAttendanceEmployee). */
 function checkInName(employee: TodayAttendanceEmployee | null): string {
   if (!employee) return ''
-  return `${employee.user.first_name} ${employee.user.last_name}`
+  return formatFirstLast(employee.user)
 }
 
 /** Full name from a pending attendance action (has nested .employee). */
 function pendingName(pending: PendingAttendanceData | null): string {
   if (!pending) return ''
-  return `${pending.employee.user.first_name} ${pending.employee.user.last_name}`
+  return formatFirstLast(pending.employee.user)
 }
 
 interface OvertimeDialogState {
@@ -82,7 +83,7 @@ function resolveOvertimeDialog({
     return {
       isOpen: true,
       attendanceId: individual.attendanceId,
-      employeeName: `${individual.employee.user.first_name} ${individual.employee.user.last_name}`,
+      employeeName: formatFirstLast(individual.employee.user),
       overtimeMinutes: individualMinutes,
       onAuthorize: (method, agreedRate, agreedFactor) => confirmIndividual(true, method, agreedRate, agreedFactor),
       onReject: () => confirmIndividual(false),
@@ -260,11 +261,11 @@ export function AttendancePage() {
                 onOvertimeDecision={openOvertimeDecision}
                 onMarkDayStatus={markDayStatus}
                 onWeeklySummary={can('reports.weekly-summary')
-                  ? (emp) => weeklySummary.open(emp.id, `${emp.user.last_name}, ${emp.user.first_name}`)
+                  ? (emp) => weeklySummary.open(emp.id, formatLastFirst(emp.user))
                   : undefined}
                 onViewAudit={can('audit-logs.view')
                   ? (emp, attendanceId) => setAuditRecord({
-                    employeeName: `${emp.user.last_name}, ${emp.user.first_name}`,
+                    employeeName: formatLastFirst(emp.user),
                     attendanceId,
                   })
                   : undefined}

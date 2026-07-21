@@ -9,6 +9,7 @@ import { EmployeeForm, EmployeeFilters, getEmployeeColumns } from '@/components/
 import { WeeklySummaryPanel } from '@/components/attendance/WeeklySummaryPanel'
 import { AuditLogDialog } from '@/components/audit'
 import { useEmployeesSearch, type EmployeesSearch } from '@/hooks/use-employees-search'
+import { formatFirstLast, formatLastFirst } from '@/lib/format'
 import type { Employee } from '@/types/employee'
 
 export const Route = createFileRoute('/employees')({
@@ -41,7 +42,7 @@ export function EmployeesPage() {
 
   const columns = getEmployeeColumns(
     handleEditEmployee,
-    canOpenWeeklySummary ? (item) => weeklySummary.open(item.id, `${item.user.last_name}, ${item.user.first_name}`) : undefined,
+    canOpenWeeklySummary ? (item) => weeklySummary.open(item.id, formatLastFirst(item.user)) : undefined,
     canViewAuditLog ? setAuditEmployee : undefined,
   )
 
@@ -93,7 +94,7 @@ export function EmployeesPage() {
         <AuditLogDialog
           isOpen={!!auditEmployee}
           onClose={() => setAuditEmployee(null)}
-          title={`Auditoría — ${auditEmployee.user.first_name} ${auditEmployee.user.last_name}`}
+          title={`Auditoría — ${formatFirstLast(auditEmployee.user)}`}
           filters={{ employee_id: auditEmployee.id }}
         />
       )}

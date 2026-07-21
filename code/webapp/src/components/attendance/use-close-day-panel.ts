@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useCloseDay } from '@/services/attendance-hooks'
+import { formatFirstLast } from '@/lib/format'
 import { getAttendancePhase, formatTime } from '@/types/attendance'
 import type { TodayAttendanceRow, CloseDayLunchReturn, OvertimePendingEntry } from '@/types/attendance'
 
@@ -100,7 +101,7 @@ export function useCloseDayPanel(
 
       entries.push({
         attendanceId: row.attendance.id,
-        employeeName: `${row.employee.user.first_name} ${row.employee.user.last_name}`,
+        employeeName: formatFirstLast(row.employee.user),
         lunchStart,
         lunchStartDisplay: formatTime(lunchStart),
         preCalculatedReturn: preCalc,
@@ -134,7 +135,7 @@ export function useCloseDayPanel(
 
     for (const row of rows) {
       const phase = getAttendancePhase(row.attendance)
-      const name = `${row.employee.user.first_name} ${row.employee.user.last_name}`
+      const name = formatFirstLast(row.employee.user)
 
       if (phase === 'pending') {
         // No check_in → will be marked as ABSENCE

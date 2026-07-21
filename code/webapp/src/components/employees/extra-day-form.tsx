@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { FormField, Textarea } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { RestDayPicker } from '@/components/ui/rest-day-picker'
+import { formatFirstLast } from '@/lib/format'
 import { useExtraDayForm } from './use-extra-day-form'
 import type { Employee } from '@/types/employee'
 
@@ -18,7 +19,7 @@ function formatCurrency(value: number): string {
 }
 
 export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
-  const employeeName = `${employee.user.first_name} ${employee.user.last_name}`
+  const employeeName = formatFirstLast(employee.user)
 
   const {
     form,

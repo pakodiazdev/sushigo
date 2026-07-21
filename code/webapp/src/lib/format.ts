@@ -2,8 +2,18 @@ export function formatCurrency(value: number): string {
   return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
 }
 
-export function formatLastFirst(user: { first_name: string | null; last_name: string | null } | null | undefined): string {
-  return user ? `${user.last_name ?? ''}, ${user.first_name ?? ''}` : ''
+type NamedUser = { first_name: string | null; last_name: string | null } | null | undefined
+
+/** "Last, First" — omits the missing part instead of rendering "null" or a dangling comma. */
+export function formatLastFirst(user: NamedUser): string {
+  if (!user) return ''
+  return [user.last_name, user.first_name].filter(Boolean).join(', ')
+}
+
+/** "First Last" — omits the missing part instead of rendering "null". */
+export function formatFirstLast(user: NamedUser): string {
+  if (!user) return ''
+  return [user.first_name, user.last_name].filter(Boolean).join(' ')
 }
 
 export function formatDayLabel(dateStr: string, weekdayAndMonth: 'short' | 'long' = 'short'): string {

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { formatLastFirst } from '@/lib/format'
 import {
   useExtraDayNegotiationDialog,
   formatCurrency,
@@ -108,7 +109,7 @@ export function ExtraDayNegotiationDialog({
             </h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               <span className="font-medium text-foreground">
-                {employee.user.last_name}, {employee.user.first_name}
+                {formatLastFirst(employee.user)}
               </span>
               {' · '}
               <span className="font-mono">{date}</span>

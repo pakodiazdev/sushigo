@@ -3,6 +3,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Loader2, Edit, UserMinus, UserPlus, Power, PowerOff, ShieldCheck } from 'lucide-react'
 import type { Employee } from '@/types/employee'
 import { useAuthStore } from '@/stores/auth.store'
+import { formatFirstLast } from '@/lib/format'
 import { EmploymentPeriodsSection } from './employment-periods-section'
 import { WageHistorySection } from './wage-history-section'
 import { EmployeeInfoHeader } from './employee-info-header'
@@ -160,7 +161,7 @@ export function EmployeeDetailView({
           <PermissionManagerDialog
             isOpen={permissionManager.open}
             onClose={permissionManager.closeDialog}
-            employeeName={`${employee.user.first_name} ${employee.user.last_name}`}
+            employeeName={formatFirstLast(employee.user)}
             groups={permissionManager.groups}
             isLoading={permissionManager.isLoading}
             isSaving={permissionManager.isSaving}
@@ -240,8 +241,8 @@ export function EmployeeDetailView({
         title={employee.is_active ? 'Deshabilitar empleado' : 'Habilitar empleado'}
         description={
           employee.is_active
-            ? `¿Estás seguro de deshabilitar a ${employee.user.first_name} ${employee.user.last_name}? El empleado no podrá acceder al sistema mientras esté deshabilitado.`
-            : `¿Estás seguro de habilitar a ${employee.user.first_name} ${employee.user.last_name}? El empleado podrá acceder al sistema nuevamente.`
+            ? `¿Estás seguro de deshabilitar a ${formatFirstLast(employee.user)}? El empleado no podrá acceder al sistema mientras esté deshabilitado.`
+            : `¿Estás seguro de habilitar a ${formatFirstLast(employee.user)}? El empleado podrá acceder al sistema nuevamente.`
         }
         confirmLabel={employee.is_active ? 'Deshabilitar' : 'Habilitar'}
         variant={employee.is_active ? 'warning' : 'info'}
