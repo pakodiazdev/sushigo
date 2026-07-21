@@ -56,7 +56,8 @@ abstract class InventoryTestCase extends TestCase
 
         // Create test user
         $this->user = User::factory()->create([
-            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'test@sushigo.com',
         ]);
 

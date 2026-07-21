@@ -79,12 +79,12 @@ class EmployeeCrudTest extends TestCase
 
         $this->assertDatabaseHas('employees', [
             'code' => 'EMP-001',
-            'first_name' => 'Juan',
         ]);
 
         $this->assertDatabaseHas('users', [
             'email' => 'juan.perez@sushigo.com',
-            'name' => 'Juan Perez',
+            'first_name' => 'Juan',
+            'last_name' => 'Perez',
         ]);
 
         // Should auto-create employment period
@@ -117,7 +117,8 @@ class EmployeeCrudTest extends TestCase
         $this->assertDatabaseHas('users', [
             'phone' => '5512345678',
             'phone_country' => '+52',
-            'name' => 'Maria Lopez',
+            'first_name' => 'Maria',
+            'last_name' => 'Lopez',
         ]);
     }
 
@@ -336,9 +337,9 @@ class EmployeeCrudTest extends TestCase
     #[Test]
     public function it_can_search_employees_by_name(): void
     {
-        Employee::factory()->create(['first_name' => 'Juan', 'last_name' => 'Perez']);
-        Employee::factory()->create(['first_name' => 'Maria', 'last_name' => 'Lopez']);
-        Employee::factory()->create(['first_name' => 'Carlos', 'last_name' => 'Juanez']);
+        Employee::factory()->withName('Juan', 'Perez')->create();
+        Employee::factory()->withName('Maria', 'Lopez')->create();
+        Employee::factory()->withName('Carlos', 'Juanez')->create();
 
         $response = $this->getJson('/api/v1/employees?search=juan');
 
@@ -390,8 +391,8 @@ class EmployeeCrudTest extends TestCase
         $roles = $response->json('data.roles');
         $this->assertContains('manager', $roles);
 
-        $this->assertDatabaseHas('employees', [
-            'id' => $employee->id,
+        $this->assertDatabaseHas('users', [
+            'id' => $employee->user_id,
             'first_name' => 'Updated Name',
         ]);
     }
@@ -744,10 +745,10 @@ class EmployeeCrudTest extends TestCase
     #[Test]
     public function it_can_combine_baja_filter_with_search(): void
     {
-        $bajaJuan = Employee::factory()->create(['first_name' => 'Juan', 'last_name' => 'Perez', 'is_active' => false]);
+        $bajaJuan = Employee::factory()->withName('Juan', 'Perez')->create(['is_active' => false]);
         \App\Models\EmploymentPeriod::factory()->forEmployee($bajaJuan)->terminated()->create();
 
-        $bajaMaria = Employee::factory()->create(['first_name' => 'Maria', 'last_name' => 'Lopez', 'is_active' => false]);
+        $bajaMaria = Employee::factory()->withName('Maria', 'Lopez')->create(['is_active' => false]);
         \App\Models\EmploymentPeriod::factory()->forEmployee($bajaMaria)->terminated()->create();
 
         $response = $this->getJson('/api/v1/employees?status=baja&search=Juan');
@@ -844,8 +845,8 @@ class EmployeeCrudTest extends TestCase
         // A regular admin tries to update the employee with only cook — no super-admin in payload
         // syncPositionRoles must preserve super-admin since the acting user cannot manage it
         $response = $this->putJson("/api/v1/employees/{$employee->public_id}", [
-            'first_name' => $employee->first_name,
-            'last_name' => $employee->last_name,
+            'first_name' => $employee->user->first_name,
+            'last_name' => $employee->user->last_name,
             'roles' => ['cook'],
         ]);
 

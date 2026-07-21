@@ -125,7 +125,7 @@ class BulkOvertimeDecisionApiTest extends TestCase
     #[Test]
     public function each_result_includes_the_employee_name_for_success_and_failure(): void
     {
-        $employee = Employee::factory()->create(['first_name' => 'Ana', 'last_name' => 'López']);
+        $employee = Employee::factory()->withName('Ana', 'López')->create();
         $attendance = Attendance::factory()->withOvertime(30)->create([
             'employee_id' => $employee->id,
             'date' => '2026-02-23',
