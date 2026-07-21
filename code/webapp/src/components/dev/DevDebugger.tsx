@@ -98,6 +98,7 @@ export function DevDebugger() {
                 </a>
                 {sectionItems.map((item) => (
                     <button
+                        type="button"
                         key={item.key}
                         onClick={() => jumpToSection(item.key)}
                         className={`p-1 ${hoverBgClass} rounded shrink-0`}
@@ -130,6 +131,7 @@ export function DevDebugger() {
                     data-testid="dev-debugger"
                 >
                     <button
+                        type="button"
                         onClick={toggleMinimized}
                         className="flex items-center gap-2"
                         title="Expandir debugger"
@@ -140,6 +142,7 @@ export function DevDebugger() {
                     <div className="flex items-center gap-1 min-w-0">
                         <div className="flex items-center gap-1 overflow-x-auto">{renderQuickLinks('hover:bg-gray-800')}</div>
                         <button
+                            type="button"
                             onClick={toggleMinimized}
                             className="p-1 hover:bg-gray-800 rounded shrink-0"
                             title="Expandir debugger"
@@ -205,6 +208,7 @@ export function DevDebugger() {
                         <div className="flex items-center gap-1 overflow-x-auto">{renderQuickLinks('hover:bg-blue-700')}</div>
                     )}
                     <button
+                        type="button"
                         onClick={refreshQueries}
                         className="p-1 hover:bg-blue-700 rounded shrink-0"
                         title="Refresh all queries"
@@ -212,6 +216,7 @@ export function DevDebugger() {
                         <RefreshCw className="h-4 w-4" />
                     </button>
                     <button
+                        type="button"
                         onClick={toggleMinimized}
                         className="p-1 hover:bg-blue-700 rounded shrink-0"
                         title="Minimize debugger"

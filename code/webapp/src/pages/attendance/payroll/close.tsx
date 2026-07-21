@@ -74,6 +74,7 @@ export function PayrollClosePage() {
           />
         </div>
         <button
+          type="button"
           onClick={calculate}
           disabled={isLoading}
           className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
