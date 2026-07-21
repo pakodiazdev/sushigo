@@ -27,7 +27,7 @@ use Carbon\Carbon;
  *
  * Response shape per row:
  * {
- *   "employee":   EmployeeSummaryResource  { id, code, first_name, last_name, roles },
+ *   "employee":   EmployeeSummaryResource  { id, code, user: { first_name, last_name }, roles },
  *   "attendance":  AttendanceResource | null
  * }
  *
