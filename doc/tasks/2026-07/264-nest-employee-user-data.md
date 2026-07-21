@@ -12,25 +12,25 @@ Como consumidor de la API, quiero que las respuestas de `EmployeeResource`/`Empl
 
 ## ✅ Backend Tasks
 
-- [ ] 🔨 `EmployeeResource` — nest `first_name/last_name/email/phone/phone_country` under `user` object, update Swagger schema
-- [ ] 🔨 `EmployeeSummaryResource` — nest `first_name/last_name` under `user` object, update Swagger schema
-- [ ] 🧪 Update `EmployeeCrudTest`, `EmploymentPeriodApiTest`, `TodayAttendanceApiTest` assertions to the new nested shape
+- [x] 🔨 `EmployeeResource` — nest `first_name/last_name/email/phone/phone_country` under `user` object, update Swagger schema
+- [x] 🔨 `EmployeeSummaryResource` — nest `first_name/last_name` under `user` object, update Swagger schema
+- [x] 🧪 Update `EmployeeCrudTest`, `EmploymentPeriodApiTest`, `TodayAttendanceApiTest` assertions to the new nested shape
 
 ## ✅ Frontend Tasks
 
-- [ ] 📝 `Employee` type (`src/types/employee.ts`) — nest personal fields under `user`
-- [ ] 📝 `TodayAttendanceEmployee` type (`src/types/attendance.ts`) — nest under `user`
-- [ ] 📝 `ManualOvertimeMovementEmployee` / `RegisterVacationRequestEmployee` local shapes — nest under `user`
-- [ ] 🔨 Update ~16 consumer components/pages reading `employee.first_name` etc. directly to read `employee.user.first_name`
-- [ ] 🧪 Update affected Vitest specs (`employee-detail-view`, `ManualOvertimeMovementDialog`, `RegisterVacationRequestDialog`, `employee-hooks`)
+- [x] 📝 `Employee` type (`src/types/employee.ts`) — nest personal fields under `user`
+- [x] 📝 `TodayAttendanceEmployee` type (`src/types/attendance.ts`) — nest under `user`
+- [x] 📝 `ManualOvertimeMovementEmployee` / `RegisterVacationRequestEmployee` local shapes — nest under `user`
+- [x] 🔨 Update ~16 consumer components/pages reading `employee.first_name` etc. directly to read `employee.user.first_name`
+- [x] 🧪 Update affected Vitest specs (`employee-detail-view`, `ManualOvertimeMovementDialog`, `RegisterVacationRequestDialog`, `employee-hooks`)
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] `EmployeeResource`/`EmployeeSummaryResource` nest first_name/last_name/email/phone/phone_country under a `user` key
-- [ ] All frontend consumers and their tests updated to the new nested shape — no code reads `employee.first_name` etc. directly anymore
-- [ ] TypeScript types updated to match
+- [x] `EmployeeResource`/`EmployeeSummaryResource` nest first_name/last_name/email/phone/phone_country under a `user` key
+- [x] All frontend consumers and their tests updated to the new nested shape — no code reads `employee.first_name` etc. directly anymore
+- [x] TypeScript types updated to match
 
 ## 🚫 Explicitly Out of Scope
 
@@ -56,3 +56,12 @@ Como consumidor de la API, quiero que las respuestas de `EmployeeResource`/`Empl
   { "date": "2026-07-20", "start": "22:07", "end": "23:49" }
 ]
 ```
+
+## 📊 Retrospective
+- **Actual total:** 1h 42m (102 min)
+- **vs optimistic:** −1h 18m
+- **vs pessimistic:** −4h 18m
+
+**Justification:**
+
+The change was mechanically traceable: two backend resources plus a fixed, greppable set of frontend call sites reading the flattened fields. Most of the time went into exhaustively locating every consumer (components, hooks, local prop-shape types, and test fixtures) via targeted grep sweeps and `tsc --noEmit` rather than into design decisions — the nesting shape itself was a direct translation of the issue's proposal. No unplanned rework was needed within the tracked session; the estimate padding (3h–6h) assumed more hidden call sites or ambiguity in the target shape than were actually present.
