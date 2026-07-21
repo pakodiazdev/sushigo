@@ -1,9 +1,52 @@
 import { describe, it, expect } from 'vitest'
-import { formatCurrency, groupContiguousDates, formatDatesLabel } from '../format'
+import { formatCurrency, formatLastFirst, formatFirstLast, groupContiguousDates, formatDatesLabel } from '../format'
 
 describe('formatCurrency', () => {
   it('formats a number as MXN currency', () => {
     expect(formatCurrency(1234.5)).toBe('$1,234.50')
+  })
+})
+
+describe('formatLastFirst', () => {
+  it('joins last and first name with a comma', () => {
+    expect(formatLastFirst({ first_name: 'Juan', last_name: 'Pérez' })).toBe('Pérez, Juan')
+  })
+
+  it('omits the comma when only last_name is present', () => {
+    expect(formatLastFirst({ first_name: null, last_name: 'Pérez' })).toBe('Pérez')
+  })
+
+  it('omits the comma when only first_name is present', () => {
+    expect(formatLastFirst({ first_name: 'Juan', last_name: null })).toBe('Juan')
+  })
+
+  it('returns an empty string when both parts are null', () => {
+    expect(formatLastFirst({ first_name: null, last_name: null })).toBe('')
+  })
+
+  it('returns an empty string when user is null or undefined', () => {
+    expect(formatLastFirst(null)).toBe('')
+    expect(formatLastFirst(undefined)).toBe('')
+  })
+})
+
+describe('formatFirstLast', () => {
+  it('joins first and last name with a space', () => {
+    expect(formatFirstLast({ first_name: 'Juan', last_name: 'Pérez' })).toBe('Juan Pérez')
+  })
+
+  it('omits the missing part instead of rendering "null"', () => {
+    expect(formatFirstLast({ first_name: null, last_name: 'Pérez' })).toBe('Pérez')
+    expect(formatFirstLast({ first_name: 'Juan', last_name: null })).toBe('Juan')
+  })
+
+  it('returns an empty string when both parts are null', () => {
+    expect(formatFirstLast({ first_name: null, last_name: null })).toBe('')
+  })
+
+  it('returns an empty string when user is null or undefined', () => {
+    expect(formatFirstLast(null)).toBe('')
+    expect(formatFirstLast(undefined)).toBe('')
   })
 })
 

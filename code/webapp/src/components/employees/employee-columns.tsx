@@ -1,6 +1,7 @@
 import { Eye, BarChart3, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Column } from '@/components/ui/data-grid'
+import { formatFirstLast } from '@/lib/format'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
 import type { Employee, EmployeePositionRole } from '@/types/employee'
 
@@ -44,7 +45,7 @@ export function getEmployeeColumns(
       sortKey: 'first_name',
       render: (item) => (
         <div className="font-medium">
-          {item.user.first_name} {item.user.last_name}
+          {formatFirstLast(item.user)}
         </div>
       ),
       skeleton: () => <div className="h-4 w-32 rounded bg-muted animate-pulse" />,

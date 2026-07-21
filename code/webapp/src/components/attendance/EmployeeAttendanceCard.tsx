@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
+import { formatLastFirst } from '@/lib/format'
 import { getAttendancePhase, formatTime, formatSeconds, parseIsoToUtcMs } from '@/types/attendance'
 import type {
     TodayAttendanceRow,
@@ -318,7 +319,7 @@ export function EmployeeAttendanceCard({
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                     <p className="font-semibold text-sm truncate text-foreground">
-                        {row.employee.user.last_name}, {row.employee.user.first_name}
+                        {formatLastFirst(row.employee.user)}
                     </p>
                     <p className="text-xs text-muted-foreground">{row.employee.code}</p>
                 </div>
@@ -421,7 +422,7 @@ export function EmployeeAttendanceCard({
                     onMarkDayStatus(row.employee, 'ABSENCE')
                 }}
                 title="¿Confirmar falta?"
-                description={`${row.employee.user.last_name}, ${row.employee.user.first_name} no tiene registro de entrada. ¿Confirmar que faltó hoy?`}
+                description={`${formatLastFirst(row.employee.user)} no tiene registro de entrada. ¿Confirmar que faltó hoy?`}
                 confirmLabel="Confirmar falta"
                 variant="danger"
                 container="viewport"

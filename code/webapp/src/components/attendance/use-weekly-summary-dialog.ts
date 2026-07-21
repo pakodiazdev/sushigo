@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useWeeklySummary } from '@/services/report.service'
 import { useEmployee } from '@/services/employee-hooks'
 import { currentWeekRange, weekRangeContaining, addDays } from '@/lib/week'
+import { formatLastFirst } from '@/lib/format'
 import type { WeeklySummaryResponse } from '@/types/report'
 
 export interface WeeklySummaryDialogState {
@@ -41,7 +42,7 @@ export function useWeeklySummaryDialog(): WeeklySummaryDialogState {
   )
 
   const { data: employee } = useEmployee(employeePublicId)
-  const employeeName = employee ? `${employee.user.last_name}, ${employee.user.first_name}` : fallbackName
+  const employeeName = employee ? formatLastFirst(employee.user) : fallbackName
   const periods = employee?.employment_periods ?? []
   const hireDate = periods.length > 0
     ? periods.reduce((earliest, p) => (p.start_date < earliest ? p.start_date : earliest), periods[0]!.start_date) // NOSONAR — start_date is an ISO date string, not a number; Math.min() would coerce it to NaN

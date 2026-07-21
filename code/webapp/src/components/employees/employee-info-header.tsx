@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { formatFirstLast } from '@/lib/format'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
 import type { Employee, EmployeePositionRole } from '@/types/employee'
 
@@ -30,7 +31,7 @@ export function EmployeeInfoHeader({ employee, hasActivePeriod }: EmployeeInfoHe
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">
-            {employee.user.first_name} {employee.user.last_name}
+            {formatFirstLast(employee.user)}
           </h3>
           <span className="font-mono text-sm text-muted-foreground">{employee.code}</span>
         </div>

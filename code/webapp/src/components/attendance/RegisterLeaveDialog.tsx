@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
+import { formatLastFirst } from '@/lib/format'
 import { useRegisterLeaveDialog } from './use-register-leave-dialog'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
 
@@ -83,9 +84,7 @@ export function RegisterLeaveDialog({
   const backdropAnim = getAnimationClass(animating, 'animate-dialog-backdrop-in', 'animate-dialog-backdrop-out')
   const panelAnim = getAnimationClass(animating, 'animate-dialog-in', 'animate-dialog-out')
 
-  const employeeName = employee
-    ? `${employee.user.last_name}, ${employee.user.first_name}`
-    : ''
+  const employeeName = formatLastFirst(employee?.user)
 
   const content = (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
