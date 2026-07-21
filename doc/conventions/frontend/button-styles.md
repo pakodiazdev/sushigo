@@ -25,6 +25,7 @@ Both are symptoms of the same gap: contrast belongs in the component, not in eac
 | `info` | Solid blue "Guardar"/"Nueva X" action (legacy blue palette, not the brand `default` token) | Use instead of hardcoding `bg-blue-600` |
 | `warning` | Solid amber confirm/attention action (e.g. "Dar de Baja", "Registrar ausencia") | Use instead of hardcoding `bg-amber-600` |
 | `success` | Solid green positive/confirm action (e.g. "Abrir Sesión de Caja", "Habilitar", "Reingreso") | Use instead of hardcoding `bg-green-600`/`bg-emerald-600` |
+| `indigo` | Solid indigo action, distinct from `info`'s blue (e.g. "Calcular preview") | Use instead of hardcoding `bg-indigo-600` |
 | `ghost` | Lowest-emphasis action (e.g. "Cancelar" next to a stronger action) | No border, no fixed background |
 | `ghost-danger` | Lowest-emphasis destructive/cancel action (e.g. an inline "Cancelar" link on a request card) | Dark-mode-safe red text baked in |
 | `link` | Inline text-styled action | |
@@ -55,3 +56,17 @@ If a button needs a `className` override for `border-*`, `text-*`, `bg-*`, or an
 `OvertimeDecisionDialog.tsx` ("No pagar" → `outline-danger`, "Regresar" → `outline`) is the reference for migrating existing ad-hoc overrides to the centralized variants. `EmployeeAttendanceCard.tsx` ("Marcar falta" → `outline-danger`, "Decidir horas extra" → `outline-warning`) is a second migration of the same pattern.
 
 As of issue #247, every `<Button>` usage in the webapp has been migrated off hardcoded palette `className` overrides, across `attendance/`, `cash/`, `employees/`, `inventory/`, `solicitudes/`, `dashboard/`, and `ui/confirm-dialog.tsx`. `ConfirmDialog`'s internal `variantStyles` map now resolves to a `Button` `variant` name (`confirmVariant`) instead of a raw className, so its own danger/warning/info confirm buttons go through the same system. See issue #247.
+
+## `type` defaults to `"button"`
+
+`Button` defaults its `type` prop to `"button"` when not explicitly passed (issue #272). Real form-submit buttons must still pass `type="submit"` explicitly — the default only prevents the SonarCloud `typescript:S9011` finding (missing `type` attribute) from recurring for consumers who forget to set it, the same way centralized variants prevent ad-hoc dark-mode overrides.
+
+## Raw `<button>` patterns intentionally excluded from `Button` migration (issue #272)
+
+A full audit of raw `<button>` usage in `src/` (issue #272) found that most instances are not "a labeled action button someone forgot to style" but a structurally different kind of control. Forcing these through `Button` would fight its fixed sizing/layout rather than fix a styling gap, so they are explicitly excluded rather than silently left alone:
+
+- **Dialog backdrop click-catchers** — an invisible `absolute inset-0` `<button>` used purely for keyboard/AT-accessible click-outside-to-close (e.g. `dialog-frame.tsx`, `ExtraDayNegotiationDialog.tsx`, `permission-manager-dialog.tsx`). `Button`'s base classes (`rounded-md`, fixed height, `ring-offset`) don't apply to a transparent full-screen overlay.
+- **Small inline icon-only utility controls** — close (`✕`), chevron nav, and row-level edit/save/cancel/approve icons (e.g. dialog close buttons, `week-calendar.tsx` nav arrows, `schedule-config-rows.tsx` row actions). These already use theme tokens (`text-muted-foreground hover:text-foreground`) and are dark-mode safe; `Button`'s `icon` size is a fixed `h-10 w-10`, much larger than these compact inline controls.
+- **Tab-like / step-like / disclosure controls** — `schedule-dialog.tsx` tabs, `SolicitudesLayout.tsx` tabs, `product-wizard.tsx` wizard steps, `Sidebar.tsx` submenu toggle, `week-calendar.tsx` year/month pickers. These implement custom active/inactive selection logic that doesn't map onto `Button`'s variant system.
+- **Clickable card/list-row containers** — `BranchSelectionDialog.tsx`, `BranchSwitcher.tsx`, `override-list-dialog.tsx`, `schedule-history-item.tsx`, `stock-dashboard.tsx` location cards. Multi-line nested content that `Button`'s centered-flex layout would break.
+- **Dev-only tooling with its own hardcoded dark palette** — `components/dev/DevDebugger.tsx`, `components/dev/page-actions/payroll-close-actions.tsx`, `components/devtools/ClockBadge.tsx`, `components/devtools/ClockDebugPanel.tsx`. These intentionally use a fixed dark palette (`bg-gray-900`, `bg-blue-600`, etc.) independent of the app's `--primary`/`--foreground` theme tokens `Button` is built on — not a candidate for centralization.
