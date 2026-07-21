@@ -108,7 +108,7 @@ export function ExtraDayNegotiationDialog({
             </h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               <span className="font-medium text-foreground">
-                {employee.last_name}, {employee.first_name}
+                {employee.user.last_name}, {employee.user.first_name}
               </span>
               {' · '}
               <span className="font-mono">{date}</span>

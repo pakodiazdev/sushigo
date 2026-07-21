@@ -24,8 +24,8 @@ vi.mock('@tanstack/react-router', () => ({
 
 const mockEmployeesData = {
     data: [
-        { id: 'emp-01', code: 'E001', first_name: 'John', last_name: 'Doe' },
-        { id: 'emp-02', code: 'E002', first_name: 'Jane', last_name: 'Smith' },
+        { id: 'emp-01', code: 'E001', user: { first_name: 'John', last_name: 'Doe' } },
+        { id: 'emp-02', code: 'E002', user: { first_name: 'Jane', last_name: 'Smith' } },
     ],
     meta: { total: 2, per_page: 20, current_page: 1, last_page: 1 },
 }
@@ -37,7 +37,7 @@ vi.mock('@/services/employee-hooks', () => ({
         isFetching: false,
     }),
     useEmployee: (id: string) => ({
-        data: id ? { id, code: 'E003', first_name: 'Bob', last_name: 'Wilson' } : null,
+        data: id ? { id, code: 'E003', user: { first_name: 'Bob', last_name: 'Wilson' } } : null,
     }),
 }))
 

@@ -64,7 +64,7 @@ vi.mock('@/components/attendance', () => ({
         isOpen ? <div data-testid="register-leave-dialog">RegisterLeaveDialog</div> : null,
 }))
 
-const employee = { id: 'emp-1', first_name: 'Ana', last_name: 'López', code: 'E001' }
+const employee = { id: 'emp-1', code: 'E001', user: { first_name: 'Ana', last_name: 'López' } }
 
 function makeLeave(overrides: Partial<Leave> = {}): Leave {
     return {
@@ -223,7 +223,7 @@ describe('LeaveSummarySection', () => {
     it('opens RegisterLeaveDialog when pendingLeaveEmployee is set', () => {
         currentHook = {
             ...currentHook,
-            pendingLeaveEmployee: { id: 'emp-1', code: 'E001', first_name: 'Ana', last_name: 'López', roles: [], daily_wage: null },
+            pendingLeaveEmployee: { id: 'emp-1', code: 'E001', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null },
             showRegisterLeave: true,
         }
 

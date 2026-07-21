@@ -54,8 +54,10 @@ vi.mock('@/stores/auth.store', () => ({
 
 const mockEmployee: RegisterVacationRequestEmployee = {
     id: 'emp-1',
-    first_name: 'Carlos',
-    last_name: 'Mendoza',
+    user: {
+        first_name: 'Carlos',
+        last_name: 'Mendoza',
+    },
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────

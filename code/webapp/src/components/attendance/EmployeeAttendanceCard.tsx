@@ -318,7 +318,7 @@ export function EmployeeAttendanceCard({
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                     <p className="font-semibold text-sm truncate text-foreground">
-                        {row.employee.last_name}, {row.employee.first_name}
+                        {row.employee.user.last_name}, {row.employee.user.first_name}
                     </p>
                     <p className="text-xs text-muted-foreground">{row.employee.code}</p>
                 </div>
@@ -421,7 +421,7 @@ export function EmployeeAttendanceCard({
                     onMarkDayStatus(row.employee, 'ABSENCE')
                 }}
                 title="¿Confirmar falta?"
-                description={`${row.employee.last_name}, ${row.employee.first_name} no tiene registro de entrada. ¿Confirmar que faltó hoy?`}
+                description={`${row.employee.user.last_name}, ${row.employee.user.first_name} no tiene registro de entrada. ¿Confirmar que faltó hoy?`}
                 confirmLabel="Confirmar falta"
                 variant="danger"
                 container="viewport"

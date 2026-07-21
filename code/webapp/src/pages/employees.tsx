@@ -41,7 +41,7 @@ export function EmployeesPage() {
 
   const columns = getEmployeeColumns(
     handleEditEmployee,
-    canOpenWeeklySummary ? (item) => weeklySummary.open(item.id, `${item.last_name}, ${item.first_name}`) : undefined,
+    canOpenWeeklySummary ? (item) => weeklySummary.open(item.id, `${item.user.last_name}, ${item.user.first_name}`) : undefined,
     canViewAuditLog ? setAuditEmployee : undefined,
   )
 
@@ -93,7 +93,7 @@ export function EmployeesPage() {
         <AuditLogDialog
           isOpen={!!auditEmployee}
           onClose={() => setAuditEmployee(null)}
-          title={`Auditoría — ${auditEmployee.first_name} ${auditEmployee.last_name}`}
+          title={`Auditoría — ${auditEmployee.user.first_name} ${auditEmployee.user.last_name}`}
           filters={{ employee_id: auditEmployee.id }}
         />
       )}

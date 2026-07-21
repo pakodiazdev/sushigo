@@ -101,8 +101,10 @@ export interface TodayAttendanceRow {
 export interface TodayAttendanceEmployee {
   id: string         // ULID
   code: string
-  first_name: string
-  last_name: string
+  user: {
+    first_name: string
+    last_name: string
+  }
   roles: string[]
   /** Computed daily wage: hourly_rate × weekly_scheduled_hours / 6. Null when no wage is configured. */
   daily_wage: number | null

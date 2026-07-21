@@ -30,7 +30,7 @@ export function EmployeeInfoHeader({ employee, hasActivePeriod }: EmployeeInfoHe
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">
-            {employee.first_name} {employee.last_name}
+            {employee.user.first_name} {employee.user.last_name}
           </h3>
           <span className="font-mono text-sm text-muted-foreground">{employee.code}</span>
         </div>
@@ -48,13 +48,13 @@ export function EmployeeInfoHeader({ employee, hasActivePeriod }: EmployeeInfoHe
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <span className="text-muted-foreground">Email</span>
-          <p className="font-medium">{employee.email || 'No registrado'}</p>
+          <p className="font-medium">{employee.user.email || 'No registrado'}</p>
         </div>
         <div>
           <span className="text-muted-foreground">Teléfono</span>
           <p className="font-medium">
-            {employee.phone
-              ? `${employee.phone_country || ''} ${employee.phone}`.trim()
+            {employee.user.phone
+              ? `${employee.user.phone_country || ''} ${employee.user.phone}`.trim()
               : 'No registrado'}
           </p>
         </div>

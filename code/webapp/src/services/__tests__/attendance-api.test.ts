@@ -22,7 +22,7 @@ describe('attendanceApi.daily', () => {
     const mockResponse = {
       data: {
         data: [
-          { employee: { id: '1', first_name: 'Carlos', last_name: 'Mendoza' }, attendance: null },
+          { employee: { id: '1', user: { first_name: 'Carlos', last_name: 'Mendoza' } }, attendance: null },
         ],
       },
     }

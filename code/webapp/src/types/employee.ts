@@ -22,11 +22,19 @@ export type EmployeePositionRole = keyof typeof EMPLOYEE_POSITION_ROLES
 
 import type { EmploymentPeriod } from './employment-period'
 
+/** Personal data owned by the linked User account — fields are null when has_user is false. */
+export interface EmployeeUser {
+  first_name: string
+  last_name: string
+  email: string | null
+  phone: string | null
+  phone_country: string | null
+}
+
 export interface Employee {
   id: string // ULID public identifier
   code: string
-  first_name: string
-  last_name: string
+  user: EmployeeUser
   roles: EmployeePositionRole[]
   is_active: boolean
   /** True for roles (e.g. admin, super-admin) that do not check in/out — excluded from the attendance list */
@@ -36,9 +44,6 @@ export interface Employee {
   vacation_entitlement_custom_table: { years_from: number; days: number }[] | null
   has_active_period?: boolean | null
   has_user: boolean
-  email?: string | null
-  phone?: string | null
-  phone_country?: string | null
   meta: Record<string, unknown> | null
   employment_periods?: EmploymentPeriod[]
   created_at: string

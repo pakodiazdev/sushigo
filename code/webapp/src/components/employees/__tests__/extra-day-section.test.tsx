@@ -76,8 +76,7 @@ import { ExtraDaySection } from '../extra-day-section'
 
 const employee = {
   id: 'emp-1',
-  first_name: 'Ana',
-  last_name: 'López',
+  user: { first_name: 'Ana', last_name: 'López' },
 } as unknown as Employee
 
 function defaultHookCtx(overrides = {}) {
