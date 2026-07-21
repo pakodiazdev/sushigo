@@ -167,6 +167,7 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
           <div className="flex items-center gap-2">
             {isFormView && (
               <button
+                type="button"
                 onClick={ctx.showSchedule}
                 className="rounded-sm text-muted-foreground hover:text-foreground mr-1"
                 aria-label="Volver"
@@ -177,7 +178,7 @@ export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-base font-semibold">{getDialogTitle(view)}</h3>
           </div>
-          <button onClick={close} className="rounded-sm text-muted-foreground hover:text-foreground">
+          <button type="button" onClick={close} aria-label="Cerrar" title="Cerrar" className="rounded-sm text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>

@@ -77,7 +77,7 @@ export function ClockDebugPanel() {
             {error && (
                 <div className="p-2 rounded bg-red-900/40 border border-red-700/50 text-red-300 flex justify-between items-center gap-2">
                     <span className="truncate">{error}</span>
-                    <button onClick={clearError} className="shrink-0 text-red-400 hover:text-red-200">✕</button>
+                    <button type="button" onClick={clearError} className="shrink-0 text-red-400 hover:text-red-200">✕</button>
                 </div>
             )}
 
@@ -128,6 +128,7 @@ export function ClockDebugPanel() {
                         { label: '+1a', onClick: () => shiftCalendar('year', 1) },
                     ].map(({ label, onClick, icon }) => (
                         <button
+                            type="button"
                             key={label}
                             onClick={onClick}
                             disabled={isLoading}
@@ -154,6 +155,7 @@ export function ClockDebugPanel() {
                         className="flex-1 min-w-0 bg-gray-700 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-40"
                     />
                     <button
+                        type="button"
                         onClick={handleSetTime}
                         disabled={isLoading || !customDatetime}
                         className="flex items-center gap-1 px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 transition-colors shrink-0"
@@ -167,6 +169,7 @@ export function ClockDebugPanel() {
             {/* Reset + Refresh */}
             <div className="flex gap-1.5 pt-1 border-t border-gray-700">
                 <button
+                    type="button"
                     onClick={() => resetClockToSystem()}
                     disabled={isLoading || clockState?.mode === 'system'}
                     className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 disabled:opacity-40 transition-colors"
@@ -175,6 +178,7 @@ export function ClockDebugPanel() {
                     Reset
                 </button>
                 <button
+                    type="button"
                     onClick={() => fetchClock()}
                     disabled={isLoading}
                     className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 disabled:opacity-40 transition-colors"
