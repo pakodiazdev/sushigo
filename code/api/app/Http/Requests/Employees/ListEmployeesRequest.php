@@ -32,6 +32,17 @@ class ListEmployeesRequest extends FormRequest
         return ['code', 'first_name', 'last_name', 'is_active', 'created_at'];
     }
 
+    protected function sortColumnMap(): array
+    {
+        return [
+            'first_name' => 'users.first_name',
+            'last_name' => 'users.last_name',
+            // employees is left-joined to users in ListEmployeesController — both tables
+            // have created_at, so it must be qualified to avoid an ambiguous-column error.
+            'created_at' => 'employees.created_at',
+        ];
+    }
+
     protected function defaultSort(): array
     {
         return [['field' => 'code', 'direction' => 'asc']];

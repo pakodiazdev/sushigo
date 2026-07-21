@@ -53,35 +53,34 @@ return [
 
     'development_users' => [
         [
-            'name' => 'Super Admin',
+            'first_name' => 'Super',
+            'last_name' => 'Admin',
             'email' => 'superadmin@sushigo.com',
             'password' => $seederPasswords['admin'],
             'role' => 'super-admin',
             // super-admin is not an employee — system-level account only
         ],
         [
-            'name' => 'Admin User',
+            'first_name' => 'Admin',
+            'last_name' => 'User',
             'email' => 'admin@sushigo.com',
             'password' => $seederPasswords['admin'],
             'role' => 'admin',
             'employee' => [
                 'code' => 'ADM-001',
-                'first_name' => 'Admin',
-                'last_name' => 'User',
                 'position_roles' => ['manager'],
                 // Admins are free of attendance tracking, like super-admin (which has no employee record)
                 'attendance_exempt' => true,
             ],
         ],
         [
-            'name' => 'Inventory Manager',
+            'first_name' => 'Inventory',
+            'last_name' => 'Manager',
             'email' => 'inventory@sushigo.com',
             'password' => $seederPasswords['inventory'],
             'role' => 'inventory-manager',
             'employee' => [
                 'code' => 'ADM-002',
-                'first_name' => 'Inventory',
-                'last_name' => 'Manager',
                 'position_roles' => ['manager'],
             ],
         ],

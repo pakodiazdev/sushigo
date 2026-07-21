@@ -130,8 +130,8 @@ class PayPeriodPreviewService
         return [
             'employee' => [
                 'id' => $employee->public_id,
-                'first_name' => $employee->first_name,
-                'last_name' => $employee->last_name,
+                'first_name' => $employee->user?->first_name ?? '',
+                'last_name' => $employee->user?->last_name ?? '',
                 'code' => $employee->code,
             ],
             'base_pay' => $basePay,

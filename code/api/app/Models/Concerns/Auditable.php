@@ -56,7 +56,7 @@ trait Auditable
         });
 
         static::updated(function (self $model): void {
-            $dirty = $model->getDirty();
+            $dirty = array_diff_key($model->getDirty(), array_flip($model->auditExcluded()));
 
             // Nothing worth logging if no tracked fields changed
             if (empty($dirty)) {
@@ -79,6 +79,16 @@ trait Auditable
                 newValues: null,
             );
         });
+    }
+
+    /**
+     * Attribute names to always exclude from audit logs (in addition to id/timestamps).
+     * Override in the consuming model — e.g. to keep secrets like password hashes
+     * out of the audit trail.
+     */
+    protected function auditExcluded(): array
+    {
+        return [];
     }
 
     private function writeAuditLog(
@@ -106,7 +116,7 @@ trait Auditable
      */
     private function getAuditAttributes(): array
     {
-        $excluded = ['id', 'created_at', 'updated_at', 'deleted_at'];
+        $excluded = array_merge(['id', 'created_at', 'updated_at', 'deleted_at'], $this->auditExcluded());
 
         $attributes = array_diff_key($this->getAttributes(), array_flip($excluded));
 

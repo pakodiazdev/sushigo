@@ -30,7 +30,7 @@ class RecordBulkOvertimeDecisionAction
     {
         return $attendances
             ->map(function (Attendance $attendance) use ($data, $decidedBy) {
-                $employeeName = "{$attendance->employee->first_name} {$attendance->employee->last_name}";
+                $employeeName = $attendance->employee->user?->name ?? '';
 
                 try {
                     $updated = ($this->recordDecision)($attendance, $data, $decidedBy);

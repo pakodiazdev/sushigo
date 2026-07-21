@@ -35,8 +35,8 @@ class EmployeeSummaryResource extends BaseResource
         return [
             'id' => $this->public_id,
             'code' => $this->code,
-            'first_name' => $this->first_name,
-            'last_name' => $this->last_name,
+            'first_name' => $this->user?->first_name,
+            'last_name' => $this->user?->last_name,
             'roles' => $this->getPositionRoles(),
             'daily_wage' => $wage
                 ? round((float) $wage->hourly_rate * (float) $wage->weekly_scheduled_hours / 6, 2)

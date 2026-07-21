@@ -39,13 +39,16 @@ class ListEmployeesController extends Controller
 {
     public function __invoke(ListEmployeesRequest $request): ResponsePaginated
     {
-        $query = Employee::with(['user.roles'])
+        $query = Employee::query()
+            ->select('employees.*')
+            ->leftJoin('users', 'users.id', '=', 'employees.user_id')
+            ->with(['user.roles'])
             ->withCount(['employmentPeriods as active_employment_periods_count' => function ($q) {
                 $q->where('is_active', true);
             }]);
 
         if ($request->filled('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
+            $query->where('employees.is_active', $request->boolean('is_active'));
         }
 
         if ($request->input('status') === 'baja') {
@@ -59,9 +62,9 @@ class ListEmployeesController extends Controller
         if ($request->filled('search')) {
             $search = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $request->search);
             $query->where(function ($q) use ($search) {
-                $q->where('code', 'ILIKE', "%{$search}%")
-                    ->orWhere('first_name', 'ILIKE', "%{$search}%")
-                    ->orWhere('last_name', 'ILIKE', "%{$search}%");
+                $q->where('employees.code', 'ILIKE', "%{$search}%")
+                    ->orWhere('users.first_name', 'ILIKE', "%{$search}%")
+                    ->orWhere('users.last_name', 'ILIKE', "%{$search}%");
             });
         }
 

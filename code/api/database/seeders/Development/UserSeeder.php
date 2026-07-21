@@ -28,7 +28,8 @@ class UserSeeder extends OnceSeeder
             $user = User::updateOrCreate(
                 ['email' => $userData['email']],
                 [
-                    'name' => $userData['name'],
+                    'first_name' => $userData['first_name'],
+                    'last_name' => $userData['last_name'],
                     'password' => Hash::make($userData['password']),
                     'email_verified_at' => now(),
                 ]
@@ -53,8 +54,6 @@ class UserSeeder extends OnceSeeder
                     $employee = Employee::create([
                         'user_id' => $user->id,
                         'code' => $empCode,
-                        'first_name' => $empData['first_name'],
-                        'last_name' => $empData['last_name'],
                         'is_active' => true,
                         'attendance_exempt' => $empData['attendance_exempt'] ?? false,
                         'created_at' => $hireDate,

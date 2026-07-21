@@ -74,8 +74,6 @@ class Employee extends Model
     protected $fillable = [
         'user_id',
         'code',
-        'first_name',
-        'last_name',
         'is_active',
         'attendance_exempt',
         'meta',
@@ -90,6 +88,18 @@ class Employee extends Model
         'vacation_entitlement_custom_table' => 'array',
     ];
 
+    /**
+     * The linked User — the sole source of this employee's display name
+     * (first_name/last_name), email and phone as of #086.
+     *
+     * Known risk (accepted, not yet mitigated): `employees.user_id` has
+     * `onDelete('set null')`. No code path in this app deletes a User today
+     * (confirmed while investigating #086's PR review), so this is currently
+     * theoretical — but if a User-deletion feature is ever added, deleting a
+     * User with a linked Employee will silently orphan it, leaving the
+     * employee unidentifiable everywhere (no fallback name is stored). Any
+     * future User-deletion code path must guard against this explicitly.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

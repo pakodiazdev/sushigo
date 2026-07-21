@@ -129,11 +129,11 @@ class CloseDayAction
                 ->whereDate('date', $today)
                 ->where('overtime_minutes', '>', 0)
                 ->whereNull('overtime_authorized_at')
-                ->with('employee')
+                ->with('employee.user')
                 ->get()
                 ->map(fn (Attendance $a) => [
                     'attendance_id' => $a->public_id,
-                    'employee_name' => "{$a->employee->first_name} {$a->employee->last_name}",
+                    'employee_name' => $a->employee->user?->name ?? '',
                     'overtime_minutes' => $a->overtime_minutes,
                 ])
                 ->values()

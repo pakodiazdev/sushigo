@@ -30,7 +30,8 @@ class UserSeeder extends OnceSeeder
         // ⚠️ SECURITY WARNING: This user should be disabled or removed after initial setup
         $defaultUsers = [
             [
-                'name' => 'Sistema Admin',
+                'first_name' => 'Sistema',
+                'last_name' => 'Admin',
                 'email' => 'admin@sushigo.com',
                 'password' => config('seeders.passwords.admin'), // ⚠️ Change this password immediately after first login
                 'role' => 'super-admin',
@@ -44,7 +45,8 @@ class UserSeeder extends OnceSeeder
             $user = User::updateOrCreate(
                 ['email' => $userData['email']],
                 [
-                    'name' => $userData['name'],
+                    'first_name' => $userData['first_name'],
+                    'last_name' => $userData['last_name'],
                     'password' => Hash::make($userData['password']),
                     'email_verified_at' => now(),
                 ]

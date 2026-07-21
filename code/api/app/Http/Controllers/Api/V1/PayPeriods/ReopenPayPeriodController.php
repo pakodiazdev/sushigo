@@ -67,7 +67,7 @@ class ReopenPayPeriodController extends Controller
             'reopen_reason' => $request->reason(),
         ]);
 
-        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee', 'payPeriodEmployees.lines']);
+        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines']);
 
         return new PayPeriodResource($payPeriod);
     }

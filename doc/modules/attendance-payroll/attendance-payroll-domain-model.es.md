@@ -47,8 +47,6 @@ erDiagram
         bigint id PK
         bigint user_id FK "nullable - cuenta de acceso"
         string code UK "código único empleado"
-        string first_name
-        string last_name
         enum role "MANAGER|COOK|KITCHEN_ASSISTANT|DELIVERY_DRIVER"
         boolean is_active "default true"
         json meta "nullable"

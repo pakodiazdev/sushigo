@@ -403,12 +403,15 @@ class PayrollSeedService
 
     private function activeEmployees(int $branchId): Collection
     {
-        return Employee::where('is_active', true)
+        return Employee::query()
+            ->select('employees.id', 'employees.code')
+            ->leftJoin('users', 'users.id', '=', 'employees.user_id')
+            ->where('employees.is_active', true)
             ->whereHas('employmentPeriods', fn ($q) => $q
                 ->where('branch_id', $branchId)
                 ->where('is_active', true))
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get(['id', 'code', 'first_name', 'last_name']);
+            ->orderBy('users.last_name')
+            ->orderBy('users.first_name')
+            ->get();
     }
 }

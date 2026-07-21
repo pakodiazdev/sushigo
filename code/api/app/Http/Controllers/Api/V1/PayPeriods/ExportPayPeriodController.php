@@ -41,7 +41,7 @@ class ExportPayPeriodController extends Controller
             ]);
         }
 
-        $payPeriod->load('payPeriodEmployees.employee');
+        $payPeriod->load('payPeriodEmployees.employee.user');
 
         $filename = "periodo-nomina-{$payPeriod->period_start->format('Y-m-d')}-{$payPeriod->period_end->format('Y-m-d')}.csv";
 
@@ -54,7 +54,7 @@ class ExportPayPeriodController extends Controller
             foreach ($payPeriod->payPeriodEmployees as $payPeriodEmployee) {
                 fputcsv($handle, [
                     $payPeriodEmployee->employee->code,
-                    trim($payPeriodEmployee->employee->first_name.' '.$payPeriodEmployee->employee->last_name),
+                    $payPeriodEmployee->employee->user?->name ?? '',
                     number_format((float) $payPeriodEmployee->base_pay, 2, '.', ''),
                     number_format((float) $payPeriodEmployee->late_deductions, 2, '.', ''),
                     number_format((float) $payPeriodEmployee->unpaid_leave_deductions, 2, '.', ''),

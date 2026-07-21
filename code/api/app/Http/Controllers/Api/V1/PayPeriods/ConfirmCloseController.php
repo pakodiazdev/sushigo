@@ -6,10 +6,10 @@ use App\Actions\Payroll\RecalculatePayPeriodEmployeesAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ConfirmClosePayPeriodRequest;
 use App\Http\Responses\Common\ResponseEntity;
-use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\PayPeriod;
 use App\Models\PunctualityRange;
+use App\Repositories\EmployeeRepository;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -50,6 +50,7 @@ class ConfirmCloseController extends Controller
 
     public function __construct(
         private RecalculatePayPeriodEmployeesAction $recalculate,
+        private EmployeeRepository $employeeRepository,
     ) {}
 
     public function __invoke(ConfirmClosePayPeriodRequest $request): ResponseEntity
@@ -75,14 +76,7 @@ class ConfirmCloseController extends Controller
             ]);
         }
 
-        $employees = Employee::with(['employmentPeriods'])
-            ->whereHas('employmentPeriods', function ($q) use ($branchId) {
-                $q->where('branch_id', $branchId)->where('is_active', true);
-            })
-            ->where('is_active', true)
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get();
+        $employees = $this->employeeRepository->getActiveForPayPeriod($branchId);
 
         $holidays = Holiday::whereBetween('date', [$periodStart, $periodEnd])->get();
         $punctualityRanges = PunctualityRange::orderBy('sort_order')->get();

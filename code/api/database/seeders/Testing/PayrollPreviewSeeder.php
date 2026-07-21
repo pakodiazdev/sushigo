@@ -59,7 +59,8 @@ class PayrollPreviewSeeder extends Seeder
 
         foreach ($employees as $emp) {
             $userId = DB::table('users')->insertGetId([
-                'name' => "{$emp['first_name']} {$emp['last_name']}",
+                'first_name' => $emp['first_name'],
+                'last_name' => $emp['last_name'],
                 'email' => $emp['email'],
                 'password' => $hashedPassword,
                 'created_at' => $now,
@@ -76,8 +77,6 @@ class PayrollPreviewSeeder extends Seeder
                 'public_id' => Str::ulid()->toString(),
                 'user_id' => $userId,
                 'code' => $emp['code'],
-                'first_name' => $emp['first_name'],
-                'last_name' => $emp['last_name'],
                 'is_active' => true,
                 'created_at' => $now,
                 'updated_at' => $now,

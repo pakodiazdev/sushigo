@@ -8,6 +8,7 @@ use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\PunctualityRange;
+use App\Repositories\EmployeeRepository;
 use App\Services\PayPeriodPreviewService;
 
 /**
@@ -30,7 +31,10 @@ use App\Services\PayPeriodPreviewService;
  */
 class PreviewPayPeriodController extends Controller
 {
-    public function __construct(private PayPeriodPreviewService $previewService) {}
+    public function __construct(
+        private PayPeriodPreviewService $previewService,
+        private EmployeeRepository $employeeRepository,
+    ) {}
 
     public function __invoke(PreviewPayPeriodRequest $request): ResponseEntity
     {
@@ -38,14 +42,7 @@ class PreviewPayPeriodController extends Controller
         $periodStart = $request->periodStart();
         $periodEnd = $request->periodEnd();
 
-        $employees = Employee::with(['employmentPeriods'])
-            ->whereHas('employmentPeriods', function ($q) use ($branchId) {
-                $q->where('branch_id', $branchId)->where('is_active', true);
-            })
-            ->where('is_active', true)
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get();
+        $employees = $this->employeeRepository->getActiveForPayPeriod($branchId);
 
         $holidays = Holiday::whereBetween('date', [$periodStart, $periodEnd])->get();
         $punctualityRanges = PunctualityRange::orderBy('sort_order')->get();

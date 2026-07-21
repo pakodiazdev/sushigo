@@ -12,6 +12,12 @@ class EmployeeRepository extends BaseRepository
 {
     use HasPublicId;
 
+    /**
+     * Explicit column list for queries that join users — avoids ambiguous-column
+     * errors from users sharing column names with employees (e.g. id, created_at).
+     */
+    private const SELECT_EMPLOYEE_COLUMNS = 'employees.*';
+
     public function __construct(Employee $model)
     {
         parent::__construct($model);
@@ -27,6 +33,8 @@ class EmployeeRepository extends BaseRepository
         $dayOfWeek = Carbon::parse($today)->dayOfWeekIso;
 
         return $this->newQuery()
+            ->select(self::SELECT_EMPLOYEE_COLUMNS)
+            ->leftJoin('users', 'users.id', '=', 'employees.user_id')
             ->with([
                 'user.roles',
                 'attendances' => fn ($q) => $q->whereDate('date', $today),
@@ -46,13 +54,34 @@ class EmployeeRepository extends BaseRepository
                             ]),
                     ]),
             ])
-            ->where('attendance_exempt', false)
+            ->where('employees.attendance_exempt', false)
             ->whereHas('employmentPeriods', fn ($q) => $q
                 ->where('branch_id', $branchId)
                 ->where('is_active', true)
             )
-            ->orderBy('last_name')
-            ->orderBy('first_name')
+            ->orderBy('users.last_name')
+            ->orderBy('users.first_name')
+            ->get();
+    }
+
+    /**
+     * Active employees with an active employment period in the given branch,
+     * ordered by last name then first name. Used by the pay period preview,
+     * close, and reclose flows.
+     */
+    public function getActiveForPayPeriod(int $branchId): Collection
+    {
+        return $this->newQuery()
+            ->select(self::SELECT_EMPLOYEE_COLUMNS)
+            ->leftJoin('users', 'users.id', '=', 'employees.user_id')
+            ->with(['employmentPeriods', 'user'])
+            ->whereHas('employmentPeriods', fn ($q) => $q
+                ->where('branch_id', $branchId)
+                ->where('is_active', true)
+            )
+            ->where('employees.is_active', true)
+            ->orderBy('users.last_name')
+            ->orderBy('users.first_name')
             ->get();
     }
 
@@ -64,10 +93,13 @@ class EmployeeRepository extends BaseRepository
     public function paginateIndex(array $filters = [], array $sorts = [], int $perPage = 15): LengthAwarePaginator
     {
         // Roles live on User — only 'user' relation needed on Employee
-        $query = $this->newQuery()->with(['user.roles']);
+        $query = $this->newQuery()
+            ->select(self::SELECT_EMPLOYEE_COLUMNS)
+            ->leftJoin('users', 'users.id', '=', 'employees.user_id')
+            ->with(['user.roles']);
 
         if (array_key_exists('is_active', $filters) && $filters['is_active'] !== null) {
-            $query->where('is_active', (bool) $filters['is_active']);
+            $query->where('employees.is_active', (bool) $filters['is_active']);
         }
 
         if (! empty($filters['role'])) {
@@ -82,16 +114,21 @@ class EmployeeRepository extends BaseRepository
             $search = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
 
             $query->where(function ($q) use ($search) {
-                $q->where('code', 'ILIKE', "%{$search}%")
-                    ->orWhere('first_name', 'ILIKE', "%{$search}%")
-                    ->orWhere('last_name', 'ILIKE', "%{$search}%");
+                $q->where('employees.code', 'ILIKE', "%{$search}%")
+                    ->orWhere('users.first_name', 'ILIKE', "%{$search}%")
+                    ->orWhere('users.last_name', 'ILIKE', "%{$search}%");
             });
         }
 
         // apply sorts parsed by the request when provided
+        // created_at/updated_at exist on both joined tables and must be qualified —
+        // every other sortable field (code, is_active, first_name, last_name) is
+        // unambiguous under the join.
+        $columnMap = ['created_at' => 'employees.created_at', 'updated_at' => 'employees.updated_at'];
+
         foreach ($sorts as $sort) {
             if (! empty($sort['field']) && ! empty($sort['direction'])) {
-                $query->orderBy($sort['field'], $sort['direction']);
+                $query->orderBy($columnMap[$sort['field']] ?? $sort['field'], $sort['direction']);
             }
         }
 

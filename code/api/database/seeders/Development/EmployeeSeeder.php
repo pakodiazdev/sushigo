@@ -89,7 +89,7 @@ class EmployeeSeeder extends OnceSeeder
             $credential = $employee->user->email ?? $employee->user->phone ?? 'N/A';
             $roles = implode(', ', $employee->getPositionRoles());
 
-            $this->command->info("✓ Employee created: {$employee->code} - {$employee->first_name} {$employee->last_name} (hired: {$hireDate->toDateString()}, user: {$credential}, roles: {$roles})");
+            $this->command->info("✓ Employee created: {$employee->code} - {$employee->user->name} (hired: {$hireDate->toDateString()}, user: {$credential}, roles: {$roles})");
         }
     }
 
