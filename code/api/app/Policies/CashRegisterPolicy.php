@@ -74,7 +74,7 @@ class CashRegisterPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, CashRegister $cashRegister): bool
+    public function restore(): bool
     {
         return false;
     }
@@ -82,7 +82,7 @@ class CashRegisterPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, CashRegister $cashRegister): bool
+    public function forceDelete(): bool
     {
         return false;
     }

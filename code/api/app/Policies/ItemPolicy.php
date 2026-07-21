@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Models\Item;
 use App\Models\User;
 
 class ItemPolicy
@@ -10,7 +9,7 @@ class ItemPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(?User $user): bool
+    public function viewAny(?User $user): bool // NOSONAR - $user kept nullable so Gate::methodAllowsGuests() permits guest access
     {
         // Public endpoint - anyone can list items
         return true;
@@ -19,7 +18,7 @@ class ItemPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(?User $user, Item $item): bool
+    public function view(?User $user): bool // NOSONAR - $user kept nullable so Gate::methodAllowsGuests() permits guest access
     {
         // Public endpoint - anyone can view items
         return true;
@@ -28,7 +27,7 @@ class ItemPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(): bool
     {
         // Any authenticated user can create items
         // In production, you might want to check for specific roles/permissions
@@ -38,7 +37,7 @@ class ItemPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Item $item): bool
+    public function update(): bool
     {
         // Any authenticated user can update items
         // In production, you might want to check for specific roles/permissions
@@ -48,7 +47,7 @@ class ItemPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Item $item): bool
+    public function delete(): bool
     {
         // Any authenticated user can delete items
         // In production, you might want to check for specific roles/permissions
@@ -58,7 +57,7 @@ class ItemPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Item $item): bool
+    public function restore(): bool
     {
         return true;
     }
@@ -66,7 +65,7 @@ class ItemPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Item $item): bool
+    public function forceDelete(): bool
     {
         return true;
     }
