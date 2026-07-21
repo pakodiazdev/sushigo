@@ -74,7 +74,7 @@ class CashTerminalPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, CashTerminal $cashTerminal): bool
+    public function restore(): bool
     {
         return false;
     }
@@ -82,7 +82,7 @@ class CashTerminalPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, CashTerminal $cashTerminal): bool
+    public function forceDelete(): bool
     {
         return false;
     }

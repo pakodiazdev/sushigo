@@ -98,7 +98,7 @@ class CashAdjustmentPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, CashAdjustment $cashAdjustment): bool
+    public function restore(): bool
     {
         return false;
     }
@@ -106,7 +106,7 @@ class CashAdjustmentPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, CashAdjustment $cashAdjustment): bool
+    public function forceDelete(): bool
     {
         return false;
     }

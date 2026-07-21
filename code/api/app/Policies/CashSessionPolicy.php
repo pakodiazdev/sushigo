@@ -54,7 +54,7 @@ class CashSessionPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, CashSession $cashSession): bool
+    public function delete(): bool
     {
         return false; // Sessions should not be deleted
     }
@@ -90,7 +90,7 @@ class CashSessionPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, CashSession $cashSession): bool
+    public function restore(): bool
     {
         return false;
     }
@@ -98,7 +98,7 @@ class CashSessionPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, CashSession $cashSession): bool
+    public function forceDelete(): bool
     {
         return false;
     }
