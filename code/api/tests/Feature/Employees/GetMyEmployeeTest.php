@@ -40,8 +40,8 @@ class GetMyEmployeeTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.id', $employee->public_id)
-            ->assertJsonPath('data.first_name', $user->first_name)
-            ->assertJsonPath('data.last_name', $user->last_name);
+            ->assertJsonPath('data.user.first_name', $user->first_name)
+            ->assertJsonPath('data.user.last_name', $user->last_name);
     }
 
     #[Test]

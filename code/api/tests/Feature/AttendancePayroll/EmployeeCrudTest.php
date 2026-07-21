@@ -300,7 +300,7 @@ class EmployeeCrudTest extends TestCase
             ->assertJsonStructure([
                 'status',
                 'data' => [
-                    '*' => ['id', 'code', 'first_name', 'last_name', 'roles', 'is_active'],
+                    '*' => ['id', 'code', 'user' => ['first_name', 'last_name'], 'roles', 'is_active'],
                 ],
                 'meta' => ['current_page', 'total'],
             ]);
@@ -357,7 +357,7 @@ class EmployeeCrudTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'status',
-                'data' => ['id', 'code', 'first_name', 'last_name', 'roles', 'is_active', 'email', 'phone', 'phone_country'],
+                'data' => ['id', 'code', 'user' => ['first_name', 'last_name', 'email', 'phone', 'phone_country'], 'roles', 'is_active'],
             ])
             ->assertJsonFragment([
                 'id' => $employee->public_id,

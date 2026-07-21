@@ -14,8 +14,10 @@ use App\Http\Resources\BaseResource;
  *
  *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
  *     @OA\Property(property="code", type="string", example="EMP-001"),
- *     @OA\Property(property="first_name", type="string", example="Juan"),
- *     @OA\Property(property="last_name", type="string", example="Perez"),
+ *     @OA\Property(property="user", type="object", description="Personal data owned by the linked User account",
+ *         @OA\Property(property="first_name", type="string", nullable=true, example="Juan"),
+ *         @OA\Property(property="last_name", type="string", nullable=true, example="Perez")
+ *     ),
  *     @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}), example={"cook"}, description="Position roles"),
  *     @OA\Property(property="daily_wage", type="number", format="float", nullable=true, example=271.44, description="Computed daily wage (hourly_rate × weekly_scheduled_hours / 6). Null when no wage history is loaded.")
  * )
@@ -35,8 +37,10 @@ class EmployeeSummaryResource extends BaseResource
         return [
             'id' => $this->public_id,
             'code' => $this->code,
-            'first_name' => $this->user?->first_name,
-            'last_name' => $this->user?->last_name,
+            'user' => [
+                'first_name' => $this->user?->first_name,
+                'last_name' => $this->user?->last_name,
+            ],
             'roles' => $this->getPositionRoles(),
             'daily_wage' => $wage
                 ? round((float) $wage->hourly_rate * (float) $wage->weekly_scheduled_hours / 6, 2)

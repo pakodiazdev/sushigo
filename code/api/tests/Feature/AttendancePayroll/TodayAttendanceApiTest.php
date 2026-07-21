@@ -195,8 +195,7 @@ class TodayAttendanceApiTest extends TestCase
                         'employee' => [
                             'id',
                             'code',
-                            'first_name',
-                            'last_name',
+                            'user' => ['first_name', 'last_name'],
                             'roles',
                             'daily_wage',
                         ],
@@ -231,14 +230,14 @@ class TodayAttendanceApiTest extends TestCase
         $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
 
         $data = $response->json('data');
-        $names = collect($data)->pluck('employee.last_name')->all();
+        $names = collect($data)->pluck('employee.user.last_name')->all();
 
         // Acosta, Acosta, Zamora
         $this->assertEquals(['Acosta', 'Acosta', 'Zamora'], $names);
 
         // Within Acosta: Ana before Beto
-        $this->assertEquals('Ana', $data[0]['employee']['first_name']);
-        $this->assertEquals('Beto', $data[1]['employee']['first_name']);
+        $this->assertEquals('Ana', $data[0]['employee']['user']['first_name']);
+        $this->assertEquals('Beto', $data[1]['employee']['user']['first_name']);
     }
 
     #[Test]

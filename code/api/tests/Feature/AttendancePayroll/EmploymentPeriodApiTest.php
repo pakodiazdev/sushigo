@@ -211,7 +211,7 @@ class EmploymentPeriodApiTest extends TestCase
         $response->assertOk()
             ->assertJsonStructure([
                 'data' => [
-                    'id', 'code', 'first_name', 'last_name', 'is_active',
+                    'id', 'code', 'user' => ['first_name', 'last_name'], 'is_active',
                     'employment_periods' => [
                         '*' => ['id', 'branch_id', 'branch_name', 'start_date', 'end_date', 'is_active'],
                     ],
