@@ -93,4 +93,39 @@ class UpdateEmployeeRequest extends FormRequest
             $this->merge(['phone' => preg_replace('/[^0-9]/', '', $this->phone)]);
         }
     }
+
+    /**
+     * Fields to persist on the Employee record — everything validated except
+     * the ones that belong to the linked User (first_name/last_name/email/phone),
+     * roles (synced separately), and user_id (never user-settable).
+     */
+    public function employeeFields(): array
+    {
+        $exclude = ['first_name', 'last_name', 'email', 'phone', 'roles', 'user_id'];
+
+        return array_diff_key($this->validated(), array_flip($exclude));
+    }
+
+    /**
+     * Fields to persist on the linked User record, with phone_country derived
+     * from phone when phone changes.
+     */
+    public function userFields(): array
+    {
+        $userFields = array_intersect_key($this->validated(), array_flip(['first_name', 'last_name', 'email', 'phone']));
+
+        if (array_key_exists('phone', $userFields)) {
+            $userFields['phone_country'] = $userFields['phone'] ? config('employees.default_phone_country') : null;
+        }
+
+        return $userFields;
+    }
+
+    /**
+     * Position roles to sync, or null when roles were not part of this request.
+     */
+    public function roles(): ?array
+    {
+        return $this->validated()['roles'] ?? null;
+    }
 }

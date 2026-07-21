@@ -34,7 +34,7 @@ class TodayReportService
 
             return [
                 'employee_id' => $employee->public_id,
-                'name' => "{$employee->first_name} {$employee->last_name}",
+                'name' => $employee->user?->name ?? '',
                 'code' => $employee->code,
                 'role' => $employee->getPositionRoles()[0] ?? null,
                 'status' => $this->resolveStatus($attendance, $todayLeave, $isScheduledOff),

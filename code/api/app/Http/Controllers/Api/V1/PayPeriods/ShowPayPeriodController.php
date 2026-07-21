@@ -39,7 +39,7 @@ class ShowPayPeriodController extends Controller
 {
     public function __invoke(ShowPayPeriodRequest $request, PayPeriod $payPeriod): PayPeriodResource
     {
-        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee', 'payPeriodEmployees.lines']);
+        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines']);
 
         return new PayPeriodResource($payPeriod);
     }

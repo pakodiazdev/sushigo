@@ -18,8 +18,6 @@ class EmployeeFactory extends Factory
             'public_id' => (string) Str::ulid(),
             'user_id' => null,
             'code' => strtoupper(fake()->unique()->bothify('EMP-?###')),
-            'first_name' => fake()->firstName(),
-            'last_name' => fake()->lastName(),
             'is_active' => true,
             'meta' => null,
         ];
@@ -54,6 +52,19 @@ class EmployeeFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'user_id' => $user?->id ?? User::factory(),
+        ]);
+    }
+
+    /**
+     * Set the linked User's first/last name (name lives on User, not Employee).
+     */
+    public function withName(string $firstName, string $lastName): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_id' => User::factory()->state([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+            ]),
         ]);
     }
 

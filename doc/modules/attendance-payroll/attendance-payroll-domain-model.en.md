@@ -49,8 +49,6 @@ erDiagram
         bigint id PK
         bigint user_id FK "nullable - access account"
         string code UK "unique employee code"
-        string first_name
-        string last_name
         enum role "MANAGER|COOK|KITCHEN_ASSISTANT|DELIVERY_DRIVER"
         boolean is_active "default true"
         json meta "nullable"
@@ -418,10 +416,8 @@ Employee requests → EmployeeRequest{PENDING} → inbox → Manager approves �
 | Field        | Type         | Null | Default | Description                                                                 | FR    |
 | ------------ | ------------ | ---- | ------- | --------------------------------------------------------------------------- | ----- |
 | `id`         | bigint       | NO   | auto    | PK                                                                          | —     |
-| `user_id`    | bigint FK    | YES  | NULL    | User account (→ `users`). NULL if no system access.                         | RF-01 |
+| `user_id`    | bigint FK    | YES  | NULL    | User account (→ `users`). NULL if no system access. Personal data (name, email, phone) lives on `users`, not here. | RF-01 |
 | `code`       | varchar(20)  | NO   | —       | Unique employee code (e.g. "EMP-001").                                      | RF-03 |
-| `first_name` | varchar(100) | NO   | —       | First name.                                                                 | RF-01 |
-| `last_name`  | varchar(100) | NO   | —       | Last name.                                                                  | RF-01 |
 | `role`       | enum         | NO   | —       | Functional role: `MANAGER`, `COOK`, `KITCHEN_ASSISTANT`, `DELIVERY_DRIVER`. | RF-02 |
 | `is_active`  | boolean      | NO   | true    | Active in the system. `false` = deactivated (soft-delete).                  | RF-05 |
 | `meta`       | json         | YES  | NULL    | Extensible metadata (phone, emergency contact, etc.).                       | RF-01 |
@@ -926,8 +922,6 @@ classDiagram
         +int id
         +int user_id
         +string code
-        +string first_name
-        +string last_name
         +EmployeeRole role
         +bool is_active
         --

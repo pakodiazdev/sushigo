@@ -160,7 +160,7 @@ class BulkOvertimeDecisionRequest extends FormRequest
             $ids = $this->input('attendance_ids');
             $ids = is_array($ids) ? $ids : [];
 
-            $byId = Attendance::with('employee')
+            $byId = Attendance::with('employee.user')
                 ->whereIn('public_id', $ids)
                 ->get()
                 ->keyBy('public_id');

@@ -89,29 +89,32 @@ class TodayAttendanceController extends Controller
         // Fetch all active employees for the branch (via active employment period)
         // and eager-load today's attendance (if any) and any approved leave covering
         // today in a single query.
-        $employees = Employee::with([
-            'user.roles',
-            'attendances' => fn ($q) => $q->whereDate('date', $today),
-            // Pick only the first approved leave covering today.
-            // reorder() clears the default orderBy('start_date', 'desc') inherited from
-            // Employee::leaves(), then oldest('id') applies a stable, predictable tie-break.
-            'leaves' => fn ($q) => $q
-                ->approved()
-                ->forDate($today)
-                ->with('leaveType')
-                ->reorder()
-                ->oldest('id'),
-            // Load the wage record effective today to compute the daily wage shown in the
-            // ExtraDayNegotiationDialog. Only the most recent effective record is needed.
-            'wageHistories' => fn ($q) => $q->effective($today)->latest('effective_from'),
-        ])
-            ->where('attendance_exempt', false)
+        $employees = Employee::query()
+            ->select('employees.*')
+            ->leftJoin('users', 'users.id', '=', 'employees.user_id')
+            ->with([
+                'user.roles',
+                'attendances' => fn ($q) => $q->whereDate('date', $today),
+                // Pick only the first approved leave covering today.
+                // reorder() clears the default orderBy('start_date', 'desc') inherited from
+                // Employee::leaves(), then oldest('id') applies a stable, predictable tie-break.
+                'leaves' => fn ($q) => $q
+                    ->approved()
+                    ->forDate($today)
+                    ->with('leaveType')
+                    ->reorder()
+                    ->oldest('id'),
+                // Load the wage record effective today to compute the daily wage shown in the
+                // ExtraDayNegotiationDialog. Only the most recent effective record is needed.
+                'wageHistories' => fn ($q) => $q->effective($today)->latest('effective_from'),
+            ])
+            ->where('employees.attendance_exempt', false)
             ->whereHas('employmentPeriods', function ($q) use ($branchId) {
                 $q->where('branch_id', $branchId)
                     ->where('is_active', true);
             })
-            ->orderBy('last_name')
-            ->orderBy('first_name')
+            ->orderBy('users.last_name')
+            ->orderBy('users.first_name')
             ->get();
 
         $dayOfWeekIso = Carbon::parse($today)->dayOfWeekIso;

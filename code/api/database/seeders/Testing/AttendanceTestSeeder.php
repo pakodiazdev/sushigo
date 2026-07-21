@@ -73,15 +73,11 @@ class AttendanceTestSeeder extends Seeder
             [
                 'email' => 'admin@sushigo.com',
                 'code' => 'ADM-001',
-                'first_name' => 'Admin',
-                'last_name' => 'User',
                 'roles' => ['manager'],
             ],
             [
                 'email' => 'inventory@sushigo.com',
                 'code' => 'ADM-002',
-                'first_name' => 'Inventory',
-                'last_name' => 'Manager',
                 'roles' => ['manager'],
             ],
         ];
@@ -95,7 +91,8 @@ class AttendanceTestSeeder extends Seeder
         $userRows = [];
         foreach ($configEmployees as $emp) {
             $userRows[] = [
-                'name' => $emp['first_name'].' '.$emp['last_name'],
+                'first_name' => $emp['first_name'],
+                'last_name' => $emp['last_name'],
                 'email' => $emp['email'],
                 'phone' => $emp['phone'] ?? null,
                 'password' => $hashedPassword,
@@ -183,8 +180,6 @@ class AttendanceTestSeeder extends Seeder
         foreach ($configEmployees as $emp) {
             $allEmployees[] = [
                 'code' => $emp['code'],
-                'first_name' => $emp['first_name'],
-                'last_name' => $emp['last_name'],
                 'user_id' => $userIdMap[$emp['email']],
                 'meta' => isset($emp['meta']) ? json_encode($emp['meta']) : null,
             ];
@@ -194,8 +189,6 @@ class AttendanceTestSeeder extends Seeder
             if ($userId) {
                 $allEmployees[] = [
                     'code' => $profile['code'],
-                    'first_name' => $profile['first_name'],
-                    'last_name' => $profile['last_name'],
                     'user_id' => $userId,
                     'meta' => null,
                 ];
@@ -207,8 +200,6 @@ class AttendanceTestSeeder extends Seeder
             $employeeRows[] = [
                 'user_id' => $emp['user_id'],
                 'code' => $emp['code'],
-                'first_name' => $emp['first_name'],
-                'last_name' => $emp['last_name'],
                 'is_active' => true,
                 'public_id' => (string) Str::ulid(),
                 'meta' => $emp['meta'],

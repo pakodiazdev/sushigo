@@ -17,7 +17,8 @@ class RegisterUser
         $phoneCountry = config('employees.default_phone_country');
 
         return $this->userRepository->create([
-            'name' => $data['name'],
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
             'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
             'phone_country' => isset($data['phone']) ? $phoneCountry : null,

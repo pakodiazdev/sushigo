@@ -21,7 +21,7 @@ An Employee has a User → that User has a role within the company.
 ## 2. Main Components
 
 - **User**: authenticated account (Laravel Passport). All roles and permissions are assigned here via Spatie Permission (`guard: api`).
-- **Employee**: work profile linked to a `User` (`user_id FK`). Describes the person: name, code, position. **Does not implement `HasRoles`**.
+- **Employee**: work profile linked to a `User` (`user_id FK`). Describes the person's work data: code, position — personal data (name, email, phone) lives on `User`. **Does not implement `HasRoles`**.
 - **Role**: contextual grouper of permissions assigned to the `User`.
 - **Permission**: granular action (e.g., `employees.create`, `users.index`).
 - **OperatingUnitUser**: pivot table linking `User` with operating units, granting an operating role (`OWNER`, `MANAGER`, `INVENTORY`, etc.).
@@ -45,7 +45,8 @@ erDiagram
 
   USER {
     bigint id PK
-    string name
+    string first_name
+    string last_name
     string email
     string phone
     string password
@@ -56,8 +57,6 @@ erDiagram
     string public_id UK
     bigint user_id FK
     string code UK
-    string first_name
-    string last_name
     boolean is_active
     json meta
   }

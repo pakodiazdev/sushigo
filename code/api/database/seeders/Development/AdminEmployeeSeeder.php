@@ -52,8 +52,6 @@ class AdminEmployeeSeeder extends OnceSeeder
             $employee = $employeeRepository->create([
                 'user_id' => $user->id,
                 'code' => $employeeData['code'],
-                'first_name' => $employeeData['first_name'],
-                'last_name' => $employeeData['last_name'],
                 'is_active' => true,
                 'attendance_exempt' => $employeeData['attendance_exempt'] ?? false,
             ]);

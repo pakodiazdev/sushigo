@@ -13,7 +13,7 @@ class ListDevUsersController extends Controller
     {
         DevLoginGuard::validate();
 
-        $users = User::with(['roles', 'permissions'])->orderBy('name')->get();
+        $users = User::with(['roles', 'permissions'])->orderBy('first_name')->orderBy('last_name')->get();
 
         return response()->json([
             'status' => 200,

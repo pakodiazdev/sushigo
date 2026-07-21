@@ -51,8 +51,8 @@ class EmployeeResource extends BaseResource
         return [
             'id' => $this->public_id,
             'code' => $this->code,
-            'first_name' => $this->first_name,
-            'last_name' => $this->last_name,
+            'first_name' => $this->user?->first_name,
+            'last_name' => $this->user?->last_name,
             'roles' => $this->getPositionRoles(),
             'is_active' => $this->is_active,
             'attendance_exempt' => $this->attendance_exempt,

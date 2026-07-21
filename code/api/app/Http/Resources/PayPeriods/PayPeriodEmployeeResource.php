@@ -38,8 +38,8 @@ class PayPeriodEmployeeResource extends BaseResource
         return [
             'employee' => [
                 'id' => $this->employee->public_id,
-                'first_name' => $this->employee->first_name,
-                'last_name' => $this->employee->last_name,
+                'first_name' => $this->employee->user?->first_name,
+                'last_name' => $this->employee->user?->last_name,
                 'code' => $this->employee->code,
             ],
             'base_pay' => (float) $this->base_pay,

@@ -9,6 +9,7 @@ use App\Http\Responses\Common\ResponsePaginated;
 use App\Models\Attendance;
 use App\Models\AttendanceAuditLog;
 use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
@@ -63,7 +64,13 @@ class ListAuditLogsController extends Controller
                         'auditable_id',
                         Attendance::query()->select('id')->where('employee_id', $employee->id)
                     );
-                });
+                })
+                    // Name/email/phone changes are audited on the linked User, not
+                    // Employee — surface them under the employee's trail too so
+                    // "this employee's history" stays complete.
+                    ->when($employee->user_id, fn ($q2) => $q2->orWhere(function ($q3) use ($employee) {
+                        $q3->where('auditable_type', User::class)->where('auditable_id', $employee->user_id);
+                    }));
             });
         }
 

@@ -14,7 +14,7 @@ use App\Models\AttendanceAuditLog;
  *
  *     @OA\Property(property="id", type="integer", example=42),
  *     @OA\Property(property="auditable_type", type="string", example="App\\Models\\Attendance"),
- *     @OA\Property(property="auditable_id", type="string", nullable=true, example="01JKXYZ1234567890ABCDEFGH", description="Public ID (ULID) of the audited record"),
+ *     @OA\Property(property="auditable_id", type="string", nullable=true, example="01JKXYZ1234567890ABCDEFGH", description="Public ID (ULID) of the audited record when it has one (Employee, Attendance); falls back to the internal numeric ID for auditable types without a public ID (e.g. User)"),
  *     @OA\Property(property="action", type="string", enum={"CREATE", "UPDATE", "DELETE"}, example="UPDATE"),
  *     @OA\Property(property="old_values", type="object", nullable=true),
  *     @OA\Property(property="new_values", type="object", nullable=true),
@@ -30,7 +30,10 @@ class AuditLogResource extends BaseResource
         return [
             'id' => $this->id,
             'auditable_type' => $this->auditable_type,
-            'auditable_id' => $this->auditable?->public_id,
+            // Employee/Attendance expose a ULID public_id; User (audited since #086
+            // for name/email/phone changes) does not, so fall back to the raw FK
+            // rather than leaving the record unidentifiable in the response.
+            'auditable_id' => $this->auditable?->public_id ?? (string) $this->auditable_id,
             'action' => $this->action->value,
             'old_values' => $this->old_values,
             'new_values' => $this->new_values,

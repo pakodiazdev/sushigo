@@ -348,7 +348,8 @@ class CoreTestSeeder extends Seeder
         // Define users
         $users = [
             [
-                'name' => 'Super Admin',
+                'first_name' => 'Super',
+                'last_name' => 'Admin',
                 'email' => 'superadmin@sushigo.com',
                 'password' => $adminHash,
                 'email_verified_at' => $now,
@@ -359,7 +360,8 @@ class CoreTestSeeder extends Seeder
                 '_units' => $allUnitIds,
             ],
             [
-                'name' => 'Admin User',
+                'first_name' => 'Admin',
+                'last_name' => 'User',
                 'email' => 'admin@sushigo.com',
                 'password' => $adminHash,
                 'email_verified_at' => $now,
@@ -370,7 +372,8 @@ class CoreTestSeeder extends Seeder
                 '_units' => $allUnitIds,
             ],
             [
-                'name' => 'Inventory Manager',
+                'first_name' => 'Inventory',
+                'last_name' => 'Manager',
                 'email' => 'inventory@sushigo.com',
                 'password' => $inventoryHash,
                 'email_verified_at' => $now,
@@ -381,7 +384,8 @@ class CoreTestSeeder extends Seeder
                 '_units' => $mainBufferIds,
             ],
             [
-                'name' => 'Branch Manager',
+                'first_name' => 'Branch',
+                'last_name' => 'Manager',
                 'email' => 'manager@sushigo.com',
                 'password' => $employeeHash,
                 'email_verified_at' => $now,

@@ -41,45 +41,16 @@ class UpdateEmployeeController extends Controller
     public function __invoke(UpdateEmployeeRequest $request, Employee $employee): EmployeeResource
     {
         DB::transaction(function () use ($request, $employee) {
-            $validated = $request->validated();
+            $employee->update($request->employeeFields());
 
-            $roles = $validated['roles'] ?? null;
-            $userFields = array_intersect_key($validated, array_flip(['email', 'phone']));
-
-            // user_id has no validation rule so it never appears in validated(),
-            // but we keep it in the exclude list as defense-in-depth.
-            $exclude = ['email', 'phone', 'roles', 'user_id'];
-
-            $employeeFields = array_diff_key($validated, array_flip($exclude));
-
-            $employee->update($employeeFields);
-
+            $roles = $request->roles();
             if ($roles !== null) {
                 $employee->syncPositionRoles($roles, $request->user());
             }
 
-            // Prepare user updates: keep name in sync when employee names change
-            $userUpdates = $userFields;
-
-            // Sync phone_country when phone changes
-            if (array_key_exists('phone', $userFields)) {
-                $phoneCountry = config('employees.default_phone_country');
-                $userUpdates['phone_country'] = $userFields['phone'] ? $phoneCountry : null;
-            }
-
-            // If first_name or last_name were provided, rebuild the user.name
-            if ($employee->user && (array_key_exists('first_name', $employeeFields) || array_key_exists('last_name', $employeeFields))) {
-                $first = $employeeFields['first_name'] ?? $employee->first_name;
-                $last = $employeeFields['last_name'] ?? $employee->last_name;
-                $newName = trim("{$first} {$last}");
-
-                if ($employee->user->name !== $newName) {
-                    $userUpdates['name'] = $newName;
-                }
-            }
-
-            if (! empty($userUpdates) && $employee->user) {
-                $employee->user->update($userUpdates);
+            $userFields = $request->userFields();
+            if (! empty($userFields) && $employee->user) {
+                $employee->user->update($userFields);
             }
         });
 

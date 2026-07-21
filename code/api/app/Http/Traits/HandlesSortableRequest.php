@@ -13,6 +13,16 @@ trait HandlesSortableRequest
         return [];
     }
 
+    /**
+     * Map a public-facing sort field name to the DB column actually used in
+     * ORDER BY (e.g. when the field lives on a joined table). Fields not
+     * listed here are used as-is.
+     */
+    protected function sortColumnMap(): array
+    {
+        return [];
+    }
+
     public function sortRules(): array
     {
         return [
@@ -41,8 +51,11 @@ trait HandlesSortableRequest
 
     public function applySorts(Builder $query): void
     {
+        $columnMap = $this->sortColumnMap();
+
         foreach ($this->parseSorts() as $sort) {
-            $query->orderBy($sort['field'], $sort['direction']);
+            $column = $columnMap[$sort['field']] ?? $sort['field'];
+            $query->orderBy($column, $sort['direction']);
         }
     }
 }

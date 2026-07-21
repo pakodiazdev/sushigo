@@ -36,8 +36,6 @@ class CreateEmployeeAction
             $employee = $this->employeeRepository->create([
                 'user_id' => $user->id,
                 'code' => $data['code'],
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
                 'is_active' => $data['is_active'] ?? true,
                 'attendance_exempt' => $data['attendance_exempt'] ?? false,
                 'meta' => $data['meta'] ?? null,
@@ -74,7 +72,8 @@ class CreateEmployeeAction
         $plainPassword = $data['password'] ?? Str::random(32);
 
         $user = $this->userRepository->create([
-            'name' => "{$data['first_name']} {$data['last_name']}",
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
             'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
             'phone_country' => isset($data['phone']) ? $phoneCountry : null,

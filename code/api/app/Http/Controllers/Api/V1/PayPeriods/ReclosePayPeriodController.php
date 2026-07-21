@@ -6,11 +6,11 @@ use App\Actions\Payroll\RecalculatePayPeriodEmployeesAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ReclosePayPeriodRequest;
 use App\Http\Resources\PayPeriods\PayPeriodResource;
-use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\PayPeriod;
 use App\Models\PayPeriodEmployee;
 use App\Models\PunctualityRange;
+use App\Repositories\EmployeeRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -49,6 +49,7 @@ class ReclosePayPeriodController extends Controller
 {
     public function __construct(
         private RecalculatePayPeriodEmployeesAction $recalculate,
+        private EmployeeRepository $employeeRepository,
     ) {}
 
     public function __invoke(ReclosePayPeriodRequest $request, PayPeriod $payPeriod): PayPeriodResource
@@ -62,14 +63,7 @@ class ReclosePayPeriodController extends Controller
         $periodStart = $payPeriod->period_start->toDateString();
         $periodEnd = $payPeriod->period_end->toDateString();
 
-        $employees = Employee::with(['employmentPeriods'])
-            ->whereHas('employmentPeriods', function ($q) use ($payPeriod) {
-                $q->where('branch_id', $payPeriod->branch_id)->where('is_active', true);
-            })
-            ->where('is_active', true)
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get();
+        $employees = $this->employeeRepository->getActiveForPayPeriod($payPeriod->branch_id);
 
         $holidays = Holiday::whereBetween('date', [$periodStart, $periodEnd])->get();
         $punctualityRanges = PunctualityRange::orderBy('sort_order')->get();
@@ -87,7 +81,7 @@ class ReclosePayPeriodController extends Controller
             ]);
         });
 
-        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee', 'payPeriodEmployees.lines']);
+        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines']);
 
         return new PayPeriodResource($payPeriod);
     }

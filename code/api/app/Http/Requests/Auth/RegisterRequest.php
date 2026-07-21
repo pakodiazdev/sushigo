@@ -7,9 +7,10 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @OA\Schema(
  *   schema="RegisterRequestSchema",
- *   required={"name", "password"},
+ *   required={"first_name", "last_name", "password"},
  *
- *   @OA\Property(property="name", type="string", example="John Doe"),
+ *   @OA\Property(property="first_name", type="string", example="John"),
+ *   @OA\Property(property="last_name", type="string", example="Doe"),
  *   @OA\Property(property="email", type="string", format="email", example="john@example.com", description="Required if phone is not provided"),
  *   @OA\Property(property="phone", type="string", example="5512345678", description="National phone number without country code (required if email not provided)"),
  *   @OA\Property(property="password", type="string", format="password", minLength=8, example="password123"),
@@ -26,7 +27,8 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
             'email' => ['required_without:phone', 'nullable', 'string', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required_without:email', 'nullable', 'string', 'regex:/^[0-9]{10}$/', 'unique:users,phone'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],

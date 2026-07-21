@@ -64,12 +64,15 @@ class PayPeriodHistorySeeder extends OnceSeeder
 
     private function seedBranchHistory(Branch $branch, Carbon $anchorSunday): int
     {
-        $employees = Employee::with('employmentPeriods')
-            ->where('is_active', true)
-            ->where('attendance_exempt', false)
+        $employees = Employee::query()
+            ->select('employees.*')
+            ->leftJoin('users', 'users.id', '=', 'employees.user_id')
+            ->with('employmentPeriods')
+            ->where('employees.is_active', true)
+            ->where('employees.attendance_exempt', false)
             ->whereHas('employmentPeriods', fn ($q) => $q->where('branch_id', $branch->id)->where('is_active', true))
-            ->orderBy('last_name')
-            ->orderBy('first_name')
+            ->orderBy('users.last_name')
+            ->orderBy('users.first_name')
             ->get();
 
         if ($employees->isEmpty()) {

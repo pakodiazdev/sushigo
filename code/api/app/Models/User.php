@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,12 +11,13 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use Auditable, HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     protected $guard_name = 'api';
 
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
         'email',
         'phone',
         'phone_country',
@@ -26,6 +28,13 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    /**
+     * Keep `name` present in serialized output even though it's a computed
+     * accessor now, not a stored column — preserves the API contract for any
+     * path that serializes a User directly instead of reading ->name explicitly.
+     */
+    protected $appends = ['name'];
 
     protected function casts(): array
     {
@@ -63,5 +72,23 @@ class User extends Authenticatable
         }
 
         return ($this->phone_country ?? '').$this->phone;
+    }
+
+    /**
+     * Get the full display name, computed from first_name + last_name.
+     * Kept as a computed attribute (not a stored column) so name is always
+     * consistent with its two source fields — no sync required.
+     */
+    public function getNameAttribute(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    /**
+     * Keep password hashes and remember tokens out of the audit trail.
+     */
+    protected function auditExcluded(): array
+    {
+        return ['password', 'remember_token'];
     }
 }
