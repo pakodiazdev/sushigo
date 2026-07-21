@@ -13,11 +13,13 @@ afterEach(() => {
 const mockEmployee: Employee = {
     id: '1',
     code: 'EMP-001',
-    first_name: 'John',
-    last_name: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '555-1234',
-    phone_country: '+1',
+    user: {
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'john.doe@example.com',
+        phone: '555-1234',
+        phone_country: '+1',
+    },
     is_active: true,
     attendance_exempt: false,
     vacation_entitlement_rule_key: null,
@@ -86,7 +88,7 @@ describe('EmployeeInfoHeader', () => {
         })
 
         it('displays "No registrado" when email is not provided', () => {
-            const noEmailEmployee = { ...mockEmployee, email: null }
+            const noEmailEmployee = { ...mockEmployee, user: { ...mockEmployee.user, email: null } }
             const { getAllByText } = render(
                 <EmployeeInfoHeader employee={noEmailEmployee} hasActivePeriod={true} />
             )
@@ -102,7 +104,7 @@ describe('EmployeeInfoHeader', () => {
         })
 
         it('displays "No registrado" when phone is not provided', () => {
-            const noPhoneEmployee = { ...mockEmployee, phone: null, phone_country: null }
+            const noPhoneEmployee = { ...mockEmployee, user: { ...mockEmployee.user, phone: null, phone_country: null } }
             const { getAllByText } = render(
                 <EmployeeInfoHeader employee={noPhoneEmployee} hasActivePeriod={true} />
             )

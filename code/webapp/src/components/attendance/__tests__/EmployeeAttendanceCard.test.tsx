@@ -77,8 +77,10 @@ const mockRow: TodayAttendanceRow = {
     employee: {
         id: '01HZTEST00000001',
         code: 'EMP001',
-        first_name: 'John',
-        last_name: 'Doe',
+        user: {
+            first_name: 'John',
+            last_name: 'Doe',
+        },
         roles: ['cajero'],
         daily_wage: null,
     },
@@ -91,8 +93,10 @@ const mockRowWithAttendance: TodayAttendanceRow = {
     employee: {
         id: '01HZTEST00000002',
         code: 'EMP002',
-        first_name: 'Jane',
-        last_name: 'Smith',
+        user: {
+            first_name: 'Jane',
+            last_name: 'Smith',
+        },
         roles: ['mesero', 'cocina'],
         daily_wage: null,
     },

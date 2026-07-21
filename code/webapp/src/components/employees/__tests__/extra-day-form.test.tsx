@@ -111,8 +111,7 @@ import { ExtraDayForm } from '../extra-day-form'
 
 const employee = {
   id: 'emp-1',
-  first_name: 'Ana',
-  last_name: 'López',
+  user: { first_name: 'Ana', last_name: 'López' },
 } as unknown as Employee
 
 const baseProps = {

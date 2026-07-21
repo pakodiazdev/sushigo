@@ -34,10 +34,13 @@ vi.mock('@/services/employee-hooks', () => ({
 const mockEmployee: Employee = {
   id: 'emp-1',
   code: 'EMP-001',
-  first_name: 'Juan',
-  last_name: 'García',
-  email: 'juan@example.com',
-  phone: null,
+  user: {
+    first_name: 'Juan',
+    last_name: 'García',
+    email: 'juan@example.com',
+    phone: null,
+    phone_country: null,
+  },
   is_active: true,
   attendance_exempt: false,
   vacation_entitlement_rule_key: null,

@@ -84,7 +84,7 @@ export function RegisterLeaveDialog({
   const panelAnim = getAnimationClass(animating, 'animate-dialog-in', 'animate-dialog-out')
 
   const employeeName = employee
-    ? `${employee.last_name}, ${employee.first_name}`
+    ? `${employee.user.last_name}, ${employee.user.first_name}`
     : ''
 
   const content = (

@@ -17,8 +17,10 @@ afterEach(() => {
 const employee: TodayAttendanceEmployee = {
   id: 'emp-001',
   code: 'EMP001',
-  first_name: 'María',
-  last_name: 'García',
+  user: {
+    first_name: 'María',
+    last_name: 'García',
+  },
   roles: ['mesero'],
   daily_wage: null,
 }

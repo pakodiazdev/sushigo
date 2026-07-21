@@ -4,7 +4,7 @@ import type { LeaveFilters } from '@/services/leave-api'
 import type { Leave } from '@/types/leave'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
 
-export function useLeaveSummarySection(employeeId: string, employee: { id: string; first_name: string; last_name: string; code: string } | undefined) {
+export function useLeaveSummarySection(employeeId: string, employee: { id: string; code: string; user: { first_name: string; last_name: string } } | undefined) {
     const [showFullHistory, setShowFullHistory] = useState(false)
     const [filters, setFilters] = useState<LeaveFilters>({})
     const [page, setPage] = useState(1)
@@ -52,8 +52,10 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
         setPendingLeaveEmployee({
             id: employee.id,
             code: employee.code,
-            first_name: employee.first_name,
-            last_name: employee.last_name,
+            user: {
+                first_name: employee.user.first_name,
+                last_name: employee.user.last_name,
+            },
             roles: [],
             daily_wage: null,
         })

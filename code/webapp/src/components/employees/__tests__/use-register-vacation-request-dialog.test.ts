@@ -17,7 +17,7 @@ vi.mock('@/services/vacation-hooks', async (importOriginal) => {
   }
 })
 
-const mockEmployee = { id: 'emp-1', first_name: 'Carlos', last_name: 'Mendoza' }
+const mockEmployee = { id: 'emp-1', user: { first_name: 'Carlos', last_name: 'Mendoza' } }
 
 describe('useRegisterVacationRequestDialog', () => {
   beforeEach(() => {

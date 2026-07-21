@@ -161,6 +161,7 @@ describe('useWeeklySummaryDialog', () => {
   it('exposes isEarliestWeek and blocks navigation before the employee hire date', () => {
     vi.mocked(useEmployee).mockReturnValue({
       data: {
+        user: { first_name: 'Carlos', last_name: 'Mendoza' },
         employment_periods: [
           { id: 'p1', branch_id: 1, branch_name: 'Main', start_date: '2026-06-08', end_date: null, termination_reason: null, is_active: true },
         ],
@@ -200,6 +201,7 @@ describe('useWeeklySummaryDialog', () => {
   it('uses the earliest of multiple employment periods as the hire date', () => {
     vi.mocked(useEmployee).mockReturnValue({
       data: {
+        user: { first_name: 'Carlos', last_name: 'Mendoza' },
         employment_periods: [
           { id: 'p2', branch_id: 1, branch_name: 'Main', start_date: '2026-05-04', end_date: '2026-05-18', termination_reason: 'resignation', is_active: false },
           { id: 'p1', branch_id: 1, branch_name: 'Main', start_date: '2026-06-08', end_date: null, termination_reason: null, is_active: true },

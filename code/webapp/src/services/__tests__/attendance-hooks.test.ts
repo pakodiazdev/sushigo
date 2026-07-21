@@ -43,12 +43,12 @@ const mockTodayResponse = {
   data: {
     data: [
       {
-        employee: { id: 'emp-001', first_name: 'Carlos', last_name: 'Mendoza', code: 'EMP-001' },
+        employee: { id: 'emp-001', code: 'EMP-001', user: { first_name: 'Carlos', last_name: 'Mendoza' } },
         attendance: null,
         schedule_day: null,
       },
       {
-        employee: { id: 'emp-002', first_name: 'María', last_name: 'García', code: 'EMP-002' },
+        employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'María', last_name: 'García' } },
         attendance: { id: 'att-001', check_in: '2026-04-01T13:00:00Z' },
         schedule_day: null,
       },

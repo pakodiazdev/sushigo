@@ -35,8 +35,10 @@ vi.mock('../use-manual-overtime-movement-dialog', () => ({
 
 const mockEmployee: ManualOvertimeMovementEmployee = {
     id: 'emp-1',
-    first_name: 'Carlos',
-    last_name: 'Mendoza',
+    user: {
+        first_name: 'Carlos',
+        last_name: 'Mendoza',
+    },
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────

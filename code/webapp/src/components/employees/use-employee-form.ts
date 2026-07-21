@@ -113,8 +113,8 @@ export function useEmployeeForm({
           // Only send contact fields if they changed from the original value.
           // This preserves the backend `required_without` cross-validation:
           // absent fields are ignored, and the rule only fires when both are present.
-          const originalEmail = fullEmployee?.email ?? ''
-          const originalPhone = fullEmployee?.phone ?? ''
+          const originalEmail = fullEmployee?.user.email ?? ''
+          const originalPhone = fullEmployee?.user.phone ?? ''
           const newEmail = (values.email ?? '').trim()
           const newPhone = (values.phone ?? '').trim()
           if (newEmail !== originalEmail) updateData.email = newEmail

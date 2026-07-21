@@ -18,7 +18,7 @@ function formatCurrency(value: number): string {
 }
 
 export function ExtraDayForm({ isOpen, onClose, employee }: ExtraDayFormProps) {
-  const employeeName = `${employee.first_name} ${employee.last_name}`
+  const employeeName = `${employee.user.first_name} ${employee.user.last_name}`
 
   const {
     form,

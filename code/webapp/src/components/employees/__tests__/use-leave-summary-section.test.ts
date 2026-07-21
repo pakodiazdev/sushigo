@@ -30,7 +30,7 @@ function createWrapper() {
         React.createElement(QueryClientProvider, { client: queryClient }, children)
 }
 
-const employee = { id: 'emp-1', first_name: 'Ana', last_name: 'López', code: 'E001' }
+const employee = { id: 'emp-1', code: 'E001', user: { first_name: 'Ana', last_name: 'López' } }
 
 function makeLeave(overrides: Record<string, unknown> = {}) {
     return {
@@ -187,8 +187,10 @@ describe('useLeaveSummarySection', () => {
         expect(result.current.pendingLeaveEmployee).toEqual({
             id: 'emp-1',
             code: 'E001',
-            first_name: 'Ana',
-            last_name: 'López',
+            user: {
+                first_name: 'Ana',
+                last_name: 'López',
+            },
             roles: [],
             daily_wage: null,
         })

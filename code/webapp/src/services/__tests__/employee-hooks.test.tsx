@@ -131,7 +131,7 @@ describe('employee-hooks', () => {
     describe('useEmployee', () => {
         it('fetches single employee by id', async () => {
             mockEmployeeGet.mockResolvedValue({
-                data: { data: { id: 'emp-01', first_name: 'Carlos', code: 'EMP-003' } },
+                data: { data: { id: 'emp-01', code: 'EMP-003', user: { first_name: 'Carlos' } } },
             })
 
             const { result } = renderHook(() => useEmployee('emp-01'), {
@@ -141,7 +141,7 @@ describe('employee-hooks', () => {
             await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
             expect(mockEmployeeGet).toHaveBeenCalledWith('emp-01')
-            expect(result.current.data?.first_name).toBe('Carlos')
+            expect(result.current.data?.user.first_name).toBe('Carlos')
         })
 
         it('does not fetch when id is empty', () => {
@@ -157,7 +157,7 @@ describe('employee-hooks', () => {
     describe('useMyEmployee', () => {
         it('fetches the current user employee profile', async () => {
             mockEmployeeMe.mockResolvedValue({
-                data: { data: { id: 'emp-me', first_name: 'Yo', code: 'EMP-001' } },
+                data: { data: { id: 'emp-me', code: 'EMP-001', user: { first_name: 'Yo' } } },
             })
 
             const { result } = renderHook(() => useMyEmployee(), {
@@ -267,7 +267,7 @@ describe('employee-hooks', () => {
     describe('useUpdateEmployee', () => {
         it('calls update API and shows success toast', async () => {
             mockEmployeeUpdate.mockResolvedValue({
-                data: { data: { id: 'emp-01', first_name: 'Updated' } },
+                data: { data: { id: 'emp-01', user: { first_name: 'Updated' } } },
             })
 
             const { result } = renderHook(() => useUpdateEmployee(), {

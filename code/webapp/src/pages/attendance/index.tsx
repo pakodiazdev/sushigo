@@ -36,13 +36,13 @@ import type { TodayAttendanceEmployee, OvertimePendingEntry, OvertimeValuationMe
 /** Full name from a check-in pending employee (direct TodayAttendanceEmployee). */
 function checkInName(employee: TodayAttendanceEmployee | null): string {
   if (!employee) return ''
-  return `${employee.first_name} ${employee.last_name}`
+  return `${employee.user.first_name} ${employee.user.last_name}`
 }
 
 /** Full name from a pending attendance action (has nested .employee). */
 function pendingName(pending: PendingAttendanceData | null): string {
   if (!pending) return ''
-  return `${pending.employee.first_name} ${pending.employee.last_name}`
+  return `${pending.employee.user.first_name} ${pending.employee.user.last_name}`
 }
 
 interface OvertimeDialogState {
@@ -82,7 +82,7 @@ function resolveOvertimeDialog({
     return {
       isOpen: true,
       attendanceId: individual.attendanceId,
-      employeeName: `${individual.employee.first_name} ${individual.employee.last_name}`,
+      employeeName: `${individual.employee.user.first_name} ${individual.employee.user.last_name}`,
       overtimeMinutes: individualMinutes,
       onAuthorize: (method, agreedRate, agreedFactor) => confirmIndividual(true, method, agreedRate, agreedFactor),
       onReject: () => confirmIndividual(false),
@@ -260,11 +260,11 @@ export function AttendancePage() {
                 onOvertimeDecision={openOvertimeDecision}
                 onMarkDayStatus={markDayStatus}
                 onWeeklySummary={can('reports.weekly-summary')
-                  ? (emp) => weeklySummary.open(emp.id, `${emp.last_name}, ${emp.first_name}`)
+                  ? (emp) => weeklySummary.open(emp.id, `${emp.user.last_name}, ${emp.user.first_name}`)
                   : undefined}
                 onViewAudit={can('audit-logs.view')
                   ? (emp, attendanceId) => setAuditRecord({
-                    employeeName: `${emp.last_name}, ${emp.first_name}`,
+                    employeeName: `${emp.user.last_name}, ${emp.user.first_name}`,
                     attendanceId,
                   })
                   : undefined}

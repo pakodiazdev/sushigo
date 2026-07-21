@@ -23,11 +23,13 @@ import type { Employee, EmployeePositionRole } from '@/types/employee'
 const mockEmployee: Employee = {
     id: 'emp-01',
     code: 'EMP-001',
-    first_name: 'Juan',
-    last_name: 'Perez',
-    email: 'juan@test.com',
-    phone: '5551234567',
-    phone_country: 'MX',
+    user: {
+        first_name: 'Juan',
+        last_name: 'Perez',
+        email: 'juan@test.com',
+        phone: '5551234567',
+        phone_country: 'MX',
+    },
     roles: ['cook'] as EmployeePositionRole[],
     is_active: true,
     attendance_exempt: false,

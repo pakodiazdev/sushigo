@@ -33,7 +33,7 @@ vi.mock('@/components/employees/wage-history-section', () => ({
 }))
 
 vi.mock('@/components/employees/employee-info-header', () => ({
-  EmployeeInfoHeader: ({ employee }: { employee: Employee }) => <div>{employee.first_name} {employee.last_name}</div>,
+  EmployeeInfoHeader: ({ employee }: { employee: Employee }) => <div>{employee.user.first_name} {employee.user.last_name}</div>,
 }))
 
 vi.mock('@/components/employees/deactivate-form', () => ({
@@ -118,10 +118,12 @@ vi.mock('@/stores/auth.store', () => ({
 const employee = {
   id: 12,
   code: 'EMP-012',
-  first_name: 'Laura',
-  last_name: 'Torres',
-  email: 'laura@sushigo.com',
-  phone: '5512345678',
+  user: {
+    first_name: 'Laura',
+    last_name: 'Torres',
+    email: 'laura@sushigo.com',
+    phone: '5512345678',
+  },
   is_active: true,
   has_user: true,
   employment_periods: [],

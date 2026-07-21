@@ -44,7 +44,7 @@ export function getEmployeeColumns(
       sortKey: 'first_name',
       render: (item) => (
         <div className="font-medium">
-          {item.first_name} {item.last_name}
+          {item.user.first_name} {item.user.last_name}
         </div>
       ),
       skeleton: () => <div className="h-4 w-32 rounded bg-muted animate-pulse" />,

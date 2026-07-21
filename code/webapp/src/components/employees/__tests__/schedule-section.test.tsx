@@ -103,8 +103,13 @@ const mockScheduleWithBothOverrides = {
 const mockEmployee: Employee = {
   id: 'emp-1',
   code: 'E001',
-  first_name: 'Juan',
-  last_name: 'Pérez',
+  user: {
+    first_name: 'Juan',
+    last_name: 'Pérez',
+    email: null,
+    phone: null,
+    phone_country: null,
+  },
   roles: ['cook'],
   is_active: true,
   attendance_exempt: false,

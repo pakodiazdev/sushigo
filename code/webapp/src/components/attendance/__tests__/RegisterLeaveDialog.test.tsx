@@ -66,8 +66,10 @@ vi.mock('../use-register-leave-dialog', () => ({
 const mockEmployee: TodayAttendanceEmployee = {
     id: '01HZTEST00000001',
     code: 'EMP-001',
-    first_name: 'Carlos',
-    last_name: 'Mendoza',
+    user: {
+        first_name: 'Carlos',
+        last_name: 'Mendoza',
+    },
     roles: [],
     daily_wage: null,
 }

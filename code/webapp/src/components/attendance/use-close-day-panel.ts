@@ -100,7 +100,7 @@ export function useCloseDayPanel(
 
       entries.push({
         attendanceId: row.attendance.id,
-        employeeName: `${row.employee.first_name} ${row.employee.last_name}`,
+        employeeName: `${row.employee.user.first_name} ${row.employee.user.last_name}`,
         lunchStart,
         lunchStartDisplay: formatTime(lunchStart),
         preCalculatedReturn: preCalc,
@@ -134,7 +134,7 @@ export function useCloseDayPanel(
 
     for (const row of rows) {
       const phase = getAttendancePhase(row.attendance)
-      const name = `${row.employee.first_name} ${row.employee.last_name}`
+      const name = `${row.employee.user.first_name} ${row.employee.user.last_name}`
 
       if (phase === 'pending') {
         // No check_in → will be marked as ABSENCE
