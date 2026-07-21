@@ -48,11 +48,11 @@ Como consumidor de la API, quiero que las respuestas de `EmployeeResource`/`Empl
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `3h` · **Pessimistic:** `6h` · **Tracked:** _in progress_
+- **Optimistic:** `3h` · **Pessimistic:** `6h` · **Tracked:** `~1h42m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-20", "start": "22:07", "end": "?" }
+  { "date": "2026-07-20", "start": "22:07", "end": "23:49" }
 ]
 ```
