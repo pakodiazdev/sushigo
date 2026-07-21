@@ -132,14 +132,36 @@ class AuditLogApiTest extends TestCase
     }
 
     #[Test]
+    public function it_includes_user_level_name_changes_when_filtering_by_employee(): void
+    {
+        // Name lives on the linked User now — its own changes must still surface
+        // under the employee's audit trail, not just Employee/Attendance changes.
+        $employee = Employee::factory()->create();
+        $this->clearIncidentalAuditLogs();
+
+        $employee->user->update(['first_name' => 'Updated']);
+
+        $response = $this->getJson("/api/v1/audit-logs?employee_id={$employee->public_id}");
+
+        $response->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.auditable_type', User::class)
+            // User has no public_id — the resource must fall back to the raw ID
+            // instead of leaving the entry unidentifiable.
+            ->assertJsonPath('data.0.auditable_id', (string) $employee->user_id);
+    }
+
+    #[Test]
     public function it_paginates_results(): void
     {
         $attendance = Attendance::factory()->create();
+        $editor = User::factory()->create();
         $this->clearIncidentalAuditLogs();
 
         AttendanceAuditLog::factory()->count(3)->update_action()->create([
             'auditable_type' => Attendance::class,
             'auditable_id' => $attendance->id,
+            'user_id' => $editor->id,
         ]);
 
         $response = $this->getJson('/api/v1/audit-logs?per_page=2');
@@ -163,6 +185,7 @@ class AuditLogApiTest extends TestCase
             'old_values' => ['check_in' => '08:15:00'],
             'new_values' => ['check_in' => '08:05:00'],
             'reason' => 'Corrección de horario',
+            'user_id' => $this->admin->id,
         ]);
 
         $response = $this->getJson('/api/v1/audit-logs');
@@ -195,9 +218,8 @@ class AuditLogApiTest extends TestCase
     public function it_shows_user_name_who_made_the_change(): void
     {
         $attendance = Attendance::factory()->create();
+        $editor = User::factory()->create(['first_name' => 'Ana', 'last_name' => 'García']);
         $this->clearIncidentalAuditLogs();
-
-        $editor = User::factory()->create(['name' => 'Ana García']);
 
         AttendanceAuditLog::factory()->update_action()->create([
             'auditable_type' => Attendance::class,

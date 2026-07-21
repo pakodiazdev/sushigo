@@ -205,7 +205,7 @@ class CloseDayApiTest extends TestCase
         $data = $response->json('data.overtime_pending');
         $this->assertCount(1, $data);
         $this->assertSame(
-            "{$employee->first_name} {$employee->last_name}",
+            $employee->user->name,
             $data[0]['employee_name'],
         );
         $this->assertSame(60, $data[0]['overtime_minutes']);

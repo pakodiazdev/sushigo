@@ -73,7 +73,7 @@ class OvertimeBankApiTest extends TestCase
     public function it_includes_authorized_by_name_for_paid_movements(): void
     {
         $employee = Employee::factory()->create();
-        $manager = User::factory()->create(['name' => 'Jane Manager']);
+        $manager = User::factory()->create(['first_name' => 'Jane', 'last_name' => 'Manager']);
 
         OvertimeBankMovement::factory()->paid()->create([
             'employee_id' => $employee->id,

@@ -45,7 +45,7 @@ class AttendanceAuditLogTest extends TestCase
             'auditable_id' => $employee->id,
             'action' => AuditAction::CREATE,
             'old_values' => null,
-            'new_values' => ['first_name' => $employee->first_name],
+            'new_values' => ['first_name' => $employee->user->first_name],
             'user_id' => $user->id,
             'reason' => 'Initial employee registration',
         ]);
@@ -166,7 +166,7 @@ class AttendanceAuditLogTest extends TestCase
             'auditable_id' => $employee->id,
             'action' => AuditAction::CREATE,
             'old_values' => null,
-            'new_values' => ['first_name' => $employee->first_name],
+            'new_values' => ['first_name' => $employee->user->first_name],
             'user_id' => $user->id,
         ]);
 

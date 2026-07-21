@@ -55,11 +55,9 @@ class ExportPayPeriodApiTest extends TestCase
             'closed_at' => now(),
         ]);
 
-        $employee = Employee::factory()->create([
+        $employee = Employee::factory()->withName('Ana', 'García')->create([
             'is_active' => true,
             'code' => 'EMP-001',
-            'first_name' => 'Ana',
-            'last_name' => 'García',
         ]);
 
         PayPeriodEmployee::create([

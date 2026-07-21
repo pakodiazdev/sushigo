@@ -237,7 +237,7 @@ class EmployeeRequestApiTest extends TestCase
         $createResponse->assertStatus(201)
             ->assertJsonStructure(['data' => ['employee_name']]);
 
-        $employeeName = $employee->first_name.' '.$employee->last_name;
+        $employeeName = $employee->user->name;
         $createResponse->assertJsonPath('data.employee_name', $employeeName);
     }
 

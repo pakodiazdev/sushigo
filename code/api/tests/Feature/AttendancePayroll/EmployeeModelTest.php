@@ -33,18 +33,20 @@ class EmployeeModelTest extends TestCase
     #[Test]
     public function it_can_create_an_employee(): void
     {
-        $employee = Employee::factory()->cook()->create([
+        $employee = Employee::factory()->cook()->withName('Juan', 'Pérez')->create([
             'code' => 'EMP-001',
-            'first_name' => 'Juan',
-            'last_name' => 'Pérez',
         ]);
 
         $this->assertDatabaseHas('employees', [
             'id' => $employee->id,
             'code' => 'EMP-001',
+            'is_active' => true,
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $employee->user_id,
             'first_name' => 'Juan',
             'last_name' => 'Pérez',
-            'is_active' => true,
         ]);
 
         $this->assertInstanceOf(Employee::class, $employee);
@@ -186,8 +188,8 @@ class EmployeeModelTest extends TestCase
         $employee = Employee::factory()->create();
 
         $this->assertNotEmpty($employee->code);
-        $this->assertNotEmpty($employee->first_name);
-        $this->assertNotEmpty($employee->last_name);
+        $this->assertNotEmpty($employee->user->first_name);
+        $this->assertNotEmpty($employee->user->last_name);
         $this->assertTrue($employee->is_active);
         // Factory default assigns employee-cook to the linked User
         $this->assertTrue($employee->user->hasRole(Employee::ROLE_COOK));

@@ -519,9 +519,9 @@ class TodayAttendanceApiTest extends TestCase
         $employee = $period->employee;
 
         if ($firstName || $lastName) {
-            $employee->update([
-                'first_name' => $firstName ?: $employee->first_name,
-                'last_name' => $lastName ?: $employee->last_name,
+            $employee->user->update([
+                'first_name' => $firstName ?: $employee->user->first_name,
+                'last_name' => $lastName ?: $employee->user->last_name,
             ]);
             $employee->refresh();
         }
