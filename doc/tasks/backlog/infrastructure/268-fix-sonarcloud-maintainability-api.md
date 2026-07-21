@@ -64,12 +64,12 @@ Como desarrollador, necesito resolver los Code Smells de mantenibilidad abiertos
 ### 📊 Estimates
 - **Optimistic:** `12h` (SonarCloud effort estimate, assuming clean mechanical fixes)
 - **Pessimistic:** `24h` (accounting for Policy signature changes needing test updates, and exception-class refactors touching call sites)
-- **Tracked:** _in progress_
+- **Tracked:** `0.15h` (in progress — Policies cleanup sub-task only, 7 sub-tasks remain)
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-21", "start": "14:24", "end": "?" }
+  { "date": "2026-07-21", "start": "14:24", "end": "14:33" }
 ]
 ```
 
