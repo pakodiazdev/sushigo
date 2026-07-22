@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Api\V1\Inventory;
 
+use App\Exceptions\InvalidStockOutReasonException;
 use App\Models\Item;
 use App\Models\ItemVariant;
 use App\Models\Stock;
 use App\Models\StockMovementLine;
+use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
+use App\Services\Inventory\StockOutService;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Inventory\InventoryTestCase;
 
@@ -276,6 +279,76 @@ class StockOutTest extends InventoryTestCase
         $this->assertEquals(50.0000, (float) $line->unit_cost);
         $this->assertEquals(0.0000, (float) $line->profit_margin);
         $this->assertEquals(0.0000, (float) $line->profit_total);
+    }
+
+    #[Test]
+    public function it_validates_no_stock_found()
+    {
+        // A variant with no Stock row at all for this location
+        $itemNoStock = $this->createItem(['sku' => 'ITM-NOSTOCK-001', 'name' => 'No Stock Item']);
+        $variantNoStock = $this->createItemVariant($itemNoStock, [
+            'code' => 'VNOSTOCK-001',
+            'name' => 'No Stock Variant',
+        ]);
+
+        $response = $this->postJson('/api/v1/inventory/stock-out', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variantNoStock->id,
+            'qty' => 1,
+            'uom_id' => $this->uomKg->id,
+            'reason' => 'CONSUMPTION',
+        ]);
+
+        $response->assertStatus(400)
+            ->assertJson(['success' => false]);
+
+        $this->assertStringContainsString('No stock found', $response->json('message'));
+    }
+
+    #[Test]
+    public function it_validates_uom_conversion_not_found()
+    {
+        // A UOM with no conversion path to the variant's base UOM (KG)
+        $uomLiter = UnitOfMeasure::create([
+            'code' => 'LT',
+            'name' => 'Liter',
+            'symbol' => 'l',
+            'type' => 'VOLUME',
+            'precision' => 3,
+            'is_base' => false,
+            'is_active' => true,
+        ]);
+
+        $response = $this->postJson('/api/v1/inventory/stock-out', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $this->variant->id,
+            'qty' => 1,
+            'uom_id' => $uomLiter->id,
+            'reason' => 'CONSUMPTION',
+        ]);
+
+        $response->assertStatus(400)
+            ->assertJson(['success' => false]);
+
+        $this->assertStringContainsString('No conversion found', $response->json('message'));
+    }
+
+    #[Test]
+    public function it_rejects_invalid_reason_at_service_level()
+    {
+        // The FormRequest already blocks invalid reasons with a 422 (see
+        // it_validates_reason_must_be_sale_or_consumption), but the service
+        // itself also guards this invariant for any non-HTTP caller.
+        $this->expectException(InvalidStockOutReasonException::class);
+        $this->expectExceptionMessage('Invalid reason for stock out');
+
+        app(StockOutService::class)->registerStockOut(
+            inventoryLocationId: $this->location->id,
+            itemVariantId: $this->variant->id,
+            quantity: 1,
+            transactionUomId: $this->uomKg->id,
+            reason: 'SCRAP',
+        );
     }
 
     #[Test]

@@ -2,6 +2,8 @@
 
 namespace App\Services\CashAdjustments;
 
+use App\Exceptions\CashAdjustmentAlreadyPostedException;
+use App\Exceptions\InvalidCashAdjustmentLineException;
 use App\Models\CashAdjustment;
 use App\Models\CashAdjustmentLine;
 use App\Models\CashSession;
@@ -15,7 +17,7 @@ class CashAdjustmentService
      *
      * @param  array  $lines  [['tender_type' => 'CASH', 'amount' => 100.00, ...], ...]
      *
-     * @throws \Exception
+     * @throws InvalidCashAdjustmentLineException
      */
     public function createAdjustment(
         CashSession $session,
@@ -27,7 +29,7 @@ class CashAdjustmentService
         array $meta = []
     ): CashAdjustment {
         if (empty($lines)) {
-            throw new \Exception('Adjustment must have at least one line');
+            throw new InvalidCashAdjustmentLineException('Adjustment must have at least one line');
         }
 
         DB::beginTransaction();
@@ -108,12 +110,12 @@ class CashAdjustmentService
     /**
      * Post an adjustment (mark as finalized)
      *
-     * @throws \Exception
+     * @throws CashAdjustmentAlreadyPostedException
      */
     public function postAdjustment(CashAdjustment $adjustment, User $user): CashAdjustment
     {
         if ($adjustment->isPosted()) {
-            throw new \Exception('Adjustment is already posted');
+            throw new CashAdjustmentAlreadyPostedException('Adjustment is already posted');
         }
 
         $adjustment->posted_by = $user->id;
@@ -126,12 +128,12 @@ class CashAdjustmentService
     /**
      * Delete an adjustment (only if not posted)
      *
-     * @throws \Exception
+     * @throws CashAdjustmentAlreadyPostedException
      */
     public function deleteAdjustment(CashAdjustment $adjustment): bool
     {
         if ($adjustment->isPosted()) {
-            throw new \Exception('Cannot delete posted adjustment');
+            throw new CashAdjustmentAlreadyPostedException('Cannot delete posted adjustment');
         }
 
         DB::beginTransaction();
@@ -154,25 +156,25 @@ class CashAdjustmentService
     /**
      * Validate line data
      *
-     * @throws \Exception
+     * @throws InvalidCashAdjustmentLineException
      */
     private function validateLineData(array $lineData): void
     {
         if (! isset($lineData['tender_type'])) {
-            throw new \Exception('Line must have tender_type');
+            throw new InvalidCashAdjustmentLineException('Line must have tender_type');
         }
 
         if (! isset($lineData['amount']) || $lineData['amount'] <= 0) {
-            throw new \Exception('Line must have positive amount');
+            throw new InvalidCashAdjustmentLineException('Line must have positive amount');
         }
 
         // Validate tender-specific requirements
         if ($lineData['tender_type'] === 'CARD' && empty($lineData['card_terminal_id'])) {
-            throw new \Exception('CARD tender requires card_terminal_id');
+            throw new InvalidCashAdjustmentLineException('CARD tender requires card_terminal_id');
         }
 
         if ($lineData['tender_type'] === 'TRANSFER' && empty($lineData['bank_account_id'])) {
-            throw new \Exception('TRANSFER tender requires bank_account_id');
+            throw new InvalidCashAdjustmentLineException('TRANSFER tender requires bank_account_id');
         }
     }
 

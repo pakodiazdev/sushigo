@@ -2,6 +2,8 @@
 
 namespace App\Services\CashAdjustments;
 
+use App\Exceptions\CashExpenseAlreadyPostedException;
+use App\Exceptions\InvalidCashExpenseException;
 use App\Models\CashExpense;
 use App\Models\CashSession;
 use App\Models\User;
@@ -11,7 +13,7 @@ class CashExpenseService
     /**
      * Register a new expense
      *
-     * @throws \Exception
+     * @throws InvalidCashExpenseException
      */
     public function registerExpense(
         CashSession $session,
@@ -31,7 +33,7 @@ class CashExpenseService
         $this->validateTenderRequirements($tenderType, $cardTerminalId, $bankAccountId);
 
         if ($amount <= 0) {
-            throw new \Exception('Expense amount must be positive');
+            throw new InvalidCashExpenseException('Expense amount must be positive');
         }
 
         return CashExpense::create([
@@ -53,12 +55,12 @@ class CashExpenseService
     /**
      * Post an expense (mark as finalized)
      *
-     * @throws \Exception
+     * @throws CashExpenseAlreadyPostedException
      */
     public function postExpense(CashExpense $expense, User $user): CashExpense
     {
         if ($expense->isPosted()) {
-            throw new \Exception('Expense is already posted');
+            throw new CashExpenseAlreadyPostedException('Expense is already posted');
         }
 
         $expense->posted_by = $user->id;
@@ -71,12 +73,13 @@ class CashExpenseService
     /**
      * Update expense (only if not posted)
      *
-     * @throws \Exception
+     * @throws CashExpenseAlreadyPostedException
+     * @throws InvalidCashExpenseException
      */
     public function updateExpense(CashExpense $expense, array $data): CashExpense
     {
         if ($expense->isPosted()) {
-            throw new \Exception('Cannot update posted expense');
+            throw new CashExpenseAlreadyPostedException('Cannot update posted expense');
         }
 
         // Validate tender requirements if tender type is being updated
@@ -96,12 +99,12 @@ class CashExpenseService
     /**
      * Delete an expense (only if not posted)
      *
-     * @throws \Exception
+     * @throws CashExpenseAlreadyPostedException
      */
     public function deleteExpense(CashExpense $expense): bool
     {
         if ($expense->isPosted()) {
-            throw new \Exception('Cannot delete posted expense');
+            throw new CashExpenseAlreadyPostedException('Cannot delete posted expense');
         }
 
         return $expense->delete();
@@ -177,16 +180,16 @@ class CashExpenseService
     /**
      * Validate tender-specific requirements
      *
-     * @throws \Exception
+     * @throws InvalidCashExpenseException
      */
     private function validateTenderRequirements(string $tenderType, ?int $cardTerminalId, ?int $bankAccountId): void
     {
         if ($tenderType === CashExpense::TENDER_CARD && ! $cardTerminalId) {
-            throw new \Exception('CARD tender requires card_terminal_id');
+            throw new InvalidCashExpenseException('CARD tender requires card_terminal_id');
         }
 
         if ($tenderType === CashExpense::TENDER_TRANSFER && ! $bankAccountId) {
-            throw new \Exception('TRANSFER tender requires bank_account_id');
+            throw new InvalidCashExpenseException('TRANSFER tender requires bank_account_id');
         }
     }
 }

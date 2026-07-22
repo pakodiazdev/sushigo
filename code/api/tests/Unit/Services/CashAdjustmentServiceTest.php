@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Services;
 
+use App\Exceptions\CashAdjustmentAlreadyPostedException;
+use App\Exceptions\InvalidCashAdjustmentLineException;
 use App\Models\Branch;
 use App\Models\CashAdjustment;
 use App\Models\CashAdjustmentLine;
@@ -141,7 +143,7 @@ class CashAdjustmentServiceTest extends TestCase
             ->posted()
             ->create();
 
-        $this->expectException(\Exception::class);
+        $this->expectException(CashAdjustmentAlreadyPostedException::class);
         $this->expectExceptionMessage('already posted');
 
         $this->service->postAdjustment($adjustment, $this->user);
@@ -170,7 +172,7 @@ class CashAdjustmentServiceTest extends TestCase
             ->posted()
             ->create();
 
-        $this->expectException(\Exception::class);
+        $this->expectException(CashAdjustmentAlreadyPostedException::class);
         $this->expectExceptionMessage('posted');
 
         $this->service->deleteAdjustment($adjustment);
@@ -202,7 +204,7 @@ class CashAdjustmentServiceTest extends TestCase
     #[Test]
     public function it_validates_tender_type_requirements()
     {
-        $this->expectException(\Exception::class);
+        $this->expectException(InvalidCashAdjustmentLineException::class);
 
         // This should fail because CARD requires card_terminal_id
         $lines = [
@@ -218,6 +220,68 @@ class CashAdjustmentServiceTest extends TestCase
             type: 'EXTERNAL_IMPORT',
             direction: 'INFLOW',
             lines: $lines
+        );
+    }
+
+    #[Test]
+    public function it_cannot_create_adjustment_without_lines()
+    {
+        $this->expectException(InvalidCashAdjustmentLineException::class);
+        $this->expectExceptionMessage('Adjustment must have at least one line');
+
+        $this->service->createAdjustment(
+            session: $this->session,
+            type: 'EXTERNAL_IMPORT',
+            direction: 'INFLOW',
+            lines: []
+        );
+    }
+
+    #[Test]
+    public function it_validates_line_has_tender_type()
+    {
+        $this->expectException(InvalidCashAdjustmentLineException::class);
+        $this->expectExceptionMessage('Line must have tender_type');
+
+        $this->service->createAdjustment(
+            session: $this->session,
+            type: 'EXTERNAL_IMPORT',
+            direction: 'INFLOW',
+            lines: [
+                ['amount' => 100.00],
+            ]
+        );
+    }
+
+    #[Test]
+    public function it_validates_line_has_positive_amount()
+    {
+        $this->expectException(InvalidCashAdjustmentLineException::class);
+        $this->expectExceptionMessage('Line must have positive amount');
+
+        $this->service->createAdjustment(
+            session: $this->session,
+            type: 'EXTERNAL_IMPORT',
+            direction: 'INFLOW',
+            lines: [
+                ['tender_type' => 'CASH', 'amount' => 0],
+            ]
+        );
+    }
+
+    #[Test]
+    public function it_validates_transfer_tender_requires_bank_account()
+    {
+        $this->expectException(InvalidCashAdjustmentLineException::class);
+        $this->expectExceptionMessage('TRANSFER tender requires bank_account_id');
+
+        $this->service->createAdjustment(
+            session: $this->session,
+            type: 'EXTERNAL_IMPORT',
+            direction: 'INFLOW',
+            lines: [
+                ['tender_type' => 'TRANSFER', 'amount' => 100.00],
+            ]
         );
     }
 
