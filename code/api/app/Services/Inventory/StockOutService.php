@@ -72,54 +72,23 @@ class StockOutService
             $transactionUom = UnitOfMeasure::findOrFail($transactionUomId);
 
             // Convert quantity to base UOM
-            $conversionFactor = 1.0;
-            $baseQuantity = $quantity;
-
-            if ($transactionUomId !== $variant->uom_id) {
-                $conversion = $this->getConversion($transactionUomId, $variant->uom_id);
-                if (! $conversion) {
-                    throw new UomConversionNotFoundException(
-                        "No conversion found from {$transactionUom->code} to {$variant->unitOfMeasure->code}"
-                    );
-                }
-                $conversionFactor = $conversion->factor;
-                $baseQuantity = $quantity * $conversionFactor;
-            }
+            [$baseQuantity, $conversionFactor] = $this->convertToBaseQuantity($quantity, $transactionUomId, $variant, $transactionUom);
 
             // Check stock availability
-            $stock = Stock::where('inventory_location_id', $inventoryLocationId)
-                ->where('item_variant_id', $itemVariantId)
-                ->first();
-
-            if (! $stock) {
-                throw new StockNotFoundException(
-                    "No stock found for variant {$variant->sku} at location {$location->name}"
-                );
-            }
-
-            $availableQty = $stock->on_hand - $stock->reserved;
-            if ($baseQuantity > $availableQty) {
-                throw new InsufficientStockException(
-                    "Insufficient stock. Available: {$availableQty}, Requested: {$baseQuantity}"
-                );
-            }
+            $stock = $this->assertAvailableStock($inventoryLocationId, $itemVariantId, $baseQuantity, $variant, $location);
 
             // Get current average unit cost from variant
             $unitCost = $variant->avg_unit_cost ?? 0;
 
             // Calculate pricing and profit (only for SALE movements)
-            $saleTotal = null;
-            $profitMargin = null;
-            $profitTotal = null;
-
-            if ($reason === StockMovement::REASON_SALE && $salePrice !== null) {
-                $saleTotal = $quantity * $salePrice;
-
-                // Convert sale price to base UOM for profit calculation
-                $salePriceBase = $conversionFactor != 0 ? $salePrice / $conversionFactor : 0;
-                $profitMargin = $salePriceBase - $unitCost;
-                $profitTotal = $baseQuantity * $profitMargin;
-            }
+            [$saleTotal, $profitMargin, $profitTotal] = $this->calculateSaleFigures(
+                $reason,
+                $salePrice,
+                $quantity,
+                $baseQuantity,
+                $conversionFactor,
+                $unitCost
+            );
 
             // Create stock movement
             $movement = StockMovement::create([
@@ -202,5 +171,71 @@ class StockOutService
         }
 
         return null;
+    }
+
+    /**
+     * Convert a transaction-UOM quantity to base UOM, returning [baseQuantity, conversionFactor].
+     *
+     * @throws UomConversionNotFoundException
+     */
+    private function convertToBaseQuantity(float $quantity, int $transactionUomId, ItemVariant $variant, UnitOfMeasure $transactionUom): array
+    {
+        if ($transactionUomId === $variant->uom_id) {
+            return [$quantity, 1.0];
+        }
+
+        $conversion = $this->getConversion($transactionUomId, $variant->uom_id);
+        if (! $conversion) {
+            throw new UomConversionNotFoundException(
+                "No conversion found from {$transactionUom->code} to {$variant->unitOfMeasure->code}"
+            );
+        }
+
+        return [$quantity * $conversion->factor, $conversion->factor];
+    }
+
+    /**
+     * Assert the location has enough available stock for the requested base quantity.
+     *
+     * @throws StockNotFoundException
+     * @throws InsufficientStockException
+     */
+    private function assertAvailableStock(int $inventoryLocationId, int $itemVariantId, float $baseQuantity, ItemVariant $variant, InventoryLocation $location): Stock
+    {
+        $stock = Stock::where('inventory_location_id', $inventoryLocationId)
+            ->where('item_variant_id', $itemVariantId)
+            ->first();
+
+        if (! $stock) {
+            throw new StockNotFoundException(
+                "No stock found for variant {$variant->sku} at location {$location->name}"
+            );
+        }
+
+        $availableQty = $stock->on_hand - $stock->reserved;
+        if ($baseQuantity > $availableQty) {
+            throw new InsufficientStockException(
+                "Insufficient stock. Available: {$availableQty}, Requested: {$baseQuantity}"
+            );
+        }
+
+        return $stock;
+    }
+
+    /**
+     * Calculate sale total and profit figures for SALE movements, returning [saleTotal, profitMargin, profitTotal].
+     */
+    private function calculateSaleFigures(string $reason, ?float $salePrice, float $quantity, float $baseQuantity, float $conversionFactor, float $unitCost): array
+    {
+        if ($reason !== StockMovement::REASON_SALE || $salePrice === null) {
+            return [null, null, null];
+        }
+
+        $saleTotal = $quantity * $salePrice;
+        $salePriceBase = $conversionFactor != 0 ? $salePrice / $conversionFactor : 0;
+        $profitMargin = $salePriceBase - $unitCost;
+        $profitTotal = $baseQuantity * $profitMargin;
+
+        return [$saleTotal, $profitMargin, $profitTotal];
     }
 }
