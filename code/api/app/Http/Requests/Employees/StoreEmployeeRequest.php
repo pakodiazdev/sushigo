@@ -54,7 +54,7 @@ class StoreEmployeeRequest extends FormRequest
         }
         // Strip any non-digit characters from phone (user might paste with spaces, dashes, etc.)
         if ($this->has('phone') && $this->phone) {
-            $this->merge(['phone' => preg_replace('/[^0-9]/', '', $this->phone)]);
+            $this->merge(['phone' => preg_replace('/\D/', '', $this->phone)]);
         }
     }
 
