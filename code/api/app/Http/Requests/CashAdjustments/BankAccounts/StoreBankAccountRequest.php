@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\CashAdjustments\BankAccounts;
 
+use App\Http\Requests\Concerns\CastsRequestFields;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -20,6 +21,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class StoreBankAccountRequest extends FormRequest
 {
+    use CastsRequestFields;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', \App\Models\BankAccount::class);
@@ -50,10 +53,6 @@ class StoreBankAccountRequest extends FormRequest
 
     public function prepareForValidation(): void
     {
-        if ($this->has('is_active') && is_string($this->is_active)) {
-            $this->merge([
-                'is_active' => filter_var($this->is_active, FILTER_VALIDATE_BOOLEAN),
-            ]);
-        }
+        $this->castToBoolean('is_active');
     }
 }

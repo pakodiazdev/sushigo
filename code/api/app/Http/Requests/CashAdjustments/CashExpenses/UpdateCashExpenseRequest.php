@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\CashAdjustments\CashExpenses;
 
+use App\Http\Requests\Concerns\CastsRequestFields;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -23,6 +24,8 @@ use Illuminate\Validation\Validator;
  */
 class UpdateCashExpenseRequest extends FormRequest
 {
+    use CastsRequestFields;
+
     public function authorize(): bool
     {
         $expense = $this->route('cashExpense');
@@ -85,10 +88,6 @@ class UpdateCashExpenseRequest extends FormRequest
 
     public function prepareForValidation(): void
     {
-        if ($this->has('amount') && is_string($this->amount)) {
-            $this->merge([
-                'amount' => (float) $this->amount,
-            ]);
-        }
+        $this->castToFloat('amount');
     }
 }

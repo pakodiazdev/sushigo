@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\CashAdjustments\CashRegisters;
 
+use App\Http\Requests\Concerns\CastsRequestFields;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -20,6 +21,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class StoreCashRegisterRequest extends FormRequest
 {
+    use CastsRequestFields;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', \App\Models\CashRegister::class);
@@ -53,10 +56,6 @@ class StoreCashRegisterRequest extends FormRequest
 
     public function prepareForValidation(): void
     {
-        if ($this->has('is_active') && is_string($this->is_active)) {
-            $this->merge([
-                'is_active' => filter_var($this->is_active, FILTER_VALIDATE_BOOLEAN),
-            ]);
-        }
+        $this->castToBoolean('is_active');
     }
 }
