@@ -24,7 +24,7 @@ class CreateInventoryLocationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // TODO: Implement proper authorization
+        return $this->user()->can('inventory_locations.manage');
     }
 
     public function rules(): array

@@ -22,7 +22,7 @@ class RegisterOpeningBalanceRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // TODO: Implement proper authorization policy
+        return $this->user()->can('stock.manage');
     }
 
     public function rules(): array

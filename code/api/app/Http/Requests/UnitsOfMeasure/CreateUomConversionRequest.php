@@ -21,7 +21,7 @@ class CreateUomConversionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // TODO: Implement proper authorization policy
+        // Granular permission tracked in https://github.com/pakodiazdev/sushigo/issues/275
         return true;
     }
 
