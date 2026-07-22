@@ -5,8 +5,15 @@ namespace App\Http\Controllers\Api\V1\Inventory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Inventory\RegisterStockOutRequest;
 use App\Services\Inventory\StockOutService;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use OpenApi\Attributes as OA;
+
+// Shared with the OA attribute below and the controller body — attribute arguments
+// must be constant expressions, and the OA\Post attribute decorates the class
+// itself, so these live as namespaced constants rather than class constants.
+const STOCK_OUT_SUCCESS_MESSAGE = 'Stock out movement registered successfully';
+const STOCK_OUT_EXAMPLE_QTY = '10.0000';
 
 #[OA\Post(
     path: '/api/v1/inventory/stock-out',
@@ -19,7 +26,7 @@ use OpenApi\Attributes as OA;
     responses: [
         new OA\Response(
             response: 201,
-            description: 'Stock out movement registered successfully',
+            description: STOCK_OUT_SUCCESS_MESSAGE,
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'success', type: 'boolean', example: true),
@@ -31,7 +38,7 @@ use OpenApi\Attributes as OA;
                             new OA\Property(property: 'to_location_id', type: 'integer', nullable: true, example: null),
                             new OA\Property(property: 'item_variant_id', type: 'integer', example: 1),
                             new OA\Property(property: 'user_id', type: 'integer', nullable: true, example: 1),
-                            new OA\Property(property: 'qty', type: 'number', format: 'decimal', example: '10.0000'),
+                            new OA\Property(property: 'qty', type: 'number', format: 'decimal', example: STOCK_OUT_EXAMPLE_QTY),
                             new OA\Property(property: 'reason', type: 'string', example: 'SALE'),
                             new OA\Property(property: 'status', type: 'string', example: 'POSTED'),
                             new OA\Property(property: 'reference', type: 'string', nullable: true, example: 'SALE-001'),
@@ -54,8 +61,8 @@ use OpenApi\Attributes as OA;
                                 items: new OA\Items(
                                     properties: [
                                         new OA\Property(property: 'id', type: 'integer', example: 1),
-                                        new OA\Property(property: 'qty', type: 'number', example: '10.0000'),
-                                        new OA\Property(property: 'base_qty', type: 'number', example: '10.0000'),
+                                        new OA\Property(property: 'qty', type: 'number', example: STOCK_OUT_EXAMPLE_QTY),
+                                        new OA\Property(property: 'base_qty', type: 'number', example: STOCK_OUT_EXAMPLE_QTY),
                                         new OA\Property(property: 'unit_cost', type: 'number', example: '50.0000'),
                                         new OA\Property(property: 'line_total', type: 'number', example: '500.0000'),
                                         new OA\Property(property: 'sale_price', type: 'number', example: '75.0000'),
@@ -94,7 +101,7 @@ use OpenApi\Attributes as OA;
                         ],
                         type: 'object'
                     ),
-                    new OA\Property(property: 'message', type: 'string', example: 'Stock out movement registered successfully'),
+                    new OA\Property(property: 'message', type: 'string', example: STOCK_OUT_SUCCESS_MESSAGE),
                 ],
                 type: 'object'
             )
@@ -161,9 +168,9 @@ class RegisterStockOutController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $movement,
-                'message' => 'Stock out movement registered successfully',
+                'message' => STOCK_OUT_SUCCESS_MESSAGE,
             ], 201);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),

@@ -127,6 +127,39 @@ use App\Http\Controllers\Api\V1\VacationPolicy\UpdateVacationPolicyController;
 use App\Http\Controllers\Api\V1\VacationRequests\ApproveVacationRequestController;
 use App\Http\Controllers\Api\V1\VacationRequests\RegisterVacationRequestController;
 use App\Http\Controllers\Api\V1\VacationRequests\RejectVacationRequestController;
+use App\Http\Controllers\CashAdjustments\BankAccounts\CreateBankAccountController;
+use App\Http\Controllers\CashAdjustments\BankAccounts\DeleteBankAccountController;
+use App\Http\Controllers\CashAdjustments\BankAccounts\ListBankAccountsController;
+use App\Http\Controllers\CashAdjustments\BankAccounts\ShowBankAccountController;
+use App\Http\Controllers\CashAdjustments\BankAccounts\UpdateBankAccountController;
+use App\Http\Controllers\CashAdjustments\CashAdjustments\CreateCashAdjustmentController;
+use App\Http\Controllers\CashAdjustments\CashAdjustments\DeleteCashAdjustmentController;
+use App\Http\Controllers\CashAdjustments\CashAdjustments\ListCashAdjustmentsController;
+use App\Http\Controllers\CashAdjustments\CashAdjustments\PostCashAdjustmentController;
+use App\Http\Controllers\CashAdjustments\CashAdjustments\ShowCashAdjustmentController;
+use App\Http\Controllers\CashAdjustments\CashExpenses\CreateCashExpenseController;
+use App\Http\Controllers\CashAdjustments\CashExpenses\DeleteCashExpenseController;
+use App\Http\Controllers\CashAdjustments\CashExpenses\ListCashExpensesController;
+use App\Http\Controllers\CashAdjustments\CashExpenses\PostCashExpenseController;
+use App\Http\Controllers\CashAdjustments\CashExpenses\ShowCashExpenseController;
+use App\Http\Controllers\CashAdjustments\CashExpenses\UpdateCashExpenseController;
+use App\Http\Controllers\CashAdjustments\CashRegisters\CreateCashRegisterController;
+use App\Http\Controllers\CashAdjustments\CashRegisters\DeleteCashRegisterController;
+use App\Http\Controllers\CashAdjustments\CashRegisters\ListCashRegistersController;
+use App\Http\Controllers\CashAdjustments\CashRegisters\ShowCashRegisterController;
+use App\Http\Controllers\CashAdjustments\CashRegisters\UpdateCashRegisterController;
+use App\Http\Controllers\CashAdjustments\CashSessions\CreateCashSessionController;
+use App\Http\Controllers\CashAdjustments\CashSessions\GetSessionSummaryController;
+use App\Http\Controllers\CashAdjustments\CashSessions\ListCashSessionsController;
+use App\Http\Controllers\CashAdjustments\CashSessions\PostCashSessionController;
+use App\Http\Controllers\CashAdjustments\CashSessions\ShowCashSessionController;
+use App\Http\Controllers\CashAdjustments\CashSessions\UpdateCashSessionController;
+use App\Http\Controllers\CashAdjustments\CashTerminals\CreateCashTerminalController;
+use App\Http\Controllers\CashAdjustments\CashTerminals\DeleteCashTerminalController;
+use App\Http\Controllers\CashAdjustments\CashTerminals\ListCashTerminalsController;
+use App\Http\Controllers\CashAdjustments\CashTerminals\ShowCashTerminalController;
+use App\Http\Controllers\CashAdjustments\CashTerminals\UpdateCashTerminalController;
+use App\Support\RouteParams;
 use Illuminate\Support\Facades\Route;
 
 // ── Test-only routes (never exposed in production) ───────────────────────
@@ -209,12 +242,12 @@ Route::prefix('v1')->group(function () {
     // Units of Measure (Public read, protected write)
     Route::prefix('units-of-measure')->group(function () {
         Route::get('/', ListUnitsOfMeasureController::class)->name('units-of-measure.list');
-        Route::get('/{id}', ShowUnitOfMeasureController::class)->name('units-of-measure.show');
+        Route::get(RouteParams::ID, ShowUnitOfMeasureController::class)->name('units-of-measure.show');
 
         Route::middleware('auth:api')->group(function () {
             Route::post('/', CreateUnitOfMeasureController::class)->name('units-of-measure.create');
-            Route::put('/{id}', UpdateUnitOfMeasureController::class)->name('units-of-measure.update');
-            Route::delete('/{id}', DeleteUnitOfMeasureController::class)->name('units-of-measure.delete');
+            Route::put(RouteParams::ID, UpdateUnitOfMeasureController::class)->name('units-of-measure.update');
+            Route::delete(RouteParams::ID, DeleteUnitOfMeasureController::class)->name('units-of-measure.delete');
         });
     });
 
@@ -224,46 +257,46 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('auth:api')->group(function () {
             Route::post('/', CreateUomConversionController::class)->name('uom-conversions.create');
-            Route::delete('/{id}', DeleteUomConversionController::class)->name('uom-conversions.delete');
+            Route::delete(RouteParams::ID, DeleteUomConversionController::class)->name('uom-conversions.delete');
         });
     });
 
     // Items (Protected read + write — requires items.view / items.create / items.update / items.delete)
     Route::middleware('auth:api')->prefix('items')->group(function () {
         Route::get('/', ListItemsController::class)->name('items.list')->middleware('permission:items.view');
-        Route::get('/{id}', ShowItemController::class)->name('items.show')->middleware('permission:items.view');
+        Route::get(RouteParams::ID, ShowItemController::class)->name('items.show')->middleware('permission:items.view');
         Route::post('/', CreateItemController::class)->name('items.create')->middleware('permission:items.create');
-        Route::put('/{id}', UpdateItemController::class)->name('items.update')->middleware('permission:items.update');
-        Route::delete('/{id}', DeleteItemController::class)->name('items.delete')->middleware('permission:items.delete');
+        Route::put(RouteParams::ID, UpdateItemController::class)->name('items.update')->middleware('permission:items.update');
+        Route::delete(RouteParams::ID, DeleteItemController::class)->name('items.delete')->middleware('permission:items.delete');
     });
 
     // Item Variants (Protected read + write — inherits items.* permissions)
     Route::middleware('auth:api')->prefix('item-variants')->group(function () {
         Route::get('/', ListItemVariantsController::class)->name('item-variants.list')->middleware('permission:items.view');
-        Route::get('/{id}', ShowItemVariantController::class)->name('item-variants.show')->middleware('permission:items.view');
+        Route::get(RouteParams::ID, ShowItemVariantController::class)->name('item-variants.show')->middleware('permission:items.view');
         Route::post('/', CreateItemVariantController::class)->name('item-variants.create')->middleware('permission:items.create');
-        Route::put('/{id}', UpdateItemVariantController::class)->name('item-variants.update')->middleware('permission:items.update');
-        Route::delete('/{id}', DeleteItemVariantController::class)->name('item-variants.delete')->middleware('permission:items.delete');
+        Route::put(RouteParams::ID, UpdateItemVariantController::class)->name('item-variants.update')->middleware('permission:items.update');
+        Route::delete(RouteParams::ID, DeleteItemVariantController::class)->name('item-variants.delete')->middleware('permission:items.delete');
     });
 
     // Inventory Locations (Protected read + write)
     Route::middleware('auth:api')->prefix('inventory-locations')->group(function () {
         Route::get('/', ListInventoryLocationsController::class)->name('inventory-locations.list')->middleware('permission:inventory_locations.view');
-        Route::get('/{id}', ShowInventoryLocationController::class)->name('inventory-locations.show')->middleware('permission:inventory_locations.view');
+        Route::get(RouteParams::ID, ShowInventoryLocationController::class)->name('inventory-locations.show')->middleware('permission:inventory_locations.view');
         Route::post('/', CreateInventoryLocationController::class)->name('inventory-locations.create')->middleware('permission:inventory_locations.manage');
-        Route::put('/{id}', UpdateInventoryLocationController::class)->name('inventory-locations.update')->middleware('permission:inventory_locations.manage');
-        Route::delete('/{id}', DeleteInventoryLocationController::class)->name('inventory-locations.delete')->middleware('permission:inventory_locations.manage');
+        Route::put(RouteParams::ID, UpdateInventoryLocationController::class)->name('inventory-locations.update')->middleware('permission:inventory_locations.manage');
+        Route::delete(RouteParams::ID, DeleteInventoryLocationController::class)->name('inventory-locations.delete')->middleware('permission:inventory_locations.manage');
     });
 
     // Operating Units (Public read, protected write)
     Route::prefix('operating-units')->group(function () {
         Route::get('/', ListOperatingUnitsController::class)->name('operating-units.list');
-        Route::get('/{id}', ShowOperatingUnitController::class)->name('operating-units.show');
+        Route::get(RouteParams::ID, ShowOperatingUnitController::class)->name('operating-units.show');
 
         Route::middleware('auth:api')->group(function () {
             Route::post('/', CreateOperatingUnitController::class)->name('operating-units.create');
-            Route::put('/{id}', UpdateOperatingUnitController::class)->name('operating-units.update');
-            Route::delete('/{id}', DeleteOperatingUnitController::class)->name('operating-units.delete');
+            Route::put(RouteParams::ID, UpdateOperatingUnitController::class)->name('operating-units.update');
+            Route::delete(RouteParams::ID, DeleteOperatingUnitController::class)->name('operating-units.delete');
         });
     });
 
@@ -413,7 +446,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:api')->prefix('negotiated-extra-days')->group(function () {
-        Route::delete('/{id}', CancelNegotiatedExtraDayController::class)->name('negotiated-extra-days.destroy');
+        Route::delete(RouteParams::ID, CancelNegotiatedExtraDayController::class)->name('negotiated-extra-days.destroy');
     });
 
     // Pay Periods Module
@@ -452,8 +485,8 @@ Route::prefix('v1')->group(function () {
         Route::prefix('holidays')->name('holidays.')->group(function () {
             Route::get('/', ListHolidaysController::class)->name('index');
             Route::post('/', CreateHolidayController::class)->name('store');
-            Route::put('/{id}', UpdateHolidayController::class)->name('update');
-            Route::delete('/{id}', DeleteHolidayController::class)->name('destroy');
+            Route::put(RouteParams::ID, UpdateHolidayController::class)->name('update');
+            Route::delete(RouteParams::ID, DeleteHolidayController::class)->name('destroy');
         });
 
         Route::prefix('holiday-definitions')->name('holiday-definitions.')->group(function () {
@@ -468,89 +501,89 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:api')->group(function () {
         // Cash Registers
         Route::prefix('cash-registers')->group(function () {
-            Route::get('/', \App\Http\Controllers\CashAdjustments\CashRegisters\ListCashRegistersController::class)
+            Route::get('/', ListCashRegistersController::class)
                 ->name('cash-registers.list');
-            Route::post('/', \App\Http\Controllers\CashAdjustments\CashRegisters\CreateCashRegisterController::class)
+            Route::post('/', CreateCashRegisterController::class)
                 ->name('cash-registers.create');
-            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashRegisters\ShowCashRegisterController::class)
+            Route::get(RouteParams::ID, ShowCashRegisterController::class)
                 ->name('cash-registers.show');
-            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\CashRegisters\UpdateCashRegisterController::class)
+            Route::put(RouteParams::ID, UpdateCashRegisterController::class)
                 ->name('cash-registers.update');
-            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\CashRegisters\DeleteCashRegisterController::class)
+            Route::delete(RouteParams::ID, DeleteCashRegisterController::class)
                 ->name('cash-registers.delete');
         });
 
         // Cash Terminals
         Route::prefix('cash-terminals')->group(function () {
-            Route::get('/', \App\Http\Controllers\CashAdjustments\CashTerminals\ListCashTerminalsController::class)
+            Route::get('/', ListCashTerminalsController::class)
                 ->name('cash-terminals.list');
-            Route::post('/', \App\Http\Controllers\CashAdjustments\CashTerminals\CreateCashTerminalController::class)
+            Route::post('/', CreateCashTerminalController::class)
                 ->name('cash-terminals.create');
-            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashTerminals\ShowCashTerminalController::class)
+            Route::get(RouteParams::ID, ShowCashTerminalController::class)
                 ->name('cash-terminals.show');
-            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\CashTerminals\UpdateCashTerminalController::class)
+            Route::put(RouteParams::ID, UpdateCashTerminalController::class)
                 ->name('cash-terminals.update');
-            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\CashTerminals\DeleteCashTerminalController::class)
+            Route::delete(RouteParams::ID, DeleteCashTerminalController::class)
                 ->name('cash-terminals.delete');
         });
 
         // Bank Accounts
         Route::prefix('bank-accounts')->group(function () {
-            Route::get('/', \App\Http\Controllers\CashAdjustments\BankAccounts\ListBankAccountsController::class)
+            Route::get('/', ListBankAccountsController::class)
                 ->name('bank-accounts.list');
-            Route::post('/', \App\Http\Controllers\CashAdjustments\BankAccounts\CreateBankAccountController::class)
+            Route::post('/', CreateBankAccountController::class)
                 ->name('bank-accounts.create');
-            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\BankAccounts\ShowBankAccountController::class)
+            Route::get(RouteParams::ID, ShowBankAccountController::class)
                 ->name('bank-accounts.show');
-            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\BankAccounts\UpdateBankAccountController::class)
+            Route::put(RouteParams::ID, UpdateBankAccountController::class)
                 ->name('bank-accounts.update');
-            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\BankAccounts\DeleteBankAccountController::class)
+            Route::delete(RouteParams::ID, DeleteBankAccountController::class)
                 ->name('bank-accounts.delete');
         });
 
         // Cash Sessions
         Route::prefix('cash-sessions')->group(function () {
-            Route::get('/', \App\Http\Controllers\CashAdjustments\CashSessions\ListCashSessionsController::class)
+            Route::get('/', ListCashSessionsController::class)
                 ->name('cash-sessions.list');
-            Route::post('/', \App\Http\Controllers\CashAdjustments\CashSessions\CreateCashSessionController::class)
+            Route::post('/', CreateCashSessionController::class)
                 ->name('cash-sessions.create');
-            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashSessions\ShowCashSessionController::class)
+            Route::get(RouteParams::ID, ShowCashSessionController::class)
                 ->name('cash-sessions.show');
-            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\CashSessions\UpdateCashSessionController::class)
+            Route::put(RouteParams::ID, UpdateCashSessionController::class)
                 ->name('cash-sessions.update');
-            Route::post('/{id}/post', \App\Http\Controllers\CashAdjustments\CashSessions\PostCashSessionController::class)
+            Route::post(RouteParams::ID_POST, PostCashSessionController::class)
                 ->name('cash-sessions.post');
-            Route::get('/{id}/summary', \App\Http\Controllers\CashAdjustments\CashSessions\GetSessionSummaryController::class)
+            Route::get('/{id}/summary', GetSessionSummaryController::class)
                 ->name('cash-sessions.summary');
         });
 
         // Cash Adjustments
         Route::prefix('cash-adjustments')->group(function () {
-            Route::get('/', \App\Http\Controllers\CashAdjustments\CashAdjustments\ListCashAdjustmentsController::class)
+            Route::get('/', ListCashAdjustmentsController::class)
                 ->name('cash-adjustments.list');
-            Route::post('/', \App\Http\Controllers\CashAdjustments\CashAdjustments\CreateCashAdjustmentController::class)
+            Route::post('/', CreateCashAdjustmentController::class)
                 ->name('cash-adjustments.create');
-            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashAdjustments\ShowCashAdjustmentController::class)
+            Route::get(RouteParams::ID, ShowCashAdjustmentController::class)
                 ->name('cash-adjustments.show');
-            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\CashAdjustments\DeleteCashAdjustmentController::class)
+            Route::delete(RouteParams::ID, DeleteCashAdjustmentController::class)
                 ->name('cash-adjustments.delete');
-            Route::post('/{id}/post', \App\Http\Controllers\CashAdjustments\CashAdjustments\PostCashAdjustmentController::class)
+            Route::post(RouteParams::ID_POST, PostCashAdjustmentController::class)
                 ->name('cash-adjustments.post');
         });
 
         // Cash Expenses
         Route::prefix('cash-expenses')->group(function () {
-            Route::get('/', \App\Http\Controllers\CashAdjustments\CashExpenses\ListCashExpensesController::class)
+            Route::get('/', ListCashExpensesController::class)
                 ->name('cash-expenses.list');
-            Route::post('/', \App\Http\Controllers\CashAdjustments\CashExpenses\CreateCashExpenseController::class)
+            Route::post('/', CreateCashExpenseController::class)
                 ->name('cash-expenses.create');
-            Route::get('/{id}', \App\Http\Controllers\CashAdjustments\CashExpenses\ShowCashExpenseController::class)
+            Route::get(RouteParams::ID, ShowCashExpenseController::class)
                 ->name('cash-expenses.show');
-            Route::put('/{id}', \App\Http\Controllers\CashAdjustments\CashExpenses\UpdateCashExpenseController::class)
+            Route::put(RouteParams::ID, UpdateCashExpenseController::class)
                 ->name('cash-expenses.update');
-            Route::delete('/{id}', \App\Http\Controllers\CashAdjustments\CashExpenses\DeleteCashExpenseController::class)
+            Route::delete(RouteParams::ID, DeleteCashExpenseController::class)
                 ->name('cash-expenses.delete');
-            Route::post('/{id}/post', \App\Http\Controllers\CashAdjustments\CashExpenses\PostCashExpenseController::class)
+            Route::post(RouteParams::ID_POST, PostCashExpenseController::class)
                 ->name('cash-expenses.post');
         });
     });
