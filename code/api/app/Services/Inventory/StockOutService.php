@@ -13,11 +13,13 @@ use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockMovementLine;
 use App\Models\UnitOfMeasure;
-use App\Models\UomConversion;
+use App\Services\Inventory\Concerns\ConvertsUomQuantities;
 use Illuminate\Support\Facades\DB;
 
 class StockOutService
 {
+    use ConvertsUomQuantities;
+
     /**
      * Register a stock outbound movement (SALE or CONSUMPTION)
      *
@@ -127,63 +129,6 @@ class StockOutService
 
             return $movement->fresh(['lines', 'fromLocation', 'itemVariant.item', 'itemVariant.unitOfMeasure']);
         });
-    }
-
-    /**
-     * Get conversion between two UOMs (searches in both directions)
-     */
-    protected function getConversion(int $fromUomId, int $toUomId): ?UomConversion
-    {
-        // Try direct conversion first
-        $conversion = UomConversion::where('from_uom_id', $fromUomId)
-            ->where('to_uom_id', $toUomId)
-            ->where('is_active', true)
-            ->first();
-
-        if ($conversion) {
-            return $conversion;
-        }
-
-        // Try inverse conversion
-        $inverseConversion = UomConversion::where('from_uom_id', $toUomId)
-            ->where('to_uom_id', $fromUomId)
-            ->where('is_active', true)
-            ->first();
-
-        if ($inverseConversion) {
-            // Create a virtual conversion with inverted factor
-            $virtual = new UomConversion;
-            $virtual->from_uom_id = $fromUomId;
-            $virtual->to_uom_id = $toUomId;
-            $virtual->factor = 1 / $inverseConversion->factor;
-            $virtual->tolerance_percent = $inverseConversion->tolerance_percent;
-            $virtual->is_active = true;
-
-            return $virtual;
-        }
-
-        return null;
-    }
-
-    /**
-     * Convert a transaction-UOM quantity to base UOM, returning [baseQuantity, conversionFactor].
-     *
-     * @throws UomConversionNotFoundException
-     */
-    private function convertToBaseQuantity(float $quantity, int $transactionUomId, ItemVariant $variant, UnitOfMeasure $transactionUom): array
-    {
-        if ($transactionUomId === $variant->uom_id) {
-            return [$quantity, 1.0];
-        }
-
-        $conversion = $this->getConversion($transactionUomId, $variant->uom_id);
-        if (! $conversion) {
-            throw new UomConversionNotFoundException(
-                "No conversion found from {$transactionUom->code} to {$variant->unitOfMeasure->code}"
-            );
-        }
-
-        return [$quantity * $conversion->factor, $conversion->factor];
     }
 
     /**

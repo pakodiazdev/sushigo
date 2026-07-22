@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\CashAdjustments\CashSessions;
 
+use App\Http\Requests\Concerns\CastsRequestFields;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -17,6 +18,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class StoreCashSessionRequest extends FormRequest
 {
+    use CastsRequestFields;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', \App\Models\CashSession::class);
@@ -46,10 +49,6 @@ class StoreCashSessionRequest extends FormRequest
 
     public function prepareForValidation(): void
     {
-        if ($this->has('opening_balance') && is_string($this->opening_balance)) {
-            $this->merge([
-                'opening_balance' => (float) $this->opening_balance,
-            ]);
-        }
+        $this->castToFloat('opening_balance');
     }
 }

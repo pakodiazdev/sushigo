@@ -10,11 +10,13 @@ use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockMovementLine;
 use App\Models\UnitOfMeasure;
-use App\Models\UomConversion;
+use App\Services\Inventory\Concerns\ConvertsUomQuantities;
 use Illuminate\Support\Facades\DB;
 
 class OpeningBalanceService
 {
+    use ConvertsUomQuantities;
+
     /**
      * Register opening balance for an item variant at a specific location
      *
@@ -104,42 +106,6 @@ class OpeningBalanceService
     }
 
     /**
-     * Get conversion between two UOMs (searches in both directions)
-     */
-    protected function getConversion(int $fromUomId, int $toUomId): ?UomConversion
-    {
-        // Try direct conversion first
-        $conversion = UomConversion::where('from_uom_id', $fromUomId)
-            ->where('to_uom_id', $toUomId)
-            ->where('is_active', true)
-            ->first();
-
-        if ($conversion) {
-            return $conversion;
-        }
-
-        // Try inverse conversion
-        $inverseConversion = UomConversion::where('from_uom_id', $toUomId)
-            ->where('to_uom_id', $fromUomId)
-            ->where('is_active', true)
-            ->first();
-
-        if ($inverseConversion) {
-            // Create a virtual conversion with inverted factor
-            $virtual = new UomConversion;
-            $virtual->from_uom_id = $fromUomId;
-            $virtual->to_uom_id = $toUomId;
-            $virtual->factor = 1 / $inverseConversion->factor;
-            $virtual->tolerance_percent = $inverseConversion->tolerance_percent;
-            $virtual->is_active = true;
-
-            return $virtual;
-        }
-
-        return null;
-    }
-
-    /**
      * Update variant costing with weighted average
      */
     protected function updateVariantCosting(ItemVariant $variant, float $newQty, float $newCost): void
@@ -161,27 +127,6 @@ class OpeningBalanceService
             'last_unit_cost' => $newCost,
             'avg_unit_cost' => $newAvg,
         ]);
-    }
-
-    /**
-     * Convert an entry-UOM quantity to base UOM, returning [baseQuantity, conversionFactor].
-     *
-     * @throws UomConversionNotFoundException
-     */
-    private function convertToBaseQuantity(float $quantity, int $entryUomId, ItemVariant $variant, UnitOfMeasure $entryUom): array
-    {
-        if ($entryUomId === $variant->uom_id) {
-            return [$quantity, 1.0];
-        }
-
-        $conversion = $this->getConversion($entryUomId, $variant->uom_id);
-        if (! $conversion) {
-            throw new UomConversionNotFoundException(
-                "No conversion found from {$entryUom->code} to {$variant->unitOfMeasure->code}"
-            );
-        }
-
-        return [$quantity * $conversion->factor, $conversion->factor];
     }
 
     /**
