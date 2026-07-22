@@ -65,11 +65,7 @@ class EmployeeResource extends BaseResource
             'attendance_exempt' => $this->attendance_exempt,
             'vacation_entitlement_rule_key' => $this->vacation_entitlement_rule_key,
             'vacation_entitlement_custom_table' => $this->vacation_entitlement_custom_table,
-            'has_active_period' => $this->active_employment_periods_count !== null
-                ? $this->active_employment_periods_count > 0
-                : ($this->relationLoaded('employmentPeriods')
-                    ? $this->employmentPeriods->contains('is_active', true)
-                    : null),
+            'has_active_period' => $this->hasActivePeriod(),
             'has_user' => $this->user_id !== null,
             'meta' => $this->meta,
             'created_at' => $this->created_at,
@@ -86,5 +82,18 @@ class EmployeeResource extends BaseResource
                 ])->toArray()
                 : null,
         ];
+    }
+
+    private function hasActivePeriod(): ?bool
+    {
+        if ($this->active_employment_periods_count !== null) {
+            return $this->active_employment_periods_count > 0;
+        }
+
+        if ($this->relationLoaded('employmentPeriods')) {
+            return $this->employmentPeriods->contains('is_active', true);
+        }
+
+        return null;
     }
 }

@@ -49,7 +49,7 @@ class OpeningBalanceService
             $notes
         ) {
             // Validate location
-            $location = InventoryLocation::findOrFail($inventoryLocationId);
+            InventoryLocation::findOrFail($inventoryLocationId);
 
             // Validate variant
             $variant = ItemVariant::with(['item', 'unitOfMeasure'])->findOrFail($itemVariantId);

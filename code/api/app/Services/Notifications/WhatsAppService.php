@@ -19,6 +19,7 @@ class WhatsAppService
         // Example providers: Twilio WhatsApp API, 360dialog, Meta Cloud API
         Log::channel('single')->info('[WhatsApp Service] Message to be sent', [
             'phone' => $this->maskPhone($phone),
+            'message_length' => strlen($message),
         ]);
     }
 

@@ -71,7 +71,7 @@ class CreateEmployeeAction
         // If provided, hash it; otherwise generate a random password.
         $plainPassword = $data['password'] ?? Str::random(32);
 
-        $user = $this->userRepository->create([
+        return $this->userRepository->create([
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'email' => $data['email'] ?? null,
@@ -79,7 +79,5 @@ class CreateEmployeeAction
             'phone_country' => isset($data['phone']) ? $phoneCountry : null,
             'password' => Hash::make($plainPassword),
         ]);
-
-        return $user;
     }
 }

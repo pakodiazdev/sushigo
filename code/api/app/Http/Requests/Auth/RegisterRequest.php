@@ -38,7 +38,7 @@ class RegisterRequest extends FormRequest
     public function prepareForValidation(): void
     {
         if ($this->has('phone') && $this->phone) {
-            $this->merge(['phone' => preg_replace('/[^0-9]/', '', $this->phone)]);
+            $this->merge(['phone' => preg_replace('/\D/', '', $this->phone)]);
         }
     }
 

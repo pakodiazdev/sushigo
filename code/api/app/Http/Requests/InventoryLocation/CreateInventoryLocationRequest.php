@@ -58,7 +58,7 @@ class CreateInventoryLocationRequest extends FormRequest
             $defaults['is_active'] = true;
         }
 
-        if (count($defaults) > 0) {
+        if (! empty($defaults)) {
             $this->merge($defaults);
         }
     }

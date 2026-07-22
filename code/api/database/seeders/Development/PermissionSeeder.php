@@ -53,7 +53,23 @@ class PermissionSeeder extends LockedSeeder
 
     public function run(): void
     {
-        $permissions = [
+        $this->upsertPermissions($this->permissionDefinitions());
+
+        $this->assignSuperAdminPermissions();
+        $this->assignAdminPermissions();
+        $this->assignInventoryManagerPermissions();
+        $this->assignManagerPermissions();
+        $this->assignBasicRolesPermissions();
+
+        $this->command->info('✓ Development permissions seeded successfully');
+    }
+
+    /**
+     * @return array<string, array{label: string, group: string}>
+     */
+    private function permissionDefinitions(): array
+    {
+        return [
             // Usuarios
             'users.index' => ['label' => 'Ver lista de usuarios',    'group' => 'Usuarios'],
             'users.show' => ['label' => 'Ver detalle de usuario',   'group' => 'Usuarios'],
@@ -166,20 +182,32 @@ class PermissionSeeder extends LockedSeeder
             // Auditoría
             'audit-logs.view' => ['label' => 'Ver bitácora de auditoría', 'group' => 'Auditoría'],
         ];
+    }
 
+    /**
+     * @param  array<string, array{label: string, group: string}>  $permissions
+     */
+    private function upsertPermissions(array $permissions): void
+    {
         foreach ($permissions as $name => $meta) {
             Permission::updateOrCreate(
                 ['name' => $name, 'guard_name' => 'api'],
                 ['label' => $meta['label'], 'group' => $meta['group']]
             );
         }
+    }
 
+    private function assignSuperAdminPermissions(): void
+    {
         // super-admin: all permissions
         $superAdminRole = Role::where('name', 'super-admin')->where('guard_name', 'api')->first();
         if ($superAdminRole) {
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
+    }
 
+    private function assignAdminPermissions(): void
+    {
         // admin: user + employee + leave + inventory management
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
         if ($adminRole) {
@@ -202,7 +230,10 @@ class PermissionSeeder extends LockedSeeder
                     ->get()
             );
         }
+    }
 
+    private function assignInventoryManagerPermissions(): void
+    {
         // inventory-manager: full inventory management (items, locations, stock)
         // Note: does NOT include employees.* or users.* — inventory is their only scope
         // (plus self-service Solicitudes — see SELF_SERVICE_REQUESTS below)
@@ -219,7 +250,10 @@ class PermissionSeeder extends LockedSeeder
                     ->get()
             );
         }
+    }
 
+    private function assignManagerPermissions(): void
+    {
         // manager (position role): jefe de piso — can view/manage employees.
         // Does NOT get VACATION_REQUESTS_PATTERN — directly scheduling vacations
         // on behalf of an employee is admin/super-admin-only; manager still
@@ -241,7 +275,10 @@ class PermissionSeeder extends LockedSeeder
                     ->get()
             );
         }
+    }
 
+    private function assignBasicRolesPermissions(): void
+    {
         // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
         // plus self-service Solicitudes (view/create/cancel their own requests —
         // never approve, that stays manager/admin-only)
@@ -258,7 +295,5 @@ class PermissionSeeder extends LockedSeeder
                 );
             }
         }
-
-        $this->command->info('✓ Development permissions seeded successfully');
     }
 }

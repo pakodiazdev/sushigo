@@ -13,8 +13,6 @@ class User extends Authenticatable
 {
     use Auditable, HasApiTokens, HasFactory, HasRoles, Notifiable;
 
-    protected $guard_name = 'api';
-
     protected $fillable = [
         'first_name',
         'last_name',
@@ -42,6 +40,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * The guard used by Spatie Permission to resolve roles/permissions for this model.
+     */
+    public function guardName(): string
+    {
+        return 'api';
     }
 
     /**
