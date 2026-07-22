@@ -11,7 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cash_expenses', function (Blueprint $table) {
+        $onDeleteSetNull = 'set null';
+
+        Schema::create('cash_expenses', function (Blueprint $table) use ($onDeleteSetNull) {
             $table->id();
             $table->foreignId('cash_session_id')->constrained('cash_sessions')->onDelete('cascade');
             $table->enum('tender_type', ['CASH', 'CARD', 'TRANSFER'])->comment('Payment tender type');
@@ -20,11 +22,11 @@ return new class extends Migration
             $table->string('vendor')->comment('Vendor/supplier name');
             $table->string('reference')->nullable()->comment('Invoice/receipt number');
             $table->text('notes')->nullable();
-            $table->foreignId('card_terminal_id')->nullable()->constrained('cash_terminals')->onDelete('set null');
-            $table->foreignId('bank_account_id')->nullable()->constrained('bank_accounts')->onDelete('set null');
+            $table->foreignId('card_terminal_id')->nullable()->constrained('cash_terminals')->onDelete($onDeleteSetNull);
+            $table->foreignId('bank_account_id')->nullable()->constrained('bank_accounts')->onDelete($onDeleteSetNull);
             $table->timestamp('incurred_at')->comment('When expense was incurred');
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
-            $table->foreignId('posted_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('posted_by')->nullable()->constrained('users')->onDelete($onDeleteSetNull);
             $table->timestamp('posted_at')->nullable();
             $table->json('meta')->nullable()->comment('Additional expense metadata');
             $table->timestamps();

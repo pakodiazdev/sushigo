@@ -22,6 +22,8 @@ class EmployeeSeeder extends OnceSeeder
         'ACTING_MANAGER' => 'acting-manager',
     ];
 
+    private const TERMINATION_REASON_VOLUNTARY = 'Renuncia voluntaria';
+
     /**
      * Note: CreateEmployeeAction sends welcome notifications. In development
      * these are caught by Mailhog (MAIL_MAILER=smtp → localhost:1025).
@@ -127,7 +129,7 @@ class EmployeeSeeder extends OnceSeeder
         $firstPeriod = $employee->employmentPeriods()->first();
         $firstPeriod->update([
             'end_date' => $firstEnd->toDateString(),
-            'termination_reason' => 'Renuncia voluntaria',
+            'termination_reason' => self::TERMINATION_REASON_VOLUNTARY,
             'is_active' => false,
             'created_at' => $firstHire,
             'updated_at' => $firstEnd,
@@ -141,7 +143,7 @@ class EmployeeSeeder extends OnceSeeder
             'branch_id' => $branch->id,
             'start_date' => $secondHire->toDateString(),
             'end_date' => $secondEnd->toDateString(),
-            'termination_reason' => 'Renuncia voluntaria',
+            'termination_reason' => self::TERMINATION_REASON_VOLUNTARY,
             'is_active' => false,
             'created_at' => $secondHire,
             'updated_at' => $secondEnd,
@@ -255,7 +257,7 @@ class EmployeeSeeder extends OnceSeeder
                 'start_date' => $hireDate->toDateString(),
                 'end_date' => $bajaDate->toDateString(),
                 'termination_reason' => fake()->randomElement([
-                    'Renuncia voluntaria',
+                    self::TERMINATION_REASON_VOLUNTARY,
                     'Término de contrato',
                     'Despido justificado',
                     'Mutuo acuerdo',

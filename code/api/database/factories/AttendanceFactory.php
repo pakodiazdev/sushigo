@@ -12,10 +12,16 @@ class AttendanceFactory extends Factory
 {
     protected $model = Attendance::class;
 
+    private const CHECK_IN_WINDOW_START = 'today 07:00';
+
+    private const CHECK_OUT_WINDOW_START = 'today 16:00';
+
+    private const CHECK_OUT_WINDOW_END = 'today 19:00';
+
     public function definition(): array
     {
-        $checkIn = fake()->dateTimeBetween('today 07:00', 'today 09:30');
-        $checkOut = fake()->dateTimeBetween('today 16:00', 'today 19:00');
+        $checkIn = fake()->dateTimeBetween(self::CHECK_IN_WINDOW_START, 'today 09:30');
+        $checkOut = fake()->dateTimeBetween(self::CHECK_OUT_WINDOW_START, self::CHECK_OUT_WINDOW_END);
 
         return [
             'employee_id' => Employee::factory(),
@@ -43,8 +49,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::WORKED,
-            'check_in' => fake()->dateTimeBetween('today 07:00', 'today 09:30'),
-            'check_out' => fake()->dateTimeBetween('today 16:00', 'today 19:00'),
+            'check_in' => fake()->dateTimeBetween(self::CHECK_IN_WINDOW_START, 'today 09:30'),
+            'check_out' => fake()->dateTimeBetween(self::CHECK_OUT_WINDOW_START, self::CHECK_OUT_WINDOW_END),
         ]);
     }
 
@@ -97,8 +103,8 @@ class AttendanceFactory extends Factory
     {
         return $this->state(fn () => [
             'day_status' => DayStatus::EXTRA,
-            'check_in' => fake()->dateTimeBetween('today 07:00', 'today 09:00'),
-            'check_out' => fake()->dateTimeBetween('today 16:00', 'today 19:00'),
+            'check_in' => fake()->dateTimeBetween(self::CHECK_IN_WINDOW_START, 'today 09:00'),
+            'check_out' => fake()->dateTimeBetween(self::CHECK_OUT_WINDOW_START, self::CHECK_OUT_WINDOW_END),
         ]);
     }
 
