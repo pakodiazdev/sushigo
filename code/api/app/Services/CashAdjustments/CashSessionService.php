@@ -110,67 +110,13 @@ class CashSessionService
         $adjustments = $session->adjustments()->with(['lines.cardTerminal', 'lines.bankAccount'])->get();
         $expenses = $session->expenses()->with(['cardTerminal', 'bankAccount'])->get();
 
-        // Calculate income totals (INFLOW adjustments)
-        $incomes = [];
-        $totalIncomes = 0;
+        // Income totals (INFLOW adjustment lines)
+        $incomeLines = $adjustments->where('direction', 'INFLOW')->flatMap->lines;
+        [$incomes, $totalIncomes] = $this->tallyByTenderType($incomeLines);
 
-        foreach ($adjustments->where('direction', 'INFLOW') as $adjustment) {
-            foreach ($adjustment->lines as $line) {
-                $tenderType = $line->tender_type;
-
-                if (! isset($incomes[$tenderType])) {
-                    $incomes[$tenderType] = [
-                        'tender_type' => $tenderType,
-                        'amount' => 0,
-                        'count' => 0,
-                    ];
-                }
-
-                $incomes[$tenderType]['amount'] += (float) $line->amount;
-                $incomes[$tenderType]['count']++;
-                $totalIncomes += (float) $line->amount;
-            }
-        }
-
-        // Calculate expense totals (OUTFLOW adjustments + expenses)
-        $expensesData = [];
-        $totalExpenses = 0;
-
-        // Add OUTFLOW adjustments as expenses
-        foreach ($adjustments->where('direction', 'OUTFLOW') as $adjustment) {
-            foreach ($adjustment->lines as $line) {
-                $tenderType = $line->tender_type;
-
-                if (! isset($expensesData[$tenderType])) {
-                    $expensesData[$tenderType] = [
-                        'tender_type' => $tenderType,
-                        'amount' => 0,
-                        'count' => 0,
-                    ];
-                }
-
-                $expensesData[$tenderType]['amount'] += (float) $line->amount;
-                $expensesData[$tenderType]['count']++;
-                $totalExpenses += (float) $line->amount;
-            }
-        }
-
-        // Add expenses
-        foreach ($expenses as $expense) {
-            $tenderType = $expense->tender_type;
-
-            if (! isset($expensesData[$tenderType])) {
-                $expensesData[$tenderType] = [
-                    'tender_type' => $tenderType,
-                    'amount' => 0,
-                    'count' => 0,
-                ];
-            }
-
-            $expensesData[$tenderType]['amount'] += (float) $expense->amount;
-            $expensesData[$tenderType]['count']++;
-            $totalExpenses += (float) $expense->amount;
-        }
+        // Expense totals (OUTFLOW adjustment lines + expenses)
+        $outflowLines = $adjustments->where('direction', 'OUTFLOW')->flatMap->lines;
+        [$expensesData, $totalExpenses] = $this->tallyByTenderType($outflowLines->concat($expenses));
 
         return [
             'session' => $session,
@@ -187,5 +133,34 @@ class CashSessionService
                 'calculated_current' => $session->calculateCurrentBalance(),
             ],
         ];
+    }
+
+    /**
+     * Group items with a tender_type/amount pair by tender type, summing amounts and counts.
+     *
+     * @param  iterable<object{tender_type: string, amount: mixed}>  $items
+     * @return array{0: array<string, array{tender_type: string, amount: float, count: int}>, 1: float}
+     */
+    private function tallyByTenderType(iterable $items): array
+    {
+        $tally = [];
+        $total = 0.0;
+
+        foreach ($items as $item) {
+            $tenderType = $item->tender_type;
+            $amount = (float) $item->amount;
+
+            $tally[$tenderType] ??= [
+                'tender_type' => $tenderType,
+                'amount' => 0,
+                'count' => 0,
+            ];
+
+            $tally[$tenderType]['amount'] += $amount;
+            $tally[$tenderType]['count']++;
+            $total += $amount;
+        }
+
+        return [$tally, $total];
     }
 }

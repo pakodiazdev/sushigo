@@ -58,26 +58,10 @@ class OpeningBalanceService
             $entryUom = UnitOfMeasure::findOrFail($entryUomId);
 
             // Convert quantity to base UOM
-            $conversionFactor = 1.0;
-            $baseQuantity = $quantity;
-
-            if ($entryUomId !== $variant->uom_id) {
-                $conversion = $this->getConversion($entryUomId, $variant->uom_id);
-                if (! $conversion) {
-                    throw new UomConversionNotFoundException(
-                        "No conversion found from {$entryUom->code} to {$variant->unitOfMeasure->code}"
-                    );
-                }
-                $conversionFactor = $conversion->factor;
-                $baseQuantity = $quantity * $conversionFactor;
-            }
+            [$baseQuantity, $conversionFactor] = $this->convertToBaseQuantity($quantity, $entryUomId, $variant, $entryUom);
 
             // Calculate unit cost in base UOM
-            $baseCost = null;
-            if ($unitCost !== null) {
-                // If cost is per entry UOM, convert to base UOM
-                $baseCost = $conversionFactor != 0 ? $unitCost / $conversionFactor : 0;
-            }
+            $baseCost = $this->calculateBaseCost($unitCost, $conversionFactor);
 
             // Create stock movement
             $movement = StockMovement::create([
@@ -115,23 +99,7 @@ class OpeningBalanceService
             ]);
 
             // Update or create stock record
-            $stock = Stock::where('inventory_location_id', $inventoryLocationId)
-                ->where('item_variant_id', $itemVariantId)
-                ->first();
-
-            if ($stock) {
-                // Update existing stock
-                $stock->increment('on_hand', $baseQuantity);
-            } else {
-                // Create new stock record
-                $stock = Stock::create([
-                    'inventory_location_id' => $inventoryLocationId,
-                    'item_variant_id' => $itemVariantId,
-                    'on_hand' => $baseQuantity,
-                    'reserved' => 0,
-                    'meta' => [],
-                ]);
-            }
+            $this->upsertStock($inventoryLocationId, $itemVariantId, $baseQuantity);
 
             // Update variant costing if cost provided
             if ($baseCost !== null && $baseCost > 0) {
@@ -199,6 +167,63 @@ class OpeningBalanceService
         $variant->update([
             'last_unit_cost' => $newCost,
             'avg_unit_cost' => $newAvg,
+        ]);
+    }
+
+    /**
+     * Convert an entry-UOM quantity to base UOM, returning [baseQuantity, conversionFactor].
+     *
+     * @throws UomConversionNotFoundException
+     */
+    private function convertToBaseQuantity(float $quantity, int $entryUomId, ItemVariant $variant, UnitOfMeasure $entryUom): array
+    {
+        if ($entryUomId === $variant->uom_id) {
+            return [$quantity, 1.0];
+        }
+
+        $conversion = $this->getConversion($entryUomId, $variant->uom_id);
+        if (! $conversion) {
+            throw new UomConversionNotFoundException(
+                "No conversion found from {$entryUom->code} to {$variant->unitOfMeasure->code}"
+            );
+        }
+
+        return [$quantity * $conversion->factor, $conversion->factor];
+    }
+
+    /**
+     * Convert an entry-UOM unit cost to base UOM.
+     */
+    private function calculateBaseCost(?float $unitCost, float $conversionFactor): ?float
+    {
+        if ($unitCost === null) {
+            return null;
+        }
+
+        return $conversionFactor != 0 ? $unitCost / $conversionFactor : 0;
+    }
+
+    /**
+     * Increment on-hand quantity for an existing stock record, or create one.
+     */
+    private function upsertStock(int $inventoryLocationId, int $itemVariantId, float $baseQuantity): Stock
+    {
+        $stock = Stock::where('inventory_location_id', $inventoryLocationId)
+            ->where('item_variant_id', $itemVariantId)
+            ->first();
+
+        if ($stock) {
+            $stock->increment('on_hand', $baseQuantity);
+
+            return $stock;
+        }
+
+        return Stock::create([
+            'inventory_location_id' => $inventoryLocationId,
+            'item_variant_id' => $itemVariantId,
+            'on_hand' => $baseQuantity,
+            'reserved' => 0,
+            'meta' => [],
         ]);
     }
 }
