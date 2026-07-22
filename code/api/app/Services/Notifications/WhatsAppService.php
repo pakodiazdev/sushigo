@@ -15,7 +15,7 @@ class WhatsAppService
 {
     public function sendMessage(string $phone, string $message): void
     {
-        // TODO: Replace with real WhatsApp provider integration
+        // Real provider integration tracked in https://github.com/pakodiazdev/sushigo/issues/276
         // Example providers: Twilio WhatsApp API, 360dialog, Meta Cloud API
         Log::channel('single')->info('[WhatsApp Service] Message to be sent', [
             'phone' => $this->maskPhone($phone),
