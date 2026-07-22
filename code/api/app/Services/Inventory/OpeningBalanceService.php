@@ -2,6 +2,7 @@
 
 namespace App\Services\Inventory;
 
+use App\DataTransferObjects\Inventory\RegisterOpeningBalanceData;
 use App\Exceptions\UomConversionNotFoundException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
@@ -17,27 +18,19 @@ class OpeningBalanceService
     /**
      * Register opening balance for an item variant at a specific location
      *
-     * @param  int  $inventoryLocationId  The inventory location ID
-     * @param  int  $itemVariantId  The item variant ID
-     * @param  float  $quantity  Quantity in entry UOM
-     * @param  int  $entryUomId  Unit of measure for the entry
-     * @param  float|null  $unitCost  Cost per unit in entry UOM (optional)
-     * @param  int|null  $userId  User performing the operation
-     * @param  string|null  $reference  External reference number
-     * @param  string|null  $notes  Additional notes
-     *
      * @throws UomConversionNotFoundException
      */
-    public function registerOpeningBalance(
-        int $inventoryLocationId,
-        int $itemVariantId,
-        float $quantity,
-        int $entryUomId,
-        ?float $unitCost = null,
-        ?int $userId = null,
-        ?string $reference = null,
-        ?string $notes = null
-    ): StockMovement {
+    public function registerOpeningBalance(RegisterOpeningBalanceData $data): StockMovement
+    {
+        $inventoryLocationId = $data->inventoryLocationId;
+        $itemVariantId = $data->itemVariantId;
+        $quantity = $data->quantity;
+        $entryUomId = $data->entryUomId;
+        $unitCost = $data->unitCost;
+        $userId = $data->userId;
+        $reference = $data->reference;
+        $notes = $data->notes;
+
         return DB::transaction(function () use (
             $inventoryLocationId,
             $itemVariantId,

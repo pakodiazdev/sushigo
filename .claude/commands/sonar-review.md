@@ -33,22 +33,27 @@ Map arguments to constants:
 | `webapp` | `pakodiazdev_sushigo-webapp` | `SONAR_TOKEN_WEBAPP` | `Webapp Tests (Vitest + Coverage)` | `code/webapp` |
 | `api` | `pakodiazdev_sushigo-api` | `SONAR_TOKEN_API` | `API Tests (PHPUnit + Coverage)` | `code/api` |
 
-Verify the token is set:
+Tokens are **not** expected to be pre-exported in the shell. They live in the workspace root `.env` file — `$(git rev-parse --show-toplevel)/.env` (gitignored, one file per dev-lab workspace clone) — as `SONAR_TOKEN_API` and `SONAR_TOKEN_WEBAPP`. Read them from there in every command that needs them:
 
 ```bash
-# For webapp:
-echo "${SONAR_TOKEN_WEBAPP:-MISSING}"
-# For api:
-echo "${SONAR_TOKEN_API:-MISSING}"
+TOKEN_API=$(grep '^SONAR_TOKEN_API=' "$(git rev-parse --show-toplevel)/.env" | cut -d= -f2)
+TOKEN_WEBAPP=$(grep '^SONAR_TOKEN_WEBAPP=' "$(git rev-parse --show-toplevel)/.env" | cut -d= -f2)
 ```
 
-If the token is `MISSING`, stop and instruct the user:
+**Critical:** the Bash tool does not persist shell state (`export`, plain variable assignment) between separate tool calls — each call starts a fresh shell, and only the working directory carries over. Never `export TOKEN=...` in one command and reference `$TOKEN` in a later one — it silently resolves to empty, `curl -u ":"` sends anonymous auth, and every SonarCloud call fails with 401 (which looks like an invalid token but isn't). Always read the token from `.env` fresh **inside the same command block** that uses it, e.g.:
+
+```bash
+TOKEN_API=$(grep '^SONAR_TOKEN_API=' "$(git rev-parse --show-toplevel)/.env" | cut -d= -f2)
+curl -s -u "${TOKEN_API}:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=pakodiazdev_sushigo-api&branch=<BRANCH>"
+```
+
+If a value is missing, stop and instruct the user:
 
 ```
-Missing SONAR_TOKEN_<WEBAPP|API> environment variable.
-Add it to your shell profile or run:
-  export SONAR_TOKEN_WEBAPP=<your-token>   # for webapp
-  export SONAR_TOKEN_API=<your-token>      # for api
+Missing SONAR_TOKEN_<WEBAPP|API> in <workspace-root>/.env.
+Add a line to that file:
+  SONAR_TOKEN_WEBAPP=<your-token>   # for webapp
+  SONAR_TOKEN_API=<your-token>      # for api
 
 Tokens can be generated at: https://sonarcloud.io/account/security
 ```
@@ -115,6 +120,19 @@ Call the SonarCloud API using the token as HTTP Basic auth user (no password):
 curl -s -u "${SONAR_TOKEN}:" \
   "https://sonarcloud.io/api/qualitygates/project_status?projectKey=<PROJECT_KEY>&branch=<BRANCH>"
 ```
+
+**If the response is `{"errors":[{"msg":"Component '<KEY>' on branch '<BRANCH>' not found"}]}`:** SonarCloud has no branch-level analysis for this branch — this is expected for a feature branch with an open PR, since CI only runs *pull request* analysis for it, not *branch* analysis. Look up the open PR for the current branch and retry with `pullRequest=<PR_NUMBER>` instead of `branch=<BRANCH>` on every subsequent API call in this skill:
+
+```bash
+gh pr list --repo pakodiazdev/sushigo --head "$(git branch --show-current)" --json number --jq '.[0].number'
+```
+
+```bash
+curl -s -u "${SONAR_TOKEN}:" \
+  "https://sonarcloud.io/api/qualitygates/project_status?projectKey=<PROJECT_KEY>&pullRequest=<PR_NUMBER>"
+```
+
+If there is no open PR either, the branch truly hasn't been analyzed yet — tell the user to push/open a PR first so CI runs the scan.
 
 Parse `projectStatus.status`: `OK` means passed, `ERROR` or `WARN` means failed.
 

@@ -62,11 +62,9 @@ class UserSeeder extends OnceSeeder
             $this->command->warn('   ⚠️  CHANGE THIS PASSWORD IMMEDIATELY!');
 
             // Assign to main operating unit as OWNER
-            if ($mainUnit) {
-                if (! $user->operatingUnits()->where('operating_unit_id', $mainUnit->id)->exists()) {
-                    $user->operatingUnits()->attach($mainUnit->id, ['assignment_role' => 'OWNER']);
-                    $this->command->info("  → Assigned to: {$mainUnit->name} as OWNER");
-                }
+            if ($mainUnit && ! $user->operatingUnits()->where('operating_unit_id', $mainUnit->id)->exists()) {
+                $user->operatingUnits()->attach($mainUnit->id, ['assignment_role' => 'OWNER']);
+                $this->command->info("  → Assigned to: {$mainUnit->name} as OWNER");
             }
         }
 

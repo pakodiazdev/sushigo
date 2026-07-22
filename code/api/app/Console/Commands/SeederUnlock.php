@@ -14,14 +14,16 @@ class SeederUnlock extends Command
     public function handle(): int
     {
         $environment = $this->option('environment') ?? app()->environment();
-        $unlockAll = $this->option('all');
 
-        if ($unlockAll) {
+        if ($this->option('all')) {
             return $this->unlockAll($environment);
         }
 
-        $seederName = $this->argument('seeder');
+        return $this->unlockOne($this->argument('seeder'), $environment);
+    }
 
+    private function unlockOne(string $seederName, string $environment): int
+    {
         $log = $this->findSeeder($seederName, $environment);
 
         if (! $log) {
@@ -36,16 +38,21 @@ class SeederUnlock extends Command
             return self::SUCCESS;
         }
 
-        if (SeederLog::unlock($log->seeder_class, $environment)) {
-            $this->info("✓ Seeder '{$seederName}' unlocked in '{$environment}' environment.");
-            $this->warn('⚠️  This seeder will run again on next execution!');
+        return $this->performUnlock($log, $seederName, $environment);
+    }
 
-            return self::SUCCESS;
+    private function performUnlock(SeederLog $log, string $seederName, string $environment): int
+    {
+        if (! SeederLog::unlock($log->seeder_class, $environment)) {
+            $this->error("Failed to unlock seeder '{$seederName}'.");
+
+            return self::FAILURE;
         }
 
-        $this->error("Failed to unlock seeder '{$seederName}'.");
+        $this->info("✓ Seeder '{$seederName}' unlocked in '{$environment}' environment.");
+        $this->warn('⚠️  This seeder will run again on next execution!');
 
-        return self::FAILURE;
+        return self::SUCCESS;
     }
 
     private function unlockAll(string $environment): int

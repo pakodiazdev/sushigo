@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\CashAdjustments\CashExpenses;
 
+use App\DataTransferObjects\CashAdjustments\RegisterExpenseData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CashAdjustments\CashExpenses\StoreCashExpenseRequest;
 use App\Models\CashSession;
@@ -42,7 +43,7 @@ class CreateCashExpenseController extends Controller
         try {
             $session = CashSession::findOrFail($validated['cash_session_id']);
 
-            $expense = $this->expenseService->registerExpense(
+            $expense = $this->expenseService->registerExpense(new RegisterExpenseData(
                 session: $session,
                 tenderType: $validated['tender_type'],
                 amount: $validated['amount'],
@@ -55,7 +56,7 @@ class CreateCashExpenseController extends Controller
                 createdBy: Auth::user(),
                 incurredAt: $validated['incurred_at'] ?? null,
                 meta: $validated['meta'] ?? []
-            );
+            ));
 
             return response()->json([
                 'message' => 'Expense created successfully',

@@ -209,14 +209,7 @@ class CloseDayAction
      */
     private function isScheduledRestDay(int $employeeId, string $today, int $dayOfWeek): bool
     {
-        $period = EmploymentPeriod::where('employee_id', $employeeId)
-            ->where('is_active', true)
-            ->whereDate('start_date', '<=', $today)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('end_date')
-                    ->orWhereDate('end_date', '>=', $today);
-            })
-            ->first();
+        $period = $this->resolveActiveEmploymentPeriod($employeeId, $today);
 
         if (! $period) {
             return false;
@@ -230,6 +223,23 @@ class CloseDayAction
             return false;
         }
 
+        return $this->resolveDayOffFlag($schedule, $period, $today, $dayOfWeek);
+    }
+
+    private function resolveActiveEmploymentPeriod(int $employeeId, string $today): ?EmploymentPeriod
+    {
+        return EmploymentPeriod::where('employee_id', $employeeId)
+            ->where('is_active', true)
+            ->whereDate('start_date', '<=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $today);
+            })
+            ->first();
+    }
+
+    private function resolveDayOffFlag(EmployeeSchedule $schedule, EmploymentPeriod $period, string $today, int $dayOfWeek): bool
+    {
         // Override takes precedence
         $override = ScheduleDayOverride::effective($today)
             ->where('employment_period_id', $period->id)
