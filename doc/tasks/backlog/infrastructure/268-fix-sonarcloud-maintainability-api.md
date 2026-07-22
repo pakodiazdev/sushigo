@@ -40,7 +40,7 @@ Como desarrollador, necesito resolver los Code Smells de mantenibilidad abiertos
 ## ✅ Technical Tasks
 
 - [x] 🔧 **Policies cleanup (`php:S1172`, 62 of 65 occurrences in `app/Policies/*`):** remove unused `$user`/model parameters across `app/Policies/*` (BankAccount, CashAdjustment, CashExpense, CashRegister, CashSession, CashTerminal, InventoryLocation, Item, ItemVariant policies). Guest-access exception: `viewAny()`/`view()` in `InventoryLocationPolicy`, `ItemPolicy`, `ItemVariantPolicy` use a nullable `?User $user` that Laravel's `Gate::methodAllowsGuests()` reads via reflection to permit unauthenticated access — that parameter is kept and suppressed with `// NOSONAR` instead of removed, to avoid silently breaking public/guest access. *(Session: 2026-07-21, PR: see below)*
-- [ ] 🔧 **Dedicated exceptions (`php:S112`, 20 occurrences):** create specific exception classes for `app/Services/CashAdjustments/CashAdjustmentService.php`, `CashExpenseService.php`, `CashSessionService.php` instead of throwing generic `\Exception`
+- [x] 🔧 **Dedicated exceptions (`php:S112`, 20 of 20 occurrences):** created 10 dedicated exception classes in `app/Exceptions/` and replaced every `throw new \Exception(...)` across `app/Services/CashAdjustments/CashAdjustmentService.php`, `CashExpenseService.php`, `CashSessionService.php`, `app/Services/Inventory/OpeningBalanceService.php`, and `StockOutService.php` (the last two were not in the original file list for this bullet but carry the same rule, so folded in here to fully close `php:S112`). Controllers already catch `\Exception` generically, so no controller changes were needed. *(PR: see below)*
 - [ ] 🔧 **Extract duplicated literals (`php:S1192`, 9 occurrences):** introduce constants for repeated strings in `routes/api.php` (`/{id}`, `/{id}/post`), `database/factories/AttendanceFactory.php`, `database/seeders/Development/EmployeeSeeder.php`, `database/migrations/2025_11_30_232333_create_cash_expenses_table.php`, `RegisterStockOutController.php`
 - [ ] 🔧 **Reduce cognitive complexity (`php:S3776`, 5 occurrences):** refactor `database/seeders/Development/UserSeeder.php` (45→15) and `CashSessionService.php` plus 3 others below 15
 - [ ] 🔧 **Simplify conditionals & control flow:** merge nested `if`s (`php:S1066`, 5), reduce excess `return`s (`php:S1142`, 3), reduce excess parameters (`php:S107`, 3 — `CashExpenseService` constructor is one)
@@ -64,14 +64,35 @@ Como desarrollador, necesito resolver los Code Smells de mantenibilidad abiertos
 ### 📊 Estimates
 - **Optimistic:** `12h` (SonarCloud effort estimate, assuming clean mechanical fixes)
 - **Pessimistic:** `24h` (accounting for Policy signature changes needing test updates, and exception-class refactors touching call sites)
-- **Tracked:** `0.15h` (in progress — Policies cleanup sub-task only, 7 sub-tasks remain)
+- **Tracked:** `1.42h` (in progress — Policies + Dedicated exceptions sub-tasks complete, 6 sub-tasks remain)
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-21", "start": "14:24", "end": "14:33" }
+  { "date": "2026-07-21", "start": "14:24", "end": "14:33" },
+  { "date": "2026-07-21", "start": "15:48", "end": "16:20" },
+  { "date": "2026-07-21", "start": "18:29", "end": "18:42" },
+  { "date": "2026-07-21", "start": "18:42", "end": "18:51" },
+  { "date": "2026-07-21", "start": "18:51", "end": "19:06" },
+  { "date": "2026-07-21", "start": "19:06", "end": "19:13" }
 ]
 ```
+
+---
+
+## 📊 Sub-task Retrospectives
+
+### ✅ Policies cleanup (`php:S1172`) — PR [#271](https://github.com/pakodiazdev/sushigo/pull/271), merged 2026-07-21
+- **Actual:** 41m (9m + 32m)
+- **vs SonarCloud effort estimate (5h25m):** −4h44m
+
+**Justification:** Removing the unused `$user`/model parameters across the 9 Policy classes was mechanical and fast (session 1, 9m). A second session (32m) was needed after PR review flagged a coverage drop on the touched Policy classes — added dedicated Unit tests for `BankAccountPolicy`, `CashAdjustmentPolicy`, `CashExpensePolicy`, `CashRegisterPolicy`, `CashSessionPolicy`, `CashTerminalPolicy`, `InventoryLocationPolicy`, `ItemPolicy`, `ItemVariantPolicy` to restore the SonarCloud quality gate. SonarCloud's per-rule effort estimate is a generic default and does not reflect how repetitive/boilerplate this batch was.
+
+### ✅ Dedicated exceptions (`php:S112`) — PR [#274](https://github.com/pakodiazdev/sushigo/pull/274)
+- **Actual:** 44m (13m + 9m + 15m + 7m)
+- **vs SonarCloud effort estimate (6h40m):** −5h56m
+
+**Justification:** Once the exception-naming scheme was decided (group by domain error, e.g. `CashAdjustmentAlreadyPostedException`, `InsufficientStockException`), the mechanical replacement of 20 `throw new \Exception(...)` call sites with 10 new one-line exception classes was fast and required zero controller changes, since every caller already caught `\Exception` generically (session 1, 13m). A second session (9m) addressed two `copilot-pull-request-reviewer` review comments on PR #274: a missing `@throws InvalidCashExpenseException` on `CashExpenseService::updateExpense()`, and a stale "PR: pending" reference in this task file. A third session (15m) fixed the PR's own SonarCloud quality gate, which failed on `new_coverage` (55.0% < 80%) because 9 of the 20 new exception-throwing lines were never exercised by existing tests — added targeted PHPUnit cases for the empty-lines, missing-field, and not-found branches across `CashAdjustmentServiceTest`, `CashExpenseServiceTest`, and `StockOutTest`. A fourth session (7m) waited for CI + SonarCloud re-scan (new_coverage → 100%, gate → OK) and squashed the accumulated commits per request. SonarCloud's estimate assumes far more design/wiring effort than this codebase's existing generic-catch convention actually required, even accounting for the review/coverage follow-up.
 
 ---
 

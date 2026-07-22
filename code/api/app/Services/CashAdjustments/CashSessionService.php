@@ -2,6 +2,8 @@
 
 namespace App\Services\CashAdjustments;
 
+use App\Exceptions\CashSessionAlreadyPostedException;
+use App\Exceptions\DuplicateCashSessionException;
 use App\Models\CashRegister;
 use App\Models\CashSession;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +13,7 @@ class CashSessionService
     /**
      * Open a new cash session for a register
      *
-     * @throws \Exception
+     * @throws DuplicateCashSessionException
      */
     public function openSession(
         CashRegister $cashRegister,
@@ -25,7 +27,7 @@ class CashSessionService
             ->first();
 
         if ($existing) {
-            throw new \Exception("Session already exists for register {$cashRegister->code} on {$operatingDate}");
+            throw new DuplicateCashSessionException("Session already exists for register {$cashRegister->code} on {$operatingDate}");
         }
 
         // If no opening balance provided, use previous day's closing balance
@@ -71,12 +73,12 @@ class CashSessionService
     /**
      * Post a session (mark as finalized)
      *
-     * @throws \Exception
+     * @throws CashSessionAlreadyPostedException
      */
     public function postSession(CashSession $session): CashSession
     {
         if ($session->isPosted()) {
-            throw new \Exception('Session is already posted');
+            throw new CashSessionAlreadyPostedException('Session is already posted');
         }
 
         DB::beginTransaction();

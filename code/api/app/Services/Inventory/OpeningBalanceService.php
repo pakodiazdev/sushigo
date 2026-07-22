@@ -2,6 +2,7 @@
 
 namespace App\Services\Inventory;
 
+use App\Exceptions\UomConversionNotFoundException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
 use App\Models\Stock;
@@ -25,7 +26,7 @@ class OpeningBalanceService
      * @param  string|null  $reference  External reference number
      * @param  string|null  $notes  Additional notes
      *
-     * @throws \Exception
+     * @throws UomConversionNotFoundException
      */
     public function registerOpeningBalance(
         int $inventoryLocationId,
@@ -63,7 +64,7 @@ class OpeningBalanceService
             if ($entryUomId !== $variant->uom_id) {
                 $conversion = $this->getConversion($entryUomId, $variant->uom_id);
                 if (! $conversion) {
-                    throw new \Exception(
+                    throw new UomConversionNotFoundException(
                         "No conversion found from {$entryUom->code} to {$variant->unitOfMeasure->code}"
                     );
                 }

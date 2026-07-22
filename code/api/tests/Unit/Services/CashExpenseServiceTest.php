@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Services;
 
+use App\Exceptions\CashExpenseAlreadyPostedException;
+use App\Exceptions\InvalidCashExpenseException;
 use App\Models\BankAccount;
 use App\Models\Branch;
 use App\Models\CashExpense;
@@ -138,7 +140,7 @@ class CashExpenseServiceTest extends TestCase
             ->posted()
             ->create();
 
-        $this->expectException(\Exception::class);
+        $this->expectException(CashExpenseAlreadyPostedException::class);
         $this->expectExceptionMessage('already posted');
 
         $this->service->postExpense($expense, $this->user);
@@ -174,7 +176,7 @@ class CashExpenseServiceTest extends TestCase
             ->posted()
             ->create();
 
-        $this->expectException(\Exception::class);
+        $this->expectException(CashExpenseAlreadyPostedException::class);
         $this->expectExceptionMessage('Cannot update posted expense');
 
         $this->service->updateExpense($expense, ['amount' => 200.00]);
@@ -203,7 +205,7 @@ class CashExpenseServiceTest extends TestCase
             ->posted()
             ->create();
 
-        $this->expectException(\Exception::class);
+        $this->expectException(CashExpenseAlreadyPostedException::class);
         $this->expectExceptionMessage('Cannot delete posted expense');
 
         $this->service->deleteExpense($expense);
@@ -284,7 +286,7 @@ class CashExpenseServiceTest extends TestCase
     public function it_validates_tender_type_requirements()
     {
         // CARD requires terminal
-        $this->expectException(\Exception::class);
+        $this->expectException(InvalidCashExpenseException::class);
 
         $this->service->registerExpense(
             session: $this->session,
@@ -296,6 +298,50 @@ class CashExpenseServiceTest extends TestCase
             notes: null,
             cardTerminalId: null, // Missing - should throw exception
             bankAccountId: null,
+            createdBy: $this->user,
+            incurredAt: null,
+            meta: []
+        );
+    }
+
+    #[Test]
+    public function it_validates_amount_must_be_positive()
+    {
+        $this->expectException(InvalidCashExpenseException::class);
+        $this->expectExceptionMessage('Expense amount must be positive');
+
+        $this->service->registerExpense(
+            session: $this->session,
+            tenderType: 'CASH',
+            amount: 0,
+            category: 'SUPPLIES',
+            vendor: null,
+            reference: null,
+            notes: null,
+            cardTerminalId: null,
+            bankAccountId: null,
+            createdBy: $this->user,
+            incurredAt: null,
+            meta: []
+        );
+    }
+
+    #[Test]
+    public function it_validates_transfer_tender_requires_bank_account()
+    {
+        $this->expectException(InvalidCashExpenseException::class);
+        $this->expectExceptionMessage('TRANSFER tender requires bank_account_id');
+
+        $this->service->registerExpense(
+            session: $this->session,
+            tenderType: 'TRANSFER',
+            amount: 100.00,
+            category: 'SUPPLIES',
+            vendor: null,
+            reference: null,
+            notes: null,
+            cardTerminalId: null,
+            bankAccountId: null, // Missing - should throw exception
             createdBy: $this->user,
             incurredAt: null,
             meta: []

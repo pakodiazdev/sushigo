@@ -2,6 +2,10 @@
 
 namespace App\Services\Inventory;
 
+use App\Exceptions\InsufficientStockException;
+use App\Exceptions\InvalidStockOutReasonException;
+use App\Exceptions\StockNotFoundException;
+use App\Exceptions\UomConversionNotFoundException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
 use App\Models\Stock;
@@ -26,7 +30,10 @@ class StockOutService
      * @param  string|null  $reference  External reference number
      * @param  string|null  $notes  Additional notes
      *
-     * @throws \Exception
+     * @throws InvalidStockOutReasonException
+     * @throws UomConversionNotFoundException
+     * @throws StockNotFoundException
+     * @throws InsufficientStockException
      */
     public function registerStockOut(
         int $inventoryLocationId,
@@ -41,7 +48,7 @@ class StockOutService
     ): StockMovement {
         // Validate reason
         if (! in_array($reason, [StockMovement::REASON_SALE, StockMovement::REASON_CONSUMPTION])) {
-            throw new \Exception("Invalid reason for stock out: {$reason}. Must be SALE or CONSUMPTION.");
+            throw new InvalidStockOutReasonException("Invalid reason for stock out: {$reason}. Must be SALE or CONSUMPTION.");
         }
 
         return DB::transaction(function () use (
@@ -71,7 +78,7 @@ class StockOutService
             if ($transactionUomId !== $variant->uom_id) {
                 $conversion = $this->getConversion($transactionUomId, $variant->uom_id);
                 if (! $conversion) {
-                    throw new \Exception(
+                    throw new UomConversionNotFoundException(
                         "No conversion found from {$transactionUom->code} to {$variant->unitOfMeasure->code}"
                     );
                 }
@@ -85,14 +92,14 @@ class StockOutService
                 ->first();
 
             if (! $stock) {
-                throw new \Exception(
+                throw new StockNotFoundException(
                     "No stock found for variant {$variant->sku} at location {$location->name}"
                 );
             }
 
             $availableQty = $stock->on_hand - $stock->reserved;
             if ($baseQuantity > $availableQty) {
-                throw new \Exception(
+                throw new InsufficientStockException(
                     "Insufficient stock. Available: {$availableQty}, Requested: {$baseQuantity}"
                 );
             }
