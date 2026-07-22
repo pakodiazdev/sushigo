@@ -2,6 +2,7 @@
 
 namespace App\Services\CashAdjustments;
 
+use App\DataTransferObjects\CashAdjustments\RegisterExpenseData;
 use App\Exceptions\CashExpenseAlreadyPostedException;
 use App\Exceptions\InvalidCashExpenseException;
 use App\Models\CashExpense;
@@ -15,40 +16,28 @@ class CashExpenseService
      *
      * @throws InvalidCashExpenseException
      */
-    public function registerExpense(
-        CashSession $session,
-        string $tenderType,
-        float $amount,
-        string $category,
-        ?string $vendor,
-        ?string $reference,
-        ?string $notes,
-        ?int $cardTerminalId,
-        ?int $bankAccountId,
-        User $createdBy,
-        ?string $incurredAt = null,
-        array $meta = []
-    ): CashExpense {
+    public function registerExpense(RegisterExpenseData $data): CashExpense
+    {
         // Validate tender-specific requirements
-        $this->validateTenderRequirements($tenderType, $cardTerminalId, $bankAccountId);
+        $this->validateTenderRequirements($data->tenderType, $data->cardTerminalId, $data->bankAccountId);
 
-        if ($amount <= 0) {
+        if ($data->amount <= 0) {
             throw new InvalidCashExpenseException('Expense amount must be positive');
         }
 
         return CashExpense::create([
-            'cash_session_id' => $session->id,
-            'tender_type' => $tenderType,
-            'amount' => $amount,
-            'category' => $category,
-            'vendor' => $vendor,
-            'reference' => $reference,
-            'notes' => $notes,
-            'card_terminal_id' => $cardTerminalId,
-            'bank_account_id' => $bankAccountId,
-            'incurred_at' => $incurredAt ?? now(),
-            'created_by' => $createdBy->id,
-            'meta' => $meta,
+            'cash_session_id' => $data->session->id,
+            'tender_type' => $data->tenderType,
+            'amount' => $data->amount,
+            'category' => $data->category,
+            'vendor' => $data->vendor,
+            'reference' => $data->reference,
+            'notes' => $data->notes,
+            'card_terminal_id' => $data->cardTerminalId,
+            'bank_account_id' => $data->bankAccountId,
+            'incurred_at' => $data->incurredAt ?? now(),
+            'created_by' => $data->createdBy->id,
+            'meta' => $data->meta,
         ]);
     }
 

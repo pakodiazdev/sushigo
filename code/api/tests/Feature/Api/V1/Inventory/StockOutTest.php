@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Inventory;
 
+use App\DataTransferObjects\Inventory\RegisterStockOutData;
 use App\Exceptions\InvalidStockOutReasonException;
 use App\Models\Item;
 use App\Models\ItemVariant;
@@ -342,13 +343,13 @@ class StockOutTest extends InventoryTestCase
         $this->expectException(InvalidStockOutReasonException::class);
         $this->expectExceptionMessage('Invalid reason for stock out');
 
-        app(StockOutService::class)->registerStockOut(
+        app(StockOutService::class)->registerStockOut(new RegisterStockOutData(
             inventoryLocationId: $this->location->id,
             itemVariantId: $this->variant->id,
             quantity: 1,
             transactionUomId: $this->uomKg->id,
             reason: 'SCRAP',
-        );
+        ));
     }
 
     #[Test]

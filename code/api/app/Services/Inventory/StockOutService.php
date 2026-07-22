@@ -2,6 +2,7 @@
 
 namespace App\Services\Inventory;
 
+use App\DataTransferObjects\Inventory\RegisterStockOutData;
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\InvalidStockOutReasonException;
 use App\Exceptions\StockNotFoundException;
@@ -20,32 +21,23 @@ class StockOutService
     /**
      * Register a stock outbound movement (SALE or CONSUMPTION)
      *
-     * @param  int  $inventoryLocationId  The inventory location ID (from location)
-     * @param  int  $itemVariantId  The item variant ID
-     * @param  float  $quantity  Quantity in transaction UOM
-     * @param  int  $transactionUomId  Unit of measure for the transaction
-     * @param  string  $reason  Movement reason (SALE or CONSUMPTION)
-     * @param  float|null  $salePrice  Sale price per unit in transaction UOM (optional, for SALE movements)
-     * @param  int|null  $userId  User performing the operation
-     * @param  string|null  $reference  External reference number
-     * @param  string|null  $notes  Additional notes
-     *
      * @throws InvalidStockOutReasonException
      * @throws UomConversionNotFoundException
      * @throws StockNotFoundException
      * @throws InsufficientStockException
      */
-    public function registerStockOut(
-        int $inventoryLocationId,
-        int $itemVariantId,
-        float $quantity,
-        int $transactionUomId,
-        string $reason,
-        ?float $salePrice = null,
-        ?int $userId = null,
-        ?string $reference = null,
-        ?string $notes = null
-    ): StockMovement {
+    public function registerStockOut(RegisterStockOutData $data): StockMovement
+    {
+        $inventoryLocationId = $data->inventoryLocationId;
+        $itemVariantId = $data->itemVariantId;
+        $quantity = $data->quantity;
+        $transactionUomId = $data->transactionUomId;
+        $reason = $data->reason;
+        $salePrice = $data->salePrice;
+        $userId = $data->userId;
+        $reference = $data->reference;
+        $notes = $data->notes;
+
         // Validate reason
         if (! in_array($reason, [StockMovement::REASON_SALE, StockMovement::REASON_CONSUMPTION])) {
             throw new InvalidStockOutReasonException("Invalid reason for stock out: {$reason}. Must be SALE or CONSUMPTION.");

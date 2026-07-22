@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Inventory;
 
+use App\DataTransferObjects\Inventory\RegisterStockOutData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Inventory\RegisterStockOutRequest;
 use App\Services\Inventory\StockOutService;
@@ -153,7 +154,7 @@ class RegisterStockOutController extends Controller
     public function __invoke(RegisterStockOutRequest $request): JsonResponse
     {
         try {
-            $movement = $this->stockOutService->registerStockOut(
+            $movement = $this->stockOutService->registerStockOut(new RegisterStockOutData(
                 inventoryLocationId: $request->input('inventory_location_id'),
                 itemVariantId: $request->input('item_variant_id'),
                 quantity: $request->input('qty'),
@@ -163,7 +164,7 @@ class RegisterStockOutController extends Controller
                 userId: $request->user()?->id,
                 reference: $request->input('reference'),
                 notes: $request->input('notes')
-            );
+            ));
 
             return response()->json([
                 'success' => true,

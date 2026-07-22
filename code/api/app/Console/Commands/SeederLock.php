@@ -15,7 +15,6 @@ class SeederLock extends Command
     {
         $environment = $this->option('environment') ?? app()->environment();
         $seederName = $this->argument('seeder');
-        $notes = $this->option('notes');
 
         $log = $this->findSeeder($seederName, $environment);
 
@@ -32,16 +31,21 @@ class SeederLock extends Command
             return self::SUCCESS;
         }
 
-        if (SeederLog::lock($log->seeder_class, $environment, $notes)) {
-            $this->info("✓ Seeder '{$seederName}' locked in '{$environment}' environment.");
-            $this->info('This seeder will not run again automatically.');
+        return $this->performLock($log, $seederName, $environment, $this->option('notes'));
+    }
 
-            return self::SUCCESS;
+    private function performLock(SeederLog $log, string $seederName, string $environment, ?string $notes): int
+    {
+        if (! SeederLog::lock($log->seeder_class, $environment, $notes)) {
+            $this->error("Failed to lock seeder '{$seederName}'.");
+
+            return self::FAILURE;
         }
 
-        $this->error("Failed to lock seeder '{$seederName}'.");
+        $this->info("✓ Seeder '{$seederName}' locked in '{$environment}' environment.");
+        $this->info('This seeder will not run again automatically.');
 
-        return self::FAILURE;
+        return self::SUCCESS;
     }
 
     private function findSeeder(string $name, string $environment): ?SeederLog

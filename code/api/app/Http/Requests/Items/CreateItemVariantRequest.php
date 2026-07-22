@@ -65,10 +65,8 @@ class CreateItemVariantRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if ($this->filled('min_stock') && $this->filled('max_stock')) {
-                if ($this->max_stock < $this->min_stock) {
-                    $validator->errors()->add('max_stock', 'Maximum stock must be greater than or equal to minimum stock');
-                }
+            if ($this->filled('min_stock') && $this->filled('max_stock') && $this->max_stock < $this->min_stock) {
+                $validator->errors()->add('max_stock', 'Maximum stock must be greater than or equal to minimum stock');
             }
         });
     }

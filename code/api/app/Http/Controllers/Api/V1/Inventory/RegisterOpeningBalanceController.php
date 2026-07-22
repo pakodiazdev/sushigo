@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Inventory;
 
+use App\DataTransferObjects\Inventory\RegisterOpeningBalanceData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\RegisterOpeningBalanceRequest;
 use App\Http\Responses\Common\ResponseEntity;
@@ -48,7 +49,7 @@ class RegisterOpeningBalanceController extends Controller
     public function __invoke(RegisterOpeningBalanceRequest $request)
     {
         try {
-            $movement = $this->service->registerOpeningBalance(
+            $movement = $this->service->registerOpeningBalance(new RegisterOpeningBalanceData(
                 inventoryLocationId: $request->inventory_location_id,
                 itemVariantId: $request->item_variant_id,
                 quantity: $request->quantity,
@@ -57,7 +58,7 @@ class RegisterOpeningBalanceController extends Controller
                 userId: $request->user()->id,
                 reference: $request->reference,
                 notes: $request->notes
-            );
+            ));
 
             return new ResponseEntity(
                 data: [

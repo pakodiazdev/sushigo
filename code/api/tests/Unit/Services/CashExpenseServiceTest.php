@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\DataTransferObjects\CashAdjustments\RegisterExpenseData;
 use App\Exceptions\CashExpenseAlreadyPostedException;
 use App\Exceptions\InvalidCashExpenseException;
 use App\Models\BankAccount;
@@ -46,7 +47,7 @@ class CashExpenseServiceTest extends TestCase
     #[Test]
     public function it_can_register_cash_expense()
     {
-        $expense = $this->service->registerExpense(
+        $expense = $this->service->registerExpense(new RegisterExpenseData(
             session: $this->session,
             tenderType: 'CASH',
             amount: 150.00,
@@ -59,7 +60,7 @@ class CashExpenseServiceTest extends TestCase
             createdBy: $this->user,
             incurredAt: null,
             meta: []
-        );
+        ));
 
         $this->assertInstanceOf(CashExpense::class, $expense);
         $this->assertEquals('SUPPLIES', $expense->category);
@@ -74,7 +75,7 @@ class CashExpenseServiceTest extends TestCase
     {
         $terminal = CashTerminal::factory()->for($this->branch)->create();
 
-        $expense = $this->service->registerExpense(
+        $expense = $this->service->registerExpense(new RegisterExpenseData(
             session: $this->session,
             tenderType: 'CARD',
             amount: 250.00,
@@ -87,7 +88,7 @@ class CashExpenseServiceTest extends TestCase
             createdBy: $this->user,
             incurredAt: null,
             meta: []
-        );
+        ));
 
         $this->assertEquals('CARD', $expense->tender_type);
         $this->assertEquals($terminal->id, $expense->card_terminal_id);
@@ -98,7 +99,7 @@ class CashExpenseServiceTest extends TestCase
     {
         $bankAccount = BankAccount::factory()->for($this->branch)->create();
 
-        $expense = $this->service->registerExpense(
+        $expense = $this->service->registerExpense(new RegisterExpenseData(
             session: $this->session,
             tenderType: 'TRANSFER',
             amount: 1000.00,
@@ -111,7 +112,7 @@ class CashExpenseServiceTest extends TestCase
             createdBy: $this->user,
             incurredAt: null,
             meta: []
-        );
+        ));
 
         $this->assertEquals('TRANSFER', $expense->tender_type);
         $this->assertEquals($bankAccount->id, $expense->bank_account_id);
@@ -288,7 +289,7 @@ class CashExpenseServiceTest extends TestCase
         // CARD requires terminal
         $this->expectException(InvalidCashExpenseException::class);
 
-        $this->service->registerExpense(
+        $this->service->registerExpense(new RegisterExpenseData(
             session: $this->session,
             tenderType: 'CARD',
             amount: 100.00,
@@ -301,7 +302,7 @@ class CashExpenseServiceTest extends TestCase
             createdBy: $this->user,
             incurredAt: null,
             meta: []
-        );
+        ));
     }
 
     #[Test]
@@ -310,7 +311,7 @@ class CashExpenseServiceTest extends TestCase
         $this->expectException(InvalidCashExpenseException::class);
         $this->expectExceptionMessage('Expense amount must be positive');
 
-        $this->service->registerExpense(
+        $this->service->registerExpense(new RegisterExpenseData(
             session: $this->session,
             tenderType: 'CASH',
             amount: 0,
@@ -323,7 +324,7 @@ class CashExpenseServiceTest extends TestCase
             createdBy: $this->user,
             incurredAt: null,
             meta: []
-        );
+        ));
     }
 
     #[Test]
@@ -332,7 +333,7 @@ class CashExpenseServiceTest extends TestCase
         $this->expectException(InvalidCashExpenseException::class);
         $this->expectExceptionMessage('TRANSFER tender requires bank_account_id');
 
-        $this->service->registerExpense(
+        $this->service->registerExpense(new RegisterExpenseData(
             session: $this->session,
             tenderType: 'TRANSFER',
             amount: 100.00,
@@ -345,7 +346,7 @@ class CashExpenseServiceTest extends TestCase
             createdBy: $this->user,
             incurredAt: null,
             meta: []
-        );
+        ));
     }
 
     #[Test]
