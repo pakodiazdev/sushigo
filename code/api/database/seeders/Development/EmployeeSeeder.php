@@ -113,17 +113,14 @@ class EmployeeSeeder extends OnceSeeder
         $firstHire = now()->subMonths(30)->startOfDay();
         $firstEnd = now()->subMonths(20)->startOfDay();
 
-        $employee = $this->createReingresoEmployee(
-            $action,
-            $branch,
-            $code,
-            'Luis',
-            'Dos Reingresos',
-            ['cook'],
-            'luis.reingresos2@sushigo.com',
-            '5512349902',
-            $firstHire
-        );
+        $employee = $this->createReingresoEmployee($action, $branch, [
+            'code' => $code,
+            'first_name' => 'Luis',
+            'last_name' => 'Dos Reingresos',
+            'roles' => ['cook'],
+            'email' => 'luis.reingresos2@sushigo.com',
+            'phone' => '5512349902',
+        ], $firstHire);
 
         $this->closeFirstEmploymentPeriod($employee, $firstHire, $firstEnd, self::TERMINATION_REASON_VOLUNTARY);
 
@@ -162,17 +159,14 @@ class EmployeeSeeder extends OnceSeeder
         $firstHire = now()->subMonths(34)->startOfDay();
         $firstEnd = now()->subMonths(26)->startOfDay();
 
-        $employee = $this->createReingresoEmployee(
-            $action,
-            $branch,
-            $code,
-            'Sofía',
-            'Reingreso Tres',
-            ['kitchen-assistant'],
-            'sofia.reingresos3@sushigo.com',
-            '5512349903',
-            $firstHire
-        );
+        $employee = $this->createReingresoEmployee($action, $branch, [
+            'code' => $code,
+            'first_name' => 'Sofía',
+            'last_name' => 'Reingreso Tres',
+            'roles' => ['kitchen-assistant'],
+            'email' => 'sofia.reingresos3@sushigo.com',
+            'phone' => '5512349903',
+        ], $firstHire);
 
         $this->closeFirstEmploymentPeriod($employee, $firstHire, $firstEnd, 'Motivos personales');
 
@@ -250,26 +244,14 @@ class EmployeeSeeder extends OnceSeeder
     /**
      * Create a re-entry employee's first employment period via the action.
      * Shared by seedDosReingresos/seedReingresoTres — only the literal
-     * fields (name, roles, contact info) differ between scenarios.
+     * fields in $employeeData (name, roles, contact info) differ between scenarios.
+     *
+     * @param  array<string, mixed>  $employeeData  code/first_name/last_name/roles/email/phone
      */
-    private function createReingresoEmployee(
-        CreateEmployeeAction $action,
-        Branch $branch,
-        string $code,
-        string $firstName,
-        string $lastName,
-        array $roles,
-        string $email,
-        string $phone,
-        Carbon $firstHire
-    ): Employee {
+    private function createReingresoEmployee(CreateEmployeeAction $action, Branch $branch, array $employeeData, Carbon $firstHire): Employee
+    {
         return $action([
-            'code' => $code,
-            'first_name' => $firstName,
-            'last_name' => $lastName,
-            'roles' => $roles,
-            'email' => $email,
-            'phone' => $phone,
+            ...$employeeData,
             'password' => config('seeders.passwords.employee'),
             'branch_id' => $branch->id,
             'start_date' => $firstHire->toDateString(),
