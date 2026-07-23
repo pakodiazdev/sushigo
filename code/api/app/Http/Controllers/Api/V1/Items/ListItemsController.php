@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Items;
 
+use App\Http\Controllers\Api\V1\Items\Concerns\FiltersItemListing;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Items\ListItemsRequest;
 use App\Http\Responses\Common\ResponsePaginated;
@@ -37,6 +38,8 @@ use App\Models\Item;
  */
 class ListItemsController extends Controller
 {
+    use FiltersItemListing;
+
     public function __invoke(ListItemsRequest $request)
     {
         $query = Item::query();
@@ -53,20 +56,10 @@ class ListItemsController extends Controller
             $query->where('is_perishable', $request->boolean('is_perishable'));
         }
 
-        if ($request->filled('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
+        $this->applyIsActiveFilter($query, $request);
+        $this->applySearchFilter($query, $request, ['sku', 'name']);
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('sku', 'ILIKE', "%{$search}%")
-                    ->orWhere('name', 'ILIKE', "%{$search}%");
-            });
-        }
-
-        $perPage = $request->input('per_page', 15);
-        $items = $query->orderBy('sku')->paginate($perPage);
+        $items = $query->orderBy('sku')->paginate($this->resolvePerPage($request));
 
         return new ResponsePaginated(paginator: $items);
     }
