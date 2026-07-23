@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashExpenses;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
 use App\Models\CashExpense;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -28,6 +29,7 @@ use Illuminate\Validation\Validator;
 class StoreCashExpenseRequest extends FormRequest
 {
     use CastsRequestFields;
+    use ValidatesTenderTypeReference;
 
     public function authorize(): bool
     {
@@ -66,19 +68,12 @@ class StoreCashExpenseRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function ($validator) {
-            if ($this->input('tender_type') === 'CARD' && empty($this->input('card_terminal_id'))) {
-                $validator->errors()->add(
-                    'card_terminal_id',
-                    'El terminal de tarjeta es requerido para tender tipo CARD'
-                );
-            }
-
-            if ($this->input('tender_type') === 'TRANSFER' && empty($this->input('bank_account_id'))) {
-                $validator->errors()->add(
-                    'bank_account_id',
-                    'La cuenta bancaria es requerida para tender tipo TRANSFER'
-                );
-            }
+            $this->requireTenderTypeReference(
+                $validator,
+                $this->input('tender_type'),
+                $this->input('card_terminal_id'),
+                $this->input('bank_account_id')
+            );
         });
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashExpenses;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -25,6 +26,7 @@ use Illuminate\Validation\Validator;
 class UpdateCashExpenseRequest extends FormRequest
 {
     use CastsRequestFields;
+    use ValidatesTenderTypeReference;
 
     public function authorize(): bool
     {
@@ -66,23 +68,12 @@ class UpdateCashExpenseRequest extends FormRequest
         $validator->after(function ($validator) {
             $expense = $this->route('cashExpense');
 
-            $tenderType = $this->input('tender_type', $expense->tender_type);
-            $cardTerminalId = $this->input('card_terminal_id', $expense->card_terminal_id);
-            $bankAccountId = $this->input('bank_account_id', $expense->bank_account_id);
-
-            if ($tenderType === 'CARD' && empty($cardTerminalId)) {
-                $validator->errors()->add(
-                    'card_terminal_id',
-                    'El terminal de tarjeta es requerido para tender tipo CARD'
-                );
-            }
-
-            if ($tenderType === 'TRANSFER' && empty($bankAccountId)) {
-                $validator->errors()->add(
-                    'bank_account_id',
-                    'La cuenta bancaria es requerida para tender tipo TRANSFER'
-                );
-            }
+            $this->requireTenderTypeReference(
+                $validator,
+                $this->input('tender_type', $expense->tender_type),
+                $this->input('card_terminal_id', $expense->card_terminal_id),
+                $this->input('bank_account_id', $expense->bank_account_id)
+            );
         });
     }
 

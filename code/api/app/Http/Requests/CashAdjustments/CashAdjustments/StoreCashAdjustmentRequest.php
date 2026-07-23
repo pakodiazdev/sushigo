@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\CashAdjustments\CashAdjustments;
 
+use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -38,6 +39,8 @@ use Illuminate\Validation\Validator;
  */
 class StoreCashAdjustmentRequest extends FormRequest
 {
+    use ValidatesTenderTypeReference;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', \App\Models\CashAdjustment::class);
@@ -89,19 +92,14 @@ class StoreCashAdjustmentRequest extends FormRequest
             }
 
             foreach ($this->input('lines', []) as $index => $line) {
-                if ($line['tender_type'] === 'CARD' && empty($line['card_terminal_id'])) {
-                    $validator->errors()->add(
-                        "lines.{$index}.card_terminal_id",
-                        'El terminal de tarjeta es requerido para tender tipo CARD'
-                    );
-                }
-
-                if ($line['tender_type'] === 'TRANSFER' && empty($line['bank_account_id'])) {
-                    $validator->errors()->add(
-                        "lines.{$index}.bank_account_id",
-                        'La cuenta bancaria es requerida para tender tipo TRANSFER'
-                    );
-                }
+                $this->requireTenderTypeReference(
+                    $validator,
+                    $line['tender_type'] ?? null,
+                    $line['card_terminal_id'] ?? null,
+                    $line['bank_account_id'] ?? null,
+                    "lines.{$index}.card_terminal_id",
+                    "lines.{$index}.bank_account_id"
+                );
             }
         });
     }
