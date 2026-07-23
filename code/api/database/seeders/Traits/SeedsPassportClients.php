@@ -14,14 +14,14 @@ trait SeedsPassportClients
      */
     protected function seedPassportClients(): void
     {
-        $personalClientId = Str::uuid()->toString();
-        $passwordClientId = Str::uuid()->toString();
-
         $personalClientExists = DB::table('oauth_clients')
             ->where('name', 'SushiGo Personal Access Client')
             ->exists();
 
         if (! $personalClientExists) {
+            $personalClientId = Str::uuid()->toString();
+            $now = now();
+
             DB::table('oauth_clients')->insert([
                 'id' => $personalClientId,
                 'owner_type' => null,
@@ -32,8 +32,8 @@ trait SeedsPassportClients
                 'redirect_uris' => json_encode([config('app.url')]),
                 'grant_types' => json_encode(['personal_access']),
                 'revoked' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
             $this->command->info("✓ Passport Personal Access Client created (ID: {$personalClientId})");
         } else {
@@ -45,6 +45,9 @@ trait SeedsPassportClients
             ->exists();
 
         if (! $passwordClientExists) {
+            $passwordClientId = Str::uuid()->toString();
+            $now = now();
+
             DB::table('oauth_clients')->insert([
                 'id' => $passwordClientId,
                 'owner_type' => null,
@@ -55,8 +58,8 @@ trait SeedsPassportClients
                 'redirect_uris' => json_encode([config('app.url')]),
                 'grant_types' => json_encode(['password', 'refresh_token']),
                 'revoked' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $now,
+                'updated_at' => $now,
             ]);
             $this->command->info("✓ Passport Password Grant Client created (ID: {$passwordClientId})");
         } else {
