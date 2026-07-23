@@ -144,6 +144,7 @@ app/Http/Controllers/Api/V1/
 - Response formatting in `app/Http/Responses/`
 - Swagger schemas documented alongside Request/Response classes
 - All routes versioned under `/api/v1/`
+- Routes are split by domain under `routes/api/*.php` and `require`d from `routes/api.php` — see `doc/conventions/backend/route-organization.md` before adding a new domain module or growing an existing route file
 
 ### Webapp Structure (React)
 
@@ -622,7 +623,7 @@ doc/tasks/
 - `docker-compose.yml` - Main development stack
 - `docker-compose.e2e.yml` - E2E testing stack
 - `Makefile` - Common development commands
-- `code/api/routes/api.php` - All API route definitions
+- `code/api/routes/api.php` - Route entry point (test/dev/devtools + requires `routes/api/*.php`)
 - `code/webapp/src/routeTree.gen.ts` - Auto-generated route tree
 - `doc/architecture/` - Domain architecture docs (English/Spanish)
 - `doc/conventions/` - Code standards
