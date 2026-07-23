@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\InventoryLocation;
 
+use App\Http\Requests\InventoryLocation\Concerns\SharesInventoryLocationRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -20,6 +21,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class UpdateInventoryLocationRequest extends FormRequest
 {
+    use SharesInventoryLocationRules;
+
     public function authorize(): bool
     {
         return $this->user()->can('inventory_locations.manage');
@@ -28,14 +31,9 @@ class UpdateInventoryLocationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['nullable', 'string', 'max:50'],
             'name' => ['nullable', 'string', 'max:255'],
             'type' => ['nullable', 'string', 'in:MAIN,DISPLAY,KITCHEN,BAR,TEMP,RETURN,WASTE'],
-            'priority' => ['nullable', 'integer', 'min:0', 'max:1000'],
-            'is_primary' => ['nullable', 'boolean'],
-            'is_active' => ['nullable', 'boolean'],
-            'is_pickable' => ['nullable', 'boolean'],
-            'notes' => ['nullable', 'string'],
+            ...$this->sharedLocationFieldRules(),
         ];
     }
 }
