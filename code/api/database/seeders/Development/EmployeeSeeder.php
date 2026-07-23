@@ -113,41 +113,25 @@ class EmployeeSeeder extends OnceSeeder
         $firstHire = now()->subMonths(30)->startOfDay();
         $firstEnd = now()->subMonths(20)->startOfDay();
 
-        $employee = $action([
-            'code' => $code,
-            'first_name' => 'Luis',
-            'last_name' => 'Dos Reingresos',
-            'roles' => ['cook'],
-            'email' => 'luis.reingresos2@sushigo.com',
-            'phone' => '5512349902',
-            'password' => config('seeders.passwords.employee'),
-            'branch_id' => $branch->id,
-            'start_date' => $firstHire->toDateString(),
-        ]);
+        $employee = $this->createReingresoEmployee(
+            $action,
+            $branch,
+            $code,
+            'Luis',
+            'Dos Reingresos',
+            ['cook'],
+            'luis.reingresos2@sushigo.com',
+            '5512349902',
+            $firstHire
+        );
 
-        // Close the first period (created by the action)
-        $firstPeriod = $employee->employmentPeriods()->first();
-        $firstPeriod->update([
-            'end_date' => $firstEnd->toDateString(),
-            'termination_reason' => self::TERMINATION_REASON_VOLUNTARY,
-            'is_active' => false,
-            'created_at' => $firstHire,
-            'updated_at' => $firstEnd,
-        ]);
+        $this->closeFirstEmploymentPeriod($employee, $firstHire, $firstEnd, self::TERMINATION_REASON_VOLUNTARY);
 
         // Second hire: ~10 months ago, closed ~4 months ago
         $secondHire = now()->subMonths(10)->startOfDay();
         $secondEnd = now()->subMonths(4)->startOfDay();
 
-        $employee->employmentPeriods()->create([
-            'branch_id' => $branch->id,
-            'start_date' => $secondHire->toDateString(),
-            'end_date' => $secondEnd->toDateString(),
-            'termination_reason' => self::TERMINATION_REASON_VOLUNTARY,
-            'is_active' => false,
-            'created_at' => $secondHire,
-            'updated_at' => $secondEnd,
-        ]);
+        $this->addClosedEmploymentPeriod($employee, $branch, $secondHire, $secondEnd, self::TERMINATION_REASON_VOLUNTARY);
 
         // Mark employee as inactive
         $employee->update([
@@ -178,41 +162,25 @@ class EmployeeSeeder extends OnceSeeder
         $firstHire = now()->subMonths(34)->startOfDay();
         $firstEnd = now()->subMonths(26)->startOfDay();
 
-        $employee = $action([
-            'code' => $code,
-            'first_name' => 'Sofía',
-            'last_name' => 'Reingreso Tres',
-            'roles' => ['kitchen-assistant'],
-            'email' => 'sofia.reingresos3@sushigo.com',
-            'phone' => '5512349903',
-            'password' => config('seeders.passwords.employee'),
-            'branch_id' => $branch->id,
-            'start_date' => $firstHire->toDateString(),
-        ]);
+        $employee = $this->createReingresoEmployee(
+            $action,
+            $branch,
+            $code,
+            'Sofía',
+            'Reingreso Tres',
+            ['kitchen-assistant'],
+            'sofia.reingresos3@sushigo.com',
+            '5512349903',
+            $firstHire
+        );
 
-        // Close the first period (created by the action)
-        $firstPeriod = $employee->employmentPeriods()->first();
-        $firstPeriod->update([
-            'end_date' => $firstEnd->toDateString(),
-            'termination_reason' => 'Motivos personales',
-            'is_active' => false,
-            'created_at' => $firstHire,
-            'updated_at' => $firstEnd,
-        ]);
+        $this->closeFirstEmploymentPeriod($employee, $firstHire, $firstEnd, 'Motivos personales');
 
         // Second hire: ~18 months ago, closed ~10 months ago
         $secondHire = now()->subMonths(18)->startOfDay();
         $secondEnd = now()->subMonths(10)->startOfDay();
 
-        $employee->employmentPeriods()->create([
-            'branch_id' => $branch->id,
-            'start_date' => $secondHire->toDateString(),
-            'end_date' => $secondEnd->toDateString(),
-            'termination_reason' => 'Cambio de ciudad',
-            'is_active' => false,
-            'created_at' => $secondHire,
-            'updated_at' => $secondEnd,
-        ]);
+        $this->addClosedEmploymentPeriod($employee, $branch, $secondHire, $secondEnd, 'Cambio de ciudad');
 
         // Third hire (current): ~3 months ago, still active
         $thirdHire = now()->subMonths(3)->startOfDay();
@@ -277,6 +245,67 @@ class EmployeeSeeder extends OnceSeeder
         }
 
         $this->command->info("✓ Created {$bajaCount} terminated employees (baja, no active period)");
+    }
+
+    /**
+     * Create a re-entry employee's first employment period via the action.
+     * Shared by seedDosReingresos/seedReingresoTres — only the literal
+     * fields (name, roles, contact info) differ between scenarios.
+     */
+    private function createReingresoEmployee(
+        CreateEmployeeAction $action,
+        Branch $branch,
+        string $code,
+        string $firstName,
+        string $lastName,
+        array $roles,
+        string $email,
+        string $phone,
+        Carbon $firstHire
+    ): Employee {
+        return $action([
+            'code' => $code,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'roles' => $roles,
+            'email' => $email,
+            'phone' => $phone,
+            'password' => config('seeders.passwords.employee'),
+            'branch_id' => $branch->id,
+            'start_date' => $firstHire->toDateString(),
+        ]);
+    }
+
+    /**
+     * Close the employment period created alongside the employee
+     * (the "first hire" period in a re-entry scenario).
+     */
+    private function closeFirstEmploymentPeriod(Employee $employee, Carbon $firstHire, Carbon $firstEnd, string $terminationReason): void
+    {
+        $firstPeriod = $employee->employmentPeriods()->first();
+        $firstPeriod->update([
+            'end_date' => $firstEnd->toDateString(),
+            'termination_reason' => $terminationReason,
+            'is_active' => false,
+            'created_at' => $firstHire,
+            'updated_at' => $firstEnd,
+        ]);
+    }
+
+    /**
+     * Add a subsequent, already-closed employment period to a re-entry employee.
+     */
+    private function addClosedEmploymentPeriod(Employee $employee, Branch $branch, Carbon $start, Carbon $end, string $terminationReason): void
+    {
+        $employee->employmentPeriods()->create([
+            'branch_id' => $branch->id,
+            'start_date' => $start->toDateString(),
+            'end_date' => $end->toDateString(),
+            'termination_reason' => $terminationReason,
+            'is_active' => false,
+            'created_at' => $start,
+            'updated_at' => $end,
+        ]);
     }
 
     /**

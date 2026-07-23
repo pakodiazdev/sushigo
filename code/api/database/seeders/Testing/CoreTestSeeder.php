@@ -3,6 +3,7 @@
 namespace Database\Seeders\Testing;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -435,50 +436,28 @@ class CoreTestSeeder extends Seeder
         $now = now();
 
         DB::table('leave_types')->insert([
-            [
-                'code' => 'MEDICAL',
-                'name' => 'Incapacidad médica',
-                'calculation_mode' => 'FIXED_PERCENTAGE',
-                'default_pay_percentage' => 0.00,
-                'default_rest_day_factor' => 'NONE',
-                'counts_for_bonus' => false,
-                'is_active' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'code' => 'PERSONAL',
-                'name' => 'Permiso personal',
-                'calculation_mode' => 'FIXED_PERCENTAGE',
-                'default_pay_percentage' => 0.00,
-                'default_rest_day_factor' => 'NONE',
-                'counts_for_bonus' => false,
-                'is_active' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'code' => 'PERMISSION',
-                'name' => 'Permiso',
-                'calculation_mode' => 'FIXED_PERCENTAGE',
-                'default_pay_percentage' => 0.00,
-                'default_rest_day_factor' => 'NONE',
-                'counts_for_bonus' => false,
-                'is_active' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'code' => 'PERMISSION_HOURS',
-                'name' => 'Permiso por horas',
-                'calculation_mode' => 'PROPORTIONAL_HOURS',
-                'default_pay_percentage' => 0.00,
-                'default_rest_day_factor' => 'PROPORTIONAL',
-                'counts_for_bonus' => false,
-                'is_active' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
+            $this->leaveTypeRow('MEDICAL', 'Incapacidad médica', 'FIXED_PERCENTAGE', 'NONE', $now),
+            $this->leaveTypeRow('PERSONAL', 'Permiso personal', 'FIXED_PERCENTAGE', 'NONE', $now),
+            $this->leaveTypeRow('PERMISSION', 'Permiso', 'FIXED_PERCENTAGE', 'NONE', $now),
+            $this->leaveTypeRow('PERMISSION_HOURS', 'Permiso por horas', 'PROPORTIONAL_HOURS', 'PROPORTIONAL', $now),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function leaveTypeRow(string $code, string $name, string $calculationMode, string $restDayFactor, Carbon $now): array
+    {
+        return [
+            'code' => $code,
+            'name' => $name,
+            'calculation_mode' => $calculationMode,
+            'default_pay_percentage' => 0.00,
+            'default_rest_day_factor' => $restDayFactor,
+            'counts_for_bonus' => false,
+            'is_active' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
     }
 }

@@ -137,23 +137,7 @@ class PayrollSeedService
     private function lateOrWorkedRow(string $date, int $index): array
     {
         if (in_array($index, [0, 2], strict: true)) {
-            return [
-                'attendance' => [
-                    'date' => $date,
-                    'check_in' => $date.' 08:35:00',
-                    'check_out' => $date.' '.self::SHIFT_END,
-                    'lunch_start' => $date.' '.self::LUNCH_START,
-                    'lunch_end' => $date.' '.self::LUNCH_END,
-                    'entry_late_seconds' => self::LATE_SECONDS,
-                    'lunch_late_seconds' => 0,
-                    'net_worked_minutes' => self::NET_MINUTES - 35,
-                    'overtime_minutes' => 0,
-                    'overtime_authorized' => false,
-                    'day_status' => DayStatus::WORKED->value,
-                ],
-                'partial_leave' => null,
-                'overtime' => null,
-            ];
+            return $this->lateEntryRow($date);
         }
 
         return $this->workedRow($date);
@@ -197,28 +181,7 @@ class PayrollSeedService
     private function overtimeOrWorkedRow(string $date, int $index): array
     {
         if (in_array($index, [1, 3, 4], strict: true)) {
-            return [
-                'attendance' => [
-                    'date' => $date,
-                    'check_in' => $date.' '.self::SHIFT_START,
-                    'check_out' => $date.' '.self::OVERTIME_END,
-                    'lunch_start' => $date.' '.self::LUNCH_START,
-                    'lunch_end' => $date.' '.self::LUNCH_END,
-                    'entry_late_seconds' => 0,
-                    'lunch_late_seconds' => 0,
-                    'net_worked_minutes' => self::NET_MINUTES + self::OVERTIME_MINUTES,
-                    'overtime_minutes' => self::OVERTIME_MINUTES,
-                    'overtime_authorized' => true,
-                    'day_status' => DayStatus::WORKED->value,
-                ],
-                'partial_leave' => null,
-                'overtime' => [
-                    'movement_type' => OvertimeMovementType::PAID,
-                    'origin' => OvertimeOrigin::AUTO,
-                    'minutes' => self::OVERTIME_MINUTES,
-                    'reference' => 'payroll-seed',
-                ],
-            ];
+            return $this->overtimeDayRow($date);
         }
 
         return $this->workedRow($date);
@@ -228,23 +191,7 @@ class PayrollSeedService
     private function absenceOrWorkedRow(string $date, int $index): array
     {
         if (in_array($index, [1, 3], strict: true)) {
-            return [
-                'attendance' => [
-                    'date' => $date,
-                    'check_in' => null,
-                    'check_out' => null,
-                    'lunch_start' => null,
-                    'lunch_end' => null,
-                    'entry_late_seconds' => 0,
-                    'lunch_late_seconds' => 0,
-                    'net_worked_minutes' => 0,
-                    'overtime_minutes' => 0,
-                    'overtime_authorized' => false,
-                    'day_status' => DayStatus::ABSENCE->value,
-                ],
-                'partial_leave' => null,
-                'overtime' => null,
-            ];
+            return $this->absenceDayRow($date);
         }
 
         return $this->workedRow($date);
@@ -309,64 +256,82 @@ class PayrollSeedService
     private function combinedRow(string $date, int $index): array
     {
         return match ($index) {
-            0 => [
-                'attendance' => [
-                    'date' => $date,
-                    'check_in' => $date.' 08:35:00',
-                    'check_out' => $date.' '.self::SHIFT_END,
-                    'lunch_start' => $date.' '.self::LUNCH_START,
-                    'lunch_end' => $date.' '.self::LUNCH_END,
-                    'entry_late_seconds' => self::LATE_SECONDS,
-                    'lunch_late_seconds' => 0,
-                    'net_worked_minutes' => self::NET_MINUTES - 35,
-                    'overtime_minutes' => 0,
-                    'overtime_authorized' => false,
-                    'day_status' => DayStatus::WORKED->value,
-                ],
-                'partial_leave' => null,
-                'overtime' => null,
-            ],
-            2 => [
-                'attendance' => [
-                    'date' => $date,
-                    'check_in' => $date.' '.self::SHIFT_START,
-                    'check_out' => $date.' '.self::OVERTIME_END,
-                    'lunch_start' => $date.' '.self::LUNCH_START,
-                    'lunch_end' => $date.' '.self::LUNCH_END,
-                    'entry_late_seconds' => 0,
-                    'lunch_late_seconds' => 0,
-                    'net_worked_minutes' => self::NET_MINUTES + self::OVERTIME_MINUTES,
-                    'overtime_minutes' => self::OVERTIME_MINUTES,
-                    'overtime_authorized' => true,
-                    'day_status' => DayStatus::WORKED->value,
-                ],
-                'partial_leave' => null,
-                'overtime' => [
-                    'movement_type' => OvertimeMovementType::PAID,
-                    'origin' => OvertimeOrigin::AUTO,
-                    'minutes' => self::OVERTIME_MINUTES,
-                    'reference' => 'payroll-seed',
-                ],
-            ],
-            3 => [
-                'attendance' => [
-                    'date' => $date,
-                    'check_in' => null,
-                    'check_out' => null,
-                    'lunch_start' => null,
-                    'lunch_end' => null,
-                    'entry_late_seconds' => 0,
-                    'lunch_late_seconds' => 0,
-                    'net_worked_minutes' => 0,
-                    'overtime_minutes' => 0,
-                    'overtime_authorized' => false,
-                    'day_status' => DayStatus::ABSENCE->value,
-                ],
-                'partial_leave' => null,
-                'overtime' => null,
-            ],
+            0 => $this->lateEntryRow($date),
+            2 => $this->overtimeDayRow($date),
+            3 => $this->absenceDayRow($date),
             default => $this->workedRow($date),
         };
+    }
+
+    /** 35 min late entry, otherwise a normal worked day. */
+    private function lateEntryRow(string $date): array
+    {
+        return [
+            'attendance' => [
+                'date' => $date,
+                'check_in' => $date.' 08:35:00',
+                'check_out' => $date.' '.self::SHIFT_END,
+                'lunch_start' => $date.' '.self::LUNCH_START,
+                'lunch_end' => $date.' '.self::LUNCH_END,
+                'entry_late_seconds' => self::LATE_SECONDS,
+                'lunch_late_seconds' => 0,
+                'net_worked_minutes' => self::NET_MINUTES - 35,
+                'overtime_minutes' => 0,
+                'overtime_authorized' => false,
+                'day_status' => DayStatus::WORKED->value,
+            ],
+            'partial_leave' => null,
+            'overtime' => null,
+        ];
+    }
+
+    /** 2h paid overtime day. */
+    private function overtimeDayRow(string $date): array
+    {
+        return [
+            'attendance' => [
+                'date' => $date,
+                'check_in' => $date.' '.self::SHIFT_START,
+                'check_out' => $date.' '.self::OVERTIME_END,
+                'lunch_start' => $date.' '.self::LUNCH_START,
+                'lunch_end' => $date.' '.self::LUNCH_END,
+                'entry_late_seconds' => 0,
+                'lunch_late_seconds' => 0,
+                'net_worked_minutes' => self::NET_MINUTES + self::OVERTIME_MINUTES,
+                'overtime_minutes' => self::OVERTIME_MINUTES,
+                'overtime_authorized' => true,
+                'day_status' => DayStatus::WORKED->value,
+            ],
+            'partial_leave' => null,
+            'overtime' => [
+                'movement_type' => OvertimeMovementType::PAID,
+                'origin' => OvertimeOrigin::AUTO,
+                'minutes' => self::OVERTIME_MINUTES,
+                'reference' => 'payroll-seed',
+            ],
+        ];
+    }
+
+    /** Full-day absence. */
+    private function absenceDayRow(string $date): array
+    {
+        return [
+            'attendance' => [
+                'date' => $date,
+                'check_in' => null,
+                'check_out' => null,
+                'lunch_start' => null,
+                'lunch_end' => null,
+                'entry_late_seconds' => 0,
+                'lunch_late_seconds' => 0,
+                'net_worked_minutes' => 0,
+                'overtime_minutes' => 0,
+                'overtime_authorized' => false,
+                'day_status' => DayStatus::ABSENCE->value,
+            ],
+            'partial_leave' => null,
+            'overtime' => null,
+        ];
     }
 
     private function workedRow(string $date): array
