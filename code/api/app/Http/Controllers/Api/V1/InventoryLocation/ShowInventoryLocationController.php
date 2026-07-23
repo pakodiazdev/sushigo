@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\InventoryLocation;
 
+use App\Http\Controllers\Api\V1\InventoryLocation\Concerns\FormatsInventoryLocation;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\InventoryLocation;
@@ -20,6 +21,8 @@ use App\Models\InventoryLocation;
  */
 class ShowInventoryLocationController extends Controller
 {
+    use FormatsInventoryLocation;
+
     public function __invoke(int $id)
     {
         $location = InventoryLocation::with([
@@ -39,24 +42,7 @@ class ShowInventoryLocationController extends Controller
 
         return new ResponseEntity(
             data: [
-                'id' => $location->id,
-                'operating_unit_id' => $location->operating_unit_id,
-                'name' => $location->name,
-                'type' => $location->type,
-                'priority' => $location->priority,
-                'is_primary' => $location->is_primary,
-                'is_active' => $location->is_active,
-                'notes' => $location->notes,
-                'operating_unit' => [
-                    'id' => $location->operatingUnit->id,
-                    'name' => $location->operatingUnit->name,
-                    'type' => $location->operatingUnit->type,
-                    'branch' => [
-                        'id' => $location->operatingUnit->branch->id,
-                        'code' => $location->operatingUnit->branch->code,
-                        'name' => $location->operatingUnit->branch->name,
-                    ],
-                ],
+                ...$this->baseLocationData($location),
                 'stock_summary' => [
                     'variant_count' => (int) $stockTotals->variant_count,
                     'total_on_hand' => (float) $stockTotals->total_on_hand,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Items;
 
+use App\Http\Controllers\Api\V1\Items\Concerns\FiltersItemListing;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponsePaginated;
 use App\Models\ItemVariant;
@@ -34,6 +35,8 @@ use Illuminate\Http\Request;
  */
 class ListItemVariantsController extends Controller
 {
+    use FiltersItemListing;
+
     public function __invoke(Request $request)
     {
         $query = ItemVariant::with(['item', 'unitOfMeasure']);
@@ -42,20 +45,10 @@ class ListItemVariantsController extends Controller
             $query->where('item_id', $request->item_id);
         }
 
-        if ($request->filled('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
+        $this->applyIsActiveFilter($query, $request);
+        $this->applySearchFilter($query, $request, ['code', 'name']);
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('code', 'ILIKE', "%{$search}%")
-                    ->orWhere('name', 'ILIKE', "%{$search}%");
-            });
-        }
-
-        $perPage = $request->input('per_page', 15);
-        $variants = $query->orderBy('code')->paginate($perPage);
+        $variants = $query->orderBy('code')->paginate($this->resolvePerPage($request));
 
         return new ResponsePaginated(paginator: $variants);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Stock;
 
+use App\Http\Controllers\Api\V1\Stock\Concerns\SummarizesStock;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\InventoryLocation;
@@ -21,6 +22,8 @@ use App\Models\Stock;
  */
 class StockByLocationController extends Controller
 {
+    use SummarizesStock;
+
     public function __invoke(int $id)
     {
         $location = InventoryLocation::findOrFail($id);
@@ -38,19 +41,13 @@ class StockByLocationController extends Controller
                 'item_variant_name' => $stock->itemVariant->name,
                 'item_name' => $stock->itemVariant->item->name,
                 'item_sku' => $stock->itemVariant->item->sku,
-                'on_hand' => (float) $stock->on_hand,
-                'reserved' => (float) $stock->reserved,
-                'available' => (float) $stock->available,
-                'weighted_avg_cost' => (float) $stock->weighted_avg_cost,
-                'total_value' => (float) ($stock->on_hand * $stock->weighted_avg_cost),
+                ...$this->stockMoneyFields($stock),
             ];
         });
 
         $summary = [
             'total_variants' => $stockRecords->count(),
-            'total_on_hand' => (float) $stockRecords->sum('on_hand'),
-            'total_reserved' => (float) $stockRecords->sum('reserved'),
-            'total_available' => (float) $stockRecords->sum('available'),
+            ...$this->stockTotals($stockRecords),
             'total_inventory_value' => (float) $stockRecords->map(fn ($s) => $s->on_hand * $s->weighted_avg_cost)->sum(),
         ];
 
