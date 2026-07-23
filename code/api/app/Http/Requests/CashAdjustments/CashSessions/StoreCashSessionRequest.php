@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashSessions;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Models\CashSession;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -22,7 +23,7 @@ class StoreCashSessionRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\CashSession::class);
+        return $this->user()->can('create', CashSession::class);
     }
 
     public function rules(): array

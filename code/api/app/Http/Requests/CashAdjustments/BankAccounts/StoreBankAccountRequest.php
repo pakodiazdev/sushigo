@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\BankAccounts;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Models\BankAccount;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -25,7 +26,7 @@ class StoreBankAccountRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\BankAccount::class);
+        return $this->user()->can('create', BankAccount::class);
     }
 
     public function rules(): array

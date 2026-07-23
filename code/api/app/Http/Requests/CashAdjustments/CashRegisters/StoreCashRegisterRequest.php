@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashRegisters;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Models\CashRegister;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -25,7 +26,7 @@ class StoreCashRegisterRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\CashRegister::class);
+        return $this->user()->can('create', CashRegister::class);
     }
 
     public function rules(): array
