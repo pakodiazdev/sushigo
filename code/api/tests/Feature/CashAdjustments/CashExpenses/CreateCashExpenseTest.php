@@ -73,6 +73,42 @@ class CreateCashExpenseTest extends TestCase
     }
 
     #[Test]
+    public function it_rejects_card_tender_without_terminal(): void
+    {
+        $this->actingAsUserWithPermission();
+
+        $response = $this->postJson('/api/v1/cash-expenses', [
+            'cash_session_id' => $this->session->id,
+            'tender_type' => 'CARD',
+            'amount' => 150.00,
+            'category' => 'SUPPLIES',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'card_terminal_id' => 'El terminal de tarjeta es requerido para tender tipo CARD',
+            ]);
+    }
+
+    #[Test]
+    public function it_rejects_transfer_tender_without_bank_account(): void
+    {
+        $this->actingAsUserWithPermission();
+
+        $response = $this->postJson('/api/v1/cash-expenses', [
+            'cash_session_id' => $this->session->id,
+            'tender_type' => 'TRANSFER',
+            'amount' => 150.00,
+            'category' => 'SUPPLIES',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'bank_account_id' => 'La cuenta bancaria es requerida para tender tipo TRANSFER',
+            ]);
+    }
+
+    #[Test]
     public function it_rejects_unauthenticated_requests(): void
     {
         $response = $this->postJson('/api/v1/cash-expenses', [
