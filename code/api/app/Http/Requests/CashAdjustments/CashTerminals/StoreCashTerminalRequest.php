@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashTerminals;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Models\CashTerminal;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -25,7 +26,7 @@ class StoreCashTerminalRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\CashTerminal::class);
+        return $this->user()->can('create', CashTerminal::class);
     }
 
     public function rules(): array

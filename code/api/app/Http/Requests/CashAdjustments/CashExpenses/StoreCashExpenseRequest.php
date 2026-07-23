@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashExpenses;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Models\CashExpense;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -30,7 +31,7 @@ class StoreCashExpenseRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\CashExpense::class);
+        return $this->user()->can('create', CashExpense::class);
     }
 
     public function rules(): array
