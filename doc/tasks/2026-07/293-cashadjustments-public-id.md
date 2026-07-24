@@ -42,24 +42,32 @@ Como desarrollador, dando seguimiento a #291, necesito que los 6 tipos de recurs
 ### 📊 Estimates
 - **Optimistic:** `2h`
 - **Pessimistic:** `4h` (6 models × migration/trait/routes/controllers/requests/tests, plus discovering the List-controller-has-no-auth-at-all finding mid-audit)
-- **Tracked:** `2.52h` (backend only; frontend pass not yet started)
+- **Tracked:** `5.6h` (backend only, PR #294 merged; frontend pass not yet started)
 
 ### 📅 Sessions
 ```json
 [
   { "date": "2026-07-23", "start": "22:00", "end": "24:00" },
-  { "date": "2026-07-24", "start": "00:00", "end": "00:31" }
+  { "date": "2026-07-24", "start": "00:00", "end": "00:31" },
+  { "date": "2026-07-24", "start": "07:30", "end": "10:35" }
 ]
 ```
 
 ## 📊 Retrospective
-- **Actual total:** 2h 31m
-- **vs optimistic:** +31m over the `2h` optimistic estimate
-- **vs pessimistic:** −1h 29m under the `4h` pessimistic estimate
+- **Actual total:** 5h 36m
+- **vs optimistic:** +3h 36m over the `2h` optimistic estimate
+- **vs pessimistic:** +1h 36m over the `4h` pessimistic estimate
 
 **Justification:**
 
-The audit phase (verifying the existing `HasPublicId`/ULID convention actually works correctly across 20 models, checking every `RouteParams::ID` route in the entire API for the same binding bug found in #291, and confirming `CashAdjustmentLine` isn't independently routable) took real time but was essential — it's what surfaced the mid-scope discovery that all 6 `List*Controller` classes have zero authorization at all (a separate, more severe bug, deliberately **not** fixed here — flagged for its own issue to keep this PR's diff scoped to what it claims). The implementation itself landed faster than planned because of one design pivot: rather than writing 6 hand-maintained API Resource classes (the original issue plan), a single `SerializesPublicIdAsId` trait applied to the models handles Show/Update/List/nested-relations uniformly via `toArray()`, with no per-controller work for `List` at all — verified directly via `php artisan tinker` before writing any controller code, avoiding a much larger, more error-prone implementation.
+The initial implementation session (2h 31m) landed close to estimate, helped by a design pivot — a single `SerializesPublicIdAsId` trait instead of 6 hand-maintained API Resource classes, verified directly via `php artisan tinker` before writing controller code. The overrun came entirely from the review/hardening pass that followed PR #294 being opened, which surfaced real, shippable bugs the original scope hadn't accounted for:
+
+- A `/sonar-review` cycle fixing SonarCloud-flagged duplicated route-segment literals (2 iterations, new `CashAdjustmentRouteParams` class).
+- A **critical bug found via automated PR review**: the ULID migration changed API *output* to `public_id` but left every write endpoint (`Store`/`Update` requests for CashSession/CashExpense/CashAdjustment) and every List filter (`cash_register_id`, `cash_session_id` query params) still validating/filtering against the old numeric `id`. Since the API no longer returns any numeric id, this made it impossible to create/update CARD or TRANSFER expenses/adjustments, open sessions, or filter lists — a complete write-path break, not a cosmetic issue. Fixed with two new resolver traits (`ResolvesPublicIdReferences` for FormRequests, `ResolvesPublicIdFilters` for List controllers) that accept `public_id` and resolve it to the numeric FK internally.
+- A residual leak (`CashAdjustmentLine.cash_adjustment_id` not hidden) caught via `/pr-comments`.
+- Documentation follow-up (unrelated but bundled per user request): added the `Devin Review:` link convention to both repos' `CLAUDE.md`, with matching issue/PR in `sushigo-dev-lab` (#58/#59).
+
+None of this was scope creep in the harmful sense — the write-path bug in particular would have shipped a broken feature (CARD/TRANSFER cash operations silently unusable) had it not been caught before merge. The pessimistic estimate didn't anticipate a review pass finding a functional regression this deep, which is the main driver of the overrun.
 
 ---
 
