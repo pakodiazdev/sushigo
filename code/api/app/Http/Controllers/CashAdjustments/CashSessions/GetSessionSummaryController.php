@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
- *   path="/api/v1/cash-sessions/{id}/summary",
+ *   path="/api/v1/cash-sessions/{cashSession}/summary",
  *   summary="Get Cash Session Summary",
  *   description="Returns detailed summary with income/expense breakdown by tender type",
  *   tags={"Cash Sessions"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Session ID"),
+ *   @OA\Parameter(name="cashSession", in="path", required=true, @OA\Schema(type="string"), description="Cash Session public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Session summary retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -30,10 +30,8 @@ class GetSessionSummaryController extends Controller
         private CashSessionService $sessionService
     ) {}
 
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashSession $cashSession): JsonResponse
     {
-        $cashSession = CashSession::findOrFail($id);
-
         Gate::authorize('view', $cashSession);
 
         $summary = $this->sessionService->getSessionSummary($cashSession);

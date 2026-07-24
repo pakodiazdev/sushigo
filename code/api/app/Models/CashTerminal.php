@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\Traits\HasPublicId;
+use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CashTerminal extends Model
 {
-    use HasFactory;
+    use HasFactory, HasPublicId, SerializesPublicIdAsId;
 
     protected $fillable = [
         'branch_id',

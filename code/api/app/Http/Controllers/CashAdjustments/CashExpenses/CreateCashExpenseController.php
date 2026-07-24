@@ -5,7 +5,6 @@ namespace App\Http\Controllers\CashAdjustments\CashExpenses;
 use App\DataTransferObjects\CashAdjustments\RegisterExpenseData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CashAdjustments\CashExpenses\StoreCashExpenseRequest;
-use App\Models\CashSession;
 use App\Services\CashAdjustments\CashExpenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -41,18 +40,16 @@ class CreateCashExpenseController extends Controller
         $validated = $request->validated();
 
         try {
-            $session = CashSession::findOrFail($validated['cash_session_id']);
-
             $expense = $this->expenseService->registerExpense(new RegisterExpenseData(
-                session: $session,
+                session: $request->cashSession(),
                 tenderType: $validated['tender_type'],
                 amount: $validated['amount'],
                 category: $validated['category'],
                 vendor: $validated['vendor'] ?? null,
                 reference: $validated['reference'] ?? null,
                 notes: $validated['notes'] ?? null,
-                cardTerminalId: $validated['card_terminal_id'] ?? null,
-                bankAccountId: $validated['bank_account_id'] ?? null,
+                cardTerminalId: $request->cardTerminalId(),
+                bankAccountId: $request->bankAccountId(),
                 createdBy: Auth::user(),
                 incurredAt: $validated['incurred_at'] ?? null,
                 meta: $validated['meta'] ?? []

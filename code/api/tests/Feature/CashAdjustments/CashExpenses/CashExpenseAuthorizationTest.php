@@ -6,7 +6,10 @@ use App\Models\Branch;
 use App\Models\CashExpense;
 use App\Models\CashRegister;
 use App\Models\CashSession;
+use App\Models\CashTerminal;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\CashAdjustments\Concerns\SetsUpBranchAccess;
 use Tests\TestCase;
@@ -35,9 +38,9 @@ class CashExpenseAuthorizationTest extends TestCase
         $expense = $this->expenseForBranch($branch);
         $this->actingAsUserWithBranchAccess($branch, 'cash_expenses.view');
 
-        $response = $this->getJson("/api/v1/cash-expenses/{$expense->id}");
+        $response = $this->getJson("/api/v1/cash-expenses/{$expense->public_id}");
 
-        $response->assertStatus(200)->assertJsonPath('data.id', $expense->id);
+        $response->assertStatus(200)->assertJsonPath('data.id', $expense->public_id);
     }
 
     #[Test]
@@ -47,7 +50,7 @@ class CashExpenseAuthorizationTest extends TestCase
         $expense = $this->expenseForBranch($branch);
         $this->actingAsUserWithoutBranchAccess('cash_expenses.view');
 
-        $response = $this->getJson("/api/v1/cash-expenses/{$expense->id}");
+        $response = $this->getJson("/api/v1/cash-expenses/{$expense->public_id}");
 
         $response->assertStatus(403);
     }
@@ -64,16 +67,55 @@ class CashExpenseAuthorizationTest extends TestCase
     }
 
     #[Test]
+    public function list_filters_by_cash_session_public_id(): void
+    {
+        $branch = Branch::factory()->create();
+        $expense = $this->expenseForBranch($branch);
+        CashExpense::factory()->for(
+            CashSession::factory()->for(CashRegister::factory()->for($branch)->create(), 'cashRegister')->draft(),
+            'cashSession'
+        )->cash()->draft()->create();
+        Passport::actingAs(User::factory()->create());
+
+        $response = $this->getJson('/api/v1/cash-expenses?cash_session_id='.$expense->cashSession->public_id);
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $expense->public_id);
+    }
+
+    #[Test]
     public function update_actually_updates_the_requested_expense(): void
     {
         $branch = Branch::factory()->create();
         $expense = $this->expenseForBranch($branch);
         $this->actingAsUserWithBranchAccess($branch, 'cash_expenses.update');
 
-        $response = $this->putJson("/api/v1/cash-expenses/{$expense->id}", ['category' => 'UTILITIES']);
+        $response = $this->putJson("/api/v1/cash-expenses/{$expense->public_id}", ['category' => 'UTILITIES']);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('cash_expenses', ['id' => $expense->id, 'category' => 'UTILITIES']);
+    }
+
+    #[Test]
+    public function update_resolves_card_terminal_public_id_to_the_numeric_fk(): void
+    {
+        $branch = Branch::factory()->create();
+        $expense = $this->expenseForBranch($branch);
+        $terminal = CashTerminal::factory()->for($branch)->create();
+        $this->actingAsUserWithBranchAccess($branch, 'cash_expenses.update');
+
+        $response = $this->putJson("/api/v1/cash-expenses/{$expense->public_id}", [
+            'tender_type' => 'CARD',
+            'card_terminal_id' => $terminal->public_id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('cash_expenses', [
+            'id' => $expense->id,
+            'tender_type' => 'CARD',
+            'card_terminal_id' => $terminal->id,
+        ]);
     }
 
     #[Test]
@@ -83,7 +125,7 @@ class CashExpenseAuthorizationTest extends TestCase
         $expense = $this->expenseForBranch($branch);
         $this->actingAsUserWithoutBranchAccess('cash_expenses.update');
 
-        $response = $this->putJson("/api/v1/cash-expenses/{$expense->id}", ['category' => 'UTILITIES']);
+        $response = $this->putJson("/api/v1/cash-expenses/{$expense->public_id}", ['category' => 'UTILITIES']);
 
         $response->assertStatus(403);
     }
@@ -95,7 +137,7 @@ class CashExpenseAuthorizationTest extends TestCase
         $expense = $this->expenseForBranch($branch);
         $this->actingAsUserWithBranchAccess($branch, 'cash_expenses.delete');
 
-        $response = $this->deleteJson("/api/v1/cash-expenses/{$expense->id}");
+        $response = $this->deleteJson("/api/v1/cash-expenses/{$expense->public_id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('cash_expenses', ['id' => $expense->id]);
@@ -108,7 +150,7 @@ class CashExpenseAuthorizationTest extends TestCase
         $expense = $this->expenseForBranch($branch);
         $this->actingAsUserWithoutBranchAccess('cash_expenses.delete');
 
-        $response = $this->deleteJson("/api/v1/cash-expenses/{$expense->id}");
+        $response = $this->deleteJson("/api/v1/cash-expenses/{$expense->public_id}");
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('cash_expenses', ['id' => $expense->id]);
@@ -121,7 +163,7 @@ class CashExpenseAuthorizationTest extends TestCase
         $expense = $this->expenseForBranch($branch);
         $this->actingAsUserWithBranchAccess($branch, 'cash_expenses.post');
 
-        $response = $this->postJson("/api/v1/cash-expenses/{$expense->id}/post");
+        $response = $this->postJson("/api/v1/cash-expenses/{$expense->public_id}/post");
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('cash_expenses', ['id' => $expense->id]);
@@ -135,7 +177,7 @@ class CashExpenseAuthorizationTest extends TestCase
         $expense = $this->expenseForBranch($branch);
         $this->actingAsUserWithoutBranchAccess('cash_expenses.post');
 
-        $response = $this->postJson("/api/v1/cash-expenses/{$expense->id}/post");
+        $response = $this->postJson("/api/v1/cash-expenses/{$expense->public_id}/post");
 
         $response->assertStatus(403);
         $this->assertNull($expense->fresh()->posted_at);

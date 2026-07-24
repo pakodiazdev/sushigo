@@ -4,7 +4,6 @@ namespace App\Http\Requests\CashAdjustments\CashTerminals;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
 use App\Http\Requests\Concerns\SharesValidationMessages;
-use App\Models\CashTerminal;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -26,13 +25,7 @@ class UpdateCashTerminalRequest extends FormRequest
 
     public function authorize(): bool
     {
-        $cashTerminal = CashTerminal::find($this->route('id'));
-
-        if (! $cashTerminal) {
-            abort(404);
-        }
-
-        return $this->user()->can('update', $cashTerminal);
+        return $this->user()->can('update', $this->route('cashTerminal'));
     }
 
     public function rules(): array

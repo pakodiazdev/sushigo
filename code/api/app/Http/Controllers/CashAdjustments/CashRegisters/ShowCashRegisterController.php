@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
- *   path="/api/v1/cash-registers/{id}",
+ *   path="/api/v1/cash-registers/{cashRegister}",
  *   summary="Show Cash Register",
  *   tags={"Cash Registers"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Register ID"),
+ *   @OA\Parameter(name="cashRegister", in="path", required=true, @OA\Schema(type="string"), description="Cash Register public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Cash register retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -24,10 +24,8 @@ use Illuminate\Support\Facades\Gate;
  */
 class ShowCashRegisterController extends Controller
 {
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashRegister $cashRegister): JsonResponse
     {
-        $cashRegister = CashRegister::findOrFail($id);
-
         Gate::authorize('view', $cashRegister);
 
         $cashRegister->load(['branch', 'operatingUnit', 'sessions' => function ($query) {

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\CashAdjustments\CashSessions;
 
+use App\Http\Controllers\Concerns\ResolvesPublicIdFilters;
 use App\Http\Controllers\Controller;
+use App\Models\CashRegister;
 use App\Models\CashSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +16,7 @@ use Illuminate\Http\Request;
  *   tags={"Cash Sessions"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="cash_register_id", in="query", @OA\Schema(type="integer"), description="Filter by cash register ID"),
+ *   @OA\Parameter(name="cash_register_id", in="query", @OA\Schema(type="string"), description="Filter by Cash Register public_id (ULID)"),
  *   @OA\Parameter(name="operating_date_from", in="query", @OA\Schema(type="string", format="date"), description="Filter from date (YYYY-MM-DD)"),
  *   @OA\Parameter(name="operating_date_to", in="query", @OA\Schema(type="string", format="date"), description="Filter to date (YYYY-MM-DD)"),
  *   @OA\Parameter(name="status", in="query", @OA\Schema(type="string", enum={"DRAFT", "POSTED"}), description="Filter by status"),
@@ -27,12 +29,17 @@ use Illuminate\Http\Request;
  */
 class ListCashSessionsController extends Controller
 {
+    use ResolvesPublicIdFilters;
+
     public function __invoke(Request $request): JsonResponse
     {
         $query = CashSession::with(['cashRegister.branch']);
 
         if ($request->has('cash_register_id')) {
-            $query->byRegister($request->input('cash_register_id'));
+            $query->where(
+                'cash_register_id',
+                $this->resolvePublicIdFilter(CashRegister::class, $request->input('cash_register_id'))
+            );
         }
 
         if ($request->has('status')) {

@@ -2,8 +2,13 @@
 
 namespace App\Http\Requests\CashAdjustments\CashAdjustments;
 
+use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
+use App\Models\BankAccount;
+use App\Models\CashAdjustment;
+use App\Models\CashSession;
+use App\Models\CashTerminal;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -12,7 +17,7 @@ use Illuminate\Validation\Validator;
  *   schema="StoreCashAdjustmentRequest",
  *   required={"cash_session_id", "type", "direction", "lines"},
  *
- *   @OA\Property(property="cash_session_id", type="integer", example=1, description="Cash Session ID"),
+ *   @OA\Property(property="cash_session_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Cash Session public_id (ULID)"),
  *   @OA\Property(property="source_system", type="string", maxLength=100, example="POS", description="Source system name", nullable=true),
  *   @OA\Property(property="type", type="string", enum={"EXTERNAL_IMPORT", "CORRECTION"}, example="EXTERNAL_IMPORT", description="Adjustment type"),
  *   @OA\Property(property="direction", type="string", enum={"INFLOW", "OUTFLOW"}, example="INFLOW", description="Cash flow direction"),
@@ -30,8 +35,8 @@ use Illuminate\Validation\Validator;
  *       @OA\Property(property="tender_type", type="string", enum={"CASH", "CARD", "TRANSFER"}, example="CASH", description="Tender type"),
  *       @OA\Property(property="amount", type="number", format="decimal", example=500.00, description="Line amount"),
  *       @OA\Property(property="currency", type="string", example="MXN", description="Currency code (default: MXN)"),
- *       @OA\Property(property="card_terminal_id", type="integer", example=1, description="Terminal ID (required for CARD)", nullable=true),
- *       @OA\Property(property="bank_account_id", type="integer", example=1, description="Bank account ID (required for TRANSFER)", nullable=true),
+ *       @OA\Property(property="card_terminal_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Cash Terminal public_id (required for CARD)", nullable=true),
+ *       @OA\Property(property="bank_account_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Bank Account public_id (required for TRANSFER)", nullable=true),
  *       @OA\Property(property="reference", type="string", maxLength=255, example="TXN-123", description="Transaction reference", nullable=true),
  *       @OA\Property(property="meta", type="object", example={"tip": 50}, description="Line metadata", nullable=true),
  *     )
@@ -40,18 +45,19 @@ use Illuminate\Validation\Validator;
  */
 class StoreCashAdjustmentRequest extends FormRequest
 {
+    use ResolvesPublicIdReferences;
     use SharesValidationMessages;
     use ValidatesTenderTypeReference;
 
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\CashAdjustment::class);
+        return $this->user()->can('create', CashAdjustment::class);
     }
 
     public function rules(): array
     {
         return [
-            'cash_session_id' => 'required|integer|exists:cash_sessions,id',
+            'cash_session_id' => 'required|string|exists:cash_sessions,public_id',
             'source_system' => 'nullable|string|max:100',
             'type' => 'required|in:EXTERNAL_IMPORT,CORRECTION',
             'direction' => 'required|in:INFLOW,OUTFLOW',
@@ -62,8 +68,8 @@ class StoreCashAdjustmentRequest extends FormRequest
             'lines.*.tender_type' => 'required|in:CASH,CARD,TRANSFER',
             'lines.*.amount' => 'required|numeric|min:0.01|max:999999.99',
             'lines.*.currency' => 'sometimes|string|size:3',
-            'lines.*.card_terminal_id' => 'nullable|integer|exists:cash_terminals,id',
-            'lines.*.bank_account_id' => 'nullable|integer|exists:bank_accounts,id',
+            'lines.*.card_terminal_id' => 'nullable|string|exists:cash_terminals,public_id',
+            'lines.*.bank_account_id' => 'nullable|string|exists:bank_accounts,public_id',
             'lines.*.reference' => 'nullable|string|max:255',
             'lines.*.meta' => 'nullable|array',
         ];
@@ -122,5 +128,29 @@ class StoreCashAdjustmentRequest extends FormRequest
 
             $this->merge(['lines' => $lines]);
         }
+    }
+
+    public function cashSession(): CashSession
+    {
+        return $this->resolveModelByPublicId(CashSession::class, 'cash_session_id');
+    }
+
+    /**
+     * Validated lines with card_terminal_id/bank_account_id resolved from
+     * public_id to the numeric FK the cash_adjustment_lines columns store.
+     */
+    public function linesData(): array
+    {
+        return collect($this->validated('lines', []))->map(function (array $line) {
+            if (array_key_exists('card_terminal_id', $line)) {
+                $line['card_terminal_id'] = $this->resolvePublicIdValue(CashTerminal::class, $line['card_terminal_id']);
+            }
+
+            if (array_key_exists('bank_account_id', $line)) {
+                $line['bank_account_id'] = $this->resolvePublicIdValue(BankAccount::class, $line['bank_account_id']);
+            }
+
+            return $line;
+        })->all();
     }
 }

@@ -25,9 +25,9 @@ class CashTerminalAuthorizationTest extends TestCase
         $terminal = CashTerminal::factory()->for($branch)->create(['name' => 'Terminal Real']);
         $this->actingAsUserWithBranchAccess($branch, 'cash_terminals.view');
 
-        $response = $this->getJson("/api/v1/cash-terminals/{$terminal->id}");
+        $response = $this->getJson("/api/v1/cash-terminals/{$terminal->public_id}");
 
-        $response->assertStatus(200)->assertJsonPath('data.id', $terminal->id);
+        $response->assertStatus(200)->assertJsonPath('data.id', $terminal->public_id);
     }
 
     #[Test]
@@ -37,7 +37,7 @@ class CashTerminalAuthorizationTest extends TestCase
         $terminal = CashTerminal::factory()->for($branch)->create();
         $this->actingAsUserWithoutBranchAccess('cash_terminals.view');
 
-        $response = $this->getJson("/api/v1/cash-terminals/{$terminal->id}");
+        $response = $this->getJson("/api/v1/cash-terminals/{$terminal->public_id}");
 
         $response->assertStatus(403);
     }
@@ -60,7 +60,7 @@ class CashTerminalAuthorizationTest extends TestCase
         $terminal = CashTerminal::factory()->for($branch)->create(['name' => 'Old Name']);
         $this->actingAsUserWithBranchAccess($branch, 'cash_terminals.update');
 
-        $response = $this->putJson("/api/v1/cash-terminals/{$terminal->id}", ['name' => 'New Name']);
+        $response = $this->putJson("/api/v1/cash-terminals/{$terminal->public_id}", ['name' => 'New Name']);
 
         $response->assertStatus(200)->assertJsonPath('data.name', 'New Name');
         $this->assertDatabaseHas('cash_terminals', ['id' => $terminal->id, 'name' => 'New Name']);
@@ -73,7 +73,7 @@ class CashTerminalAuthorizationTest extends TestCase
         $terminal = CashTerminal::factory()->for($branch)->create(['name' => 'Untouched']);
         $this->actingAsUserWithoutBranchAccess('cash_terminals.update');
 
-        $response = $this->putJson("/api/v1/cash-terminals/{$terminal->id}", ['name' => 'Nope']);
+        $response = $this->putJson("/api/v1/cash-terminals/{$terminal->public_id}", ['name' => 'Nope']);
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('cash_terminals', ['id' => $terminal->id, 'name' => 'Untouched']);
@@ -86,7 +86,7 @@ class CashTerminalAuthorizationTest extends TestCase
         $terminal = CashTerminal::factory()->for($branch)->create();
         $this->actingAsUserWithBranchAccess($branch, 'cash_terminals.delete');
 
-        $response = $this->deleteJson("/api/v1/cash-terminals/{$terminal->id}");
+        $response = $this->deleteJson("/api/v1/cash-terminals/{$terminal->public_id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('cash_terminals', ['id' => $terminal->id]);
@@ -99,7 +99,7 @@ class CashTerminalAuthorizationTest extends TestCase
         $terminal = CashTerminal::factory()->for($branch)->create();
         $this->actingAsUserWithoutBranchAccess('cash_terminals.delete');
 
-        $response = $this->deleteJson("/api/v1/cash-terminals/{$terminal->id}");
+        $response = $this->deleteJson("/api/v1/cash-terminals/{$terminal->public_id}");
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('cash_terminals', ['id' => $terminal->id]);

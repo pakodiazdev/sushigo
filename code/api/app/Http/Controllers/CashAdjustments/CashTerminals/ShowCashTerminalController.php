@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
- *   path="/api/v1/cash-terminals/{id}",
+ *   path="/api/v1/cash-terminals/{cashTerminal}",
  *   summary="Show Cash Terminal",
  *   tags={"Cash Terminals"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Terminal ID"),
+ *   @OA\Parameter(name="cashTerminal", in="path", required=true, @OA\Schema(type="string"), description="Cash Terminal public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Cash terminal retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -24,10 +24,8 @@ use Illuminate\Support\Facades\Gate;
  */
 class ShowCashTerminalController extends Controller
 {
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashTerminal $cashTerminal): JsonResponse
     {
-        $cashTerminal = CashTerminal::findOrFail($id);
-
         Gate::authorize('view', $cashTerminal);
 
         $cashTerminal->load('branch');

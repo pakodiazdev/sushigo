@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\CashAdjustments\CashExpenses;
 
+use App\Models\BankAccount;
 use App\Models\Branch;
 use App\Models\CashRegister;
 use App\Models\CashSession;
+use App\Models\CashTerminal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -51,7 +53,7 @@ class CreateCashExpenseTest extends TestCase
         $this->actingAsUserWithPermission();
 
         $response = $this->postJson('/api/v1/cash-expenses', [
-            'cash_session_id' => $this->session->id,
+            'cash_session_id' => $this->session->public_id,
             'tender_type' => 'CASH',
             'amount' => 150.00,
             'category' => 'SUPPLIES',
@@ -73,12 +75,60 @@ class CreateCashExpenseTest extends TestCase
     }
 
     #[Test]
+    public function it_creates_a_card_cash_expense_linked_to_a_terminal(): void
+    {
+        $this->actingAsUserWithPermission();
+        $terminal = CashTerminal::factory()->create();
+
+        $response = $this->postJson('/api/v1/cash-expenses', [
+            'cash_session_id' => $this->session->public_id,
+            'tender_type' => 'CARD',
+            'amount' => 150.00,
+            'category' => 'SUPPLIES',
+            'vendor' => 'Office Depot',
+            'card_terminal_id' => $terminal->public_id,
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('cash_expenses', [
+            'cash_session_id' => $this->session->id,
+            'tender_type' => 'CARD',
+            'card_terminal_id' => $terminal->id,
+        ]);
+    }
+
+    #[Test]
+    public function it_creates_a_transfer_cash_expense_linked_to_a_bank_account(): void
+    {
+        $this->actingAsUserWithPermission();
+        $bankAccount = BankAccount::factory()->create();
+
+        $response = $this->postJson('/api/v1/cash-expenses', [
+            'cash_session_id' => $this->session->public_id,
+            'tender_type' => 'TRANSFER',
+            'amount' => 150.00,
+            'category' => 'SUPPLIES',
+            'vendor' => 'Office Depot',
+            'bank_account_id' => $bankAccount->public_id,
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('cash_expenses', [
+            'cash_session_id' => $this->session->id,
+            'tender_type' => 'TRANSFER',
+            'bank_account_id' => $bankAccount->id,
+        ]);
+    }
+
+    #[Test]
     public function it_rejects_card_tender_without_terminal(): void
     {
         $this->actingAsUserWithPermission();
 
         $response = $this->postJson('/api/v1/cash-expenses', [
-            'cash_session_id' => $this->session->id,
+            'cash_session_id' => $this->session->public_id,
             'tender_type' => 'CARD',
             'amount' => 150.00,
             'category' => 'SUPPLIES',
@@ -96,7 +146,7 @@ class CreateCashExpenseTest extends TestCase
         $this->actingAsUserWithPermission();
 
         $response = $this->postJson('/api/v1/cash-expenses', [
-            'cash_session_id' => $this->session->id,
+            'cash_session_id' => $this->session->public_id,
             'tender_type' => 'TRANSFER',
             'amount' => 150.00,
             'category' => 'SUPPLIES',
@@ -112,7 +162,7 @@ class CreateCashExpenseTest extends TestCase
     public function it_rejects_unauthenticated_requests(): void
     {
         $response = $this->postJson('/api/v1/cash-expenses', [
-            'cash_session_id' => $this->session->id,
+            'cash_session_id' => $this->session->public_id,
             'tender_type' => 'CASH',
             'amount' => 150.00,
             'category' => 'SUPPLIES',
@@ -128,7 +178,7 @@ class CreateCashExpenseTest extends TestCase
         Passport::actingAs($user);
 
         $response = $this->postJson('/api/v1/cash-expenses', [
-            'cash_session_id' => $this->session->id,
+            'cash_session_id' => $this->session->public_id,
             'tender_type' => 'CASH',
             'amount' => 150.00,
             'category' => 'SUPPLIES',

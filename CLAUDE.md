@@ -292,7 +292,21 @@ Every PR title **must** include the workspace letter, in its own bracket right a
 
 ### PR Description (mandatory)
 
-Every PR opened from dev-lab **must** include a `## Workspace` footer identifying where it was developed:
+Every PR body **must** include a `Closes #NNN` line referencing the issue the PR resolves, plus a `Devin Review:` line right under it linking to that same PR's DeepWiki page. Place both near the top of the `## Summary` section:
+
+```
+## Summary
+Closes #009
+Devin Review: https://deepwiki.com/pakodiazdev/sushigo/pull/294
+
+- ...
+```
+
+**Why:** `Closes #NNN` lets GitHub auto-close the issue on merge — a merged PR without it leaves the issue open for someone to close by hand. `Devin Review:` links to the DeepWiki mirror of this PR, which surfaces the automated review (Devin) for free without needing write access to a paid tool — keeping it next to `Closes #NNN` puts it one click away for any reviewer.
+
+**How:** the PR number isn't known until the PR exists, so add the `Devin Review:` line in a follow-up edit right after `gh pr create` returns the number — `gh pr edit <N> --body "..."` — before requesting review.
+
+Every PR opened from dev-lab **must** also include a `## Workspace` footer identifying where it was developed:
 
 ```
 ## Workspace

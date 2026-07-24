@@ -29,6 +29,21 @@ class CashAdjustmentLine extends Model
         'created_at' => 'datetime',
     ];
 
+    /**
+     * cash_adjustment_id/card_terminal_id/bank_account_id point at
+     * CashAdjustment/CashTerminal/BankAccount, which expose public_id
+     * instead of their numeric id (see #293). Hide the raw FKs so they don't
+     * leak numeric ids; consumers should use the loaded cashAdjustment/
+     * cardTerminal/bankAccount relations' ids (already ULIDs) instead.
+     * This model itself has no public_id of its own — it's never
+     * independently routable (always nested under a CashAdjustment).
+     */
+    protected $hidden = [
+        'cash_adjustment_id',
+        'card_terminal_id',
+        'bank_account_id',
+    ];
+
     // Tender type constants
     public const TENDER_CASH = 'CASH';
 

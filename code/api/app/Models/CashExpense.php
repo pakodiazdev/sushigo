@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use App\Support\Traits\HasPublicId;
+use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CashExpense extends Model
 {
-    use HasFactory;
+    use HasFactory, HasPublicId, SerializesPublicIdAsId;
 
     protected $fillable = [
         'cash_session_id',
@@ -32,6 +34,18 @@ class CashExpense extends Model
         'incurred_at' => 'datetime',
         'posted_at' => 'datetime',
         'meta' => 'array',
+    ];
+
+    /**
+     * cash_session_id/card_terminal_id/bank_account_id point at models that
+     * — like this one — expose public_id instead of their numeric id (see
+     * #293). Hide the raw FKs so they don't leak numeric ids; consumers
+     * should use the loaded relations' ids (already ULIDs) instead.
+     */
+    protected $hidden = [
+        'cash_session_id',
+        'card_terminal_id',
+        'bank_account_id',
     ];
 
     // Tender type constants

@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
- *   path="/api/v1/bank-accounts/{id}",
+ *   path="/api/v1/bank-accounts/{bankAccount}",
  *   summary="Show Bank Account",
  *   tags={"Bank Accounts"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Bank Account ID"),
+ *   @OA\Parameter(name="bankAccount", in="path", required=true, @OA\Schema(type="string"), description="Bank Account public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Bank account retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -24,10 +24,8 @@ use Illuminate\Support\Facades\Gate;
  */
 class ShowBankAccountController extends Controller
 {
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(BankAccount $bankAccount): JsonResponse
     {
-        $bankAccount = BankAccount::findOrFail($id);
-
         Gate::authorize('view', $bankAccount);
 
         $bankAccount->load('branch');

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\CashAdjustments\CashExpenses;
 
+use App\Http\Controllers\Concerns\ResolvesPublicIdFilters;
 use App\Http\Controllers\Controller;
 use App\Models\CashExpense;
+use App\Models\CashSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +16,7 @@ use Illuminate\Http\Request;
  *   tags={"Cash Expenses"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="cash_session_id", in="query", @OA\Schema(type="integer"), description="Filter by cash session ID"),
+ *   @OA\Parameter(name="cash_session_id", in="query", @OA\Schema(type="string"), description="Filter by Cash Session public_id (ULID)"),
  *   @OA\Parameter(name="category", in="query", @OA\Schema(type="string"), description="Filter by expense category"),
  *   @OA\Parameter(name="tender_type", in="query", @OA\Schema(type="string", enum={"CASH", "CARD", "TRANSFER"}), description="Filter by tender type"),
  *   @OA\Parameter(name="incurred_from", in="query", @OA\Schema(type="string", format="date-time"), description="Filter from date"),
@@ -28,6 +30,8 @@ use Illuminate\Http\Request;
  */
 class ListCashExpensesController extends Controller
 {
+    use ResolvesPublicIdFilters;
+
     public function __invoke(Request $request): JsonResponse
     {
         $query = CashExpense::with([
@@ -39,7 +43,10 @@ class ListCashExpensesController extends Controller
         ]);
 
         if ($request->has('cash_session_id')) {
-            $query->where('cash_session_id', $request->input('cash_session_id'));
+            $query->where(
+                'cash_session_id',
+                $this->resolvePublicIdFilter(CashSession::class, $request->input('cash_session_id'))
+            );
         }
 
         if ($request->has('category')) {

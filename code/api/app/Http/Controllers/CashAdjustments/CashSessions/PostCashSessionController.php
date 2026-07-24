@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Post(
- *   path="/api/v1/cash-sessions/{id}/post",
+ *   path="/api/v1/cash-sessions/{cashSession}/post",
  *   summary="Post Cash Session",
  *   description="Finalizes a cash session by calculating closing balance and changing status to POSTED",
  *   tags={"Cash Sessions"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Session ID"),
+ *   @OA\Parameter(name="cashSession", in="path", required=true, @OA\Schema(type="string"), description="Cash Session public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Cash session posted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -31,10 +31,8 @@ class PostCashSessionController extends Controller
         private CashSessionService $sessionService
     ) {}
 
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashSession $cashSession): JsonResponse
     {
-        $cashSession = CashSession::findOrFail($id);
-
         Gate::authorize('post', $cashSession);
 
         try {
