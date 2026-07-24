@@ -22,23 +22,23 @@ Discovered during the #291/#293 audit, deliberately deferred until those PRs set
 
 ## ✅ Technical Tasks
 
-- [ ] 🔒 Add `Gate::authorize('viewAny', Model::class)` to all 6 `List*Controller` classes
-- [ ] 🔒 Scope each `List` query to the requesting user's assigned branches via `$user->operatingUnits()->wherePivot('is_active', true)->pluck('branch_id')`:
+- [x] 🔒 Add `Gate::authorize('viewAny', Model::class)` to all 6 `List*Controller` classes
+- [x] 🔒 Scope each `List` query to the requesting user's assigned branches via `$user->operatingUnits()->wherePivot('is_active', true)->pluck('branch_id')` — extracted into a shared `ScopesToUserBranches` concern:
   - `CashRegister`, `CashTerminal`, `BankAccount`: direct `branch_id` column — `whereIn`
   - `CashSession`: via `cashRegister.branch_id` — `whereHas`
   - `CashExpense`, `CashAdjustment`: via `cashSession.cashRegister.branch_id` — nested `whereHas`
-- [ ] 🔒 An explicit `branch_id` filter the user doesn't have access to is silently excluded via the same scoping (no separate 403) — consistent with how list endpoints avoid leaking existence via error codes
-- [ ] ✅ Feature tests per domain: a user assigned to branch A doesn't see branch B's records in `List`, even without an explicit `branch_id` filter; a user without the `.view` permission gets `403`
-- [ ] 🧪 Full PHPUnit suite green, Pint clean
+- [x] 🔒 An explicit `branch_id` filter the user doesn't have access to is silently excluded via the same scoping (no separate 403) — consistent with how list endpoints avoid leaking existence via error codes
+- [x] ✅ Feature tests per domain: a user assigned to branch A doesn't see branch B's records in `List`, even without an explicit `branch_id` filter; a user without the `.view` permission gets `403`
+- [x] 🧪 Full PHPUnit suite green (1140/1140), Pint clean (13 files)
 
 ---
 
 ## 🎯 Acceptance Criteria
 
-- [ ] All 6 `List` endpoints reject users lacking the corresponding `.view` permission with `403`
-- [ ] All 6 `List` endpoints only return records within the requesting user's assigned branch(es), with or without an explicit `branch_id` filter
-- [ ] No behavior change for users who already have proper branch access and permission
-- [ ] No behavior change to `Create`/`Show`/`Update`/`Delete`/`Post` (untouched)
+- [x] All 6 `List` endpoints reject users lacking the corresponding `.view` permission with `403`
+- [x] All 6 `List` endpoints only return records within the requesting user's assigned branch(es), with or without an explicit `branch_id` filter
+- [x] No behavior change for users who already have proper branch access and permission
+- [x] No behavior change to `Create`/`Show`/`Update`/`Delete`/`Post` (untouched)
 
 ---
 
@@ -47,14 +47,23 @@ Discovered during the #291/#293 audit, deliberately deferred until those PRs set
 ### 📊 Estimates
 - **Optimistic:** `1h` (mechanical repeat of the #291 branch-scoping pattern across 6 controllers)
 - **Pessimistic:** `2h` (6 domains × query scoping + tests, plus verifying existing List tests still pass)
-- **Tracked:** _in progress_
+- **Tracked:** `0.5h`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-24", "start": "17:00", "end": "?" }
+  { "date": "2026-07-24", "start": "17:00", "end": "17:33" }
 ]
 ```
+
+## 📊 Retrospective
+- **Actual total:** 33m
+- **vs optimistic:** −27m under
+- **vs pessimistic:** −1h 27m under
+
+**Justification:**
+
+Landed well under the optimistic estimate. The #291 audit had already surfaced the exact scoping pattern needed (`ChecksBranchAccess`/`operatingUnits()`), so this was a mechanical repeat across 6 controllers with no new investigation required. Extracted the branch-id resolution into a small `ScopesToUserBranches` concern (mirroring the existing `ResolvesPublicIdFilters` trait already used in these same controllers) to avoid repeating the same 4-line query snippet six times — consistent with this project's strong anti-duplication stance (#282/#289). Three existing `list_filters_by_*_public_id` tests authenticated as a fully unpermissioned user (`Passport::actingAs(User::factory()->create())`), which would have broken once authorization was enforced — updated them to use the existing `actingAsUserWithBranchAccess` helper instead of writing a new one. Full suite (1140 tests) and Pint stayed green throughout.
 
 ---
 
