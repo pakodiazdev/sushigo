@@ -65,6 +65,7 @@ jobs:
         if: steps.changes.outputs.api == 'true'
         env:
           DB_HOST: 127.0.0.1
+          DB_DATABASE: mydb_test
         run: php artisan test --coverage --coverage-clover=coverage.xml
 
       - name: Upload coverage report

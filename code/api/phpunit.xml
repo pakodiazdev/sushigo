@@ -27,6 +27,15 @@
         <env name="DB_CONNECTION" value="pgsql"/>
         <env name="DB_HOST" value="127.0.0.1"/>
         <env name="DB_PORT" value="5432"/>
+        <!--
+            DB_DATABASE is intentionally NOT set here. It must be supplied by the
+            environment running the tests:
+              - dev-lab: each workspace's code/api/.env.testing (DB_DATABASE=sushigo_ws_<letter>_test)
+              - CI: DB_DATABASE=mydb_test set as a step env var (see .github/workflows/api-tests.yml)
+              - standalone Docker mode: pass DB_DATABASE=mydb_test explicitly (see CLAUDE.md)
+            A hardcoded value here would force every dev-lab workspace onto the same
+            shared test database, causing SQLSTATE[40P01] deadlocks under concurrent runs.
+        -->
         <env name="DB_USERNAME" value="admin"/>
         <env name="DB_PASSWORD" value="admin"/>
         <env name="MAIL_MAILER" value="array"/>
