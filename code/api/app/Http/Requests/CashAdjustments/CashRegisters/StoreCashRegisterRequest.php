@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashRegisters;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Models\CashRegister;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -23,6 +24,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreCashRegisterRequest extends FormRequest
 {
     use CastsRequestFields;
+    use SharesValidationMessages;
 
     public function authorize(): bool
     {
@@ -45,12 +47,14 @@ class StoreCashRegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'branch_id.required' => 'La sucursal es requerida',
-            'branch_id.exists' => 'La sucursal no existe',
-            'code.required' => 'El código es requerido',
-            'code.unique' => 'El código ya está en uso',
-            'name.required' => 'El nombre es requerido',
-            'type.required' => 'El tipo es requerido',
+            ...$this->sharedMessages([
+                'branch_id.required',
+                'branch_id.exists',
+                'code.required',
+                'code.unique',
+                'name.required',
+                'type.required',
+            ]),
             'type.in' => 'El tipo debe ser ON_PREMISE, DELIVERY o EVENT',
         ];
     }

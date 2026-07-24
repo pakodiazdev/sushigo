@@ -2,6 +2,8 @@
 
 Advanced seeder system organized by environment with tracking and automatic locking, similar to kuantys-api.
 
+> When two scenarios in the same seeder need near-identical array literals (e.g. two employee/leave-type/config rows differing only in values), see `doc/conventions/backend/avoiding-sonarcloud-duplication.md` — extract the shared shape into one parameterized method instead of writing the literal twice.
+
 ## 📁 Structure
 
 ```

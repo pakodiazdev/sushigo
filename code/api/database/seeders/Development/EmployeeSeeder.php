@@ -103,26 +103,20 @@ class EmployeeSeeder extends OnceSeeder
     {
         $code = 'EMP-RE2';
 
-        if (Employee::where('code', $code)->exists()) {
-            $this->command->info("⏭ Employee {$code} (Dos Reingresos) already exists, skipping");
-
-            return;
-        }
-
-        // First hire: ~2.5 years ago
-        $firstHire = now()->subMonths(30)->startOfDay();
-        $firstEnd = now()->subMonths(20)->startOfDay();
-
-        $employee = $this->createReingresoEmployee($action, $branch, [
+        $result = $this->seedFirstReingresoHire($action, $branch, [
             'code' => $code,
             'first_name' => 'Luis',
             'last_name' => 'Dos Reingresos',
             'roles' => ['cook'],
             'email' => 'luis.reingresos2@sushigo.com',
             'phone' => '5512349902',
-        ], $firstHire);
+        ], 30, 20, self::TERMINATION_REASON_VOLUNTARY);
 
-        $this->closeFirstEmploymentPeriod($employee, $firstHire, $firstEnd, self::TERMINATION_REASON_VOLUNTARY);
+        if ($result === null) {
+            return;
+        }
+
+        [$employee, $firstHire] = $result;
 
         // Second hire: ~10 months ago, closed ~4 months ago
         $secondHire = now()->subMonths(10)->startOfDay();
@@ -149,26 +143,20 @@ class EmployeeSeeder extends OnceSeeder
     {
         $code = 'EMP-RE3';
 
-        if (Employee::where('code', $code)->exists()) {
-            $this->command->info("⏭ Employee {$code} (Reingreso Tres) already exists, skipping");
-
-            return;
-        }
-
-        // First hire: ~3 years ago
-        $firstHire = now()->subMonths(34)->startOfDay();
-        $firstEnd = now()->subMonths(26)->startOfDay();
-
-        $employee = $this->createReingresoEmployee($action, $branch, [
+        $result = $this->seedFirstReingresoHire($action, $branch, [
             'code' => $code,
             'first_name' => 'Sofía',
             'last_name' => 'Reingreso Tres',
             'roles' => ['kitchen-assistant'],
             'email' => 'sofia.reingresos3@sushigo.com',
             'phone' => '5512349903',
-        ], $firstHire);
+        ], 34, 26, 'Motivos personales');
 
-        $this->closeFirstEmploymentPeriod($employee, $firstHire, $firstEnd, 'Motivos personales');
+        if ($result === null) {
+            return;
+        }
+
+        [$employee, $firstHire] = $result;
 
         // Second hire: ~18 months ago, closed ~10 months ago
         $secondHire = now()->subMonths(18)->startOfDay();
@@ -256,6 +244,38 @@ class EmployeeSeeder extends OnceSeeder
             'branch_id' => $branch->id,
             'start_date' => $firstHire->toDateString(),
         ]);
+    }
+
+    /**
+     * Shared "first hire" setup for the reingreso scenarios: skip if the
+     * employee already exists, compute first-hire/first-end dates from
+     * months-ago offsets, create the employee, and close its first period.
+     *
+     * @param  array<string, mixed>  $employeeData  code/first_name/last_name/roles/email/phone
+     * @return array{0: Employee, 1: Carbon}|null [employee, firstHire], or null if already seeded
+     */
+    private function seedFirstReingresoHire(
+        CreateEmployeeAction $action,
+        Branch $branch,
+        array $employeeData,
+        int $firstHireMonthsAgo,
+        int $firstEndMonthsAgo,
+        string $terminationReason
+    ): ?array {
+        if (Employee::where('code', $employeeData['code'])->exists()) {
+            $this->command->info("⏭ Employee {$employeeData['code']} ({$employeeData['last_name']}) already exists, skipping");
+
+            return null;
+        }
+
+        $firstHire = now()->subMonths($firstHireMonthsAgo)->startOfDay();
+        $firstEnd = now()->subMonths($firstEndMonthsAgo)->startOfDay();
+
+        $employee = $this->createReingresoEmployee($action, $branch, $employeeData, $firstHire);
+
+        $this->closeFirstEmploymentPeriod($employee, $firstHire, $firstEnd, $terminationReason);
+
+        return [$employee, $firstHire];
     }
 
     /**

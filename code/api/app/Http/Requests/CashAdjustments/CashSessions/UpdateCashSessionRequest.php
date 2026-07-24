@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashSessions;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -17,6 +18,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class UpdateCashSessionRequest extends FormRequest
 {
     use CastsRequestFields;
+    use SharesValidationMessages;
 
     public function authorize(): bool
     {
@@ -40,10 +42,7 @@ class UpdateCashSessionRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'opening_balance.min' => 'El balance inicial debe ser mayor o igual a 0',
-            'closing_balance.min' => 'El balance de cierre debe ser mayor o igual a 0',
-        ];
+        return $this->sharedMessages(['opening_balance.min', 'closing_balance.min']);
     }
 
     public function prepareForValidation(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\BankAccounts;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Models\BankAccount;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -23,6 +24,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreBankAccountRequest extends FormRequest
 {
     use CastsRequestFields;
+    use SharesValidationMessages;
 
     public function authorize(): bool
     {
@@ -44,12 +46,12 @@ class StoreBankAccountRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'branch_id.required' => 'La sucursal es requerida',
-            'alias.required' => 'El alias es requerido',
-            'bank_name.required' => 'El nombre del banco es requerido',
-            'account_number_masked.required' => 'El número de cuenta enmascarado es requerido',
-        ];
+        return $this->sharedMessages([
+            'branch_id.required',
+            'alias.required',
+            'bank_name.required',
+            'account_number_masked.required',
+        ]);
     }
 
     public function prepareForValidation(): void

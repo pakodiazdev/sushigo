@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashSessions;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Models\CashSession;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -20,6 +21,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreCashSessionRequest extends FormRequest
 {
     use CastsRequestFields;
+    use SharesValidationMessages;
 
     public function authorize(): bool
     {
@@ -38,14 +40,14 @@ class StoreCashSessionRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'cash_register_id.required' => 'La caja es requerida',
-            'cash_register_id.exists' => 'La caja no existe',
-            'operating_date.required' => 'La fecha de operación es requerida',
-            'operating_date.date_format' => 'La fecha debe estar en formato Y-m-d',
-            'opening_balance.min' => 'El balance inicial debe ser mayor o igual a 0',
-            'opening_balance.max' => 'El balance inicial no puede exceder 999,999.99',
-        ];
+        return $this->sharedMessages([
+            'cash_register_id.required',
+            'cash_register_id.exists',
+            'operating_date.required',
+            'operating_date.date_format',
+            'opening_balance.min',
+            'opening_balance.max',
+        ]);
     }
 
     public function prepareForValidation(): void

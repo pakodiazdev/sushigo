@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\CashAdjustments\CashAdjustments;
 
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -39,6 +40,7 @@ use Illuminate\Validation\Validator;
  */
 class StoreCashAdjustmentRequest extends FormRequest
 {
+    use SharesValidationMessages;
     use ValidatesTenderTypeReference;
 
     public function authorize(): bool
@@ -69,19 +71,22 @@ class StoreCashAdjustmentRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'cash_session_id.required' => 'La sesión de caja es requerida',
-            'type.required' => 'El tipo es requerido',
-            'type.in' => 'El tipo debe ser EXTERNAL_IMPORT o CORRECTION',
-            'direction.required' => 'La dirección es requerida',
-            'direction.in' => 'La dirección debe ser INFLOW o OUTFLOW',
-            'lines.required' => 'Debe incluir al menos una línea',
-            'lines.min' => 'Debe incluir al menos una línea',
-            'lines.*.tender_type.required' => 'El tipo de tender es requerido',
-            'lines.*.tender_type.in' => 'El tipo de tender debe ser CASH, CARD o TRANSFER',
-            'lines.*.amount.required' => 'El monto es requerido',
-            'lines.*.amount.min' => 'El monto debe ser mayor a 0',
-        ];
+        $messages = $this->sharedMessages([
+            'cash_session_id.required',
+            'type.required',
+            'direction.required',
+            'direction.in',
+            'lines.required',
+            'lines.min',
+            'lines.*.tender_type.required',
+            'lines.*.tender_type.in',
+            'lines.*.amount.required',
+            'lines.*.amount.min',
+        ]);
+
+        $messages['type.in'] = 'El tipo debe ser EXTERNAL_IMPORT o CORRECTION';
+
+        return $messages;
     }
 
     public function withValidator(Validator $validator): void

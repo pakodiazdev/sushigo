@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashExpenses;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
 use App\Models\CashExpense;
 use Illuminate\Foundation\Http\FormRequest;
@@ -29,6 +30,7 @@ use Illuminate\Validation\Validator;
 class StoreCashExpenseRequest extends FormRequest
 {
     use CastsRequestFields;
+    use SharesValidationMessages;
     use ValidatesTenderTypeReference;
 
     public function authorize(): bool
@@ -55,14 +57,14 @@ class StoreCashExpenseRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'cash_session_id.required' => 'La sesión de caja es requerida',
-            'tender_type.required' => 'El tipo de tender es requerido',
-            'tender_type.in' => 'El tipo de tender debe ser CASH, CARD o TRANSFER',
-            'amount.required' => 'El monto es requerido',
-            'amount.min' => 'El monto debe ser mayor a 0',
-            'category.required' => 'La categoría es requerida',
-        ];
+        return $this->sharedMessages([
+            'cash_session_id.required',
+            'tender_type.required',
+            'tender_type.in',
+            'amount.required',
+            'amount.min',
+            'category.required',
+        ]);
     }
 
     public function withValidator(Validator $validator): void
