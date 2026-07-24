@@ -31,6 +31,34 @@ class BankAccountAuthorizationTest extends TestCase
     }
 
     #[Test]
+    public function list_rejects_a_user_without_the_permission(): void
+    {
+        $branch = Branch::factory()->create();
+        BankAccount::factory()->for($branch)->create();
+        $this->actingAsUserWithBranchAccess($branch, 'some.other.permission');
+
+        $response = $this->getJson('/api/v1/bank-accounts');
+
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function list_only_returns_accounts_within_the_users_branch(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+        $accountA = BankAccount::factory()->for($branchA)->create();
+        BankAccount::factory()->for($branchB)->create();
+        $this->actingAsUserWithBranchAccess($branchA, 'bank_accounts.view');
+
+        $response = $this->getJson('/api/v1/bank-accounts');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $accountA->public_id);
+    }
+
+    #[Test]
     public function show_rejects_a_user_without_branch_access(): void
     {
         $branch = Branch::factory()->create();

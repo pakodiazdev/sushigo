@@ -31,6 +31,34 @@ class CashTerminalAuthorizationTest extends TestCase
     }
 
     #[Test]
+    public function list_rejects_a_user_without_the_permission(): void
+    {
+        $branch = Branch::factory()->create();
+        CashTerminal::factory()->for($branch)->create();
+        $this->actingAsUserWithBranchAccess($branch, 'some.other.permission');
+
+        $response = $this->getJson('/api/v1/cash-terminals');
+
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function list_only_returns_terminals_within_the_users_branch(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+        $terminalA = CashTerminal::factory()->for($branchA)->create();
+        CashTerminal::factory()->for($branchB)->create();
+        $this->actingAsUserWithBranchAccess($branchA, 'cash_terminals.view');
+
+        $response = $this->getJson('/api/v1/cash-terminals');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $terminalA->public_id);
+    }
+
+    #[Test]
     public function show_rejects_a_user_without_branch_access(): void
     {
         $branch = Branch::factory()->create();

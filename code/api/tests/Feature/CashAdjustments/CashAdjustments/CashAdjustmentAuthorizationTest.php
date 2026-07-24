@@ -7,9 +7,7 @@ use App\Models\CashAdjustment;
 use App\Models\CashAdjustmentLine;
 use App\Models\CashRegister;
 use App\Models\CashSession;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\CashAdjustments\Concerns\SetsUpBranchAccess;
 use Tests\TestCase;
@@ -89,13 +87,41 @@ class CashAdjustmentAuthorizationTest extends TestCase
             CashSession::factory()->for(CashRegister::factory()->for($branch)->create(), 'cashRegister')->draft(),
             'cashSession'
         )->draft()->create();
-        Passport::actingAs(User::factory()->create());
+        $this->actingAsUserWithBranchAccess($branch, 'cash_adjustments.view');
 
         $response = $this->getJson('/api/v1/cash-adjustments?cash_session_id='.$adjustment->cashSession->public_id);
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $adjustment->public_id);
+    }
+
+    #[Test]
+    public function list_rejects_a_user_without_the_permission(): void
+    {
+        $branch = Branch::factory()->create();
+        $this->adjustmentForBranch($branch);
+        $this->actingAsUserWithBranchAccess($branch, 'some.other.permission');
+
+        $response = $this->getJson('/api/v1/cash-adjustments');
+
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function list_only_returns_adjustments_within_the_users_branch(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+        $adjustmentA = $this->adjustmentForBranch($branchA);
+        $this->adjustmentForBranch($branchB);
+        $this->actingAsUserWithBranchAccess($branchA, 'cash_adjustments.view');
+
+        $response = $this->getJson('/api/v1/cash-adjustments');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $adjustmentA->public_id);
     }
 
     #[Test]

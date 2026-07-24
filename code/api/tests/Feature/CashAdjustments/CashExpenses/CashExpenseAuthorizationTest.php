@@ -7,9 +7,7 @@ use App\Models\CashExpense;
 use App\Models\CashRegister;
 use App\Models\CashSession;
 use App\Models\CashTerminal;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\CashAdjustments\Concerns\SetsUpBranchAccess;
 use Tests\TestCase;
@@ -75,13 +73,41 @@ class CashExpenseAuthorizationTest extends TestCase
             CashSession::factory()->for(CashRegister::factory()->for($branch)->create(), 'cashRegister')->draft(),
             'cashSession'
         )->cash()->draft()->create();
-        Passport::actingAs(User::factory()->create());
+        $this->actingAsUserWithBranchAccess($branch, 'cash_expenses.view');
 
         $response = $this->getJson('/api/v1/cash-expenses?cash_session_id='.$expense->cashSession->public_id);
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $expense->public_id);
+    }
+
+    #[Test]
+    public function list_rejects_a_user_without_the_permission(): void
+    {
+        $branch = Branch::factory()->create();
+        $this->expenseForBranch($branch);
+        $this->actingAsUserWithBranchAccess($branch, 'some.other.permission');
+
+        $response = $this->getJson('/api/v1/cash-expenses');
+
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function list_only_returns_expenses_within_the_users_branch(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+        $expenseA = $this->expenseForBranch($branchA);
+        $this->expenseForBranch($branchB);
+        $this->actingAsUserWithBranchAccess($branchA, 'cash_expenses.view');
+
+        $response = $this->getJson('/api/v1/cash-expenses');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $expenseA->public_id);
     }
 
     #[Test]
