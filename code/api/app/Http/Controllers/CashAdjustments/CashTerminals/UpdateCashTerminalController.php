@@ -31,11 +31,11 @@ use Illuminate\Http\JsonResponse;
  */
 class UpdateCashTerminalController extends Controller
 {
-    public function __invoke(UpdateCashTerminalRequest $request, CashTerminal $cashTerminal): JsonResponse
+    public function __invoke(UpdateCashTerminalRequest $request, int $id): JsonResponse
     {
-        $validated = $request->validated();
+        $cashTerminal = CashTerminal::findOrFail($id);
 
-        $cashTerminal->update($validated);
+        $cashTerminal->update($request->validated());
 
         return response()->json([
             'message' => 'Cash terminal updated successfully',

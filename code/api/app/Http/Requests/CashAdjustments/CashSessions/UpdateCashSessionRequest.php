@@ -4,6 +4,7 @@ namespace App\Http\Requests\CashAdjustments\CashSessions;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
 use App\Http\Requests\Concerns\SharesValidationMessages;
+use App\Models\CashSession;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -22,7 +23,11 @@ class UpdateCashSessionRequest extends FormRequest
 
     public function authorize(): bool
     {
-        $session = $this->route('cashSession');
+        $session = CashSession::find($this->route('id'));
+
+        if (! $session) {
+            abort(404);
+        }
 
         if ($session->isPosted()) {
             return false;

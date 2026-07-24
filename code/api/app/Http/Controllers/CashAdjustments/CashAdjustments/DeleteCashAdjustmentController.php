@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CashAdjustment;
 use App\Services\CashAdjustments\CashAdjustmentService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Delete(
@@ -29,8 +30,12 @@ class DeleteCashAdjustmentController extends Controller
         private CashAdjustmentService $adjustmentService
     ) {}
 
-    public function __invoke(CashAdjustment $cashAdjustment): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $cashAdjustment = CashAdjustment::findOrFail($id);
+
+        Gate::authorize('delete', $cashAdjustment);
+
         try {
             $this->adjustmentService->deleteAdjustment($cashAdjustment);
 

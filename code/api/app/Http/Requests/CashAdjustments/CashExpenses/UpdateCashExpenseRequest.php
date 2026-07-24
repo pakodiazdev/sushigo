@@ -5,6 +5,7 @@ namespace App\Http\Requests\CashAdjustments\CashExpenses;
 use App\Http\Requests\Concerns\CastsRequestFields;
 use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
+use App\Models\CashExpense;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -30,15 +31,21 @@ class UpdateCashExpenseRequest extends FormRequest
     use SharesValidationMessages;
     use ValidatesTenderTypeReference;
 
+    private ?CashExpense $cashExpense = null;
+
     public function authorize(): bool
     {
-        $expense = $this->route('cashExpense');
+        $this->cashExpense = CashExpense::find($this->route('id'));
 
-        if ($expense->isPosted()) {
+        if (! $this->cashExpense) {
+            abort(404);
+        }
+
+        if ($this->cashExpense->isPosted()) {
             return false;
         }
 
-        return $this->user()->can('update', $expense);
+        return $this->user()->can('update', $this->cashExpense);
     }
 
     public function rules(): array
@@ -65,13 +72,11 @@ class UpdateCashExpenseRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function ($validator) {
-            $expense = $this->route('cashExpense');
-
             $this->requireTenderTypeReference(
                 $validator,
-                $this->input('tender_type', $expense->tender_type),
-                $this->input('card_terminal_id', $expense->card_terminal_id),
-                $this->input('bank_account_id', $expense->bank_account_id)
+                $this->input('tender_type', $this->cashExpense->tender_type),
+                $this->input('card_terminal_id', $this->cashExpense->card_terminal_id),
+                $this->input('bank_account_id', $this->cashExpense->bank_account_id)
             );
         });
     }

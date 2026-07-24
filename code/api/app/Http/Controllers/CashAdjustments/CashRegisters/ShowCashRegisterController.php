@@ -5,6 +5,7 @@ namespace App\Http\Controllers\CashAdjustments\CashRegisters;
 use App\Http\Controllers\Controller;
 use App\Models\CashRegister;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
@@ -23,8 +24,12 @@ use Illuminate\Http\JsonResponse;
  */
 class ShowCashRegisterController extends Controller
 {
-    public function __invoke(CashRegister $cashRegister): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $cashRegister = CashRegister::findOrFail($id);
+
+        Gate::authorize('view', $cashRegister);
+
         $cashRegister->load(['branch', 'operatingUnit', 'sessions' => function ($query) {
             $query->latest('operating_date')->limit(5);
         }]);

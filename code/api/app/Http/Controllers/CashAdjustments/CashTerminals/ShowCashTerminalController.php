@@ -5,6 +5,7 @@ namespace App\Http\Controllers\CashAdjustments\CashTerminals;
 use App\Http\Controllers\Controller;
 use App\Models\CashTerminal;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
@@ -23,8 +24,12 @@ use Illuminate\Http\JsonResponse;
  */
 class ShowCashTerminalController extends Controller
 {
-    public function __invoke(CashTerminal $cashTerminal): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $cashTerminal = CashTerminal::findOrFail($id);
+
+        Gate::authorize('view', $cashTerminal);
+
         $cashTerminal->load('branch');
 
         return response()->json([

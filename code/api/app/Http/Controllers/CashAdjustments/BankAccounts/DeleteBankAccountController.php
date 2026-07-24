@@ -5,6 +5,7 @@ namespace App\Http\Controllers\CashAdjustments\BankAccounts;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Delete(
@@ -24,8 +25,12 @@ use Illuminate\Http\JsonResponse;
  */
 class DeleteBankAccountController extends Controller
 {
-    public function __invoke(BankAccount $bankAccount): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $bankAccount = BankAccount::findOrFail($id);
+
+        Gate::authorize('delete', $bankAccount);
+
         if ($bankAccount->adjustmentLines()->exists() || $bankAccount->expenses()->exists()) {
             return response()->json([
                 'message' => 'Cannot delete bank account with existing transactions',
