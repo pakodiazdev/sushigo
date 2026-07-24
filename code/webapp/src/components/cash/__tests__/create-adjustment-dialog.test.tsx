@@ -178,6 +178,54 @@ describe('CreateAdjustmentDialog', () => {
         expect(updatedAmountInputs.length).toBe(initialAmountInputs.length + 1)
     })
 
+    it('shows the terminal selector and allows picking a terminal for CARD tender type', () => {
+        const { container } = render(
+            <CreateAdjustmentDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+                cashSessionId={'1'}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        const tenderTypeSelect = container.querySelectorAll('select')[2]!
+        fireEvent.change(tenderTypeSelect, { target: { value: 'CARD' } })
+
+        expect(screen.getByText('Terminal de Pago')).toBeDefined()
+
+        const terminalSelect = screen.getByText('Terminal de Pago')
+            .closest('div')!
+            .querySelector('select')!
+        fireEvent.change(terminalSelect, { target: { value: '1' } })
+
+        expect((terminalSelect as HTMLSelectElement).value).toBe('1')
+    })
+
+    it('shows the bank account selector and allows picking an account for TRANSFER tender type', () => {
+        const { container } = render(
+            <CreateAdjustmentDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+                cashSessionId={'1'}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        const tenderTypeSelect = container.querySelectorAll('select')[2]!
+        fireEvent.change(tenderTypeSelect, { target: { value: 'TRANSFER' } })
+
+        expect(screen.getByText('Cuenta Bancaria')).toBeDefined()
+
+        const bankAccountSelect = screen.getByText('Cuenta Bancaria')
+            .closest('div')!
+            .querySelector('select')!
+        fireEvent.change(bankAccountSelect, { target: { value: '1' } })
+
+        expect((bankAccountSelect as HTMLSelectElement).value).toBe('1')
+    })
+
     it('renders preselected session without session selector', () => {
         render(
             <CreateAdjustmentDialog
