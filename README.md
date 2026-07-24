@@ -53,6 +53,7 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
 
 ---
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/pakodiazdev/sushigo)
 [![License: Elastic-2.0](https://img.shields.io/badge/license-Elastic--2.0-blue.svg)](LICENSE)
 
 ---
