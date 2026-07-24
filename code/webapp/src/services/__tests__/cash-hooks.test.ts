@@ -119,7 +119,7 @@ function makeWrapper() {
 }
 
 const mockListResponse = { data: { data: [], meta: {} } }
-const mockEntityResponse = { data: { data: { id: 1 } } }
+const mockEntityResponse = { data: { data: { id: '1' } } }
 
 // ── useCashRegisters ───────────────────────────────────────────────────────────
 
@@ -151,14 +151,14 @@ describe('useCashRegister', () => {
 
   it('fetches a single register by id', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashRegister(5), { wrapper })
+    const { result } = renderHook(() => useCashRegister('5'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(cashRegisterApi.get).toHaveBeenCalledWith(5)
+    expect(cashRegisterApi.get).toHaveBeenCalledWith('5')
   })
 
   it('is disabled when id is 0', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashRegister(0), { wrapper })
+    const { result } = renderHook(() => useCashRegister(''), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
   })
 })
@@ -198,7 +198,7 @@ describe('useUpdateCashRegister', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateCashRegister(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ id: 1, data: { name: 'Caja Updated' } })
+      await result.current.mutateAsync({ id: '1', data: { name: 'Caja Updated' } })
     })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
@@ -208,7 +208,7 @@ describe('useUpdateCashRegister', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateCashRegister(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ id: 1, data: { name: 'x' } }) }
+      try { await result.current.mutateAsync({ id: '1', data: { name: 'x' } }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -222,7 +222,7 @@ describe('useDeleteCashRegister', () => {
     vi.mocked(cashRegisterApi.delete).mockResolvedValueOnce(undefined as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteCashRegister(), { wrapper })
-    await act(async () => { await result.current.mutateAsync(1) })
+    await act(async () => { await result.current.mutateAsync('1') })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('eliminada'), expect.any(String))
   })
 
@@ -231,7 +231,7 @@ describe('useDeleteCashRegister', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteCashRegister(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync(1) }
+      try { await result.current.mutateAsync('1') }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -257,14 +257,14 @@ describe('useCashTerminal', () => {
 
   it('fetches a single terminal by id', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashTerminal(3), { wrapper })
+    const { result } = renderHook(() => useCashTerminal('3'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(cashTerminalApi.get).toHaveBeenCalledWith(3)
+    expect(cashTerminalApi.get).toHaveBeenCalledWith('3')
   })
 
   it('is disabled for id=0', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashTerminal(0), { wrapper })
+    const { result } = renderHook(() => useCashTerminal(''), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
   })
 })
@@ -299,7 +299,7 @@ describe('useUpdateCashTerminal', () => {
     vi.mocked(cashTerminalApi.update).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateCashTerminal(), { wrapper })
-    await act(async () => { await result.current.mutateAsync({ id: 1, data: { name: 'T' } }) })
+    await act(async () => { await result.current.mutateAsync({ id: '1', data: { name: 'T' } }) })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -308,7 +308,7 @@ describe('useUpdateCashTerminal', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateCashTerminal(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ id: 1, data: {} }) }
+      try { await result.current.mutateAsync({ id: '1', data: {} }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -322,7 +322,7 @@ describe('useDeleteCashTerminal', () => {
     vi.mocked(cashTerminalApi.delete).mockResolvedValueOnce(undefined as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteCashTerminal(), { wrapper })
-    await act(async () => { await result.current.mutateAsync(2) })
+    await act(async () => { await result.current.mutateAsync('2') })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -331,7 +331,7 @@ describe('useDeleteCashTerminal', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteCashTerminal(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync(2) }
+      try { await result.current.mutateAsync('2') }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -357,13 +357,13 @@ describe('useBankAccount', () => {
 
   it('fetches by id', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useBankAccount(7), { wrapper })
+    const { result } = renderHook(() => useBankAccount('7'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 
   it('is disabled for id=0', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useBankAccount(0), { wrapper })
+    const { result } = renderHook(() => useBankAccount(''), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
   })
 })
@@ -398,7 +398,7 @@ describe('useUpdateBankAccount', () => {
     vi.mocked(bankAccountApi.update).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateBankAccount(), { wrapper })
-    await act(async () => { await result.current.mutateAsync({ id: 1, data: { alias: 'Updated' } }) })
+    await act(async () => { await result.current.mutateAsync({ id: '1', data: { alias: 'Updated' } }) })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -407,7 +407,7 @@ describe('useUpdateBankAccount', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateBankAccount(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ id: 1, data: {} }) }
+      try { await result.current.mutateAsync({ id: '1', data: {} }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -421,7 +421,7 @@ describe('useDeleteBankAccount', () => {
     vi.mocked(bankAccountApi.delete).mockResolvedValueOnce(undefined as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteBankAccount(), { wrapper })
-    await act(async () => { await result.current.mutateAsync(1) })
+    await act(async () => { await result.current.mutateAsync('1') })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -430,7 +430,7 @@ describe('useDeleteBankAccount', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteBankAccount(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync(1) }
+      try { await result.current.mutateAsync('1') }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -456,13 +456,13 @@ describe('useCashSession', () => {
 
   it('fetches a single session', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashSession(10), { wrapper })
+    const { result } = renderHook(() => useCashSession('10'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 
   it('is disabled for id=0', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashSession(0), { wrapper })
+    const { result } = renderHook(() => useCashSession(''), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
   })
 })
@@ -473,14 +473,14 @@ describe('useCashSessionSummary', () => {
 
   it('fetches session summary', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashSessionSummary(10), { wrapper })
+    const { result } = renderHook(() => useCashSessionSummary('10'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(cashSessionApi.getSummary).toHaveBeenCalledWith(10)
+    expect(cashSessionApi.getSummary).toHaveBeenCalledWith('10')
   })
 
   it('is disabled for id=0', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashSessionSummary(0), { wrapper })
+    const { result } = renderHook(() => useCashSessionSummary(''), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
   })
 })
@@ -493,7 +493,7 @@ describe('useCreateCashSession', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashSession(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ cash_register_id: 1, operating_date: '2026-03-31', opening_balance: '1000' })
+      await result.current.mutateAsync({ cash_register_id: '1', operating_date: '2026-03-31', opening_balance: '1000' })
     })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('abierta'), expect.any(String))
   })
@@ -503,7 +503,7 @@ describe('useCreateCashSession', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashSession(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ cash_register_id: 1, operating_date: '2026-03-31', opening_balance: '1000' }) }
+      try { await result.current.mutateAsync({ cash_register_id: '1', operating_date: '2026-03-31', opening_balance: '1000' }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -517,7 +517,7 @@ describe('useUpdateCashSession', () => {
     vi.mocked(cashSessionApi.update).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateCashSession(), { wrapper })
-    await act(async () => { await result.current.mutateAsync({ id: 1, data: { opening_balance: '500' } }) })
+    await act(async () => { await result.current.mutateAsync({ id: '1', data: { opening_balance: '500' } }) })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -526,7 +526,7 @@ describe('useUpdateCashSession', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateCashSession(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ id: 1, data: {} }) }
+      try { await result.current.mutateAsync({ id: '1', data: {} }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -540,7 +540,7 @@ describe('usePostCashSession', () => {
     vi.mocked(cashSessionApi.post).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => usePostCashSession(), { wrapper })
-    await act(async () => { await result.current.mutateAsync(5) })
+    await act(async () => { await result.current.mutateAsync('5') })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('cerrada'), expect.any(String))
   })
 
@@ -549,7 +549,7 @@ describe('usePostCashSession', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => usePostCashSession(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync(5) }
+      try { await result.current.mutateAsync('5') }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -575,13 +575,13 @@ describe('useCashAdjustment', () => {
 
   it('fetches single adjustment', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashAdjustment(3), { wrapper })
+    const { result } = renderHook(() => useCashAdjustment('3'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 
   it('is disabled for id=0', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashAdjustment(0), { wrapper })
+    const { result } = renderHook(() => useCashAdjustment(''), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
   })
 })
@@ -590,23 +590,23 @@ describe('useCreateCashAdjustment', () => {
   afterEach(() => { vi.clearAllMocks() })
 
   it('shows success toast on create', async () => {
-    const mockResponse = { data: { data: { id: 1, cash_session_id: 10 } } }
+    const mockResponse = { data: { data: { id: '1', cash_session: { id: '10' } } } }
     vi.mocked(cashAdjustmentApi.create).mockResolvedValueOnce(mockResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashAdjustment(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ cash_session_id: 10, type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] })
+      await result.current.mutateAsync({ cash_session_id: '10', type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] })
     })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
   it('shows success toast when cash_session_id is null', async () => {
-    const mockResponse = { data: { data: { id: 1, cash_session_id: null } } }
+    const mockResponse = { data: { data: { id: '1', cash_session: null } } }
     vi.mocked(cashAdjustmentApi.create).mockResolvedValueOnce(mockResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashAdjustment(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ cash_session_id: 0, type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] })
+      await result.current.mutateAsync({ cash_session_id: '10', type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] })
     })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
@@ -616,7 +616,7 @@ describe('useCreateCashAdjustment', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashAdjustment(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ cash_session_id: 1, type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] }) }
+      try { await result.current.mutateAsync({ cash_session_id: '1', type: AdjustmentType.CORRECTION, direction: Direction.INFLOW, lines: [] }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -630,7 +630,7 @@ describe('usePostCashAdjustment', () => {
     vi.mocked(cashAdjustmentApi.post).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => usePostCashAdjustment(), { wrapper })
-    await act(async () => { await result.current.mutateAsync(2) })
+    await act(async () => { await result.current.mutateAsync('2') })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('confirmado'), expect.any(String))
   })
 
@@ -639,7 +639,7 @@ describe('usePostCashAdjustment', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => usePostCashAdjustment(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync(2) }
+      try { await result.current.mutateAsync('2') }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -653,7 +653,7 @@ describe('useDeleteCashAdjustment', () => {
     vi.mocked(cashAdjustmentApi.delete).mockResolvedValueOnce(undefined as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteCashAdjustment(), { wrapper })
-    await act(async () => { await result.current.mutateAsync(3) })
+    await act(async () => { await result.current.mutateAsync('3') })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -662,7 +662,7 @@ describe('useDeleteCashAdjustment', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteCashAdjustment(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync(3) }
+      try { await result.current.mutateAsync('3') }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -688,13 +688,13 @@ describe('useCashExpense', () => {
 
   it('fetches single expense', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashExpense(4), { wrapper })
+    const { result } = renderHook(() => useCashExpense('4'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 
   it('is disabled for id=0', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useCashExpense(0), { wrapper })
+    const { result } = renderHook(() => useCashExpense(''), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
   })
 })
@@ -707,7 +707,7 @@ describe('useCreateCashExpense', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashExpense(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ cash_session_id: 1, tender_type: TenderType.CASH, amount: '50', category: 'Supplies', vendor: 'Vendor X', incurred_at: '2026-01-01' })
+      await result.current.mutateAsync({ cash_session_id: '1', tender_type: TenderType.CASH, amount: '50', category: 'Supplies', vendor: 'Vendor X', incurred_at: '2026-01-01' })
     })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('registrado'), expect.any(String))
   })
@@ -717,7 +717,7 @@ describe('useCreateCashExpense', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useCreateCashExpense(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ cash_session_id: 1, tender_type: TenderType.CASH, amount: '50', category: 'Supplies', vendor: 'Vendor X', incurred_at: '2026-01-01' }) }
+      try { await result.current.mutateAsync({ cash_session_id: '1', tender_type: TenderType.CASH, amount: '50', category: 'Supplies', vendor: 'Vendor X', incurred_at: '2026-01-01' }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -731,7 +731,7 @@ describe('useUpdateCashExpense', () => {
     vi.mocked(cashExpenseApi.update).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateCashExpense(), { wrapper })
-    await act(async () => { await result.current.mutateAsync({ id: 1, data: { amount: '60' } }) })
+    await act(async () => { await result.current.mutateAsync({ id: '1', data: { amount: '60' } }) })
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
@@ -740,7 +740,7 @@ describe('useUpdateCashExpense', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useUpdateCashExpense(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync({ id: 1, data: {} }) }
+      try { await result.current.mutateAsync({ id: '1', data: {} }) }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -754,7 +754,7 @@ describe('usePostCashExpense', () => {
     vi.mocked(cashExpenseApi.post).mockResolvedValueOnce(mockEntityResponse as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => usePostCashExpense(), { wrapper })
-    await act(async () => { await result.current.mutateAsync(6) })
+    await act(async () => { await result.current.mutateAsync('6') })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('confirmado'), expect.any(String))
   })
 
@@ -763,7 +763,7 @@ describe('usePostCashExpense', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => usePostCashExpense(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync(6) }
+      try { await result.current.mutateAsync('6') }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()
@@ -777,7 +777,7 @@ describe('useDeleteCashExpense', () => {
     vi.mocked(cashExpenseApi.delete).mockResolvedValueOnce(undefined as never)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteCashExpense(), { wrapper })
-    await act(async () => { await result.current.mutateAsync(7) })
+    await act(async () => { await result.current.mutateAsync('7') })
     expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining('eliminado'), expect.any(String))
   })
 
@@ -786,7 +786,7 @@ describe('useDeleteCashExpense', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(() => useDeleteCashExpense(), { wrapper })
     await act(async () => {
-      try { await result.current.mutateAsync(7) }
+      try { await result.current.mutateAsync('7') }
       catch { /* expected */ }
     })
     expect(mockShowError).toHaveBeenCalled()

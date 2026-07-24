@@ -136,7 +136,7 @@ function StatCard({ stat }: { stat: Stat }) {
     );
 }
 
-function SessionCard({ session, onRegisterAdjustment }: { session: CashSession; onRegisterAdjustment: (id: number) => void }) {
+function SessionCard({ session, onRegisterAdjustment }: { session: CashSession; onRegisterAdjustment: (id: string) => void }) {
     // Usar el current_balance que viene directamente de la sesión (calculado en el backend)
     const currentBalance = session.current_balance || session.opening_balance || '0.00';
 
@@ -145,7 +145,7 @@ function SessionCard({ session, onRegisterAdjustment }: { session: CashSession; 
             <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold">
-                        {session.cash_register?.name || `Caja #${session.cash_register_id}`}
+                        {session.cash_register?.name || 'Caja sin identificar'}
                     </h3>
                     <SessionStatusBadge status={session.status} />
                 </div>
@@ -200,7 +200,7 @@ export default function Dashboard() {
     const { currentBranch } = useAuthStore();
     const [isOpenSessionDialogOpen, setIsOpenSessionDialogOpen] = useState(false);
     const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
-    const [selectedSessionId, setSelectedSessionId] = useState<number | undefined>(undefined);
+    const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(undefined);
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['dashboard'],
@@ -216,12 +216,12 @@ export default function Dashboard() {
         setIsOpenSessionDialogOpen(true);
     };
 
-    const handleSessionSuccess = (sessionId: number) => {
+    const handleSessionSuccess = (sessionId: string) => {
         console.log('Sesión creada:', sessionId);
         alert('¡Sesión de caja abierta exitosamente!');
     };
 
-    const handleCreateAdjustment = (sessionId?: number) => {
+    const handleCreateAdjustment = (sessionId?: string) => {
         setSelectedSessionId(sessionId);
         setIsAdjustmentDialogOpen(true);
     };

@@ -69,7 +69,7 @@ describe('cashRegisterApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1 } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const result = await cashRegisterApi.get(1)
+            const result = await cashRegisterApi.get('1')
 
             expect(apiClient.get).toHaveBeenCalledWith('/cash-registers/1')
             expect(result).toEqual(mockResponse)
@@ -95,7 +95,7 @@ describe('cashRegisterApi', () => {
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data = { name: 'Caja Principal' }
-            const result = await cashRegisterApi.update(1, data)
+            const result = await cashRegisterApi.update('1', data)
 
             expect(apiClient.put).toHaveBeenCalledWith('/cash-registers/1', data)
             expect(result).toEqual(mockResponse)
@@ -107,7 +107,7 @@ describe('cashRegisterApi', () => {
             const mockResponse = { data: { status: 200, message: 'Deleted' } }
             vi.mocked(apiClient.delete).mockResolvedValue(mockResponse)
 
-            const result = await cashRegisterApi.delete(1)
+            const result = await cashRegisterApi.delete('1')
 
             expect(apiClient.delete).toHaveBeenCalledWith('/cash-registers/1')
             expect(result).toEqual(mockResponse)
@@ -139,7 +139,7 @@ describe('cashTerminalApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1 } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const result = await cashTerminalApi.get(1)
+            const result = await cashTerminalApi.get('1')
 
             expect(apiClient.get).toHaveBeenCalledWith('/cash-terminals/1')
             expect(result).toEqual(mockResponse)
@@ -172,7 +172,7 @@ describe('cashTerminalApi', () => {
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data = { name: 'Terminal Actualizada' }
-            const result = await cashTerminalApi.update(1, data)
+            const result = await cashTerminalApi.update('1', data)
 
             expect(apiClient.put).toHaveBeenCalledWith('/cash-terminals/1', data)
             expect(result).toEqual(mockResponse)
@@ -184,7 +184,7 @@ describe('cashTerminalApi', () => {
             const mockResponse = { data: { status: 200, message: 'Deleted' } }
             vi.mocked(apiClient.delete).mockResolvedValue(mockResponse)
 
-            const result = await cashTerminalApi.delete(1)
+            const result = await cashTerminalApi.delete('1')
 
             expect(apiClient.delete).toHaveBeenCalledWith('/cash-terminals/1')
             expect(result).toEqual(mockResponse)
@@ -216,7 +216,7 @@ describe('bankAccountApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1 } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const result = await bankAccountApi.get(1)
+            const result = await bankAccountApi.get('1')
 
             expect(apiClient.get).toHaveBeenCalledWith('/bank-accounts/1')
             expect(result).toEqual(mockResponse)
@@ -249,7 +249,7 @@ describe('bankAccountApi', () => {
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data = { bank_name: 'Santander' }
-            const result = await bankAccountApi.update(1, data)
+            const result = await bankAccountApi.update('1', data)
 
             expect(apiClient.put).toHaveBeenCalledWith('/bank-accounts/1', data)
             expect(result).toEqual(mockResponse)
@@ -261,7 +261,7 @@ describe('bankAccountApi', () => {
             const mockResponse = { data: { status: 200, message: 'Deleted' } }
             vi.mocked(apiClient.delete).mockResolvedValue(mockResponse)
 
-            const result = await bankAccountApi.delete(1)
+            const result = await bankAccountApi.delete('1')
 
             expect(apiClient.delete).toHaveBeenCalledWith('/bank-accounts/1')
             expect(result).toEqual(mockResponse)
@@ -304,7 +304,7 @@ describe('cashSessionApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1 } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const result = await cashSessionApi.get(1)
+            const result = await cashSessionApi.get('1')
 
             expect(apiClient.get).toHaveBeenCalledWith('/cash-sessions/1')
             expect(result).toEqual(mockResponse)
@@ -316,7 +316,7 @@ describe('cashSessionApi', () => {
             const mockResponse = { data: { status: 201, data: { id: 1 } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
-            const data = { cash_register_id: 1, operating_date: '2026-04-18' } as CashSessionFormData
+            const data = { cash_register_id: '1', operating_date: '2026-04-18' } as CashSessionFormData
             const result = await cashSessionApi.create(data)
 
             expect(apiClient.post).toHaveBeenCalledWith('/cash-sessions', data)
@@ -330,7 +330,7 @@ describe('cashSessionApi', () => {
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data: Partial<CashSessionFormData> = { operating_date: '2026-04-19' }
-            const result = await cashSessionApi.update(1, data)
+            const result = await cashSessionApi.update('1', data)
 
             expect(apiClient.put).toHaveBeenCalledWith('/cash-sessions/1', data)
             expect(result).toEqual(mockResponse)
@@ -342,7 +342,7 @@ describe('cashSessionApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1, status: 'POSTED' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
-            const result = await cashSessionApi.post(1)
+            const result = await cashSessionApi.post('1')
 
             expect(apiClient.post).toHaveBeenCalledWith('/cash-sessions/1/post')
             expect(result).toEqual(mockResponse)
@@ -359,7 +359,7 @@ describe('cashSessionApi', () => {
             }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const result = await cashSessionApi.getSummary(1)
+            const result = await cashSessionApi.getSummary('1')
 
             expect(apiClient.get).toHaveBeenCalledWith('/cash-sessions/1/summary')
             expect(result).toEqual(mockResponse)
@@ -391,7 +391,7 @@ describe('cashAdjustmentApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1 } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const result = await cashAdjustmentApi.get(1)
+            const result = await cashAdjustmentApi.get('1')
 
             expect(apiClient.get).toHaveBeenCalledWith('/cash-adjustments/1')
             expect(result).toEqual(mockResponse)
@@ -404,7 +404,7 @@ describe('cashAdjustmentApi', () => {
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data: CashAdjustmentFormData = {
-                cash_session_id: 1,
+                cash_session_id: '1',
                 type: 'CORRECTION' as AdjustmentType,
                 direction: 'INFLOW' as Direction,
                 notes: 'Corrección de caja',
@@ -422,7 +422,7 @@ describe('cashAdjustmentApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1, status: 'POSTED' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
-            const result = await cashAdjustmentApi.post(1)
+            const result = await cashAdjustmentApi.post('1')
 
             expect(apiClient.post).toHaveBeenCalledWith('/cash-adjustments/1/post')
             expect(result).toEqual(mockResponse)
@@ -434,7 +434,7 @@ describe('cashAdjustmentApi', () => {
             const mockResponse = { data: { status: 200, message: 'Deleted' } }
             vi.mocked(apiClient.delete).mockResolvedValue(mockResponse)
 
-            const result = await cashAdjustmentApi.delete(1)
+            const result = await cashAdjustmentApi.delete('1')
 
             expect(apiClient.delete).toHaveBeenCalledWith('/cash-adjustments/1')
             expect(result).toEqual(mockResponse)
@@ -466,7 +466,7 @@ describe('cashExpenseApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1 } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const result = await cashExpenseApi.get(1)
+            const result = await cashExpenseApi.get('1')
 
             expect(apiClient.get).toHaveBeenCalledWith('/cash-expenses/1')
             expect(result).toEqual(mockResponse)
@@ -479,7 +479,7 @@ describe('cashExpenseApi', () => {
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data: CashExpenseFormData = {
-                cash_session_id: 1,
+                cash_session_id: '1',
                 tender_type: 'CASH' as TenderType,
                 amount: '250.00',
                 category: 'SUPPLIES',
@@ -499,7 +499,7 @@ describe('cashExpenseApi', () => {
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data: Partial<CashExpenseFormData> = { category: 'CLEANING' }
-            const result = await cashExpenseApi.update(1, data)
+            const result = await cashExpenseApi.update('1', data)
 
             expect(apiClient.put).toHaveBeenCalledWith('/cash-expenses/1', data)
             expect(result).toEqual(mockResponse)
@@ -511,7 +511,7 @@ describe('cashExpenseApi', () => {
             const mockResponse = { data: { status: 200, data: { id: 1, status: 'POSTED' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
-            const result = await cashExpenseApi.post(1)
+            const result = await cashExpenseApi.post('1')
 
             expect(apiClient.post).toHaveBeenCalledWith('/cash-expenses/1/post')
             expect(result).toEqual(mockResponse)
@@ -523,7 +523,7 @@ describe('cashExpenseApi', () => {
             const mockResponse = { data: { status: 200, message: 'Deleted' } }
             vi.mocked(apiClient.delete).mockResolvedValue(mockResponse)
 
-            const result = await cashExpenseApi.delete(1)
+            const result = await cashExpenseApi.delete('1')
 
             expect(apiClient.delete).toHaveBeenCalledWith('/cash-expenses/1')
             expect(result).toEqual(mockResponse)

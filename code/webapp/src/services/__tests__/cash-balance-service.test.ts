@@ -23,8 +23,7 @@ afterEach(() => {
 
 function createSession(overrides: Partial<CashSession> = {}): CashSession {
     return {
-        id: 1,
-        cash_register_id: 1,
+        id: '1',
         operating_date: '2026-03-31',
         opening_balance: '1000.00',
         closing_balance: null,

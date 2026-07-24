@@ -21,7 +21,7 @@ const mockCashRegistersData = {
     data: {
         data: [
             {
-                id: 1,
+                id: '1',
                 branch_id: 1,
                 operating_unit_id: 1,
                 code: 'CR001',
@@ -34,7 +34,7 @@ const mockCashRegistersData = {
                 updated_at: '2025-01-15T00:00:00+00:00',
             },
             {
-                id: 2,
+                id: '2',
                 branch_id: 1,
                 operating_unit_id: 1,
                 code: 'CR002',
@@ -151,7 +151,7 @@ describe('CashRegisterList', () => {
             data: {
                 data: [
                     {
-                        id: 3,
+                        id: '3',
                         branch_id: 1,
                         operating_unit_id: null,
                         code: 'CR003',

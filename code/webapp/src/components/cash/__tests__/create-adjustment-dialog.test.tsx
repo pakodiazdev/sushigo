@@ -11,7 +11,7 @@ vi.mock('@/services/cash-hooks', () => ({
     useCashSessions: vi.fn().mockReturnValue({
         data: {
             data: [
-                { id: 1, operating_date: '2025-01-15', cash_register: { name: 'Caja 1' } },
+                { id: '1', operating_date: '2025-01-15', cash_register: { name: 'Caja 1' } },
             ],
         },
         isLoading: false,
@@ -19,14 +19,14 @@ vi.mock('@/services/cash-hooks', () => ({
     useCashTerminals: vi.fn().mockReturnValue({
         data: {
             data: [
-                { id: 1, name: 'Terminal 1', is_active: true },
+                { id: '1', name: 'Terminal 1', is_active: true },
             ],
         },
     }),
     useBankAccounts: vi.fn().mockReturnValue({
         data: {
             data: [
-                { id: 1, name: 'Cuenta Principal', is_active: true },
+                { id: '1', name: 'Cuenta Principal', is_active: true },
             ],
         },
     }),
@@ -184,7 +184,7 @@ describe('CreateAdjustmentDialog', () => {
                 isOpen={true}
                 onClose={mockOnClose}
                 onSuccess={mockOnSuccess}
-                cashSessionId={1}
+                cashSessionId={'1'}
             />,
             { wrapper: createWrapper() },
         )
@@ -220,7 +220,7 @@ describe('CreateAdjustmentDialog', () => {
                 isOpen={true}
                 onClose={mockOnClose}
                 onSuccess={mockOnSuccess}
-                cashSessionId={1}
+                cashSessionId={'1'}
             />,
             { wrapper: createWrapper() },
         )
