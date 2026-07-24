@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\CashAdjustments\CashRegisters;
 
+use App\Http\Controllers\Concerns\ScopesToUserBranches;
 use App\Http\Controllers\Controller;
 use App\Models\CashRegister;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
@@ -28,9 +30,14 @@ use Illuminate\Http\Request;
  */
 class ListCashRegistersController extends Controller
 {
+    use ScopesToUserBranches;
+
     public function __invoke(Request $request): JsonResponse
     {
-        $query = CashRegister::with(['branch', 'operatingUnit']);
+        Gate::authorize('viewAny', CashRegister::class);
+
+        $query = CashRegister::with(['branch', 'operatingUnit'])
+            ->whereIn('branch_id', $this->userBranchIds($request));
 
         // Filter by branch
         if ($request->has('branch_id')) {
