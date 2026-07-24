@@ -42,14 +42,15 @@ Como desarrollador, dando seguimiento a #291, necesito que los 6 tipos de recurs
 ### 📊 Estimates
 - **Optimistic:** `2h`
 - **Pessimistic:** `4h` (6 models × migration/trait/routes/controllers/requests/tests, plus discovering the List-controller-has-no-auth-at-all finding mid-audit)
-- **Tracked:** `5.6h` (backend only, PR #294 merged; frontend pass not yet started)
+- **Tracked:** `7.9h` (5.6h backend, PR #294 merged; +2h17m frontend + review pass, PR #299)
 
 ### 📅 Sessions
 ```json
 [
   { "date": "2026-07-23", "start": "22:00", "end": "24:00" },
   { "date": "2026-07-24", "start": "00:00", "end": "00:31" },
-  { "date": "2026-07-24", "start": "07:30", "end": "10:35" }
+  { "date": "2026-07-24", "start": "07:30", "end": "10:35" },
+  { "date": "2026-07-24", "start": "14:26", "end": "16:43" }
 ]
 ```
 
