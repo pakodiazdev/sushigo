@@ -34,16 +34,16 @@ export const cashRegisterApi = {
   list: (params?: CashRegisterFilters) =>
     api.get<PaginatedResponse<CashRegister>>('/cash-registers', { params }),
 
-  get: (id: number) =>
+  get: (id: string) =>
     api.get<EntityResponse<CashRegister>>(`/cash-registers/${id}`),
 
   create: (data: CashRegisterFormData) =>
     api.post<EntityResponse<CashRegister>>('/cash-registers', data),
 
-  update: (id: number, data: Partial<CashRegisterFormData>) =>
+  update: (id: string, data: Partial<CashRegisterFormData>) =>
     api.put<EntityResponse<CashRegister>>(`/cash-registers/${id}`, data),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     api.delete<MessageResponse>(`/cash-registers/${id}`),
 }
 
@@ -55,16 +55,16 @@ export const cashTerminalApi = {
   list: (params?: CashTerminalFilters) =>
     api.get<PaginatedResponse<CashTerminal>>('/cash-terminals', { params }),
 
-  get: (id: number) =>
+  get: (id: string) =>
     api.get<EntityResponse<CashTerminal>>(`/cash-terminals/${id}`),
 
   create: (data: CashTerminalFormData) =>
     api.post<EntityResponse<CashTerminal>>('/cash-terminals', data),
 
-  update: (id: number, data: Partial<CashTerminalFormData>) =>
+  update: (id: string, data: Partial<CashTerminalFormData>) =>
     api.put<EntityResponse<CashTerminal>>(`/cash-terminals/${id}`, data),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     api.delete<MessageResponse>(`/cash-terminals/${id}`),
 }
 
@@ -76,16 +76,16 @@ export const bankAccountApi = {
   list: (params?: BankAccountFilters) =>
     api.get<PaginatedResponse<BankAccount>>('/bank-accounts', { params }),
 
-  get: (id: number) =>
+  get: (id: string) =>
     api.get<EntityResponse<BankAccount>>(`/bank-accounts/${id}`),
 
   create: (data: BankAccountFormData) =>
     api.post<EntityResponse<BankAccount>>('/bank-accounts', data),
 
-  update: (id: number, data: Partial<BankAccountFormData>) =>
+  update: (id: string, data: Partial<BankAccountFormData>) =>
     api.put<EntityResponse<BankAccount>>(`/bank-accounts/${id}`, data),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     api.delete<MessageResponse>(`/bank-accounts/${id}`),
 }
 
@@ -97,19 +97,19 @@ export const cashSessionApi = {
   list: (params?: CashSessionFilters) =>
     api.get<PaginatedResponse<CashSession>>('/cash-sessions', { params }),
 
-  get: (id: number) =>
+  get: (id: string) =>
     api.get<EntityResponse<CashSession>>(`/cash-sessions/${id}`),
 
   create: (data: CashSessionFormData) =>
     api.post<EntityResponse<CashSession>>('/cash-sessions', data),
 
-  update: (id: number, data: Partial<CashSessionFormData>) =>
+  update: (id: string, data: Partial<CashSessionFormData>) =>
     api.put<EntityResponse<CashSession>>(`/cash-sessions/${id}`, data),
 
-  post: (id: number) =>
+  post: (id: string) =>
     api.post<EntityResponse<CashSession>>(`/cash-sessions/${id}/post`),
 
-  getSummary: (id: number) =>
+  getSummary: (id: string) =>
     api.get<EntityResponse<SessionSummary>>(`/cash-sessions/${id}/summary`),
 }
 
@@ -121,16 +121,16 @@ export const cashAdjustmentApi = {
   list: (params?: CashAdjustmentFilters) =>
     api.get<PaginatedResponse<CashAdjustment>>('/cash-adjustments', { params }),
 
-  get: (id: number) =>
+  get: (id: string) =>
     api.get<EntityResponse<CashAdjustment>>(`/cash-adjustments/${id}`),
 
   create: (data: CashAdjustmentFormData) =>
     api.post<EntityResponse<CashAdjustment>>('/cash-adjustments', data),
 
-  post: (id: number) =>
+  post: (id: string) =>
     api.post<EntityResponse<CashAdjustment>>(`/cash-adjustments/${id}/post`),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     api.delete<MessageResponse>(`/cash-adjustments/${id}`),
 }
 
@@ -142,18 +142,18 @@ export const cashExpenseApi = {
   list: (params?: CashExpenseFilters) =>
     api.get<PaginatedResponse<CashExpense>>('/cash-expenses', { params }),
 
-  get: (id: number) =>
+  get: (id: string) =>
     api.get<EntityResponse<CashExpense>>(`/cash-expenses/${id}`),
 
   create: (data: CashExpenseFormData) =>
     api.post<EntityResponse<CashExpense>>('/cash-expenses', data),
 
-  update: (id: number, data: Partial<CashExpenseFormData>) =>
+  update: (id: string, data: Partial<CashExpenseFormData>) =>
     api.put<EntityResponse<CashExpense>>(`/cash-expenses/${id}`, data),
 
-  post: (id: number) =>
+  post: (id: string) =>
     api.post<EntityResponse<CashExpense>>(`/cash-expenses/${id}/post`),
 
-  delete: (id: number) =>
+  delete: (id: string) =>
     api.delete<MessageResponse>(`/cash-expenses/${id}`),
 }

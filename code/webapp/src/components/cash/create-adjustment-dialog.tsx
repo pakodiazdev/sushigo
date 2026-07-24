@@ -23,7 +23,7 @@ interface CreateAdjustmentDialogProps {
   isOpen: boolean
   onClose: () => void
   onSuccess?: () => void
-  cashSessionId?: number
+  cashSessionId?: string
 }
 
 export function CreateAdjustmentDialog({
@@ -33,7 +33,7 @@ export function CreateAdjustmentDialog({
   cashSessionId: preselectedSessionId,
 }: CreateAdjustmentDialogProps) {
   // Form state
-  const [cashSessionId, setCashSessionId] = useState<string>(preselectedSessionId?.toString() || '')
+  const [cashSessionId, setCashSessionId] = useState<string>(preselectedSessionId || '')
   const [type, setType] = useState<AdjustmentType>(AdjustmentType.EXTERNAL_IMPORT)
   const [direction, setDirection] = useState<Direction>(Direction.INFLOW)
   const [sourceSystem, setSourceSystem] = useState<string>('')
@@ -55,14 +55,14 @@ export function CreateAdjustmentDialog({
   // Set preselected session when dialog opens
   useEffect(() => {
     if (isOpen && preselectedSessionId) {
-      setCashSessionId(preselectedSessionId.toString())
+      setCashSessionId(preselectedSessionId)
     }
   }, [isOpen, preselectedSessionId])
 
   // Reset form when dialog closes
   useEffect(() => {
     if (!isOpen) {
-      setCashSessionId(preselectedSessionId?.toString() || '')
+      setCashSessionId(preselectedSessionId || '')
       setType(AdjustmentType.EXTERNAL_IMPORT)
       setDirection(Direction.INFLOW)
       setSourceSystem('')
@@ -118,7 +118,7 @@ export function CreateAdjustmentDialog({
 
     try {
       await createAdjustment.mutateAsync({
-        cash_session_id: parseInt(cashSessionId),
+        cash_session_id: cashSessionId,
         type,
         direction,
         source_system: sourceSystem || undefined,
@@ -157,7 +157,7 @@ export function CreateAdjustmentDialog({
             >
               <option value="">Selecciona una sesión abierta...</option>
               {sessions.map((session) => (
-                <option key={session.id} value={session.id.toString()}>
+                <option key={session.id} value={session.id}>
                   {session.cash_register?.name} - {session.operating_date}
                 </option>
               ))}
@@ -285,14 +285,14 @@ export function CreateAdjustmentDialog({
                   {line.tender_type === TenderType.CARD && (
                     <FormField label="Terminal de Pago" required>
                       <Select
-                        value={line.card_terminal_id?.toString() || ''}
+                        value={line.card_terminal_id || ''}
                         onChange={(e) =>
-                          handleLineChange(index, 'card_terminal_id', parseInt(e.target.value))
+                          handleLineChange(index, 'card_terminal_id', e.target.value || null)
                         }
                       >
                         <option value="">Selecciona una terminal...</option>
                         {terminals.map((terminal) => (
-                          <option key={terminal.id} value={terminal.id.toString()}>
+                          <option key={terminal.id} value={terminal.id}>
                             {terminal.name} ({terminal.provider})
                           </option>
                         ))}
@@ -304,14 +304,14 @@ export function CreateAdjustmentDialog({
                   {line.tender_type === TenderType.TRANSFER && (
                     <FormField label="Cuenta Bancaria" required>
                       <Select
-                        value={line.bank_account_id?.toString() || ''}
+                        value={line.bank_account_id || ''}
                         onChange={(e) =>
-                          handleLineChange(index, 'bank_account_id', parseInt(e.target.value))
+                          handleLineChange(index, 'bank_account_id', e.target.value || null)
                         }
                       >
                         <option value="">Selecciona una cuenta...</option>
                         {accounts.map((account) => (
-                          <option key={account.id} value={account.id.toString()}>
+                          <option key={account.id} value={account.id}>
                             {account.alias} - {account.bank_name}
                           </option>
                         ))}

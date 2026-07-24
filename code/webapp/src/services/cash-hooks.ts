@@ -38,7 +38,7 @@ export function useCashRegisters(filters?: CashRegisterFilters) {
   })
 }
 
-export function useCashRegister(id: number) {
+export function useCashRegister(id: string) {
   return useQuery({
     queryKey: ['cash-registers', id],
     queryFn: async () => {
@@ -70,7 +70,7 @@ export function useUpdateCashRegister() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<CashRegisterFormData> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<CashRegisterFormData> }) =>
       cashRegisterApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] })
@@ -88,7 +88,7 @@ export function useDeleteCashRegister() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => cashRegisterApi.delete(id),
+    mutationFn: (id: string) => cashRegisterApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-registers'] })
       showSuccess('La caja registradora ha sido eliminada exitosamente.', 'Caja eliminada')
@@ -113,7 +113,7 @@ export function useCashTerminals(filters?: CashTerminalFilters) {
   })
 }
 
-export function useCashTerminal(id: number) {
+export function useCashTerminal(id: string) {
   return useQuery({
     queryKey: ['cash-terminals', id],
     queryFn: async () => {
@@ -145,7 +145,7 @@ export function useUpdateCashTerminal() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<CashTerminalFormData> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<CashTerminalFormData> }) =>
       cashTerminalApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['cash-terminals'] })
@@ -163,7 +163,7 @@ export function useDeleteCashTerminal() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => cashTerminalApi.delete(id),
+    mutationFn: (id: string) => cashTerminalApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-terminals'] })
       showSuccess('La terminal de pago ha sido eliminada exitosamente.', 'Terminal eliminada')
@@ -188,7 +188,7 @@ export function useBankAccounts(filters?: BankAccountFilters) {
   })
 }
 
-export function useBankAccount(id: number) {
+export function useBankAccount(id: string) {
   return useQuery({
     queryKey: ['bank-accounts', id],
     queryFn: async () => {
@@ -220,7 +220,7 @@ export function useUpdateBankAccount() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<BankAccountFormData> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<BankAccountFormData> }) =>
       bankAccountApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
@@ -238,7 +238,7 @@ export function useDeleteBankAccount() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => bankAccountApi.delete(id),
+    mutationFn: (id: string) => bankAccountApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
       showSuccess('La cuenta bancaria ha sido eliminada exitosamente.', 'Cuenta eliminada')
@@ -263,7 +263,7 @@ export function useCashSessions(filters?: CashSessionFilters) {
   })
 }
 
-export function useCashSession(id: number) {
+export function useCashSession(id: string) {
   return useQuery({
     queryKey: ['cash-sessions', id],
     queryFn: async () => {
@@ -274,7 +274,7 @@ export function useCashSession(id: number) {
   })
 }
 
-export function useCashSessionSummary(id: number) {
+export function useCashSessionSummary(id: string) {
   return useQuery({
     queryKey: ['cash-sessions', id, 'summary'],
     queryFn: async () => {
@@ -306,7 +306,7 @@ export function useUpdateCashSession() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<CashSessionFormData> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<CashSessionFormData> }) =>
       cashSessionApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
@@ -324,7 +324,7 @@ export function usePostCashSession() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => cashSessionApi.post(id),
+    mutationFn: (id: string) => cashSessionApi.post(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
       queryClient.invalidateQueries({ queryKey: ['cash-sessions', id] })
@@ -350,7 +350,7 @@ export function useCashAdjustments(filters?: CashAdjustmentFilters) {
   })
 }
 
-export function useCashAdjustment(id: number) {
+export function useCashAdjustment(id: string) {
   return useQuery({
     queryKey: ['cash-adjustments', id],
     queryFn: async () => {
@@ -372,7 +372,7 @@ export function useCreateCashAdjustment() {
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
 
       // Invalidar el summary de la sesión específica para que se recalcule el saldo
-      const sessionId = response.data.data.cash_session_id
+      const sessionId = response.data.data.cash_session?.id
       if (sessionId) {
         queryClient.invalidateQueries({ queryKey: ['cash-sessions', sessionId, 'summary'] })
       }
@@ -390,7 +390,7 @@ export function usePostCashAdjustment() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => cashAdjustmentApi.post(id),
+    mutationFn: (id: string) => cashAdjustmentApi.post(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['cash-adjustments'] })
       queryClient.invalidateQueries({ queryKey: ['cash-adjustments', id] })
@@ -408,7 +408,7 @@ export function useDeleteCashAdjustment() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => cashAdjustmentApi.delete(id),
+    mutationFn: (id: string) => cashAdjustmentApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-adjustments'] })
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })
@@ -439,7 +439,7 @@ export function useCashExpenses(filters?: CashExpenseFilters) {
   })
 }
 
-export function useCashExpense(id: number) {
+export function useCashExpense(id: string) {
   return useQuery({
     queryKey: ['cash-expenses', id],
     queryFn: async () => {
@@ -472,7 +472,7 @@ export function useUpdateCashExpense() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<CashExpenseFormData> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<CashExpenseFormData> }) =>
       cashExpenseApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['cash-expenses'] })
@@ -491,7 +491,7 @@ export function usePostCashExpense() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => cashExpenseApi.post(id),
+    mutationFn: (id: string) => cashExpenseApi.post(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['cash-expenses'] })
       queryClient.invalidateQueries({ queryKey: ['cash-expenses', id] })
@@ -509,7 +509,7 @@ export function useDeleteCashExpense() {
   const { showSuccess, showError } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => cashExpenseApi.delete(id),
+    mutationFn: (id: string) => cashExpenseApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cash-expenses'] })
       queryClient.invalidateQueries({ queryKey: ['cash-sessions'] })

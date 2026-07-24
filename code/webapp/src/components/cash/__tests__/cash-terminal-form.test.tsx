@@ -77,7 +77,7 @@ describe('CashTerminalForm', () => {
 
         it('renders edit terminal title when editing', () => {
             const terminal = {
-                id: 1,
+                id: '1',
                 branch_id: 1,
                 name: 'Terminal 1',
                 provider: 'CLIP',
@@ -174,12 +174,12 @@ describe('CashTerminalForm', () => {
     describe('reset on prop change', () => {
         it('updates form values when terminal prop changes', async () => {
             const terminal1 = {
-                id: 1, branch_id: 1, name: 'Terminal A', provider: 'CLIP',
+                id: '1', branch_id: 1, name: 'Terminal A', provider: 'CLIP',
                 account_ref: 'REF-A', last_four: '1111', is_active: true,
                 meta: {}, created_at: '', updated_at: '',
             }
             const terminal2 = {
-                id: 2, branch_id: 2, name: 'Terminal B', provider: 'STRIPE',
+                id: '2', branch_id: 2, name: 'Terminal B', provider: 'STRIPE',
                 account_ref: 'REF-B', last_four: '2222', is_active: false,
                 meta: {}, created_at: '', updated_at: '',
             }
@@ -197,7 +197,7 @@ describe('CashTerminalForm', () => {
 
         it('resets to empty values when terminal becomes null', async () => {
             const terminal = {
-                id: 1, branch_id: 1, name: 'Terminal A', provider: 'CLIP',
+                id: '1', branch_id: 1, name: 'Terminal A', provider: 'CLIP',
                 account_ref: 'REF-A', last_four: '1111', is_active: true,
                 meta: {}, created_at: '', updated_at: '',
             }
@@ -216,7 +216,7 @@ describe('CashTerminalForm', () => {
     describe('edit mode', () => {
         it('calls updateMutation when submitting in edit mode', async () => {
             const terminal = {
-                id: 1, branch_id: 1, name: 'Terminal A', provider: 'CLIP',
+                id: '1', branch_id: 1, name: 'Terminal A', provider: 'CLIP',
                 account_ref: 'REF-001', last_four: '1234', is_active: true,
                 meta: {}, created_at: '', updated_at: '',
             }
@@ -231,7 +231,7 @@ describe('CashTerminalForm', () => {
 
             await waitFor(() => {
                 expect(mockUpdateMutation.mutateAsync).toHaveBeenCalledWith({
-                    id: 1,
+                    id: '1',
                     data: expect.objectContaining({ name: 'Terminal A' }),
                 })
             })

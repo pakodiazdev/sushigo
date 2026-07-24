@@ -36,7 +36,7 @@ export enum TenderType {
 // ============================================================================
 
 export interface CashRegister {
-  id: number
+  id: string
   branch_id: number
   operating_unit_id: number | null
   code: string
@@ -53,7 +53,7 @@ export interface CashRegister {
 }
 
 export interface CashTerminal {
-  id: number
+  id: string
   branch_id: number
   name: string
   provider: string
@@ -68,7 +68,7 @@ export interface CashTerminal {
 }
 
 export interface BankAccount {
-  id: number
+  id: string
   branch_id: number
   alias: string
   bank_name: string
@@ -83,8 +83,9 @@ export interface BankAccount {
 }
 
 export interface CashSession {
-  id: number
-  cash_register_id: number
+  id: string
+  // cash_register_id is hidden by the backend (App\Models\CashSession::$hidden)
+  // since it's the internal numeric FK — use the cash_register relation's id instead.
   operating_date: string
   opening_balance: string
   closing_balance: string | null
@@ -106,8 +107,9 @@ export interface CashSession {
 }
 
 export interface CashAdjustment {
-  id: number
-  cash_session_id: number
+  id: string
+  // cash_session_id is hidden by the backend (App\Models\CashAdjustment::$hidden)
+  // — use the cash_session relation's id instead.
   source_system: string | null
   type: AdjustmentType
   direction: Direction
@@ -125,12 +127,12 @@ export interface CashAdjustment {
 
 export interface CashAdjustmentLine {
   id: number
-  cash_adjustment_id: number
+  // cash_adjustment_id/card_terminal_id/bank_account_id are hidden by the
+  // backend (App\Models\CashAdjustmentLine::$hidden) — use the
+  // card_terminal/bank_account relations' ids instead.
   tender_type: TenderType
   amount: string
   currency: string
-  card_terminal_id: number | null
-  bank_account_id: number | null
   reference: string | null
   meta: Record<string, unknown> | null
   created_at: string
@@ -142,16 +144,16 @@ export interface CashAdjustmentLine {
 }
 
 export interface CashExpense {
-  id: number
-  cash_session_id: number
+  id: string
+  // cash_session_id/card_terminal_id/bank_account_id are hidden by the
+  // backend (App\Models\CashExpense::$hidden) — use the cash_session/
+  // card_terminal/bank_account relations' ids instead.
   tender_type: TenderType
   amount: string
   category: string
   vendor: string
   reference: string | null
   notes: string | null
-  card_terminal_id: number | null
-  bank_account_id: number | null
   incurred_at: string
   created_by: number
   posted_by: number | null
@@ -274,14 +276,14 @@ export interface BankAccountFormData {
 }
 
 export interface CashSessionFormData {
-  cash_register_id: number
+  cash_register_id: string
   operating_date: string
   opening_balance?: string
   meta?: Record<string, unknown>
 }
 
 export interface CashAdjustmentFormData {
-  cash_session_id: number
+  cash_session_id: string
   source_system?: string
   type: AdjustmentType
   direction: Direction
@@ -294,22 +296,22 @@ export interface CashAdjustmentLineFormData {
   tender_type: TenderType
   amount: string
   currency?: string
-  card_terminal_id?: number | null
-  bank_account_id?: number | null
+  card_terminal_id?: string | null
+  bank_account_id?: string | null
   reference?: string
   meta?: Record<string, unknown>
 }
 
 export interface CashExpenseFormData {
-  cash_session_id: number
+  cash_session_id: string
   tender_type: TenderType
   amount: string
   category: string
   vendor: string
   reference?: string
   notes?: string
-  card_terminal_id?: number | null
-  bank_account_id?: number | null
+  card_terminal_id?: string | null
+  bank_account_id?: string | null
   incurred_at: string
   meta?: Record<string, unknown>
 }
@@ -345,7 +347,7 @@ export interface BankAccountFilters {
 }
 
 export interface CashSessionFilters {
-  cash_register_id?: number
+  cash_register_id?: string
   operating_date?: string
   status?: SessionStatus
   date_from?: string
@@ -355,7 +357,7 @@ export interface CashSessionFilters {
 }
 
 export interface CashAdjustmentFilters {
-  cash_session_id?: number
+  cash_session_id?: string
   type?: AdjustmentType
   direction?: Direction
   posted?: boolean
@@ -364,7 +366,7 @@ export interface CashAdjustmentFilters {
 }
 
 export interface CashExpenseFilters {
-  cash_session_id?: number
+  cash_session_id?: string
   category?: string
   tender_type?: TenderType
   incurred_from?: string

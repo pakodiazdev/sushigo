@@ -77,7 +77,7 @@ describe('BankAccountForm', () => {
 
         it('renders edit account title when editing', () => {
             const account = {
-                id: 1,
+                id: '1',
                 branch_id: 1,
                 alias: 'Test Account',
                 bank_name: 'BBVA',
@@ -207,12 +207,12 @@ describe('BankAccountForm', () => {
     describe('reset on prop change', () => {
         it('updates form values when account prop changes', async () => {
             const account1 = {
-                id: 1, branch_id: 1, alias: 'First Account', bank_name: 'BBVA',
+                id: '1', branch_id: 1, alias: 'First Account', bank_name: 'BBVA',
                 account_number_masked: '1111', clabe_masked: '', is_active: true,
                 meta: {}, created_at: '', updated_at: '',
             }
             const account2 = {
-                id: 2, branch_id: 2, alias: 'Second Account', bank_name: 'SANTANDER',
+                id: '2', branch_id: 2, alias: 'Second Account', bank_name: 'SANTANDER',
                 account_number_masked: '2222', clabe_masked: '', is_active: false,
                 meta: {}, created_at: '', updated_at: '',
             }
@@ -230,7 +230,7 @@ describe('BankAccountForm', () => {
 
         it('resets to empty values when account becomes null', async () => {
             const account = {
-                id: 1, branch_id: 1, alias: 'Some Account', bank_name: 'BBVA',
+                id: '1', branch_id: 1, alias: 'Some Account', bank_name: 'BBVA',
                 account_number_masked: '1234', clabe_masked: '', is_active: true,
                 meta: {}, created_at: '', updated_at: '',
             }
@@ -249,7 +249,7 @@ describe('BankAccountForm', () => {
     describe('edit mode', () => {
         it('calls updateMutation when submitting in edit mode', async () => {
             const account = {
-                id: 1, branch_id: 1, alias: 'Test Account', bank_name: 'BBVA',
+                id: '1', branch_id: 1, alias: 'Test Account', bank_name: 'BBVA',
                 account_number_masked: '1234', clabe_masked: '', is_active: true,
                 meta: {}, created_at: '', updated_at: '',
             }
@@ -264,7 +264,7 @@ describe('BankAccountForm', () => {
 
             await waitFor(() => {
                 expect(mockUpdateMutation.mutateAsync).toHaveBeenCalledWith({
-                    id: 1,
+                    id: '1',
                     data: expect.objectContaining({ alias: 'Test Account' }),
                 })
             })

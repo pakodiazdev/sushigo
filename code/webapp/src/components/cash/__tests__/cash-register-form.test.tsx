@@ -79,7 +79,7 @@ describe('CashRegisterForm', () => {
 
         it('renders edit register title when editing', () => {
             const register = {
-                id: 1,
+                id: '1',
                 code: 'CAJA-001',
                 name: 'Main Register',
                 branch_id: 1,
@@ -159,12 +159,12 @@ describe('CashRegisterForm', () => {
     describe('reset on prop change', () => {
         it('updates form values when register prop changes', async () => {
             const register1 = {
-                id: 1, code: 'CAJA-001', name: 'Register A', branch_id: 1,
+                id: '1', code: 'CAJA-001', name: 'Register A', branch_id: 1,
                 operating_unit_id: null, type: CashRegisterType.ON_PREMISE,
                 is_active: true, meta: {}, created_at: '', updated_at: '',
             }
             const register2 = {
-                id: 2, code: 'CAJA-002', name: 'Register B', branch_id: 1,
+                id: '2', code: 'CAJA-002', name: 'Register B', branch_id: 1,
                 operating_unit_id: null, type: CashRegisterType.DELIVERY,
                 is_active: false, meta: {}, created_at: '', updated_at: '',
             }
@@ -182,7 +182,7 @@ describe('CashRegisterForm', () => {
 
         it('resets to empty values when register becomes null', async () => {
             const register = {
-                id: 1, code: 'CAJA-001', name: 'Register A', branch_id: 1,
+                id: '1', code: 'CAJA-001', name: 'Register A', branch_id: 1,
                 operating_unit_id: null, type: CashRegisterType.ON_PREMISE,
                 is_active: true, meta: {}, created_at: '', updated_at: '',
             }
@@ -201,7 +201,7 @@ describe('CashRegisterForm', () => {
     describe('edit mode', () => {
         it('calls updateMutation when submitting in edit mode', async () => {
             const register = {
-                id: 1, code: 'CAJA-001', name: 'Register A', branch_id: 1,
+                id: '1', code: 'CAJA-001', name: 'Register A', branch_id: 1,
                 operating_unit_id: null, type: CashRegisterType.ON_PREMISE,
                 is_active: true, meta: {}, created_at: '', updated_at: '',
             }
@@ -212,7 +212,7 @@ describe('CashRegisterForm', () => {
 
             await waitFor(() => {
                 expect(mockUpdateMutation.mutateAsync).toHaveBeenCalledWith({
-                    id: 1,
+                    id: '1',
                     data: expect.objectContaining({ name: 'Register A' }),
                 })
             })

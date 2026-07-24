@@ -11,7 +11,7 @@ import { CashRegisterType, type CashSessionFormData } from '@/types/cash'
 interface OpenSessionDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess?: (sessionId: number) => void
+  onSuccess?: (sessionId: string) => void
   branchId?: number
 }
 
@@ -78,7 +78,7 @@ export function OpenSessionDialog({
 
     try {
       const payload: CashSessionFormData = {
-        cash_register_id: parseInt(cashRegisterId),
+        cash_register_id: cashRegisterId,
         operating_date: operatingDate,
       }
 

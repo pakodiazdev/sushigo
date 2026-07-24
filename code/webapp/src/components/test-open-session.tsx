@@ -8,7 +8,7 @@ import { Plus } from 'lucide-react'
 export function TestOpenSessionPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  const handleSuccess = (sessionId: number) => {
+  const handleSuccess = (sessionId: string) => {
     console.log('Sesión creada con ID:', sessionId)
     alert(`¡Sesión abierta exitosamente! ID: ${sessionId}`)
   }
