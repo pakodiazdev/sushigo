@@ -58,6 +58,8 @@ make cypress WORKSPACE=sushigo-a            # interactive UI (pick a spec)
 > **Rule:** When working in dev-lab, never prefix test or artisan commands with `docker exec dev_container`.
 > The dev-lab stack does NOT use `dev_container` — that container belongs to the standalone Docker mode below.
 
+> **Test database:** each dev-lab workspace has its own isolated PHPUnit test database (`sushigo_ws_<letter>_test`), configured via `code/api/.env.testing` (Laravel loads this instead of `.env` when `APP_ENV=testing`). This is separate from the standalone Docker mode's single shared `mydb_test` described under "API Tests" below. Don't share a test database across workspaces — concurrent `RefreshDatabase` schema setup across workspaces causes `SQLSTATE[40P01]` deadlocks.
+
 ---
 
 ### Docker Development (standalone container mode)
