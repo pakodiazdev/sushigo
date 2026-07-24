@@ -3,9 +3,11 @@
 namespace App\Http\Requests\CashAdjustments\CashExpenses;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
-use App\Models\CashExpense;
+use App\Models\BankAccount;
+use App\Models\CashTerminal;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -19,8 +21,8 @@ use Illuminate\Validation\Validator;
  *   @OA\Property(property="vendor", type="string", maxLength=255, example="Office Depot", description="Vendor name", nullable=true),
  *   @OA\Property(property="reference", type="string", maxLength=255, example="INV-12345", description="Invoice reference", nullable=true),
  *   @OA\Property(property="notes", type="string", maxLength=1000, example="Office supplies", description="Additional notes", nullable=true),
- *   @OA\Property(property="card_terminal_id", type="integer", example=1, description="Terminal ID (for CARD)", nullable=true),
- *   @OA\Property(property="bank_account_id", type="integer", example=1, description="Bank account ID (for TRANSFER)", nullable=true),
+ *   @OA\Property(property="card_terminal_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Cash Terminal public_id (for CARD)", nullable=true),
+ *   @OA\Property(property="bank_account_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Bank Account public_id (for TRANSFER)", nullable=true),
  *   @OA\Property(property="incurred_at", type="string", format="date-time", example="2025-12-13T10:30:00Z", description="Expense date/time"),
  *   @OA\Property(property="meta", type="object", example={"receipt_url": "https://..."}, description="Additional metadata", nullable=true),
  * )
@@ -28,24 +30,19 @@ use Illuminate\Validation\Validator;
 class UpdateCashExpenseRequest extends FormRequest
 {
     use CastsRequestFields;
+    use ResolvesPublicIdReferences;
     use SharesValidationMessages;
     use ValidatesTenderTypeReference;
 
-    private ?CashExpense $cashExpense = null;
-
     public function authorize(): bool
     {
-        $this->cashExpense = CashExpense::find($this->route('id'));
+        $cashExpense = $this->route('cashExpense');
 
-        if (! $this->cashExpense) {
-            abort(404);
-        }
-
-        if ($this->cashExpense->isPosted()) {
+        if ($cashExpense->isPosted()) {
             return false;
         }
 
-        return $this->user()->can('update', $this->cashExpense);
+        return $this->user()->can('update', $cashExpense);
     }
 
     public function rules(): array
@@ -57,8 +54,8 @@ class UpdateCashExpenseRequest extends FormRequest
             'vendor' => 'nullable|string|max:255',
             'reference' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:1000',
-            'card_terminal_id' => 'nullable|integer|exists:cash_terminals,id',
-            'bank_account_id' => 'nullable|integer|exists:bank_accounts,id',
+            'card_terminal_id' => 'nullable|string|exists:cash_terminals,public_id',
+            'bank_account_id' => 'nullable|string|exists:bank_accounts,public_id',
             'incurred_at' => 'sometimes|date',
             'meta' => 'nullable|array',
         ];
@@ -72,11 +69,13 @@ class UpdateCashExpenseRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function ($validator) {
+            $cashExpense = $this->route('cashExpense');
+
             $this->requireTenderTypeReference(
                 $validator,
-                $this->input('tender_type', $this->cashExpense->tender_type),
-                $this->input('card_terminal_id', $this->cashExpense->card_terminal_id),
-                $this->input('bank_account_id', $this->cashExpense->bank_account_id)
+                $this->input('tender_type', $cashExpense->tender_type),
+                $this->input('card_terminal_id', $cashExpense->card_terminal_id),
+                $this->input('bank_account_id', $cashExpense->bank_account_id)
             );
         });
     }
@@ -84,5 +83,24 @@ class UpdateCashExpenseRequest extends FormRequest
     public function prepareForValidation(): void
     {
         $this->castToFloat('amount');
+    }
+
+    /**
+     * Validated data with card_terminal_id/bank_account_id resolved from
+     * public_id to the numeric FK the model column stores.
+     */
+    public function expenseData(): array
+    {
+        $data = $this->validated();
+
+        if (array_key_exists('card_terminal_id', $data)) {
+            $data['card_terminal_id'] = $this->resolvePublicId(CashTerminal::class, 'card_terminal_id');
+        }
+
+        if (array_key_exists('bank_account_id', $data)) {
+            $data['bank_account_id'] = $this->resolvePublicId(BankAccount::class, 'bank_account_id');
+        }
+
+        return $data;
     }
 }

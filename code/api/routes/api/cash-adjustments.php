@@ -32,10 +32,14 @@ use App\Http\Controllers\CashAdjustments\CashTerminals\DeleteCashTerminalControl
 use App\Http\Controllers\CashAdjustments\CashTerminals\ListCashTerminalsController;
 use App\Http\Controllers\CashAdjustments\CashTerminals\ShowCashTerminalController;
 use App\Http\Controllers\CashAdjustments\CashTerminals\UpdateCashTerminalController;
-use App\Support\RouteParams;
+use App\Support\CashAdjustmentRouteParams;
 use Illuminate\Support\Facades\Route;
 
 // Cash Adjustments Module (All Protected)
+// Route segments below use ULID public_id binding — see #293. Each segment
+// name matches its controller's Eloquent-typed parameter (e.g. {cashRegister}
+// -> CashRegister $cashRegister) so Laravel's implicit model binding resolves
+// correctly via CashRegister::getRouteKeyName() = 'public_id'.
 Route::middleware('auth:api')->group(function () {
     // Cash Registers
     Route::prefix('cash-registers')->group(function () {
@@ -43,11 +47,11 @@ Route::middleware('auth:api')->group(function () {
             ->name('cash-registers.list');
         Route::post('/', CreateCashRegisterController::class)
             ->name('cash-registers.create');
-        Route::get(RouteParams::ID, ShowCashRegisterController::class)
+        Route::get(CashAdjustmentRouteParams::CASH_REGISTER, ShowCashRegisterController::class)
             ->name('cash-registers.show');
-        Route::put(RouteParams::ID, UpdateCashRegisterController::class)
+        Route::put(CashAdjustmentRouteParams::CASH_REGISTER, UpdateCashRegisterController::class)
             ->name('cash-registers.update');
-        Route::delete(RouteParams::ID, DeleteCashRegisterController::class)
+        Route::delete(CashAdjustmentRouteParams::CASH_REGISTER, DeleteCashRegisterController::class)
             ->name('cash-registers.delete');
     });
 
@@ -57,11 +61,11 @@ Route::middleware('auth:api')->group(function () {
             ->name('cash-terminals.list');
         Route::post('/', CreateCashTerminalController::class)
             ->name('cash-terminals.create');
-        Route::get(RouteParams::ID, ShowCashTerminalController::class)
+        Route::get(CashAdjustmentRouteParams::CASH_TERMINAL, ShowCashTerminalController::class)
             ->name('cash-terminals.show');
-        Route::put(RouteParams::ID, UpdateCashTerminalController::class)
+        Route::put(CashAdjustmentRouteParams::CASH_TERMINAL, UpdateCashTerminalController::class)
             ->name('cash-terminals.update');
-        Route::delete(RouteParams::ID, DeleteCashTerminalController::class)
+        Route::delete(CashAdjustmentRouteParams::CASH_TERMINAL, DeleteCashTerminalController::class)
             ->name('cash-terminals.delete');
     });
 
@@ -71,11 +75,11 @@ Route::middleware('auth:api')->group(function () {
             ->name('bank-accounts.list');
         Route::post('/', CreateBankAccountController::class)
             ->name('bank-accounts.create');
-        Route::get(RouteParams::ID, ShowBankAccountController::class)
+        Route::get(CashAdjustmentRouteParams::BANK_ACCOUNT, ShowBankAccountController::class)
             ->name('bank-accounts.show');
-        Route::put(RouteParams::ID, UpdateBankAccountController::class)
+        Route::put(CashAdjustmentRouteParams::BANK_ACCOUNT, UpdateBankAccountController::class)
             ->name('bank-accounts.update');
-        Route::delete(RouteParams::ID, DeleteBankAccountController::class)
+        Route::delete(CashAdjustmentRouteParams::BANK_ACCOUNT, DeleteBankAccountController::class)
             ->name('bank-accounts.delete');
     });
 
@@ -85,13 +89,13 @@ Route::middleware('auth:api')->group(function () {
             ->name('cash-sessions.list');
         Route::post('/', CreateCashSessionController::class)
             ->name('cash-sessions.create');
-        Route::get(RouteParams::ID, ShowCashSessionController::class)
+        Route::get(CashAdjustmentRouteParams::CASH_SESSION, ShowCashSessionController::class)
             ->name('cash-sessions.show');
-        Route::put(RouteParams::ID, UpdateCashSessionController::class)
+        Route::put(CashAdjustmentRouteParams::CASH_SESSION, UpdateCashSessionController::class)
             ->name('cash-sessions.update');
-        Route::post(RouteParams::ID_POST, PostCashSessionController::class)
+        Route::post(CashAdjustmentRouteParams::CASH_SESSION.CashAdjustmentRouteParams::POST_ACTION, PostCashSessionController::class)
             ->name('cash-sessions.post');
-        Route::get('/{id}/summary', GetSessionSummaryController::class)
+        Route::get(CashAdjustmentRouteParams::CASH_SESSION.'/summary', GetSessionSummaryController::class)
             ->name('cash-sessions.summary');
     });
 
@@ -101,11 +105,11 @@ Route::middleware('auth:api')->group(function () {
             ->name('cash-adjustments.list');
         Route::post('/', CreateCashAdjustmentController::class)
             ->name('cash-adjustments.create');
-        Route::get(RouteParams::ID, ShowCashAdjustmentController::class)
+        Route::get(CashAdjustmentRouteParams::CASH_ADJUSTMENT, ShowCashAdjustmentController::class)
             ->name('cash-adjustments.show');
-        Route::delete(RouteParams::ID, DeleteCashAdjustmentController::class)
+        Route::delete(CashAdjustmentRouteParams::CASH_ADJUSTMENT, DeleteCashAdjustmentController::class)
             ->name('cash-adjustments.delete');
-        Route::post(RouteParams::ID_POST, PostCashAdjustmentController::class)
+        Route::post(CashAdjustmentRouteParams::CASH_ADJUSTMENT.CashAdjustmentRouteParams::POST_ACTION, PostCashAdjustmentController::class)
             ->name('cash-adjustments.post');
     });
 
@@ -115,13 +119,13 @@ Route::middleware('auth:api')->group(function () {
             ->name('cash-expenses.list');
         Route::post('/', CreateCashExpenseController::class)
             ->name('cash-expenses.create');
-        Route::get(RouteParams::ID, ShowCashExpenseController::class)
+        Route::get(CashAdjustmentRouteParams::CASH_EXPENSE, ShowCashExpenseController::class)
             ->name('cash-expenses.show');
-        Route::put(RouteParams::ID, UpdateCashExpenseController::class)
+        Route::put(CashAdjustmentRouteParams::CASH_EXPENSE, UpdateCashExpenseController::class)
             ->name('cash-expenses.update');
-        Route::delete(RouteParams::ID, DeleteCashExpenseController::class)
+        Route::delete(CashAdjustmentRouteParams::CASH_EXPENSE, DeleteCashExpenseController::class)
             ->name('cash-expenses.delete');
-        Route::post(RouteParams::ID_POST, PostCashExpenseController::class)
+        Route::post(CashAdjustmentRouteParams::CASH_EXPENSE.CashAdjustmentRouteParams::POST_ACTION, PostCashExpenseController::class)
             ->name('cash-expenses.post');
     });
 });

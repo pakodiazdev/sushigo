@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\Traits\HasPublicId;
+use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CashSession extends Model
 {
-    use HasFactory;
+    use HasFactory, HasPublicId, SerializesPublicIdAsId;
 
     protected $fillable = [
         'cash_register_id',
@@ -25,6 +27,16 @@ class CashSession extends Model
         'opening_balance' => 'decimal:4',
         'closing_balance' => 'decimal:4',
         'meta' => 'array',
+    ];
+
+    /**
+     * cash_register_id points at CashRegister, which — like this model —
+     * exposes public_id instead of its numeric id (see #293). Hide the raw
+     * FK so it doesn't leak the numeric id; consumers should use the loaded
+     * cashRegister relation's id (already a ULID) instead.
+     */
+    protected $hidden = [
+        'cash_register_id',
     ];
 
     // Status constants

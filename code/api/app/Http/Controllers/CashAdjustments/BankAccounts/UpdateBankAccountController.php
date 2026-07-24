@@ -9,12 +9,12 @@ use Illuminate\Http\JsonResponse;
 
 /**
  * @OA\Put(
- *   path="/api/v1/bank-accounts/{id}",
+ *   path="/api/v1/bank-accounts/{bankAccount}",
  *   summary="Update Bank Account",
  *   tags={"Bank Accounts"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Bank Account ID"),
+ *   @OA\Parameter(name="bankAccount", in="path", required=true, @OA\Schema(type="string"), description="Bank Account public_id (ULID)"),
  *
  *   @OA\RequestBody(
  *     required=true,
@@ -31,10 +31,8 @@ use Illuminate\Http\JsonResponse;
  */
 class UpdateBankAccountController extends Controller
 {
-    public function __invoke(UpdateBankAccountRequest $request, int $id): JsonResponse
+    public function __invoke(UpdateBankAccountRequest $request, BankAccount $bankAccount): JsonResponse
     {
-        $bankAccount = BankAccount::findOrFail($id);
-
         $bankAccount->update($request->validated());
 
         return response()->json([

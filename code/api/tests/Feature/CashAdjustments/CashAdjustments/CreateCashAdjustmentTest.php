@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\CashAdjustments\CashAdjustments;
 
+use App\Models\BankAccount;
 use App\Models\Branch;
 use App\Models\CashRegister;
 use App\Models\CashSession;
+use App\Models\CashTerminal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -46,12 +48,58 @@ class CreateCashAdjustmentTest extends TestCase
     }
 
     #[Test]
+    public function it_creates_a_card_line_linked_to_a_terminal(): void
+    {
+        $this->actingAsUserWithPermission();
+        $terminal = CashTerminal::factory()->create();
+
+        $response = $this->postJson('/api/v1/cash-adjustments', [
+            'cash_session_id' => $this->session->public_id,
+            'type' => 'CORRECTION',
+            'direction' => 'INFLOW',
+            'lines' => [
+                ['tender_type' => 'CARD', 'amount' => 100.00, 'card_terminal_id' => $terminal->public_id],
+            ],
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('cash_adjustment_lines', [
+            'tender_type' => 'CARD',
+            'card_terminal_id' => $terminal->id,
+        ]);
+    }
+
+    #[Test]
+    public function it_creates_a_transfer_line_linked_to_a_bank_account(): void
+    {
+        $this->actingAsUserWithPermission();
+        $bankAccount = BankAccount::factory()->create();
+
+        $response = $this->postJson('/api/v1/cash-adjustments', [
+            'cash_session_id' => $this->session->public_id,
+            'type' => 'CORRECTION',
+            'direction' => 'INFLOW',
+            'lines' => [
+                ['tender_type' => 'TRANSFER', 'amount' => 100.00, 'bank_account_id' => $bankAccount->public_id],
+            ],
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('cash_adjustment_lines', [
+            'tender_type' => 'TRANSFER',
+            'bank_account_id' => $bankAccount->id,
+        ]);
+    }
+
+    #[Test]
     public function it_rejects_a_card_line_without_terminal(): void
     {
         $this->actingAsUserWithPermission();
 
         $response = $this->postJson('/api/v1/cash-adjustments', [
-            'cash_session_id' => $this->session->id,
+            'cash_session_id' => $this->session->public_id,
             'type' => 'CORRECTION',
             'direction' => 'INFLOW',
             'lines' => [
@@ -71,7 +119,7 @@ class CreateCashAdjustmentTest extends TestCase
         $this->actingAsUserWithPermission();
 
         $response = $this->postJson('/api/v1/cash-adjustments', [
-            'cash_session_id' => $this->session->id,
+            'cash_session_id' => $this->session->public_id,
             'type' => 'CORRECTION',
             'direction' => 'INFLOW',
             'lines' => [

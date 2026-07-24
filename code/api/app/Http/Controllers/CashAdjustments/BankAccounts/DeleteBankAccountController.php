@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Delete(
- *   path="/api/v1/bank-accounts/{id}",
+ *   path="/api/v1/bank-accounts/{bankAccount}",
  *   summary="Delete Bank Account",
  *   tags={"Bank Accounts"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Bank Account ID"),
+ *   @OA\Parameter(name="bankAccount", in="path", required=true, @OA\Schema(type="string"), description="Bank Account public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Bank account deleted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -25,10 +25,8 @@ use Illuminate\Support\Facades\Gate;
  */
 class DeleteBankAccountController extends Controller
 {
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(BankAccount $bankAccount): JsonResponse
     {
-        $bankAccount = BankAccount::findOrFail($id);
-
         Gate::authorize('delete', $bankAccount);
 
         if ($bankAccount->adjustmentLines()->exists() || $bankAccount->expenses()->exists()) {

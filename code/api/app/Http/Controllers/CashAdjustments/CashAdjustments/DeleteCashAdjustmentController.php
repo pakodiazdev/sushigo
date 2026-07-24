@@ -10,12 +10,12 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Delete(
- *   path="/api/v1/cash-adjustments/{id}",
+ *   path="/api/v1/cash-adjustments/{cashAdjustment}",
  *   summary="Delete Cash Adjustment",
  *   tags={"Cash Adjustments"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Adjustment ID"),
+ *   @OA\Parameter(name="cashAdjustment", in="path", required=true, @OA\Schema(type="string"), description="Cash Adjustment public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Cash adjustment deleted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -30,10 +30,8 @@ class DeleteCashAdjustmentController extends Controller
         private CashAdjustmentService $adjustmentService
     ) {}
 
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashAdjustment $cashAdjustment): JsonResponse
     {
-        $cashAdjustment = CashAdjustment::findOrFail($id);
-
         Gate::authorize('delete', $cashAdjustment);
 
         try {

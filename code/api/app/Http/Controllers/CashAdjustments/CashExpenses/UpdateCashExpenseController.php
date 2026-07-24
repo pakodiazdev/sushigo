@@ -10,12 +10,12 @@ use Illuminate\Http\JsonResponse;
 
 /**
  * @OA\Put(
- *   path="/api/v1/cash-expenses/{id}",
+ *   path="/api/v1/cash-expenses/{cashExpense}",
  *   summary="Update Cash Expense",
  *   tags={"Cash Expenses"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Expense ID"),
+ *   @OA\Parameter(name="cashExpense", in="path", required=true, @OA\Schema(type="string"), description="Cash Expense public_id (ULID)"),
  *
  *   @OA\RequestBody(
  *     required=true,
@@ -36,14 +36,10 @@ class UpdateCashExpenseController extends Controller
         private CashExpenseService $expenseService
     ) {}
 
-    public function __invoke(UpdateCashExpenseRequest $request, int $id): JsonResponse
+    public function __invoke(UpdateCashExpenseRequest $request, CashExpense $cashExpense): JsonResponse
     {
-        $cashExpense = CashExpense::findOrFail($id);
-
-        $validated = $request->validated();
-
         try {
-            $updatedExpense = $this->expenseService->updateExpense($cashExpense, $validated);
+            $updatedExpense = $this->expenseService->updateExpense($cashExpense, $request->expenseData());
 
             return response()->json([
                 'message' => 'Expense updated successfully',

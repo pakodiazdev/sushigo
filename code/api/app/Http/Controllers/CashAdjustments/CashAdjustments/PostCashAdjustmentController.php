@@ -11,13 +11,13 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Post(
- *   path="/api/v1/cash-adjustments/{id}/post",
+ *   path="/api/v1/cash-adjustments/{cashAdjustment}/post",
  *   summary="Post Cash Adjustment",
  *   description="Finalizes adjustment and marks it as posted",
  *   tags={"Cash Adjustments"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Adjustment ID"),
+ *   @OA\Parameter(name="cashAdjustment", in="path", required=true, @OA\Schema(type="string"), description="Cash Adjustment public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Cash adjustment posted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -32,10 +32,8 @@ class PostCashAdjustmentController extends Controller
         private CashAdjustmentService $adjustmentService
     ) {}
 
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashAdjustment $cashAdjustment): JsonResponse
     {
-        $cashAdjustment = CashAdjustment::findOrFail($id);
-
         Gate::authorize('post', $cashAdjustment);
 
         try {

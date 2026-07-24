@@ -25,9 +25,9 @@ class BankAccountAuthorizationTest extends TestCase
         $account = BankAccount::factory()->for($branch)->create(['alias' => 'Cuenta Real']);
         $this->actingAsUserWithBranchAccess($branch, 'bank_accounts.view');
 
-        $response = $this->getJson("/api/v1/bank-accounts/{$account->id}");
+        $response = $this->getJson("/api/v1/bank-accounts/{$account->public_id}");
 
-        $response->assertStatus(200)->assertJsonPath('data.id', $account->id);
+        $response->assertStatus(200)->assertJsonPath('data.id', $account->public_id);
     }
 
     #[Test]
@@ -37,7 +37,7 @@ class BankAccountAuthorizationTest extends TestCase
         $account = BankAccount::factory()->for($branch)->create();
         $this->actingAsUserWithoutBranchAccess('bank_accounts.view');
 
-        $response = $this->getJson("/api/v1/bank-accounts/{$account->id}");
+        $response = $this->getJson("/api/v1/bank-accounts/{$account->public_id}");
 
         $response->assertStatus(403);
     }
@@ -60,7 +60,7 @@ class BankAccountAuthorizationTest extends TestCase
         $account = BankAccount::factory()->for($branch)->create(['alias' => 'Old Alias']);
         $this->actingAsUserWithBranchAccess($branch, 'bank_accounts.update');
 
-        $response = $this->putJson("/api/v1/bank-accounts/{$account->id}", ['alias' => 'New Alias']);
+        $response = $this->putJson("/api/v1/bank-accounts/{$account->public_id}", ['alias' => 'New Alias']);
 
         $response->assertStatus(200)->assertJsonPath('data.alias', 'New Alias');
         $this->assertDatabaseHas('bank_accounts', ['id' => $account->id, 'alias' => 'New Alias']);
@@ -73,7 +73,7 @@ class BankAccountAuthorizationTest extends TestCase
         $account = BankAccount::factory()->for($branch)->create(['alias' => 'Untouched']);
         $this->actingAsUserWithoutBranchAccess('bank_accounts.update');
 
-        $response = $this->putJson("/api/v1/bank-accounts/{$account->id}", ['alias' => 'Nope']);
+        $response = $this->putJson("/api/v1/bank-accounts/{$account->public_id}", ['alias' => 'Nope']);
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('bank_accounts', ['id' => $account->id, 'alias' => 'Untouched']);
@@ -86,7 +86,7 @@ class BankAccountAuthorizationTest extends TestCase
         $account = BankAccount::factory()->for($branch)->create();
         $this->actingAsUserWithBranchAccess($branch, 'bank_accounts.delete');
 
-        $response = $this->deleteJson("/api/v1/bank-accounts/{$account->id}");
+        $response = $this->deleteJson("/api/v1/bank-accounts/{$account->public_id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('bank_accounts', ['id' => $account->id]);
@@ -99,7 +99,7 @@ class BankAccountAuthorizationTest extends TestCase
         $account = BankAccount::factory()->for($branch)->create();
         $this->actingAsUserWithoutBranchAccess('bank_accounts.delete');
 
-        $response = $this->deleteJson("/api/v1/bank-accounts/{$account->id}");
+        $response = $this->deleteJson("/api/v1/bank-accounts/{$account->public_id}");
 
         $response->assertStatus(403);
         $this->assertDatabaseHas('bank_accounts', ['id' => $account->id]);

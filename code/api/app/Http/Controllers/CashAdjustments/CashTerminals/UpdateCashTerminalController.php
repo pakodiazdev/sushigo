@@ -9,12 +9,12 @@ use Illuminate\Http\JsonResponse;
 
 /**
  * @OA\Put(
- *   path="/api/v1/cash-terminals/{id}",
+ *   path="/api/v1/cash-terminals/{cashTerminal}",
  *   summary="Update Cash Terminal",
  *   tags={"Cash Terminals"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Terminal ID"),
+ *   @OA\Parameter(name="cashTerminal", in="path", required=true, @OA\Schema(type="string"), description="Cash Terminal public_id (ULID)"),
  *
  *   @OA\RequestBody(
  *     required=true,
@@ -31,10 +31,8 @@ use Illuminate\Http\JsonResponse;
  */
 class UpdateCashTerminalController extends Controller
 {
-    public function __invoke(UpdateCashTerminalRequest $request, int $id): JsonResponse
+    public function __invoke(UpdateCashTerminalRequest $request, CashTerminal $cashTerminal): JsonResponse
     {
-        $cashTerminal = CashTerminal::findOrFail($id);
-
         $cashTerminal->update($request->validated());
 
         return response()->json([

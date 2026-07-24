@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
- *   path="/api/v1/cash-sessions/{id}",
+ *   path="/api/v1/cash-sessions/{cashSession}",
  *   summary="Show Cash Session",
  *   tags={"Cash Sessions"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Session ID"),
+ *   @OA\Parameter(name="cashSession", in="path", required=true, @OA\Schema(type="string"), description="Cash Session public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Cash session retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -24,10 +24,8 @@ use Illuminate\Support\Facades\Gate;
  */
 class ShowCashSessionController extends Controller
 {
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashSession $cashSession): JsonResponse
     {
-        $cashSession = CashSession::findOrFail($id);
-
         Gate::authorize('view', $cashSession);
 
         $cashSession->load([

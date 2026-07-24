@@ -110,7 +110,7 @@ class CastsRequestFieldsTest extends TestCase
         $register = CashRegister::factory()->create(['branch_id' => $this->branch->id]);
 
         $this->postJson('/api/v1/cash-sessions', [
-            'cash_register_id' => $register->id,
+            'cash_register_id' => $register->public_id,
             'operating_date' => '2026-01-05',
             'opening_balance' => '1500.50',
         ])
@@ -130,7 +130,7 @@ class CastsRequestFieldsTest extends TestCase
         $session = CashSession::factory()->create(['cash_register_id' => $register->id]);
 
         $this->postJson('/api/v1/cash-expenses', [
-            'cash_session_id' => $session->id,
+            'cash_session_id' => $session->public_id,
             'tender_type' => 'CASH',
             'amount' => '250.75',
             'category' => 'SUPPLIES',

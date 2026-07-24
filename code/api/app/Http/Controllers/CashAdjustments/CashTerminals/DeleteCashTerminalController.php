@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Delete(
- *   path="/api/v1/cash-terminals/{id}",
+ *   path="/api/v1/cash-terminals/{cashTerminal}",
  *   summary="Delete Cash Terminal",
  *   tags={"Cash Terminals"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Terminal ID"),
+ *   @OA\Parameter(name="cashTerminal", in="path", required=true, @OA\Schema(type="string"), description="Cash Terminal public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Cash terminal deleted successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -25,10 +25,8 @@ use Illuminate\Support\Facades\Gate;
  */
 class DeleteCashTerminalController extends Controller
 {
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashTerminal $cashTerminal): JsonResponse
     {
-        $cashTerminal = CashTerminal::findOrFail($id);
-
         Gate::authorize('delete', $cashTerminal);
 
         if ($cashTerminal->adjustmentLines()->exists() || $cashTerminal->expenses()->exists()) {

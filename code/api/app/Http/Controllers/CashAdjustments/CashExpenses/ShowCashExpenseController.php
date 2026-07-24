@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
- *   path="/api/v1/cash-expenses/{id}",
+ *   path="/api/v1/cash-expenses/{cashExpense}",
  *   summary="Show Cash Expense",
  *   tags={"Cash Expenses"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Cash Expense ID"),
+ *   @OA\Parameter(name="cashExpense", in="path", required=true, @OA\Schema(type="string"), description="Cash Expense public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Cash expense retrieved successfully"),
  *   @OA\Response(response=401, description="Unauthenticated"),
@@ -24,10 +24,8 @@ use Illuminate\Support\Facades\Gate;
  */
 class ShowCashExpenseController extends Controller
 {
-    public function __invoke(int $id): JsonResponse
+    public function __invoke(CashExpense $cashExpense): JsonResponse
     {
-        $cashExpense = CashExpense::findOrFail($id);
-
         Gate::authorize('view', $cashExpense);
 
         $cashExpense->load([

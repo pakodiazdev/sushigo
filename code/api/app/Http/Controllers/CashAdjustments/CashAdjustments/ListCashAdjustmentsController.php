@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\CashAdjustments\CashAdjustments;
 
+use App\Http\Controllers\Concerns\ResolvesPublicIdFilters;
 use App\Http\Controllers\Controller;
 use App\Models\CashAdjustment;
+use App\Models\CashSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +16,7 @@ use Illuminate\Http\Request;
  *   tags={"Cash Adjustments"},
  *   security={{"bearerAuth":{}}},
  *
- *   @OA\Parameter(name="cash_session_id", in="query", @OA\Schema(type="integer"), description="Filter by cash session ID"),
+ *   @OA\Parameter(name="cash_session_id", in="query", @OA\Schema(type="string"), description="Filter by Cash Session public_id (ULID)"),
  *   @OA\Parameter(name="type", in="query", @OA\Schema(type="string", enum={"EXTERNAL_IMPORT", "CORRECTION"}), description="Filter by adjustment type"),
  *   @OA\Parameter(name="direction", in="query", @OA\Schema(type="string", enum={"INFLOW", "OUTFLOW"}), description="Filter by direction"),
  *   @OA\Parameter(name="posted", in="query", @OA\Schema(type="boolean"), description="Filter by posted status"),
@@ -27,12 +29,17 @@ use Illuminate\Http\Request;
  */
 class ListCashAdjustmentsController extends Controller
 {
+    use ResolvesPublicIdFilters;
+
     public function __invoke(Request $request): JsonResponse
     {
         $query = CashAdjustment::with(['cashSession.cashRegister', 'lines', 'postedBy']);
 
         if ($request->has('cash_session_id')) {
-            $query->where('cash_session_id', $request->input('cash_session_id'));
+            $query->where(
+                'cash_session_id',
+                $this->resolvePublicIdFilter(CashSession::class, $request->input('cash_session_id'))
+            );
         }
 
         if ($request->has('type')) {

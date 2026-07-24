@@ -4,7 +4,6 @@ namespace App\Http\Controllers\CashAdjustments\CashSessions;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CashAdjustments\CashSessions\StoreCashSessionRequest;
-use App\Models\CashRegister;
 use App\Services\CashAdjustments\CashSessionService;
 use Illuminate\Http\JsonResponse;
 
@@ -38,7 +37,7 @@ class CreateCashSessionController extends Controller
         $validated = $request->validated();
 
         try {
-            $cashRegister = CashRegister::findOrFail($validated['cash_register_id']);
+            $cashRegister = $request->cashRegister();
 
             $session = $this->sessionService->openSession(
                 cashRegister: $cashRegister,

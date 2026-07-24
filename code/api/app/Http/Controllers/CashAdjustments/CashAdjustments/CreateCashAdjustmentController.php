@@ -4,7 +4,6 @@ namespace App\Http\Controllers\CashAdjustments\CashAdjustments;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CashAdjustments\CashAdjustments\StoreCashAdjustmentRequest;
-use App\Models\CashSession;
 use App\Services\CashAdjustments\CashAdjustmentService;
 use Illuminate\Http\JsonResponse;
 
@@ -39,13 +38,11 @@ class CreateCashAdjustmentController extends Controller
         $validated = $request->validated();
 
         try {
-            $session = CashSession::findOrFail($validated['cash_session_id']);
-
             $adjustment = $this->adjustmentService->createAdjustment(
-                session: $session,
+                session: $request->cashSession(),
                 type: $validated['type'],
                 direction: $validated['direction'],
-                lines: $validated['lines'],
+                lines: $request->linesData(),
                 sourceSystem: $validated['source_system'] ?? null,
                 notes: $validated['notes'] ?? null,
                 meta: $validated['meta'] ?? []
