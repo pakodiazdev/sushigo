@@ -58,7 +58,7 @@ make cypress WORKSPACE=sushigo-a            # interactive UI (pick a spec)
 > **Rule:** When working in dev-lab, never prefix test or artisan commands with `docker exec dev_container`.
 > The dev-lab stack does NOT use `dev_container` — that container belongs to the standalone Docker mode below.
 
-> **Test database:** each dev-lab workspace has its own isolated PHPUnit test database (`sushigo_ws_<letter>_test`), configured via `code/api/.env.testing` (Laravel loads this instead of `.env` when `APP_ENV=testing`). This is separate from the standalone Docker mode's single shared `mydb_test` described under "API Tests" below. Don't share a test database across workspaces — concurrent `RefreshDatabase` schema setup across workspaces causes `SQLSTATE[40P01]` deadlocks.
+> **Test database:** each dev-lab workspace has its own isolated PHPUnit test database (`sushigo_ws_<letter>_test`), configured via `code/api/.env.testing` (Laravel loads this instead of `.env` when `APP_ENV=testing`). `phpunit.xml` does **not** hardcode `DB_DATABASE` — outside dev-lab (standalone Docker mode, CI) it must be supplied explicitly (`DB_DATABASE=mydb_test`, see "Docker Development" below), otherwise tests silently fall back to `.env`'s dev database. Don't share a test database across workspaces — concurrent `RefreshDatabase` schema setup across workspaces causes `SQLSTATE[40P01]` deadlocks.
 
 ---
 
@@ -78,10 +78,12 @@ This monorepo runs inside `dev_container`. Each sub-project maps to a path insid
 docker compose up --build
 
 # Run API tests
-docker exec -it dev_container bash -c "cd /app/code/api && php artisan test"
+# DB_DATABASE=mydb_test is required — phpunit.xml no longer hardcodes it (see below),
+# so without this override tests would run against the dev database (mydb) instead.
+docker exec -it dev_container bash -c "cd /app/code/api && DB_DATABASE=mydb_test php artisan test"
 
 # Run specific test
-docker exec -it dev_container bash -c "cd /app/code/api && php artisan test --filter=WageHistoryTest"
+docker exec -it dev_container bash -c "cd /app/code/api && DB_DATABASE=mydb_test php artisan test --filter=WageHistoryTest"
 
 # Run database seeders
 docker exec -it dev_container bash -c "cd /app/code/api && php artisan db:seed"
@@ -579,10 +581,10 @@ Full convention reference: `doc/conventions/testing/testing-strategy.md`
 
 ### API Tests
 
-Tests use PostgreSQL (`mydb_test` database). Each test runs in a transaction that rolls back:
+Tests use PostgreSQL (`mydb_test` database, passed explicitly via `DB_DATABASE=mydb_test` — `phpunit.xml` does not hardcode it). Each test runs in a transaction that rolls back:
 
 ```bash
-docker exec -it dev_container php artisan test --testsuite=Feature
+docker exec -it dev_container bash -c "cd /app/code/api && DB_DATABASE=mydb_test php artisan test --testsuite=Feature"
 ```
 
 ### Test Users
