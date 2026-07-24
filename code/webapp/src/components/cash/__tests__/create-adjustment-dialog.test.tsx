@@ -19,14 +19,14 @@ vi.mock('@/services/cash-hooks', () => ({
     useCashTerminals: vi.fn().mockReturnValue({
         data: {
             data: [
-                { id: '1', name: 'Terminal 1', is_active: true },
+                { id: '1', name: 'Terminal 1', provider: 'Clip', is_active: true },
             ],
         },
     }),
     useBankAccounts: vi.fn().mockReturnValue({
         data: {
             data: [
-                { id: '1', name: 'Cuenta Principal', is_active: true },
+                { id: '1', alias: 'Cuenta Principal', bank_name: 'BBVA', is_active: true },
             ],
         },
     }),

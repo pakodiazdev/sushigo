@@ -600,7 +600,7 @@ describe('useCreateCashAdjustment', () => {
     expect(mockShowSuccess).toHaveBeenCalled()
   })
 
-  it('shows success toast when cash_session_id is null', async () => {
+  it('shows success toast when cash_session relation is null', async () => {
     const mockResponse = { data: { data: { id: '1', cash_session: null } } }
     vi.mocked(cashAdjustmentApi.create).mockResolvedValueOnce(mockResponse as never)
     const { wrapper } = makeWrapper()

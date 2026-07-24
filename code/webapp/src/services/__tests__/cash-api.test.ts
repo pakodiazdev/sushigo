@@ -66,7 +66,7 @@ describe('cashRegisterApi', () => {
 
     describe('get', () => {
         it('calls GET /cash-registers/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
             const result = await cashRegisterApi.get('1')
@@ -78,7 +78,7 @@ describe('cashRegisterApi', () => {
 
     describe('create', () => {
         it('calls POST /cash-registers', async () => {
-            const mockResponse = { data: { status: 201, data: { id: 1 } } }
+            const mockResponse = { data: { status: 201, data: { id: '1' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data = { name: 'Caja 1', code: 'CAJA01' } as CashRegisterFormData
@@ -91,7 +91,7 @@ describe('cashRegisterApi', () => {
 
     describe('update', () => {
         it('calls PUT /cash-registers/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data = { name: 'Caja Principal' }
@@ -136,7 +136,7 @@ describe('cashTerminalApi', () => {
 
     describe('get', () => {
         it('calls GET /cash-terminals/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
             const result = await cashTerminalApi.get('1')
@@ -148,7 +148,7 @@ describe('cashTerminalApi', () => {
 
     describe('create', () => {
         it('calls POST /cash-terminals', async () => {
-            const mockResponse = { data: { status: 201, data: { id: 1 } } }
+            const mockResponse = { data: { status: 201, data: { id: '1' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data: CashTerminalFormData = {
@@ -168,7 +168,7 @@ describe('cashTerminalApi', () => {
 
     describe('update', () => {
         it('calls PUT /cash-terminals/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data = { name: 'Terminal Actualizada' }
@@ -213,7 +213,7 @@ describe('bankAccountApi', () => {
 
     describe('get', () => {
         it('calls GET /bank-accounts/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
             const result = await bankAccountApi.get('1')
@@ -225,7 +225,7 @@ describe('bankAccountApi', () => {
 
     describe('create', () => {
         it('calls POST /bank-accounts', async () => {
-            const mockResponse = { data: { status: 201, data: { id: 1 } } }
+            const mockResponse = { data: { status: 201, data: { id: '1' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data: BankAccountFormData = {
@@ -245,7 +245,7 @@ describe('bankAccountApi', () => {
 
     describe('update', () => {
         it('calls PUT /bank-accounts/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data = { bank_name: 'Santander' }
@@ -301,7 +301,7 @@ describe('cashSessionApi', () => {
 
     describe('get', () => {
         it('calls GET /cash-sessions/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
             const result = await cashSessionApi.get('1')
@@ -313,7 +313,7 @@ describe('cashSessionApi', () => {
 
     describe('create', () => {
         it('calls POST /cash-sessions', async () => {
-            const mockResponse = { data: { status: 201, data: { id: 1 } } }
+            const mockResponse = { data: { status: 201, data: { id: '1' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data = { cash_register_id: '1', operating_date: '2026-04-18' } as CashSessionFormData
@@ -326,7 +326,7 @@ describe('cashSessionApi', () => {
 
     describe('update', () => {
         it('calls PUT /cash-sessions/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data: Partial<CashSessionFormData> = { operating_date: '2026-04-19' }
@@ -339,7 +339,7 @@ describe('cashSessionApi', () => {
 
     describe('post', () => {
         it('calls POST /cash-sessions/:id/post', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1, status: 'POSTED' } } }
+            const mockResponse = { data: { status: 200, data: { id: '1', status: 'POSTED' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const result = await cashSessionApi.post('1')
@@ -388,7 +388,7 @@ describe('cashAdjustmentApi', () => {
 
     describe('get', () => {
         it('calls GET /cash-adjustments/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
             const result = await cashAdjustmentApi.get('1')
@@ -400,7 +400,7 @@ describe('cashAdjustmentApi', () => {
 
     describe('create', () => {
         it('calls POST /cash-adjustments', async () => {
-            const mockResponse = { data: { status: 201, data: { id: 1 } } }
+            const mockResponse = { data: { status: 201, data: { id: '1' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data: CashAdjustmentFormData = {
@@ -419,7 +419,7 @@ describe('cashAdjustmentApi', () => {
 
     describe('post', () => {
         it('calls POST /cash-adjustments/:id/post', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1, status: 'POSTED' } } }
+            const mockResponse = { data: { status: 200, data: { id: '1', status: 'POSTED' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const result = await cashAdjustmentApi.post('1')
@@ -463,7 +463,7 @@ describe('cashExpenseApi', () => {
 
     describe('get', () => {
         it('calls GET /cash-expenses/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
             const result = await cashExpenseApi.get('1')
@@ -475,7 +475,7 @@ describe('cashExpenseApi', () => {
 
     describe('create', () => {
         it('calls POST /cash-expenses', async () => {
-            const mockResponse = { data: { status: 201, data: { id: 1 } } }
+            const mockResponse = { data: { status: 201, data: { id: '1' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data: CashExpenseFormData = {
@@ -495,7 +495,7 @@ describe('cashExpenseApi', () => {
 
     describe('update', () => {
         it('calls PUT /cash-expenses/:id', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1 } } }
+            const mockResponse = { data: { status: 200, data: { id: '1' } } }
             vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
 
             const data: Partial<CashExpenseFormData> = { category: 'CLEANING' }
@@ -508,7 +508,7 @@ describe('cashExpenseApi', () => {
 
     describe('post', () => {
         it('calls POST /cash-expenses/:id/post', async () => {
-            const mockResponse = { data: { status: 200, data: { id: 1, status: 'POSTED' } } }
+            const mockResponse = { data: { status: 200, data: { id: '1', status: 'POSTED' } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const result = await cashExpenseApi.post('1')
