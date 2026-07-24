@@ -5,6 +5,7 @@ namespace App\Http\Controllers\CashAdjustments\BankAccounts;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
@@ -23,8 +24,12 @@ use Illuminate\Http\JsonResponse;
  */
 class ShowBankAccountController extends Controller
 {
-    public function __invoke(BankAccount $bankAccount): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $bankAccount = BankAccount::findOrFail($id);
+
+        Gate::authorize('view', $bankAccount);
+
         $bankAccount->load('branch');
 
         return response()->json([

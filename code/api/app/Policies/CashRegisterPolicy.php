@@ -4,9 +4,12 @@ namespace App\Policies;
 
 use App\Models\CashRegister;
 use App\Models\User;
+use App\Policies\Concerns\ChecksBranchAccess;
 
 class CashRegisterPolicy
 {
+    use ChecksBranchAccess;
+
     /**
      * Determine whether the user can view any models.
      */
@@ -57,18 +60,6 @@ class CashRegisterPolicy
         }
 
         return $this->userHasBranchAccess($user, $cashRegister->branch_id);
-    }
-
-    /**
-     * Check if user has access to the branch
-     */
-    private function userHasBranchAccess(User $user, int $branchId): bool
-    {
-        return $user->operatingUnitUsers()
-            ->whereHas('operatingUnit', function ($query) use ($branchId) {
-                $query->where('branch_id', $branchId);
-            })
-            ->exists();
     }
 
     /**

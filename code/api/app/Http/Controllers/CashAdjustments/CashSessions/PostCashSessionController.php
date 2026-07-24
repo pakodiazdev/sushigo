@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CashSession;
 use App\Services\CashAdjustments\CashSessionService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Post(
@@ -30,8 +31,12 @@ class PostCashSessionController extends Controller
         private CashSessionService $sessionService
     ) {}
 
-    public function __invoke(CashSession $cashSession): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $cashSession = CashSession::findOrFail($id);
+
+        Gate::authorize('post', $cashSession);
+
         try {
             $postedSession = $this->sessionService->postSession($cashSession);
 

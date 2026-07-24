@@ -31,11 +31,11 @@ use Illuminate\Http\JsonResponse;
  */
 class UpdateBankAccountController extends Controller
 {
-    public function __invoke(UpdateBankAccountRequest $request, BankAccount $bankAccount): JsonResponse
+    public function __invoke(UpdateBankAccountRequest $request, int $id): JsonResponse
     {
-        $validated = $request->validated();
+        $bankAccount = BankAccount::findOrFail($id);
 
-        $bankAccount->update($validated);
+        $bankAccount->update($request->validated());
 
         return response()->json([
             'message' => 'Bank account updated successfully',

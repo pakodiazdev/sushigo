@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CashSession;
 use App\Services\CashAdjustments\CashSessionService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
@@ -29,8 +30,12 @@ class GetSessionSummaryController extends Controller
         private CashSessionService $sessionService
     ) {}
 
-    public function __invoke(CashSession $cashSession): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $cashSession = CashSession::findOrFail($id);
+
+        Gate::authorize('view', $cashSession);
+
         $summary = $this->sessionService->getSessionSummary($cashSession);
 
         return response()->json([

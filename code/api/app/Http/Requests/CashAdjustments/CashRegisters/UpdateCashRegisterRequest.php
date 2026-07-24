@@ -4,6 +4,7 @@ namespace App\Http\Requests\CashAdjustments\CashRegisters;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
 use App\Http\Requests\Concerns\SharesValidationMessages;
+use App\Models\CashRegister;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -23,18 +24,24 @@ class UpdateCashRegisterRequest extends FormRequest
     use CastsRequestFields;
     use SharesValidationMessages;
 
+    private ?CashRegister $cashRegister = null;
+
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('cashRegister'));
+        $this->cashRegister = CashRegister::find($this->route('id'));
+
+        if (! $this->cashRegister) {
+            abort(404);
+        }
+
+        return $this->user()->can('update', $this->cashRegister);
     }
 
     public function rules(): array
     {
-        $cashRegisterId = $this->route('cashRegister')->id;
-
         return [
             'operating_unit_id' => 'nullable|integer|exists:operating_units,id',
-            'code' => 'sometimes|string|max:50|unique:cash_registers,code,'.$cashRegisterId,
+            'code' => 'sometimes|string|max:50|unique:cash_registers,code,'.$this->cashRegister->id,
             'name' => 'sometimes|string|max:255',
             'type' => 'sometimes|in:ON_PREMISE,DELIVERY,EVENT',
             'is_active' => 'boolean',

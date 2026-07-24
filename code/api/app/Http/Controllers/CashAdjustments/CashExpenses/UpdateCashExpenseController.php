@@ -36,8 +36,10 @@ class UpdateCashExpenseController extends Controller
         private CashExpenseService $expenseService
     ) {}
 
-    public function __invoke(UpdateCashExpenseRequest $request, CashExpense $cashExpense): JsonResponse
+    public function __invoke(UpdateCashExpenseRequest $request, int $id): JsonResponse
     {
+        $cashExpense = CashExpense::findOrFail($id);
+
         $validated = $request->validated();
 
         try {

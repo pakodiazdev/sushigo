@@ -5,6 +5,7 @@ namespace App\Http\Controllers\CashAdjustments\CashRegisters;
 use App\Http\Controllers\Controller;
 use App\Models\CashRegister;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Delete(
@@ -24,8 +25,12 @@ use Illuminate\Http\JsonResponse;
  */
 class DeleteCashRegisterController extends Controller
 {
-    public function __invoke(CashRegister $cashRegister): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $cashRegister = CashRegister::findOrFail($id);
+
+        Gate::authorize('delete', $cashRegister);
+
         // Check if register has sessions
         if ($cashRegister->sessions()->exists()) {
             return response()->json([

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\BankAccounts;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Models\BankAccount;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -23,7 +24,13 @@ class UpdateBankAccountRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('bankAccount'));
+        $bankAccount = BankAccount::find($this->route('id'));
+
+        if (! $bankAccount) {
+            abort(404);
+        }
+
+        return $this->user()->can('update', $bankAccount);
     }
 
     public function rules(): array

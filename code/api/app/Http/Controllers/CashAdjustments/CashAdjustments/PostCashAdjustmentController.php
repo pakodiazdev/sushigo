@@ -7,6 +7,7 @@ use App\Models\CashAdjustment;
 use App\Services\CashAdjustments\CashAdjustmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Post(
@@ -31,8 +32,12 @@ class PostCashAdjustmentController extends Controller
         private CashAdjustmentService $adjustmentService
     ) {}
 
-    public function __invoke(CashAdjustment $cashAdjustment): JsonResponse
+    public function __invoke(int $id): JsonResponse
     {
+        $cashAdjustment = CashAdjustment::findOrFail($id);
+
+        Gate::authorize('post', $cashAdjustment);
+
         try {
             $postedAdjustment = $this->adjustmentService->postAdjustment(
                 $cashAdjustment,
