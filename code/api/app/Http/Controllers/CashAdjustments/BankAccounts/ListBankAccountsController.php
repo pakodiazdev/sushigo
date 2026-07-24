@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\CashAdjustments\BankAccounts;
 
+use App\Http\Controllers\Concerns\ScopesToUserBranches;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
@@ -25,9 +27,14 @@ use Illuminate\Http\Request;
  */
 class ListBankAccountsController extends Controller
 {
+    use ScopesToUserBranches;
+
     public function __invoke(Request $request): JsonResponse
     {
-        $query = BankAccount::with('branch');
+        Gate::authorize('viewAny', BankAccount::class);
+
+        $query = BankAccount::with('branch')
+            ->whereIn('branch_id', $this->userBranchIds($request));
 
         if ($request->has('branch_id')) {
             $query->byBranch($request->input('branch_id'));

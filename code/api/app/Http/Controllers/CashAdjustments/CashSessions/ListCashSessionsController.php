@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\CashAdjustments\CashSessions;
 
 use App\Http\Controllers\Concerns\ResolvesPublicIdFilters;
+use App\Http\Controllers\Concerns\ScopesToUserBranches;
 use App\Http\Controllers\Controller;
 use App\Models\CashRegister;
 use App\Models\CashSession;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
@@ -30,10 +33,15 @@ use Illuminate\Http\Request;
 class ListCashSessionsController extends Controller
 {
     use ResolvesPublicIdFilters;
+    use ScopesToUserBranches;
 
     public function __invoke(Request $request): JsonResponse
     {
-        $query = CashSession::with(['cashRegister.branch']);
+        Gate::authorize('viewAny', CashSession::class);
+
+        $branchIds = $this->userBranchIds($request);
+        $query = CashSession::with(['cashRegister.branch'])
+            ->whereHas('cashRegister', fn (Builder $q) => $q->whereIn('branch_id', $branchIds));
 
         if ($request->has('cash_register_id')) {
             $query->where(
