@@ -5,9 +5,7 @@ namespace Tests\Feature\CashAdjustments\CashSessions;
 use App\Models\Branch;
 use App\Models\CashRegister;
 use App\Models\CashSession;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\CashAdjustments\Concerns\SetsUpBranchAccess;
 use Tests\TestCase;
@@ -72,13 +70,56 @@ class CashSessionAuthorizationTest extends TestCase
         $otherRegister = CashRegister::factory()->for($branch)->create();
         $session = CashSession::factory()->for($register, 'cashRegister')->draft()->create();
         CashSession::factory()->for($otherRegister, 'cashRegister')->draft()->create();
-        Passport::actingAs(User::factory()->create());
+        $this->actingAsUserWithBranchAccess($branch, 'cash_sessions.view');
 
         $response = $this->getJson('/api/v1/cash-sessions?cash_register_id='.$register->public_id);
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $session->public_id);
+    }
+
+    #[Test]
+    public function list_rejects_a_user_without_the_permission(): void
+    {
+        $branch = Branch::factory()->create();
+        $this->sessionForBranch($branch);
+        $this->actingAsUserWithBranchAccess($branch, 'some.other.permission');
+
+        $response = $this->getJson('/api/v1/cash-sessions');
+
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function list_only_returns_sessions_within_the_users_branch(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+        $sessionA = $this->sessionForBranch($branchA);
+        $this->sessionForBranch($branchB);
+        $this->actingAsUserWithBranchAccess($branchA, 'cash_sessions.view');
+
+        $response = $this->getJson('/api/v1/cash-sessions');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $sessionA->public_id);
+    }
+
+    #[Test]
+    public function list_excludes_a_cash_register_id_filter_from_a_branch_the_user_cannot_access(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+        $this->sessionForBranch($branchA);
+        $registerB = CashRegister::factory()->for($branchB)->create();
+        CashSession::factory()->for($registerB, 'cashRegister')->draft()->create();
+        $this->actingAsUserWithBranchAccess($branchA, 'cash_sessions.view');
+
+        $response = $this->getJson('/api/v1/cash-sessions?cash_register_id='.$registerB->public_id);
+
+        $response->assertStatus(200)->assertJsonCount(0, 'data');
     }
 
     #[Test]

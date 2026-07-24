@@ -73,6 +73,48 @@ class CashRegisterAuthorizationTest extends TestCase
     }
 
     #[Test]
+    public function list_rejects_a_user_without_the_permission(): void
+    {
+        $branch = Branch::factory()->create();
+        CashRegister::factory()->for($branch)->create();
+        $this->actingAsUserWithBranchAccess($branch, 'some.other.permission');
+
+        $response = $this->getJson('/api/v1/cash-registers');
+
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function list_only_returns_registers_within_the_users_branch(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+        $registerA = CashRegister::factory()->for($branchA)->create();
+        CashRegister::factory()->for($branchB)->create();
+        $this->actingAsUserWithBranchAccess($branchA, 'cash_registers.view');
+
+        $response = $this->getJson('/api/v1/cash-registers');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $registerA->public_id);
+    }
+
+    #[Test]
+    public function list_excludes_a_branch_id_filter_the_user_cannot_access(): void
+    {
+        $branchA = Branch::factory()->create();
+        $branchB = Branch::factory()->create();
+        CashRegister::factory()->for($branchA)->create();
+        CashRegister::factory()->for($branchB)->create();
+        $this->actingAsUserWithBranchAccess($branchA, 'cash_registers.view');
+
+        $response = $this->getJson('/api/v1/cash-registers?branch_id='.$branchB->id);
+
+        $response->assertStatus(200)->assertJsonCount(0, 'data');
+    }
+
+    #[Test]
     public function show_rejects_a_user_without_branch_access(): void
     {
         $branch = Branch::factory()->create();
