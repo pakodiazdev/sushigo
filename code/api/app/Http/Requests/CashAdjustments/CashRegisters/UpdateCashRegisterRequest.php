@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashRegisters;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -20,6 +21,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class UpdateCashRegisterRequest extends FormRequest
 {
     use CastsRequestFields;
+    use SharesValidationMessages;
 
     public function authorize(): bool
     {
@@ -43,7 +45,7 @@ class UpdateCashRegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'code.unique' => 'El código ya está en uso',
+            ...$this->sharedMessages(['code.unique']),
             'type.in' => 'El tipo debe ser ON_PREMISE, DELIVERY o EVENT',
         ];
     }

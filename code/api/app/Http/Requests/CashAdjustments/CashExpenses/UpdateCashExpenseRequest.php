@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashExpenses;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use App\Http\Requests\Concerns\ValidatesTenderTypeReference;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -26,6 +27,7 @@ use Illuminate\Validation\Validator;
 class UpdateCashExpenseRequest extends FormRequest
 {
     use CastsRequestFields;
+    use SharesValidationMessages;
     use ValidatesTenderTypeReference;
 
     public function authorize(): bool
@@ -57,10 +59,7 @@ class UpdateCashExpenseRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'tender_type.in' => 'El tipo de tender debe ser CASH, CARD o TRANSFER',
-            'amount.min' => 'El monto debe ser mayor a 0',
-        ];
+        return $this->sharedMessages(['tender_type.in', 'amount.min']);
     }
 
     public function withValidator(Validator $validator): void

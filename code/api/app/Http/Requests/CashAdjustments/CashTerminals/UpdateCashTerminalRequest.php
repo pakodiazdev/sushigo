@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CashAdjustments\CashTerminals;
 
 use App\Http\Requests\Concerns\CastsRequestFields;
+use App\Http\Requests\Concerns\SharesValidationMessages;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -20,6 +21,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class UpdateCashTerminalRequest extends FormRequest
 {
     use CastsRequestFields;
+    use SharesValidationMessages;
 
     public function authorize(): bool
     {
@@ -40,10 +42,7 @@ class UpdateCashTerminalRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'last_four.size' => 'Deben ser exactamente 4 dígitos',
-            'last_four.regex' => 'Solo se permiten números',
-        ];
+        return $this->sharedMessages(['last_four.size', 'last_four.regex']);
     }
 
     public function prepareForValidation(): void

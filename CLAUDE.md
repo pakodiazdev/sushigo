@@ -360,6 +360,8 @@ This rule applies everywhere: return types, parameter types, `::class` reference
 
 ### FormRequest / Controller / Service responsibilities (mandatory)
 
+> Before writing a `messages()` method on a new `Store*Request`/`Update*Request` in an existing domain (e.g. `CashAdjustments/*`), see `doc/conventions/backend/avoiding-sonarcloud-duplication.md` — check `App\Http\Requests\Concerns\SharesValidationMessages::MESSAGES` for the field/rule pair first, and add new ones there rather than writing a fresh inline array. This is what caused 883 lines of SonarCloud duplication debt (#268, #282, #289).
+
 Each layer has a fixed responsibility. Never mix them:
 
 | Layer | Responsibility |
