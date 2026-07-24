@@ -54,7 +54,7 @@ Como desarrollador, dando seguimiento a #291, necesito que los 6 tipos de recurs
 ```
 
 ## 📊 Retrospective
-- **Actual total:** 5h 36m
+- **Actual total:** 5h 36m (120 min + 31 min + 185 min)
 - **vs optimistic:** +3h 36m over the `2h` optimistic estimate
 - **vs pessimistic:** +1h 36m over the `4h` pessimistic estimate
 
