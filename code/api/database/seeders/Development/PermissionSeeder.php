@@ -26,6 +26,8 @@ class PermissionSeeder extends LockedSeeder
 
     private const PAYROLL_PATTERN = 'payroll.%';
 
+    private const ATTENDANCES_PATTERN = 'attendances.%';
+
     /**
      * Self-service Solicitudes access — every employee can view/create/cancel
      * their own requests, including self-service vacation requests (via the
@@ -163,6 +165,10 @@ class PermissionSeeder extends LockedSeeder
             'stock.view' => ['label' => 'Ver stock y movimientos',   'group' => self::GROUP_INVENTARIO],
             'stock.manage' => ['label' => 'Registrar movimientos de stock', 'group' => self::GROUP_INVENTARIO],
 
+            // Asistencia — registro
+            'attendances.view' => ['label' => 'Ver asistencias', 'group' => 'Asistencia'],
+            'attendances.create' => ['label' => 'Registrar asistencia', 'group' => 'Asistencia'],
+
             // Asistencia — configuración
             'punctuality.manage' => ['label' => 'Gestionar rangos de puntualidad', 'group' => 'Asistencia'],
             'holidays.manage' => ['label' => 'Gestionar días festivos', 'group' => 'Asistencia'],
@@ -227,6 +233,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN)
+                            ->orWhere('name', 'like', self::ATTENDANCES_PATTERN)
                             ->orWhere('name', 'like', 'audit-logs.%')
                             ->orWhereIn('name', ['units_of_measure.manage', 'punctuality.manage', 'holidays.manage', 'settings.manage', 'overtime.manage', 'vacation-policy.manage']);
                     })
@@ -274,6 +281,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::LEAVES_PATTERN)
                             ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
+                            ->orWhere('name', 'like', self::ATTENDANCES_PATTERN)
                             ->orWhereIn('name', ['payroll.preview', 'payroll.close']);
                     })
                     ->get()
