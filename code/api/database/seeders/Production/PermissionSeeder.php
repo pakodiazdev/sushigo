@@ -98,6 +98,10 @@ class PermissionSeeder extends LockedSeeder
             'attendances.view',
             'attendances.create',
 
+            // Reportes
+            'reports.today',
+            'reports.weekly-summary',
+
             // Asistencia — configuración
             'punctuality.manage',
             'holidays.manage',
@@ -157,7 +161,8 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
                             ->orWhere('name', 'like', 'employee-requests.%')
-                            ->orWhere('name', 'like', 'attendances.%');
+                            ->orWhere('name', 'like', 'attendances.%')
+                            ->orWhere('name', 'like', 'reports.%');
                     })
                     ->get()
             );
@@ -175,6 +180,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'vacation-requests.%')
                             ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', 'attendances.%')
+                            ->orWhere('name', 'like', 'reports.%')
                             ->orWhere('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
