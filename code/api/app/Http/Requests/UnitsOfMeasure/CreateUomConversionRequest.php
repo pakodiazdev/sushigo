@@ -21,8 +21,7 @@ class CreateUomConversionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Granular permission tracked in https://github.com/pakodiazdev/sushigo/issues/275
-        return true;
+        return $this->user()->can('units_of_measure.manage');
     }
 
     public function rules(): array

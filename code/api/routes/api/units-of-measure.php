@@ -16,7 +16,7 @@ Route::prefix('units-of-measure')->group(function () {
     Route::get('/', ListUnitsOfMeasureController::class)->name('units-of-measure.list');
     Route::get(RouteParams::ID, ShowUnitOfMeasureController::class)->name('units-of-measure.show');
 
-    Route::middleware('auth:api')->group(function () {
+    Route::middleware(['auth:api', 'permission:units_of_measure.manage'])->group(function () {
         Route::post('/', CreateUnitOfMeasureController::class)->name('units-of-measure.create');
         Route::put(RouteParams::ID, UpdateUnitOfMeasureController::class)->name('units-of-measure.update');
         Route::delete(RouteParams::ID, DeleteUnitOfMeasureController::class)->name('units-of-measure.delete');
@@ -27,7 +27,7 @@ Route::prefix('units-of-measure')->group(function () {
 Route::prefix('uom-conversions')->group(function () {
     Route::get('/', ListUomConversionsController::class)->name('uom-conversions.list');
 
-    Route::middleware('auth:api')->group(function () {
+    Route::middleware(['auth:api', 'permission:units_of_measure.manage'])->group(function () {
         Route::post('/', CreateUomConversionController::class)->name('uom-conversions.create');
         Route::delete(RouteParams::ID, DeleteUomConversionController::class)->name('uom-conversions.delete');
     });
