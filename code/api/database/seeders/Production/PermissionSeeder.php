@@ -123,6 +123,9 @@ class PermissionSeeder extends LockedSeeder
             'inventory_locations.view',
             'inventory_locations.manage',
 
+            // Inventario — Unidades de medida
+            'units_of_measure.manage',
+
             // Inventario — Stock y movimientos
             'stock.view',
             'stock.manage',
@@ -176,7 +179,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'audit-logs.%')
-                            ->orWhereIn('name', ['punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'payroll.reopen', 'payroll.reclose', 'overtime.manage', 'vacation-policy.manage']);
+                            ->orWhereIn('name', ['units_of_measure.manage', 'punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'payroll.reopen', 'payroll.reclose', 'overtime.manage', 'vacation-policy.manage']);
                     })
                     ->get()
             );
@@ -193,6 +196,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->where('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
+                            ->orWhere('name', 'units_of_measure.manage')
                             ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
                     })
                     ->get()
