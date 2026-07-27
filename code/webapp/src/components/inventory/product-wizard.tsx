@@ -88,6 +88,8 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
     const { showSuccess, showError } = useToast()
     const [currentStep, setCurrentStep] = useState(1)
     const [wizardData, setWizardData] = useState<WizardData>(INITIAL_DATA)
+    const [conversionKeys, setConversionKeys] = useState<string[]>([])
+    const [balanceKeys, setBalanceKeys] = useState<string[]>([])
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [createdItemId, setCreatedItemId] = useState<number | null>(null)
     const [createdVariantId, setCreatedVariantId] = useState<number | null>(null)
@@ -180,6 +182,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                 { from_uom_id: 0, to_uom_id: 0, factor: 1 },
             ],
         }))
+        setConversionKeys((prev) => [...prev, crypto.randomUUID()])
     }
 
     const updateConversion = (index: number, field: keyof WizardData['conversions'][number], value: number) => {
@@ -196,6 +199,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
             ...prev,
             conversions: prev.conversions.filter((_, i) => i !== index),
         }))
+        setConversionKeys((prev) => prev.filter((_, i) => i !== index))
     }
 
     const addOpeningBalance = () => {
@@ -206,11 +210,12 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                 {
                     inventory_location_id: 0,
                     quantity: 0,
-                    uom_id: wizardData.variant.uom_id || 0,
+                    uom_id: prev.variant.uom_id || 0,
                     unit_cost: 0,
                 },
             ],
         }))
+        setBalanceKeys((prev) => [...prev, crypto.randomUUID()])
     }
 
     const updateOpeningBalance = (index: number, field: keyof WizardData['openingBalances'][number], value: number) => {
@@ -227,6 +232,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
             ...prev,
             openingBalances: prev.openingBalances.filter((_, i) => i !== index),
         }))
+        setBalanceKeys((prev) => prev.filter((_, i) => i !== index))
     }
 
     const validateStep1 = (): boolean => {
@@ -663,7 +669,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                             <>
                                 {wizardData.conversions.map((conversion, index) => (
                                     <div
-                                        key={index}
+                                        key={conversionKeys[index]}
                                         className="rounded-lg border border-gray-200 p-4 space-y-4"
                                     >
                                         <div className="flex items-center justify-between">
@@ -754,7 +760,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
 
                         {wizardData.openingBalances.map((balance, index) => (
                             <div
-                                key={index}
+                                key={balanceKeys[index]}
                                 className="rounded-lg border border-gray-200 p-4 space-y-4"
                             >
                                 <div className="flex items-center justify-between">

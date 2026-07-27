@@ -164,7 +164,7 @@ export function DataGrid<T extends { id: string | number }>({
     return pages.map((page, i) => {
       if (page === 'ellipsis') {
         return (
-          <span key={`ellipsis-${i}`} className={cn(PAGE_BTN_BASE, 'cursor-default text-muted-foreground')}>
+          <span key={`ellipsis-${pages[i - 1]}`} className={cn(PAGE_BTN_BASE, 'cursor-default text-muted-foreground')}>
             &hellip;
           </span>
         )

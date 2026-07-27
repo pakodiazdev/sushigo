@@ -178,6 +178,32 @@ describe('CreateAdjustmentDialog', () => {
         expect(updatedAmountInputs.length).toBe(initialAmountInputs.length + 1)
     })
 
+    it('removes a line and keeps the remaining line values when there is more than one line', () => {
+        const { container } = render(
+            <CreateAdjustmentDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        const addButton = screen.getByText(/Agregar Línea/i)
+        fireEvent.click(addButton)
+
+        const amountInputs = screen.getAllByPlaceholderText('0.00')
+        fireEvent.change(amountInputs[0]!, { target: { value: '100' } })
+        fireEvent.change(amountInputs[1]!, { target: { value: '200' } })
+
+        const removeButtons = container.querySelectorAll('button.text-red-600')
+        expect(removeButtons.length).toBe(2)
+        fireEvent.click(removeButtons[0]!)
+
+        const remainingAmountInputs = screen.getAllByPlaceholderText('0.00')
+        expect(remainingAmountInputs.length).toBe(1)
+        expect((remainingAmountInputs[0] as HTMLInputElement).value).toBe('200')
+    })
+
     it('shows the terminal selector and allows picking a terminal for CARD tender type', () => {
         const { container } = render(
             <CreateAdjustmentDialog
