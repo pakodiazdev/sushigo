@@ -269,9 +269,11 @@ export default function Sidebar() {
         <>
             {/* Mobile Overlay */}
             {isMobileOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                <button
+                    type="button"
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden cursor-default appearance-none border-none p-0"
                     onClick={closeMobileSidebar}
+                    aria-label="Cerrar menú"
                 />
             )}
 

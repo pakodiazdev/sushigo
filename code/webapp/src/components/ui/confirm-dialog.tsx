@@ -136,9 +136,12 @@ export function ConfirmDialog({
   const content = (
     <div className={`${portalTarget ? 'absolute' : 'fixed'} inset-0 z-[60] flex items-center justify-center`}>
       {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black/50 ${backdropAnimation}`}
-        onClick={() => !isLoading && onClose()}
+      <button
+        type="button"
+        className={`absolute inset-0 bg-black/50 ${backdropAnimation} cursor-default appearance-none border-none p-0`}
+        onClick={onClose}
+        disabled={isLoading}
+        aria-label="Cerrar diálogo"
       />
 
       {/* Dialog */}

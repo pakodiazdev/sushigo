@@ -118,7 +118,7 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
 | ⏳ | #323 | [Security] PRNGs should not be used in security contexts | Critical | 0.5h | 1h | — | — | Do first — Security, not just style |
-| ⏳ | #322 | [Reliability] Mouse events should have corresponding keyboard events | Critical | 1h | 2h | — | — | Real a11y/interaction bug |
+| 🚧 | #322 | [Reliability] Mouse events should have corresponding keyboard events | Critical | 1h | 2h | 0.2h | PR #333 | Real a11y/interaction bug. Fixed, SonarCloud + Copilot review passed, awaiting merge |
 | ⏳ | #325 | Overlay del diálogo "Registrar entrada" no cubre toda la pantalla | High | 0.5h | 1.5h | — | — | Quick real bug fix. **Land before starting #328** — both touch `AttendanceTimeDialog.tsx` |
 | ⏳ | #329 | Auto-calculate current week for payroll close + Sunday 19:00 gate | High | 3h | 6h | — | — | Prevents closing a wrong/partial payroll period |
 | ⏳ | #327 | Add "Ausentes" stat card, move absent employees out of main grid | High | 2h | 4h | — | — | Frontend-only |
@@ -261,7 +261,7 @@ Update the comparison as each round finishes — do not wait until sprint closur
 | Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
 |---|---:|---|---:|---|---:|---|
 | ⏳ | #323 | Not started | — | — | — | — |
-| ⏳ | #322 | Not started | — | — | — | — |
+| 🚧 | #322 | Backdrop `<div onClick>` → native `<button>` in confirm-dialog.tsx, BranchSwitcher.tsx, Sidebar.tsx (reused `dialog-frame.tsx` idiom) | PR #333 | — | 0.2h | SonarCloud + Copilot review passed; existing Vitest suites (60 tests) pass unmodified; awaiting merge |
 | ⏳ | #325 | Not started | — | — | — | — |
 | ⏳ | #329 | Not started | — | — | — | — |
 | ⏳ | #327 | Not started | — | — | — | — |

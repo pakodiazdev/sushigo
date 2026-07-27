@@ -48,9 +48,11 @@ export function BranchSwitcher() {
 
             {isOpen && (
                 <>
-                    <div
-                        className="fixed inset-0 z-30"
+                    <button
+                        type="button"
+                        className="fixed inset-0 z-30 cursor-default appearance-none border-none bg-transparent p-0"
                         onClick={() => setIsOpen(false)}
+                        aria-label="Cerrar selector de sucursal"
                     />
                     <div className="absolute bottom-full left-0 right-0 mb-2 z-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 max-h-64 overflow-y-auto">
                         {availableBranches.map((branch) => (
