@@ -33,6 +33,8 @@ A file-level conflict analysis (parsed directly from each SonarCloud Issue's "Af
 
 Expected outcome: a real attendance-correction capability shipped, payroll-close periods can no longer be closed early or as a partial week, the two highest-connected quality debt nodes (#305, #306) cleared, and the sprint's own estimate-vs-tracked comparison populated so future sprints can calibrate estimates against real data.
 
+**Progress as of 2026-07-26:** 3 of 26 scoped Issues completed (11.5%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge). All three are in Round 1.
+
 ## 2. Context
 
 The previous planning document (an unversioned `sushigo-dev-lab/plan/roadmap.md`, tracking the same backlog before it existed as a formal sprint) established the value ranking and round structure below through direct repository analysis, not topic guessing. That document lived in the dev-lab orchestration repo, outside version control (`plan/.gitignore` excluded everything under it), so no history of past planning was preserved. This sprint moves that planning permanently into `sushigo`, under the process introduced in `sprint-000-introduction.md`, so it accumulates real history from this point forward.
@@ -59,6 +61,7 @@ Base state: `main` @ `079a316`, 26 open Issues, zero Issues yet linked to a GitH
 | Target completion (deadline) | 2026-08-09 |
 | Calendar duration (planned) | 14 days |
 | Active workdays | — |
+| Progress (Issues completed) | 3 / 26 (11.5%) — #323, #322, #325 |
 
 ### How the deadline was set
 
@@ -119,7 +122,7 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 |---|---:|---|---|---:|---:|---:|---|---|
 | ✅ | #323 | [Security] PRNGs should not be used in security contexts | Critical | 0.5h | 1h | 0.6h | PR #332 | Fixed — `Math.random()` → `crypto.randomUUID()`, plus guarded `generateToastId()` fallback for insecure contexts (Copilot review). Commits squashed to 1. Reviewed, merge pending |
 | ✅ | #322 | [Reliability] Mouse events should have corresponding keyboard events | Critical | 1h | 2h | 0.2h | PR #333 | Real a11y/interaction bug. Fixed, SonarCloud + Copilot review passed, merged |
-| 🚧 | #325 | Overlay del diálogo "Registrar entrada" no cubre toda la pantalla | High | 0.5h | 1.5h | — | PR #334 | Quick real bug fix. **Land before starting #328** — both touch `AttendanceTimeDialog.tsx` |
+| ✅ | #325 | Overlay del diálogo "Registrar entrada" no cubre toda la pantalla | High | 0.5h | 1.5h | 0.27h | PR #334 | Fixed — added `container="viewport"` to `ConfirmDialog` in `AttendanceTimeDialog`; portal-to-`document.body` test added, 2 Copilot review comments addressed. **Land before starting #328** — both touch `AttendanceTimeDialog.tsx`. PR ready, merge pending |
 | 🚧 | #329 | Auto-calculate current week for payroll close + Sunday 19:00 gate | High | 3h | 6h | — | — | Prevents closing a wrong/partial payroll period |
 | 🚧 | #327 | Add "Ausentes" stat card, move absent employees out of main grid | High | 2h | 4h | — | — | Frontend-only |
 | ⏳ | #276 | Integrate a real WhatsApp provider in WhatsAppService | Medium | 2h | 4h | — | — | Backend-only, zero overlap with anything |
@@ -186,7 +189,7 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 ## 8. Route B — Sequential Dependencies
 
 ```text
-#325 (Round 1, ~1h)  →  #328 (Round 2, ~4-7h)
+#325 (Round 1, ~1h, ✅ done — PR #334 ready to merge)  →  #328 (Round 2, ~4-7h)
    Both touch AttendanceTimeDialog.tsx — land #325's one-line fix first
    so #328 isn't rebasing around it mid-flight.
 
@@ -262,7 +265,7 @@ Update the comparison as each round finishes — do not wait until sprint closur
 |---|---:|---|---:|---|---:|---|
 | ✅ | #323 | `Math.random()` → `crypto.randomUUID()` in `toast-provider.tsx`, guarded `generateToastId()` fallback (Date.now() + counter, no `Math.random()`) for insecure contexts/older browsers per Copilot review | PR #332 | — | 0.6h | ESLint + TypeScript pass, 0 errors; no Vitest/Cypress needed (internal id-gen, no behavior change); commits squashed to 1; reviewed, merge pending |
 | ✅ | #322 | Backdrop `<div onClick>` → native `<button>` in confirm-dialog.tsx, BranchSwitcher.tsx, Sidebar.tsx (reused `dialog-frame.tsx` idiom) | PR #333 | 621868b | 0.2h | SonarCloud + Copilot review passed; existing Vitest suites (60 tests) pass unmodified; merged |
-| 🚧 | #325 | In progress — PR #334 open | PR #334 | — | — | — |
+| ✅ | #325 | Added `container="viewport"` to `ConfirmDialog` in `AttendanceTimeDialog`, fixing the overlay for all 4 attendance dialogs (check-in, lunch-start, lunch-return, check-out); added a portal-assertion test | PR #334 | — | 0.27h | Vitest 17/17 passing, ESLint + TypeScript clean, 2 Copilot review comments addressed and resolved; manual in-browser verification of the 4 flows still pending (no browser automation available); PR ready, merge pending |
 | 🚧 | #329 | In progress | — | — | — | — |
 | 🚧 | #327 | In progress | — | — | — | — |
 | ⏳ | #328 | Not started | — | — | — | — |

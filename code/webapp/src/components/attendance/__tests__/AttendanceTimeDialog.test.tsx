@@ -107,10 +107,10 @@ describe('AttendanceTimeDialog', () => {
     })
 
     it('renders time input with correct type', () => {
-        const { container } = render(<AttendanceTimeDialog {...defaultProps} />)
+        const { baseElement } = render(<AttendanceTimeDialog {...defaultProps} />)
 
-        const input = container.querySelector('input[type="time"]')
-        expect(input).toBeDefined()
+        const input = baseElement.querySelector('input[type="time"]')
+        expect(input).not.toBeNull()
         expect(input?.getAttribute('max')).toBe('18:00')
     })
 
@@ -128,9 +128,9 @@ describe('AttendanceTimeDialog', () => {
     })
 
     it('has time input with initial value', () => {
-        const { container } = render(<AttendanceTimeDialog {...defaultProps} />)
+        const { baseElement } = render(<AttendanceTimeDialog {...defaultProps} />)
 
-        const input = container.querySelector('input[type="time"]') as HTMLInputElement
+        const input = baseElement.querySelector('input[type="time"]') as HTMLInputElement
         expect(input.value).toBe('14:00')
     })
 
@@ -145,9 +145,9 @@ describe('AttendanceTimeDialog', () => {
     })
 
     it('does not reset user input when initialTime changes while dialog is open', () => {
-        const { container, rerender } = render(<AttendanceTimeDialog {...defaultProps} />)
+        const { baseElement, rerender } = render(<AttendanceTimeDialog {...defaultProps} />)
 
-        const input = container.querySelector('input[type="time"]') as HTMLInputElement
+        const input = baseElement.querySelector('input[type="time"]') as HTMLInputElement
         expect(input.value).toBe('14:00')
 
         // User types a different time
@@ -179,9 +179,9 @@ describe('AttendanceTimeDialog', () => {
     })
 
     it('resets form when dialog reopens', () => {
-        const { container, rerender } = render(<AttendanceTimeDialog {...defaultProps} />)
+        const { baseElement, rerender } = render(<AttendanceTimeDialog {...defaultProps} />)
 
-        const input = container.querySelector('input[type="time"]') as HTMLInputElement
+        const input = baseElement.querySelector('input[type="time"]') as HTMLInputElement
         fireEvent.change(input, { target: { value: '13:30' } })
         expect(input.value).toBe('13:30')
 
@@ -193,5 +193,16 @@ describe('AttendanceTimeDialog', () => {
 
         // Should reset to new initialTime since dialog was closed and reopened
         expect(input.value).toBe('15:00')
+    })
+
+    it('portals the dialog to document.body so the overlay covers the full viewport', () => {
+        const { container, baseElement } = render(<AttendanceTimeDialog {...defaultProps} />)
+
+        const dialog = baseElement.querySelector('[role="alertdialog"]')
+        expect(dialog).not.toBeNull()
+
+        // Not inline within the render container — portaled out to document.body instead
+        expect(container.contains(dialog)).toBe(false)
+        expect(document.body.contains(dialog)).toBe(true)
     })
 })
