@@ -41,6 +41,7 @@ export function CreateAdjustmentDialog({
   const [lines, setLines] = useState<CashAdjustmentLineFormData[]>([
     { tender_type: TenderType.CASH, amount: '', currency: 'MXN' }
   ])
+  const [lineKeys, setLineKeys] = useState<string[]>([crypto.randomUUID()])
 
   // Queries
   const { data: sessionsData, isLoading: loadingSessions } = useCashSessions(
@@ -68,17 +69,18 @@ export function CreateAdjustmentDialog({
       setSourceSystem('')
       setNotes('')
       setLines([{ tender_type: TenderType.CASH, amount: '', currency: 'MXN' }])
+      setLineKeys([crypto.randomUUID()])
     }
   }, [isOpen, preselectedSessionId])
 
   const handleAddLine = () => {
-    setLines([...lines, { tender_type: TenderType.CASH, amount: '', currency: 'MXN' }])
+    setLines((prev) => [...prev, { tender_type: TenderType.CASH, amount: '', currency: 'MXN' }])
+    setLineKeys((prev) => [...prev, crypto.randomUUID()])
   }
 
   const handleRemoveLine = (index: number) => {
-    if (lines.length > 1) {
-      setLines(lines.filter((_, i) => i !== index))
-    }
+    setLines((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev))
+    setLineKeys((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev))
   }
 
   const handleLineChange = <K extends keyof CashAdjustmentLineFormData>(index: number, field: K, value: CashAdjustmentLineFormData[K]) => {
@@ -235,7 +237,7 @@ export function CreateAdjustmentDialog({
 
           <div className="space-y-3">
             {lines.map((line, index) => (
-              <Card key={index} className="p-4">
+              <Card key={lineKeys[index]} className="p-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Línea {index + 1}</span>

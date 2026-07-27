@@ -282,8 +282,8 @@ export default function Dashboard() {
 
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {data.stats.map((stat, index) => (
-                    <StatCard key={index} stat={stat} />
+                {data.stats.map((stat) => (
+                    <StatCard key={stat.title} stat={stat} />
                 ))}
             </div>
 

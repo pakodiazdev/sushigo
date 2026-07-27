@@ -6,7 +6,7 @@ status: In Progress
 created: 2026-07-25
 started: 2026-07-26
 completed:
-last_updated: 2026-07-26
+last_updated: 2026-07-27
 
 base_branch: main
 base_commit: 079a316
@@ -33,7 +33,7 @@ A file-level conflict analysis (parsed directly from each SonarCloud Issue's "Af
 
 Expected outcome: a real attendance-correction capability shipped, payroll-close periods can no longer be closed early or as a partial week, the two highest-connected quality debt nodes (#305, #306) cleared, and the sprint's own estimate-vs-tracked comparison populated so future sprints can calibrate estimates against real data.
 
-**Progress as of 2026-07-26:** 3 of 26 scoped Issues completed (11.5%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge). All three are in Round 1.
+**Progress as of 2026-07-27:** 4 of 26 scoped Issues completed (15.4%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge). All four are in Round 1.
 
 ## 2. Context
 
@@ -61,7 +61,7 @@ Base state: `main` @ `079a316`, 26 open Issues, zero Issues yet linked to a GitH
 | Target completion (deadline) | 2026-08-09 |
 | Calendar duration (planned) | 14 days |
 | Active workdays | — |
-| Progress (Issues completed) | 3 / 26 (11.5%) — #323, #322, #325 |
+| Progress (Issues completed) | 4 / 26 (15.4%) — #323, #322, #325, #309 |
 
 ### How the deadline was set
 
@@ -132,7 +132,7 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 | 🚧 | #329 | Auto-calculate current week for payroll close + Sunday 19:00 gate | High | 3h | 6h | — | — | Prevents closing a wrong/partial payroll period |
 | 🚧 | #327 | Add "Ausentes" stat card, move absent employees out of main grid | High | 2h | 4h | — | — | Frontend-only |
 | ⏳ | #276 | Integrate a real WhatsApp provider in WhatsAppService | Medium | 2h | 4h | — | — | Backend-only, zero overlap with anything |
-| ⏳ | #309 | [Maintainability] JSX list components should not use array indexes as key | Medium | 1h | 2h | — | — | Real rendering-bug risk on list reorder, not just style |
+| ✅ | #309 | [Maintainability] JSX list components should not use array indexes as key | Medium | 1h | 2h | 0.7h | PR #339 | Fixed 5 array-index keys (data-grid ellipsis, cash line items, product-wizard conversions/balances, dashboard stats); 2 Copilot review bugs fixed (non-functional state updaters causing possible desync under rapid clicks); Vitest coverage added for previously-untested remove-item flows (81.8% on touched files); ESLint + TypeScript clean; PR ready, merge pending |
 | ⏳ | #321 | [Maintainability] Heading elements should have accessible content | Medium | 0.5h | 1h | — | — | a11y |
 | ⏳ | #314 | [Maintainability] Unused React typed props should be removed | Low (filler) | 1h | 2h | — | — | Conflict-free, fills spare capacity |
 | ⏳ | #315 | [Maintainability] Functions should not be nested too deeply | Low (filler) | 0.5h | 1h | — | — | Conflict-free, fills spare capacity |
@@ -277,7 +277,8 @@ Update the comparison as each round finishes — do not wait until sprint closur
 | ⏳ | #328 | Not started | — | — | — | — |
 | ⏳ | #276 | Not started | — | — | — | — |
 | ⏳ | #324 | Not started | — | — | — | — |
-| ⏳ | #305–#321 (17 remaining SonarCloud Issues) | Not started | — | — | — | — |
+| ✅ | #309 | Fixed 5 array-index keys (data-grid ellipsis, cash line items, product-wizard conversions/balances, dashboard stats) with stable identifiers (`crypto.randomUUID()`-backed parallel key arrays where the item objects post directly to the API, `pages[i-1]`/`stat.title` where a natural stable value existed) | PR #339 | — | 0.7h | ESLint + TypeScript clean, Vitest 47/47 passing; 2 Copilot review comments fixed (non-functional `setState` updaters in `handleAddLine`/`handleRemoveLine` and stale-closure `uom_id` read in `addOpeningBalance` — both could desync state under rapid clicks); added coverage for previously-untested remove-item flows, raising touched-file line coverage 75.4% → 81.8%; PR ready, merge pending |
+| ⏳ | #305–#308, #310–#321 (16 remaining SonarCloud Issues) | Not started | — | — | — | — |
 | ⏳ | #85 | Not started | — | — | — | — |
 | 🚧 | #340 | Opportunistic work (§5.4) — `.claude/settings.json` un-ignored and versioned in `sushigo-c`; read-only permission allowlist added | — | — | — | Not scheduled into a round — see §5.4 |
 

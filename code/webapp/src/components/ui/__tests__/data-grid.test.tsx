@@ -337,6 +337,38 @@ describe('DataGrid', () => {
             const currentPageButton = container.querySelector('[aria-current="page"]')
             expect(currentPageButton?.className).toContain('bg-primary')
         })
+
+        it('renders ellipsis on both sides when current page is in the middle of a long range', () => {
+            const onPageChange = vi.fn()
+            const { container, getAllByText } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    pagination={{
+                        currentPage: 10,
+                        totalPages: 20,
+                        onPageChange,
+                    }}
+                />
+            )
+
+            // Two ellipsis spans per responsive nav (5/7/10-button breakpoints), each with a unique key
+            const ellipses = getAllByText('…')
+            expect(ellipses.length).toBeGreaterThan(0)
+            ellipses.forEach((el) => expect(el.tagName).toBe('SPAN'))
+
+            // First and last page are still reachable
+            const buttons = Array.from(container.querySelectorAll('button'))
+            const firstPageButton = buttons.find(btn => btn.textContent === '1')
+            expect(firstPageButton).toBeDefined()
+            fireEvent.click(firstPageButton!)
+            expect(onPageChange).toHaveBeenCalledWith(1)
+
+            const lastPageButton = buttons.find(btn => btn.textContent === '20')
+            expect(lastPageButton).toBeDefined()
+            fireEvent.click(lastPageButton!)
+            expect(onPageChange).toHaveBeenCalledWith(20)
+        })
     })
 
     describe('column visibility', () => {

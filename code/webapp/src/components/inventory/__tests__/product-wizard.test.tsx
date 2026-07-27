@@ -177,6 +177,68 @@ describe('ProductWizard', () => {
         expect(screen.getByText('Variante del Producto')).toBeDefined()
     })
 
+    it('removes a conversion and an opening balance while keeping the remaining values', async () => {
+        createItem.mockResolvedValue({ data: { data: { id: 100 } } })
+        createVariant.mockResolvedValue({ data: { data: { id: 200 } } })
+        apiPost.mockResolvedValue({ data: {} })
+
+        render(<ProductWizard onSuccess={onSuccess} onCancel={onCancel} />, { wrapper: createWrapper() })
+
+        await waitFor(() => expect(apiGet).toHaveBeenCalled())
+        await fillStep1()
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /siguiente/i }))
+        })
+        await waitFor(() => expect(createItem).toHaveBeenCalled())
+
+        await waitFor(() => expect(screen.getByText('Variante del Producto')).toBeDefined())
+        fireEvent.change(screen.getByPlaceholderText('ej., ROLL-001-8PZ'), { target: { value: 'ROLL-001-8PZ' } })
+        fireEvent.change(screen.getByPlaceholderText('ej., California Roll 8 piezas'), { target: { value: 'California Roll 8pz' } })
+        fireEvent.change(screen.getByDisplayValue('Seleccione una unidad'), { target: { value: '1' } })
+        fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '55.5' } })
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /siguiente/i }))
+        })
+        await waitFor(() => expect(createVariant).toHaveBeenCalled())
+
+        // Step 3: add two conversions, remove the first, keep the second's value
+        await waitFor(() => expect(screen.getByText('Conversiones de Unidad')).toBeDefined())
+        fireEvent.click(screen.getByText('+ Agregar Conversión'))
+        fireEvent.change(screen.getByPlaceholderText('1.0'), { target: { value: '2' } })
+
+        fireEvent.click(screen.getByText('+ Agregar Conversión'))
+        const conversionSelects = screen.getAllByDisplayValue('Seleccione')
+        fireEvent.change(conversionSelects[2]!, { target: { value: '1' } }) // second conversion from_uom_id
+        fireEvent.change(conversionSelects[3]!, { target: { value: '1' } }) // second conversion to_uom_id
+        fireEvent.change(screen.getAllByPlaceholderText('1.0')[1]!, { target: { value: '3' } })
+
+        fireEvent.click(screen.getAllByText('Eliminar')[0]!)
+
+        const remainingFactorInputs = screen.getAllByPlaceholderText('1.0')
+        expect(remainingFactorInputs.length).toBe(1)
+        expect((remainingFactorInputs[0] as HTMLInputElement).value).toBe('3')
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /siguiente/i }))
+        })
+
+        // Step 4: add two opening balances, remove the first, keep the second's quantity
+        await waitFor(() => expect(screen.getByText('Existencias Iniciales')).toBeDefined())
+        fireEvent.click(screen.getByText('+ Agregar Ubicación'))
+        fireEvent.change(screen.getAllByPlaceholderText('0.00')[0]!, { target: { value: '10' } })
+
+        fireEvent.click(screen.getByText('+ Agregar Ubicación'))
+        fireEvent.change(screen.getAllByPlaceholderText('0.00')[2]!, { target: { value: '20' } })
+
+        fireEvent.click(screen.getAllByText('Eliminar')[0]!)
+
+        const remainingQuantityInputs = screen.getAllByPlaceholderText('0.00')
+        expect(remainingQuantityInputs.length).toBe(2)
+        expect((remainingQuantityInputs[0] as HTMLInputElement).value).toBe('20')
+    })
+
     it('shows an error when registering the opening balance fails', async () => {
         createItem.mockResolvedValue({ data: { data: { id: 100 } } })
         createVariant.mockResolvedValue({ data: { data: { id: 200 } } })
