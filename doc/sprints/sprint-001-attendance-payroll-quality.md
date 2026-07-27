@@ -98,6 +98,12 @@ Nothing was intentionally left out of this sprint — it absorbs the full open b
 |---|---|---|---|---|
 | 2026-07-26 | ✅ | — | Sprint created from `sushigo-dev-lab/plan/roadmap.md` | Converting ad hoc planning into the formal sprint process (`sprint-000-introduction.md`) |
 
+### 5.4 Opportunistic Work
+
+| Date | Issue | Title | Trigger | Result |
+|---|---:|---|---|---|
+| 2026-07-27 | #340 | Version `.claude/settings.json` and reduce permission prompts | Repeated Bash/gh permission prompts noticed while executing Round 1 work across parallel workspaces (`sushigo-a`, `sushigo-c`) | Read-only allowlist added and versioned in `sushigo-c`; `.claude/settings.json` un-ignored so future workspaces can adopt the same config from git instead of re-deriving it |
+
 ## 6. Value Ranking
 
 | Tier | Issues | Rationale |
@@ -273,6 +279,7 @@ Update the comparison as each round finishes — do not wait until sprint closur
 | ⏳ | #324 | Not started | — | — | — | — |
 | ⏳ | #305–#321 (17 remaining SonarCloud Issues) | Not started | — | — | — | — |
 | ⏳ | #85 | Not started | — | — | — | — |
+| 🚧 | #340 | Opportunistic work (§5.4) — `.claude/settings.json` un-ignored and versioned in `sushigo-c`; read-only permission allowlist added | — | — | — | Not scheduled into a round — see §5.4 |
 
 This table should be expanded to one row per Issue as work starts — collapsed here at sprint creation time since nothing has begun.
 
