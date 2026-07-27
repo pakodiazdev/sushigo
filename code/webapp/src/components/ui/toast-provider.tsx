@@ -6,6 +6,16 @@ interface ToastWithId extends Omit<ToastProps, 'onClose'> {
   id: string
 }
 
+let toastFallbackCounter = 0
+
+function generateToastId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  toastFallbackCounter += 1
+  return `toast-${Date.now()}-${toastFallbackCounter}`
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastWithId[]>([])
 
@@ -14,7 +24,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const showToast = useCallback((toast: Omit<ToastProps, 'id' | 'onClose'>) => {
-    const id = Math.random().toString(36).substring(2, 9)
+    const id = generateToastId()
     setToasts((prev) => [...prev, { ...toast, id }])
   }, [])
 
