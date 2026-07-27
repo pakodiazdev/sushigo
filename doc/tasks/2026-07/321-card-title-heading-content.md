@@ -48,11 +48,20 @@ Como desarrollador, necesito que `CardTitle` en el kit de UI compartido exponga 
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `0.25h` · **Pessimistic:** `1h` · **Tracked:** _in progress_
+- **Optimistic:** `0.25h` · **Pessimistic:** `1h` · **Tracked:** `5m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-27", "start": "01:45", "end": "?" }
+  { "date": "2026-07-27", "start": "01:45", "end": "01:48" }
 ]
 ```
+
+## 📊 Retrospective
+- **Actual total:** 3m (5m rounded)
+- **vs optimistic:** −12m
+- **vs pessimistic:** −57m
+
+**Justification:**
+
+The fix was a single, well-understood change: make `CardTitle`'s `children` prop required and render it explicitly inside the `<h3>` instead of via `...props` spread. All 7 real usages already passed meaningful text children, so no callers needed changes — confirmed by a clean `tsc --noEmit`. No unplanned rework or scope discovery occurred.
