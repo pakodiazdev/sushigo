@@ -117,11 +117,11 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ⏳ | #323 | [Security] PRNGs should not be used in security contexts | Critical | 0.5h | 1h | — | — | Do first — Security, not just style |
-| 🚧 | #322 | [Reliability] Mouse events should have corresponding keyboard events | Critical | 1h | 2h | 0.2h | PR #333 | Real a11y/interaction bug. Fixed, SonarCloud + Copilot review passed, awaiting merge |
-| ⏳ | #325 | Overlay del diálogo "Registrar entrada" no cubre toda la pantalla | High | 0.5h | 1.5h | — | — | Quick real bug fix. **Land before starting #328** — both touch `AttendanceTimeDialog.tsx` |
-| ⏳ | #329 | Auto-calculate current week for payroll close + Sunday 19:00 gate | High | 3h | 6h | — | — | Prevents closing a wrong/partial payroll period |
-| ⏳ | #327 | Add "Ausentes" stat card, move absent employees out of main grid | High | 2h | 4h | — | — | Frontend-only |
+| ✅ | #323 | [Security] PRNGs should not be used in security contexts | Critical | 0.5h | 1h | 0.6h | PR #332 | Fixed — `Math.random()` → `crypto.randomUUID()`, plus guarded `generateToastId()` fallback for insecure contexts (Copilot review). Commits squashed to 1. Reviewed, merge pending |
+| ✅ | #322 | [Reliability] Mouse events should have corresponding keyboard events | Critical | 1h | 2h | 0.2h | PR #333 | Real a11y/interaction bug. Fixed, SonarCloud + Copilot review passed, merged |
+| 🚧 | #325 | Overlay del diálogo "Registrar entrada" no cubre toda la pantalla | High | 0.5h | 1.5h | — | PR #334 | Quick real bug fix. **Land before starting #328** — both touch `AttendanceTimeDialog.tsx` |
+| 🚧 | #329 | Auto-calculate current week for payroll close + Sunday 19:00 gate | High | 3h | 6h | — | — | Prevents closing a wrong/partial payroll period |
+| 🚧 | #327 | Add "Ausentes" stat card, move absent employees out of main grid | High | 2h | 4h | — | — | Frontend-only |
 | ⏳ | #276 | Integrate a real WhatsApp provider in WhatsAppService | Medium | 2h | 4h | — | — | Backend-only, zero overlap with anything |
 | ⏳ | #309 | [Maintainability] JSX list components should not use array indexes as key | Medium | 1h | 2h | — | — | Real rendering-bug risk on list reorder, not just style |
 | ⏳ | #321 | [Maintainability] Heading elements should have accessible content | Medium | 0.5h | 1h | — | — | a11y |
@@ -260,11 +260,11 @@ Update the comparison as each round finishes — do not wait until sprint closur
 
 | Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
 |---|---:|---|---:|---|---:|---|
-| ⏳ | #323 | Not started | — | — | — | — |
-| 🚧 | #322 | Backdrop `<div onClick>` → native `<button>` in confirm-dialog.tsx, BranchSwitcher.tsx, Sidebar.tsx (reused `dialog-frame.tsx` idiom) | PR #333 | — | 0.2h | SonarCloud + Copilot review passed; existing Vitest suites (60 tests) pass unmodified; awaiting merge |
-| ⏳ | #325 | Not started | — | — | — | — |
-| ⏳ | #329 | Not started | — | — | — | — |
-| ⏳ | #327 | Not started | — | — | — | — |
+| ✅ | #323 | `Math.random()` → `crypto.randomUUID()` in `toast-provider.tsx`, guarded `generateToastId()` fallback (Date.now() + counter, no `Math.random()`) for insecure contexts/older browsers per Copilot review | PR #332 | — | 0.6h | ESLint + TypeScript pass, 0 errors; no Vitest/Cypress needed (internal id-gen, no behavior change); commits squashed to 1; reviewed, merge pending |
+| ✅ | #322 | Backdrop `<div onClick>` → native `<button>` in confirm-dialog.tsx, BranchSwitcher.tsx, Sidebar.tsx (reused `dialog-frame.tsx` idiom) | PR #333 | 621868b | 0.2h | SonarCloud + Copilot review passed; existing Vitest suites (60 tests) pass unmodified; merged |
+| 🚧 | #325 | In progress — PR #334 open | PR #334 | — | — | — |
+| 🚧 | #329 | In progress | — | — | — | — |
+| 🚧 | #327 | In progress | — | — | — | — |
 | ⏳ | #328 | Not started | — | — | — | — |
 | ⏳ | #276 | Not started | — | — | — | — |
 | ⏳ | #324 | Not started | — | — | — | — |
