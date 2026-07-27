@@ -97,6 +97,7 @@ export function AttendanceTimeDialog({
             variant="info"
             isLoading={isLoading}
             confirmDisabled={!isValid}
+            container="viewport"
         />
     )
 }
