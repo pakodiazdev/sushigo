@@ -26,8 +26,14 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 )
 CardHeader.displayName = "CardHeader"
 
-const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
-    ({ className, ...props }, ref) => (
+interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
+    children: React.ReactNode
+}
+
+// children is required and rendered explicitly (not via ...props spread) so
+// the heading always has verifiable accessible content (SonarCloud typescript:S6850)
+const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
+    ({ className, children, ...props }, ref) => (
         <h3
             ref={ref}
             className={cn(
@@ -35,7 +41,9 @@ const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTML
                 className
             )}
             {...props}
-        />
+        >
+            {children}
+        </h3>
     )
 )
 CardTitle.displayName = "CardTitle"
