@@ -26,6 +26,7 @@ function createAxiosError(
 const mockGetClosePreview = vi.fn()
 const mockConfirmClose = vi.fn()
 const mockGetPayPeriods = vi.fn()
+const mockGetNextUnclosedPayPeriod = vi.fn()
 const mockGetPayPeriodDetail = vi.fn()
 const mockExportCsv = vi.fn()
 const mockReopenPeriod = vi.fn()
@@ -38,6 +39,7 @@ vi.mock('@/services/payroll.service', () => ({
     getClosePreview: (...args: unknown[]) => mockGetClosePreview(...args),
     confirmClose: (...args: unknown[]) => mockConfirmClose(...args),
     getPayPeriods: (...args: unknown[]) => mockGetPayPeriods(...args),
+    getNextUnclosedPayPeriod: (...args: unknown[]) => mockGetNextUnclosedPayPeriod(...args),
     getPayPeriodDetail: (...args: unknown[]) => mockGetPayPeriodDetail(...args),
     exportCsv: (...args: unknown[]) => mockExportCsv(...args),
     reopenPeriod: (...args: unknown[]) => mockReopenPeriod(...args),
@@ -53,6 +55,7 @@ import {
   useClosePreview,
   useConfirmClose,
   usePayPeriods,
+  useNextUnclosedPayPeriod,
   usePayPeriodDetail,
   useExportPayPeriod,
   useReopenPayPeriod,
@@ -246,6 +249,30 @@ describe('usePayPeriods', () => {
     expect(mockGetPayPeriods).toHaveBeenCalledWith({ branch_id: 1, status: 'CLOSED' })
     expect(result.current.data?.data).toHaveLength(1)
     expect(result.current.data?.meta.total).toBe(1)
+  })
+})
+
+describe('useNextUnclosedPayPeriod', () => {
+  it('is disabled when branchId is null', () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useNextUnclosedPayPeriod(null), { wrapper })
+
+    expect(result.current.fetchStatus).toBe('idle')
+    expect(mockGetNextUnclosedPayPeriod).not.toHaveBeenCalled()
+  })
+
+  it('fetches and maps the oldest unclosed week when branchId is provided', async () => {
+    mockGetNextUnclosedPayPeriod.mockResolvedValue({
+      data: { status: 200, data: { period_start: '2026-06-22', period_end: '2026-06-28' } },
+    })
+    const { wrapper } = makeWrapper()
+
+    const { result } = renderHook(() => useNextUnclosedPayPeriod(1), { wrapper })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockGetNextUnclosedPayPeriod).toHaveBeenCalledWith(1)
+    expect(result.current.data).toEqual({ periodStart: '2026-06-22', periodEnd: '2026-06-28' })
   })
 })
 

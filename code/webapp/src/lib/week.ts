@@ -74,6 +74,42 @@ export function currentWeekRange(): { start: string; end: string } {
   return weekRangeContaining(todayInBusinessTz())
 }
 
+/** Whole weeks between two week-start (`YYYY-MM-DD`) dates — `to` minus `from`. */
+export function weeksBetween(from: string, to: string): number {
+  const msPerDay = 24 * 60 * 60 * 1000
+  const days = (new Date(to + 'T00:00:00').getTime() - new Date(from + 'T00:00:00').getTime()) / msPerDay
+  return Math.round(days / 7)
+}
+
+/**
+ * Fixed business timezone for the payroll-close gate — deliberately NOT
+ * `getFrontendTimezone()` (the browser's timezone), since that would make the
+ * gate inconsistent across devices. This is a UX nicety only: the backend
+ * (`ApplicationClock::nowInBusinessTz()`) is the actual authority.
+ */
+const PAYROLL_GATE_TIMEZONE = 'America/Mexico_City'
+
+const PAYROLL_GATE_HOUR = 19
+
+/** Whether the payroll close gate is open (Sunday >= 19:00 business tz) for the week ending `periodEnd`. */
+export function isCloseGateOpen(periodEnd: string, now: Date = new Date()): boolean {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: PAYROLL_GATE_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00'
+  const nowInBusinessTz = `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`
+  const gateOpensAt = `${periodEnd}T${String(PAYROLL_GATE_HOUR).padStart(2, '0')}:00:00`
+
+  return nowInBusinessTz >= gateOpensAt
+}
+
 /** Formats a week range as "16 jun – 22 jun 2026" for display. */
 export function formatWeekLabel(start: string, end: string): string {
   const shortDate = (dateStr: string) =>

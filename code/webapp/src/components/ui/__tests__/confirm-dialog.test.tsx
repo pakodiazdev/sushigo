@@ -63,6 +63,14 @@ describe('ConfirmDialog', () => {
             )
             expect(await findByText('Go Back')).toBeDefined()
         })
+
+        it('hides the cancel button when hideCancel is true', async () => {
+            const { findByText, queryByText } = render(
+                <ConfirmDialog {...defaultProps} hideCancel />
+            )
+            await findByText('Test Dialog')
+            expect(queryByText('Cancelar')).toBeNull()
+        })
     })
 
     describe('interactions', () => {

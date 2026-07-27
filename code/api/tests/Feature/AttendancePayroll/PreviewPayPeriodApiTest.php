@@ -285,4 +285,13 @@ class PreviewPayPeriodApiTest extends TestCase
         $response->assertStatus(200);
         $this->assertCount(0, $response->json('data'));
     }
+
+    public function test_preview_returns_422_for_a_non_mon_sun_range(): void
+    {
+        // period_start (Tue) is not a Monday — shared full-week rule from BasePayPeriodRangeRequest
+        $response = $this->getJson('/api/v1/pay-periods/preview?branch_id='.$this->branch->id.'&period_start=2026-06-23&period_end=2026-06-29');
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['period_start']);
+    }
 }

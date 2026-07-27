@@ -10,6 +10,8 @@ import {
   weekOrdinalInMonth,
   formatWeekOrdinal,
   formatWeekTitle,
+  isCloseGateOpen,
+  weeksBetween,
 } from '../week'
 
 // Mock the timezone module to use CDMX timezone for deterministic tests
@@ -165,5 +167,56 @@ describe('formatWeekTitle', () => {
     // 2026-06-15 is June's 3rd week and the year's 24th week
     const title = formatWeekTitle('2026-06-15', '2026-06-21')
     expect(title).toBe('3ra sem. de Jun. [24] - 15 jun – 21 jun 2026')
+  })
+})
+
+describe('isCloseGateOpen', () => {
+  const PERIOD_END = '2026-06-28' // Sunday
+
+  it('is closed one minute before Sunday 19:00 in the business timezone', () => {
+    // 18:59:00 CDMX (UTC-6) = 00:59:00 UTC the next day
+    const now = new Date('2026-06-29T00:59:00Z')
+    expect(isCloseGateOpen(PERIOD_END, now)).toBe(false)
+  })
+
+  it('is open exactly at Sunday 19:00 in the business timezone', () => {
+    // 19:00:00 CDMX (UTC-6) = 01:00:00 UTC the next day
+    const now = new Date('2026-06-29T01:00:00Z')
+    expect(isCloseGateOpen(PERIOD_END, now)).toBe(true)
+  })
+
+  it('is open one minute after Sunday 19:00 in the business timezone', () => {
+    const now = new Date('2026-06-29T01:01:00Z')
+    expect(isCloseGateOpen(PERIOD_END, now)).toBe(true)
+  })
+
+  it('is closed mid-week regardless of the hour', () => {
+    // Wednesday of the same week, 23:00 CDMX — still before Sunday
+    const now = new Date('2026-06-25T05:00:00Z')
+    expect(isCloseGateOpen(PERIOD_END, now)).toBe(false)
+  })
+
+  it('stays open on days after the period end', () => {
+    // The following Monday, 00:30 CDMX
+    const now = new Date('2026-06-29T06:30:00Z')
+    expect(isCloseGateOpen(PERIOD_END, now)).toBe(true)
+  })
+})
+
+describe('weeksBetween', () => {
+  it('returns 0 for the same week start', () => {
+    expect(weeksBetween('2026-06-22', '2026-06-22')).toBe(0)
+  })
+
+  it('returns 1 for consecutive weeks', () => {
+    expect(weeksBetween('2026-06-22', '2026-06-29')).toBe(1)
+  })
+
+  it('returns 2 when two weeks were skipped', () => {
+    expect(weeksBetween('2026-06-22', '2026-07-06')).toBe(2)
+  })
+
+  it('returns a negative number when "to" is before "from"', () => {
+    expect(weeksBetween('2026-07-06', '2026-06-22')).toBe(-2)
   })
 })

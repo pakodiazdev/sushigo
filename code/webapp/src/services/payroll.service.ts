@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api-client'
 import type {
   ConfirmClosePayPeriodResponse,
+  NextUnclosedPayPeriodResponse,
   PayPeriodDetailResponse,
   PayPeriodListFilters,
   PayPeriodListResponse,
@@ -23,6 +24,11 @@ export const payrollApi = {
 
   getPayPeriods: (filters: PayPeriodListFilters) =>
     apiClient.get<PayPeriodListResponse>('/pay-periods', { params: filters }),
+
+  getNextUnclosedPayPeriod: (branchId: number) =>
+    apiClient.get<NextUnclosedPayPeriodResponse>('/pay-periods/next-unclosed', {
+      params: { branch_id: branchId },
+    }),
 
   getPayPeriodDetail: (periodId: string) =>
     apiClient.get<PayPeriodDetailResponse>(`/pay-periods/${periodId}`),
