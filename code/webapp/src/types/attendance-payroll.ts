@@ -168,6 +168,14 @@ export interface PayPeriodDetailResponse {
   data: PayPeriodDetail
 }
 
+export interface NextUnclosedPayPeriodResponse {
+  status: number
+  data: {
+    period_start: string
+    period_end: string
+  }
+}
+
 export interface ReopenPayPeriodPayload {
   reason: string
 }

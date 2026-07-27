@@ -14,6 +14,7 @@ use App\Models\PayPeriodLine;
 use App\Models\ScheduleDay;
 use App\Models\User;
 use App\Models\WageHistory;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Permission;
@@ -49,6 +50,16 @@ class ConfirmCloseApiTest extends TestCase
         $this->branch = Branch::factory()->create();
 
         Passport::actingAs($this->user);
+
+        // All pre-existing tests below target the fixed 2026-06-22..2026-06-28 week (Mon-Sun).
+        // Pin "now" to Sunday 20:00 in the business timezone so they clear the Sunday-19:00 gate.
+        Carbon::setTestNow(Carbon::parse('2026-06-28 20:00:00', 'America/Mexico_City'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow(null);
+        parent::tearDown();
     }
 
     private function createActiveEmployee(): Employee
@@ -301,5 +312,86 @@ class ConfirmCloseApiTest extends TestCase
             'period_end' => '2026-06-22',
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['period_end']);
+    }
+
+    public function test_confirm_close_rejects_a_datetime_with_offset_instead_of_a_plain_date(): void
+    {
+        $response = $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22T00:00:00-06:00',
+            'period_end' => '2026-06-28',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['period_start']);
+        $this->assertDatabaseCount('pay_periods', 0);
+    }
+
+    public function test_confirm_close_rejects_close_before_sunday_1900(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-28 18:59:00', 'America/Mexico_City'));
+
+        $response = $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-28',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['period_start']);
+        $this->assertDatabaseCount('pay_periods', 0);
+    }
+
+    public function test_confirm_close_allows_close_exactly_at_sunday_1900(): void
+    {
+        $this->createActiveEmployee();
+        Carbon::setTestNow(Carbon::parse('2026-06-28 19:00:00', 'America/Mexico_City'));
+
+        $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-28',
+        ])->assertStatus(201);
+    }
+
+    public function test_confirm_close_allows_closing_a_week_that_was_missed_weeks_ago(): void
+    {
+        // The gate has no upper bound — an overdue week (e.g. payroll close was skipped that
+        // Sunday) must stay closeable whenever someone finally gets to it, not just within a
+        // narrow window right after its own Sunday 19:00.
+        $this->createActiveEmployee();
+        Carbon::setTestNow(Carbon::parse('2026-07-15 10:00:00', 'America/Mexico_City'));
+
+        $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-28',
+        ])->assertStatus(201);
+    }
+
+    public function test_confirm_close_rejects_period_start_that_is_not_a_monday(): void
+    {
+        $response = $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-23',
+            'period_end' => '2026-06-29',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['period_start']);
+        $this->assertDatabaseCount('pay_periods', 0);
+    }
+
+    public function test_confirm_close_rejects_period_end_that_is_not_the_following_sunday(): void
+    {
+        $response = $this->postJson('/api/v1/pay-periods', [
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-27',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['period_start']);
+        $this->assertDatabaseCount('pay_periods', 0);
     }
 }

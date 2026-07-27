@@ -17,6 +17,8 @@ export interface ConfirmDialogProps {
   isLoading?: boolean
   /** Disable the confirm button (e.g. when required input is empty). */
   confirmDisabled?: boolean
+  /** Hide the cancel button — for plain informational dialogs with a single acknowledgement action. */
+  hideCancel?: boolean
   /** Where to render the dialog overlay.
    *  - undefined (default): renders inline with absolute positioning,
    *    covering the nearest positioned ancestor (e.g. a SlidePanel).
@@ -58,6 +60,7 @@ export function ConfirmDialog({
   variant = 'warning',
   isLoading = false,
   confirmDisabled = false,
+  hideCancel = false,
   container,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -131,14 +134,16 @@ export function ConfirmDialog({
 
         {/* Actions */}
         <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
-          <Button
-            type="button"
-            variant="neutral"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            {cancelLabel}
-          </Button>
+          {!hideCancel && (
+            <Button
+              type="button"
+              variant="neutral"
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              {cancelLabel}
+            </Button>
+          )}
           <Button
             type="button"
             variant={styles.confirmVariant}

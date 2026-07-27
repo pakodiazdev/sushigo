@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\Overtime\UpdateOvertimeLftTiersController;
 use App\Http\Controllers\Api\V1\PayPeriods\ConfirmCloseController;
 use App\Http\Controllers\Api\V1\PayPeriods\ExportPayPeriodController;
 use App\Http\Controllers\Api\V1\PayPeriods\ListPayPeriodsController;
+use App\Http\Controllers\Api\V1\PayPeriods\NextUnclosedPayPeriodController;
 use App\Http\Controllers\Api\V1\PayPeriods\PreviewPayPeriodController;
 use App\Http\Controllers\Api\V1\PayPeriods\ReclosePayPeriodController;
 use App\Http\Controllers\Api\V1\PayPeriods\ReopenPayPeriodController;
@@ -70,6 +71,7 @@ Route::middleware('auth:api')->prefix('negotiated-extra-days')->group(function (
 // Pay Periods Module
 Route::middleware('auth:api')->prefix('pay-periods')->name('pay-periods.')->group(function () {
     Route::get('/preview', PreviewPayPeriodController::class)->name('preview');
+    Route::get('/next-unclosed', NextUnclosedPayPeriodController::class)->name('next-unclosed');
     Route::get('/', ListPayPeriodsController::class)->name('index');
     Route::post('/', ConfirmCloseController::class)->name('close');
     Route::get('/{payPeriod}', ShowPayPeriodController::class)->name('show');

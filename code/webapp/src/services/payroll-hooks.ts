@@ -70,6 +70,18 @@ export function usePayPeriods(filters: PayPeriodListFilters) {
   })
 }
 
+export function useNextUnclosedPayPeriod(branchId: number | null) {
+  return useQuery<ClosePreviewRange | null>({
+    queryKey: ['payroll', 'periods', 'next-unclosed', branchId],
+    queryFn: async () => {
+      if (!branchId) return null
+      const res = await payrollApi.getNextUnclosedPayPeriod(branchId)
+      return { periodStart: res.data.data.period_start, periodEnd: res.data.data.period_end }
+    },
+    enabled: Boolean(branchId),
+  })
+}
+
 export function usePayPeriodDetail(periodId: string | null) {
   return useQuery<PayPeriodDetail | null>({
     queryKey: ['payroll', 'periods', periodId],
