@@ -76,6 +76,7 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
     - [Database](#database)
     - [Local setup](#local-setup)
   - [Architecture \& domain documentation](#architecture--domain-documentation)
+  - [Sprints](#sprints)
   - [Development tips](#development-tips)
   - [License](#license)
 
@@ -247,6 +248,15 @@ Uses the workspace's own `docker-compose.e2e.yml` with a Cypress container.
 - [Task #004 — Auth + Zustand migration](doc/tasks/2025-11/004-authentication-frontend-zustand.md)
 
 These documents capture the target inventory domain (operating units, stock movements, Hashids exposure) and should guide upcoming modules.
+
+## Sprints
+
+Development is organized into documented sprints — see [`doc/conventions/sprints.md`](doc/conventions/sprints.md) for the full convention and [`doc/sprints/`](doc/sprints/) for every sprint document (goal, scope, execution rounds, conflict analysis, and results).
+
+| Sprint | Title | Status | Started | Completed | Target | Document |
+|---|---|---|---|---|---|---|
+| 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
+| 001 | Attendance, Payroll & Quality | In Progress | 2026-07-26 | — | 2026-08-09 | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
 
 ## Development tips
 
