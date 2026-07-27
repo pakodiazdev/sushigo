@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Write",
+      "Edit",
+      "Bash(git *)",
+      "Bash(gh issue *)",
+      "Bash(gh pr *)",
+      "Bash(gh repo *)",
+      "Bash(gh api *)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(docker exec *)",
+      "Bash(docker ps *)",
+      "Bash(docker compose *)",
+      "Bash(php artisan test*)",
+      "Bash(npx vitest run*)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(gh run watch*)",
+      "Bash(gh project item-list*)",
+      "Bash(gh label list*)",
+      "Bash(shellcheck *)"
+    ]
+  }
+}
