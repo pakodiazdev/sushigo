@@ -415,6 +415,20 @@ Record all additions, removals, deprecations, and cancellations made after sprin
 
 Items must never disappear from sprint history without an entry here.
 
+### 5.4 Opportunistic Work
+
+Record work that was not part of the original planning and round assignment, but was seized as an opportunity during the sprint — typically a small improvement to tooling, process, or a previous decision, discovered or requested while other sprint work was in progress.
+
+Opportunistic work differs from a planned Issue (§7) and from a scope addition (§5.3):
+
+- It usually has no meaningful file-conflict surface to schedule into a round.
+- It is often triggered by something observed *while* executing other sprint work (e.g. "this kept prompting for permission, let's fix the config") rather than by the sprint's original goal.
+- It still requires a tracked GitHub Issue, sprint label, and Execution Evidence row (§13) — "opportunistic" describes *when and why* the work was picked up, not a license to skip tracking it.
+
+| Date | Issue | Title | Trigger | Result |
+|---|---:|---|---|---|
+| YYYY-MM-DD | #000 | Short title | What prompted picking this up now | One-line outcome |
+
 ## 6. Value Ranking
 
 Classify work by value and urgency before defining execution order.
@@ -767,6 +781,11 @@ next:
 
 | Date | Status | Item | Change | Reason |
 |---|---|---|---|---|
+
+### 5.4 Opportunistic Work
+
+| Date | Issue | Title | Trigger | Result |
+|---|---:|---|---|---|
 
 ## 6. Value Ranking
 
