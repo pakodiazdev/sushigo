@@ -21,9 +21,9 @@ SonarCloud flagged 1 occurrence of a redundant `return` statement in `sushigo-we
 
 ## 🎯 Acceptance Criteria
 
-- [ ] Redundant `return` at `Layout.tsx:55` removed
-- [ ] No behavior change (auth redirect flow works identically)
-- [ ] `npm run lint` and `npm run typecheck` pass with 0 errors
+- [x] Redundant `return` at `Layout.tsx:55` removed
+- [x] No behavior change (auth redirect flow works identically)
+- [x] `npm run lint` and `npm run typecheck` pass with 0 errors
 - [ ] SonarCloud shows 0 new occurrences of `typescript:S3626` on the PR
 
 ---
@@ -35,11 +35,20 @@ SonarCloud flagged 1 occurrence of a redundant `return` statement in `sushigo-we
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `10m` · **Pessimistic:** `30m` · **Tracked:** _in progress_
+- **Optimistic:** `10m` · **Pessimistic:** `30m` · **Tracked:** `3m`
 
 ### 📅 Sessions
 ```json
 [
-  { "date": "2026-07-27", "start": "20:38", "end": "?" }
+  { "date": "2026-07-27", "start": "20:38", "end": "20:41" }
 ]
 ```
+
+## 📊 Retrospective
+- **Actual total:** 3m
+- **vs optimistic:** −7m
+- **vs pessimistic:** −27m
+
+**Justification:**
+
+Finished well under the optimistic estimate — a single-line redundant `return;` removal with existing test coverage (`Layout.test.tsx`, 10/10 passing) already validating the redirect flow, no new tests needed, lint and typecheck clean on the first pass.
