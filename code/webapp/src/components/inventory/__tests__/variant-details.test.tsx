@@ -69,7 +69,6 @@ describe('VariantDetails', () => {
 
     const mockOnEdit = vi.fn()
     const mockOnDelete = vi.fn()
-    const mockOnClose = vi.fn()
 
     beforeEach(() => {
         vi.clearAllMocks()
@@ -85,7 +84,6 @@ describe('VariantDetails', () => {
                 variant={mockVariant}
                 onEdit={mockOnEdit}
                 onDelete={mockOnDelete}
-                onClose={mockOnClose}
             />,
             { wrapper: createWrapper() },
         )
@@ -99,7 +97,6 @@ describe('VariantDetails', () => {
                 variant={mockVariant}
                 onEdit={mockOnEdit}
                 onDelete={mockOnDelete}
-                onClose={mockOnClose}
             />,
             { wrapper: createWrapper() },
         )
@@ -113,7 +110,6 @@ describe('VariantDetails', () => {
                 variant={mockVariant}
                 onEdit={mockOnEdit}
                 onDelete={mockOnDelete}
-                onClose={mockOnClose}
             />,
             { wrapper: createWrapper() },
         )
@@ -129,7 +125,6 @@ describe('VariantDetails', () => {
                 variant={inactiveVariant}
                 onEdit={mockOnEdit}
                 onDelete={mockOnDelete}
-                onClose={mockOnClose}
             />,
             { wrapper: createWrapper() },
         )
@@ -143,7 +138,6 @@ describe('VariantDetails', () => {
                 variant={mockVariant}
                 onEdit={mockOnEdit}
                 onDelete={mockOnDelete}
-                onClose={mockOnClose}
             />,
             { wrapper: createWrapper() },
         )
@@ -157,7 +151,6 @@ describe('VariantDetails', () => {
                 variant={mockVariant}
                 onEdit={mockOnEdit}
                 onDelete={mockOnDelete}
-                onClose={mockOnClose}
             />,
             { wrapper: createWrapper() },
         )
@@ -171,7 +164,6 @@ describe('VariantDetails', () => {
                 variant={mockVariant}
                 onEdit={mockOnEdit}
                 onDelete={mockOnDelete}
-                onClose={mockOnClose}
             />,
             { wrapper: createWrapper() },
         )

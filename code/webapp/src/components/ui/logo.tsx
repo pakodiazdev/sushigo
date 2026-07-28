@@ -4,7 +4,6 @@ import logoImage from '@/assets/sushigo-logo.png';
 interface LogoProps {
     className?: string;
     collapsed?: boolean;
-    showText?: boolean;
 }
 
 export function Logo({ className, collapsed = false }: LogoProps) {
