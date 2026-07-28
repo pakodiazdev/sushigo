@@ -78,6 +78,7 @@ export function Toast({
 
         {/* Close Button */}
         <button
+          type="button"
           onClick={() => onClose(id)}
           className="flex-shrink-0 rounded-lg p-1 hover:bg-black/5 transition-colors"
           aria-label="Close notification"

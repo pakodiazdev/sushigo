@@ -256,7 +256,7 @@ Development is organized into documented sprints — see [`doc/conventions/sprin
 | Sprint | Title | Status | Started | Completed | Target | Document |
 |---|---|---|---|---|---|---|
 | 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
-| 001 | Attendance, Payroll & Quality | In Progress | 2026-07-26 | 30.8% | 2026-08-09 | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
+| 001 | Attendance, Payroll & Quality | In Progress | 2026-07-26 | 34.6% | 2026-08-09 | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
 
 ## Development tips
 

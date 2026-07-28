@@ -16,6 +16,7 @@ export interface DropdownMenuTriggerProps extends React.ButtonHTMLAttributes<HTM
 export function DropdownMenuTrigger({ children, className, ...props }: DropdownMenuTriggerProps) {
   return (
     <button
+      type="button"
       className={cn("flex items-center gap-2", className)}
       {...props}
     >
@@ -53,6 +54,7 @@ export interface DropdownMenuItemProps extends React.ButtonHTMLAttributes<HTMLBu
 export function DropdownMenuItem({ children, icon, className, ...props }: DropdownMenuItemProps) {
   return (
     <button
+      type="button"
       className={cn(
         "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm",
         "hover:bg-accent hover:text-accent-foreground",

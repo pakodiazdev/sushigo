@@ -211,6 +211,7 @@ export default function Sidebar() {
                 ) : (
                     <>
                         <button
+                            type="button"
                             onClick={() => !isCollapsed && toggleSubmenu(item.label)}
                             className={cn(
                                 "w-full",

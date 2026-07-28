@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react'
+import { ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type Breakpoint = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
@@ -160,6 +160,46 @@ export function DataGrid<T extends { id: string | number }>({
     )
   }
 
+  function renderEdgeButton(Icon: LucideIcon, iconCls: string, onClick: () => void, disabled: boolean, roundedCls: string | undefined, key: string) {
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={roundedCls ? cn(NAV_BTN, roundedCls) : NAV_BTN}
+      >
+        <Icon className={iconCls} />
+      </button>
+    )
+  }
+
+  function renderLeadingEdges(pag: NonNullable<DataGridProps<T>['pagination']>, iconCls: string) {
+    return [
+      renderEdgeButton(ChevronsLeft, iconCls, () => pag.onPageChange(1), pag.currentPage === 1, 'rounded-l-md', 'first'),
+      renderEdgeButton(ChevronLeft, iconCls, () => pag.onPageChange(pag.currentPage - 1), pag.currentPage === 1, undefined, 'prev'),
+    ]
+  }
+
+  function renderTrailingEdges(pag: NonNullable<DataGridProps<T>['pagination']>, iconCls: string) {
+    return [
+      renderEdgeButton(ChevronRight, iconCls, () => pag.onPageChange(pag.currentPage + 1), pag.currentPage === pag.totalPages, undefined, 'next'),
+      renderEdgeButton(ChevronsRight, iconCls, () => pag.onPageChange(pag.totalPages), pag.currentPage === pag.totalPages, 'rounded-r-md', 'last'),
+    ]
+  }
+
+  function renderPaginationNav(pag: NonNullable<DataGridProps<T>['pagination']>, maxVisible: number, iconCls: string) {
+    const leading = renderLeadingEdges(pag, iconCls)
+    const trailing = renderTrailingEdges(pag, iconCls)
+    return (
+      <>
+        {leading}
+        {renderPageNav(getPageNumbers(pag.currentPage, pag.totalPages, maxVisible), pag)}
+        {trailing}
+      </>
+    )
+  }
+
   function renderPageNav(pages: (number | 'ellipsis')[], pag: NonNullable<DataGridProps<T>['pagination']>) {
     return pages.map((page, i) => {
       if (page === 'ellipsis') {
@@ -172,6 +212,7 @@ export function DataGrid<T extends { id: string | number }>({
       const isActive = page === pag.currentPage
       return (
         <button
+          type="button"
           key={page}
           onClick={() => pag.onPageChange(page)}
           className={cn(PAGE_BTN_BASE, isActive ? PAGE_BTN_ACTIVE : PAGE_BTN_INACTIVE)}
@@ -299,37 +340,11 @@ export function DataGrid<T extends { id: string | number }>({
           {/* Mobile: compact pagination */}
           {pagination && (
             <div className="flex flex-1 items-center justify-center gap-1 sm:hidden">
-              <button
-                onClick={() => pagination.onPageChange(1)}
-                disabled={pagination.currentPage === 1}
-                className={cn(NAV_BTN, 'rounded-l-md')}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-                disabled={pagination.currentPage === 1}
-                className={NAV_BTN}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+              {renderLeadingEdges(pagination, 'h-4 w-4')}
               <span className="px-3 py-2 text-sm text-muted-foreground">
                 {pagination.currentPage} / {pagination.totalPages}
               </span>
-              <button
-                onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-                disabled={pagination.currentPage === pagination.totalPages}
-                className={NAV_BTN}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => pagination.onPageChange(pagination.totalPages)}
-                disabled={pagination.currentPage === pagination.totalPages}
-                className={cn(NAV_BTN, 'rounded-r-md')}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </button>
+              {renderTrailingEdges(pagination, 'h-4 w-4')}
             </div>
           )}
 
@@ -380,101 +395,17 @@ export function DataGrid<T extends { id: string | number }>({
                 <>
                   {/* sm to md: 5 page buttons */}
                   <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm md:hidden">
-                    <button
-                      onClick={() => pagination.onPageChange(1)}
-                      disabled={pagination.currentPage === 1}
-                      className={cn(NAV_BTN, 'rounded-l-md')}
-                    >
-                      <ChevronsLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-                      disabled={pagination.currentPage === 1}
-                      className={NAV_BTN}
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    {renderPageNav(getPageNumbers(pagination.currentPage, pagination.totalPages, 5), pagination)}
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-                      disabled={pagination.currentPage === pagination.totalPages}
-                      className={NAV_BTN}
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.totalPages)}
-                      disabled={pagination.currentPage === pagination.totalPages}
-                      className={cn(NAV_BTN, 'rounded-r-md')}
-                    >
-                      <ChevronsRight className="h-5 w-5" />
-                    </button>
+                    {renderPaginationNav(pagination, 5, 'h-5 w-5')}
                   </nav>
 
                   {/* md to lg: 7 page buttons */}
                   <nav className="isolate hidden -space-x-px rounded-md shadow-sm md:inline-flex lg:hidden">
-                    <button
-                      onClick={() => pagination.onPageChange(1)}
-                      disabled={pagination.currentPage === 1}
-                      className={cn(NAV_BTN, 'rounded-l-md')}
-                    >
-                      <ChevronsLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-                      disabled={pagination.currentPage === 1}
-                      className={NAV_BTN}
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    {renderPageNav(getPageNumbers(pagination.currentPage, pagination.totalPages, 7), pagination)}
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-                      disabled={pagination.currentPage === pagination.totalPages}
-                      className={NAV_BTN}
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.totalPages)}
-                      disabled={pagination.currentPage === pagination.totalPages}
-                      className={cn(NAV_BTN, 'rounded-r-md')}
-                    >
-                      <ChevronsRight className="h-5 w-5" />
-                    </button>
+                    {renderPaginationNav(pagination, 7, 'h-5 w-5')}
                   </nav>
 
                   {/* lg+: 10 page buttons */}
                   <nav className="isolate hidden -space-x-px rounded-md shadow-sm lg:inline-flex">
-                    <button
-                      onClick={() => pagination.onPageChange(1)}
-                      disabled={pagination.currentPage === 1}
-                      className={cn(NAV_BTN, 'rounded-l-md')}
-                    >
-                      <ChevronsLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-                      disabled={pagination.currentPage === 1}
-                      className={NAV_BTN}
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    {renderPageNav(getPageNumbers(pagination.currentPage, pagination.totalPages, 10), pagination)}
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-                      disabled={pagination.currentPage === pagination.totalPages}
-                      className={NAV_BTN}
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => pagination.onPageChange(pagination.totalPages)}
-                      disabled={pagination.currentPage === pagination.totalPages}
-                      className={cn(NAV_BTN, 'rounded-r-md')}
-                    >
-                      <ChevronsRight className="h-5 w-5" />
-                    </button>
+                    {renderPaginationNav(pagination, 10, 'h-5 w-5')}
                   </nav>
                 </>
               )}

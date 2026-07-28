@@ -50,7 +50,7 @@ export function ReadRow({ day, permanentOverride, hasTemporaryOverride, onEdit, 
         <td colSpan={5} className="py-2 pr-2 italic text-muted-foreground">Descanso</td>
         {showActions && (
           <td className="py-2 pr-3">
-            <button onClick={onEdit} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Agregar excepción">
+            <button type="button" onClick={onEdit} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Agregar excepción">
               <Pencil className="h-3.5 w-3.5" />
             </button>
           </td>
@@ -84,7 +84,7 @@ export function ReadRow({ day, permanentOverride, hasTemporaryOverride, onEdit, 
       </td>
       {showActions && (
         <td className="py-2 pr-3">
-          <button onClick={onEdit} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Agregar excepción">
+          <button type="button" onClick={onEdit} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" title="Agregar excepción">
             <Pencil className="h-3.5 w-3.5" />
           </button>
         </td>
@@ -149,8 +149,8 @@ export function EditRow({ day, values, errors, hasErrors, isPending, onUpdate, o
       {showActions && (
         <td className="py-2 pr-3">
           <div className="flex items-center gap-1">
-            <button onClick={onSave} disabled={hasErrors || isPending} className="rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-40" title="Guardar excepción"><Check className="h-4 w-4" /></button>
-            <button onClick={onCancel} className="rounded p-1 text-muted-foreground hover:bg-muted" title="Cancelar"><Ban className="h-4 w-4" /></button>
+            <button type="button" onClick={onSave} disabled={hasErrors || isPending} className="rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-40" title="Guardar excepción"><Check className="h-4 w-4" /></button>
+            <button type="button" onClick={onCancel} className="rounded p-1 text-muted-foreground hover:bg-muted" title="Cancelar"><Ban className="h-4 w-4" /></button>
           </div>
         </td>
       )}

@@ -24,7 +24,7 @@ export function OverrideListDialog({ dow: _dow, dayLabel, overrides, onSelect, o
             <Zap className="h-4 w-4 text-amber-500" aria-hidden />
             <h3 className="text-base font-semibold">Excepciones — {dayLabel}</h3>
           </div>
-          <button onClick={onClose} className="rounded-sm text-muted-foreground hover:text-foreground">
+          <button type="button" onClick={onClose} className="rounded-sm text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -42,6 +42,7 @@ export function OverrideListDialog({ dow: _dow, dayLabel, overrides, onSelect, o
                 return (
                   <li key={o.id}>
                     <button
+                      type="button"
                       onClick={() => onSelect(o)}
                       className="w-full px-5 py-3 text-left transition-colors hover:bg-muted/50"
                     >

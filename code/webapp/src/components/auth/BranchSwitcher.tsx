@@ -32,6 +32,7 @@ export function BranchSwitcher() {
     return (
         <div className="relative">
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center gap-3 w-full px-4 py-3 text-left rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
@@ -58,6 +59,7 @@ export function BranchSwitcher() {
                         {availableBranches.map((branch) => (
                             <button
                                 key={branch.id}
+                                type="button"
                                 onClick={() => handleSwitchBranch(branch.id)}
                                 disabled={isLoading}
                                 className="flex items-center justify-between w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"

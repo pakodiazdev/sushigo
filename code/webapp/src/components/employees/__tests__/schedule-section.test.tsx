@@ -12,6 +12,7 @@ vi.mock('@/services/schedule-api', () => ({
     getCurrent: vi.fn(),
     createPayload: vi.fn().mockResolvedValue({ data: { data: { id: 'new-sched' } } }),
     createDayOverride: vi.fn().mockResolvedValue({ data: { data: { id: 'new-override' } } }),
+    getHistory: vi.fn().mockResolvedValue({ data: { data: [] } }),
   },
 }))
 
@@ -326,6 +327,38 @@ describe('ScheduleSection', () => {
     await waitFor(() => {
       // Weekly calendar renders day column headers like "Lun", "Mar", etc.
       expect(screen.queryAllByText(/lun|mar|mié|jue|vie|sáb|dom/i).length).toBeGreaterThan(0)
+    })
+  })
+
+  it('switches to history view when "Historial" tab is clicked', async () => {
+    renderSection()
+    await waitFor(() => {
+      const buttons = screen.getAllByRole('button')
+      expect(buttons.find((b) => /ver horario/i.test(b.textContent ?? ''))).toBeDefined()
+    })
+
+    const verBtn = screen.getAllByRole('button').find((b) => /ver horario/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(verBtn) })
+
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Historial/i).length).toBeGreaterThan(0)
+    })
+
+    // Click the "Historial" tab
+    const historyTab = screen.getAllByRole('button').find((b) => /historial/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(historyTab) })
+
+    // No history records mocked → empty state message
+    await waitFor(() => {
+      expect(screen.queryAllByText(/no hay horarios registrados/i).length).toBeGreaterThan(0)
+    })
+
+    // Click back to "Configuración" tab
+    const configTab = screen.getAllByRole('button').find((b) => /configuraci[oó]n/i.test(b.textContent ?? ''))!
+    await act(async () => { fireEvent.click(configTab) })
+
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Jornada completa/i).length).toBeGreaterThan(0)
     })
   })
 

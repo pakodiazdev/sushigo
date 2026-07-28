@@ -95,13 +95,13 @@ function ScheduleViewBody({ ctx, employee, activeTab, setActiveTab, viewMode }: 
       {/* Tabs — only show when schedule exists */}
       {ctx.schedule && (
         <div className="flex border-b px-5">
-          <button className={tabCls('config')} onClick={() => setActiveTab('config')}>
+          <button type="button" className={tabCls('config')} onClick={() => setActiveTab('config')}>
             Configuración
           </button>
-          <button className={tabCls('week')} onClick={() => setActiveTab('week')}>
+          <button type="button" className={tabCls('week')} onClick={() => setActiveTab('week')}>
             Vista semanal
           </button>
-          <button className={tabCls('history')} onClick={() => setActiveTab('history')}>
+          <button type="button" className={tabCls('history')} onClick={() => setActiveTab('history')}>
             <span className="flex items-center gap-1">
               <History className="h-3.5 w-3.5" />
               Historial

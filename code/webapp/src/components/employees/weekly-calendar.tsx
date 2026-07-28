@@ -29,6 +29,7 @@ export function WeeklyCalendar({ schedule, weekStart, prevWeek, nextWeek, openOv
       {/* Week navigation */}
       <div className="flex items-center justify-between">
         <button
+          type="button"
           onClick={prevWeek}
           className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           title="Semana anterior"
@@ -42,6 +43,7 @@ export function WeeklyCalendar({ schedule, weekStart, prevWeek, nextWeek, openOv
           )}
         </div>
         <button
+          type="button"
           onClick={nextWeek}
           className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           title="Semana siguiente"
