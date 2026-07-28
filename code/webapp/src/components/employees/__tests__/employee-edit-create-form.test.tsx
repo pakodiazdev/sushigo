@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { EmployeeEditCreateForm } from '../employee-edit-create-form'
 import type { Employee } from '@/types/employee'
 
@@ -69,5 +69,29 @@ describe('EmployeeEditCreateForm — edit mode defaults', () => {
     expect((screen.getByPlaceholderText('Perez') as HTMLInputElement).value).toBe('García')
     expect((screen.getByPlaceholderText('juan@example.com') as HTMLInputElement).value).toBe('juan@sushigo.com')
     expect((screen.getByPlaceholderText('5512345678') as HTMLInputElement).value).toBe('5512345678')
+  })
+})
+
+describe('EmployeeEditCreateForm — role toggle', () => {
+  it('adds a role when its toggle is checked and removes it when unchecked', () => {
+    render(
+      <EmployeeEditCreateForm
+        {...baseProps}
+        assignableRoles={['cook', 'delivery-driver']}
+      />,
+    )
+
+    const cookToggle = screen.getByRole('switch', { name: 'Cocinero' })
+    const driverToggle = screen.getByRole('switch', { name: 'Repartidor' })
+
+    // Employee starts with only 'cook' assigned.
+    expect(cookToggle.getAttribute('aria-checked')).toBe('true')
+    expect(driverToggle.getAttribute('aria-checked')).toBe('false')
+
+    fireEvent.click(driverToggle)
+    expect(driverToggle.getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(cookToggle)
+    expect(cookToggle.getAttribute('aria-checked')).toBe('false')
   })
 })

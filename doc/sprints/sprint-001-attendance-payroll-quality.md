@@ -33,7 +33,7 @@ A file-level conflict analysis (parsed directly from each SonarCloud Issue's "Af
 
 Expected outcome: a real attendance-correction capability shipped, payroll-close periods can no longer be closed early or as a partial week, the two highest-connected quality debt nodes (#305, #306) cleared, and the sprint's own estimate-vs-tracked comparison populated so future sprints can calibrate estimates against real data.
 
-**Progress as of 2026-07-27:** 7 of 26 scoped Issues completed (26.9%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge), #327 (Ausentes stat card, PR #336 ready to merge), #329 (payroll close week gate, PR #335 ready to merge), #314 (unused React typed props removed, PR #343 ready to merge). All seven are in Round 1.
+**Progress as of 2026-07-28:** 8 of 26 scoped Issues completed (30.8%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge), #327 (Ausentes stat card, PR #336 ready to merge), #329 (payroll close week gate, PR #335 ready to merge), #314 (unused React typed props removed, PR #343 ready to merge), #315 (deeply nested role-toggle handler flattened, PR #344 ready to merge). All eight are in Round 1.
 
 ## 2. Context
 
@@ -61,7 +61,7 @@ Base state: `main` @ `079a316`, 26 open Issues, zero Issues yet linked to a GitH
 | Target completion (deadline) | 2026-08-09 |
 | Calendar duration (planned) | 14 days |
 | Active workdays | — |
-| Progress (Issues completed) | 7 / 26 (26.9%) — #323, #322, #325, #309, #327, #329, #314 |
+| Progress (Issues completed) | 8 / 26 (30.8%) — #323, #322, #325, #309, #327, #329, #314, #315 |
 
 ### How the deadline was set
 
@@ -135,7 +135,7 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 | ✅ | #309 | [Maintainability] JSX list components should not use array indexes as key | Medium | 1h | 2h | 0.7h | PR #339 | Fixed 5 array-index keys (data-grid ellipsis, cash line items, product-wizard conversions/balances, dashboard stats); 2 Copilot review bugs fixed (non-functional state updaters causing possible desync under rapid clicks); Vitest coverage added for previously-untested remove-item flows (81.8% on touched files); ESLint + TypeScript clean; PR ready, merge pending |
 | ⏳ | #321 | [Maintainability] Heading elements should have accessible content | Medium | 0.5h | 1h | — | — | a11y |
 | ✅ | #314 | [Maintainability] Unused React typed props should be removed | Low (filler) | 1h | 2h | 0.03h | PR #343 | Fixed — removed unused `onClose` from `VariantDetailsProps` and `showText` from `LogoProps` (both dead, confirmed no call site read them). Vitest 7/7, ESLint + TypeScript clean, Devin/DeepWiki 0 bugs/0 flags, 12/12 checks. PR ready, merge pending |
-| ⏳ | #315 | [Maintainability] Functions should not be nested too deeply | Low (filler) | 0.5h | 1h | — | — | Conflict-free, fills spare capacity |
+| ✅ | #315 | [Maintainability] Functions should not be nested too deeply | Low (filler) | 0.5h | 1h | 0.25h | PR #344 | Fixed — extracted `addRole`/`removeRole` module-level functions to flatten the `ToggleSwitch onChange` handler (S2004); further split to avoid a boolean selector parameter after `/sonar-review` flagged the initial single-function fix as S2301. New Vitest test for role toggle, full suite (3531 tests) green, SonarCloud gate OK, 12/12 checks. PR ready, merge pending |
 | ⏳ | #316 | [Maintainability] Jump statements should not be redundant | Low (filler) | 0.5h | 1h | — | — | Conflict-free, fills spare capacity |
 | ⏳ | #317 | [Maintainability] "catch" clauses should do more than rethrow | Low (filler) | 0.5h | 1h | — | — | Conflict-free, fills spare capacity |
 | ⏳ | #319 | [Maintainability] Type constituents of unions/intersections redundant | Low (filler) | 0.5h | 1h | — | — | Conflict-free, fills spare capacity |
@@ -279,7 +279,8 @@ Update the comparison as each round finishes — do not wait until sprint closur
 | ⏳ | #324 | Not started | — | — | — | — |
 | ✅ | #309 | Fixed 5 array-index keys (data-grid ellipsis, cash line items, product-wizard conversions/balances, dashboard stats) with stable identifiers (`crypto.randomUUID()`-backed parallel key arrays where the item objects post directly to the API, `pages[i-1]`/`stat.title` where a natural stable value existed) | PR #339 | — | 0.7h | ESLint + TypeScript clean, Vitest 47/47 passing; 2 Copilot review comments fixed (non-functional `setState` updaters in `handleAddLine`/`handleRemoveLine` and stale-closure `uom_id` read in `addOpeningBalance` — both could desync state under rapid clicks); added coverage for previously-untested remove-item flows, raising touched-file line coverage 75.4% → 81.8%; PR ready, merge pending |
 | ✅ | #314 | Removed unused `onClose` from `VariantDetailsProps` (`variant-details.tsx`, dead — the owning `SlidePanel` already handles closing) and `showText` from `LogoProps` (`logo.tsx`, no call site anywhere passed it); dropped the now-invalid call-site prop and unused test mock | PR #343 | — | 0.03h | Vitest 7/7 passing, ESLint + TypeScript clean; Devin/DeepWiki: 0 bugs, 0 flags, 12/12 checks; 0 review threads; commit already a single commit; PR ready, merge pending |
-| ⏳ | #305–#308, #310–#313, #315–#321 (15 remaining SonarCloud Issues) | Not started | — | — | — | — |
+| ✅ | #315 | Flattened the deeply nested `ToggleSwitch onChange` role-toggle handler in `employee-edit-create-form.tsx` into module-level `addRole`/`removeRole` functions, fixing SonarCloud S2004; further split to avoid a boolean selector parameter after `/sonar-review` flagged the initial fix as S2301 | PR #344 | — | 0.25h | Vitest 3/3 passing on the new role-toggle test, full suite (3531 tests) green, ESLint + TypeScript clean; SonarCloud quality gate OK (0 new code smells); 0 review threads; Devin/DeepWiki 0 bugs, 3 Informational-only flags; 12/12 checks; commit squashed to 1; PR ready, merge pending |
+| ⏳ | #305–#308, #310–#313, #316–#321 (14 remaining SonarCloud Issues) | Not started | — | — | — | — |
 | ⏳ | #85 | Not started | — | — | — | — |
 | 🚧 | #340 | Opportunistic work (§5.4) — `.claude/settings.json` un-ignored and versioned in `sushigo-c`; read-only permission allowlist added | — | — | — | Not scheduled into a round — see §5.4 |
 
