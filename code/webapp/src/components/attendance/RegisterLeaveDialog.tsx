@@ -1,21 +1,12 @@
 import { Loader2, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { formatLastFirst } from '@/lib/format'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 import { useRegisterLeaveDialog } from './use-register-leave-dialog'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
-
-function getAnimationClass(
-  state: 'enter' | 'exit' | null,
-  enterClass: string,
-  exitClass: string,
-): string {
-  if (state === 'enter') return enterClass
-  if (state === 'exit') return exitClass
-  return ''
-}
 
 // ── Props ───────────────────────────────────────────────────────────────────────
 
@@ -32,8 +23,6 @@ export function RegisterLeaveDialog({
   employee,
   onClose,
 }: Readonly<RegisterLeaveDialogProps>) {
-  const [visible, setVisible] = useState(false)
-  const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   const {
@@ -52,37 +41,12 @@ export function RegisterLeaveDialog({
 
   const { register, formState: { errors } } = form
 
-  // Animation
-  useEffect(() => {
-    if (isOpen) {
-      setVisible(true)
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setAnimating('enter'))
-      })
-    } else if (visible) {
-      setAnimating('exit')
-      const timer = setTimeout(() => {
-        setVisible(false)
-        setAnimating(null)
-        handleClose()
-      }, 200)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen, visible, handleClose])
-
-  // Escape key
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isPending) onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [isOpen, isPending, onClose])
+  const { visible, backdropCls: backdropAnim, panelCls: panelAnim } = useDialogTransition(isOpen, {
+    onEscape: () => { if (!isPending) onClose() },
+    onExitComplete: handleClose,
+  })
 
   if (!visible) return null
-
-  const backdropAnim = getAnimationClass(animating, 'animate-dialog-backdrop-in', 'animate-dialog-backdrop-out')
-  const panelAnim = getAnimationClass(animating, 'animate-dialog-in', 'animate-dialog-out')
 
   const employeeName = formatLastFirst(employee?.user)
 

@@ -1,13 +1,13 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useDailyAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useBulkOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { useExtraDayExpress } from '@/components/attendance/use-extra-day-express'
-import { getAttendancePhase } from '@/types/attendance'
+import { getAttendancePhase, isAbsentRow, isHiddenFromGrid } from '@/types/attendance'
 import { todayDateCdmx } from '@/lib/datetime'
 import { timeToIsoWithOffset } from '@/lib/timezone'
 import { useBusinessDate } from '@/stores/clock.store'
 import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimeDecisionPayload, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
-import type { AttendanceSummary } from '@/components/attendance'
+import type { AttendanceSummary, AttendanceFilter } from '@/components/attendance'
 
 // Re-export from shared utilities for backwards compatibility
 export { currentTimeLabel } from '@/lib/datetime'
@@ -17,20 +17,70 @@ export interface PendingAttendanceData {
   attendanceId: string
 }
 
+type AttendanceBucket = 'pending' | 'checkedIn' | 'done' | 'absent'
+
+/** Which stat bucket a row belongs to (exported for testing) */
+export function attendanceBucket(row: TodayAttendanceRow): AttendanceBucket {
+  if (isAbsentRow(row)) return 'absent'
+  const phase = getAttendancePhase(row.attendance)
+  if (phase === 'pending') return 'pending'
+  if (phase === 'done') return 'done'
+  return 'checkedIn'
+}
+
 /** Computes attendance summary from rows (exported for testing) */
 export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
-  let pending = 0, checkedIn = 0, done = 0, withOvertime = 0
+  let pending = 0, checkedIn = 0, done = 0, absent = 0, withOvertime = 0
 
   for (const row of rows) {
-    const phase = getAttendancePhase(row.attendance)
-    if (phase === 'pending') pending++
-    else if (phase === 'done' || phase === 'on-leave' || phase === 'day-off' || phase === 'absence') done++
-    else checkedIn++
+    const bucket = attendanceBucket(row)
+    if (bucket === 'pending') pending++
+    else if (bucket === 'checkedIn') checkedIn++
+    else if (bucket === 'done') done++
+    else absent++
 
     if ((row.attendance?.overtime_minutes ?? 0) > 0) withOvertime++
   }
 
-  return { total: rows.length, pending, checkedIn, done, withOvertime }
+  return { total: rows.length, pending, checkedIn, done, absent, withOvertime }
+}
+
+/**
+ * Whether a single row belongs in the grid for the given tab filter.
+ * `null` (no tab selected) is the default view: everything except rows that never
+ * need action (VACATION, scheduled rest days) — ABSENCE/LEAVE stay visible by
+ * default since their cards expose actions/info the manager still needs (see
+ * isHiddenFromGrid). Selecting "Total" or "Ausentes" overrides that default to
+ * reveal the rows hidden from the default view.
+ */
+function matchesGridFilter(row: TodayAttendanceRow, filter: AttendanceFilter | null): boolean {
+  if (filter === 'total') return true
+  if (filter === 'absent') return isAbsentRow(row)
+  if (filter === null) return !isHiddenFromGrid(row)
+  return !isHiddenFromGrid(row) && attendanceBucket(row) === filter
+}
+
+/** Rows to render in the main grid for the given tab filter (exported for testing). */
+export function filterRowsForGrid(rows: TodayAttendanceRow[], filter: AttendanceFilter | null): TodayAttendanceRow[] {
+  return rows.filter((row) => matchesGridFilter(row, filter))
+}
+
+/**
+ * Smart default tab applied once the page's first data load resolves and no
+ * tab was already chosen (e.g. from the URL). Cascades through the buckets in
+ * priority order — Pendientes, then En trabajo, then Completados, then
+ * Ausentes — landing on the first one that actually has anyone in it, so the
+ * manager never lands on an empty single-bucket tab (e.g. once everyone has
+ * checked out, or on a day where every employee is on vacation). Falls back
+ * to `null` (the default full view) only when there are no employees at all.
+ * Exported for testing.
+ */
+export function resolveDefaultFilter(summary: AttendanceSummary): AttendanceFilter | null {
+  if (summary.pending > 0) return 'pending'
+  if (summary.checkedIn > 0) return 'checkedIn'
+  if (summary.done > 0) return 'done'
+  if (summary.absent > 0) return 'absent'
+  return null
 }
 
 /**
@@ -79,6 +129,7 @@ export function timeToIso(hhmm: string, date?: string): string {
 export interface UseTodayAttendancePageResult {
   // Data
   rows: TodayAttendanceRow[]
+  visibleRows: TodayAttendanceRow[]
   summary: AttendanceSummary
   isLoading: boolean
   isError: boolean
@@ -86,6 +137,14 @@ export interface UseTodayAttendancePageResult {
   hasBranch: boolean
   branchId: number | null
   getPhase: (row: TodayAttendanceRow) => AttendancePhase
+  // Stat tab filter
+  selectedFilter: AttendanceFilter | null
+  toggleFilter: (filter: AttendanceFilter) => void
+  // Keeps a card rendered through the mark-falta → justify-now? → (dialog) flow,
+  // then plays an exit animation once the flow concludes
+  isCardExiting: (employeeId: string) => boolean
+  pinEmployeeCard: (employeeId: string) => void
+  onFaltaFlowComplete: (employeeId: string) => void
   // Date selection
   selectedDate: string
   setSelectedDate: (date: string) => void
@@ -137,7 +196,7 @@ export interface UseTodayAttendancePageResult {
   confirmExtraDay: (payload: { agreed_daily_wage: number; prima_percent: number; notes: string }) => void
 }
 
-export function useTodayAttendancePage(): UseTodayAttendancePageResult {
+export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = null): UseTodayAttendancePageResult {
   const currentBranch = useAuthStore(s => s.currentBranch)
   const branchId = currentBranch?.id ?? null
 
@@ -160,6 +219,125 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
   const extraDayMutation = useExtraDayExpress()
 
   const summary = computeSummary(data)
+
+  // ── Stat tab filter ───────────────────────────────────────────────────────────
+  const [selectedFilter, setSelectedFilter] = useState<AttendanceFilter | null>(initialFilter)
+  const hasAppliedDefaultFilter = useRef(initialFilter !== null)
+
+  // Apply the smart default (Pendientes, or En trabajo if nothing is pending)
+  // once the first load resolves, unless a tab was already chosen (e.g. from
+  // the URL). Runs at most once — later loading states (refetches, date
+  // changes) never override a filter the user or the URL already picked.
+  useEffect(() => {
+    if (hasAppliedDefaultFilter.current || isLoading) return
+    hasAppliedDefaultFilter.current = true
+    setSelectedFilter(resolveDefaultFilter(summary))
+  }, [isLoading, summary])
+
+  const toggleFilter = useCallback((filter: AttendanceFilter) => {
+    // A manual click always wins over the smart default — even one that
+    // arrives before the initial load resolves (the default-filter effect
+    // below checks this same ref and skips applying its value if so).
+    hasAppliedDefaultFilter.current = true
+    setSelectedFilter((current) => (current === filter ? null : filter))
+  }, [])
+
+  // ── Keep a card rendered through the mark-falta → justify-now? → (dialog) flow ──
+  // 'pinned'  — the underlying row no longer matches the active tab, but a dialog
+  //             flow on this exact card is still in progress; render normally,
+  //             fully interactive, so the flow isn't yanked out from under the user.
+  // 'exiting' — the flow just concluded; play the exit animation, then remove.
+  const [cardOverrides, setCardOverrides] = useState<Map<string, 'pinned' | 'exiting'>>(new Map())
+  const exitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  useEffect(() => {
+    const timers = exitTimers.current
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer))
+    }
+  }, [])
+
+  const pinEmployeeCard = useCallback((employeeId: string) => {
+    setCardOverrides((current) => {
+      if (current.get(employeeId) === 'pinned') return current
+      const next = new Map(current)
+      next.set(employeeId, 'pinned')
+      return next
+    })
+  }, [])
+
+  // The mark-falta flow always ends with the row in the 'absent' bucket,
+  // regardless of which choice the manager makes:
+  //  - Decline / no leave registered → day_status stays ABSENCE.
+  //  - Justify with a full-day (non-SCHEDULED) leave → RegisterDirectLeaveAction
+  //    overwrites the existing Attendance record's day_status to LEAVE.
+  //  - Justify with a partial (SCHEDULED) leave → shouldCreateAttendanceRecords()
+  //    is false, so RegisterDirectLeaveAction skips touching Attendance entirely
+  //    and day_status is left as ABSENCE (see RegisterDirectLeaveAction.php).
+  // Either way day_status ends up ABSENCE or LEAVE, so isAbsentRow is true and
+  // isHiddenFromGrid is false — today_leave.time_mode never overrides this,
+  // since isAbsentRow checks getAttendancePhase(row.attendance) first and only
+  // falls back to today_leave for rows with NO attendance record at all.
+  // This is computed from `filter` alone — deliberately NOT from `data` —
+  // because `data` can still reflect the pre-mutation row when the flow
+  // concludes quickly (useMarkDayStatus only invalidates/refetches on
+  // success, and the manager can dismiss the justify-now prompt before that
+  // refetch lands). Deciding from `data` in that window used the stale
+  // (still-pending) bucket and produced the wrong answer once the real data
+  // arrived a moment later.
+  function matchesFilterAfterFalta(filter: AttendanceFilter | null): boolean {
+    return filter === null || filter === 'total' || filter === 'absent'
+  }
+
+  // Ends the pin started by pinEmployeeCard once the mark-falta → justify-now?
+  // flow concludes. If the row's final status still belongs in the active tab
+  // (e.g. ABSENCE stays visible on the default view), it never actually needs
+  // to leave the grid — clear the pin immediately instead of playing the
+  // fade/slide-out animation, which would otherwise make the card vanish and
+  // then abruptly pop back in.
+  const startExitAnimation = useCallback((employeeId: string) => {
+    if (matchesFilterAfterFalta(selectedFilter)) {
+      const existingTimer = exitTimers.current.get(employeeId)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
+        exitTimers.current.delete(employeeId)
+      }
+      setCardOverrides((current) => {
+        if (!current.has(employeeId)) return current
+        const next = new Map(current)
+        next.delete(employeeId)
+        return next
+      })
+      return
+    }
+
+    setCardOverrides((current) => {
+      const next = new Map(current)
+      next.set(employeeId, 'exiting')
+      return next
+    })
+
+    const existingTimer = exitTimers.current.get(employeeId)
+    if (existingTimer) clearTimeout(existingTimer)
+
+    const timer = setTimeout(() => {
+      setCardOverrides((current) => {
+        if (!current.has(employeeId)) return current
+        const next = new Map(current)
+        next.delete(employeeId)
+        return next
+      })
+      exitTimers.current.delete(employeeId)
+    }, 350)
+    exitTimers.current.set(employeeId, timer)
+  }, [selectedFilter])
+
+  // Pinned/exiting rows are kept in their natural `data` position (not appended
+  // at the end) so the card doesn't visibly jump while its dialog flow plays out.
+  const visibleRows = useMemo(() => {
+    if (cardOverrides.size === 0) return filterRowsForGrid(data, selectedFilter)
+    return data.filter((row) => cardOverrides.has(row.employee.id) || matchesGridFilter(row, selectedFilter))
+  }, [data, selectedFilter, cardOverrides])
 
   // ── Extra day express state (declared first — openCheckIn depends on it) ──────
   const [extraDayRow, setExtraDayRow] = useState<TodayAttendanceRow | null>(null)
@@ -380,6 +558,7 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
 
   return {
     rows: data,
+    visibleRows,
     summary,
     isLoading,
     isError,
@@ -387,6 +566,11 @@ export function useTodayAttendancePage(): UseTodayAttendancePageResult {
     hasBranch: !!branchId,
     branchId,
     getPhase: (row) => getAttendancePhase(row.attendance),
+    selectedFilter,
+    toggleFilter,
+    isCardExiting: (employeeId) => cardOverrides.get(employeeId) === 'exiting',
+    pinEmployeeCard,
+    onFaltaFlowComplete: startExitAnimation,
     selectedDate,
     setSelectedDate,
     // Check-in

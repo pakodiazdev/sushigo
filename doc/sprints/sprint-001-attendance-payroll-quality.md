@@ -33,7 +33,7 @@ A file-level conflict analysis (parsed directly from each SonarCloud Issue's "Af
 
 Expected outcome: a real attendance-correction capability shipped, payroll-close periods can no longer be closed early or as a partial week, the two highest-connected quality debt nodes (#305, #306) cleared, and the sprint's own estimate-vs-tracked comparison populated so future sprints can calibrate estimates against real data.
 
-**Progress as of 2026-07-27:** 4 of 26 scoped Issues completed (15.4%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge). All four are in Round 1.
+**Progress as of 2026-07-27:** 5 of 26 scoped Issues completed (19.2%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge), #327 (Ausentes stat card, PR #336 ready to merge). All five are in Round 1.
 
 ## 2. Context
 
@@ -61,7 +61,7 @@ Base state: `main` @ `079a316`, 26 open Issues, zero Issues yet linked to a GitH
 | Target completion (deadline) | 2026-08-09 |
 | Calendar duration (planned) | 14 days |
 | Active workdays | — |
-| Progress (Issues completed) | 4 / 26 (15.4%) — #323, #322, #325, #309 |
+| Progress (Issues completed) | 5 / 26 (19.2%) — #323, #322, #325, #309, #327 |
 
 ### How the deadline was set
 
@@ -130,7 +130,7 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 | ✅ | #322 | [Reliability] Mouse events should have corresponding keyboard events | Critical | 1h | 2h | 0.2h | PR #333 | Real a11y/interaction bug. Fixed, SonarCloud + Copilot review passed, merged |
 | ✅ | #325 | Overlay del diálogo "Registrar entrada" no cubre toda la pantalla | High | 0.5h | 1.5h | 0.27h | PR #334 | Fixed — added `container="viewport"` to `ConfirmDialog` in `AttendanceTimeDialog`; portal-to-`document.body` test added, 2 Copilot review comments addressed. **Land before starting #328** — both touch `AttendanceTimeDialog.tsx`. PR ready, merge pending |
 | 🚧 | #329 | Auto-calculate current week for payroll close + Sunday 19:00 gate | High | 3h | 6h | — | — | Prevents closing a wrong/partial payroll period |
-| 🚧 | #327 | Add "Ausentes" stat card, move absent employees out of main grid | High | 2h | 4h | — | — | Frontend-only |
+| ✅ | #327 | Add "Ausentes" stat card, move absent employees out of main grid | High | 2h | 4h | 16.4h | PR #336 | Fixed — 5th "Ausentes" stat card + clickable filter tabs, smart default tab w/ URL persistence, justify-now flow with exit animations, shared `useDialogTransition` hook (full migration → #342). `/finish-pr`'s Devin/DeepWiki readiness gate caught and fixed 5 issues: a CI route-typing break, an exit-animation race, a Custom Hook Convention violation, and an empty-tab-at-end-of-day bug — 0 Bugs on final pass. PR ready, merge pending |
 | ⏳ | #276 | Integrate a real WhatsApp provider in WhatsAppService | Medium | 2h | 4h | — | — | Backend-only, zero overlap with anything |
 | ✅ | #309 | [Maintainability] JSX list components should not use array indexes as key | Medium | 1h | 2h | 0.7h | PR #339 | Fixed 5 array-index keys (data-grid ellipsis, cash line items, product-wizard conversions/balances, dashboard stats); 2 Copilot review bugs fixed (non-functional state updaters causing possible desync under rapid clicks); Vitest coverage added for previously-untested remove-item flows (81.8% on touched files); ESLint + TypeScript clean; PR ready, merge pending |
 | ⏳ | #321 | [Maintainability] Heading elements should have accessible content | Medium | 0.5h | 1h | — | — | a11y |
@@ -273,7 +273,7 @@ Update the comparison as each round finishes — do not wait until sprint closur
 | ✅ | #322 | Backdrop `<div onClick>` → native `<button>` in confirm-dialog.tsx, BranchSwitcher.tsx, Sidebar.tsx (reused `dialog-frame.tsx` idiom) | PR #333 | 621868b | 0.2h | SonarCloud + Copilot review passed; existing Vitest suites (60 tests) pass unmodified; merged |
 | ✅ | #325 | Added `container="viewport"` to `ConfirmDialog` in `AttendanceTimeDialog`, fixing the overlay for all 4 attendance dialogs (check-in, lunch-start, lunch-return, check-out); added a portal-assertion test | PR #334 | — | 0.27h | Vitest 17/17 passing, ESLint + TypeScript clean, 2 Copilot review comments addressed and resolved; manual in-browser verification of the 4 flows still pending (no browser automation available); PR ready, merge pending |
 | 🚧 | #329 | In progress | — | — | — | — |
-| 🚧 | #327 | In progress | — | — | — | — |
+| ✅ | #327 | Added a 5th "Ausentes" stat card, made every stat card a clickable filter tab with a smart default tab + URL persistence, a justify-now prompt with pin/exit-animation flow for "Marcar falta", and extracted a shared `useDialogTransition` hook (full system-wide migration deferred to #342) | PR #336 | — | 16.4h | Vitest 3479+/3479+ passing, PHPUnit 1384 passing, Cypress 46 specs/151 tests (6 pre-existing/unrelated failures verified against a clean baseline); ESLint + TypeScript clean; `/finish-pr`'s Devin/DeepWiki readiness gate found and fixed 5 issues across two passes (a `webapp-lint` CI route-typing break, an exit-animation-skip bug, a race between that fix and the mark-falta mutation's refetch, a Custom Hook Convention violation, and `resolveDefaultFilter` landing on an empty tab at end-of-day) — final pass: 0 Bugs, 0 unresolved flags; PR ready, merge pending |
 | ⏳ | #328 | Not started | — | — | — | — |
 | ⏳ | #276 | Not started | — | — | — | — |
 | ⏳ | #324 | Not started | — | — | — | — |
@@ -318,6 +318,7 @@ Not applicable — sprint just started, no lessons yet. First candidate lesson t
 | Status | Proposed Issue | Title | Reason | Candidate Sprint |
 |---|---:|---|---|---|
 | ⏳ | — | Retrofit real Estimates onto #305–#323 per `doc/conventions/tasks.md` | Current values are rough sizing, not technically scoped | Sprint 001 (before each Issue's round starts) |
+| ⏳ | #342 | Unify dialog component and enter/exit transitions across the system | Discovered while implementing #327: 3 duplicated dialog animation implementations + 6 dialogs with no animation + a separate SlidePanel family; a scoped-to-Attendance version of the shared hook lands in #327's PR, full system migration is cross-cutting frontend work that doesn't fit Sprint 001's scope | Next |
 
 ## 18. Sprint Closure Checklist
 

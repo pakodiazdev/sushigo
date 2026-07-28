@@ -1,4 +1,5 @@
-import { Users, XCircle, AlertTriangle } from 'lucide-react'
+import { Users, XCircle, AlertTriangle, FilterX } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 // ── Empty State ────────────────────────────────────────────────────────────────
 
@@ -10,6 +11,28 @@ export function EmptyState() {
             <p className="text-sm text-muted-foreground">
                 No hay empleados activos registrados en esta sucursal.
             </p>
+        </div>
+    )
+}
+
+// ── No Matches For Filter State ───────────────────────────────────────────────
+
+interface NoMatchesForFilterStateProps {
+    onShowAll: () => void
+}
+
+/** Shown when a stat-card filter (e.g. "Ausentes") narrows the grid to zero rows, even though employees exist. */
+export function NoMatchesForFilterState({ onShowAll }: Readonly<NoMatchesForFilterStateProps>) {
+    return (
+        <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
+            <FilterX className="h-10 w-10 text-muted-foreground" />
+            <p className="text-lg font-medium text-foreground">Sin resultados para este filtro</p>
+            <p className="text-sm text-muted-foreground">
+                Ningún empleado coincide con la vista seleccionada.
+            </p>
+            <Button size="sm" variant="neutral" onClick={onShowAll}>
+                Ver todos
+            </Button>
         </div>
     )
 }

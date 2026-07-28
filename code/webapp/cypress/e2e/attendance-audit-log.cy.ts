@@ -48,6 +48,11 @@ describe('Attendance audit log viewer', () => {
     cy.closeDevDebugger()
 
     cy.clock(TEST_TIME_UTC.getTime(), ['Date'])
+
+    // This spec isn't about the stat-card tabs — reveal every employee
+    // regardless of bucket (issue #327 made the default view land on a
+    // single bucket tab, e.g. "Pendientes").
+    cy.get("[data-testid='stat-total']", { timeout: 10_000 }).click({ force: true })
   })
 
   it('shows the reasoned check-in in the record audit history', () => {

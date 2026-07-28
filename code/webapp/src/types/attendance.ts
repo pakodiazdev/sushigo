@@ -178,7 +178,7 @@ export type AttendancePhase =
 
 export function getAttendancePhase(attendance: TodayAttendanceData | null): AttendancePhase {
   if (!attendance) return 'pending'
-  if (attendance.day_status === 'LEAVE') return 'on-leave'
+  if (attendance.day_status === 'LEAVE' || attendance.day_status === 'VACATION') return 'on-leave'
   if (attendance.day_status === 'DAY_OFF') return 'day-off'
   if (attendance.day_status === 'ABSENCE') return 'absence'
   if (!attendance.check_in) return 'pending'
@@ -186,6 +186,36 @@ export function getAttendancePhase(attendance: TodayAttendanceData | null): Atte
   if (!attendance.lunch_start) return 'checked-in'
   if (!attendance.lunch_end) return 'at-lunch'
   return 'returned'
+}
+
+/**
+ * True when the employee counts under the "Ausentes" stat: a manually marked
+ * absence, an approved vacation/leave, a scheduled rest day, or a full-day
+ * (OPEN_ENDED) approved leave/permiso. Partial SCHEDULED leaves keep the
+ * employee actionable — the backend never creates an Attendance record for
+ * those (see LeaveGuards::shouldCreateAttendanceRecords), since the employee
+ * is still expected to check in/out normally that day.
+ */
+export function isAbsentRow(row: TodayAttendanceRow): boolean {
+  const phase = getAttendancePhase(row.attendance)
+  if (phase === 'on-leave' || phase === 'absence' || phase === 'day-off') return true
+  return row.today_leave?.time_mode === 'OPEN_ENDED'
+}
+
+/**
+ * True when the row should be removed from the default main working grid
+ * view: an approved VACATION or a scheduled rest day (DAY_OFF) — neither
+ * requires any action from the manager. ABSENCE and LEAVE (day_status LEAVE,
+ * or a full-day OPEN_ENDED leave/permiso) stay in the grid — their cards
+ * expose live, tested functionality that requires the card to remain
+ * visible: ABSENCE shows the "Justificar falta" action
+ * (EmployeeAttendanceCard), and LEAVE shows the informational leave
+ * chip/badge (see attendance-today-leave-context.cy.ts and
+ * attendance-register-leave.cy.ts).
+ */
+export function isHiddenFromGrid(row: TodayAttendanceRow): boolean {
+  const status = row.attendance?.day_status
+  return status === 'VACATION' || status === 'DAY_OFF'
 }
 
 /** Format seconds as "Xm" or "Xh Ym" */

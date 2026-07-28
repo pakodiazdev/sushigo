@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useSearch } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
 import { RefreshCw, DoorClosed } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
@@ -13,6 +13,7 @@ import {
   EmptyState,
   ErrorState,
   NoBranchState,
+  NoMatchesForFilterState,
   OvertimeDecisionDialog,
   SkeletonGrid,
   useCloseDayPanel,
@@ -30,7 +31,18 @@ import { todayDateCdmx } from '@/lib/datetime'
 import { useBusinessDate } from '@/stores/clock.store'
 import { formatFirstLast, formatLastFirst } from '@/lib/format'
 import type { PendingAttendanceData } from './-use-today-attendance-page'
+import type { AttendanceFilter } from '@/components/attendance'
 import type { TodayAttendanceEmployee, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
+
+const ATTENDANCE_FILTERS: readonly AttendanceFilter[] = ['total', 'pending', 'checkedIn', 'done', 'absent']
+
+function isAttendanceFilter(value: unknown): value is AttendanceFilter {
+  return typeof value === 'string' && (ATTENDANCE_FILTERS as readonly string[]).includes(value)
+}
+
+interface AttendanceSearch {
+  tab?: AttendanceFilter
+}
 
 // ── Module-level helpers (keep complexity out of the component) ───────────────
 
@@ -105,17 +117,29 @@ function resolveOvertimeDialog({
 export const Route = createFileRoute('/attendance/')({
   beforeLoad: requirePermission('employees.view'),
   component: AttendancePage,
+  validateSearch: (search: Record<string, unknown>): AttendanceSearch => ({
+    tab: isAttendanceFilter(search.tab) ? search.tab : undefined,
+  }),
 })
 
 export function AttendancePage() {
+  const search = useSearch({ from: '/attendance/' })
+  const navigate = Route.useNavigate()
+
   const {
     rows,
+    visibleRows,
     summary,
     isLoading,
     isError,
     branchName,
     hasBranch,
     branchId,
+    selectedFilter,
+    toggleFilter,
+    isCardExiting,
+    pinEmployeeCard,
+    onFaltaFlowComplete,
     selectedDate,
     setSelectedDate,
     // Check-in
@@ -162,7 +186,7 @@ export function AttendancePage() {
     isRegisteringExtraDay,
     closeExtraDay,
     confirmExtraDay,
-  } = useTodayAttendancePage()
+  } = useTodayAttendancePage(search.tab ?? null)
 
   const maxTime = useApplicationTimeLabel()
   const closeDayPanel = useCloseDayPanel(rows, branchId, maxTime)
@@ -172,6 +196,15 @@ export function AttendancePage() {
   const { canEdit, requiresReason } = useAttendancePermissions(selectedDate)
   const weeklySummary = useWeeklySummaryDialog()
   const [auditRecord, setAuditRecord] = useState<{ employeeName: string; attendanceId: string } | null>(null)
+
+  // Mirror the active tab into the URL (?tab=) so a page refresh keeps the
+  // same filter — including the smart default the hook resolves on first load.
+  useEffect(() => {
+    navigate({
+      search: (prev) => ({ ...prev, tab: selectedFilter ?? undefined }),
+      replace: true,
+    })
+  }, [selectedFilter, navigate])
 
   // Feed bulk overtime decisions from the close-day panel into the queue
   const { overtimePending, clearOvertimePending } = closeDayPanel
@@ -241,25 +274,34 @@ export function AttendancePage() {
         }
       />
 
-      <AttendanceSummaryBar summary={summary} />
+      <AttendanceSummaryBar summary={summary} activeFilter={selectedFilter} onFilterChange={toggleFilter} />
 
       {(() => {
         if (isError) return <ErrorState />
         if (isLoading && rows.length === 0) return <SkeletonGrid />
         if (rows.length === 0) return <EmptyState />
+        if (visibleRows.length === 0) return <NoMatchesForFilterState onShowAll={() => toggleFilter('total')} />
         return (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {rows.map((row) => (
+            {visibleRows.map((row) => (
               <EmployeeAttendanceCard
                 key={row.employee.id}
                 row={row}
                 canEdit={canEdit}
+                isExiting={isCardExiting(row.employee.id)}
+                onFaltaFlowComplete={onFaltaFlowComplete}
                 onCheckIn={openCheckIn}
                 onLunchStart={openLunchStart}
                 onLunchReturn={openLunchReturn}
                 onCheckOut={openCheckOut}
                 onOvertimeDecision={openOvertimeDecision}
-                onMarkDayStatus={markDayStatus}
+                onMarkDayStatus={(employee, status) => {
+                  // Keep this card rendered through the justify-now? flow —
+                  // its bucket is about to change and would otherwise vanish
+                  // from the current tab mid-flow (see onFaltaFlowComplete).
+                  pinEmployeeCard(employee.id)
+                  markDayStatus(employee, status)
+                }}
                 onWeeklySummary={can('reports.weekly-summary')
                   ? (emp) => weeklySummary.open(emp.id, formatLastFirst(emp.user))
                   : undefined}

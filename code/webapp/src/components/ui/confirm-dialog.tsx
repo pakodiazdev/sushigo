@@ -1,8 +1,9 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useContext, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, type ButtonProps } from '@/components/ui/button'
 import { Loader2, AlertTriangle, Info } from 'lucide-react'
 import { SlidePanelOverlayContext } from '@/components/ui/slide-panel-context'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 
 export interface ConfirmDialogProps {
   isOpen: boolean
@@ -59,70 +60,18 @@ export function ConfirmDialog({
   confirmDisabled = false,
   container,
 }: ConfirmDialogProps) {
-  const [visible, setVisible] = useState(false)
-  const [animating, setAnimating] = useState<'enter' | 'exit' | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const slidePanelOverlay = useContext(SlidePanelOverlayContext)
 
-  useEffect(() => {
-    if (isOpen) {
-      setVisible(true)
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setAnimating('enter'))
-      })
-    } else if (visible) {
-      setAnimating('exit')
-      const timer = setTimeout(() => {
-        setVisible(false)
-        setAnimating(null)
-      }, 200)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen, visible])
-
-  // Close on Escape
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isLoading) {
-        onClose()
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [isOpen, isLoading, onClose])
-
-  // Prevent body scroll only in viewport mode
-  useEffect(() => {
-    if (container === 'viewport' && isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else if (container === 'viewport') {
-      document.body.style.overflow = 'unset'
-    }
-    return () => {
-      if (container === 'viewport') {
-        document.body.style.overflow = 'unset'
-      }
-    }
-  }, [isOpen, container])
+  const { visible, backdropCls: backdropAnimation, panelCls: panelAnimation } = useDialogTransition(isOpen, {
+    onEscape: () => { if (!isLoading) onClose() },
+    lockScroll: container === 'viewport',
+  })
 
   if (!visible) return null
 
   const styles = variantStyles[variant]
   const Icon = styles.icon
-
-  const backdropAnimation =
-    animating === 'enter'
-      ? 'animate-dialog-backdrop-in'
-      : animating === 'exit'
-        ? 'animate-dialog-backdrop-out'
-        : ''
-
-  const panelAnimation =
-    animating === 'enter'
-      ? 'animate-dialog-in'
-      : animating === 'exit'
-        ? 'animate-dialog-out'
-        : ''
 
   // Determine portal target:
   // - 'viewport': portal to document.body (covers full window)

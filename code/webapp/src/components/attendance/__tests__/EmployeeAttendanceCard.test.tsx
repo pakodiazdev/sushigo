@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, cleanup, fireEvent } from '@testing-library/react'
+import { render, cleanup, fireEvent, act } from '@testing-library/react'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -29,6 +29,7 @@ import type { TodayAttendanceRow, TodayAttendanceData, TodayScheduleDay, TodayLe
 afterEach(() => {
     cleanup()
     mockRegisterLeaveDialog.mockClear()
+    vi.useRealTimers()
 })
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -381,6 +382,102 @@ describe('EmployeeAttendanceCard', () => {
         expect(onMarkDayStatus).not.toHaveBeenCalled()
     })
 
+    it('asks whether to justify the falta right after confirming it', () => {
+        const { getByTestId, getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
+
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        fireEvent.click(getByText('Confirmar falta'))
+
+        expect(getByText('¿Deseas justificar la falta ahora?')).toBeDefined()
+    })
+
+    it('opens RegisterLeaveDialog when choosing to justify the falta right away', () => {
+        const { getByTestId, getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
+
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        fireEvent.click(getByText('Confirmar falta'))
+        fireEvent.click(getByText('Justificar ahora'))
+
+        expect(mockRegisterLeaveDialog).toHaveBeenLastCalledWith(
+            expect.objectContaining({ isOpen: true, employee: mockRow.employee })
+        )
+    })
+
+    it('calls onFaltaFlowComplete when declining to justify the falta right away', () => {
+        const onFaltaFlowComplete = vi.fn()
+        const { getByTestId, getByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} onFaltaFlowComplete={onFaltaFlowComplete} />
+        )
+
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        fireEvent.click(getByText('Confirmar falta'))
+        fireEvent.click(getByText('Ahora no'))
+
+        expect(onFaltaFlowComplete).toHaveBeenCalledWith(mockRow.employee.id)
+    })
+
+    it('calls onFaltaFlowComplete when RegisterLeaveDialog closes', () => {
+        const onFaltaFlowComplete = vi.fn()
+        const { getByTestId, getByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} onFaltaFlowComplete={onFaltaFlowComplete} />
+        )
+
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        fireEvent.click(getByText('Confirmar falta'))
+        fireEvent.click(getByText('Justificar ahora'))
+
+        const calls = mockRegisterLeaveDialog.mock.calls
+        const lastCall = calls[calls.length - 1]
+        if (!lastCall) throw new Error('RegisterLeaveDialog was not called')
+        lastCall[0].onClose()
+
+        expect(onFaltaFlowComplete).toHaveBeenCalledWith(mockRow.employee.id)
+    })
+
+    it('crossfades: pending actions fade out and "Justificar falta" fades in when the row turns ABSENCE', () => {
+        vi.useFakeTimers()
+
+        const { getByTestId, queryByTestId, rerender } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRow} />
+        )
+
+        expect(getByTestId('btn-mark-falta')).toBeDefined()
+
+        const absenceRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({ id: '01HZATTEND000010', check_in: null, day_status: 'ABSENCE' }),
+            schedule: null,
+            today_leave: null,
+        }
+        rerender(<EmployeeAttendanceCard {...defaultProps} row={absenceRow} />)
+
+        // Still showing the old pending buttons, now fading out — not yet swapped
+        const fadingOutContainer = getByTestId('btn-mark-falta').parentElement as HTMLElement
+        expect(fadingOutContainer.className).toContain('animate-fade-out')
+        expect(queryByTestId('btn-justify-absence')).toBeNull()
+
+        act(() => {
+            vi.advanceTimersByTime(200)
+        })
+
+        // Swapped to the justify button, fading in
+        expect(queryByTestId('btn-mark-falta')).toBeNull()
+        const fadedInContainer = getByTestId('btn-justify-absence').parentElement as HTMLElement
+        expect(fadedInContainer.className).toContain('animate-fade-in')
+    })
+
+    it('does not crossfade for a direct initial ABSENCE render (no prior pending state)', () => {
+        const absenceRow: TodayAttendanceRow = {
+            employee: mockRow.employee,
+            attendance: makeAttendance({ id: '01HZATTEND000011', check_in: null, day_status: 'ABSENCE' }),
+            schedule: null,
+            today_leave: null,
+        }
+        const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={absenceRow} />)
+
+        expect(getByTestId('btn-justify-absence')).toBeDefined()
+    })
+
     it('renders "Justificar falta" button when day_status is ABSENCE', () => {
         const absenceRow: TodayAttendanceRow = {
             employee: mockRow.employee,
@@ -606,6 +703,19 @@ describe('EmployeeAttendanceCard', () => {
             <EmployeeAttendanceCard {...defaultProps} row={pendingRow} canEdit={false} />
         )
         expect(getByText(/pendiente autorización/)).toBeDefined()
+    })
+
+    it('applies the exit animation class when isExiting is true', () => {
+        const { container } = render(<EmployeeAttendanceCard {...defaultProps} isExiting />)
+        const root = container.firstChild as HTMLElement
+        expect(root.className).toContain('animate-card-exit')
+        expect(root.className).toContain('pointer-events-none')
+    })
+
+    it('does not apply the exit animation class by default', () => {
+        const { container } = render(<EmployeeAttendanceCard {...defaultProps} />)
+        const root = container.firstChild as HTMLElement
+        expect(root.className).not.toContain('animate-card-exit')
     })
 })
 

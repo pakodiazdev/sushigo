@@ -43,6 +43,11 @@ beforeEach(() => {
   cy.closeDevDebugger()
 
   cy.clock(TEST_TIME_UTC.getTime(), ['Date'])
+
+  // This spec isn't about the stat-card tabs — reveal every employee
+  // regardless of bucket (issue #327 made the default view land on a
+  // single bucket tab, e.g. "Pendientes").
+  cy.get("[data-testid='stat-total']", { timeout: 10_000 }).click({ force: true })
 })
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -100,6 +105,10 @@ function registerMedicalAbsence(firstName: string, lastName: string) {
   cy.url().should('include', '/attendance', { timeout: 10_000 })
   cy.closeDevDebugger()
   cy.wait('@refetchAttendance', { timeout: 10_000 })
+
+  // Fresh visit re-resolves the smart default tab — reveal every employee
+  // regardless of bucket so the card under test is visible (issue #327).
+  cy.get("[data-testid='stat-total']", { timeout: 10_000 }).click({ force: true })
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -149,6 +158,10 @@ describe('Register Leave — cancel closes dialog without changes', () => {
     cy.visitWithAuth('/attendance')
     cy.url().should('include', '/attendance', { timeout: 10_000 })
     cy.closeDevDebugger()
+
+    // Fresh visit re-resolves the smart default tab — reveal every employee
+    // regardless of bucket so the card under test is visible (issue #327).
+    cy.get("[data-testid='stat-total']", { timeout: 10_000 }).click({ force: true })
 
     getCard('García', 'María').within(() => {
       cy.contains('Sin registro').should('be.visible')

@@ -46,12 +46,20 @@ beforeEach(() => {
   cy.closeDevDebugger();
 
   cy.clock(TEST_TIME_UTC.getTime(), ["Date"]);
+
+  // This spec isn't about the stat-card tabs — reveal every employee
+  // regardless of bucket (issue #327 made the default view land on a
+  // single bucket tab, e.g. "Pendientes").
+  cy.get("[data-testid='stat-total']", { timeout: 10_000 }).click({ force: true });
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Clicks "Marcar falta" for the given employee and confirms the dialog.
+ * Clicks "Marcar falta" for the given employee, confirms the dialog, then
+ * declines the follow-up "¿Deseas justificar la falta ahora?" prompt so the
+ * flow ends the same way it did before that prompt existed (falta marked,
+ * not yet justified).
  */
 function markFalta(lastName: string, firstName: string) {
   cy.intercept("GET", "**/attendances/today*").as("refetchAttendance");
@@ -67,6 +75,10 @@ function markFalta(lastName: string, firstName: string) {
   cy.contains("button", "Confirmar falta").click({ force: true });
 
   cy.wait("@refetchAttendance", { timeout: 10_000 });
+
+  // Decline the immediate justify-now prompt
+  cy.contains("¿Deseas justificar la falta ahora?", { timeout: 10_000 }).should("be.visible");
+  cy.contains("button", "Ahora no").click({ force: true });
 }
 
 /**
@@ -126,6 +138,42 @@ describe("Day Status — Justificar Falta", () => {
     getCard("García", "María").within(() => {
       cy.contains("Ausencia", { timeout: 10_000 }).should("be.visible");
       cy.contains("Falta").should("not.exist");
+    });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 3. Justificar la falta de inmediato — desde el prompt que sigue a "Confirmar falta"
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe("Day Status — Justificar de inmediato", () => {
+  it("abre el diálogo de registrar ausencia al elegir 'Justificar ahora'", () => {
+    cy.intercept("GET", "**/attendances/today*").as("refetchAttendance");
+    cy.intercept("GET", "**/leave-types*").as("leaveTypesLoad");
+    cy.intercept("POST", "**/leaves").as("registerLeave");
+
+    cy.contains("p", "López, Pedro")
+      .closest("div.rounded-xl")
+      .find("[data-testid='btn-mark-falta']")
+      .scrollIntoView()
+      .click({ force: true });
+
+    cy.contains("¿Confirmar falta?").should("be.visible");
+    cy.contains("button", "Confirmar falta").click({ force: true });
+    cy.wait("@refetchAttendance", { timeout: 10_000 });
+
+    cy.contains("¿Deseas justificar la falta ahora?", { timeout: 10_000 }).should("be.visible");
+    cy.contains("button", "Justificar ahora").click({ force: true });
+
+    cy.contains("h3", "Registrar ausencia", { timeout: 6_000 }).should("be.visible");
+    cy.wait("@leaveTypesLoad");
+    cy.get("dialog select").first().select("Incapacidad médica");
+    cy.get("dialog").contains("button", "Registrar ausencia").click({ force: true });
+
+    cy.wait("@registerLeave").its("response.statusCode").should("eq", 201);
+
+    getCard("López", "Pedro").within(() => {
+      cy.contains("Ausencia", { timeout: 10_000 }).should("be.visible");
     });
   });
 });
