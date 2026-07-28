@@ -15,6 +15,8 @@ export { currentTimeLabel } from '@/lib/datetime'
 export interface PendingAttendanceData {
   employee: TodayAttendanceEmployee
   attendanceId: string
+  /** Existing ISO value being corrected — undefined/null means a first-time registration. */
+  currentValue?: string | null
 }
 
 type AttendanceBucket = 'pending' | 'checkedIn' | 'done' | 'absent'
@@ -150,6 +152,7 @@ export interface UseTodayAttendancePageResult {
   setSelectedDate: (date: string) => void
   // Check-in action
   pendingCheckInEmployee: TodayAttendanceEmployee | null
+  pendingCheckInCurrentValue: string | null
   isCheckingIn: boolean
   openCheckIn: (row: TodayAttendanceRow) => void
   closeCheckIn: () => void
@@ -157,19 +160,19 @@ export interface UseTodayAttendancePageResult {
   // Lunch-start action
   pendingLunchStart: PendingAttendanceData | null
   isRegisteringLunch: boolean
-  openLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+  openLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
   closeLunchStart: () => void
   confirmLunchStart: (time: string, reason?: string) => void
   // Lunch-return action
   pendingLunchReturn: PendingAttendanceData | null
   isRegisteringLunchReturn: boolean
-  openLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+  openLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
   closeLunchReturn: () => void
   confirmLunchReturn: (time: string, reason?: string) => void
   // Check-out action
   pendingCheckOut: PendingAttendanceData | null
   isCheckingOut: boolean
-  openCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+  openCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
   closeCheckOut: () => void
   confirmCheckOut: (time: string, reason?: string) => void
   // Overtime decision action (individual)
@@ -345,22 +348,32 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   // ── Check-in state ───────────────────────────────────────────────────────────
   const [pendingCheckInEmployee, setPendingCheckInEmployee] =
     useState<TodayAttendanceEmployee | null>(null)
+  const [pendingCheckInCurrentValue, setPendingCheckInCurrentValue] =
+    useState<string | null>(null)
 
   // If the row is a scheduled rest day AND no extra-day agreement exists yet,
   // intercept and show the negotiation dialog first.
   // If day_status === 'EXTRA' the agreement was already approved (e.g. the
   // manager cancelled the time-picker after negotiating), so skip straight to
-  // the time dialog.
+  // the time dialog. Correcting an already-recorded check-in never goes
+  // through the extra-day dialog either — the schedule may have changed since
+  // the original check-in, but a correction is editing what's already there,
+  // not negotiating a new extra day.
   const openCheckIn = useCallback((row: TodayAttendanceRow) => {
-    if (row.schedule?.is_day_off && row.attendance?.day_status !== 'EXTRA') {
+    const isCorrection = !!row.attendance?.check_in
+    const needsExtraDayNegotiation = row.schedule?.is_day_off && row.attendance?.day_status !== 'EXTRA'
+
+    if (!isCorrection && needsExtraDayNegotiation) {
       setExtraDayRow(row)
     } else {
       setPendingCheckInEmployee(row.employee)
+      setPendingCheckInCurrentValue(row.attendance?.check_in ?? null)
     }
   }, [])
 
   const closeCheckIn = useCallback(() => {
     setPendingCheckInEmployee(null)
+    setPendingCheckInCurrentValue(null)
   }, [])
 
   const confirmCheckIn = useCallback((time: string, reason?: string) => {
@@ -375,8 +388,8 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   const [pendingLunchStart, setPendingLunchStart] =
     useState<PendingAttendanceData | null>(null)
 
-  const openLunchStart = useCallback((employee: TodayAttendanceEmployee, attendanceId: string) => {
-    setPendingLunchStart({ employee, attendanceId })
+  const openLunchStart = useCallback((employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => {
+    setPendingLunchStart({ employee, attendanceId, currentValue })
   }, [])
 
   const closeLunchStart = useCallback(() => {
@@ -395,8 +408,8 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   const [pendingLunchReturn, setPendingLunchReturn] =
     useState<PendingAttendanceData | null>(null)
 
-  const openLunchReturn = useCallback((employee: TodayAttendanceEmployee, attendanceId: string) => {
-    setPendingLunchReturn({ employee, attendanceId })
+  const openLunchReturn = useCallback((employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => {
+    setPendingLunchReturn({ employee, attendanceId, currentValue })
   }, [])
 
   const closeLunchReturn = useCallback(() => {
@@ -415,8 +428,8 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   const [pendingCheckOut, setPendingCheckOut] =
     useState<PendingAttendanceData | null>(null)
 
-  const openCheckOut = useCallback((employee: TodayAttendanceEmployee, attendanceId: string) => {
-    setPendingCheckOut({ employee, attendanceId })
+  const openCheckOut = useCallback((employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => {
+    setPendingCheckOut({ employee, attendanceId, currentValue })
   }, [])
 
   const closeCheckOut = useCallback(() => {
@@ -575,6 +588,7 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     setSelectedDate,
     // Check-in
     pendingCheckInEmployee,
+    pendingCheckInCurrentValue,
     isCheckingIn: checkInMutation.isPending,
     openCheckIn,
     closeCheckIn,

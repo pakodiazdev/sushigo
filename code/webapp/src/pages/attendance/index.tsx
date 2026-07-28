@@ -29,6 +29,7 @@ import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
 import { useAuthStore } from '@/stores/auth.store'
 import { todayDateCdmx } from '@/lib/datetime'
 import { useBusinessDate } from '@/stores/clock.store'
+import { toDatetimeLocalValue } from '@/lib/timezone'
 import { formatFirstLast, formatLastFirst } from '@/lib/format'
 import type { PendingAttendanceData } from './-use-today-attendance-page'
 import type { AttendanceFilter } from '@/components/attendance'
@@ -56,6 +57,15 @@ function checkInName(employee: TodayAttendanceEmployee | null): string {
 function pendingName(pending: PendingAttendanceData | null): string {
   if (!pending) return ''
   return formatFirstLast(pending.employee.user)
+}
+
+/**
+ * Local "HH:mm" to pre-fill the time dialog: the existing recorded value when
+ * correcting an already-recorded event, otherwise the registration default.
+ */
+function resolveInitialTime(currentValue: string | null | undefined, fallback: string): string {
+  if (!currentValue) return fallback
+  return toDatetimeLocalValue(currentValue).slice(11, 16)
 }
 
 interface OvertimeDialogState {
@@ -144,6 +154,7 @@ export function AttendancePage() {
     setSelectedDate,
     // Check-in
     pendingCheckInEmployee,
+    pendingCheckInCurrentValue,
     isCheckingIn,
     openCheckIn,
     closeCheckIn,
@@ -194,6 +205,7 @@ export function AttendancePage() {
   const { can } = useAuthStore()
   const today = useBusinessDate() ?? todayDateCdmx()
   const { canEdit, requiresReason } = useAttendancePermissions(selectedDate)
+  const canCorrect = canEdit && can('attendances.update')
   const weeklySummary = useWeeklySummaryDialog()
   const [auditRecord, setAuditRecord] = useState<{ employeeName: string; attendanceId: string } | null>(null)
 
@@ -288,6 +300,7 @@ export function AttendancePage() {
                 key={row.employee.id}
                 row={row}
                 canEdit={canEdit}
+                canCorrect={canCorrect}
                 isExiting={isCardExiting(row.employee.id)}
                 onFaltaFlowComplete={onFaltaFlowComplete}
                 onCheckIn={openCheckIn}
@@ -322,10 +335,10 @@ export function AttendancePage() {
         isOpen={!!pendingCheckInEmployee}
         onClose={closeCheckIn}
         onConfirm={confirmCheckIn}
-        title="Registrar entrada"
+        title={pendingCheckInCurrentValue ? 'Corregir hora de entrada' : 'Registrar entrada'}
         employeeName={checkInName(pendingCheckInEmployee)}
-        confirmLabel="Confirmar entrada"
-        initialTime={effectiveInitialTime}
+        confirmLabel={pendingCheckInCurrentValue ? 'Guardar corrección' : 'Confirmar entrada'}
+        initialTime={resolveInitialTime(pendingCheckInCurrentValue, effectiveInitialTime)}
         maxTime={effectiveMaxTime}
         inputId="checkin-time"
         inputLabel="Hora de entrada"
@@ -338,10 +351,10 @@ export function AttendancePage() {
         isOpen={!!pendingLunchStart}
         onClose={closeLunchStart}
         onConfirm={confirmLunchStart}
-        title="Salir a comer"
+        title={pendingLunchStart?.currentValue ? 'Corregir hora de salida a comer' : 'Salir a comer'}
         employeeName={pendingName(pendingLunchStart)}
-        confirmLabel="Confirmar salida"
-        initialTime={effectiveInitialTime}
+        confirmLabel={pendingLunchStart?.currentValue ? 'Guardar corrección' : 'Confirmar salida'}
+        initialTime={resolveInitialTime(pendingLunchStart?.currentValue, effectiveInitialTime)}
         maxTime={effectiveMaxTime}
         inputId="lunch-time"
         inputLabel="Hora de salida"
@@ -354,10 +367,10 @@ export function AttendancePage() {
         isOpen={!!pendingLunchReturn}
         onClose={closeLunchReturn}
         onConfirm={confirmLunchReturn}
-        title="Regresar de comida"
+        title={pendingLunchReturn?.currentValue ? 'Corregir hora de regreso de comida' : 'Regresar de comida'}
         employeeName={pendingName(pendingLunchReturn)}
-        confirmLabel="Confirmar regreso"
-        initialTime={effectiveInitialTime}
+        confirmLabel={pendingLunchReturn?.currentValue ? 'Guardar corrección' : 'Confirmar regreso'}
+        initialTime={resolveInitialTime(pendingLunchReturn?.currentValue, effectiveInitialTime)}
         maxTime={effectiveMaxTime}
         inputId="lunch-return-time"
         inputLabel="Hora de regreso"
@@ -370,10 +383,10 @@ export function AttendancePage() {
         isOpen={!!pendingCheckOut}
         onClose={closeCheckOut}
         onConfirm={confirmCheckOut}
-        title="Registrar salida"
+        title={pendingCheckOut?.currentValue ? 'Corregir hora de salida' : 'Registrar salida'}
         employeeName={pendingName(pendingCheckOut)}
-        confirmLabel="Confirmar salida"
-        initialTime={effectiveInitialTime}
+        confirmLabel={pendingCheckOut?.currentValue ? 'Guardar corrección' : 'Confirmar salida'}
+        initialTime={resolveInitialTime(pendingCheckOut?.currentValue, effectiveInitialTime)}
         maxTime={effectiveMaxTime}
         inputId="checkout-time"
         inputLabel="Hora de salida"

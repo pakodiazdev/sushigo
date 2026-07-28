@@ -12,11 +12,15 @@ use Illuminate\Validation\ValidationException;
  *
  * This action:
  *   1. Guards that the attendance already has a lunch_start (employee must have left for lunch)
- *   2. Guards against duplicate lunch_end registration
- *   3. Attempts to resolve the employee's schedule to calculate lunch_late_seconds
- *   4. Calculates: lunch_late_seconds = max(0, lunch_end − expected_return)
+ *   2. Attempts to resolve the employee's schedule to calculate lunch_late_seconds
+ *   3. Calculates: lunch_late_seconds = max(0, lunch_end − expected_return)
  *      where expected_return = lunch_start + scheduleDay.lunch_duration_minutes
- *   5. Persists lunch_end and lunch_late_seconds on the Attendance record
+ *   4. Persists lunch_end and lunch_late_seconds on the Attendance record —
+ *      overwriting an already-recorded value (and recalculating lunch_late_seconds)
+ *      is a correction, already authorized upstream in LunchReturnRequest
+ *      (AttendancePolicy::edit + attendances.update)
+ *   5. If check_out is already recorded (correcting lunch_end on an
+ *      already-completed day), recalculates net_worked_minutes too
  *
  * If the schedule or lunch_duration_minutes cannot be resolved, lunch_late_seconds
  * is set to 0 rather than blocking the registration — the operational flow
@@ -39,17 +43,31 @@ class RegisterLunchReturnAction
     public function __invoke(Attendance $attendance, array $data): Attendance
     {
         $this->guardLunchStartExists($attendance);
-        $this->guardNoDuplicateLunchEnd($attendance);
 
         $lunchEnd = Carbon::parse($data['lunch_end'])->utc();
 
-        $lunchLateSeconds = $this->calculateLunchLateSeconds($attendance, $lunchEnd);
+        $lunchLateSeconds = $this->calculateLunchLateSeconds(
+            $attendance,
+            Carbon::parse($attendance->lunch_start),
+            $lunchEnd,
+        );
 
-        $attendance->auditReason = $data['reason'] ?? null;
-        $attendance->update([
+        $updateData = [
             'lunch_end' => $lunchEnd,
             'lunch_late_seconds' => $lunchLateSeconds,
-        ]);
+        ];
+
+        if ($attendance->check_out !== null) {
+            $updateData['net_worked_minutes'] = $this->calculateNetWorkedMinutes(
+                Carbon::parse($attendance->check_in),
+                Carbon::parse($attendance->lunch_start),
+                $lunchEnd,
+                Carbon::parse($attendance->check_out),
+            );
+        }
+
+        $attendance->auditReason = $data['reason'] ?? null;
+        $attendance->update($updateData);
 
         return $attendance->load('employee');
     }
@@ -68,41 +86,5 @@ class RegisterLunchReturnAction
         }
     }
 
-    /**
-     * Throw a 422 if lunch_end was already registered for this attendance.
-     *
-     * @throws ValidationException
-     */
-    private function guardNoDuplicateLunchEnd(Attendance $attendance): void
-    {
-        if ($attendance->lunch_end) {
-            throw ValidationException::withMessages([
-                'lunch_end' => 'El regreso de comida ya fue registrado para este día.',
-            ]);
-        }
-    }
-
-    /**
-     * Calculate lunch tardiness in seconds.
-     *
-     * Resolves the schedule for the attendance date and uses
-     * ScheduleDay::expectedLunchReturnTime() to determine when the employee
-     * was expected back.
-     *
-     * Returns 0 if the schedule cannot be resolved or lunch_duration_minutes
-     * is not configured — incomplete configuration should not block the flow.
-     */
-    private function calculateLunchLateSeconds(Attendance $attendance, Carbon $lunchEnd): int
-    {
-        $scheduleDay = $this->resolveEffectiveScheduleDay($attendance);
-
-        if (! $scheduleDay || ! $scheduleDay->lunch_duration_minutes) {
-            return 0;
-        }
-
-        $expectedReturn = Carbon::parse($attendance->lunch_start)
-            ->addMinutes($scheduleDay->lunch_duration_minutes);
-
-        return (int) max(0, $lunchEnd->timestamp - $expectedReturn->timestamp);
-    }
+    // calculateLunchLateSeconds() provided by ResolvesEffectiveScheduleDay trait
 }

@@ -98,6 +98,7 @@ class CoreTestSeeder extends Seeder
         'stock.manage',
         'attendances.view',
         'attendances.create',
+        'attendances.update',
         'punctuality.manage',
         'reports.today',
         'reports.weekly-summary',

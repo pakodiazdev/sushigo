@@ -168,6 +168,7 @@ class PermissionSeeder extends LockedSeeder
             // Asistencia — registro
             'attendances.view' => ['label' => 'Ver asistencias', 'group' => 'Asistencia'],
             'attendances.create' => ['label' => 'Registrar asistencia', 'group' => 'Asistencia'],
+            'attendances.update' => ['label' => 'Corregir asistencia registrada', 'group' => 'Asistencia'],
 
             // Asistencia — configuración
             'punctuality.manage' => ['label' => 'Gestionar rangos de puntualidad', 'group' => 'Asistencia'],

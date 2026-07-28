@@ -45,8 +45,9 @@ class LunchReturnApiTest extends TestCase
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
+        Permission::create(['name' => 'attendances.update', 'guard_name' => 'api']);
         $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
-        $role->givePermissionTo('attendances.create');
+        $role->givePermissionTo(['attendances.create', 'attendances.update']);
 
         // Position roles required by Employee factory
         Role::firstOrCreate(['name' => 'employee',         'guard_name' => 'api']);
@@ -192,7 +193,7 @@ class LunchReturnApiTest extends TestCase
     }
 
     #[Test]
-    public function rejects_duplicate_lunch_end(): void
+    public function allows_correcting_an_already_recorded_lunch_return_and_recalculates_late_seconds(): void
     {
         ['attendance' => $attendance] = $this->makeAttendanceWithLunchStart();
 
@@ -201,13 +202,39 @@ class LunchReturnApiTest extends TestCase
             ['lunch_end' => self::ON_TIME_RETURN],
         )->assertStatus(200);
 
+        // Correct the mistaken time — the admin has attendances.update
         $response = $this->patchJson(
             "/api/v1/attendances/{$attendance->public_id}/lunch-return",
-            ['lunch_end' => self::ON_TIME_RETURN],
+            ['lunch_end' => '2026-02-23T14:40:00'],
         );
 
-        $response->assertStatus(422);
-        $this->assertArrayHasKey('lunch_end', $response->json('errors'));
+        $response->assertStatus(200)
+            ->assertJsonPath('data.lunch_late_seconds', 2100)
+            ->assertJsonPath('data.lunch_late_minutes', 35);
+    }
+
+    #[Test]
+    public function rejects_lunch_return_correction_without_attendances_update_permission(): void
+    {
+        ['attendance' => $attendance] = $this->makeAttendanceWithLunchStart();
+
+        $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/lunch-return",
+            ['lunch_end' => self::ON_TIME_RETURN],
+        )->assertStatus(200);
+
+        $limitedRole = Role::create(['name' => 'manager-no-correction', 'guard_name' => 'api']);
+        $limitedRole->givePermissionTo('attendances.create');
+        $limitedUser = User::factory()->create();
+        $limitedUser->assignRole('manager-no-correction');
+        Passport::actingAs($limitedUser);
+
+        $response = $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/lunch-return",
+            ['lunch_end' => '2026-02-23T14:40:00'],
+        );
+
+        $response->assertStatus(403);
     }
 
     #[Test]

@@ -593,6 +593,44 @@ describe('useTodayAttendancePage', () => {
       expect(result.current.pendingCheckInEmployee).toEqual(row.employee)
     })
 
+    it('openCheckIn never opens the extra-day dialog when correcting an already-recorded check-in, even if the schedule now looks like a rest day', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      // Schedule changed to a rest day AFTER the check-in was recorded — day_status
+      // is still WORKED (not EXTRA), but this is a correction of an existing value,
+      // not a new extra-day negotiation.
+      const row = makeRow({
+        schedule: { day_of_week: 1, is_day_off: true, expected_start: null, expected_lunch_start: null, expected_lunch_end: null, lunch_duration_minutes: null, expected_end: null },
+        attendance: {
+          id: 'att-correction-001',
+          check_in: '2026-02-23T13:00:00Z',
+          lunch_start: null,
+          lunch_end: null,
+          check_out: null,
+          day_status: 'WORKED',
+          entry_late_seconds: 0,
+          entry_late_minutes: 0,
+          is_entry_deductible: false,
+          overtime_minutes: 0,
+          overtime_authorized: false,
+          overtime_authorized_at: null,
+          overtime_valuation_method: null,
+          overtime_rate_applied: null,
+          overtime_amount: null,
+          requires_overtime_decision: false,
+        },
+      })
+
+      act(() => {
+        result.current.openCheckIn(row)
+      })
+
+      expect(result.current.extraDayRow).toBeNull()
+      expect(result.current.pendingCheckInEmployee).toEqual(row.employee)
+      expect(result.current.pendingCheckInCurrentValue).toBe('2026-02-23T13:00:00Z')
+    })
+
     it('closeCheckIn clears pending employee', async () => {
       const { wrapper } = makeWrapper()
       const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })

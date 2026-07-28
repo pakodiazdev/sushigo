@@ -55,8 +55,9 @@ class CheckOutApiTest extends TestCase
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
+        Permission::create(['name' => 'attendances.update', 'guard_name' => 'api']);
         $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
-        $role->givePermissionTo('attendances.create');
+        $role->givePermissionTo(['attendances.create', 'attendances.update']);
 
         // Position roles required by Employee factory
         Role::firstOrCreate(['name' => 'employee',         'guard_name' => 'api']);
@@ -241,6 +242,7 @@ class CheckOutApiTest extends TestCase
         $attendance = Attendance::factory()->onDate(self::DATE)->create([
             'employee_id' => $employee->id,
             'check_in' => null,
+            'check_out' => null,
         ]);
 
         $response = $this->patchJson(
@@ -253,7 +255,7 @@ class CheckOutApiTest extends TestCase
     }
 
     #[Test]
-    public function rejects_duplicate_checkout(): void
+    public function allows_correcting_an_already_recorded_checkout(): void
     {
         ['attendance' => $attendance] = $this->makeAttendanceWithLunch();
 
@@ -262,9 +264,64 @@ class CheckOutApiTest extends TestCase
             ['check_out' => '2026-02-23T17:00:00'],
         )->assertStatus(200);
 
+        // Correct the mistaken time — the admin has attendances.update
         $response = $this->patchJson(
             "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-23T17:35:00'],
+        );
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.overtime_minutes', 35);
+
+        $this->assertDatabaseCount('overtime_bank_movements', 1);
+        $this->assertSame(35, OvertimeBankMovement::first()->minutes);
+    }
+
+    #[Test]
+    public function rejects_checkout_correction_without_attendances_update_permission(): void
+    {
+        ['attendance' => $attendance] = $this->makeAttendanceWithLunch();
+
+        $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
             ['check_out' => '2026-02-23T17:00:00'],
+        )->assertStatus(200);
+
+        $limitedRole = Role::create(['name' => 'manager-no-correction', 'guard_name' => 'api']);
+        $limitedRole->givePermissionTo('attendances.create');
+        $limitedUser = User::factory()->create();
+        $limitedUser->assignRole('manager-no-correction');
+        Passport::actingAs($limitedUser);
+
+        $response = $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-23T17:35:00'],
+        );
+
+        $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function rejects_checkout_correction_when_overtime_already_decided(): void
+    {
+        ['attendance' => $attendance] = $this->makeAttendanceWithLunch();
+
+        $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-23T17:35:00'],
+        )->assertStatus(200);
+
+        // Mirror what RecordOvertimeDecisionAction persists on Attendance itself
+        // (not on the OvertimeBankMovement row) when a decision is recorded.
+        $attendance->update([
+            'overtime_authorized' => true,
+            'overtime_authorized_by' => $this->user->id,
+            'overtime_authorized_at' => now(),
+        ]);
+
+        $response = $this->patchJson(
+            "/api/v1/attendances/{$attendance->public_id}/check-out",
+            ['check_out' => '2026-02-23T18:00:00'],
         );
 
         $response->assertStatus(422);

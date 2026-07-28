@@ -35,7 +35,33 @@ abstract class AttendanceFormRequest extends FormRequest
             return true; // controller will return 404
         }
 
-        return Gate::allows('edit', $attendance);
+        if (! Gate::allows('edit', $attendance)) {
+            return false;
+        }
+
+        return ! $this->isCorrectingWithoutPermission($attendance);
+    }
+
+    /**
+     * Subclasses covering one of the four attendance transitions (check-in,
+     * lunch-start, lunch-return, check-out) return the attribute they write.
+     * When that attribute is already set on the resolved attendance, this
+     * request is correcting an already-recorded event and requires
+     * attendances.update on top of the date-based AttendancePolicy::edit rule.
+     */
+    protected function correctionField(): ?string
+    {
+        return null;
+    }
+
+    private function isCorrectingWithoutPermission(Attendance $attendance): bool
+    {
+        $field = $this->correctionField();
+        if (! $field || $attendance->{$field} === null) {
+            return false;
+        }
+
+        return ! $this->user()?->can('attendances.update');
     }
 
     public function withValidator(Validator $validator): void

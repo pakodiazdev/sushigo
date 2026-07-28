@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Attendances;
 
 use App\Http\Requests\Concerns\GuardsClosedPayPeriod;
+use App\Models\Attendance;
 use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
@@ -47,23 +48,59 @@ class CheckInRequest extends FormRequest
 
     public function authorize(): bool
     {
-        $checkInInput = $this->input('check_in');
-        if (! $checkInInput) {
-            return true; // validation will reject it
-        }
-
-        try {
-            $date = Carbon::parse($checkInInput)->toDateString();
-        } catch (Throwable) {
-            return true; // unparseable date — let validation reject it with 422
+        $date = $this->resolveCheckInDate();
+        if ($date === null) {
+            return true; // missing or unparseable check_in — validation will reject it with 422
         }
 
         $today = $this->clock->todayInBusinessTz();
-
         $user = $this->user();
         $isAdmin = $user?->hasRole('admin') || $user?->hasRole('super-admin');
 
-        return $isAdmin || $date === $today;
+        return ($isAdmin || $date === $today) && ! $this->isCorrectingWithoutPermission($date);
+    }
+
+    /**
+     * Local date (Y-m-d) parsed from the check_in input, or null when it's
+     * missing/unparseable — those cases are left for validation to reject.
+     */
+    private function resolveCheckInDate(): ?string
+    {
+        $checkInInput = $this->input('check_in');
+        if (! $checkInInput) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($checkInInput)->toDateString();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * A check-in that overwrites an already-recorded check_in for this
+     * employee/date is a correction of an already-recorded event and
+     * requires attendances.update, on top of the date-based rule above.
+     * A record with no check_in yet (e.g. a Falta/ABSENCE stub) is not
+     * affected — that flow is untouched by this endpoint.
+     */
+    private function isCorrectingWithoutPermission(string $date): bool
+    {
+        $employeeId = $this->employeeIdFromPublicId($this->input('employee_id'));
+        if (! $employeeId) {
+            return false;
+        }
+
+        $existingCheckIn = Attendance::where('employee_id', $employeeId)
+            ->where('date', $date)
+            ->value('check_in');
+
+        if ($existingCheckIn === null) {
+            return false;
+        }
+
+        return ! $this->user()?->can('attendances.update');
     }
 
     public function rules(): array

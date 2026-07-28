@@ -126,6 +126,34 @@ class CloseDayApiTest extends TestCase
     }
 
     #[Test]
+    public function skips_lunch_return_already_recorded_instead_of_overwriting_it(): void
+    {
+        // A "returned" employee already has lunch_end recorded. This batch path
+        // calls RegisterLunchReturnAction directly (bypassing LunchReturnRequest
+        // and its attendances.update permission gate entirely) — if the payload
+        // still names this attendance (e.g. a retried/stale close-day submission),
+        // the already-recorded value must be left untouched, not silently overwritten.
+        ['attendance' => $returnedAtt] = $this->makeReturnedEmployee();
+
+        $response = $this->postJson('/api/v1/attendances/close-day', [
+            'branch_id' => $this->branchId,
+            'close_time' => '22:00',
+            'lunch_returns' => [
+                [
+                    'attendance_id' => $returnedAtt->public_id,
+                    'lunch_end' => '16:00',
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.lunch_returns', 0);
+
+        $returnedAtt->refresh();
+        $this->assertTrue($returnedAtt->lunch_end->equalTo(self::LUNCH_END));
+    }
+
+    #[Test]
     public function closes_day_marks_absences_for_employees_without_attendance(): void
     {
         // 3 employees, none checked in → all absences

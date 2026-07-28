@@ -206,6 +206,20 @@ describe('TimeRow', () => {
         const { getByText } = render(<TimeRow icon="↗" label="Test" value="12:00" />)
         expect(getByText('↗')).toBeDefined()
     })
+
+    it('does not render an edit affordance when onEdit is not provided', () => {
+        const { queryByRole } = render(<TimeRow icon="↗" label="Entrada" value="08:30" />)
+        expect(queryByRole('button')).toBeNull()
+    })
+
+    it('renders an edit affordance and calls onEdit when clicked', () => {
+        const onEdit = vi.fn()
+        const { getByRole } = render(<TimeRow icon="↗" label="Entrada" value="08:30" onEdit={onEdit} />)
+
+        fireEvent.click(getByRole('button', { name: 'Corregir entrada' }))
+
+        expect(onEdit).toHaveBeenCalledTimes(1)
+    })
 })
 
 // ── LateRow Tests ──────────────────────────────────────────────────────────────
@@ -716,6 +730,97 @@ describe('EmployeeAttendanceCard', () => {
         const { container } = render(<EmployeeAttendanceCard {...defaultProps} />)
         const root = container.firstChild as HTMLElement
         expect(root.className).not.toContain('animate-card-exit')
+    })
+
+    // ── Correction pencils (canCorrect) ─────────────────────────────────────────
+
+    it('does not render correction pencils by default (canCorrect defaults to false)', () => {
+        const { queryByRole } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} />
+        )
+        expect(queryByRole('button', { name: /^Corregir/ })).toBeNull()
+    })
+
+    it('does not render correction pencils when canCorrect is true but canEdit is false', () => {
+        const { queryByRole } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} canEdit={false} canCorrect />
+        )
+        expect(queryByRole('button', { name: /^Corregir/ })).toBeNull()
+    })
+
+    it('renders a pencil next to every already-recorded event when canCorrect is true', () => {
+        const { getByRole, queryByRole } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} canCorrect />
+        )
+
+        expect(getByRole('button', { name: 'Corregir entrada' })).toBeDefined()
+        expect(getByRole('button', { name: 'Corregir salida comida' })).toBeDefined()
+        expect(getByRole('button', { name: 'Corregir regreso comida' })).toBeDefined()
+        // check_out is null on this fixture — no pencil for a value that was never recorded
+        expect(queryByRole('button', { name: 'Corregir salida' })).toBeNull()
+    })
+
+    it('calls onCheckIn with the row when the entrada pencil is clicked', () => {
+        const onCheckIn = vi.fn()
+        const { getByRole } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} canCorrect onCheckIn={onCheckIn} />
+        )
+
+        fireEvent.click(getByRole('button', { name: 'Corregir entrada' }))
+
+        expect(onCheckIn).toHaveBeenCalledWith(mockRowWithAttendance)
+    })
+
+    it('calls onLunchStart with the employee, attendance id and current value when the lunch-start pencil is clicked', () => {
+        const onLunchStart = vi.fn()
+        const { getByRole } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} canCorrect onLunchStart={onLunchStart} />
+        )
+
+        fireEvent.click(getByRole('button', { name: 'Corregir salida comida' }))
+
+        expect(onLunchStart).toHaveBeenCalledWith(
+            mockRowWithAttendance.employee,
+            mockRowWithAttendance.attendance?.id,
+            mockRowWithAttendance.attendance?.lunch_start,
+        )
+    })
+
+    it('calls onLunchReturn with the employee, attendance id and current value when the lunch-return pencil is clicked', () => {
+        const onLunchReturn = vi.fn()
+        const { getByRole } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={mockRowWithAttendance} canCorrect onLunchReturn={onLunchReturn} />
+        )
+
+        fireEvent.click(getByRole('button', { name: 'Corregir regreso comida' }))
+
+        expect(onLunchReturn).toHaveBeenCalledWith(
+            mockRowWithAttendance.employee,
+            mockRowWithAttendance.attendance?.id,
+            mockRowWithAttendance.attendance?.lunch_end,
+        )
+    })
+
+    it('calls onCheckOut with the employee, attendance id and current value when the salida pencil is clicked', () => {
+        const onCheckOut = vi.fn()
+        const doneRow: TodayAttendanceRow = {
+            ...mockRowWithAttendance,
+            attendance: makeAttendance({
+                ...mockRowWithAttendance.attendance!,
+                check_out: '2024-01-15T17:00:00Z',
+            }),
+        }
+        const { getByRole } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={doneRow} canCorrect onCheckOut={onCheckOut} />
+        )
+
+        fireEvent.click(getByRole('button', { name: 'Corregir salida' }))
+
+        expect(onCheckOut).toHaveBeenCalledWith(
+            doneRow.employee,
+            doneRow.attendance?.id,
+            doneRow.attendance?.check_out,
+        )
     })
 })
 
