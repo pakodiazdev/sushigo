@@ -70,6 +70,21 @@ function buildSchema(assignableRoles: string[]) {
     })
 }
 
+// ─── Role toggle ───────────────────────────────────────────────────────────────
+// Extracted to module scope to keep the ToggleSwitch onChange handler shallow
+// (SonarCloud typescript:S2004 — functions should not be nested too deeply).
+// Split into two named functions rather than one function with a boolean
+// selector param (SonarCloud typescript:S2301 — methods should not contain
+// selector parameters); the ternary lives at the call site instead.
+
+function addRole(currentRoles: string[], role: string): string[] {
+  return [...currentRoles, role]
+}
+
+function removeRole(currentRoles: string[], role: string): string[] {
+  return currentRoles.filter((r) => r !== role)
+}
+
 // ─── Form value type ───────────────────────────────────────────────────────────
 
 type EmployeeFormSchema = ReturnType<typeof buildSchema>
@@ -288,10 +303,8 @@ export function EmployeeEditCreateForm({
                     label={EMPLOYEE_POSITION_ROLES[role as EmployeePositionRole] || role}
                     checked={(rolesValue || []).includes(role)}
                     onChange={(checked) => {
-                      const current = (field.value as string[]) || []
-                      field.onChange(
-                        checked ? [...current, role] : current.filter((r) => r !== role),
-                      )
+                      const currentRoles = (field.value as string[]) || []
+                      field.onChange(checked ? addRole(currentRoles, role) : removeRole(currentRoles, role))
                     }}
                   />
                 ))
