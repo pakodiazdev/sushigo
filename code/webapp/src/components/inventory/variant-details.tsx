@@ -19,7 +19,6 @@ interface VariantDetailsProps {
   variant: ItemVariant
   onEdit: () => void
   onDelete: () => void
-  onClose: () => void
 }
 
 export function VariantDetails({ variant, onEdit, onDelete }: VariantDetailsProps) {

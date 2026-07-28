@@ -217,7 +217,6 @@ export function ItemVariantsPage() {
             variant={selectedVariant}
             onEdit={() => handleEdit(selectedVariant)}
             onDelete={() => handleDelete(selectedVariant.id)}
-            onClose={() => setIsDetailsPanelOpen(false)}
           />
         )}
       </SlidePanel>
