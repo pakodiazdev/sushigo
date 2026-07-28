@@ -1,12 +1,13 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, cleanup } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, cleanup, fireEvent } from '@testing-library/react'
 import {
     EmptyState,
     ErrorState,
     NoBranchState,
+    NoMatchesForFilterState,
     SkeletonGrid,
 } from '../AttendanceStates'
 
@@ -68,6 +69,26 @@ describe('NoBranchState', () => {
         const { container } = render(<NoBranchState />)
 
         expect(container.innerHTML).toContain('text-yellow-500')
+    })
+})
+
+// ── NoMatchesForFilterState Tests ─────────────────────────────────────────────
+
+describe('NoMatchesForFilterState', () => {
+    it('renders the no-results message', () => {
+        const { getByText } = render(<NoMatchesForFilterState onShowAll={() => {}} />)
+
+        expect(getByText('Sin resultados para este filtro')).toBeDefined()
+        expect(getByText('Ningún empleado coincide con la vista seleccionada.')).toBeDefined()
+    })
+
+    it('calls onShowAll when the "Ver todos" button is clicked', () => {
+        const onShowAll = vi.fn()
+        const { getByText } = render(<NoMatchesForFilterState onShowAll={onShowAll} />)
+
+        fireEvent.click(getByText('Ver todos'))
+
+        expect(onShowAll).toHaveBeenCalledTimes(1)
     })
 })
 

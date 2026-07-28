@@ -28,9 +28,9 @@ export type { OvertimeDecisionDialogProps } from './OvertimeDecisionDialog'
 export { getPhaseCardClass } from './attendance-helpers'
 
 export { AttendanceSummaryBar, SummaryStat, OvertimeWarning } from './AttendanceSummaryBar'
-export type { AttendanceSummaryBarProps, AttendanceSummary } from './AttendanceSummaryBar'
+export type { AttendanceSummaryBarProps, AttendanceSummary, AttendanceFilter } from './AttendanceSummaryBar'
 
-export { EmptyState, ErrorState, NoBranchState, SkeletonGrid } from './AttendanceStates'
+export { EmptyState, ErrorState, NoBranchState, NoMatchesForFilterState, SkeletonGrid } from './AttendanceStates'
 
 // Pay Period Status Badge
 export { PayPeriodStatusBadge } from './PayPeriodStatusBadge'

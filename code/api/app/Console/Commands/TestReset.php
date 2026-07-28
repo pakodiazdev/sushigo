@@ -7,6 +7,7 @@ use Database\Seeders\Fakes\FakeEmployeesSeeder;
 use Database\Seeders\OvertimeLftTierSeeder;
 use Database\Seeders\PunctualityBonusGroupSeeder;
 use Database\Seeders\PunctualityRangeSeeder;
+use Database\Seeders\Testing\AttendanceAbsentStatCardSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
 use Database\Seeders\Testing\AttendanceTodayLeaveSeeder;
 use Database\Seeders\Testing\CloseDayHappyPathSeeder;
@@ -50,6 +51,10 @@ class TestReset extends Command
         'attendance-today-leave' => [
             AttendanceTestSeeder::class,
             AttendanceTodayLeaveSeeder::class,
+        ],
+        'attendance-absent-stat-card' => [
+            AttendanceTestSeeder::class,
+            AttendanceAbsentStatCardSeeder::class,
         ],
         'close-day-happy' => [
             AttendanceTestSeeder::class,

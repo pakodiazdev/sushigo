@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import {
     getAttendancePhase,
+    isAbsentRow,
+    isHiddenFromGrid,
     formatSeconds,
     formatTime,
 } from '@/types/attendance'
-import type { TodayAttendanceData } from '@/types/attendance'
+import type { TodayAttendanceData, TodayAttendanceRow } from '@/types/attendance'
 
 describe('getAttendancePhase', () => {
     it('returns "pending" when attendance is null', () => {
@@ -163,6 +165,223 @@ describe('getAttendancePhase', () => {
             requires_overtime_decision: false,
         }
         expect(getAttendancePhase(attendance)).toBe('absence')
+    })
+
+    it('returns "on-leave" when day_status is VACATION', () => {
+        const attendance: TodayAttendanceData = {
+            id: '1',
+            check_in: null,
+            lunch_start: null,
+            lunch_end: null,
+            check_out: null,
+            day_status: 'VACATION',
+            entry_late_seconds: null,
+            entry_late_minutes: null,
+            is_entry_deductible: false,
+            overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
+            requires_overtime_decision: false,
+        }
+        expect(getAttendancePhase(attendance)).toBe('on-leave')
+    })
+})
+
+describe('isAbsentRow', () => {
+    function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRow {
+        return {
+            employee: {
+                id: 'emp-1',
+                code: 'EMP-001',
+                user: { first_name: 'Test', last_name: 'User' },
+                roles: [],
+                daily_wage: null,
+            },
+            attendance: null,
+            schedule: null,
+            today_leave: null,
+            ...overrides,
+        }
+    }
+
+    function makeAttendance(overrides: Partial<TodayAttendanceData> = {}): TodayAttendanceData {
+        return {
+            id: 'att-1',
+            check_in: null,
+            lunch_start: null,
+            lunch_end: null,
+            check_out: null,
+            day_status: 'WORKED',
+            entry_late_seconds: null,
+            entry_late_minutes: null,
+            is_entry_deductible: false,
+            overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
+            requires_overtime_decision: false,
+            ...overrides,
+        }
+    }
+
+    it('returns true when day_status is ABSENCE', () => {
+        const row = makeRow({ attendance: makeAttendance({ day_status: 'ABSENCE' }) })
+        expect(isAbsentRow(row)).toBe(true)
+    })
+
+    it('returns true when day_status is VACATION', () => {
+        const row = makeRow({ attendance: makeAttendance({ day_status: 'VACATION' }) })
+        expect(isAbsentRow(row)).toBe(true)
+    })
+
+    it('returns true when day_status is LEAVE', () => {
+        const row = makeRow({ attendance: makeAttendance({ day_status: 'LEAVE' }) })
+        expect(isAbsentRow(row)).toBe(true)
+    })
+
+    it('returns true when today_leave is a full-day OPEN_ENDED leave, even without an attendance record yet', () => {
+        const row = makeRow({
+            attendance: null,
+            today_leave: {
+                id: 'leave-1',
+                time_mode: 'OPEN_ENDED',
+                calculation_mode: 'FIXED_PERCENTAGE',
+                is_paid: true,
+                starts_at: null,
+                ends_at: null,
+                note: null,
+            },
+        })
+        expect(isAbsentRow(row)).toBe(true)
+    })
+
+    it('returns false when today_leave is a partial SCHEDULED leave — employee still works part of the day', () => {
+        const row = makeRow({
+            attendance: null,
+            today_leave: {
+                id: 'leave-1',
+                time_mode: 'SCHEDULED',
+                calculation_mode: 'PROPORTIONAL_HOURS',
+                is_paid: true,
+                starts_at: '2026-04-09T19:00:00+00:00',
+                ends_at: '2026-04-09T22:00:00+00:00',
+                note: null,
+            },
+        })
+        expect(isAbsentRow(row)).toBe(false)
+    })
+
+    it('returns false for a pending row with no attendance and no leave', () => {
+        expect(isAbsentRow(makeRow())).toBe(false)
+    })
+
+    it('returns true when day_status is DAY_OFF — a scheduled rest day counts as absent', () => {
+        const row = makeRow({ attendance: makeAttendance({ day_status: 'DAY_OFF' }) })
+        expect(isAbsentRow(row)).toBe(true)
+    })
+
+    it('returns false for a checked-in employee with no leave', () => {
+        const row = makeRow({ attendance: makeAttendance({ check_in: '2026-04-09T13:00:00+00:00' }) })
+        expect(isAbsentRow(row)).toBe(false)
+    })
+})
+
+describe('isHiddenFromGrid', () => {
+    function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRow {
+        return {
+            employee: {
+                id: 'emp-1',
+                code: 'EMP-001',
+                user: { first_name: 'Test', last_name: 'User' },
+                roles: [],
+                daily_wage: null,
+            },
+            attendance: null,
+            schedule: null,
+            today_leave: null,
+            ...overrides,
+        }
+    }
+
+    function makeAttendance(overrides: Partial<TodayAttendanceData> = {}): TodayAttendanceData {
+        return {
+            id: 'att-1',
+            check_in: null,
+            lunch_start: null,
+            lunch_end: null,
+            check_out: null,
+            day_status: 'WORKED',
+            entry_late_seconds: null,
+            entry_late_minutes: null,
+            is_entry_deductible: false,
+            overtime_minutes: 0,
+            overtime_authorized: false,
+            overtime_authorized_at: null,
+            overtime_valuation_method: null,
+            overtime_rate_applied: null,
+            overtime_amount: null,
+            requires_overtime_decision: false,
+            ...overrides,
+        }
+    }
+
+    it('returns true when day_status is VACATION', () => {
+        const row = makeRow({ attendance: makeAttendance({ day_status: 'VACATION' }) })
+        expect(isHiddenFromGrid(row)).toBe(true)
+    })
+
+    it('returns false when day_status is LEAVE — stays in grid so the informational leave chip/badge remains reachable', () => {
+        const row = makeRow({ attendance: makeAttendance({ day_status: 'LEAVE' }) })
+        expect(isHiddenFromGrid(row)).toBe(false)
+    })
+
+    it('returns false for a full-day OPEN_ENDED today_leave — the card must stay visible to show the leave chip', () => {
+        const row = makeRow({
+            today_leave: {
+                id: 'leave-1',
+                time_mode: 'OPEN_ENDED',
+                calculation_mode: 'FIXED_PERCENTAGE',
+                is_paid: true,
+                starts_at: null,
+                ends_at: null,
+                note: null,
+            },
+        })
+        expect(isHiddenFromGrid(row)).toBe(false)
+    })
+
+    it('returns false when day_status is ABSENCE — stays in grid so "Justificar falta" remains reachable', () => {
+        const row = makeRow({ attendance: makeAttendance({ day_status: 'ABSENCE' }) })
+        expect(isHiddenFromGrid(row)).toBe(false)
+    })
+
+    it('returns false for a partial SCHEDULED today_leave', () => {
+        const row = makeRow({
+            today_leave: {
+                id: 'leave-1',
+                time_mode: 'SCHEDULED',
+                calculation_mode: 'PROPORTIONAL_HOURS',
+                is_paid: true,
+                starts_at: '2026-04-09T19:00:00+00:00',
+                ends_at: '2026-04-09T22:00:00+00:00',
+                note: null,
+            },
+        })
+        expect(isHiddenFromGrid(row)).toBe(false)
+    })
+
+    it('returns false for a pending row with no attendance and no leave', () => {
+        expect(isHiddenFromGrid(makeRow())).toBe(false)
+    })
+
+    it('returns true when day_status is DAY_OFF — a scheduled rest day never needs action', () => {
+        const row = makeRow({ attendance: makeAttendance({ day_status: 'DAY_OFF' }) })
+        expect(isHiddenFromGrid(row)).toBe(true)
     })
 })
 

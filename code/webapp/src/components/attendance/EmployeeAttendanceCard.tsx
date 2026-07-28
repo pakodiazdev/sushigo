@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
     UtensilsCrossed,
     AlertTriangle,
@@ -20,7 +19,7 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatLastFirst } from '@/lib/format'
-import { getAttendancePhase, formatTime, formatSeconds, parseIsoToUtcMs } from '@/types/attendance'
+import { formatTime, formatSeconds, parseIsoToUtcMs } from '@/types/attendance'
 import type {
     TodayAttendanceRow,
     AttendancePhase,
@@ -29,6 +28,7 @@ import type {
 } from '@/types/attendance'
 import { getPhaseCardClass } from './attendance-helpers'
 import { RegisterLeaveDialog } from './RegisterLeaveDialog'
+import { useEmployeeAttendanceCard } from './use-employee-attendance-card'
 
 // ── Sub-components ─────────────────────────────────────────────────────���───────
 
@@ -246,6 +246,11 @@ export interface EmployeeAttendanceCardProps {
     onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
     onWeeklySummary?: (employee: TodayAttendanceEmployee) => void
     onViewAudit?: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+    /** Called once the mark-falta flow concludes (justified now or declined), so the
+     *  parent can play an exit animation before the card leaves the current tab. */
+    onFaltaFlowComplete?: (employeeId: string) => void
+    /** True while the card is playing its exit animation before leaving the grid. */
+    isExiting?: boolean
     canEdit?: boolean
 }
 
@@ -259,16 +264,29 @@ export function EmployeeAttendanceCard({
     onMarkDayStatus,
     onWeeklySummary,
     onViewAudit,
+    onFaltaFlowComplete,
+    isExiting = false,
     canEdit = true,
 }: Readonly<EmployeeAttendanceCardProps>) {
-    const phase = getAttendancePhase(row.attendance)
     const att = row.attendance
     const leave = row.today_leave
-    const [confirmFaltaOpen, setConfirmFaltaOpen] = useState(false)
-    const [showJustifyDialog, setShowJustifyDialog] = useState(false)
-
-    const isScheduledRestDay = row.schedule?.is_day_off === true
-    const isFullDayLeave = leave?.time_mode === 'OPEN_ENDED'
+    const {
+        phase,
+        isScheduledRestDay,
+        isFullDayLeave,
+        displayedActionsPhase,
+        actionsFadingOut,
+        confirmFaltaOpen,
+        openConfirmFalta,
+        closeConfirmFalta,
+        confirmFalta,
+        askJustifyOpen,
+        declineJustifyNow,
+        acceptJustifyNow,
+        showJustifyDialog,
+        openJustifyDialog,
+        closeJustifyDialog,
+    } = useEmployeeAttendanceCard(row, onMarkDayStatus, onFaltaFlowComplete)
 
     function renderPendingActions() {
         if (isFullDayLeave) {
@@ -298,7 +316,7 @@ export function EmployeeAttendanceCard({
                         variant="outline-danger"
                         className="w-full"
                         data-testid="btn-mark-falta"
-                        onClick={() => setConfirmFaltaOpen(true)}
+                        onClick={openConfirmFalta}
                     >
                         <UserX className="h-3.5 w-3.5 mr-1.5" />
                         Marcar falta
@@ -312,7 +330,8 @@ export function EmployeeAttendanceCard({
         <div
             className={cn(
                 'rounded-xl border bg-card p-4 flex flex-col gap-3 transition-colors',
-                getPhaseCardClass(phase)
+                getPhaseCardClass(phase),
+                isExiting && 'animate-card-exit pointer-events-none'
             )}
         >
             {/* Header: Name + Phase Badge + Weekly Summary */}
@@ -390,22 +409,22 @@ export function EmployeeAttendanceCard({
             )}
 
             {/* Actions for pending employees */}
-            {canEdit && phase === 'pending' && (
-                <div className="flex flex-col gap-1.5 mt-auto">
+            {canEdit && displayedActionsPhase === 'pending' && (
+                <div className={cn('flex flex-col gap-1.5 mt-auto', actionsFadingOut && 'animate-fade-out pointer-events-none')}>
                     {renderPendingActions()}
                 </div>
             )}
 
             {/* Justify an already-marked falta — registers a direct leave for today,
                 which overwrites the ABSENCE attendance record with the chosen type. */}
-            {canEdit && phase === 'absence' && (
-                <div className="flex flex-col gap-1.5 mt-auto">
+            {canEdit && displayedActionsPhase === 'absence' && (
+                <div className={cn('flex flex-col gap-1.5 mt-auto', !actionsFadingOut && 'animate-fade-in')}>
                     <Button
                         size="sm"
                         variant="outline"
                         className="w-full"
                         data-testid="btn-justify-absence"
-                        onClick={() => setShowJustifyDialog(true)}
+                        onClick={openJustifyDialog}
                     >
                         <CalendarX className="h-3.5 w-3.5 mr-1.5" />
                         Justificar falta
@@ -416,11 +435,8 @@ export function EmployeeAttendanceCard({
             {/* Confirm-falta dialog */}
             <ConfirmDialog
                 isOpen={confirmFaltaOpen}
-                onClose={() => setConfirmFaltaOpen(false)}
-                onConfirm={() => {
-                    setConfirmFaltaOpen(false)
-                    onMarkDayStatus(row.employee, 'ABSENCE')
-                }}
+                onClose={closeConfirmFalta}
+                onConfirm={confirmFalta}
                 title="¿Confirmar falta?"
                 description={`${formatLastFirst(row.employee.user)} no tiene registro de entrada. ¿Confirmar que faltó hoy?`}
                 confirmLabel="Confirmar falta"
@@ -428,11 +444,24 @@ export function EmployeeAttendanceCard({
                 container="viewport"
             />
 
+            {/* Ask whether to justify the falta right away */}
+            <ConfirmDialog
+                isOpen={askJustifyOpen}
+                onClose={declineJustifyNow}
+                onConfirm={acceptJustifyNow}
+                title="¿Deseas justificar la falta ahora?"
+                description="Puedes registrar el motivo de la ausencia ahora, o hacerlo después desde la pestaña Ausentes."
+                confirmLabel="Justificar ahora"
+                cancelLabel="Ahora no"
+                variant="info"
+                container="viewport"
+            />
+
             {/* Justify-falta dialog — direct leave registration (not a request) */}
             <RegisterLeaveDialog
                 isOpen={showJustifyDialog}
                 employee={row.employee}
-                onClose={() => setShowJustifyDialog(false)}
+                onClose={closeJustifyDialog}
             />
 
             {/* Lunch-start action — only for checked-in employees */}
