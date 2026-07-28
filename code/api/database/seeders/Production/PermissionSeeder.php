@@ -23,7 +23,22 @@ class PermissionSeeder extends LockedSeeder
 
     public function run(): void
     {
-        $permissions = [
+        $this->upsertPermissions($this->permissionDefinitions());
+        $this->assignSuperAdminPermissions();
+        $this->assignManagerPermissions();
+        $this->assignAdminPermissions();
+        $this->assignInventoryManagerPermissions();
+        $this->assignBasicRolesPermissions();
+
+        $this->command->info('✓ Production permissions seeded successfully');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function permissionDefinitions(): array
+    {
+        return [
             'users.index',
             'users.show',
             'users.store',
@@ -97,6 +112,7 @@ class PermissionSeeder extends LockedSeeder
             // Attendances
             'attendances.view',
             'attendances.create',
+            'attendances.update',
 
             // Reportes
             'reports.today',
@@ -134,20 +150,32 @@ class PermissionSeeder extends LockedSeeder
             'stock.view',
             'stock.manage',
         ];
+    }
 
+    /**
+     * @param  array<int, string>  $permissions
+     */
+    private function upsertPermissions(array $permissions): void
+    {
         foreach ($permissions as $permission) {
             Permission::updateOrCreate(
                 ['name' => $permission, 'guard_name' => 'api'],
                 ['name' => $permission, 'guard_name' => 'api']
             );
         }
+    }
 
+    private function assignSuperAdminPermissions(): void
+    {
         // super-admin: all permissions
         $superAdminRole = Role::where('name', 'super-admin')->where('guard_name', 'api')->first();
         if ($superAdminRole) {
             $superAdminRole->syncPermissions(Permission::where('guard_name', 'api')->get());
         }
+    }
 
+    private function assignManagerPermissions(): void
+    {
         // manager (position role): jefe de piso — can view/manage employees and attendances.
         // Does NOT get vacation-requests.% — directly scheduling vacations on behalf
         // of an employee is admin/super-admin-only; manager still reviews self-service
@@ -167,7 +195,10 @@ class PermissionSeeder extends LockedSeeder
                     ->get()
             );
         }
+    }
 
+    private function assignAdminPermissions(): void
+    {
         // admin (position role): full user + employee + leave + attendance + inventory management
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
         if ($adminRole) {
@@ -190,7 +221,10 @@ class PermissionSeeder extends LockedSeeder
                     ->get()
             );
         }
+    }
 
+    private function assignInventoryManagerPermissions(): void
+    {
         // inventory-manager: full inventory management (items, locations, stock)
         // Note: does NOT include employees.* or users.* — inventory is their only scope
         // (plus self-service Solicitudes)
@@ -208,7 +242,10 @@ class PermissionSeeder extends LockedSeeder
                     ->get()
             );
         }
+    }
 
+    private function assignBasicRolesPermissions(): void
+    {
         // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
         // plus self-service Solicitudes (view/create/cancel their own requests —
         // never approve, that stays manager/admin-only)
@@ -225,7 +262,5 @@ class PermissionSeeder extends LockedSeeder
                 );
             }
         }
-
-        $this->command->info('✓ Production permissions seeded successfully');
     }
 }

@@ -13,6 +13,7 @@ import {
     Lock,
     BarChart3,
     History,
+    Pencil,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -77,16 +78,30 @@ interface TimeRowProps {
     icon: string
     label: string
     value: string
+    /** Shown as a pencil affordance next to the value when provided (edit permission granted). */
+    onEdit?: () => void
 }
 
-export function TimeRow({ icon, label, value }: Readonly<TimeRowProps>) {
+export function TimeRow({ icon, label, value, onEdit }: Readonly<TimeRowProps>) {
     return (
         <div className="flex items-center justify-between">
             <span className="text-muted-foreground flex items-center gap-1">
                 <span>{icon}</span>
                 {label}
             </span>
-            <span className="font-mono font-medium text-foreground">{value}</span>
+            <span className="flex items-center gap-1.5">
+                <span className="font-mono font-medium text-foreground">{value}</span>
+                {onEdit && (
+                    <button
+                        type="button"
+                        aria-label={`Corregir ${label.toLowerCase()}`}
+                        onClick={onEdit}
+                        className="rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                        <Pencil className="h-3 w-3" />
+                    </button>
+                )}
+            </span>
         </div>
     )
 }
@@ -112,6 +127,73 @@ export function LateRow({ label, value, deductible }: Readonly<LateRowProps>) {
             <span className="font-mono text-red-700 dark:text-red-400 font-medium">
                 {value}
             </span>
+        </div>
+    )
+}
+
+interface AttendanceEventListProps {
+    row: TodayAttendanceRow
+    /** Both canEdit (date rule) and canCorrect (attendances.update) already combined by the caller. */
+    canCorrect: boolean
+    onCheckIn: (row: TodayAttendanceRow) => void
+    onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
+    onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
+    onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
+}
+
+export function AttendanceEventList({
+    row,
+    canCorrect,
+    onCheckIn,
+    onLunchStart,
+    onLunchReturn,
+    onCheckOut,
+}: Readonly<AttendanceEventListProps>) {
+    const att = row.attendance
+
+    if (!att) {
+        return <p className="text-xs text-muted-foreground italic">Sin registro aún</p>
+    }
+
+    return (
+        <div className="space-y-1.5 text-xs">
+            <TimeRow
+                icon="↗"
+                label="Entrada"
+                value={formatTime(att.check_in)}
+                onEdit={canCorrect && att.check_in ? () => onCheckIn(row) : undefined}
+            />
+            {(att.entry_late_seconds ?? 0) > 0 && (
+                <LateRow
+                    label="Tardanza entrada"
+                    value={formatSeconds(att.entry_late_seconds)}
+                    deductible={att.is_entry_deductible}
+                />
+            )}
+            {att.lunch_start && (
+                <TimeRow
+                    icon="🍽"
+                    label="Salida comida"
+                    value={formatTime(att.lunch_start)}
+                    onEdit={canCorrect ? () => onLunchStart(row.employee, att.id, att.lunch_start) : undefined}
+                />
+            )}
+            {att.lunch_end && (
+                <TimeRow
+                    icon="↩"
+                    label="Regreso comida"
+                    value={formatTime(att.lunch_end)}
+                    onEdit={canCorrect ? () => onLunchReturn(row.employee, att.id, att.lunch_end) : undefined}
+                />
+            )}
+            {att.check_out && (
+                <TimeRow
+                    icon="↙"
+                    label="Salida"
+                    value={formatTime(att.check_out)}
+                    onEdit={canCorrect ? () => onCheckOut(row.employee, att.id, att.check_out) : undefined}
+                />
+            )}
         </div>
     )
 }
@@ -239,9 +321,9 @@ export function LeaveChip({ leave, nowMs = Date.now() }: Readonly<LeaveChipProps
 export interface EmployeeAttendanceCardProps {
     row: TodayAttendanceRow
     onCheckIn: (row: TodayAttendanceRow) => void
-    onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string) => void
-    onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string) => void
-    onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string) => void
+    onLunchStart: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
+    onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
+    onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
     onWeeklySummary?: (employee: TodayAttendanceEmployee) => void
@@ -252,6 +334,8 @@ export interface EmployeeAttendanceCardProps {
     /** True while the card is playing its exit animation before leaving the grid. */
     isExiting?: boolean
     canEdit?: boolean
+    /** True when the user may correct an already-recorded event (canEdit + attendances.update permission). */
+    canCorrect?: boolean
 }
 
 export function EmployeeAttendanceCard({
@@ -267,6 +351,7 @@ export function EmployeeAttendanceCard({
     onFaltaFlowComplete,
     isExiting = false,
     canEdit = true,
+    canCorrect = false,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const att = row.attendance
     const leave = row.today_leave
@@ -375,30 +460,17 @@ export function EmployeeAttendanceCard({
             {/* Leave context chip (shown when there is an approved leave covering today) */}
             {leave && <LeaveChip leave={leave} />}
 
-            {/* Attendance details */}
-            {att ? (
-                <div className="space-y-1.5 text-xs">
-                    <TimeRow icon="↗" label="Entrada" value={formatTime(att.check_in)} />
-                    {(att.entry_late_seconds ?? 0) > 0 && (
-                        <LateRow
-                            label="Tardanza entrada"
-                            value={formatSeconds(att.entry_late_seconds)}
-                            deductible={att.is_entry_deductible}
-                        />
-                    )}
-                    {att.lunch_start && (
-                        <TimeRow icon="🍽" label="Salida comida" value={formatTime(att.lunch_start)} />
-                    )}
-                    {att.lunch_end && (
-                        <TimeRow icon="↩" label="Regreso comida" value={formatTime(att.lunch_end)} />
-                    )}
-                    {att.check_out && (
-                        <TimeRow icon="↙" label="Salida" value={formatTime(att.check_out)} />
-                    )}
-                </div>
-            ) : (
-                <p className="text-xs text-muted-foreground italic">Sin registro aún</p>
-            )}
+            {/* Attendance details — both canEdit (date rule) and canCorrect (attendances.update)
+                must hold before a correction pencil is shown, so an inconsistent prop
+                combination never offers a correction the backend would reject with 403. */}
+            <AttendanceEventList
+                row={row}
+                canCorrect={canEdit && canCorrect}
+                onCheckIn={onCheckIn}
+                onLunchStart={onLunchStart}
+                onLunchReturn={onLunchReturn}
+                onCheckOut={onCheckOut}
+            />
 
             {/* Lock indicator for past-day view (manager cannot edit) */}
             {!canEdit && ['pending', 'checked-in', 'at-lunch', 'returned'].includes(phase) && (

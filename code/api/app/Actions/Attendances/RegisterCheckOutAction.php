@@ -16,15 +16,22 @@ use Illuminate\Validation\ValidationException;
  *
  * This action:
  *   1. Guards that the attendance already has a check_in
- *   2. Guards against duplicate check_out registration
- *   3. Calculates net_worked_minutes:
+ *   2. Calculates net_worked_minutes:
  *        (check_out − check_in) − actual_lunch_duration_if_both_recorded
- *   4. Calculates overtime_minutes:
+ *   3. Calculates overtime_minutes:
  *        max(0, check_out − scheduleDay.expected_end) in whole minutes
  *      If the schedule cannot be resolved, overtime_minutes = 0 (non-blocking)
  *      ScheduleDayOverride takes precedence over the base ScheduleDay when present
- *   5. Persists check_out, net_worked_minutes, overtime_minutes
- *   6. If overtime_minutes > 0, auto-creates an EARNED OvertimeBankMovement (origin=AUTO)
+ *   4. Persists check_out, net_worked_minutes, overtime_minutes — overwriting an
+ *      already-recorded check_out is a correction, already authorized upstream in
+ *      CheckOutRequest (AttendancePolicy::edit + attendances.update)
+ *   5. Syncs the auto EARNED OvertimeBankMovement (origin=AUTO) for this attendance:
+ *      creates it if none exists, updates its minutes on a correction, or deletes
+ *      it if the correction brings overtime_minutes back to 0. A correction is
+ *      REJECTED (422) once Attendance.overtime_authorized_at is set — i.e. the
+ *      overtime decision was already recorded via RecordOvertimeDecisionAction.
+ *      There is no reopen flow, so a settled overtime amount is never silently
+ *      changed underneath it.
  *
  * All business rule violations are surfaced as 422 ValidationException.
  *
@@ -43,12 +50,19 @@ class RegisterCheckOutAction
     public function __invoke(Attendance $attendance, array $data): Attendance
     {
         $this->guardCheckInExists($attendance);
-        $this->guardNoDuplicateCheckOut($attendance);
+
+        $isCorrection = $attendance->check_out !== null;
+        $this->guardDecidedOvertimeNotModified($attendance, $isCorrection);
 
         $checkOutLocal = Carbon::parse($data['check_out']);
         $checkOut = $checkOutLocal->clone()->utc();
 
-        $netWorkedMinutes = $this->calculateNetWorkedMinutes($attendance, $checkOut);
+        $netWorkedMinutes = $this->calculateNetWorkedMinutes(
+            Carbon::parse($attendance->check_in),
+            $attendance->lunch_start ? Carbon::parse($attendance->lunch_start) : null,
+            $attendance->lunch_end ? Carbon::parse($attendance->lunch_end) : null,
+            $checkOut,
+        );
         $overtimeMinutes = $this->calculateOvertimeMinutes($attendance, $checkOut, $checkOutLocal);
 
         return DB::transaction(function () use ($attendance, $data, $checkOut, $netWorkedMinutes, $overtimeMinutes) {
@@ -59,19 +73,77 @@ class RegisterCheckOutAction
                 'overtime_minutes' => $overtimeMinutes,
             ]);
 
-            if ($overtimeMinutes > 0) {
-                OvertimeBankMovement::create([
-                    'employee_id' => $attendance->employee_id,
-                    'attendance_id' => $attendance->id,
-                    'date' => $attendance->date,
-                    'movement_type' => OvertimeMovementType::EARNED,
-                    'origin' => OvertimeOrigin::AUTO,
-                    'minutes' => $overtimeMinutes,
-                ]);
-            }
+            $this->syncAutoOvertimeMovement($attendance, $overtimeMinutes);
 
             return $attendance->load('employee');
         });
+    }
+
+    /**
+     * Throw a 422 if this is a check-out correction and the overtime decision
+     * for this attendance was already recorded (Attendance.overtime_authorized_at
+     * is set by RecordOvertimeDecisionAction, on either authorize or reject) —
+     * there is no reopen flow, so a settled overtime amount is never silently
+     * changed underneath it.
+     *
+     * @throws ValidationException
+     */
+    private function guardDecidedOvertimeNotModified(Attendance $attendance, bool $isCorrection): void
+    {
+        if ($isCorrection && $attendance->overtime_authorized_at !== null) {
+            throw ValidationException::withMessages([
+                'check_out' => 'No se puede corregir la salida: las horas extra de este día ya fueron decididas.',
+            ]);
+        }
+    }
+
+    /**
+     * Create, update, or remove the auto EARNED OvertimeBankMovement so it
+     * always matches the just-recalculated overtime_minutes. Only reached
+     * when the overtime decision hasn't been recorded yet —
+     * guardDecidedOvertimeNotModified() already rejected that case.
+     */
+    private function syncAutoOvertimeMovement(Attendance $attendance, int $overtimeMinutes): void
+    {
+        $existingAutoMovement = $this->existingAutoOvertimeMovement($attendance);
+
+        if ($existingAutoMovement) {
+            if ($overtimeMinutes > 0) {
+                $existingAutoMovement->update(['minutes' => $overtimeMinutes]);
+            } else {
+                $existingAutoMovement->delete();
+            }
+
+            return;
+        }
+
+        if ($overtimeMinutes > 0) {
+            OvertimeBankMovement::create([
+                'employee_id' => $attendance->employee_id,
+                'attendance_id' => $attendance->id,
+                'date' => $attendance->date,
+                'movement_type' => OvertimeMovementType::EARNED,
+                'origin' => OvertimeOrigin::AUTO,
+                'minutes' => $overtimeMinutes,
+            ]);
+        }
+    }
+
+    /**
+     * The existing auto-generated (origin=AUTO) EARNED overtime movement for
+     * this attendance, if any — there is at most one per attendance. Filtering
+     * by movement_type too (not just origin) matters because
+     * CreateOvertimePaidMovementsAction also creates an origin=AUTO row for the
+     * same attendance at payroll close time, but with movement_type=PAID —
+     * without this filter, a correction after the period is reopened could
+     * match and mutate that PAID row instead of the EARNED one.
+     */
+    private function existingAutoOvertimeMovement(Attendance $attendance): ?OvertimeBankMovement
+    {
+        return OvertimeBankMovement::where('attendance_id', $attendance->id)
+            ->where('origin', OvertimeOrigin::AUTO)
+            ->where('movement_type', OvertimeMovementType::EARNED)
+            ->first();
     }
 
     /**
@@ -88,42 +160,7 @@ class RegisterCheckOutAction
         }
     }
 
-    /**
-     * Throw a 422 if check_out was already registered for this attendance.
-     *
-     * @throws ValidationException
-     */
-    private function guardNoDuplicateCheckOut(Attendance $attendance): void
-    {
-        if ($attendance->check_out) {
-            throw ValidationException::withMessages([
-                'check_out' => 'La salida ya fue registrada para este día.',
-            ]);
-        }
-    }
-
-    /**
-     * Calculate net worked minutes:
-     *   gross = check_out − check_in  (in minutes)
-     *   net   = gross − actual_lunch_duration  (only if both lunch_start and lunch_end exist)
-     *
-     * Returns 0 minimum (cannot be negative).
-     */
-    private function calculateNetWorkedMinutes(Attendance $attendance, Carbon $checkOut): int
-    {
-        $checkIn = Carbon::parse($attendance->check_in);
-        $grossMinutes = $checkIn->diffInMinutes($checkOut);
-
-        // Deduct the actual lunch break only when both boundaries were recorded
-        if ($attendance->lunch_start && $attendance->lunch_end) {
-            $lunchStart = Carbon::parse($attendance->lunch_start);
-            $lunchEnd = Carbon::parse($attendance->lunch_end);
-            $lunchMinutes = $lunchStart->diffInMinutes($lunchEnd);
-            $grossMinutes -= $lunchMinutes;
-        }
-
-        return (int) max(0, $grossMinutes);
-    }
+    // calculateNetWorkedMinutes() provided by ResolvesEffectiveScheduleDay trait
 
     /**
      * Calculate overtime in whole minutes:

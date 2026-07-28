@@ -73,97 +73,149 @@ class CloseDayAction
                 $q->where('branch_id', $branchId)->where('is_active', true);
             })->pluck('id');
 
-            // Step 1: Register pending lunch returns
-            $lunchReturns = $data['lunch_returns'] ?? [];
-            foreach ($lunchReturns as $lr) {
-                $attendance = Attendance::where('public_id', $lr['attendance_id'])
-                    ->whereIn('employee_id', $activeEmployeeIds)
-                    ->first();
+            $counts['lunch_returns'] = $this->registerPendingLunchReturns($data['lunch_returns'] ?? [], $activeEmployeeIds);
+            $counts['check_outs'] = $this->registerPendingCheckOuts($activeEmployeeIds, $today, $closeTimeIso);
+            $counts['overtime_pending'] = $this->collectOvertimePending($activeEmployeeIds, $today);
 
-                if (! $attendance) {
-                    continue;
-                }
-
-                // Build lunch_end ISO from HH:mm using the attendance date
-                $lunchEndLocal = Carbon::parse(
-                    "{$attendance->date->toDateString()} {$lr['lunch_end']}",
-                    config('app.business_timezone')
-                );
-
-                try {
-                    ($this->lunchReturnAction)($attendance, [
-                        'lunch_end' => $lunchEndLocal->toIso8601String(),
-                    ]);
-                    $counts['lunch_returns']++;
-                } catch (ValidationException) {
-                    // Skip if already registered or validation fails — non-blocking
-                }
-            }
-
-            // Step 2: Batch check-out for all attendances with check_in and no check_out
-            // Exclude at-lunch employees (lunch_start set but lunch_end not resolved)
-            $pendingCheckOuts = Attendance::whereIn('employee_id', $activeEmployeeIds)
-                ->whereDate('date', $today)
-                ->whereNotNull('check_in')
-                ->whereNull('check_out')
-                ->where(function ($q) {
-                    $q->whereNull('lunch_start')
-                        ->orWhereNotNull('lunch_end');
-                })
-                ->get();
-
-            foreach ($pendingCheckOuts as $attendance) {
-                try {
-                    ($this->checkOutAction)($attendance, [
-                        'check_out' => $closeTimeIso,
-                    ]);
-                    $counts['check_outs']++;
-                } catch (ValidationException) {
-                    // Skip if guard fails — non-blocking
-                }
-            }
-
-            // Collect attendances that now have overtime with no decision recorded yet.
-            // These will be returned so the caller can prompt the manager for each one.
-            $counts['overtime_pending'] = Attendance::whereIn('employee_id', $activeEmployeeIds)
-                ->whereDate('date', $today)
-                ->where('overtime_minutes', '>', 0)
-                ->whereNull('overtime_authorized_at')
-                ->with('employee.user')
-                ->get()
-                ->map(fn (Attendance $a) => [
-                    'attendance_id' => $a->public_id,
-                    'employee_name' => $a->employee->user?->name ?? '',
-                    'overtime_minutes' => $a->overtime_minutes,
-                ])
-                ->values()
-                ->all();
-
-            // Step 3: Classify employees with no attendance record today
-            $employeesWithAttendance = Attendance::whereIn('employee_id', $activeEmployeeIds)
-                ->whereDate('date', $today)
-                ->pluck('employee_id');
-
-            $noAttendanceIds = $activeEmployeeIds->diff($employeesWithAttendance);
-
-            foreach ($noAttendanceIds as $employeeId) {
-                $dayStatus = $this->resolveAbsentDayStatus($employeeId, $today, $dayOfWeek);
-
-                Attendance::create([
-                    'employee_id' => $employeeId,
-                    'date' => $today,
-                    'day_status' => $dayStatus,
-                ]);
-
-                match ($dayStatus) {
-                    DayStatus::LEAVE => $counts['leaves']++,
-                    DayStatus::DAY_OFF => $counts['day_offs']++,
-                    default => $counts['absences']++,
-                };
-            }
+            $this->classifyAbsentEmployees($activeEmployeeIds, $today, $dayOfWeek, $counts);
         });
 
         return $counts;
+    }
+
+    /**
+     * Step 1: Register lunch_end for attendances named in the lunch_returns payload.
+     *
+     * This batch path calls RegisterLunchReturnAction directly, bypassing
+     * LunchReturnRequest entirely — so neither AttendancePolicy::edit nor
+     * attendances.update are ever checked here. Skipping attendances that
+     * already have lunch_end keeps this path scoped to genuinely-pending
+     * returns only; correcting an already-recorded one stays the normal
+     * (authorized) PATCH /{id}/lunch-return endpoint's job, not this one.
+     *
+     * @param  array<int, array{attendance_id: string, lunch_end: string}>  $lunchReturns
+     * @param  \Illuminate\Support\Collection<int, int>  $activeEmployeeIds
+     */
+    private function registerPendingLunchReturns(array $lunchReturns, $activeEmployeeIds): int
+    {
+        $registered = 0;
+
+        foreach ($lunchReturns as $lr) {
+            $attendance = Attendance::where('public_id', $lr['attendance_id'])
+                ->whereIn('employee_id', $activeEmployeeIds)
+                ->first();
+
+            if (! $attendance || $attendance->lunch_end !== null) {
+                continue;
+            }
+
+            // Build lunch_end ISO from HH:mm using the attendance date
+            $lunchEndLocal = Carbon::parse(
+                "{$attendance->date->toDateString()} {$lr['lunch_end']}",
+                config('app.business_timezone')
+            );
+
+            try {
+                ($this->lunchReturnAction)($attendance, [
+                    'lunch_end' => $lunchEndLocal->toIso8601String(),
+                ]);
+                $registered++;
+            } catch (ValidationException) {
+                // Skip on validation failure (e.g. no lunch_start recorded) — non-blocking
+            }
+        }
+
+        return $registered;
+    }
+
+    /**
+     * Step 2: Batch check-out for all attendances with check_in and no check_out.
+     * Excludes at-lunch employees (lunch_start set but lunch_end not resolved).
+     *
+     * @param  \Illuminate\Support\Collection<int, int>  $activeEmployeeIds
+     */
+    private function registerPendingCheckOuts($activeEmployeeIds, string $today, string $closeTimeIso): int
+    {
+        $pendingCheckOuts = Attendance::whereIn('employee_id', $activeEmployeeIds)
+            ->whereDate('date', $today)
+            ->whereNotNull('check_in')
+            ->whereNull('check_out')
+            ->where(function ($q) {
+                $q->whereNull('lunch_start')
+                    ->orWhereNotNull('lunch_end');
+            })
+            ->get();
+
+        $registered = 0;
+
+        foreach ($pendingCheckOuts as $attendance) {
+            try {
+                ($this->checkOutAction)($attendance, [
+                    'check_out' => $closeTimeIso,
+                ]);
+                $registered++;
+            } catch (ValidationException) {
+                // Skip if guard fails — non-blocking
+            }
+        }
+
+        return $registered;
+    }
+
+    /**
+     * Collect attendances that now have overtime with no decision recorded yet,
+     * so the caller can prompt the manager for each one.
+     *
+     * @param  \Illuminate\Support\Collection<int, int>  $activeEmployeeIds
+     * @return array<int, array{attendance_id: string, employee_name: string, overtime_minutes: int}>
+     */
+    private function collectOvertimePending($activeEmployeeIds, string $today): array
+    {
+        return Attendance::whereIn('employee_id', $activeEmployeeIds)
+            ->whereDate('date', $today)
+            ->where('overtime_minutes', '>', 0)
+            ->whereNull('overtime_authorized_at')
+            ->with('employee.user')
+            ->get()
+            ->map(fn (Attendance $a) => [
+                'attendance_id' => $a->public_id,
+                'employee_name' => $a->employee->user?->name ?? '',
+                'overtime_minutes' => $a->overtime_minutes,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Step 3: Classify employees with no attendance record today and create their
+     * Attendance row, incrementing the matching bucket in $counts by reference.
+     *
+     * @param  \Illuminate\Support\Collection<int, int>  $activeEmployeeIds
+     * @param  array{lunch_returns: int, check_outs: int, absences: int, leaves: int, day_offs: int, overtime_pending: array<int, mixed>}  $counts
+     */
+    private function classifyAbsentEmployees($activeEmployeeIds, string $today, int $dayOfWeek, array &$counts): void
+    {
+        $employeesWithAttendance = Attendance::whereIn('employee_id', $activeEmployeeIds)
+            ->whereDate('date', $today)
+            ->pluck('employee_id');
+
+        $noAttendanceIds = $activeEmployeeIds->diff($employeesWithAttendance);
+
+        foreach ($noAttendanceIds as $employeeId) {
+            $dayStatus = $this->resolveAbsentDayStatus($employeeId, $today, $dayOfWeek);
+
+            Attendance::create([
+                'employee_id' => $employeeId,
+                'date' => $today,
+                'day_status' => $dayStatus,
+            ]);
+
+            match ($dayStatus) {
+                DayStatus::LEAVE => $counts['leaves']++,
+                DayStatus::DAY_OFF => $counts['day_offs']++,
+                default => $counts['absences']++,
+            };
+        }
     }
 
     /**

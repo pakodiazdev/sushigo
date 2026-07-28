@@ -2,6 +2,7 @@
 
 namespace App\Actions\Attendances;
 
+use App\Actions\Attendances\Concerns\ResolvesEffectiveScheduleDay;
 use App\Enums\DayStatus;
 use App\Enums\LeaveStatus;
 use App\Enums\VacationRequestStatus;
@@ -28,6 +29,9 @@ use Illuminate\Validation\ValidationException;
  *   4. Retrieves the effective ScheduleDay (or ScheduleDayOverride) for the day of week
  *   5. Calculates entry_late_seconds = max(0, checkIn − expectedStart) in seconds
  *   6. Persists an Attendance record with day_status = WORKED
+ *   7. If correcting a check_in on an already-completed day (check_out already
+ *      set), recalculates net_worked_minutes against the NEW check_in — otherwise
+ *      it would silently keep reflecting the old, now-incorrect worked span
  *
  * All business rule violations are surfaced as 422 ValidationException.
  *
@@ -36,6 +40,7 @@ use Illuminate\Validation\ValidationException;
 class RegisterCheckInAction
 {
     use ResolvesActiveEmploymentPeriod;
+    use ResolvesEffectiveScheduleDay;
 
     public function __construct(
         private readonly ApplicationClock $clock
@@ -103,6 +108,18 @@ class RegisterCheckInAction
         $attendance = Attendance::where('employee_id', $employee->id)->where('date', $date)->first();
 
         if ($attendance) {
+            // Correcting check_in on an already-completed day: net_worked_minutes
+            // was derived from the OLD check_in at check-out time and must be
+            // recalculated against the corrected one, or it silently goes stale.
+            if ($attendance->check_out !== null) {
+                $attendanceData['net_worked_minutes'] = $this->calculateNetWorkedMinutes(
+                    $checkIn,
+                    $attendance->lunch_start ? Carbon::parse($attendance->lunch_start) : null,
+                    $attendance->lunch_end ? Carbon::parse($attendance->lunch_end) : null,
+                    Carbon::parse($attendance->check_out),
+                );
+            }
+
             $attendance->auditReason = $data['reason'] ?? null;
             $attendance->fill($attendanceData)->save();
         } else {
@@ -115,11 +132,17 @@ class RegisterCheckInAction
     }
 
     /**
-     * Throw a 422 if the employee already has an attendance record for this date.
+     * Throw a 422 if the employee already has an attendance record for this date
+     * with no check_in yet and it isn't a pending EXTRA stub (e.g. a Falta/ABSENCE
+     * or LEAVE record) — that flow is untouched by this action.
+     *
+     * When check_in is already set, this is a correction of an already-recorded
+     * event: authorization (including the attendances.update permission) was
+     * already enforced in CheckInRequest::authorize(), so it's allowed through
+     * to the update branch below.
      *
      * When $hasApprovedExtraDay is true, an existing attendance with no check-in
-     * (created by RegisterNegotiatedExtraDayAction) is allowed — the check-in
-     * will update it via updateOrCreate.
+     * (created by RegisterNegotiatedExtraDayAction) is also allowed through.
      *
      * @throws ValidationException
      */
@@ -133,8 +156,13 @@ class RegisterCheckInAction
             return;
         }
 
+        // Already has a check-in — this is an authorized correction.
+        if ($existing->check_in !== null) {
+            return;
+        }
+
         // Allow check-in on an EXTRA attendance stub that has no check-in yet.
-        if ($hasApprovedExtraDay && $existing->day_status === DayStatus::EXTRA && $existing->check_in === null) {
+        if ($hasApprovedExtraDay && $existing->day_status === DayStatus::EXTRA) {
             return;
         }
 

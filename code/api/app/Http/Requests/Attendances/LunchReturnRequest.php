@@ -26,6 +26,11 @@ namespace App\Http\Requests\Attendances;
  */
 class LunchReturnRequest extends AttendanceFormRequest
 {
+    protected function correctionField(): ?string
+    {
+        return 'lunch_end';
+    }
+
     public function rules(): array
     {
         return [

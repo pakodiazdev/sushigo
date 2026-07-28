@@ -49,8 +49,9 @@ class CheckInApiTest extends TestCase
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         Permission::create(['name' => 'attendances.create', 'guard_name' => 'api']);
+        Permission::create(['name' => 'attendances.update', 'guard_name' => 'api']);
         $role = Role::create(['name' => 'admin', 'guard_name' => 'api']);
-        $role->givePermissionTo('attendances.create');
+        $role->givePermissionTo(['attendances.create', 'attendances.update']);
 
         // Position roles required by Employee factory
         Role::firstOrCreate(['name' => 'employee',         'guard_name' => 'api']);
@@ -187,7 +188,7 @@ class CheckInApiTest extends TestCase
     // #region 422 error cases
 
     #[Test]
-    public function rejects_duplicate_attendance(): void
+    public function allows_correcting_an_already_recorded_check_in(): void
     {
         ['employee' => $employee] = $this->makeEmployeeWithSchedule(
             date: self::DATE,
@@ -199,13 +200,73 @@ class CheckInApiTest extends TestCase
             'check_in' => self::CHECK_IN,
         ])->assertStatus(201);
 
+        // Correct the mistaken time — the admin has attendances.update
         $response = $this->postJson('/api/v1/attendances/check-in', [
             'employee_id' => $employee->public_id,
-            'check_in' => self::CHECK_IN,
+            'check_in' => '2026-02-23T09:15:00',
         ]);
 
-        $response->assertStatus(422);
-        $this->assertArrayHasKey('check_in', $response->json('errors'));
+        $response->assertStatus(201)
+            ->assertJsonPath('data.entry_late_seconds', 900);
+    }
+
+    #[Test]
+    public function correcting_check_in_recalculates_net_worked_minutes_when_check_out_already_recorded(): void
+    {
+        ['employee' => $employee] = $this->makeEmployeeWithSchedule(
+            date: self::DATE,
+            expectedStart: self::START,
+        );
+
+        // Check in at 09:00, then check out at 17:00 — 480 min worked, no lunch.
+        $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => self::CHECK_IN,
+        ])->assertStatus(201);
+
+        $attendanceId = Attendance::where('employee_id', $employee->id)->firstOrFail()->public_id;
+
+        $this->patchJson("/api/v1/attendances/{$attendanceId}/check-out", [
+            'check_out' => '2026-02-23T17:00:00',
+        ])->assertStatus(200)
+            ->assertJsonPath('data.net_worked_minutes', 480);
+
+        // Correct the check-in to an hour earlier — the worked span grows to 540 min.
+        // Before the fix, net_worked_minutes silently kept reflecting the stale 480.
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => '2026-02-23T08:00:00',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.net_worked_minutes', 540);
+    }
+
+    #[Test]
+    public function rejects_check_in_correction_without_attendances_update_permission(): void
+    {
+        ['employee' => $employee] = $this->makeEmployeeWithSchedule(
+            date: self::DATE,
+            expectedStart: self::START,
+        );
+
+        $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => self::CHECK_IN,
+        ])->assertStatus(201);
+
+        $limitedRole = Role::create(['name' => 'manager-no-correction', 'guard_name' => 'api']);
+        $limitedRole->givePermissionTo('attendances.create');
+        $limitedUser = User::factory()->create();
+        $limitedUser->assignRole('manager-no-correction');
+        Passport::actingAs($limitedUser);
+
+        $response = $this->postJson('/api/v1/attendances/check-in', [
+            'employee_id' => $employee->public_id,
+            'check_in' => '2026-02-23T09:15:00',
+        ]);
+
+        $response->assertStatus(403);
     }
 
     #[Test]

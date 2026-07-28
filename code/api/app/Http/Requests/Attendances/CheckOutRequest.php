@@ -26,6 +26,11 @@ namespace App\Http\Requests\Attendances;
  */
 class CheckOutRequest extends AttendanceFormRequest
 {
+    protected function correctionField(): ?string
+    {
+        return 'check_out';
+    }
+
     public function rules(): array
     {
         return [

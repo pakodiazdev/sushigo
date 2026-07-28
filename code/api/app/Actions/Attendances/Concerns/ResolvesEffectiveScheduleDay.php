@@ -7,6 +7,7 @@ use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
 use App\Models\ScheduleDay;
 use App\Models\ScheduleDayOverride;
+use Carbon\Carbon;
 
 /**
  * Shared override-aware schedule day resolution for attendance actions.
@@ -19,8 +20,9 @@ use App\Models\ScheduleDayOverride;
  * Returns null (non-blocking) when any step fails — callers default to 0
  * for calculated values rather than interrupting the operational flow.
  *
- * Used by: RegisterCheckOutAction, RegisterLunchReturnAction.
- * RegisterCheckInAction uses its own blocking version with specific 422 messages.
+ * Used by: RegisterCheckInAction, RegisterLunchStartAction, RegisterLunchReturnAction,
+ * RegisterCheckOutAction. RegisterCheckInAction resolves its own schedule day for the
+ * blocking (422-message) day-off checks, but shares calculateNetWorkedMinutes() below.
  *
  * @see AP-012, RF-10
  */
@@ -74,5 +76,56 @@ trait ResolvesEffectiveScheduleDay
         $scheduleDay = $schedule->dayConfig($dayOfWeek);
 
         return ($scheduleDay && ! $scheduleDay->isDayOff()) ? $scheduleDay : null;
+    }
+
+    /**
+     * Calculate lunch tardiness in seconds:
+     *   lunch_late_seconds = max(0, lunch_end − expected_return)
+     *   where expected_return = lunch_start + scheduleDay.lunch_duration_minutes
+     *
+     * Takes both boundaries as parameters (rather than reading them off the
+     * model) so callers can pass a value being corrected — e.g. correcting
+     * lunch_start after lunch_end is already recorded must recalculate this
+     * against the NEW lunch_start, not the stale one still on the model.
+     *
+     * Returns 0 if the schedule cannot be resolved or lunch_duration_minutes
+     * is not configured — incomplete configuration should not block the flow.
+     */
+    protected function calculateLunchLateSeconds(Attendance $attendance, Carbon $lunchStart, Carbon $lunchEnd): int
+    {
+        $scheduleDay = $this->resolveEffectiveScheduleDay($attendance);
+
+        if (! $scheduleDay || ! $scheduleDay->lunch_duration_minutes) {
+            return 0;
+        }
+
+        $expectedReturn = $lunchStart->clone()->addMinutes($scheduleDay->lunch_duration_minutes);
+
+        return (int) max(0, $lunchEnd->timestamp - $expectedReturn->timestamp);
+    }
+
+    /**
+     * Calculate net worked minutes:
+     *   gross = check_out − check_in  (in minutes)
+     *   net   = gross − actual_lunch_duration  (only if both lunch_start and lunch_end exist)
+     *
+     * Takes every boundary as a parameter (rather than reading them off the
+     * model) so callers can pass a value being corrected — e.g. correcting
+     * check_in, lunch_start, or lunch_end on an already-completed day (one
+     * that already has check_out) must recalculate this against the NEW
+     * value, not the stale one still on the model.
+     *
+     * Returns 0 minimum (cannot be negative).
+     */
+    protected function calculateNetWorkedMinutes(Carbon $checkIn, ?Carbon $lunchStart, ?Carbon $lunchEnd, Carbon $checkOut): int
+    {
+        $grossMinutes = $checkIn->diffInMinutes($checkOut);
+
+        // Deduct the actual lunch break only when both boundaries were recorded
+        if ($lunchStart && $lunchEnd) {
+            $grossMinutes -= $lunchStart->diffInMinutes($lunchEnd);
+        }
+
+        return (int) max(0, $grossMinutes);
     }
 }
