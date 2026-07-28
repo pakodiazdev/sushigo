@@ -52,7 +52,6 @@ export default function Layout() {
 
         if (shouldRedirectToLogin) {
             router.navigate({ to: '/login' });
-            return;
         }
     }, [isAuthenticated, currentPath, user, router, isLoading, isPublicRoute]);
 
