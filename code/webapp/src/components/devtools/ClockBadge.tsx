@@ -35,6 +35,7 @@ export function ClockBadge() {
         <div className="relative" ref={panelRef}>
             {/* Badge - clickable */}
             <button
+                type="button"
                 onClick={togglePanel}
                 className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
                     isSimulated
@@ -60,6 +61,7 @@ export function ClockBadge() {
                             Clock Configuration
                         </h3>
                         <button
+                            type="button"
                             onClick={closePanel}
                             className="p-1 hover:bg-muted rounded"
                         >
@@ -118,6 +120,7 @@ export function ClockBadge() {
                         {/* Action Buttons */}
                         <div className="flex gap-2">
                             <button
+                                type="button"
                                 onClick={handleSetTime}
                                 disabled={isLoading || !dateInput || !timeInput}
                                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -126,6 +129,7 @@ export function ClockBadge() {
                                 Set Time
                             </button>
                             <button
+                                type="button"
                                 onClick={handleReset}
                                 disabled={isLoading || !isSimulated}
                                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

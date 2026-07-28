@@ -36,6 +36,7 @@ export function WeekDayRow({ day, onClickOverride }: WeekDayRowProps) {
           </span>
           {isOverride && (
             <button
+              type="button"
               onClick={onClickOverride}
               title="Ver excepciones"
               className="rounded p-0.5 hover:bg-amber-100 dark:hover:bg-amber-900"

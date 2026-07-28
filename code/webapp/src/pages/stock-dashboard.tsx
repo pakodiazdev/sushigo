@@ -326,6 +326,7 @@ export function StockDashboardPage() {
             {locationSummaryCards.map(({ location, totalValue, totalItems, variantCount }) => (
               <button
                 key={location.id}
+                type="button"
                 onClick={() => setSelectedLocationId(location.id)}
                 className="text-left p-4 rounded-lg border border-gray-200 bg-white hover:border-blue-400 hover:shadow-md transition-all"
               >

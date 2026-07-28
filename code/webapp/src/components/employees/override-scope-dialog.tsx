@@ -65,7 +65,7 @@ export function OverrideScopeDialog({ dayLabel, dayOfWeek, existingOverrides, is
             <Zap className="h-4 w-4 text-amber-500" aria-hidden />
             <h3 className="text-base font-semibold">Ajuste — {dayLabel}</h3>
           </div>
-          <button onClick={onClose} className="rounded-sm text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} className="rounded-sm text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
 
         {step === 'form' ? (

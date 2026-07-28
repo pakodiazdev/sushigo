@@ -369,6 +369,41 @@ describe('DataGrid', () => {
             fireEvent.click(lastPageButton!)
             expect(onPageChange).toHaveBeenCalledWith(20)
         })
+
+        it('navigates via the First/Prev/Next/Last edge buttons', () => {
+            const onPageChange = vi.fn()
+            const { container } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    pagination={{
+                        currentPage: 3,
+                        totalPages: 5,
+                        onPageChange,
+                    }}
+                />
+            )
+
+            // Scope to a single responsive nav — First, Prev, [page numbers...], Next, Last
+            const nav = container.querySelector('nav')
+            expect(nav).toBeDefined()
+            const navButtons = Array.from(nav!.querySelectorAll('button'))
+            const [firstBtn, prevBtn] = navButtons
+            const nextBtn = navButtons[navButtons.length - 2]
+            const lastBtn = navButtons[navButtons.length - 1]
+
+            fireEvent.click(firstBtn!)
+            expect(onPageChange).toHaveBeenCalledWith(1)
+
+            fireEvent.click(prevBtn!)
+            expect(onPageChange).toHaveBeenCalledWith(2)
+
+            fireEvent.click(nextBtn!)
+            expect(onPageChange).toHaveBeenCalledWith(4)
+
+            fireEvent.click(lastBtn!)
+            expect(onPageChange).toHaveBeenCalledWith(5)
+        })
     })
 
     describe('column visibility', () => {

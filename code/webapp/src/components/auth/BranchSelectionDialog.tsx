@@ -59,6 +59,7 @@ export function BranchSelectionDialog() {
                     {availableBranches.map((branch) => (
                         <button
                             key={branch.id}
+                            type="button"
                             onClick={() => handleSelectBranch(branch)}
                             disabled={isLoading}
                             className="w-full p-4 text-left rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"

@@ -169,6 +169,7 @@ export function DevDebugger() {
                     <Bug className="h-5 w-5 text-blue-400" />
                     <span className="text-sm font-mono">Debugger</span>
                     <button
+                        type="button"
                         onClick={toggleMinimized}
                         className="ml-2 p-1 hover:bg-gray-800 rounded"
                         title="Expand debugger"
@@ -362,6 +363,7 @@ export function DevDebugger() {
                                     <div className="flex flex-wrap gap-1">
                                         {devLoginAllRoles.map((role) => (
                                             <button
+                                                type="button"
                                                 key={role}
                                                 onClick={() =>
                                                     setDevLoginRoleFilter(
@@ -384,6 +386,7 @@ export function DevDebugger() {
                                             {devLoginPermissionFilter}
                                         </span>
                                         <button
+                                            type="button"
                                             onClick={() => {
                                                 setDevLoginPermissionFilter(null)
                                                 setDevLoginPermissionSearch('')
@@ -411,6 +414,7 @@ export function DevDebugger() {
                                                 {permissionDropdownItems.map((perm) => (
                                                     <li key={perm}>
                                                         <button
+                                                            type="button"
                                                             onMouseDown={(e) => e.preventDefault()}
                                                             onClick={() => {
                                                                 setDevLoginPermissionFilter(perm)
@@ -442,6 +446,7 @@ export function DevDebugger() {
                                     <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
                                         {devLoginFilteredUsers.map((devUser) => (
                                             <button
+                                                type="button"
                                                 key={devUser.id}
                                                 data-testid="dev-login-user"
                                                 onClick={() => handleDevLogin(devUser)}
@@ -563,6 +568,7 @@ function Section({ id, icon: Icon, title, isExpanded, onToggle, badge, children 
     return (
         <div id={id} className="bg-gray-800 rounded-lg overflow-hidden">
             <button
+                type="button"
                 onClick={onToggle}
                 className="w-full px-3 py-2 flex items-center justify-between hover:bg-gray-700 transition-colors"
             >
