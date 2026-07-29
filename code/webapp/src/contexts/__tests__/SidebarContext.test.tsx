@@ -1,6 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
+import { useState } from 'react'
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, renderHook, act } from '@testing-library/react'
 import { SidebarProvider } from '../SidebarContext'
@@ -134,6 +135,39 @@ describe('SidebarContext', () => {
             })
 
             expect(result.current.isMobileOpen).toBe(false)
+        })
+    })
+
+    describe('value identity', () => {
+        it('keeps the same context value reference across unrelated parent re-renders', () => {
+            const capturedValues: unknown[] = []
+
+            function Capture() {
+                const value = useSidebar()
+                capturedValues.push(value)
+                return null
+            }
+
+            function Harness() {
+                const [, setTick] = useState(0)
+                return (
+                    <SidebarProvider>
+                        <Capture />
+                        <button data-testid="rerender" onClick={() => setTick((t) => t + 1)}>
+                            rerender
+                        </button>
+                    </SidebarProvider>
+                )
+            }
+
+            const { getByTestId } = render(<Harness />)
+
+            act(() => {
+                fireEvent.click(getByTestId('rerender'))
+            })
+
+            expect(capturedValues).toHaveLength(2)
+            expect(capturedValues[1]).toBe(capturedValues[0])
         })
     })
 

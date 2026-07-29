@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { SidebarContext } from '@/contexts/sidebar-context';
 
 interface SidebarProviderProps {
@@ -9,20 +9,23 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-    const toggleSidebar = () => setIsCollapsed(prev => !prev);
-    const toggleMobileSidebar = () => setIsMobileOpen(prev => !prev);
-    const closeMobileSidebar = () => setIsMobileOpen(false);
+    const toggleSidebar = useCallback(() => setIsCollapsed(prev => !prev), []);
+    const toggleMobileSidebar = useCallback(() => setIsMobileOpen(prev => !prev), []);
+    const closeMobileSidebar = useCallback(() => setIsMobileOpen(false), []);
+
+    const value = useMemo(
+        () => ({
+            isCollapsed,
+            isMobileOpen,
+            toggleSidebar,
+            toggleMobileSidebar,
+            closeMobileSidebar
+        }),
+        [isCollapsed, isMobileOpen, toggleSidebar, toggleMobileSidebar, closeMobileSidebar]
+    );
 
     return (
-        <SidebarContext.Provider
-            value={{
-                isCollapsed,
-                isMobileOpen,
-                toggleSidebar,
-                toggleMobileSidebar,
-                closeMobileSidebar
-            }}
-        >
+        <SidebarContext.Provider value={value}>
             {children}
         </SidebarContext.Provider>
     );
