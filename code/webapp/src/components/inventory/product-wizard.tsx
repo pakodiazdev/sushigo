@@ -313,55 +313,63 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
         return Object.keys(newErrors).length === 0
     }
 
-    const handleNext = async () => {
-        if (currentStep === 1) {
-            if (!validateStep1()) return
+    const advanceFromStep1 = async () => {
+        if (!validateStep1()) return
 
-            // Create item if not created yet
-            if (!createdItemId) {
-                try {
-                    await createItemMutation.mutateAsync(wizardData.item)
-                } catch {
-                    return
-                }
-                setCurrentStep(2)
-            } else {
-                setCurrentStep(2)
+        // Create item if not created yet
+        if (!createdItemId) {
+            try {
+                await createItemMutation.mutateAsync(wizardData.item)
+            } catch {
+                return
             }
-        } else if (currentStep === 2) {
-            if (!validateStep2()) return
-
-            // Create variant if not created yet
-            if (!createdVariantId && createdItemId) {
-                try {
-                    await createVariantMutation.mutateAsync({
-                        ...wizardData.variant,
-                        item_id: createdItemId,
-                    })
-                } catch {
-                    return
-                }
-                setCurrentStep(3)
-            } else {
-                setCurrentStep(3)
-            }
-        } else if (currentStep === 3) {
-            if (!validateStep3()) return
-
-            // Create conversions if item is stocked and has conversions defined
-            if (wizardData.item.is_stocked && wizardData.conversions.length > 0) {
-                try {
-                    await Promise.all(
-                        wizardData.conversions.map((conv) => createConversionMutation.mutateAsync(conv))
-                    )
-                    showSuccess('Conversiones creadas exitosamente', 'Paso 3 Completo')
-                } catch {
-                    showError('Error al crear conversiones', 'Error')
-                    return
-                }
-            }
-            setCurrentStep(4)
         }
+        setCurrentStep(2)
+    }
+
+    const advanceFromStep2 = async () => {
+        if (!validateStep2()) return
+
+        // Create variant if not created yet
+        if (!createdVariantId && createdItemId) {
+            try {
+                await createVariantMutation.mutateAsync({
+                    ...wizardData.variant,
+                    item_id: createdItemId,
+                })
+            } catch {
+                return
+            }
+        }
+        setCurrentStep(3)
+    }
+
+    const advanceFromStep3 = async () => {
+        if (!validateStep3()) return
+
+        // Create conversions if item is stocked and has conversions defined
+        if (wizardData.item.is_stocked && wizardData.conversions.length > 0) {
+            try {
+                await Promise.all(
+                    wizardData.conversions.map((conv) => createConversionMutation.mutateAsync(conv))
+                )
+                showSuccess('Conversiones creadas exitosamente', 'Paso 3 Completo')
+            } catch {
+                showError('Error al crear conversiones', 'Error')
+                return
+            }
+        }
+        setCurrentStep(4)
+    }
+
+    const STEP_ADVANCERS: Record<number, () => Promise<void>> = {
+        1: advanceFromStep1,
+        2: advanceFromStep2,
+        3: advanceFromStep3,
+    }
+
+    const handleNext = async () => {
+        await STEP_ADVANCERS[currentStep]?.()
     }
 
     const handleBack = () => {

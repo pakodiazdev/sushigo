@@ -19,9 +19,10 @@ import {
 } from 'lucide-react'
 import { useRouterState } from '@tanstack/react-router'
 import { gitBranch } from 'virtual:git-branch'
-import { useDevDebugger, sectionElementId } from './use-dev-debugger'
+import { useDevDebugger, sectionElementId, type DevUser } from './use-dev-debugger'
 import { PayrollCloseActions } from './page-actions/payroll-close-actions'
 import { ClockDebugPanel } from '@/components/devtools/ClockDebugPanel'
+import type { User as AuthUser } from '@/types/auth'
 
 const PAGE_ACTIONS: Record<string, { title: string; component: React.ReactNode }> = {
     '/attendance/payroll/close': {
@@ -71,8 +72,6 @@ export function DevDebugger() {
     const currentPath = useRouterState({ select: (s) => s.location.pathname })
     const pageAction = PAGE_ACTIONS[currentPath] ?? null
 
-    const [permissionInputFocused, setPermissionInputFocused] = useState(false)
-
     const sectionItems: { key: keyof typeof state.expandedSections; title: string; icon: LucideIcon }[] = [
         { key: 'user', title: 'Usuario', icon: User },
         ...(pageAction ? [{ key: 'pageActions' as const, title: `Acciones — ${pageAction.title}`, icon: Zap }] : []),
@@ -112,72 +111,20 @@ export function DevDebugger() {
         )
     }
 
-    let permissionDropdownItems: string[] = []
-    if (devLoginPermissionSearch.length > 0) {
-        permissionDropdownItems = devLoginPermissionSuggestions
-    } else if (permissionInputFocused) {
-        permissionDropdownItems = devLoginAllPermissions
-    }
-
     if (isHidden) {
         return null
     }
 
     if (isMinimized) {
-        if (isMobile) {
-            return (
-                <div
-                    className="fixed inset-x-0 bottom-0 z-[9999] bg-gray-900 text-white border-t-2 border-blue-500 shadow-2xl px-3 py-2 flex items-center justify-between"
-                    data-testid="dev-debugger"
-                >
-                    <button
-                        type="button"
-                        onClick={toggleMinimized}
-                        className="flex items-center gap-2"
-                        title="Expandir debugger"
-                    >
-                        <Bug className="h-5 w-5 text-blue-400" />
-                        <span className="text-sm font-mono">Debugger</span>
-                    </button>
-                    <div className="flex items-center gap-1 min-w-0">
-                        <div className="flex items-center gap-1 overflow-x-auto">{renderQuickLinks('hover:bg-gray-800')}</div>
-                        <button
-                            type="button"
-                            onClick={toggleMinimized}
-                            className="p-1 hover:bg-gray-800 rounded shrink-0"
-                            title="Expandir debugger"
-                        >
-                            <PlusCircle className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
-            )
-        }
-
         return (
-            <div
-                ref={dragRef}
-                style={{
-                    left: state.position.x,
-                    top: state.position.y,
-                }}
-                className="fixed z-[9999] cursor-move"
-                data-testid="dev-debugger"
-                onMouseDown={handleMouseDown}
-            >
-                <div className="bg-gray-900 text-white rounded-lg shadow-2xl p-3 flex items-center gap-2 border-2 border-blue-500">
-                    <Bug className="h-5 w-5 text-blue-400" />
-                    <span className="text-sm font-mono">Debugger</span>
-                    <button
-                        type="button"
-                        onClick={toggleMinimized}
-                        className="ml-2 p-1 hover:bg-gray-800 rounded"
-                        title="Expand debugger"
-                    >
-                        <PlusCircle className="h-4 w-4" />
-                    </button>
-                </div>
-            </div>
+            <MinimizedDebugger
+                isMobile={isMobile}
+                dragRef={dragRef}
+                position={state.position}
+                handleMouseDown={handleMouseDown}
+                toggleMinimized={toggleMinimized}
+                renderQuickLinks={renderQuickLinks}
+            />
         )
     }
 
@@ -287,51 +234,7 @@ export function DevDebugger() {
                     onToggle={() => toggleSection('roles')}
                     badge={user?.roles?.length}
                 >
-                    {user ? (
-                        <div className="space-y-2 text-xs font-mono">
-                            <InfoRow
-                                label="isAdmin (store)"
-                                value={isAdmin ? 'true' : 'false'}
-                                highlight={isAdmin}
-                            />
-                            <div>
-                                <span className="text-gray-400">Roles:</span>
-                                {user.roles && user.roles.length > 0 ? (
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                        {user.roles.map((role) => (
-                                            <span
-                                                key={role.id}
-                                                className="inline-block bg-purple-600 text-white px-2 py-0.5 rounded text-xs"
-                                            >
-                                                {role.name}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <span className="ml-2 text-yellow-400">Sin roles</span>
-                                )}
-                            </div>
-                            <div>
-                                <span className="text-gray-400">Permisos:</span>
-                                {user.permissions && user.permissions.length > 0 ? (
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                        {user.permissions.map((perm) => (
-                                            <span
-                                                key={perm.id}
-                                                className="inline-block bg-teal-600 text-white px-2 py-0.5 rounded text-xs"
-                                            >
-                                                {perm.name}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <span className="ml-2 text-gray-500">Sin permisos directos</span>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-xs text-gray-400">No autenticado</p>
-                    )}
+                    <RolesPermissionsSection user={user} isAdmin={isAdmin} />
                 </Section>
 
                 {devLoginSectionVisible && (
@@ -343,143 +246,24 @@ export function DevDebugger() {
                         onToggle={() => toggleSection('devLogin')}
                         badge={devUsers?.length}
                     >
-                        <div className="space-y-2">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Usuario</p>
-                                <div className="relative">
-                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar usuario..."
-                                        value={devLoginSearch}
-                                        onChange={(e) => setDevLoginSearch(e.target.value)}
-                                        className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    />
-                                </div>
-                            </div>
-                            {devLoginAllRoles.length > 0 && (
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Rol</p>
-                                    <div className="flex flex-wrap gap-1">
-                                        {devLoginAllRoles.map((role) => (
-                                            <button
-                                                type="button"
-                                                key={role}
-                                                onClick={() =>
-                                                    setDevLoginRoleFilter(
-                                                        devLoginRoleFilter === role ? null : role,
-                                                    )
-                                                }
-                                                className={`text-[10px] px-1.5 py-0.5 rounded border transition-opacity ${getRoleColor(role, devLoginAllRoles)} ${devLoginRoleFilter && devLoginRoleFilter !== role ? 'opacity-40' : 'opacity-100'}`}
-                                            >
-                                                {role}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Permiso</p>
-                                {devLoginPermissionFilter ? (
-                                    <div className="flex items-center gap-1">
-                                        <span className="flex-1 text-[10px] px-1.5 py-0.5 rounded border bg-teal-500/20 text-teal-300 border-teal-500/40 truncate">
-                                            {devLoginPermissionFilter}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setDevLoginPermissionFilter(null)
-                                                setDevLoginPermissionSearch('')
-                                            }}
-                                            className="text-gray-400 hover:text-white text-[11px] px-1 leading-none"
-                                            aria-label="Quitar filtro de permiso"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="relative">
-                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Buscar permiso..."
-                                            value={devLoginPermissionSearch}
-                                            onChange={(e) => setDevLoginPermissionSearch(e.target.value)}
-                                            onFocus={() => setPermissionInputFocused(true)}
-                                            onBlur={() => setPermissionInputFocused(false)}
-                                            className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                        />
-                                        {permissionDropdownItems.length > 0 && (
-                                            <ul className="absolute z-10 mt-0.5 w-full max-h-36 overflow-y-auto bg-gray-800 border border-gray-600 rounded shadow-lg">
-                                                {permissionDropdownItems.map((perm) => (
-                                                    <li key={perm}>
-                                                        <button
-                                                            type="button"
-                                                            onMouseDown={(e) => e.preventDefault()}
-                                                            onClick={() => {
-                                                                setDevLoginPermissionFilter(perm)
-                                                                setDevLoginPermissionSearch('')
-                                                                setPermissionInputFocused(false)
-                                                            }}
-                                                            className="w-full text-left text-[10px] px-2 py-1 text-gray-200 hover:bg-teal-600/30 hover:text-teal-200 truncate"
-                                                        >
-                                                            {perm}
-                                                        </button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            {isLoadingDevUsers && (
-                                <div className="space-y-1">
-                                    {[1, 2, 3].map((i) => (
-                                        <div key={i} className="h-8 bg-gray-700 rounded animate-pulse" />
-                                    ))}
-                                </div>
-                            )}
-                            {devUsers && (
-                                devLoginFilteredUsers.length === 0 ? (
-                                    <p className="text-xs text-gray-400">Sin resultados</p>
-                                ) : (
-                                    <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
-                                        {devLoginFilteredUsers.map((devUser) => (
-                                            <button
-                                                type="button"
-                                                key={devUser.id}
-                                                data-testid="dev-login-user"
-                                                onClick={() => handleDevLogin(devUser)}
-                                                disabled={loggingInUserId !== null}
-                                                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-left"
-                                            >
-                                                <div className="min-w-0 space-y-0.5">
-                                                    <p className="text-xs text-white truncate">{devUser.name}</p>
-                                                    <p className="text-xs text-gray-400 truncate">{devUser.email}</p>
-                                                    {devUser.roles.length > 0 && (
-                                                        <div className="flex flex-wrap gap-0.5">
-                                                            {devUser.roles.map((role) => (
-                                                                <span
-                                                                    key={role}
-                                                                    className={`text-[9px] px-1 py-0 rounded border ${getRoleColor(role, devLoginAllRoles)}`}
-                                                                >
-                                                                    {role}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {loggingInUserId === devUser.id ? (
-                                                    <Loader2 className="h-3 w-3 text-blue-400 shrink-0 animate-spin" />
-                                                ) : (
-                                                    <LogIn className="h-3 w-3 text-blue-400 shrink-0" />
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )
-                            )}
-                        </div>
+                        <DevLoginSection
+                            devLoginSearch={devLoginSearch}
+                            setDevLoginSearch={setDevLoginSearch}
+                            devLoginAllRoles={devLoginAllRoles}
+                            devLoginRoleFilter={devLoginRoleFilter}
+                            setDevLoginRoleFilter={setDevLoginRoleFilter}
+                            devLoginPermissionSearch={devLoginPermissionSearch}
+                            setDevLoginPermissionSearch={setDevLoginPermissionSearch}
+                            devLoginPermissionFilter={devLoginPermissionFilter}
+                            setDevLoginPermissionFilter={setDevLoginPermissionFilter}
+                            devLoginPermissionSuggestions={devLoginPermissionSuggestions}
+                            devLoginAllPermissions={devLoginAllPermissions}
+                            devLoginFilteredUsers={devLoginFilteredUsers}
+                            devUsers={devUsers}
+                            isLoadingDevUsers={isLoadingDevUsers}
+                            loggingInUserId={loggingInUserId}
+                            onLogin={handleDevLogin}
+                        />
                     </Section>
                 )}
 
@@ -609,6 +393,306 @@ function InfoRow({ label, value, highlight }: InfoRowProps) {
             <span className={highlight ? 'text-green-400 font-semibold text-right' : 'text-white text-right'}>
                 {value?.toString() || '-'}
             </span>
+        </div>
+    )
+}
+
+interface MinimizedDebuggerProps {
+    readonly isMobile: boolean
+    readonly dragRef: React.RefObject<HTMLDivElement | null>
+    readonly position: { x: number; y: number }
+    readonly handleMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void
+    readonly toggleMinimized: () => void
+    readonly renderQuickLinks: (hoverBgClass: string) => React.ReactNode
+}
+
+function MinimizedDebugger({ isMobile, dragRef, position, handleMouseDown, toggleMinimized, renderQuickLinks }: MinimizedDebuggerProps) {
+    if (isMobile) {
+        return (
+            <div
+                className="fixed inset-x-0 bottom-0 z-[9999] bg-gray-900 text-white border-t-2 border-blue-500 shadow-2xl px-3 py-2 flex items-center justify-between"
+                data-testid="dev-debugger"
+            >
+                <button
+                    type="button"
+                    onClick={toggleMinimized}
+                    className="flex items-center gap-2"
+                    title="Expandir debugger"
+                >
+                    <Bug className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm font-mono">Debugger</span>
+                </button>
+                <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex items-center gap-1 overflow-x-auto">{renderQuickLinks('hover:bg-gray-800')}</div>
+                    <button
+                        type="button"
+                        onClick={toggleMinimized}
+                        className="p-1 hover:bg-gray-800 rounded shrink-0"
+                        title="Expandir debugger"
+                    >
+                        <PlusCircle className="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div
+            ref={dragRef}
+            style={{ left: position.x, top: position.y }}
+            className="fixed z-[9999] cursor-move"
+            data-testid="dev-debugger"
+            onMouseDown={handleMouseDown}
+        >
+            <div className="bg-gray-900 text-white rounded-lg shadow-2xl p-3 flex items-center gap-2 border-2 border-blue-500">
+                <Bug className="h-5 w-5 text-blue-400" />
+                <span className="text-sm font-mono">Debugger</span>
+                <button
+                    type="button"
+                    onClick={toggleMinimized}
+                    className="ml-2 p-1 hover:bg-gray-800 rounded"
+                    title="Expand debugger"
+                >
+                    <PlusCircle className="h-4 w-4" />
+                </button>
+            </div>
+        </div>
+    )
+}
+
+interface RolesPermissionsSectionProps {
+    readonly user: AuthUser | null | undefined
+    readonly isAdmin: boolean
+}
+
+function RolesPermissionsSection({ user, isAdmin }: RolesPermissionsSectionProps) {
+    if (!user) {
+        return <p className="text-xs text-gray-400">No autenticado</p>
+    }
+
+    return (
+        <div className="space-y-2 text-xs font-mono">
+            <InfoRow label="isAdmin (store)" value={isAdmin ? 'true' : 'false'} highlight={isAdmin} />
+            <div>
+                <span className="text-gray-400">Roles:</span>
+                {user.roles && user.roles.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                        {user.roles.map((role) => (
+                            <span
+                                key={role.id}
+                                className="inline-block bg-purple-600 text-white px-2 py-0.5 rounded text-xs"
+                            >
+                                {role.name}
+                            </span>
+                        ))}
+                    </div>
+                ) : (
+                    <span className="ml-2 text-yellow-400">Sin roles</span>
+                )}
+            </div>
+            <div>
+                <span className="text-gray-400">Permisos:</span>
+                {user.permissions && user.permissions.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                        {user.permissions.map((perm) => (
+                            <span
+                                key={perm.id}
+                                className="inline-block bg-teal-600 text-white px-2 py-0.5 rounded text-xs"
+                            >
+                                {perm.name}
+                            </span>
+                        ))}
+                    </div>
+                ) : (
+                    <span className="ml-2 text-gray-500">Sin permisos directos</span>
+                )}
+            </div>
+        </div>
+    )
+}
+
+interface DevLoginSectionProps {
+    readonly devLoginSearch: string
+    readonly setDevLoginSearch: (value: string) => void
+    readonly devLoginAllRoles: string[]
+    readonly devLoginRoleFilter: string | null
+    readonly setDevLoginRoleFilter: (value: string | null) => void
+    readonly devLoginPermissionSearch: string
+    readonly setDevLoginPermissionSearch: (value: string) => void
+    readonly devLoginPermissionFilter: string | null
+    readonly setDevLoginPermissionFilter: (value: string | null) => void
+    readonly devLoginPermissionSuggestions: string[]
+    readonly devLoginAllPermissions: string[]
+    readonly devLoginFilteredUsers: DevUser[]
+    readonly devUsers: DevUser[] | null | undefined
+    readonly isLoadingDevUsers: boolean
+    readonly loggingInUserId: number | null
+    readonly onLogin: (devUser: DevUser) => void
+}
+
+function DevLoginSection({
+    devLoginSearch,
+    setDevLoginSearch,
+    devLoginAllRoles,
+    devLoginRoleFilter,
+    setDevLoginRoleFilter,
+    devLoginPermissionSearch,
+    setDevLoginPermissionSearch,
+    devLoginPermissionFilter,
+    setDevLoginPermissionFilter,
+    devLoginPermissionSuggestions,
+    devLoginAllPermissions,
+    devLoginFilteredUsers,
+    devUsers,
+    isLoadingDevUsers,
+    loggingInUserId,
+    onLogin,
+}: DevLoginSectionProps) {
+    const [permissionInputFocused, setPermissionInputFocused] = useState(false)
+
+    let permissionDropdownItems: string[] = []
+    if (devLoginPermissionSearch.length > 0) {
+        permissionDropdownItems = devLoginPermissionSuggestions
+    } else if (permissionInputFocused) {
+        permissionDropdownItems = devLoginAllPermissions
+    }
+
+    return (
+        <div className="space-y-2">
+            <div className="space-y-1">
+                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Usuario</p>
+                <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Buscar usuario..."
+                        value={devLoginSearch}
+                        onChange={(e) => setDevLoginSearch(e.target.value)}
+                        className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                </div>
+            </div>
+            {devLoginAllRoles.length > 0 && (
+                <div className="space-y-1">
+                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Rol</p>
+                    <div className="flex flex-wrap gap-1">
+                        {devLoginAllRoles.map((role) => (
+                            <button
+                                type="button"
+                                key={role}
+                                onClick={() =>
+                                    setDevLoginRoleFilter(devLoginRoleFilter === role ? null : role)
+                                }
+                                className={`text-[10px] px-1.5 py-0.5 rounded border transition-opacity ${getRoleColor(role, devLoginAllRoles)} ${devLoginRoleFilter && devLoginRoleFilter !== role ? 'opacity-40' : 'opacity-100'}`}
+                            >
+                                {role}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+            <div className="space-y-1">
+                <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Permiso</p>
+                {devLoginPermissionFilter ? (
+                    <div className="flex items-center gap-1">
+                        <span className="flex-1 text-[10px] px-1.5 py-0.5 rounded border bg-teal-500/20 text-teal-300 border-teal-500/40 truncate">
+                            {devLoginPermissionFilter}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setDevLoginPermissionFilter(null)
+                                setDevLoginPermissionSearch('')
+                            }}
+                            className="text-gray-400 hover:text-white text-[11px] px-1 leading-none"
+                            aria-label="Quitar filtro de permiso"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                ) : (
+                    <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar permiso..."
+                            value={devLoginPermissionSearch}
+                            onChange={(e) => setDevLoginPermissionSearch(e.target.value)}
+                            onFocus={() => setPermissionInputFocused(true)}
+                            onBlur={() => setPermissionInputFocused(false)}
+                            className="w-full bg-gray-700 text-white text-xs rounded pl-7 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        />
+                        {permissionDropdownItems.length > 0 && (
+                            <ul className="absolute z-10 mt-0.5 w-full max-h-36 overflow-y-auto bg-gray-800 border border-gray-600 rounded shadow-lg">
+                                {permissionDropdownItems.map((perm) => (
+                                    <li key={perm}>
+                                        <button
+                                            type="button"
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => {
+                                                setDevLoginPermissionFilter(perm)
+                                                setDevLoginPermissionSearch('')
+                                                setPermissionInputFocused(false)
+                                            }}
+                                            className="w-full text-left text-[10px] px-2 py-1 text-gray-200 hover:bg-teal-600/30 hover:text-teal-200 truncate"
+                                        >
+                                            {perm}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
+            </div>
+            {isLoadingDevUsers && (
+                <div className="space-y-1">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-8 bg-gray-700 rounded animate-pulse" />
+                    ))}
+                </div>
+            )}
+            {devUsers && (
+                devLoginFilteredUsers.length === 0 ? (
+                    <p className="text-xs text-gray-400">Sin resultados</p>
+                ) : (
+                    <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
+                        {devLoginFilteredUsers.map((devUser) => (
+                            <button
+                                type="button"
+                                key={devUser.id}
+                                data-testid="dev-login-user"
+                                onClick={() => onLogin(devUser)}
+                                disabled={loggingInUserId !== null}
+                                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-left"
+                            >
+                                <div className="min-w-0 space-y-0.5">
+                                    <p className="text-xs text-white truncate">{devUser.name}</p>
+                                    <p className="text-xs text-gray-400 truncate">{devUser.email}</p>
+                                    {devUser.roles.length > 0 && (
+                                        <div className="flex flex-wrap gap-0.5">
+                                            {devUser.roles.map((role) => (
+                                                <span
+                                                    key={role}
+                                                    className={`text-[9px] px-1 py-0 rounded border ${getRoleColor(role, devLoginAllRoles)}`}
+                                                >
+                                                    {role}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                {loggingInUserId === devUser.id ? (
+                                    <Loader2 className="h-3 w-3 text-blue-400 shrink-0 animate-spin" />
+                                ) : (
+                                    <LogIn className="h-3 w-3 text-blue-400 shrink-0" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                )
+            )}
         </div>
     )
 }
