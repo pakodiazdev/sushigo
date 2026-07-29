@@ -1,6 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
+import { useState } from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { ToastProvider } from '../toast-provider'
@@ -89,6 +90,37 @@ describe('ToastProvider', () => {
         })
 
         expect(screen.getByText('Info message')).toBeDefined()
+    })
+
+    it('keeps the same context value reference across unrelated parent re-renders', () => {
+        const capturedValues: unknown[] = []
+
+        function Capture() {
+            const value = useToast()
+            capturedValues.push(value)
+            return null
+        }
+
+        function Harness() {
+            const [, setTick] = useState(0)
+            return (
+                <ToastProvider>
+                    <Capture />
+                    <button data-testid="rerender" onClick={() => setTick((t) => t + 1)}>
+                        rerender
+                    </button>
+                </ToastProvider>
+            )
+        }
+
+        render(<Harness />)
+
+        act(() => {
+            fireEvent.click(screen.getByTestId('rerender'))
+        })
+
+        expect(capturedValues).toHaveLength(2)
+        expect(capturedValues[1]).toBe(capturedValues[0])
     })
 })
 
