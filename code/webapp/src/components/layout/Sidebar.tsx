@@ -15,6 +15,7 @@ import {
     UserCog,
     CalendarCheck,
     ClipboardList,
+    Component,
     type LucideIcon
 } from 'lucide-react';
 import { useSidebar } from '@/contexts/sidebar-context';
@@ -135,6 +136,15 @@ export default function Sidebar() {
             ? { ...item, badge: pendingCount }
             : item,
     );
+
+    // Dev-only entry, evaluated at render time (not module scope) so it stays
+    // hidden at runtime in a production build — mirrors the `devTools` pattern
+    // in Layout.tsx. The route itself is separately guarded by requireDev().
+    const devMenuItems: MenuItem[] = import.meta.env.DEV
+        ? [{ icon: Component, label: 'Componentes', path: '/dev/components' }]
+        : [];
+
+    const menuItemsToRender = [...menuItemsResolved, ...devMenuItems];
 
     const toggleSubmenu = (label: string) => {
         setExpandedMenus(prev =>
@@ -332,7 +342,7 @@ export default function Sidebar() {
                     {/* Navigation */}
                     <nav className="flex-1 overflow-y-auto px-3">
                         <ul className="space-y-1">
-                            {menuItemsResolved.map((item) => {
+                            {menuItemsToRender.map((item) => {
                                 const access = resolveAccess(item);
                                 if (access === 'hidden') return null;
                                 return renderMenuItem(item, access);

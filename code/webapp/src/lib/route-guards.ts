@@ -57,3 +57,22 @@ export function requireRole(role: 'admin' | 'super-admin') {
     }
   }
 }
+
+/**
+ * `beforeLoad` guard that keeps a route reachable only in local development,
+ * regardless of authentication state. Redirects to `/unauthorized` when
+ * `import.meta.env.DEV` is false, so the route stays inert even if it ends
+ * up in a production bundle — not just hidden from the menu.
+ *
+ * Usage:
+ *   export const Route = createFileRoute('/dev/components')({
+ *     beforeLoad: requireDev(),
+ *   })
+ */
+export function requireDev() {
+  return () => {
+    if (!import.meta.env.DEV) {
+      throw redirect({ to: '/unauthorized' })
+    }
+  }
+}

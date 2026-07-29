@@ -317,6 +317,28 @@ describe('Sidebar — inventory-manager sees inventory sections', () => {
 
 // ─── Footer & version ─────────────────────────────────────────────────────────
 
+// ─── Dev-only "Componentes" entry ─────────────────────────────────────────────
+
+describe('Sidebar — dev-only Componentes entry', () => {
+  beforeEach(() => showAll())
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('shows Componentes when running in dev', () => {
+    vi.stubEnv('DEV', true)
+    render(<Sidebar />)
+    expect(screen.getByText('Componentes')).toBeDefined()
+  })
+
+  it('hides Componentes when not running in dev (production build)', () => {
+    vi.stubEnv('DEV', false)
+    render(<Sidebar />)
+    expect(screen.queryByText('Componentes')).toBeNull()
+  })
+})
+
 describe('Sidebar — footer', () => {
   beforeEach(() => showAll())
 

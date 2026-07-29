@@ -8,8 +8,8 @@
  * requireRole now uses checkIsAdmin/checkIsSuperAdmin computed from persisted
  * user.roles to avoid a rehydration race condition.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { requirePermission, requireRole } from '@/lib/route-guards'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { requirePermission, requireRole, requireDev } from '@/lib/route-guards'
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -148,5 +148,23 @@ describe('requireRole', () => {
     requireRole('super-admin')()
     // Verify checkIsSuperAdmin was called with the user object
     expect(mockCheckIsSuperAdmin).toHaveBeenCalledWith(expect.any(Object))
+  })
+})
+
+// ─── requireDev ───────────────────────────────────────────────────────────────
+
+describe('requireDev', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('does not redirect when running in dev', () => {
+    vi.stubEnv('DEV', true)
+    expect(() => requireDev()()).not.toThrow()
+  })
+
+  it('redirects to /unauthorized when not running in dev (production build)', () => {
+    vi.stubEnv('DEV', false)
+    expect(() => requireDev()()).toThrow('redirect:/unauthorized')
   })
 })
