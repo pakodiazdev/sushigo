@@ -19,7 +19,7 @@ export interface PendingAttendanceData {
   currentValue?: string | null
 }
 
-type AttendanceBucket = 'pending' | 'checkedIn' | 'done' | 'absent'
+type AttendanceBucket = 'pending' | 'checkedIn' | 'atLunch' | 'done' | 'absent'
 
 /** Which stat bucket a row belongs to (exported for testing) */
 export function attendanceBucket(row: TodayAttendanceRow): AttendanceBucket {
@@ -27,24 +27,26 @@ export function attendanceBucket(row: TodayAttendanceRow): AttendanceBucket {
   const phase = getAttendancePhase(row.attendance)
   if (phase === 'pending') return 'pending'
   if (phase === 'done') return 'done'
+  if (phase === 'at-lunch') return 'atLunch'
   return 'checkedIn'
 }
 
 /** Computes attendance summary from rows (exported for testing) */
 export function computeSummary(rows: TodayAttendanceRow[]): AttendanceSummary {
-  let pending = 0, checkedIn = 0, done = 0, absent = 0, withOvertime = 0
+  let pending = 0, checkedIn = 0, atLunch = 0, done = 0, absent = 0, withOvertime = 0
 
   for (const row of rows) {
     const bucket = attendanceBucket(row)
     if (bucket === 'pending') pending++
     else if (bucket === 'checkedIn') checkedIn++
+    else if (bucket === 'atLunch') atLunch++
     else if (bucket === 'done') done++
     else absent++
 
     if ((row.attendance?.overtime_minutes ?? 0) > 0) withOvertime++
   }
 
-  return { total: rows.length, pending, checkedIn, done, absent, withOvertime }
+  return { total: rows.length, pending, checkedIn, atLunch, done, absent, withOvertime }
 }
 
 /**
@@ -70,16 +72,17 @@ export function filterRowsForGrid(rows: TodayAttendanceRow[], filter: Attendance
 /**
  * Smart default tab applied once the page's first data load resolves and no
  * tab was already chosen (e.g. from the URL). Cascades through the buckets in
- * priority order — Pendientes, then En trabajo, then Completados, then
- * Ausentes — landing on the first one that actually has anyone in it, so the
- * manager never lands on an empty single-bucket tab (e.g. once everyone has
- * checked out, or on a day where every employee is on vacation). Falls back
- * to `null` (the default full view) only when there are no employees at all.
- * Exported for testing.
+ * priority order — Pendientes, then En trabajo, then En comida, then
+ * Completados, then Ausentes — landing on the first one that actually has
+ * anyone in it, so the manager never lands on an empty single-bucket tab
+ * (e.g. once everyone has checked out, or on a day where every employee is
+ * on vacation). Falls back to `null` (the default full view) only when there
+ * are no employees at all. Exported for testing.
  */
 export function resolveDefaultFilter(summary: AttendanceSummary): AttendanceFilter | null {
   if (summary.pending > 0) return 'pending'
   if (summary.checkedIn > 0) return 'checkedIn'
+  if (summary.atLunch > 0) return 'atLunch'
   if (summary.done > 0) return 'done'
   if (summary.absent > 0) return 'absent'
   return null

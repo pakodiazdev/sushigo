@@ -125,6 +125,7 @@ describe('AttendanceSummaryBar', () => {
         total: 10,
         pending: 3,
         checkedIn: 4,
+        atLunch: 5,
         done: 2,
         absent: 1,
         withOvertime: 1,
@@ -151,6 +152,13 @@ describe('AttendanceSummaryBar', () => {
         expect(getByText('4')).toBeDefined()
     })
 
+    it('renders at-lunch count', () => {
+        const { getByText } = render(<AttendanceSummaryBar summary={defaultSummary} />)
+
+        expect(getByText('En comida')).toBeDefined()
+        expect(getByText('5')).toBeDefined()
+    })
+
     it('renders done count', () => {
         const { getByText } = render(<AttendanceSummaryBar summary={defaultSummary} />)
 
@@ -167,18 +175,19 @@ describe('AttendanceSummaryBar', () => {
         expect(value?.textContent).toBe('1')
     })
 
-    it('applies grid-cols-3 sm:grid-cols-5 so 5 cards fit evenly', () => {
+    it('applies grid-cols-3 sm:grid-cols-6 so 6 cards fit evenly', () => {
         const { container } = render(<AttendanceSummaryBar summary={defaultSummary} />)
 
         const grid = container.firstChild as HTMLElement
         expect(grid?.className).toContain('grid-cols-3')
-        expect(grid?.className).toContain('sm:grid-cols-5')
+        expect(grid?.className).toContain('sm:grid-cols-6')
     })
 
     it.each<[string, AttendanceFilter]>([
         ['Total empleados', 'total'],
         ['Pendientes', 'pending'],
         ['En trabajo', 'checkedIn'],
+        ['En comida', 'atLunch'],
         ['Completados', 'done'],
         ['Ausentes', 'absent'],
     ])('clicking "%s" calls onFilterChange with "%s"', (label, filter) => {
@@ -235,6 +244,7 @@ describe('AttendanceSummaryBar', () => {
             total: 0,
             pending: 0,
             checkedIn: 0,
+            atLunch: 0,
             done: 0,
             absent: 0,
             withOvertime: 0,
@@ -243,6 +253,6 @@ describe('AttendanceSummaryBar', () => {
 
         // All zero values should be rendered
         const zeros = getAllByText('0')
-        expect(zeros.length).toBeGreaterThanOrEqual(5)
+        expect(zeros.length).toBeGreaterThanOrEqual(6)
     })
 })
