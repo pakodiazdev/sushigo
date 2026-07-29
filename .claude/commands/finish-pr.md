@@ -353,11 +353,12 @@ check runs against the commit that will actually be merged.
 
 ---
 
-## PHASE 7.6 — Final CI/Devin validation (the real gate)
+## PHASE 7.6 — Final validation (the real gate)
 
 This is the only point in the flow where CI and the Devin/DeepWiki scan are checked, because
 Phase 7.5's push is the only push in the whole command — checking earlier would just describe a
-commit that's since been replaced.
+commit that's since been replaced. It also re-checks mergeable state (7.6c), since Phase 1's
+`CLEAN` result can go stale while Phases 2–7.5 run.
 
 ### 7.6a. Wait for CI
 
@@ -394,6 +395,22 @@ so a plain `WebFetch` will only return an empty shell and is not sufficient here
 - If a real **bug** (not a flag) is reported, treat it as a blocker like a failing check — tell
   the user what it is and stop before Phase 8 declares anything ready.
 
+### 7.6c. Re-validate mergeable state
+
+Phase 1's `mergeStateStatus: CLEAN` check ran before Phases 2–7.5, which can take a while (task
+file writeup, sprint doc, README, waiting on CI/Devin above). If `main` advanced during that
+window — someone else's PR merged — the branch can have silently gone `BEHIND` since Phase 1, and
+the Phase 8 report would otherwise claim "clean, no conflicts" on stale information.
+
+```bash
+gh pr view <N> --repo <owner>/<repo> --json mergeable,mergeStateStatus
+```
+
+`mergeStateStatus` must still be `CLEAN`. If it is now `BEHIND`, tell the user to run
+`/rebase-main` — same as Phase 1b, just caught late — and stop before Phase 8 declares anything
+ready (the housekeeping commits already pushed are not lost; re-run only 7.5–7.6 after the rebase
+lands, no need for the whole command again). If `DIRTY`/`BLOCKED`, report the reason and stop.
+
 ---
 
 ## PHASE 8 — Final report
@@ -403,7 +420,7 @@ so a plain `WebFetch` will only return an empty shell and is not sufficient here
 
 ### Pre-flight checks (Phase 1)
 - [x] Review threads: all resolved (<M> total)
-- [x] Mergeable: clean, no conflicts
+- [x] Mergeable: clean, no conflicts (as of Phase 1 — re-validated below)
 
 ### Final housekeeping (Phases 2–7.5)
 - [x] Commits squashed: <before> → 1 (`<sha>`)
@@ -416,6 +433,7 @@ so a plain `WebFetch` will only return an empty shell and is not sufficient here
 ### Final validation on the merge-ready commit (Phase 7.6)
 - [x] CI checks: <M>/<M> passing
 - [x] Devin/DeepWiki: 0 bugs (<M> flags — <list Investigate-severity ones, if any>)
+- [x] Mergeable: still clean, no conflicts (re-checked post-push — `main` didn't move under us)
 
 ### ✅ Ready to merge
 Everything above is green. I have not merged it — that's on you:
