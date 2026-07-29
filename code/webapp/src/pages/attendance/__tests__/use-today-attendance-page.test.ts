@@ -117,6 +117,7 @@ describe('computeSummary', () => {
       total: 0,
       pending: 0,
       checkedIn: 0,
+      atLunch: 0,
       done: 0,
       absent: 0,
       withOvertime: 0,
@@ -181,7 +182,7 @@ describe('computeSummary', () => {
     expect(result.withOvertime).toBe(1)
   })
 
-  it('counts at-lunch as checkedIn', () => {
+  it('counts at-lunch as atLunch, not checkedIn', () => {
     const rows = [
       makeRow({
         attendance: {
@@ -192,7 +193,8 @@ describe('computeSummary', () => {
       }),
     ]
     const result = computeSummary(rows)
-    expect(result.checkedIn).toBe(1)
+    expect(result.atLunch).toBe(1)
+    expect(result.checkedIn).toBe(0)
   })
 
   it('counts returned as checkedIn', () => {
@@ -208,6 +210,7 @@ describe('computeSummary', () => {
     ]
     const result = computeSummary(rows)
     expect(result.checkedIn).toBe(1)
+    expect(result.atLunch).toBe(0)
   })
 
   it('counts ABSENCE, VACATION and LEAVE day_status as absent — not done', () => {
@@ -286,11 +289,16 @@ describe('attendanceBucket', () => {
     expect(attendanceBucket(makeRow())).toBe('pending')
   })
 
-  it('returns "checkedIn" for checked-in/at-lunch/returned rows', () => {
+  it('returns "checkedIn" for checked-in/returned rows', () => {
     const checkedIn = makeRow({ attendance: { id: 'a', check_in: '2026-04-01T13:00:00Z' } as TodayAttendanceRow['attendance'] })
-    const atLunch = makeRow({ attendance: { id: 'a', check_in: '2026-04-01T13:00:00Z', lunch_start: '2026-04-01T14:00:00Z' } as TodayAttendanceRow['attendance'] })
+    const returned = makeRow({ attendance: { id: 'a', check_in: '2026-04-01T13:00:00Z', lunch_start: '2026-04-01T14:00:00Z', lunch_end: '2026-04-01T15:00:00Z' } as TodayAttendanceRow['attendance'] })
     expect(attendanceBucket(checkedIn)).toBe('checkedIn')
-    expect(attendanceBucket(atLunch)).toBe('checkedIn')
+    expect(attendanceBucket(returned)).toBe('checkedIn')
+  })
+
+  it('returns "atLunch" for at-lunch rows', () => {
+    const atLunch = makeRow({ attendance: { id: 'a', check_in: '2026-04-01T13:00:00Z', lunch_start: '2026-04-01T14:00:00Z' } as TodayAttendanceRow['attendance'] })
+    expect(attendanceBucket(atLunch)).toBe('atLunch')
   })
 
   it('returns "done" for a checked-out row', () => {
@@ -332,17 +340,21 @@ describe('filterRowsForGrid', () => {
         employee: { id: 'e6', code: 'E6', user: { first_name: 'F', last_name: 'F' }, roles: [], daily_wage: null },
         attendance: { id: 'a6', day_status: 'DAY_OFF' } as TodayAttendanceRow['attendance'],
       }), // absent — hidden by default
+      makeRow({
+        employee: { id: 'e7', code: 'E7', user: { first_name: 'G', last_name: 'G' }, roles: [], daily_wage: null },
+        attendance: { id: 'a7', check_in: '2026-04-01T13:00:00Z', lunch_start: '2026-04-01T14:00:00Z' } as TodayAttendanceRow['attendance'],
+      }), // atLunch
     ]
   }
 
   it('with null filter, shows everyone except VACATION/DAY_OFF (default view)', () => {
     const visible = filterRowsForGrid(rowsFixture(), null)
-    expect(visible.map((r) => r.employee.code)).toEqual(['E1', 'E2', 'E3', 'E4'])
+    expect(visible.map((r) => r.employee.code)).toEqual(['E1', 'E2', 'E3', 'E4', 'E7'])
   })
 
   it('with "total" filter, shows literally everyone including VACATION/DAY_OFF', () => {
     const visible = filterRowsForGrid(rowsFixture(), 'total')
-    expect(visible).toHaveLength(6)
+    expect(visible).toHaveLength(7)
   })
 
   it('with "absent" filter, shows only ABSENCE/VACATION/DAY_OFF rows', () => {
@@ -360,6 +372,11 @@ describe('filterRowsForGrid', () => {
     expect(visible.map((r) => r.employee.code)).toEqual(['E2'])
   })
 
+  it('with "atLunch" filter, shows only the at-lunch row', () => {
+    const visible = filterRowsForGrid(rowsFixture(), 'atLunch')
+    expect(visible.map((r) => r.employee.code)).toEqual(['E7'])
+  })
+
   it('with "done" filter, shows only the done row', () => {
     const visible = filterRowsForGrid(rowsFixture(), 'done')
     expect(visible.map((r) => r.employee.code)).toEqual(['E3'])
@@ -372,27 +389,32 @@ describe('filterRowsForGrid', () => {
 
 describe('resolveDefaultFilter', () => {
   it('returns "pending" when there is at least one pending employee', () => {
-    const summary = { total: 3, pending: 2, checkedIn: 1, done: 0, absent: 0, withOvertime: 0 }
+    const summary = { total: 3, pending: 2, checkedIn: 1, atLunch: 0, done: 0, absent: 0, withOvertime: 0 }
     expect(resolveDefaultFilter(summary)).toBe('pending')
   })
 
   it('returns "checkedIn" when there are no pending employees', () => {
-    const summary = { total: 3, pending: 0, checkedIn: 1, done: 2, absent: 0, withOvertime: 0 }
+    const summary = { total: 3, pending: 0, checkedIn: 1, atLunch: 0, done: 2, absent: 0, withOvertime: 0 }
     expect(resolveDefaultFilter(summary)).toBe('checkedIn')
   })
 
-  it('returns "done" when nobody is pending or checked in, but someone has finished', () => {
-    const summary = { total: 2, pending: 0, checkedIn: 0, done: 1, absent: 1, withOvertime: 0 }
+  it('returns "atLunch" when nobody is pending or checked in, but someone is at lunch', () => {
+    const summary = { total: 2, pending: 0, checkedIn: 0, atLunch: 1, done: 0, absent: 1, withOvertime: 0 }
+    expect(resolveDefaultFilter(summary)).toBe('atLunch')
+  })
+
+  it('returns "done" when nobody is pending, checked in or at lunch, but someone has finished', () => {
+    const summary = { total: 2, pending: 0, checkedIn: 0, atLunch: 0, done: 1, absent: 1, withOvertime: 0 }
     expect(resolveDefaultFilter(summary)).toBe('done')
   })
 
   it('returns "absent" when everyone is absent and no other bucket has anyone', () => {
-    const summary = { total: 1, pending: 0, checkedIn: 0, done: 0, absent: 1, withOvertime: 0 }
+    const summary = { total: 1, pending: 0, checkedIn: 0, atLunch: 0, done: 0, absent: 1, withOvertime: 0 }
     expect(resolveDefaultFilter(summary)).toBe('absent')
   })
 
   it('returns null when there are no employees at all, instead of landing on an empty bucket tab', () => {
-    const summary = { total: 0, pending: 0, checkedIn: 0, done: 0, absent: 0, withOvertime: 0 }
+    const summary = { total: 0, pending: 0, checkedIn: 0, atLunch: 0, done: 0, absent: 0, withOvertime: 0 }
     expect(resolveDefaultFilter(summary)).toBeNull()
   })
 })
@@ -910,6 +932,7 @@ describe('useTodayAttendancePage', () => {
         total: 1,
         pending: 1,
         checkedIn: 0,
+        atLunch: 0,
         done: 0,
         absent: 0,
         withOvertime: 0,
@@ -959,6 +982,28 @@ describe('useTodayAttendancePage', () => {
 
       await waitFor(() => expect(result.current.isLoading).toBe(false))
       await waitFor(() => expect(result.current.selectedFilter).toBe('checkedIn'))
+    })
+
+    it('defaults to "atLunch" once loaded when nobody is pending or checked in, but someone is at lunch', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({
+              attendance: {
+                id: 'att-1',
+                check_in: '2026-04-01T13:00:00Z',
+                lunch_start: '2026-04-01T14:00:00Z',
+              } as TodayAttendanceRow['attendance'],
+            }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+      await waitFor(() => expect(result.current.selectedFilter).toBe('atLunch'))
     })
 
     it('keeps an explicit initialFilter (e.g. from the URL) instead of applying the smart default', async () => {

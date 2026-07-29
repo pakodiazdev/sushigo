@@ -67,16 +67,16 @@ function clickTab(tab: StatTab) {
 // ── Stat card ────────────────────────────────────────────────────────────────
 
 describe("Ausentes stat card", () => {
-  it("shows a 5th 'Ausentes' card counting VACATION, ABSENCE and DAY_OFF employees", () => {
+  it("shows an 'Ausentes' card counting VACATION, ABSENCE and DAY_OFF employees", () => {
     cy.get("[data-testid='stat-absent']", { timeout: 10_000 })
       .find("p")
       .first()
       .should("have.text", "3");
   });
 
-  it("lays out 5 stat cards evenly (no orphan cell)", () => {
+  it("lays out 6 stat cards evenly (no orphan cell)", () => {
     cy.get("[data-testid='stat-absent']", { timeout: 10_000 }).closest("div.grid").should("have.class", "grid-cols-3");
-    cy.get("[data-testid='stat-absent']").closest("div.grid").should("have.class", "sm:grid-cols-5");
+    cy.get("[data-testid='stat-absent']").closest("div.grid").should("have.class", "sm:grid-cols-6");
   });
 });
 

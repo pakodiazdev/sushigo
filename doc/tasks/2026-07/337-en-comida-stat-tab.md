@@ -20,11 +20,11 @@ Currently, `computeSummary()` (`code/webapp/src/pages/attendance/-use-today-atte
 
 ## ✅ Technical Tasks
 
-- [ ] 🔧 Add an `atLunch` count to `AttendanceSummary` / `computeSummary()`, splitting the `at-lunch` phase out of the `checkedIn` bucket
-- [ ] 📱 Add a 6th `SummaryStat` "En comida" tab to `AttendanceSummaryBar.tsx`, adjusting the stat grid layout so 6 cards lay out evenly
-- [ ] 📱 Wire "En comida" into the tab-filter behavior introduced in #327/#336 (clicking it filters the main grid to only `at-lunch` employees)
-- [ ] 🧪 Extend Vitest coverage for the new bucket and tab filter
-- [ ] 🧪 Cypress coverage for the new tab
+- [x] 🔧 Add an `atLunch` count to `AttendanceSummary` / `computeSummary()`, splitting the `at-lunch` phase out of the `checkedIn` bucket
+- [x] 📱 Add a 6th `SummaryStat` "En comida" tab to `AttendanceSummaryBar.tsx`, adjusting the stat grid layout so 6 cards lay out evenly
+- [x] 📱 Wire "En comida" into the tab-filter behavior introduced in #327/#336 (clicking it filters the main grid to only `at-lunch` employees)
+- [x] 🧪 Extend Vitest coverage for the new bucket and tab filter
+- [x] 🧪 Cypress coverage for the new tab
 
 ---
 
@@ -33,12 +33,23 @@ Currently, `computeSummary()` (`code/webapp/src/pages/attendance/-use-today-atte
 ### 📊 Estimates
 - **Optimistic:** `1h`
 - **Pessimistic:** `2h`
-- **Tracked:** `0h`
+- **Tracked:** `0.5h`
 
 ### 📅 Sessions
 ```json
-[]
+[
+  { "date": "2026-07-28", "start": "19:41", "end": "20:12" }
+]
 ```
+
+## 📊 Retrospective
+- **Actual total:** 31m (31 min)
+- **vs optimistic:** −29m
+- **vs pessimistic:** −1h 29m
+
+**Justification:**
+
+Finished comfortably under the optimistic estimate. #327/#336 had already built out every piece of infrastructure this task needed to extend — the bucket-splitting pattern in `computeSummary()`/`attendanceBucket()`, the clickable `SummaryStat` tab wiring, the smart-default cascade, and the `?tab=` URL persistence — so adding `atLunch` was a mechanical extension of an existing pattern rather than new design work. No unplanned rework or blockers came up; the only backend addition was a small seeder for the new Cypress spec, mirroring `AttendanceAbsentStatCardSeeder`.
 
 ---
 

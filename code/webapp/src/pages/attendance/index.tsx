@@ -35,7 +35,7 @@ import type { PendingAttendanceData } from './-use-today-attendance-page'
 import type { AttendanceFilter } from '@/components/attendance'
 import type { TodayAttendanceEmployee, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
 
-const ATTENDANCE_FILTERS: readonly AttendanceFilter[] = ['total', 'pending', 'checkedIn', 'done', 'absent']
+const ATTENDANCE_FILTERS: readonly AttendanceFilter[] = ['total', 'pending', 'checkedIn', 'atLunch', 'done', 'absent']
 
 function isAttendanceFilter(value: unknown): value is AttendanceFilter {
   return typeof value === 'string' && (ATTENDANCE_FILTERS as readonly string[]).includes(value)

@@ -324,6 +324,7 @@ Not applicable — sprint just started, no lessons yet. First candidate lesson t
 |---|---:|---|---|---|
 | ⏳ | — | Retrofit real Estimates onto #305–#323 per `doc/conventions/tasks.md` | Current values are rough sizing, not technically scoped | Sprint 001 (before each Issue's round starts) |
 | ⏳ | #342 | Unify dialog component and enter/exit transitions across the system | Discovered while implementing #327: 3 duplicated dialog animation implementations + 6 dialogs with no animation + a separate SlidePanel family; a scoped-to-Attendance version of the shared hook lands in #327's PR, full system migration is cross-cutting frontend work that doesn't fit Sprint 001's scope | Next |
+| ✅ | #337 | Add "En comida" stat tab for employees at lunch on Attendance Today | Deferred from #327/PR #336: `computeSummary()` lumped `checked-in`/`at-lunch`/`returned` into one "En trabajo" bucket with no way to see who's at lunch. Completed same-sprint as a mechanical extension of #327's bucket-split + clickable-tab pattern — 0.5h tracked, PR #350 ready, merge pending | Sprint 001 |
 
 ## 18. Sprint Closure Checklist
 
