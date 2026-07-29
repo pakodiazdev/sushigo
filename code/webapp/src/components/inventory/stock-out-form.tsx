@@ -228,61 +228,12 @@ export function StockOutForm({
 
           {/* Current Stock Info */}
           {locationStock && selectedVariant && (
-            <div
-              className={`border rounded-lg p-3 text-sm ${hasInsufficientStock
-                ? 'bg-red-50 border-red-200'
-                : hasLowStock
-                  ? 'bg-yellow-50 border-yellow-200'
-                  : 'bg-blue-50 border-blue-200'
-                }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                {hasInsufficientStock ? (
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                ) : (
-                  <Package className="h-4 w-4 text-blue-600" />
-                )}
-                <span
-                  className={`font-semibold ${hasInsufficientStock
-                    ? 'text-red-900'
-                    : hasLowStock
-                      ? 'text-yellow-900'
-                      : 'text-blue-900'
-                    }`}
-                >
-                  Current Stock
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <div className="text-muted-foreground">On Hand</div>
-                  <div className="font-semibold">{locationStock.on_hand || 0}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Reserved</div>
-                  <div className="font-semibold">{locationStock.reserved || 0}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Available</div>
-                  <div
-                    className={`font-semibold ${hasLowStock ? 'text-yellow-700' : 'text-green-600'
-                      }`}
-                  >
-                    {locationStock.available || 0}
-                  </div>
-                </div>
-              </div>
-              {hasLowStock && !hasInsufficientStock && (
-                <div className="text-xs text-yellow-700 mt-2">
-                  ⚠️ Stock below minimum level ({selectedVariant.min_stock})
-                </div>
-              )}
-              {hasInsufficientStock && (
-                <div className="text-xs text-red-700 mt-2 font-medium">
-                  ❌ Insufficient stock for this operation
-                </div>
-              )}
-            </div>
+            <StockInfoPanel
+              locationStock={locationStock}
+              selectedVariant={selectedVariant}
+              hasLowStock={hasLowStock}
+              hasInsufficientStock={hasInsufficientStock}
+            />
           )}
 
           {/* Quantity */}
@@ -357,59 +308,13 @@ export function StockOutForm({
             qty > 0 &&
             salePrice > 0 &&
             selectedVariant && (
-              <div
-                className={`border rounded-lg p-4 ${profitAmount >= 0
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-red-50 border-red-200'
-                  }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp
-                      className={`h-5 w-5 ${profitAmount >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}
-                    />
-                    <span
-                      className={`font-semibold ${profitAmount >= 0 ? 'text-green-900' : 'text-red-900'
-                        }`}
-                    >
-                      Profit Analysis
-                    </span>
-                  </div>
-                  <span
-                    className={`text-sm px-2 py-1 rounded ${profitAmount >= 0
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-700'
-                      }`}
-                  >
-                    {profitMargin.toFixed(1)}% margin
-                  </span>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Revenue:</span>
-                    <span className="font-medium">${totalRevenue.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Cost:</span>
-                    <span className="font-medium">
-                      ${totalCost.toFixed(2)}
-                      <span className="text-xs ml-1">
-                        (${unitCost.toFixed(2)}/unit)
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-gray-200">
-                    <span className="font-semibold">Net Profit:</span>
-                    <span
-                      className={`font-bold text-lg ${profitAmount >= 0 ? 'text-green-700' : 'text-red-700'
-                        }`}
-                    >
-                      ${profitAmount.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <ProfitAnalysisPanel
+                profitAmount={profitAmount}
+                profitMargin={profitMargin}
+                totalRevenue={totalRevenue}
+                totalCost={totalCost}
+                unitCost={unitCost}
+              />
             )}
 
           {/* Notes */}
@@ -440,5 +345,138 @@ export function StockOutForm({
         </div>
       </SlidePanel.Footer>
     </>
+  )
+}
+
+interface StockInfoPanelProps {
+  readonly locationStock: Stock
+  readonly selectedVariant: ItemVariant
+  readonly hasLowStock: boolean
+  readonly hasInsufficientStock: boolean
+}
+
+function StockInfoPanel({ locationStock, selectedVariant, hasLowStock, hasInsufficientStock }: StockInfoPanelProps) {
+  return (
+    <div
+      className={`border rounded-lg p-3 text-sm ${hasInsufficientStock
+        ? 'bg-red-50 border-red-200'
+        : hasLowStock
+          ? 'bg-yellow-50 border-yellow-200'
+          : 'bg-blue-50 border-blue-200'
+        }`}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        {hasInsufficientStock ? (
+          <AlertCircle className="h-4 w-4 text-red-600" />
+        ) : (
+          <Package className="h-4 w-4 text-blue-600" />
+        )}
+        <span
+          className={`font-semibold ${hasInsufficientStock
+            ? 'text-red-900'
+            : hasLowStock
+              ? 'text-yellow-900'
+              : 'text-blue-900'
+            }`}
+        >
+          Current Stock
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div>
+          <div className="text-muted-foreground">On Hand</div>
+          <div className="font-semibold">{locationStock.on_hand || 0}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground">Reserved</div>
+          <div className="font-semibold">{locationStock.reserved || 0}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground">Available</div>
+          <div
+            className={`font-semibold ${hasLowStock ? 'text-yellow-700' : 'text-green-600'
+              }`}
+          >
+            {locationStock.available || 0}
+          </div>
+        </div>
+      </div>
+      {hasLowStock && !hasInsufficientStock && (
+        <div className="text-xs text-yellow-700 mt-2">
+          ⚠️ Stock below minimum level ({selectedVariant.min_stock})
+        </div>
+      )}
+      {hasInsufficientStock && (
+        <div className="text-xs text-red-700 mt-2 font-medium">
+          ❌ Insufficient stock for this operation
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface ProfitAnalysisPanelProps {
+  readonly profitAmount: number
+  readonly profitMargin: number
+  readonly totalRevenue: number
+  readonly totalCost: number
+  readonly unitCost: number
+}
+
+function ProfitAnalysisPanel({ profitAmount, profitMargin, totalRevenue, totalCost, unitCost }: ProfitAnalysisPanelProps) {
+  return (
+    <div
+      className={`border rounded-lg p-4 ${profitAmount >= 0
+        ? 'bg-green-50 border-green-200'
+        : 'bg-red-50 border-red-200'
+        }`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp
+            className={`h-5 w-5 ${profitAmount >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}
+          />
+          <span
+            className={`font-semibold ${profitAmount >= 0 ? 'text-green-900' : 'text-red-900'
+              }`}
+          >
+            Profit Analysis
+          </span>
+        </div>
+        <span
+          className={`text-sm px-2 py-1 rounded ${profitAmount >= 0
+            ? 'bg-green-100 text-green-700'
+            : 'bg-red-100 text-red-700'
+            }`}
+        >
+          {profitMargin.toFixed(1)}% margin
+        </span>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Total Revenue:</span>
+          <span className="font-medium">${totalRevenue.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Total Cost:</span>
+          <span className="font-medium">
+            ${totalCost.toFixed(2)}
+            <span className="text-xs ml-1">
+              (${unitCost.toFixed(2)}/unit)
+            </span>
+          </span>
+        </div>
+        <div className="flex justify-between pt-2 border-t border-gray-200">
+          <span className="font-semibold">Net Profit:</span>
+          <span
+            className={`font-bold text-lg ${profitAmount >= 0 ? 'text-green-700' : 'text-red-700'
+              }`}
+          >
+            ${profitAmount.toFixed(2)}
+          </span>
+        </div>
+      </div>
+    </div>
   )
 }

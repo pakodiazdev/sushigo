@@ -110,6 +110,7 @@ describe('DevDebugger', () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
   })
 
   it('renders visible by default in development and shows user details', async () => {
@@ -345,5 +346,78 @@ describe('DevDebugger', () => {
     for (const title of ['Usuario', 'Roles y Permisos', 'Reloj (Simulación)', 'Query Cache']) {
       expect(screen.getAllByTitle(title)).toHaveLength(1)
     }
+  })
+
+  it('renders the mobile bottom bar (not the desktop floating panel) when minimized on a mobile viewport', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    fireEvent.click(screen.getByTitle('Minimize debugger'))
+
+    // Mobile-minimized bar uses Spanish "Expandir debugger" (twice: label button + icon button),
+    // unlike the desktop-minimized floating panel which uses English "Expand debugger" (once)
+    expect(screen.getAllByTitle('Expandir debugger')).toHaveLength(2)
+    expect(screen.queryByTitle('Expand debugger')).toBeNull()
+
+    fireEvent.click(screen.getAllByTitle('Expandir debugger')[0]!)
+    expect(screen.getByText('Dev Debugger')).toBeTruthy()
+  })
+
+  it('shows "No autenticado" in Roles y Permisos when no user is logged in', async () => {
+    mockUser = null
+    mockIsAuthenticated = false
+    mockToken = null
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    fireEvent.click(screen.getByText('Roles y Permisos'))
+
+    expect(screen.getAllByText('No autenticado').length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('filters and selects a permission via the autocomplete dropdown, then clears the filter, and filters by role pill', async () => {
+    mockUser = null
+    mockIsAuthenticated = false
+    mockToken = null
+    mockDevUsersQueryData = [
+      { id: 1, name: 'Admin User', email: 'admin@test.com', roles: ['admin'], permissions: ['users.update', 'users.delete'] },
+      { id: 2, name: 'Staff User', email: 'staff@test.com', roles: ['staff'], permissions: ['inventory.view'] },
+    ]
+    vi.stubEnv('VITE_LOGIN_WITH_DEVDEBUG', 'true')
+    vi.stubEnv('VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS', 'testing')
+    vi.stubEnv('VITE_APP_ENV', 'testing')
+
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    // Role filter pill
+    fireEvent.click(screen.getByRole('button', { name: 'admin' }))
+    expect(screen.getByText('Admin User')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'admin' }))
+
+    // Permission autocomplete: focusing with an empty search shows all permissions
+    const permissionInput = screen.getByPlaceholderText('Buscar permiso...')
+    fireEvent.focus(permissionInput)
+    expect(screen.getByText('inventory.view')).toBeTruthy()
+    fireEvent.blur(permissionInput)
+
+    // Type to filter, then select a suggestion via mousedown (prevents input blur)
+    fireEvent.change(permissionInput, { target: { value: 'users' } })
+    fireEvent.mouseDown(screen.getByText('users.update'))
+    fireEvent.click(screen.getByText('users.update'))
+
+    expect(screen.getByText('users.update')).toBeTruthy()
+    expect(screen.queryByPlaceholderText('Buscar permiso...')).toBeNull()
+
+    // Clear the permission filter
+    fireEvent.click(screen.getByLabelText('Quitar filtro de permiso'))
+    expect(screen.getByPlaceholderText('Buscar permiso...')).toBeTruthy()
   })
 })

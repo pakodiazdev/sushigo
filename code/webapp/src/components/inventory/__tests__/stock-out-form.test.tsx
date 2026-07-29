@@ -12,17 +12,17 @@ const mockHandleSubmit = vi.fn((fn: (data: unknown) => void) => (e: React.FormEv
     e.preventDefault()
     fn({})
 })
+let watchValues: Record<string, number | string> = {
+    location_id: 0,
+    variant_id: 0,
+    uom_id: 0,
+    qty: 0,
+    reason: 'SALE',
+    sale_price: 0,
+    notes: '',
+}
 const mockWatch = vi.fn((field?: string) => {
-    const values: Record<string, number | string> = {
-        location_id: 0,
-        variant_id: 0,
-        uom_id: 0,
-        qty: 0,
-        reason: 'SALE',
-        sale_price: 0,
-        notes: '',
-    }
-    return field ? values[field] : values
+    return field ? watchValues[field] : watchValues
 })
 const mockFormState = { errors: {} }
 
@@ -37,7 +37,7 @@ vi.mock('react-hook-form', () => ({
 }))
 
 // Mock @tanstack/react-query with stable references
-const mockQueryResult = {
+const mockQueryResult: { data: unknown } & Record<string, unknown> = {
     data: null,
     isLoading: false,
     isError: false,
@@ -59,25 +59,23 @@ vi.mock('@/hooks/use-form-mutation', () => ({
     }),
 }))
 
+// Stable references — real react-query memoizes `data` between renders when unchanged;
+// returning fresh array/object literals on every call (as before) breaks that assumption and
+// causes the variant-lookup useEffect to loop forever once a test actually selects a variant.
+const MOCK_LOCATIONS = [{ id: 1, name: 'Main Warehouse', type: 'WAREHOUSE', priority: 10 }]
+const MOCK_VARIANTS = [{
+    id: 1, code: 'VAR-001', name: 'Salt 500g', uom_id: 1,
+    uom: { name: 'Kilogram', symbol: 'kg' },
+    item: { sku: 'SAL-001', name: 'Salt' },
+    last_unit_cost: 5.0, min_stock: 10,
+}]
+const MOCK_UNITS = [{ id: 1, name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' }]
+
 // Mock inventory queries
 vi.mock('@/hooks/use-inventory-queries', () => ({
-    useInventoryLocationsSelect: () => ({
-        data: [{ id: 1, name: 'Main Warehouse', type: 'WAREHOUSE', priority: 10 }],
-        isLoading: false,
-    }),
-    useItemVariantsSelect: () => ({
-        data: [{
-            id: 1, code: 'VAR-001', name: 'Salt 500g', uom_id: 1,
-            uom: { name: 'Kilogram', symbol: 'kg' },
-            item: { sku: 'SAL-001', name: 'Salt' },
-            last_unit_cost: 5.0, min_stock: 10,
-        }],
-        isLoading: false,
-    }),
-    useUnitsOfMeasureSelect: () => ({
-        data: [{ id: 1, name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' }],
-        isLoading: false,
-    }),
+    useInventoryLocationsSelect: () => ({ data: MOCK_LOCATIONS, isLoading: false }),
+    useItemVariantsSelect: () => ({ data: MOCK_VARIANTS, isLoading: false }),
+    useUnitsOfMeasureSelect: () => ({ data: MOCK_UNITS, isLoading: false }),
 }))
 
 // Mock inventory API
@@ -115,7 +113,19 @@ import { StockOutForm } from '../stock-out-form'
 const defaultProps = { onSuccess: vi.fn(), onCancel: vi.fn() }
 
 describe('StockOutForm', () => {
-    beforeEach(() => { vi.clearAllMocks() })
+    beforeEach(() => {
+        vi.clearAllMocks()
+        watchValues = {
+            location_id: 0,
+            variant_id: 0,
+            uom_id: 0,
+            qty: 0,
+            reason: 'SALE',
+            sale_price: 0,
+            notes: '',
+        }
+        mockQueryResult.data = null
+    })
     afterEach(() => { cleanup() })
 
     it('exports StockOutForm component', () => {
@@ -340,5 +350,60 @@ describe('StockOutForm', () => {
     it('renders select unit placeholder', () => {
         const { getByText } = render(<StockOutForm {...defaultProps} />)
         expect(getByText('Select unit...')).toBeDefined()
+    })
+
+    it('shows the current stock info panel with normal stock levels', async () => {
+        watchValues.variant_id = 1
+        watchValues.location_id = 1
+        mockQueryResult.data = {
+            data: { data: [{ inventory_location_id: 1, on_hand: 50, reserved: 5, available: 45 }] },
+        }
+
+        const { findByText, queryByText } = render(<StockOutForm {...defaultProps} />)
+
+        expect(await findByText('Current Stock')).toBeTruthy()
+        expect(queryByText(/stock below minimum level/i)).toBeNull()
+        expect(queryByText(/insufficient stock for this operation/i)).toBeNull()
+    })
+
+    it('shows a low-stock warning when available stock is below the variant minimum', async () => {
+        watchValues.variant_id = 1
+        watchValues.location_id = 1
+        mockQueryResult.data = {
+            data: { data: [{ inventory_location_id: 1, on_hand: 8, reserved: 3, available: 5 }] },
+        }
+
+        const { findByText } = render(<StockOutForm {...defaultProps} />)
+
+        expect(await findByText(/stock below minimum level/i)).toBeTruthy()
+    })
+
+    it('shows an insufficient-stock error when quantity exceeds available stock', async () => {
+        watchValues.variant_id = 1
+        watchValues.location_id = 1
+        watchValues.qty = 10
+        mockQueryResult.data = {
+            data: { data: [{ inventory_location_id: 1, on_hand: 8, reserved: 3, available: 5 }] },
+        }
+
+        const { findByText } = render(<StockOutForm {...defaultProps} />)
+
+        expect(await findByText(/insufficient stock for this operation/i)).toBeTruthy()
+        expect(await findByText('Only 5 units available')).toBeTruthy()
+    })
+
+    it('shows the profit analysis panel with revenue, cost and profit for a sale', async () => {
+        watchValues.variant_id = 1
+        watchValues.qty = 10
+        watchValues.sale_price = 20
+        watchValues.reason = 'SALE'
+
+        const { findByText } = render(<StockOutForm {...defaultProps} />)
+
+        expect(await findByText('Profit Analysis')).toBeTruthy()
+        expect(await findByText('$200.00')).toBeTruthy() // revenue: 10 * 20
+        expect(await findByText('$50.00')).toBeTruthy() // cost: 10 * 5 (last_unit_cost)
+        expect(await findByText('$150.00')).toBeTruthy() // profit: 200 - 50
+        expect(await findByText('75.0% margin')).toBeTruthy()
     })
 })

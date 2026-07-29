@@ -33,7 +33,7 @@ A file-level conflict analysis (parsed directly from each SonarCloud Issue's "Af
 
 Expected outcome: a real attendance-correction capability shipped, payroll-close periods can no longer be closed early or as a partial week, the two highest-connected quality debt nodes (#305, #306) cleared, and the sprint's own estimate-vs-tracked comparison populated so future sprints can calibrate estimates against real data.
 
-**Progress as of 2026-07-29:** 11 of 26 scoped Issues completed (42.3%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge), #327 (Ausentes stat card, PR #336 ready to merge), #329 (payroll close week gate, PR #335 ready to merge), #314 (unused React typed props removed, PR #343 ready to merge), #315 (deeply nested role-toggle handler flattened, PR #344 ready to merge) — all eight in Round 1 — plus #306 (explicit button type attribute, PR #346 ready to merge), #328 (allow correcting an already-recorded attendance event, PR #347 ready to merge), and #312 (stable Context Provider value identities, PR #348 ready to merge), all three in Round 2.
+**Progress as of 2026-07-29:** 12 of 26 scoped Issues completed (46.2%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge), #327 (Ausentes stat card, PR #336 ready to merge), #329 (payroll close week gate, PR #335 ready to merge), #314 (unused React typed props removed, PR #343 ready to merge), #315 (deeply nested role-toggle handler flattened, PR #344 ready to merge) — all eight in Round 1 — plus #306 (explicit button type attribute, PR #346 ready to merge), #328 (allow correcting an already-recorded attendance event, PR #347 ready to merge), and #312 (stable Context Provider value identities, PR #348 ready to merge), all three in Round 2, plus #311 (cognitive complexity reduced in 3 components, PR #349 ready to merge), in Round 6.
 
 ## 2. Context
 
@@ -61,7 +61,7 @@ Base state: `main` @ `079a316`, 26 open Issues, zero Issues yet linked to a GitH
 | Target completion (deadline) | 2026-08-09 |
 | Calendar duration (planned) | 14 days |
 | Active workdays | — |
-| Progress (Issues completed) | 11 / 26 (42.3%) — #323, #322, #325, #309, #327, #329, #314, #315, #306, #328, #312 |
+| Progress (Issues completed) | 12 / 26 (46.2%) — #323, #322, #325, #309, #327, #329, #314, #315, #306, #328, #312, #311 |
 
 ### How the deadline was set
 
@@ -183,7 +183,7 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ⏳ | #311 | [Maintainability] Cognitive Complexity of functions should not be too high | Low | 1h | 2h | — | — | Last — conflicts with `DevDebugger.tsx`/`product-wizard.tsx`/`stock-out-form.tsx` touched across earlier rounds |
+| ✅ | #311 | [Maintainability] Cognitive Complexity of functions should not be too high | Low | 1h | 2h | 0.2h | PR #349 | PR ready, merge pending |
 |  |  | **Round 6 total** |  | **1h** | **2h** | **—** |  |  |
 
 ### Round rules
@@ -281,8 +281,9 @@ Update the comparison as each round finishes — do not wait until sprint closur
 | ✅ | #314 | Removed unused `onClose` from `VariantDetailsProps` (`variant-details.tsx`, dead — the owning `SlidePanel` already handles closing) and `showText` from `LogoProps` (`logo.tsx`, no call site anywhere passed it); dropped the now-invalid call-site prop and unused test mock | PR #343 | — | 0.03h | Vitest 7/7 passing, ESLint + TypeScript clean; Devin/DeepWiki: 0 bugs, 0 flags, 12/12 checks; 0 review threads; commit already a single commit; PR ready, merge pending |
 | ✅ | #315 | Flattened the deeply nested `ToggleSwitch onChange` role-toggle handler in `employee-edit-create-form.tsx` into module-level `addRole`/`removeRole` functions, fixing SonarCloud S2004; further split to avoid a boolean selector parameter after `/sonar-review` flagged the initial fix as S2301 | PR #344 | — | 0.25h | Vitest 3/3 passing on the new role-toggle test, full suite (3531 tests) green, ESLint + TypeScript clean; SonarCloud quality gate OK (0 new code smells); 0 review threads; Devin/DeepWiki 0 bugs, 3 Informational-only flags; 12/12 checks; commit squashed to 1; PR ready, merge pending |
 | ✅ | #306 | `type="button"` added to 52 native `<button>` elements across 18 files (rule `typescript:S9011`); `data-grid.tsx`'s 17 occurrences (4 near-duplicate responsive pagination blocks) refactored into shared helper functions (`renderEdgeButton`, `renderLeadingEdges`, `renderTrailingEdges`, `renderPaginationNav`) rather than a flat scripted insert, since the flat fix tripped the PR's own SonarCloud duplication gate | PR #346 | — | 1.9h | ESLint + TypeScript clean; SonarCloud gate OK — 0 new bugs/vulnerabilities/smells, 0.0% new duplication (was 11.5%), 100% new coverage (was 73.7% after a mis-diagnosed first attempt; the real cause, found by inspecting the raw CI lcov artifact, was two arrow-function `onClick` handlers genuinely never invoked by any test — the pagination edge-nav buttons and the schedule dialog's default tab — closed with 2 targeted test assertions); Devin/DeepWiki 0 bugs/0 flags, 12/12 checks, 0 review threads; commits squashed to 1; PR ready, merge pending |
+| ✅ | #311 | Reduced cognitive complexity (`typescript:S3776`) in 3 flagged functions via structural extraction: `handleNext` split into `advanceFromStep1/2/3` (product-wizard.tsx), `StockInfoPanel`/`ProfitAnalysisPanel` extracted from nested-ternary JSX (stock-out-form.tsx), `MinimizedDebugger`/`RolesPermissionsSection`/`DevLoginSection` extracted from the render body (DevDebugger.tsx) | PR #349 | — | 0.2h | Vitest 3550/3550 passing (7 new tests added via `/sonar-review` after the extraction dropped new-code coverage to 50.8%, closing it to 94.7% — also found and fixed a latent test-mock bug causing an infinite-render worker OOM); ESLint + TypeScript clean; SonarCloud gate OK (0 new bugs/vulnerabilities/smells, 0% duplication); Devin/DeepWiki 0 bugs, 2 Informational-only flags, 12/12 checks; 0 review threads; commit squashed to 1; PR ready, merge pending |
 | ✅ | #312 | Wrapped `SidebarContext`/`ThemeContext`/`ToastContext` Provider `value` in `useMemo` (and their inline toggle handlers in `useCallback`), resolving all 3 `typescript:S6481` occurrences | PR #348 | — | 0.27h | Vitest 33/33 new/updated (value-identity stability tests added to all three providers), full suite 242 files/3546 passing; ESLint + TypeScript clean; Devin/DeepWiki 0 bugs/0 flags, 12/12 checks; 1 Copilot review thread (missing mandatory task Retrospective section) fixed and resolved; commits squashed to 1; PR ready, merge pending |
-| ⏳ | #305, #307–#308, #310–#311, #313, #316–#321 (12 remaining SonarCloud Issues) | Not started | — | — | — | — |
+| ⏳ | #305, #307–#308, #310, #313, #316–#321 (11 remaining SonarCloud Issues) | Not started | — | — | — | — |
 | ⏳ | #85 | Not started | — | — | — | — |
 | 🚧 | #340 | Opportunistic work (§5.4) — `.claude/settings.json` un-ignored and versioned in `sushigo-c`; read-only permission allowlist added | — | — | — | Not scheduled into a round — see §5.4 |
 
