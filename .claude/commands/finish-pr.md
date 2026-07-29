@@ -11,11 +11,14 @@ to merge, then doing every piece of bookkeeping a human would otherwise have to 
 merging — **except the merge itself**.
 
 **Call this only after the human has manually tested the PR and approved it.** Your job is to
-confirm the mechanical checks (CI, review threads, automated-review bugs) and then finish the
-paperwork: squash the branch to one commit, close out the task file, sync time tracking back to
-the GitHub issue, move the issue to Done on the project board, and update the sprint document and
-root README. You report a checklist at the end. **You never run `gh pr merge`.** The user merges
-by hand once your report says everything is green.
+confirm review threads and mergeable state, then finish the paperwork — squash the branch to one
+commit, close out the task file, sync time tracking back to the GitHub issue, move the issue to
+Done on the project board, and update the sprint document and root README — and only then check
+CI and the automated review (Devin/DeepWiki), once, against the final commit that push produced.
+Doing it in that order (paperwork before the CI/Devin check, not after) means CI and Devin's scan
+each restart exactly once instead of on every intermediate push. You report a checklist at the
+end. **You never run `gh pr merge`.** The user merges by hand once your report says everything is
+green.
 
 ---
 
@@ -37,7 +40,7 @@ Resolve the PR number:
 Fetch full PR metadata:
 
 ```bash
-gh pr view <N> --repo <owner>/<repo> --json number,title,body,state,isDraft,headRefName,baseRefName,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup
+gh pr view <N> --repo <owner>/<repo> --json number,title,body,state,isDraft,headRefName,baseRefName,mergeable,mergeStateStatus,reviewDecision
 ```
 
 Extract the linked issue number from the title (`[#NNN]`) or body (`Closes #NNN`). If neither is
@@ -49,16 +52,19 @@ present, ask the user which issue this PR closes — do not guess.
 
 ---
 
-## PHASE 1 — Validate readiness
+## PHASE 1 — Validate readiness (pre-flight gate)
 
-Build a checklist. Do **not** proceed to Phase 2+ unless every item passes.
+Build a checklist for the items that survive the rest of this flow unchanged. Do **not** proceed
+to Phase 2+ unless every item here passes.
 
-### 1a. CI checks
+CI status and the Devin/DeepWiki scan are deliberately **not** checked here: Phase 7.5 is the only
+push in this entire command (Phases 2, 3, 6, 7 only commit locally — see those phases), and every
+push force-restarts both CI and the Devin scan. A result captured now would just describe a commit
+that's about to be replaced, and Phase 8 would end up reporting stale status. They're checked
+authoritatively in **Phase 7.6**, right after that single final push — that is the real gate before
+Phase 8 declares the PR ready to merge.
 
-From `statusCheckRollup` (already fetched in Phase 0): every entry's `conclusion` must be
-`SUCCESS`. List any that are `FAILURE`, `CANCELLED`, `PENDING`, or still running by name.
-
-### 1b. Review threads
+### 1a. Review threads
 
 ```bash
 gh api graphql -f query='
@@ -76,39 +82,17 @@ Every thread must have `isResolved: true`. List unresolved ones (path) if any ex
 attempt to resolve them yourself here; that is `/pr-comments`'s job, not this command's. Tell the
 user to run `/pr-comments <N>` first if any are open.
 
-### 1c. Mergeable state
+### 1b. Mergeable state
 
 `mergeStateStatus` must be `CLEAN`. If it is `BEHIND`, tell the user to run `/rebase-main` first.
 If it is `DIRTY` (conflicts) or `BLOCKED`, report the reason and stop.
 
-### 1d. Automated review — Devin / DeepWiki (best-effort)
-
-This project is on Devin's free tier, so the only review surface available is the public
-DeepWiki-mirrored review page — check it for reported bugs instead of a paid private review.
-
-If `mcp__claude-in-chrome__*` tools are available (load them via `ToolSearch` if deferred), open
-`https://app.devin.ai/review/<owner>/<repo>/pull/<N>` and read the **Bugs** count and any
-**Flags** panel (screenshot + `get_page_text`/`find` as needed — the page is a client-rendered SPA,
-so a plain `WebFetch` will only return an empty shell and is not sufficient here).
-
-- If the browser extension is not connected: try `tabs_context_mcp` once, and if it still fails,
-  ask the user whether to wait for them to connect it or skip this sub-check as best-effort. Do
-  not block the rest of Phase 1 indefinitely on this — it is supplementary to 1a–1c, not a hard
-  gate, since Copilot's review (1b) already runs automatically on every PR in this repo.
-- Record: bug count, and the title + severity label of every flag (`Investigate` flags are worth
-  surfacing to the user even though they aren't a hard blocker; `Informational` flags are FYI
-  only).
-- If a real **bug** (not a flag) is reported, treat it as a blocker like a failing check — tell
-  the user what it is and stop before Phase 2.
-
 ### Report the checklist
 
 ```
-## PR #<N> — Readiness check
-- [x/❌] CI checks: <M>/<M> passing
+## PR #<N> — Pre-flight check
 - [x/❌] Review threads: all resolved (<M> total)
 - [x/❌] Mergeable: clean, no conflicts
-- [x/❌] Devin/DeepWiki: 0 bugs (best-effort — <note if skipped>)
 ```
 
 If anything failed, stop here — do not touch the branch, the issue, or any documentation.
@@ -165,11 +149,8 @@ git diff origin/<baseRefName> HEAD --stat
 Compare against the file list you already have from `gh pr diff <N> --name-only` (Phase 0/1). If
 they don't match, stop and report — do not push a divergent diff.
 
-Push:
-
-```bash
-git push --force-with-lease origin HEAD
-```
+Do **not** push yet — this commit is local-only scaffolding for Phase 7.5's final squash+push, the
+single push point in this command.
 
 ---
 
@@ -190,7 +171,8 @@ started; move it to the current month's folder first).
    scope changes requested mid-flight, review-response cycles, rework — not just restate *what*
    was built.
 
-Commit this as its own commit (separate from the squashed feature commit):
+Commit this as its own commit (separate from the squashed feature commit). Local only — do not
+push; Phase 7.5 pushes everything once at the end:
 
 ```bash
 git add doc/tasks/...
@@ -198,7 +180,6 @@ git commit -m "🔧 [#NNN] - Finalize task #NNN before merge 📊
 
 - 📊 Fill Tracked time and add Retrospective per doc/conventions/tasks.md
 - ✅ Tick completed Technical Task / Acceptance Criteria boxes"
-git push origin HEAD
 ```
 
 ---
@@ -310,7 +291,7 @@ Do **not** touch round-total footer rows, §10's aggregate table, or any other i
 to its own issue, never aggregate totals (those are recalculated by the coordination agent at
 round/sprint boundaries, not per-PR).
 
-Commit separately:
+Commit separately. Local only — do not push; Phase 7.5 pushes everything once at the end:
 
 ```bash
 git add doc/sprints/
@@ -318,7 +299,6 @@ git commit -m "📚 [#NNN] - Update sprint progress for #NNN 📊
 
 - 📊 Mark #NNN complete in Round table and Execution Evidence
 - 📊 Update sprint progress percentage in Executive Summary and Timeline"
-git push origin HEAD
 ```
 
 ---
@@ -330,21 +310,23 @@ not yet closed, its `Completed` cell shows the running progress percentage (matc
 recomputed value) instead of a date — that cell only becomes the actual completion date once the
 sprint formally closes (`doc/conventions/sprints.md` §6, `completed` metadata field is filled).
 
+Local only — do not push:
+
 ```bash
 git add README.md
 git commit -m "📚 [#NNN] - Update README sprint progress for #NNN 📊
 
 - 📊 Refresh the Completed cell with the current sprint progress percentage"
-git push origin HEAD
 ```
 
 ---
 
-## PHASE 7.5 — Final squash
+## PHASE 7.5 — Final squash and single push
 
-Phases 2–7 committed incrementally on purpose (so work survives if a later phase fails), but the
-user asked for **one commit total** for the whole PR, not one feature commit plus three
-housekeeping commits. Fold everything back into a single commit now:
+Phases 2–7 commit incrementally on purpose (so partial progress is never lost to a mid-flow typo
+or crash), but none of them push — this phase is the **only** push in the whole command. Folding
+everything into one commit here, instead of after every phase, means CI and the Devin/DeepWiki
+scan (Phase 7.6) each run exactly once instead of restarting on every intermediate push:
 
 ```bash
 git fetch origin <baseRefName>
@@ -365,9 +347,52 @@ git push --force-with-lease origin HEAD
 
 If the diff doesn't match, stop and report — do not push a divergent diff.
 
-If a bug is found and fixed **during** this same finish-pr run (e.g. a Devin/DeepWiki flag turned
-out to need a real code change), fix it, commit it, then repeat this phase so the branch still
-ends at exactly one commit before Phase 8.
+If Phase 7.6 (next) finds a real bug that needs a code fix, fix it, commit it, then repeat Phase
+7.5 (and then 7.6 again) so the branch still ends at exactly one commit and the final CI/Devin
+check runs against the commit that will actually be merged.
+
+---
+
+## PHASE 7.6 — Final CI/Devin validation (the real gate)
+
+This is the only point in the flow where CI and the Devin/DeepWiki scan are checked, because
+Phase 7.5's push is the only push in the whole command — checking earlier would just describe a
+commit that's since been replaced.
+
+### 7.6a. Wait for CI
+
+```bash
+gh pr checks <N> --repo <owner>/<repo> --watch
+```
+
+This blocks until every check finishes running. If any check's conclusion is not `SUCCESS`, list
+it by name and stop — do not declare the PR ready to merge, but do **not** revert the Phase 7.5
+push either. The housekeeping is already committed and pushed; the user (or a follow-up code fix)
+just needs a new commit, after which Phases 7.5–7.6 alone can be re-run.
+
+### 7.6b. Automated review — Devin / DeepWiki (best-effort)
+
+This project is on Devin's free tier, so the only review surface available is the public
+DeepWiki-mirrored review page — check it for reported bugs instead of a paid private review.
+
+If `mcp__claude-in-chrome__*` tools are available (load them via `ToolSearch` if deferred), open
+`https://app.devin.ai/review/<owner>/<repo>/pull/<N>` and read the **Bugs** count and any
+**Flags** panel (screenshot + `get_page_text`/`find` as needed — the page is a client-rendered SPA,
+so a plain `WebFetch` will only return an empty shell and is not sufficient here).
+
+- The scan restarts on the Phase 7.5 push and needs time to finish. If the page still shows
+  "in progress"/"scanning" on first load, wait and re-check (a short poll loop, or
+  `ScheduleWakeup` if running as a background task) rather than reporting an incomplete result.
+- If the browser extension is not connected: try `tabs_context_mcp` once, and if it still fails,
+  ask the user whether to wait for them to connect it or skip this sub-check as best-effort. Do
+  not block indefinitely on this — it is supplementary to 7.6a and the review threads already
+  validated in Phase 1, not a hard gate, since Copilot's review already runs automatically on
+  every PR in this repo.
+- Record: bug count, and the title + severity label of every flag (`Investigate` flags are worth
+  surfacing to the user even though they aren't a hard blocker; `Informational` flags are FYI
+  only).
+- If a real **bug** (not a flag) is reported, treat it as a blocker like a failing check — tell
+  the user what it is and stop before Phase 8 declares anything ready.
 
 ---
 
@@ -376,13 +401,11 @@ ends at exactly one commit before Phase 8.
 ```
 ## Finish PR #<N> — Ready to merge?
 
-### Pre-flight checks
-- [x] CI checks: <M>/<M> passing
+### Pre-flight checks (Phase 1)
 - [x] Review threads: all resolved (<M> total)
 - [x] Mergeable: clean, no conflicts
-- [x] Devin/DeepWiki: 0 bugs (<M> flags — <list Investigate-severity ones, if any>)
 
-### Final housekeeping
+### Final housekeeping (Phases 2–7.5)
 - [x] Commits squashed: <before> → 1 (`<sha>`)
 - [x] Task file closed — Tracked <Xh Ym>, Retrospective added
 - [x] GitHub issue #<NNN> Time section synced
@@ -390,12 +413,18 @@ ends at exactly one commit before Phase 8.
 - [x] Sprint doc updated — progress now <X>/<Y> (<Z%>)
 - [x] README Sprints table updated (Completed: <Z%>)
 
+### Final validation on the merge-ready commit (Phase 7.6)
+- [x] CI checks: <M>/<M> passing
+- [x] Devin/DeepWiki: 0 bugs (<M> flags — <list Investigate-severity ones, if any>)
+
 ### ✅ Ready to merge
 Everything above is green. I have not merged it — that's on you:
   gh pr merge <N> --merge      (branch is already a single commit, no need for --squash)
 ```
 
 If Phase 1 failed, print only that checklist (with the failing items marked ❌ and what's
-blocking them) and stop — do not run Phases 2–7.
+blocking them) and stop — do not run Phases 2–7.6. If Phase 7.6 failed, print all three sections
+(Phase 1 and the housekeeping already happened) with 7.6's failing items marked ❌, and stop before
+the "Ready to merge" line.
 
 **Never run `gh pr merge` yourself, regardless of how clean the checklist is.**
