@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { OpenSessionDialog } from '../open-session-dialog'
 
@@ -134,5 +134,26 @@ describe('OpenSessionDialog', () => {
         )
 
         expect(screen.getByRole('button', { name: /cancelar/i })).toBeDefined()
+    })
+
+    it('shows a validation error when opening balance is negative', () => {
+        const { container } = render(
+            <OpenSessionDialog
+                isOpen={true}
+                onClose={mockOnClose}
+                onSuccess={mockOnSuccess}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        const openingBalanceInput = screen.getByPlaceholderText('0.00')
+        fireEvent.change(openingBalanceInput, { target: { value: '-50' } })
+
+        // fireEvent.submit bypasses native <input min="0"> constraint validation,
+        // which would otherwise block the click path before reaching the handler.
+        const form = container.querySelector('form') as HTMLFormElement
+        fireEvent.submit(form)
+
+        expect(screen.getByText('El fondo inicial no puede ser negativo')).toBeDefined()
     })
 })
