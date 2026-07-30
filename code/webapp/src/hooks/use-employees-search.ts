@@ -7,6 +7,12 @@ import { sortSpecsToParams, parseSortParam, serializeSorts } from '@/lib/sort-ut
 import type { SortSpec } from '@/components/ui/data-grid'
 import type { Employee, EmployeeFilters, EmployeePositionRole } from '@/types/employee'
 
+function statusToIsActive(status: string | undefined): boolean | undefined {
+  if (status === 'active') return true
+  if (status === 'inactive') return false
+  return undefined
+}
+
 export interface EmployeesSearch {
   page?: number
   per_page?: number
@@ -34,9 +40,7 @@ export function useEmployeesSearch() {
     per_page: perPage,
     search: search.search,
     role: (search.role as EmployeePositionRole) ?? undefined,
-    is_active: search.status === 'active' ? true
-      : search.status === 'inactive' ? false
-        : undefined,
+    is_active: statusToIsActive(search.status),
     status: search.status === 'baja' ? 'baja' : undefined,
     ...sortSpecsToParams(sorting),
   }

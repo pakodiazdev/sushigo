@@ -355,15 +355,22 @@ interface StockInfoPanelProps {
   readonly hasInsufficientStock: boolean
 }
 
+function getStockPanelToneClass(hasInsufficientStock: boolean, hasLowStock: boolean): string {
+  if (hasInsufficientStock) return 'bg-red-50 border-red-200'
+  if (hasLowStock) return 'bg-yellow-50 border-yellow-200'
+  return 'bg-blue-50 border-blue-200'
+}
+
+function getStockPanelTextToneClass(hasInsufficientStock: boolean, hasLowStock: boolean): string {
+  if (hasInsufficientStock) return 'text-red-900'
+  if (hasLowStock) return 'text-yellow-900'
+  return 'text-blue-900'
+}
+
 function StockInfoPanel({ locationStock, selectedVariant, hasLowStock, hasInsufficientStock }: StockInfoPanelProps) {
   return (
     <div
-      className={`border rounded-lg p-3 text-sm ${hasInsufficientStock
-        ? 'bg-red-50 border-red-200'
-        : hasLowStock
-          ? 'bg-yellow-50 border-yellow-200'
-          : 'bg-blue-50 border-blue-200'
-        }`}
+      className={`border rounded-lg p-3 text-sm ${getStockPanelToneClass(hasInsufficientStock, hasLowStock)}`}
     >
       <div className="flex items-center gap-2 mb-2">
         {hasInsufficientStock ? (
@@ -372,12 +379,7 @@ function StockInfoPanel({ locationStock, selectedVariant, hasLowStock, hasInsuff
           <Package className="h-4 w-4 text-blue-600" />
         )}
         <span
-          className={`font-semibold ${hasInsufficientStock
-            ? 'text-red-900'
-            : hasLowStock
-              ? 'text-yellow-900'
-              : 'text-blue-900'
-            }`}
+          className={`font-semibold ${getStockPanelTextToneClass(hasInsufficientStock, hasLowStock)}`}
         >
           Current Stock
         </span>

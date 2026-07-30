@@ -48,6 +48,11 @@ const sizeClasses = {
   full: 'max-w-full',
 }
 
+const slideAnimations: Record<'right' | 'left', { enter: string; exit: string }> = {
+  right: { enter: 'slide-in-right', exit: 'slide-out-right' },
+  left: { enter: 'slide-in-left', exit: 'slide-out-left' },
+}
+
 export function SlidePanel({
   isOpen,
   onClose,
@@ -167,13 +172,7 @@ export function SlidePanel({
   const durationStyle = { animationDuration: `${animationDuration}ms` }
 
   const panelAnimation =
-    position === 'right'
-      ? animating === 'enter'
-        ? 'slide-in-right'
-        : 'slide-out-right'
-      : animating === 'enter'
-        ? 'slide-in-left'
-        : 'slide-out-left'
+    animating === 'enter' ? slideAnimations[position].enter : slideAnimations[position].exit
 
   const backdropAnimation =
     animating === 'enter' ? 'backdrop-in' : 'backdrop-out'

@@ -273,6 +273,50 @@ export default function Dashboard() {
 
     if (!data) return null;
 
+    let sessionsContent: React.ReactNode;
+    if (loadingSessions) {
+        sessionsContent = (
+            <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Cargando sesiones...</p>
+                </div>
+            </div>
+        );
+    } else if (sessionsData?.data && sessionsData.data.length > 0) {
+        sessionsContent = (
+            <div className="space-y-3">
+                {sessionsData.data.map((session) => (
+                    <SessionCard
+                        key={session.id}
+                        session={session}
+                        onRegisterAdjustment={handleCreateAdjustment}
+                    />
+                ))}
+            </div>
+        );
+    } else {
+        sessionsContent = (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+                <DollarSign className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
+                <p className="text-sm text-muted-foreground mb-1">
+                    No hay sesiones de caja abiertas
+                </p>
+                <p className="text-xs text-muted-foreground mb-4">
+                    Abre una nueva sesión para comenzar las operaciones del día
+                </p>
+                <Button
+                    onClick={handleOpenSession}
+                    size="sm"
+                    variant="success"
+                >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Abrir Sesión
+                </Button>
+            </div>
+        );
+    }
+
     return (
         <PageContainer>
             <PageHeader
@@ -336,42 +380,7 @@ export default function Dashboard() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {loadingSessions ? (
-                        <div className="flex items-center justify-center py-8">
-                            <div className="text-center">
-                                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                                <p className="text-sm text-muted-foreground">Cargando sesiones...</p>
-                            </div>
-                        </div>
-                    ) : sessionsData?.data && sessionsData.data.length > 0 ? (
-                        <div className="space-y-3">
-                            {sessionsData.data.map((session) => (
-                                <SessionCard
-                                    key={session.id}
-                                    session={session}
-                                    onRegisterAdjustment={handleCreateAdjustment}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <DollarSign className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
-                            <p className="text-sm text-muted-foreground mb-1">
-                                No hay sesiones de caja abiertas
-                            </p>
-                            <p className="text-xs text-muted-foreground mb-4">
-                                Abre una nueva sesión para comenzar las operaciones del día
-                            </p>
-                            <Button
-                                onClick={handleOpenSession}
-                                size="sm"
-                                variant="success"
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Abrir Sesión
-                            </Button>
-                        </div>
-                    )}
+                    {sessionsContent}
                 </CardContent>
             </Card>
 

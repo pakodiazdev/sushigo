@@ -17,6 +17,18 @@ import type { EmployeeFormValues } from './employee-edit-create-form'
 
 export type PanelMode = 'detail' | 'edit' | 'create'
 
+const PANEL_TITLES: Record<PanelMode, string> = {
+  create: 'Nuevo Empleado',
+  edit: 'Editar Empleado',
+  detail: 'Detalle de Empleado',
+}
+
+const PANEL_DESCRIPTIONS: Record<PanelMode, string | undefined> = {
+  create: 'Registra un nuevo empleado en el sistema',
+  edit: 'Actualiza los datos del empleado',
+  detail: undefined,
+}
+
 interface UseEmployeeFormParams {
   employee?: Employee | null
   isOpen: boolean
@@ -206,19 +218,9 @@ export function useEmployeeForm({
     employeeQuery.isLoading ||
     assignableRolesQuery.isLoading
 
-  const panelTitle =
-    mode === 'create'
-      ? 'Nuevo Empleado'
-      : mode === 'edit'
-        ? 'Editar Empleado'
-        : 'Detalle de Empleado'
+  const panelTitle = PANEL_TITLES[mode]
 
-  const panelDescription =
-    mode === 'create'
-      ? 'Registra un nuevo empleado en el sistema'
-      : mode === 'edit'
-        ? 'Actualiza los datos del empleado'
-        : undefined
+  const panelDescription = PANEL_DESCRIPTIONS[mode]
 
   // ─────────────────────────────────────────────────────────────────────────────
 

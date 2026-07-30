@@ -84,6 +84,12 @@ const STEPS = [
     { id: 4, name: 'Existencias', icon: Database },
 ]
 
+function getStepCircleClass(isComplete: boolean, isCurrent: boolean): string {
+    if (isComplete) return 'border-indigo-600 bg-indigo-600'
+    if (isCurrent) return 'border-indigo-600 bg-white'
+    return 'border-gray-300 bg-white'
+}
+
 export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
     const { showSuccess, showError } = useToast()
     const [currentStep, setCurrentStep] = useState(1)
@@ -467,11 +473,7 @@ export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
                                     <span
                                         className={cn(
                                             'flex h-8 w-8 items-center justify-center rounded-full border-2',
-                                            isStepComplete(step.id)
-                                                ? 'border-indigo-600 bg-indigo-600'
-                                                : currentStep === step.id
-                                                    ? 'border-indigo-600 bg-white'
-                                                    : 'border-gray-300 bg-white'
+                                            getStepCircleClass(isStepComplete(step.id), currentStep === step.id)
                                         )}
                                     >
                                         {isStepComplete(step.id) ? (
