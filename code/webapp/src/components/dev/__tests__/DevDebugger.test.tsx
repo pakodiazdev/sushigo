@@ -420,4 +420,36 @@ describe('DevDebugger', () => {
     fireEvent.click(screen.getByLabelText('Quitar filtro de permiso'))
     expect(screen.getByPlaceholderText('Buscar permiso...')).toBeTruthy()
   })
+
+  it('exposes the header drag handle as a keyboard-operable control that repositions the panel', async () => {
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    const handle = screen.getByLabelText('Mover panel de depuración')
+    expect(handle.getAttribute('role')).toBe('button')
+    expect(handle.getAttribute('tabindex')).toBe('0')
+
+    const panel = screen.getByTestId('dev-debugger')
+    const initialLeft = panel.style.left
+
+    fireEvent.keyDown(handle, { key: 'ArrowRight' })
+
+    expect(panel.style.left).not.toBe(initialLeft)
+  })
+
+  it('exposes the minimized desktop bubble drag handle as a keyboard-operable control that repositions it', async () => {
+    const DevDebugger = await loadDevDebugger('false')
+    renderFresh(DevDebugger)
+
+    fireEvent.click(screen.getByTitle('Minimize debugger'))
+
+    const handle = screen.getByRole('button', { name: 'Mover panel de depuración' })
+
+    const bubble = screen.getByTestId('dev-debugger')
+    const initialTop = bubble.style.top
+
+    fireEvent.keyDown(handle, { key: 'ArrowDown' })
+
+    expect(bubble.style.top).not.toBe(initialTop)
+  })
 })
