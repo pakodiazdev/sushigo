@@ -78,4 +78,17 @@ describe('Dashboard', () => {
 
         expect(screen.getAllByRole('button', { name: /registrar ajuste/i }).length).toBeGreaterThan(0)
     }, 5000)
+
+    it('navigates to the session detail page when clicking "Ver Detalles" on a card', async () => {
+        render(<Dashboard />, { wrapper: createWrapper() })
+
+        await waitFor(() => expect(screen.getByText('Caja sin identificar')).toBeDefined(), { timeout: 3000 })
+
+        fireEvent.click(screen.getByRole('button', { name: /ver detalles/i }))
+
+        expect(mockNavigate).toHaveBeenCalledWith({
+            to: '/cash/sessions/$sessionId',
+            params: { sessionId: mockSession.id },
+        })
+    }, 5000)
 })
