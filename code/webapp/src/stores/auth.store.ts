@@ -168,8 +168,8 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try {
           await authService.logout();
-        } catch (_err) {
-          // Silently handle logout errors - we'll clear state anyway
+        } catch (err) {
+          console.error('[auth.store] Failed to notify backend of logout:', err);
         } finally {
           set({
             user: null,

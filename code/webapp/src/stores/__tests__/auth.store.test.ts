@@ -1,10 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
     extractBranchesFromUser,
     checkIsAdmin,
     checkIsSuperAdmin,
     checkPermission,
+    useAuthStore,
 } from '@/stores/auth.store'
+import { authService } from '@/services/auth.service'
 import type { User, Branch, Role, Permission, OperatingUnitAssignment, OperatingUnit } from '@/types/auth'
 
 // ─── Test Fixtures ─────────────────────────────────────────────────────────────
@@ -328,5 +330,53 @@ describe('checkPermission', () => {
         expect(checkPermission(user, 'view-reports')).toBe(true)
         expect(checkPermission(user, 'edit-profile')).toBe(true)
         expect(checkPermission(user, 'delete-users')).toBe(false)
+    })
+})
+
+// ─── logout ────────────────────────────────────────────────────────────────────
+
+describe('logout', () => {
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
+
+    it('clears auth state even when authService.logout rejects', async () => {
+        const logoutError = new Error('Network error')
+        vi.spyOn(authService, 'logout').mockRejectedValueOnce(logoutError)
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        useAuthStore.setState({
+            user: createUser(),
+            token: 'token-123',
+            isAuthenticated: true,
+        })
+
+        await useAuthStore.getState().logout()
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            expect.stringContaining('[auth.store]'),
+            logoutError,
+        )
+        expect(useAuthStore.getState().user).toBeNull()
+        expect(useAuthStore.getState().token).toBeNull()
+        expect(useAuthStore.getState().isAuthenticated).toBe(false)
+    })
+
+    it('clears auth state when authService.logout succeeds', async () => {
+        vi.spyOn(authService, 'logout').mockResolvedValueOnce(undefined)
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        useAuthStore.setState({
+            user: createUser(),
+            token: 'token-123',
+            isAuthenticated: true,
+        })
+
+        await useAuthStore.getState().logout()
+
+        expect(consoleErrorSpy).not.toHaveBeenCalled()
+        expect(useAuthStore.getState().user).toBeNull()
+        expect(useAuthStore.getState().token).toBeNull()
+        expect(useAuthStore.getState().isAuthenticated).toBe(false)
     })
 })
