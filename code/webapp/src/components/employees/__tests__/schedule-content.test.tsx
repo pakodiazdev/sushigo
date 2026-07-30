@@ -16,7 +16,7 @@ vi.mock('@/components/employees/schedule-config-rows', () => ({
 }))
 
 vi.mock('@/components/employees/override-scope-dialog', () => ({
-  OverrideScopeDialog: () => <div data-testid="override-scope-dialog" />,
+  OverrideScopeDialog: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div data-testid="override-scope-dialog" /> : null),
 }))
 
 vi.mock('@/components/employees/weekly-calendar', () => ({
@@ -24,7 +24,7 @@ vi.mock('@/components/employees/weekly-calendar', () => ({
 }))
 
 vi.mock('@/components/employees/override-list-dialog', () => ({
-  OverrideListDialog: () => <div data-testid="override-list-dialog" />,
+  OverrideListDialog: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div data-testid="override-list-dialog" /> : null),
 }))
 
 vi.mock('@/components/employees/use-schedule-content', () => ({

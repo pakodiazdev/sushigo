@@ -1,6 +1,6 @@
 /**
- * Shared backdrop + <dialog> wrapper for the confirm-style dialogs in this
- * directory — header and body content are supplied via children.
+ * Shared backdrop + <dialog> wrapper for centered dialogs — header and body
+ * content are supplied via children.
  */
 export interface DialogFrameProps {
   readonly backdropCls: string

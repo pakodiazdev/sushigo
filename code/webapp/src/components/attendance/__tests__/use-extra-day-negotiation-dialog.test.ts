@@ -7,7 +7,7 @@ import { useExtraDayNegotiationDialog, formatCurrency } from '../use-extra-day-n
 
 function render(registeredDailyWage: number | null) {
   return renderHook(
-    ({ wage }: { wage: number | null }) => useExtraDayNegotiationDialog(wage),
+    ({ wage }: { wage: number | null }) => useExtraDayNegotiationDialog(wage, true),
     { initialProps: { wage: registeredDailyWage } },
   )
 }
@@ -217,7 +217,7 @@ describe('handlePrimaAmountChange', () => {
 describe('sync on registeredDailyWage prop change', () => {
   it('updates salaryAmountRaw when wage changes from null to a value', () => {
     const { result, rerender } = renderHook(
-      ({ wage }: { wage: number | null }) => useExtraDayNegotiationDialog(wage),
+      ({ wage }: { wage: number | null }) => useExtraDayNegotiationDialog(wage, true),
       { initialProps: { wage: null as number | null } },
     )
     rerender({ wage: 300 })
@@ -226,7 +226,7 @@ describe('sync on registeredDailyWage prop change', () => {
 
   it('switches back to registered mode when wage becomes available', () => {
     const { result, rerender } = renderHook(
-      ({ wage }: { wage: number | null }) => useExtraDayNegotiationDialog(wage),
+      ({ wage }: { wage: number | null }) => useExtraDayNegotiationDialog(wage, true),
       { initialProps: { wage: null as number | null } },
     )
     rerender({ wage: 300 })

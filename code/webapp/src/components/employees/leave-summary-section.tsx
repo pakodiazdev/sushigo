@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { RegisterLeaveDialog } from '@/components/attendance'
 import { groupContiguousDates } from '@/lib/format'
 import { useLeaveSummarySection } from './use-leave-summary-section'
-import { useDialogAnimation } from './use-dialog-animation'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 import type { Leave, LeaveType as LeaveTypeInterface, LeaveStatus } from '@/types/leave'
 
 // ── Badge colors by leave type code ─────────────────────────────────────────────
@@ -122,7 +122,7 @@ function FullHistoryDialog({
     setPage: (p: number) => void
     updateFilter: (key: LeaveFilterBarKey, value: FilterValue) => void
 }) {
-    const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, onClose)
+    const { visible, backdropCls, panelCls } = useDialogTransition(isOpen, { onEscape: onClose, lockScroll: true })
 
     if (!visible) return null
 

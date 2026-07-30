@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { ChevronDown, ChevronRight, Loader2, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SlidePanelOverlayContext } from '@/components/ui/slide-panel-context'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 import type { PermissionGroup, PermissionSource } from '@/types/user-permissions'
 
 interface PermissionManagerDialogProps {
@@ -40,18 +41,22 @@ export function PermissionManagerDialog({
     }
   }, [isOpen])
 
+  const { visible, backdropCls, panelCls } = useDialogTransition(isOpen)
+
   // Close on Escape — capture phase + stopImmediatePropagation so the parent
-  // SlidePanel's own Escape listener does NOT also fire when this dialog is open.
+  // SlidePanel's own Escape listener does NOT also fire while this dialog is
+  // still on screen, including during the exit animation (isOpen already
+  // false but visible still true).
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape' && visible) {
         e.stopImmediatePropagation()
-        if (!isSaving) {
+        if (isOpen && !isSaving) {
           onClose()
         }
       }
     },
-    [isOpen, isSaving, onClose],
+    [visible, isOpen, isSaving, onClose],
   )
 
   useEffect(() => {
@@ -59,7 +64,7 @@ export function PermissionManagerDialog({
     return () => document.removeEventListener('keydown', handleEscape, true)
   }, [handleEscape])
 
-  if (!isOpen) return null
+  if (!visible) return null
 
   function toggleGroup(group: string) {
     setExpandedGroups((prev) => {
@@ -82,7 +87,7 @@ export function PermissionManagerDialog({
       <button
         type="button"
         aria-label="Cerrar diálogo"
-        className="absolute inset-0 bg-black/50 cursor-default"
+        className={`absolute inset-0 bg-black/50 ${backdropCls} cursor-default`}
         onClick={() => !isSaving && onClose()}
         tabIndex={-1}
       />
@@ -90,7 +95,7 @@ export function PermissionManagerDialog({
       {/* Dialog — native <dialog> element for a11y (SonarCloud typescript:S6819) */}
       <dialog
         open
-        className="relative z-10 m-0 flex w-full max-w-lg flex-col rounded-lg border border-border bg-background p-0 shadow-xl"
+        className={`relative z-10 m-0 flex w-full max-w-lg flex-col rounded-lg border border-border bg-background p-0 shadow-xl ${panelCls}`}
         style={{ maxHeight: '85vh' }}
         aria-modal="true"
         aria-labelledby="perm-dialog-title"

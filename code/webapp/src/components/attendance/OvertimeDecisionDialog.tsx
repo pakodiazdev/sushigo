@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle, XCircle, ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 import { useOvertimeDecisionDialog } from './use-overtime-decision-dialog'
 import type { OvertimeValuationMethod, OvertimeValuationPreview } from '@/types/attendance'
 
@@ -73,12 +74,19 @@ export function OvertimeDecisionDialog({
   onReject,
   onClose,
 }: Readonly<OvertimeDecisionDialogProps>) {
+  // The parent resets `attendanceId`/`employeeName`/`overtimeMinutes`/`remainingCount`
+  // to empty/zero the instant it closes this dialog, so cache the last non-null
+  // content for the exit animation.
+  const lastContent = useRef({ attendanceId, employeeName, overtimeMinutes, remainingCount })
+  if (isOpen) lastContent.current = { attendanceId, employeeName, overtimeMinutes, remainingCount }
+  const { attendanceId: cAttendanceId, employeeName: cEmployeeName, overtimeMinutes: cOvertimeMinutes, remainingCount: cRemainingCount } = lastContent.current
+
   const { step, form, handlePagar, handleBack, onSubmitMethod, applyToRest, setApplyToRest, preview, isPreviewLoading, previewError } =
-    useOvertimeDecisionDialog({ isOpen, attendanceId, onAuthorize })
+    useOvertimeDecisionDialog({ isOpen, attendanceId: cAttendanceId, onAuthorize })
   const { register, handleSubmit, watch, formState: { errors } } = form
   const selectedMethod = watch('valuation_method')
-  const showApplyToRest = (remainingCount ?? 0) > 1
-  const restCount = (remainingCount ?? 1) - 1
+  const showApplyToRest = (cRemainingCount ?? 0) > 1
+  const restCount = (cRemainingCount ?? 1) - 1
 
   const applyToRestCheckbox = showApplyToRest ? (
     <label className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -94,35 +102,19 @@ export function OvertimeDecisionDialog({
     </label>
   ) : null
 
-  // Escape key handler
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isLoading) onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [isOpen, isLoading, onClose])
+  const { visible, backdropCls, panelCls } = useDialogTransition(isOpen, {
+    onEscape: () => { if (!isLoading) onClose() },
+    lockScroll: true,
+  })
 
-  // Scroll lock
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-    }
-    return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen])
-
-  if (!isOpen) return null
+  if (!visible) return null
 
   const content = (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 cursor-default appearance-none border-none p-0"
+        className={`absolute inset-0 bg-black/50 ${backdropCls} cursor-default appearance-none border-none p-0`}
         onClick={() => { if (!isLoading) onClose() }}
         aria-label="Cerrar diálogo"
       />
@@ -132,7 +124,7 @@ export function OvertimeDecisionDialog({
         open
         aria-modal="true"
         aria-labelledby="overtime-dialog-title"
-        className="relative z-10 bg-card rounded-xl border shadow-lg p-6 w-full max-w-sm mx-4 space-y-4"
+        className={`relative z-10 bg-card rounded-xl border shadow-lg p-6 w-full max-w-sm mx-4 space-y-4 ${panelCls}`}
       >
         {step === 'confirm' ? (
           <>
@@ -144,10 +136,10 @@ export function OvertimeDecisionDialog({
                 Decisión de horas extra
               </h2>
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{employeeName}</span>
+                <span className="font-medium text-foreground">{cEmployeeName}</span>
                 {' '}trabajó{' '}
                 <span className="font-semibold text-yellow-700 dark:text-yellow-400">
-                  {overtimeMinutes} min extra
+                  {cOvertimeMinutes} min extra
                 </span>
                 {'. ¿Se pagan?'}
               </p>
@@ -195,8 +187,8 @@ export function OvertimeDecisionDialog({
               </h2>
               <p className="text-sm text-muted-foreground">
                 ¿Cómo se pagarán los{' '}
-                <span className="font-semibold text-foreground">{overtimeMinutes} min extra</span>
-                {' '}de {employeeName}?
+                <span className="font-semibold text-foreground">{cOvertimeMinutes} min extra</span>
+                {' '}de {cEmployeeName}?
               </p>
             </div>
 

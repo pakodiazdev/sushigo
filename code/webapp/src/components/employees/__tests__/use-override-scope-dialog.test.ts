@@ -25,7 +25,7 @@ function makeOverride(id: string, from: string, to: string | null): ScheduleDayO
 
 describe('useOverrideScopeDialog', () => {
   it('initializes with scope=single_date and step=form', () => {
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], vi.fn()))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], vi.fn()))
 
     expect(result.current.scope).toBe('single_date')
     expect(result.current.step).toBe('form')
@@ -33,7 +33,7 @@ describe('useOverrideScopeDialog', () => {
   })
 
   it('becomes valid after effectiveFrom is set for single_date scope', async () => {
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], vi.fn()))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], vi.fn()))
 
     await act(async () => {
       result.current.setValue('effectiveFrom', '2026-03-10', { shouldValidate: true })
@@ -43,7 +43,7 @@ describe('useOverrideScopeDialog', () => {
   })
 
   it('exposes register, setValue and errors', () => {
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], vi.fn()))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], vi.fn()))
 
     expect(typeof result.current.register).toBe('function')
     expect(typeof result.current.setValue).toBe('function')
@@ -52,7 +52,7 @@ describe('useOverrideScopeDialog', () => {
 
   it('calls onSubmit directly when no conflicts exist', async () => {
     const onSubmit = vi.fn()
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], onSubmit))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], onSubmit))
 
     await act(async () => {
       await result.current.handlePrimaryClick()
@@ -67,7 +67,7 @@ describe('useOverrideScopeDialog', () => {
   it('transitions to conflicts step when overlaps are detected', async () => {
     const onSubmit = vi.fn()
     const existing = [makeOverride('a', '2026-03-01', '2026-03-31')]
-    const { result } = renderHook(() => useOverrideScopeDialog(3, existing, onSubmit))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, existing, onSubmit))
 
     act(() => {
       result.current.setValue('effectiveFrom', '2026-03-15', { shouldValidate: true })
@@ -85,7 +85,7 @@ describe('useOverrideScopeDialog', () => {
   it('calls onSubmit after confirming conflicts', async () => {
     const onSubmit = vi.fn()
     const existing = [makeOverride('a', '2026-03-01', '2026-03-31')]
-    const { result } = renderHook(() => useOverrideScopeDialog(3, existing, onSubmit))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, existing, onSubmit))
 
     act(() => {
       result.current.setValue('effectiveFrom', '2026-03-15', { shouldValidate: true })
@@ -107,7 +107,7 @@ describe('useOverrideScopeDialog', () => {
   it('backToForm resets step to form', async () => {
     const onSubmit = vi.fn()
     const existing = [makeOverride('a', '2026-03-01', '2026-03-31')]
-    const { result } = renderHook(() => useOverrideScopeDialog(3, existing, onSubmit))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, existing, onSubmit))
 
     act(() => {
       result.current.setValue('effectiveFrom', '2026-03-15', { shouldValidate: true })
@@ -128,7 +128,7 @@ describe('useOverrideScopeDialog', () => {
 
   it('for range scope, passes effectiveTo correctly on submit', async () => {
     const onSubmit = vi.fn()
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], onSubmit))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], onSubmit))
 
     act(() => {
       result.current.setValue('scope', 'range', { shouldValidate: true })
@@ -151,7 +151,7 @@ describe('useOverrideScopeDialog', () => {
 
   it('for indefinite scope, effectiveTo is null on submit', async () => {
     const onSubmit = vi.fn()
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], onSubmit))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], onSubmit))
 
     act(() => {
       result.current.setValue('scope', 'indefinite', { shouldValidate: true })
@@ -172,7 +172,7 @@ describe('useOverrideScopeDialog', () => {
 
   it('for single_date scope, effectiveTo on submit is null (resolved from effectiveFrom)', async () => {
     const onSubmit = vi.fn()
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], onSubmit))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], onSubmit))
 
     act(() => {
       result.current.setValue('effectiveFrom', '2026-03-10', { shouldValidate: true })
@@ -193,7 +193,7 @@ describe('useOverrideScopeDialog', () => {
 
   it('passes note from form to onSubmit', async () => {
     const onSubmit = vi.fn()
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], onSubmit))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], onSubmit))
 
     act(() => {
       result.current.setValue('note', 'Clases de inglés', { shouldValidate: true })
@@ -209,7 +209,7 @@ describe('useOverrideScopeDialog', () => {
   })
 
   it('scope watch reflects setValue changes', () => {
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], vi.fn()))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], vi.fn()))
 
     act(() => {
       result.current.setValue('scope', 'range', { shouldValidate: true })
@@ -219,7 +219,7 @@ describe('useOverrideScopeDialog', () => {
   })
 
   it('effectiveFrom watch reflects setValue changes', () => {
-    const { result } = renderHook(() => useOverrideScopeDialog(3, [], vi.fn()))
+    const { result } = renderHook(() => useOverrideScopeDialog(true, 3, [], vi.fn()))
 
     act(() => {
       result.current.setValue('effectiveFrom', '2026-06-15', { shouldValidate: true })

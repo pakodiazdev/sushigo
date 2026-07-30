@@ -56,8 +56,8 @@ describe('BranchSelectionDialog', () => {
             switchBranch: mockSwitchBranch,
         })
 
-        const { container } = render(<BranchSelectionDialog />)
-        expect(container.firstChild).toBeNull()
+        render(<BranchSelectionDialog />)
+        expect(screen.queryByText('Seleccionar Sucursal')).toBeNull()
     })
 
     it('renders nothing when admin has only one branch', () => {
@@ -68,8 +68,8 @@ describe('BranchSelectionDialog', () => {
             switchBranch: mockSwitchBranch,
         })
 
-        const { container } = render(<BranchSelectionDialog />)
-        expect(container.firstChild).toBeNull()
+        render(<BranchSelectionDialog />)
+        expect(screen.queryByText('Seleccionar Sucursal')).toBeNull()
     })
 
     it('renders nothing when admin already has a branch selected', () => {
@@ -80,8 +80,8 @@ describe('BranchSelectionDialog', () => {
             switchBranch: mockSwitchBranch,
         })
 
-        const { container } = render(<BranchSelectionDialog />)
-        expect(container.firstChild).toBeNull()
+        render(<BranchSelectionDialog />)
+        expect(screen.queryByText('Seleccionar Sucursal')).toBeNull()
     })
 
     it('renders dialog when admin has multiple branches and none selected', () => {

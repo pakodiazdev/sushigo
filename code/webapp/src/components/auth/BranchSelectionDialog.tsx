@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Building2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 import type { Branch } from '@/types/auth'
 
 export function BranchSelectionDialog() {
@@ -31,21 +33,24 @@ export function BranchSelectionDialog() {
         }
     }
 
-    if (!isOpen || !isAdmin || availableBranches.length <= 1) {
+    // Mandatory choice — no ESC/backdrop dismissal, matches the previous behavior.
+    const { visible, backdropCls, panelCls } = useDialogTransition(isOpen, { lockScroll: true })
+
+    if (!visible || !isAdmin || availableBranches.length <= 1) {
         return null
     }
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+    const content = (
+        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm ${backdropCls}`}>
+            <div className={`relative w-full max-w-md rounded-lg border border-border bg-background shadow-xl mx-4 p-6 ${panelCls}`}>
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
                         <Building2 className="h-5 w-5" />
                         Seleccionar Sucursal
                     </h2>
                 </div>
 
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                <p className="text-sm text-muted-foreground mb-6">
                     Como administrador, puedes gestionar múltiples sucursales. Por favor, selecciona la sucursal que deseas administrar.
                 </p>
 
@@ -92,4 +97,6 @@ export function BranchSelectionDialog() {
             </div>
         </div>
     )
+
+    return createPortal(content, document.body)
 }
