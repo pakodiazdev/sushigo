@@ -66,7 +66,7 @@ export function SlidePanel({
   animationDuration = SLIDE_PANEL_DEFAULT_DURATION_MS,
   autoScrollOnFocus = true,
   scrollMargin = SLIDE_PANEL_DEFAULT_SCROLL_MARGIN,
-}: SlidePanelProps) {
+}: Readonly<SlidePanelProps>) {
   const panelRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)

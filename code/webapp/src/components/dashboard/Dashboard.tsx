@@ -104,7 +104,7 @@ const fetchDashboardData = async (): Promise<DashboardData> => {
     };
 };
 
-function StatCard({ stat }: { stat: Stat }) {
+function StatCard({ stat }: Readonly<{ stat: Stat }>) {
     const Icon = stat.icon;
     const isPositive = stat.trending === 'up';
 
@@ -136,7 +136,7 @@ function StatCard({ stat }: { stat: Stat }) {
     );
 }
 
-function SessionCard({ session, onRegisterAdjustment }: { session: CashSession; onRegisterAdjustment: (id: string) => void }) {
+function SessionCard({ session, onRegisterAdjustment }: Readonly<{ session: CashSession; onRegisterAdjustment: (id: string) => void }>) {
     // Usar el current_balance que viene directamente de la sesión (calculado en el backend)
     const currentBalance = session.current_balance || session.opening_balance || '0.00';
 

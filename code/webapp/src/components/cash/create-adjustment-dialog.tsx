@@ -31,7 +31,7 @@ export function CreateAdjustmentDialog({
   onClose,
   onSuccess,
   cashSessionId: preselectedSessionId,
-}: CreateAdjustmentDialogProps) {
+}: Readonly<CreateAdjustmentDialogProps>) {
   // Form state
   const [cashSessionId, setCashSessionId] = useState<string>(preselectedSessionId || '')
   const [type, setType] = useState<AdjustmentType>(AdjustmentType.EXTERNAL_IMPORT)

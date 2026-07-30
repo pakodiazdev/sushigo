@@ -27,7 +27,7 @@ interface BreadcrumbsProps {
  * ]} />
  * ```
  */
-export function Breadcrumbs({ className, items }: BreadcrumbsProps) {
+export function Breadcrumbs({ className, items }: Readonly<BreadcrumbsProps>) {
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
 

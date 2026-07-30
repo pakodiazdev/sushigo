@@ -30,7 +30,7 @@ interface LocationFormProps {
   onCancel: () => void
 }
 
-export function LocationForm({ location, onSuccess, onCancel }: LocationFormProps) {
+export function LocationForm({ location, onSuccess, onCancel }: Readonly<LocationFormProps>) {
   const isEditing = !!location
 
   // Use shared query hook for operating units

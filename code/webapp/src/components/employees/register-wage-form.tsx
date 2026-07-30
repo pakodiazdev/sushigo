@@ -17,7 +17,7 @@ interface RegisterWageFormProps {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWageFormProps) {
+export function RegisterWageForm({ employeeId, onSuccess, onCancel }: Readonly<RegisterWageFormProps>) {
     const createWage = useCreateWage()
 
     const {

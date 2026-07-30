@@ -25,7 +25,7 @@ export function LocationDetails({
   location,
   onEdit,
   onDelete,
-}: LocationDetailsProps) {
+}: Readonly<LocationDetailsProps>) {
   // Fetch stock summary for this location
   const { data: stockData } = useQuery({
     queryKey: ['stock-by-location', location.id],

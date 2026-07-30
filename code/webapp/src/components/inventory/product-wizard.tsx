@@ -90,7 +90,7 @@ function getStepCircleClass(isComplete: boolean, isCurrent: boolean): string {
     return 'border-gray-300 bg-white'
 }
 
-export function ProductWizard({ onSuccess, onCancel }: ProductWizardProps) {
+export function ProductWizard({ onSuccess, onCancel }: Readonly<ProductWizardProps>) {
     const { showSuccess, showError } = useToast()
     const [currentStep, setCurrentStep] = useState(1)
     const [wizardData, setWizardData] = useState<WizardData>(INITIAL_DATA)

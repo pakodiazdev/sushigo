@@ -11,7 +11,7 @@ interface CashRegisterTypeBadgeProps {
     className?: string
 }
 
-export function CashRegisterTypeBadge({ type, className }: CashRegisterTypeBadgeProps) {
+export function CashRegisterTypeBadge({ type, className }: Readonly<CashRegisterTypeBadgeProps>) {
     const variants: Record<CashRegisterType, { label: string; className: string }> = {
         [CashRegisterType.ON_PREMISE]: {
             label: 'Local',
@@ -45,7 +45,7 @@ interface SessionStatusBadgeProps {
     className?: string
 }
 
-export function SessionStatusBadge({ status, className }: SessionStatusBadgeProps) {
+export function SessionStatusBadge({ status, className }: Readonly<SessionStatusBadgeProps>) {
     const variants: Record<SessionStatus, { label: string; className: string }> = {
         [SessionStatus.DRAFT]: {
             label: 'En proceso',
@@ -75,7 +75,7 @@ interface TenderTypeBadgeProps {
     className?: string
 }
 
-export function TenderTypeBadge({ type, className }: TenderTypeBadgeProps) {
+export function TenderTypeBadge({ type, className }: Readonly<TenderTypeBadgeProps>) {
     const variants: Record<TenderType, { label: string; className: string }> = {
         [TenderType.CASH]: {
             label: 'Efectivo',
@@ -110,7 +110,7 @@ interface AdjustmentTypeBadgeProps {
     className?: string
 }
 
-export function AdjustmentTypeBadge({ type, direction, className }: AdjustmentTypeBadgeProps) {
+export function AdjustmentTypeBadge({ type, direction, className }: Readonly<AdjustmentTypeBadgeProps>) {
     const isInflow = direction === Direction.INFLOW
 
     const variants: Record<AdjustmentType, { label: string; inflowClass: string; outflowClass: string }> = {

@@ -43,7 +43,7 @@ export function Toast({
   variant = 'info',
   duration = 5000,
   onClose,
-}: ToastProps) {
+}: Readonly<ToastProps>) {
   const style = variantStyles[variant]
   const Icon = style.iconComponent
 

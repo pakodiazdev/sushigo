@@ -23,7 +23,7 @@ interface WageHistoryCardProps {
     wage: WageHistory
 }
 
-export function WageHistoryCard({ wage }: WageHistoryCardProps) {
+export function WageHistoryCard({ wage }: Readonly<WageHistoryCardProps>) {
     const isActive = !wage.effective_to
     const weeklyGross = Number.parseFloat(wage.hourly_rate) * wage.weekly_scheduled_hours
 

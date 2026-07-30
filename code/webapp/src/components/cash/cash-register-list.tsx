@@ -11,7 +11,7 @@ interface CashRegisterListProps {
     onCreate: () => void
 }
 
-export function CashRegisterList({ onEdit, onCreate }: CashRegisterListProps) {
+export function CashRegisterList({ onEdit, onCreate }: Readonly<CashRegisterListProps>) {
     const { data, isLoading } = useCashRegisters({ per_page: 20, page: 1 })
 
     const columns: Column<CashRegister>[] = [

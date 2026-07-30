@@ -15,7 +15,7 @@ interface EmploymentPeriodCardProps {
   period: EmploymentPeriod
 }
 
-export function EmploymentPeriodCard({ period }: EmploymentPeriodCardProps) {
+export function EmploymentPeriodCard({ period }: Readonly<EmploymentPeriodCardProps>) {
   return (
     <Card>
       <CardContent className="p-4">

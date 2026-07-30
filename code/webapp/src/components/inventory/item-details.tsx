@@ -28,7 +28,7 @@ export function ItemDetails({
   onEdit,
   onDelete,
   onViewVariants,
-}: ItemDetailsProps) {
+}: Readonly<ItemDetailsProps>) {
   // Fetch variants for this item
   const { data: variantsData } = useQuery({
     queryKey: ['item-variants', item.id],

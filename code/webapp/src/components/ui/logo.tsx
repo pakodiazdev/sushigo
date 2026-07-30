@@ -6,7 +6,7 @@ interface LogoProps {
     collapsed?: boolean;
 }
 
-export function Logo({ className, collapsed = false }: LogoProps) {
+export function Logo({ className, collapsed = false }: Readonly<LogoProps>) {
     if (collapsed) {
         return (
             <div className={cn(
@@ -48,7 +48,7 @@ interface LogoIconProps {
     className?: string;
 }
 
-export function LogoIcon({ className }: LogoIconProps) {
+export function LogoIcon({ className }: Readonly<LogoIconProps>) {
     return (
         <div className={cn(
             "w-10 h-10 rounded-full overflow-hidden",
@@ -72,7 +72,7 @@ interface LogoFullProps {
 }
 
 // Versión horizontal del logo (imagen completa sin círculo)
-export function LogoFull({ className, height = 40 }: LogoFullProps) {
+export function LogoFull({ className, height = 40 }: Readonly<LogoFullProps>) {
     return (
         <div className={cn("flex items-center", className)}>
             <img

@@ -50,7 +50,7 @@ export function StockOutForm({
   onCancel,
   preselectedLocationId,
   preselectedVariantId,
-}: StockOutFormProps) {
+}: Readonly<StockOutFormProps>) {
   const { showWarning, showSuccess } = useToast()
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null)
   const [variantStocks, setVariantStocks] = useState<Stock[]>([])
@@ -367,7 +367,7 @@ function getStockPanelTextToneClass(hasInsufficientStock: boolean, hasLowStock: 
   return 'text-blue-900'
 }
 
-function StockInfoPanel({ locationStock, selectedVariant, hasLowStock, hasInsufficientStock }: StockInfoPanelProps) {
+function StockInfoPanel({ locationStock, selectedVariant, hasLowStock, hasInsufficientStock }: Readonly<StockInfoPanelProps>) {
   return (
     <div
       className={`border rounded-lg p-3 text-sm ${getStockPanelToneClass(hasInsufficientStock, hasLowStock)}`}
@@ -425,7 +425,7 @@ interface ProfitAnalysisPanelProps {
   readonly unitCost: number
 }
 
-function ProfitAnalysisPanel({ profitAmount, profitMargin, totalRevenue, totalCost, unitCost }: ProfitAnalysisPanelProps) {
+function ProfitAnalysisPanel({ profitAmount, profitMargin, totalRevenue, totalCost, unitCost }: Readonly<ProfitAnalysisPanelProps>) {
   return (
     <div
       className={`border rounded-lg p-4 ${profitAmount >= 0

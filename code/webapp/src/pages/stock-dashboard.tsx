@@ -409,7 +409,7 @@ function SummaryCard({
   icon: Icon,
   iconColor,
   bgColor,
-}: SummaryCardProps) {
+}: Readonly<SummaryCardProps>) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6">
       <div className="flex items-start justify-between mb-4">

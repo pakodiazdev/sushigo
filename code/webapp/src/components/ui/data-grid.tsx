@@ -108,7 +108,7 @@ export function DataGrid<T extends { id: string | number }>({
   onPerPageChange,
   totalResults,
   skeletonRows = 5,
-}: DataGridProps<T>) {
+}: Readonly<DataGridProps<T>>) {
   function handleSortClick(sortKey: string) {
     if (!onSortChange) return
     const idx = sorting.findIndex(s => s.key === sortKey)

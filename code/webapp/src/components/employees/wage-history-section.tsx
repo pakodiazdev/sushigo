@@ -9,7 +9,7 @@ interface WageHistorySectionProps {
     employeeId: string
 }
 
-export function WageHistorySection({ employeeId }: WageHistorySectionProps) {
+export function WageHistorySection({ employeeId }: Readonly<WageHistorySectionProps>) {
     const [showForm, setShowForm] = useState(false)
     const { data: wages, isLoading, error } = useWageHistory(employeeId)
 

@@ -44,7 +44,7 @@ export function CashRegisterForm({
     isOpen,
     onClose,
     onSuccess,
-}: CashRegisterFormProps) {
+}: Readonly<CashRegisterFormProps>) {
     const isEditing = !!register
 
     const {

@@ -21,7 +21,7 @@ interface WageSummaryProps {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function WageSummary({ weeklySalary, weeklyHours }: WageSummaryProps) {
+export function WageSummary({ weeklySalary, weeklyHours }: Readonly<WageSummaryProps>) {
     const calculations = useWageCalculations({ weeklySalary, weeklyHours })
 
     if (!calculations) {
