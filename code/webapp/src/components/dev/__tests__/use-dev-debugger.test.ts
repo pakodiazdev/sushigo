@@ -602,4 +602,115 @@ describe('useDevDebugger', () => {
             expect(result.current.swaggerDocsUrl).toBe('http://localhost:8080/api/documentation')
         })
     })
+
+    describe('handleDragKeyDown', () => {
+        function fireDragKey(key: string): Partial<React.KeyboardEvent> {
+            const event = { key, preventDefault: vi.fn() }
+            return event
+        }
+
+        it('moves the panel up on ArrowUp', () => {
+            const { result } = renderDebugger()
+            const { x, y } = result.current.state.position
+
+            act(() => {
+                result.current.handleDragKeyDown(fireDragKey('ArrowUp') as React.KeyboardEvent)
+            })
+
+            expect(result.current.state.position).toEqual({ x, y: y - 20 })
+        })
+
+        it('moves the panel down on ArrowDown', () => {
+            const { result } = renderDebugger()
+            const { x, y } = result.current.state.position
+
+            act(() => {
+                result.current.handleDragKeyDown(fireDragKey('ArrowDown') as React.KeyboardEvent)
+            })
+
+            expect(result.current.state.position).toEqual({ x, y: y + 20 })
+        })
+
+        it('moves the panel left on ArrowLeft', () => {
+            const { result } = renderDebugger()
+            const { x, y } = result.current.state.position
+
+            act(() => {
+                result.current.handleDragKeyDown(fireDragKey('ArrowLeft') as React.KeyboardEvent)
+            })
+
+            expect(result.current.state.position).toEqual({ x: x - 20, y })
+        })
+
+        it('moves the panel right on ArrowRight', () => {
+            const { result } = renderDebugger()
+            const { x, y } = result.current.state.position
+
+            act(() => {
+                result.current.handleDragKeyDown(fireDragKey('ArrowRight') as React.KeyboardEvent)
+            })
+
+            expect(result.current.state.position).toEqual({ x: x + 20, y })
+        })
+
+        it('calls preventDefault for arrow keys', () => {
+            const { result } = renderDebugger()
+            const event = fireDragKey('ArrowUp')
+
+            act(() => {
+                result.current.handleDragKeyDown(event as React.KeyboardEvent)
+            })
+
+            expect(event.preventDefault).toHaveBeenCalledTimes(1)
+        })
+
+        it('resets the panel to the default position on Enter', () => {
+            const { result } = renderDebugger()
+
+            act(() => {
+                result.current.handleDragKeyDown(fireDragKey('ArrowDown') as React.KeyboardEvent)
+            })
+            const movedPosition = result.current.state.position
+            const event = fireDragKey('Enter')
+
+            act(() => {
+                result.current.handleDragKeyDown(event as React.KeyboardEvent)
+            })
+
+            expect(result.current.state.position).not.toEqual(movedPosition)
+            expect(result.current.state.position).toEqual({ x: window.innerWidth - 420, y: 100 })
+            expect(event.preventDefault).toHaveBeenCalledTimes(1)
+        })
+
+        it('resets the panel to the default position on Space', () => {
+            const { result } = renderDebugger()
+
+            act(() => {
+                result.current.handleDragKeyDown(fireDragKey('ArrowRight') as React.KeyboardEvent)
+            })
+            const movedPosition = result.current.state.position
+            const event = fireDragKey(' ')
+
+            act(() => {
+                result.current.handleDragKeyDown(event as React.KeyboardEvent)
+            })
+
+            expect(result.current.state.position).not.toEqual(movedPosition)
+            expect(result.current.state.position).toEqual({ x: window.innerWidth - 420, y: 100 })
+            expect(event.preventDefault).toHaveBeenCalledTimes(1)
+        })
+
+        it('does nothing for keys that are neither arrows nor Enter/Space', () => {
+            const { result } = renderDebugger()
+            const position = result.current.state.position
+            const event = fireDragKey('Tab')
+
+            act(() => {
+                result.current.handleDragKeyDown(event as React.KeyboardEvent)
+            })
+
+            expect(result.current.state.position).toEqual(position)
+            expect(event.preventDefault).not.toHaveBeenCalled()
+        })
+    })
 })

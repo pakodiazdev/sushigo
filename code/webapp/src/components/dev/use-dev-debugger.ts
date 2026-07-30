@@ -21,6 +21,14 @@ export type { DevUser } from '@/services/dev-api'
 
 const STORAGE_KEY = 'dev_debugger_state'
 const MOBILE_BREAKPOINT_QUERY = '(max-width: 767px)'
+const DRAG_KEY_STEP = 20
+
+const DRAG_KEY_DELTAS: Record<string, { x: number; y: number }> = {
+    ArrowUp: { x: 0, y: -DRAG_KEY_STEP },
+    ArrowDown: { x: 0, y: DRAG_KEY_STEP },
+    ArrowLeft: { x: -DRAG_KEY_STEP, y: 0 },
+    ArrowRight: { x: DRAG_KEY_STEP, y: 0 },
+}
 
 /** DOM id used to scroll a given section into view — shared between the hook and the Section component. */
 export function sectionElementId(section: keyof DebuggerState['expandedSections']): string {
@@ -211,7 +219,7 @@ export function useDevDebugger() {
         }
     }, [isDragging, dragOffset])
 
-    const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    const handleMouseDown = (event: React.MouseEvent<HTMLElement>) => {
         if (!dragRef.current) return
 
         const rect = dragRef.current.getBoundingClientRect()
@@ -220,6 +228,32 @@ export function useDevDebugger() {
             y: event.clientY - rect.top,
         })
         setIsDragging(true)
+    }
+
+    /**
+     * Keyboard equivalent for the mouse-drag handles — arrow keys reposition the panel, and
+     * Enter/Space reset it to the default corner. The reset gives the handle's `role="button"`
+     * a real activation effect (per ARIA button semantics) and doubles as recovery if the panel
+     * gets dragged off-screen.
+     */
+    const handleDragKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setState((prev) => ({ ...prev, position: getDefaultState().position }))
+            return
+        }
+
+        const delta = DRAG_KEY_DELTAS[event.key]
+        if (!delta) return
+
+        event.preventDefault()
+        setState((prev) => ({
+            ...prev,
+            position: {
+                x: prev.position.x + delta.x,
+                y: prev.position.y + delta.y,
+            },
+        }))
     }
 
     const toggleSection = (section: keyof DebuggerState['expandedSections']) => {
@@ -336,6 +370,7 @@ export function useDevDebugger() {
         isMobile,
         swaggerDocsUrl: getSwaggerDocsUrl(),
         handleMouseDown,
+        handleDragKeyDown,
         toggleSection,
         toggleMinimized,
         jumpToSection,

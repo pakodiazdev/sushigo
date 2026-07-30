@@ -62,6 +62,7 @@ export function DevDebugger() {
         isMobile,
         swaggerDocsUrl,
         handleMouseDown,
+        handleDragKeyDown,
         toggleSection,
         toggleMinimized,
         jumpToSection,
@@ -122,6 +123,7 @@ export function DevDebugger() {
                 dragRef={dragRef}
                 position={state.position}
                 handleMouseDown={handleMouseDown}
+                handleDragKeyDown={handleDragKeyDown}
                 toggleMinimized={toggleMinimized}
                 renderQuickLinks={renderQuickLinks}
             />
@@ -143,37 +145,14 @@ export function DevDebugger() {
             }
             data-testid="dev-debugger"
         >
-            <div
-                className={`bg-blue-600 px-4 py-2 flex items-center justify-between ${isMobile ? '' : 'cursor-move'}`}
-                onMouseDown={isMobile ? undefined : handleMouseDown}
-            >
-                <div className="flex items-center gap-2">
-                    <Bug className="h-5 w-5" />
-                    <span className="font-semibold text-sm">Dev Debugger</span>
-                </div>
-                <div className="flex items-center gap-1 min-w-0">
-                    {isMobile && (
-                        <div className="flex items-center gap-1 overflow-x-auto">{renderQuickLinks('hover:bg-blue-700')}</div>
-                    )}
-                    <button
-                        type="button"
-                        onClick={refreshQueries}
-                        className="p-1 hover:bg-blue-700 rounded shrink-0"
-                        title="Refresh all queries"
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={toggleMinimized}
-                        className="p-1 hover:bg-blue-700 rounded shrink-0"
-                        title="Minimize debugger"
-                        aria-label="Minimize debugger"
-                    >
-                        <MinusCircle className="h-4 w-4" />
-                    </button>
-                </div>
-            </div>
+            <DebuggerHeader
+                isMobile={isMobile}
+                handleMouseDown={handleMouseDown}
+                handleDragKeyDown={handleDragKeyDown}
+                refreshQueries={refreshQueries}
+                toggleMinimized={toggleMinimized}
+                renderQuickLinks={renderQuickLinks}
+            />
 
             {gitBranch && (
                 <div className="bg-gray-950 px-4 py-1.5 flex items-center gap-2 text-xs font-mono border-b border-gray-700">
@@ -315,6 +294,62 @@ export function DevDebugger() {
     )
 }
 
+interface DebuggerHeaderProps {
+    readonly isMobile: boolean
+    readonly handleMouseDown: (event: React.MouseEvent<HTMLElement>) => void
+    readonly handleDragKeyDown: (event: React.KeyboardEvent) => void
+    readonly refreshQueries: () => void
+    readonly toggleMinimized: () => void
+    readonly renderQuickLinks: (hoverBgClass: string) => React.ReactNode
+}
+
+function DebuggerHeader({
+    isMobile,
+    handleMouseDown,
+    handleDragKeyDown,
+    refreshQueries,
+    toggleMinimized,
+    renderQuickLinks,
+}: Readonly<DebuggerHeaderProps>) {
+    return (
+        <div className="bg-blue-600 px-4 py-2 flex items-center justify-between">
+            <div
+                className={`flex-1 flex items-center gap-2 ${isMobile ? '' : 'cursor-move'}`}
+                onMouseDown={isMobile ? undefined : handleMouseDown}
+                onKeyDown={isMobile ? undefined : handleDragKeyDown}
+                role={isMobile ? undefined : 'button'}
+                tabIndex={isMobile ? undefined : 0}
+                aria-label={isMobile ? undefined : 'Mover panel de depuración'}
+            >
+                <Bug className="h-5 w-5" />
+                <span className="font-semibold text-sm">Dev Debugger</span>
+            </div>
+            <div className="flex items-center gap-1 min-w-0">
+                {isMobile && (
+                    <div className="flex items-center gap-1 overflow-x-auto">{renderQuickLinks('hover:bg-blue-700')}</div>
+                )}
+                <button
+                    type="button"
+                    onClick={refreshQueries}
+                    className="p-1 hover:bg-blue-700 rounded shrink-0"
+                    title="Refresh all queries"
+                >
+                    <RefreshCw className="h-4 w-4" />
+                </button>
+                <button
+                    type="button"
+                    onClick={toggleMinimized}
+                    className="p-1 hover:bg-blue-700 rounded shrink-0"
+                    title="Minimize debugger"
+                    aria-label="Minimize debugger"
+                >
+                    <MinusCircle className="h-4 w-4" />
+                </button>
+            </div>
+        </div>
+    )
+}
+
 const ROLE_COLORS: Record<string, string> = {
     'super-admin': 'bg-red-500/20 text-red-300 border-red-500/40',
     admin: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
@@ -401,12 +436,13 @@ interface MinimizedDebuggerProps {
     readonly isMobile: boolean
     readonly dragRef: React.RefObject<HTMLDivElement | null>
     readonly position: { x: number; y: number }
-    readonly handleMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void
+    readonly handleMouseDown: (event: React.MouseEvent<HTMLElement>) => void
+    readonly handleDragKeyDown: (event: React.KeyboardEvent) => void
     readonly toggleMinimized: () => void
     readonly renderQuickLinks: (hoverBgClass: string) => React.ReactNode
 }
 
-function MinimizedDebugger({ isMobile, dragRef, position, handleMouseDown, toggleMinimized, renderQuickLinks }: Readonly<MinimizedDebuggerProps>) {
+function MinimizedDebugger({ isMobile, dragRef, position, handleMouseDown, handleDragKeyDown, toggleMinimized, renderQuickLinks }: Readonly<MinimizedDebuggerProps>) {
     if (isMobile) {
         return (
             <div
@@ -441,13 +477,20 @@ function MinimizedDebugger({ isMobile, dragRef, position, handleMouseDown, toggl
         <div
             ref={dragRef}
             style={{ left: position.x, top: position.y }}
-            className="fixed z-[9999] cursor-move"
+            className="fixed z-[9999]"
             data-testid="dev-debugger"
-            onMouseDown={handleMouseDown}
         >
             <div className="bg-gray-900 text-white rounded-lg shadow-2xl p-3 flex items-center gap-2 border-2 border-blue-500">
-                <Bug className="h-5 w-5 text-blue-400" />
-                <span className="text-sm font-mono">Debugger</span>
+                <button
+                    type="button"
+                    className="flex-1 flex items-center gap-2 cursor-move"
+                    onMouseDown={handleMouseDown}
+                    onKeyDown={handleDragKeyDown}
+                    aria-label="Mover panel de depuración"
+                >
+                    <Bug className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm font-mono">Debugger</span>
+                </button>
                 <button
                     type="button"
                     onClick={toggleMinimized}
