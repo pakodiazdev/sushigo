@@ -136,12 +136,12 @@ function StatCard({ stat }: Readonly<{ stat: Stat }>) {
     );
 }
 
-function SessionCard({ session, onRegisterAdjustment }: Readonly<{ session: CashSession; onRegisterAdjustment: (id: string) => void }>) {
+function SessionCard({ session, onRegisterAdjustment, onViewDetail }: Readonly<{ session: CashSession; onRegisterAdjustment: (id: string) => void; onViewDetail: (id: string) => void }>) {
     // Usar el current_balance que viene directamente de la sesión (calculado en el backend)
     const currentBalance = session.current_balance || session.opening_balance || '0.00';
 
     return (
-        <div className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent/50 transition-colors">
+        <div data-testid="cash-session-card" className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent/50 transition-colors">
             <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold">
@@ -176,7 +176,7 @@ function SessionCard({ session, onRegisterAdjustment }: Readonly<{ session: Cash
                     <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => { }/* TODO: Navigate to session detail */}
+                        onClick={() => onViewDetail(session.id)}
                     >
                         <Eye className="mr-2 h-4 w-4" />
                         Ver Detalles
@@ -219,6 +219,10 @@ export default function Dashboard() {
     const handleSessionSuccess = (sessionId: string) => {
         console.log('Sesión creada:', sessionId);
         alert('¡Sesión de caja abierta exitosamente!');
+    };
+
+    const handleViewSessionDetail = (sessionId: string) => {
+        navigate({ to: '/cash/sessions/$sessionId', params: { sessionId } });
     };
 
     const handleCreateAdjustment = (sessionId?: string) => {
@@ -291,6 +295,7 @@ export default function Dashboard() {
                         key={session.id}
                         session={session}
                         onRegisterAdjustment={handleCreateAdjustment}
+                        onViewDetail={handleViewSessionDetail}
                     />
                 ))}
             </div>

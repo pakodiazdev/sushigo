@@ -66,6 +66,16 @@ describe('formatDate', () => {
         expect(formatDate('2026-06-15T12:00:00').toLowerCase()).toContain('junio')
         expect(formatDate('2026-12-15T12:00:00').toLowerCase()).toContain('diciembre')
     })
+
+    it('does not shift a date-only string to the previous day under negative UTC offsets', () => {
+        // A plain YYYY-MM-DD string parses as UTC midnight per spec, which under a
+        // negative UTC offset (e.g. America/Mexico_City, UTC-6) would render as the
+        // previous day unless normalized to local midnight first.
+        const result = formatDate('2026-07-24')
+        expect(result.toLowerCase()).toContain('julio')
+        expect(result).toContain('24')
+        expect(result).toContain('2026')
+    })
 })
 
 describe('formatDateTime', () => {

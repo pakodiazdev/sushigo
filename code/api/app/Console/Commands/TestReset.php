@@ -11,6 +11,7 @@ use Database\Seeders\Testing\AttendanceAbsentStatCardSeeder;
 use Database\Seeders\Testing\AttendanceLunchStatTabSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
 use Database\Seeders\Testing\AttendanceTodayLeaveSeeder;
+use Database\Seeders\Testing\CashSessionDetailSeeder;
 use Database\Seeders\Testing\CloseDayHappyPathSeeder;
 use Database\Seeders\Testing\CloseDayPendingLunchSeeder;
 use Database\Seeders\Testing\CoreTestSeeder;
@@ -103,6 +104,9 @@ class TestReset extends Command
             PayrollPreviewSeeder::class,
             PayrollClosedPeriodSeeder::class,
             PayrollPeriodHistorySeeder::class,
+        ],
+        'cash-session-detail' => [
+            CashSessionDetailSeeder::class,
         ],
     ];
 
