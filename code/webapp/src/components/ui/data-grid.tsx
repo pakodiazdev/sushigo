@@ -226,6 +226,32 @@ export function DataGrid<T extends { id: string | number }>({
 
   const showFooter = pagination || (totalResults != null) || onPerPageChange
 
+  let resultsInfo: React.ReactNode = null
+  if (totalResults != null && pagination && perPage) {
+    resultsInfo = (
+      <p className="text-sm text-muted-foreground">
+        Mostrando{' '}
+        <span className="font-medium text-foreground">
+          {(pagination.currentPage - 1) * perPage + 1}
+        </span>
+        {' '}-{' '}
+        <span className="font-medium text-foreground">
+          {Math.min(pagination.currentPage * perPage, totalResults)}
+        </span>
+        {' '}de{' '}
+        <span className="font-medium text-foreground">{totalResults}</span>
+        {' '}resultados
+      </p>
+    )
+  } else if (pagination) {
+    resultsInfo = (
+      <p className="text-sm text-muted-foreground">
+        Page <span className="font-medium text-foreground">{pagination.currentPage}</span>{' '}
+        of <span className="font-medium text-foreground">{pagination.totalPages}</span>
+      </p>
+    )
+  }
+
   return (
     <div className={cn('flex flex-col', className)}>
       <div className="overflow-x-auto">
@@ -352,26 +378,7 @@ export function DataGrid<T extends { id: string | number }>({
           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
             {/* Left: results info */}
             <div>
-              {totalResults != null && pagination && perPage ? (
-                <p className="text-sm text-muted-foreground">
-                  Mostrando{' '}
-                  <span className="font-medium text-foreground">
-                    {(pagination.currentPage - 1) * perPage + 1}
-                  </span>
-                  {' '}-{' '}
-                  <span className="font-medium text-foreground">
-                    {Math.min(pagination.currentPage * perPage, totalResults)}
-                  </span>
-                  {' '}de{' '}
-                  <span className="font-medium text-foreground">{totalResults}</span>
-                  {' '}resultados
-                </p>
-              ) : pagination ? (
-                <p className="text-sm text-muted-foreground">
-                  Page <span className="font-medium text-foreground">{pagination.currentPage}</span>{' '}
-                  of <span className="font-medium text-foreground">{pagination.totalPages}</span>
-                </p>
-              ) : null}
+              {resultsInfo}
             </div>
 
             {/* Right: per-page + pagination nav */}

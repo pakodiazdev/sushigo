@@ -285,32 +285,40 @@ export function EmployeeEditCreateForm({
         <Controller
           name="roles"
           control={control}
-          render={({ field }) => (
-            <div className="grid grid-cols-2 gap-3 rounded-md border border-input p-3">
-              {assignableRolesLoading ? (
+          render={({ field }) => {
+            let rolesContent: React.ReactNode
+            if (assignableRolesLoading) {
+              rolesContent = (
                 <div className="col-span-2 flex items-center justify-center py-4 text-sm text-muted-foreground">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Cargando puestos...
                 </div>
-              ) : assignableRolesError ? (
+              )
+            } else if (assignableRolesError) {
+              rolesContent = (
                 <p className="col-span-2 text-sm text-destructive">
                   Error al cargar puestos. Recarga la página.
                 </p>
-              ) : (
-                assignableRoles.map((role) => (
-                  <ToggleSwitch
-                    key={role}
-                    label={EMPLOYEE_POSITION_ROLES[role as EmployeePositionRole] || role}
-                    checked={(rolesValue || []).includes(role)}
-                    onChange={(checked) => {
-                      const currentRoles = (field.value as string[]) || []
-                      field.onChange(checked ? addRole(currentRoles, role) : removeRole(currentRoles, role))
-                    }}
-                  />
-                ))
-              )}
-            </div>
-          )}
+              )
+            } else {
+              rolesContent = assignableRoles.map((role) => (
+                <ToggleSwitch
+                  key={role}
+                  label={EMPLOYEE_POSITION_ROLES[role as EmployeePositionRole] || role}
+                  checked={(rolesValue || []).includes(role)}
+                  onChange={(checked) => {
+                    const currentRoles = (field.value as string[]) || []
+                    field.onChange(checked ? addRole(currentRoles, role) : removeRole(currentRoles, role))
+                  }}
+                />
+              ))
+            }
+            return (
+              <div className="grid grid-cols-2 gap-3 rounded-md border border-input p-3">
+                {rolesContent}
+              </div>
+            )
+          }}
         />
       </FormField>
 

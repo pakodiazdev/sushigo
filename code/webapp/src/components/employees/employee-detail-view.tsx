@@ -71,6 +71,7 @@ export function EmployeeDetailView({
 
   const permissionManager = usePermissionManager(employee.id)
   const canManagePermissions = useAuthStore((s) => s.can('users.update') && s.can('users.show'))
+  const ToggleActiveIcon = employee.is_active ? PowerOff : Power
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -197,10 +198,8 @@ export function EmployeeDetailView({
           >
             {isTogglingActive ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : employee.is_active ? (
-              <PowerOff className="mr-2 h-4 w-4" />
             ) : (
-              <Power className="mr-2 h-4 w-4" />
+              <ToggleActiveIcon className="mr-2 h-4 w-4" />
             )}
             {employee.is_active ? 'Deshabilitar' : 'Habilitar'}
           </Button>
