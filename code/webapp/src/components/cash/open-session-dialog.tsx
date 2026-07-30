@@ -67,7 +67,7 @@ export function OpenSessionDialog({
     if (!operatingDate) {
       newErrors.operating_date = 'La fecha de operación es requerida'
     }
-    if (openingBalance && parseFloat(openingBalance) < 0) {
+    if (openingBalance && Number.parseFloat(openingBalance) < 0) {
       newErrors.opening_balance = 'El fondo inicial no puede ser negativo'
     }
 

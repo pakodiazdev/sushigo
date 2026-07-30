@@ -31,9 +31,9 @@ export function calculateCurrentBalance(
   }
 
   // Caso fallback: calcular manualmente
-  const opening = parseFloat(session.opening_balance || '0')
-  const incomes = parseFloat(summary.total_incomes || '0')
-  const expenses = parseFloat(summary.total_expenses || '0')
+  const opening = Number.parseFloat(session.opening_balance || '0')
+  const incomes = Number.parseFloat(summary.total_incomes || '0')
+  const expenses = Number.parseFloat(summary.total_expenses || '0')
 
   console.log('[calculateCurrentBalance] Manual calculation:', {
     opening,
@@ -70,8 +70,8 @@ export function calculateVariance(
   currentBalance: string,
   expectedBalance: string
 ): number {
-  const current = parseFloat(currentBalance)
-  const expected = parseFloat(expectedBalance)
+  const current = Number.parseFloat(currentBalance)
+  const expected = Number.parseFloat(expectedBalance)
 
   return current - expected
 }
@@ -83,9 +83,9 @@ export function calculateVariance(
  * @returns Monto formateado como "$1,234.56"
  */
 export function formatCurrency(amount: string | number): string {
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+  const numericAmount = typeof amount === 'string' ? Number.parseFloat(amount) : amount
 
-  if (isNaN(numericAmount)) {
+  if (Number.isNaN(numericAmount)) {
     return '$0.00'
   }
 

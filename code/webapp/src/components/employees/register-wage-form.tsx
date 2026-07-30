@@ -74,7 +74,7 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
                                 step="0.001"
                                 min="0"
                                 value={weeklySalaryBruto || ''}
-                                onChange={(e) => handleBrutoChange(parseFloat(e.target.value) || 0)}
+                                onChange={(e) => handleBrutoChange(Number.parseFloat(e.target.value) || 0)}
                                 className={`w-full rounded-md border bg-background px-3 py-1.5 text-sm ${weeklySalaryError ? 'border-red-500' : 'border-input'
                                     } ${activeInput === 'bruto' ? 'ring-2 ring-blue-500' : ''}`}
                                 placeholder="2,400"
@@ -95,7 +95,7 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
                                 step="0.001"
                                 min="0"
                                 value={dailySalary || ''}
-                                onChange={(e) => handleDailySalaryChange(parseFloat(e.target.value) || 0)}
+                                onChange={(e) => handleDailySalaryChange(Number.parseFloat(e.target.value) || 0)}
                                 className={`w-full rounded-md border bg-background px-3 py-1.5 text-sm border-input ${activeInput === 'diario' ? 'ring-2 ring-purple-500' : ''
                                     }`}
                                 placeholder="342.86"
@@ -116,7 +116,7 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
                                 step="0.001"
                                 min="0"
                                 value={weeklySalaryNeto || ''}
-                                onChange={(e) => handleNetoChange(parseFloat(e.target.value) || 0)}
+                                onChange={(e) => handleNetoChange(Number.parseFloat(e.target.value) || 0)}
                                 className={`w-full rounded-md border bg-background px-3 py-1.5 text-sm border-input ${activeInput === 'neto' ? 'ring-2 ring-green-500' : ''
                                     }`}
                                 placeholder="2,100"
@@ -148,7 +148,7 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
                             max="60"
                             step="0.001"
                             value={formData.weekly_scheduled_hours}
-                            onChange={(e) => handleWeeklyHoursChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => handleWeeklyHoursChange(Number.parseFloat(e.target.value) || 0)}
                             className={`w-full rounded-md border bg-background px-3 py-1.5 text-sm ${errors.weekly_scheduled_hours ? 'border-red-500' : 'border-input'
                                 }`}
                         />
@@ -175,7 +175,7 @@ export function RegisterWageForm({ employeeId, onSuccess, onCancel }: RegisterWa
                             step="0.001"
                             min="0"
                             value={formData.hourly_rate || ''}
-                            onChange={(e) => handleHourlyRateChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => handleHourlyRateChange(Number.parseFloat(e.target.value) || 0)}
                             className={`w-full rounded-md border bg-background px-3 py-1.5 text-sm ${errors.hourly_rate ? 'border-red-500' : 'border-input'
                                 }`}
                             placeholder="0.00"
