@@ -46,7 +46,7 @@ export function BankAccountForm({
     isOpen,
     onClose,
     onSuccess,
-}: BankAccountFormProps) {
+}: Readonly<BankAccountFormProps>) {
     const isEditing = !!account
 
     const {

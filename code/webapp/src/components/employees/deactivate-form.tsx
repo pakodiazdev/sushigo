@@ -17,7 +17,7 @@ interface DeactivateFormProps {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function DeactivateForm({ isLoading, onSubmit, onCancel }: DeactivateFormProps) {
+export function DeactivateForm({ isLoading, onSubmit, onCancel }: Readonly<DeactivateFormProps>) {
   const { form, today } = useDeactivateForm()
   const {
     register,

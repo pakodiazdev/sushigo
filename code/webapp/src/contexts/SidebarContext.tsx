@@ -5,7 +5,7 @@ interface SidebarProviderProps {
     children: ReactNode;
 }
 
-export function SidebarProvider({ children }: SidebarProviderProps) {
+export function SidebarProvider({ children }: Readonly<SidebarProviderProps>) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 

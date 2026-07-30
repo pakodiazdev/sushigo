@@ -348,7 +348,7 @@ interface SectionProps {
     readonly children: React.ReactNode
 }
 
-function Section({ id, icon: Icon, title, isExpanded, onToggle, badge, children }: SectionProps) {
+function Section({ id, icon: Icon, title, isExpanded, onToggle, badge, children }: Readonly<SectionProps>) {
     return (
         <div id={id} className="bg-gray-800 rounded-lg overflow-hidden">
             <button
@@ -386,7 +386,7 @@ interface InfoRowProps {
     highlight?: boolean
 }
 
-function InfoRow({ label, value, highlight }: InfoRowProps) {
+function InfoRow({ label, value, highlight }: Readonly<InfoRowProps>) {
     return (
         <div className="flex justify-between items-center gap-3">
             <span className="text-gray-400">{label}:</span>
@@ -406,7 +406,7 @@ interface MinimizedDebuggerProps {
     readonly renderQuickLinks: (hoverBgClass: string) => React.ReactNode
 }
 
-function MinimizedDebugger({ isMobile, dragRef, position, handleMouseDown, toggleMinimized, renderQuickLinks }: MinimizedDebuggerProps) {
+function MinimizedDebugger({ isMobile, dragRef, position, handleMouseDown, toggleMinimized, renderQuickLinks }: Readonly<MinimizedDebuggerProps>) {
     if (isMobile) {
         return (
             <div
@@ -466,7 +466,7 @@ interface RolesPermissionsSectionProps {
     readonly isAdmin: boolean
 }
 
-function RolesPermissionsSection({ user, isAdmin }: RolesPermissionsSectionProps) {
+function RolesPermissionsSection({ user, isAdmin }: Readonly<RolesPermissionsSectionProps>) {
     if (!user) {
         return <p className="text-xs text-gray-400">No autenticado</p>
     }
@@ -548,7 +548,7 @@ function DevLoginSection({
     isLoadingDevUsers,
     loggingInUserId,
     onLogin,
-}: DevLoginSectionProps) {
+}: Readonly<DevLoginSectionProps>) {
     const [permissionInputFocused, setPermissionInputFocused] = useState(false)
 
     let permissionDropdownItems: string[] = []

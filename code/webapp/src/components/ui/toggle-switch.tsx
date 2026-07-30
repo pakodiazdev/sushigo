@@ -7,7 +7,7 @@ interface ToggleSwitchProps {
     disabled?: boolean
 }
 
-export function ToggleSwitch({ label, checked, onChange, disabled = false }: ToggleSwitchProps) {
+export function ToggleSwitch({ label, checked, onChange, disabled = false }: Readonly<ToggleSwitchProps>) {
     const id = useId()
 
     return (

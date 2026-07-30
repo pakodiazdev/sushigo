@@ -5,7 +5,7 @@ export interface DropdownMenuProps {
   children: React.ReactNode
 }
 
-export function DropdownMenu({ children }: DropdownMenuProps) {
+export function DropdownMenu({ children }: Readonly<DropdownMenuProps>) {
   return <div className="relative inline-block">{children}</div>
 }
 
@@ -13,7 +13,7 @@ export interface DropdownMenuTriggerProps extends React.ButtonHTMLAttributes<HTM
   children: React.ReactNode
 }
 
-export function DropdownMenuTrigger({ children, className, ...props }: DropdownMenuTriggerProps) {
+export function DropdownMenuTrigger({ children, className, ...props }: Readonly<DropdownMenuTriggerProps>) {
   return (
     <button
       type="button"
@@ -31,7 +31,7 @@ export interface DropdownMenuContentProps {
   open?: boolean
 }
 
-export function DropdownMenuContent({ children, align = 'right', open }: DropdownMenuContentProps) {
+export function DropdownMenuContent({ children, align = 'right', open }: Readonly<DropdownMenuContentProps>) {
   if (!open) return null
 
   return (
@@ -51,7 +51,7 @@ export interface DropdownMenuItemProps extends React.ButtonHTMLAttributes<HTMLBu
   icon?: React.ReactNode
 }
 
-export function DropdownMenuItem({ children, icon, className, ...props }: DropdownMenuItemProps) {
+export function DropdownMenuItem({ children, icon, className, ...props }: Readonly<DropdownMenuItemProps>) {
   return (
     <button
       type="button"

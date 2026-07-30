@@ -21,7 +21,7 @@ interface VariantDetailsProps {
   onDelete: () => void
 }
 
-export function VariantDetails({ variant, onEdit, onDelete }: VariantDetailsProps) {
+export function VariantDetails({ variant, onEdit, onDelete }: Readonly<VariantDetailsProps>) {
   // Fetch current stock for this variant
   const { data: stockData } = useQuery({
     queryKey: ['stock-by-variant', variant.id],

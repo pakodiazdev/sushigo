@@ -25,7 +25,7 @@ export function FilterSelect({
   placeholder = 'All',
   showIcon = true,
   className,
-}: FilterSelectProps) {
+}: Readonly<FilterSelectProps>) {
   return (
     <div className={cn('flex items-center gap-2', className)}>
       {showIcon && <Filter className="h-4 w-4 text-muted-foreground" />}

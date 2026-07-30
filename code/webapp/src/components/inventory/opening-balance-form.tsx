@@ -39,7 +39,7 @@ export function OpeningBalanceForm({
   onCancel,
   preselectedLocationId,
   preselectedVariantId,
-}: OpeningBalanceFormProps) {
+}: Readonly<OpeningBalanceFormProps>) {
   const [selectedVariant, setSelectedVariant] = useState<ItemVariant | null>(null)
 
   // Use shared query hooks

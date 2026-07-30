@@ -43,7 +43,7 @@ export function EmployeeDetailView({
   isDeactivating,
   isRehiring,
   isTogglingActive,
-}: EmployeeDetailViewProps) {
+}: Readonly<EmployeeDetailViewProps>) {
   const {
     hasActivePeriod,
     isLoading,

@@ -133,7 +133,7 @@ export function EmployeeEditCreateForm({
   onCancel,
   suggestedCode,
   isSuggestedCodeLoading,
-}: EmployeeEditCreateFormProps) {
+}: Readonly<EmployeeEditCreateFormProps>) {
   const canEditContact = mode === 'create' || isAdmin
 
   // Fresh per mount — avoids stale module-level date when the app stays open past midnight.

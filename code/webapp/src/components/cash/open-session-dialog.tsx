@@ -20,7 +20,7 @@ export function OpenSessionDialog({
   onClose,
   onSuccess,
   branchId,
-}: OpenSessionDialogProps) {
+}: Readonly<OpenSessionDialogProps>) {
   const [cashRegisterId, setCashRegisterId] = useState('')
   const [operatingDate, setOperatingDate] = useState('')
   const [openingBalance, setOpeningBalance] = useState('')

@@ -35,7 +35,7 @@ interface VariantFormProps {
   preselectedItemId?: number
 }
 
-export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }: VariantFormProps) {
+export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }: Readonly<VariantFormProps>) {
   const isEditing = !!variant
 
   // Use shared query hooks

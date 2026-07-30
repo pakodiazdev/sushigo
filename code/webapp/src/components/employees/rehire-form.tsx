@@ -22,7 +22,7 @@ interface RehireFormProps {
  * it internally from the auth store, following the same pattern as
  * `useEmployeeDetailActions`.
  */
-export function RehireForm({ isLoading, onSubmit, onCancel }: RehireFormProps) {
+export function RehireForm({ isLoading, onSubmit, onCancel }: Readonly<RehireFormProps>) {
   const { form, today, effectiveBranch } = useRehireForm()
   const {
     register,

@@ -16,7 +16,7 @@ function generateToastId(): string {
   return `toast-${Date.now()}-${toastFallbackCounter}`
 }
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [toasts, setToasts] = useState<ToastWithId[]>([])
 
   const removeToast = useCallback((id: string) => {

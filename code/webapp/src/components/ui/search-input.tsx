@@ -17,7 +17,7 @@ export function SearchInput({
   placeholder = 'Search...',
   debounceMs = 300,
   className,
-}: SearchInputProps) {
+}: Readonly<SearchInputProps>) {
   const [localValue, setLocalValue] = useState(value)
 
   // Keep a stable ref to onChange so the debounce effect never re-fires

@@ -6,7 +6,7 @@ interface EmploymentPeriodsSectionProps {
   periods: EmploymentPeriod[]
 }
 
-export function EmploymentPeriodsSection({ periods }: EmploymentPeriodsSectionProps) {
+export function EmploymentPeriodsSection({ periods }: Readonly<EmploymentPeriodsSectionProps>) {
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-foreground">Periodos Laborales</h3>

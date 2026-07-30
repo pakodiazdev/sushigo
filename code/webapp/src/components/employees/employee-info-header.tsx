@@ -24,7 +24,7 @@ interface EmployeeInfoHeaderProps {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function EmployeeInfoHeader({ employee, hasActivePeriod }: EmployeeInfoHeaderProps) {
+export function EmployeeInfoHeader({ employee, hasActivePeriod }: Readonly<EmployeeInfoHeaderProps>) {
   return (
     <div className="space-y-6">
       {/* Name + status badges */}

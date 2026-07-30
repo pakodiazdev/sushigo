@@ -28,7 +28,7 @@ interface ItemFormProps {
   onCancel: () => void
 }
 
-export function ItemForm({ item, onSuccess, onCancel }: ItemFormProps) {
+export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>) {
   const isEditing = !!item
 
   const {

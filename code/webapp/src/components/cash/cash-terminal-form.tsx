@@ -45,7 +45,7 @@ export function CashTerminalForm({
     isOpen,
     onClose,
     onSuccess,
-}: CashTerminalFormProps) {
+}: Readonly<CashTerminalFormProps>) {
     const isEditing = !!terminal
 
     const {

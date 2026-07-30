@@ -5,7 +5,7 @@ interface InfoTooltipProps {
     className?: string
 }
 
-export function InfoTooltip({ text, className = '' }: InfoTooltipProps) {
+export function InfoTooltip({ text, className = '' }: Readonly<InfoTooltipProps>) {
     return (
         <span className={`relative inline-flex ml-1 group cursor-help ${className}`}>
             <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-blue-500 transition-colors" />
