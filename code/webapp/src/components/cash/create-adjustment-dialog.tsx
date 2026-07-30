@@ -130,8 +130,9 @@ export function CreateAdjustmentDialog({
 
       onSuccess?.()
       onClose()
-    } catch (_error) {
-      // Error is handled by the hook
+    } catch (error) {
+      // User feedback is already shown by the mutation's onError handler
+      console.error('[CreateAdjustmentDialog] Failed to create adjustment:', error)
     }
   }
 
