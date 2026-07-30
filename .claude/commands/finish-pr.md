@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Read, Edit, Write, WebFetch
+allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git rebase:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Read, Edit, Write, WebFetch
 description: Validate a PR is ready to merge and perform the final housekeeping (squash commits, sync issue/sprint/README time tracking, move the issue to Done) — never merges automatically
 argument-hint: [pr-number]
 ---
@@ -15,10 +15,12 @@ confirm review threads and mergeable state, then finish the paperwork — squash
 commit, close out the task file, sync time tracking back to the GitHub issue, move the issue to
 Done on the project board, and update the sprint document and root README — and only then check
 CI and the automated review (Devin/DeepWiki), once, against the final commit that push produced.
-Doing it in that order (paperwork before the CI/Devin check, not after) means CI and Devin's scan
-each restart exactly once instead of on every intermediate push. You report a checklist at the
-end. **You never run `gh pr merge`.** The user merges by hand once your report says everything is
-green.
+Doing it in that order (paperwork before the CI/Devin check, not after) means Phases 2–7 add no
+restarts at all, since they only commit locally — the only push whose result actually gets checked
+is Phase 7.5's. A pre-flight rebase (Phase 1b) or a late rebase (Phase 7.6c) still pushes and still
+restarts CI/Devin, same as any other push to the branch, but that restart is irrelevant: nothing
+reads its result before Phase 7.5 pushes again anyway. You report a checklist at the end. **You
+never run `gh pr merge`.** The user merges by hand once your report says everything is green.
 
 ---
 
@@ -84,8 +86,40 @@ user to run `/pr-comments <N>` first if any are open.
 
 ### 1b. Mergeable state
 
-`mergeStateStatus` must be `CLEAN`. If it is `BEHIND`, tell the user to run `/rebase-main` first.
-If it is `DIRTY` (conflicts) or `BLOCKED`, report the reason and stop.
+`mergeStateStatus` must be `CLEAN`.
+
+- If it is `BEHIND`, auto-rebase instead of stopping — this is the common case (main moved while
+  the PR sat waiting for review) and rebases cleanly almost every time. First confirm the working
+  tree is clean — do not rebase over local changes:
+  ```bash
+  git status --short
+  ```
+  - If that prints anything, stop and tell the user to stash or commit first.
+  - Otherwise, fetch and rebase:
+    ```bash
+    git fetch origin <baseRefName>
+    git rebase origin/<baseRefName>
+    ```
+  - If the rebase **succeeds**, push the rewritten history and re-fetch PR metadata to confirm
+    `mergeStateStatus` is now `CLEAN` before continuing:
+    ```bash
+    git push --force-with-lease origin HEAD
+    gh pr view <N> --repo <owner>/<repo> --json mergeStateStatus
+    ```
+    Report how many commits arrived on `<baseRefName>` and that the rebase/push completed, then
+    continue with the rest of Phase 1. This push does trigger a new CI run and restarts the
+    Devin/DeepWiki scan, same as any push — that's harmless, not avoided, since neither is checked
+    until Phase 7.6, which validates whatever commit sits on the branch tip after Phase 7.5's own
+    push, regardless of how many earlier pushes (this one included) happened before it.
+  - If the rebase **hits conflicts**, capture the conflicting files *before* aborting — `git
+    rebase --abort` discards the conflict state, so the list is unrecoverable afterward:
+    ```bash
+    git diff --name-only --diff-filter=U
+    git rebase --abort
+    ```
+    Report that file list and stop — do not attempt to resolve conflicts automatically. Tell the
+    user to run `/rebase-main` (or resolve manually) before retrying `/finish-pr`.
+- If it is `DIRTY` (conflicts) or `BLOCKED`, report the reason and stop.
 
 ### Report the checklist
 
@@ -324,9 +358,12 @@ git commit -m "📚 [#NNN] - Update README sprint progress for #NNN 📊
 ## PHASE 7.5 — Final squash and single push
 
 Phases 2–7 commit incrementally on purpose (so partial progress is never lost to a mid-flow typo
-or crash), but none of them push — this phase is the **only** push in the whole command. Folding
+or crash), but none of them push. Phase 1b may already have pushed once, if it had to auto-rebase
+a `BEHIND` branch — that push's CI/Devin result was never read, though, so it doesn't count against
+what follows: this phase's push is the one whose result Phase 7.6 actually checks. Folding
 everything into one commit here, instead of after every phase, means CI and the Devin/DeepWiki
-scan (Phase 7.6) each run exactly once instead of restarting on every intermediate push:
+scan restart at most once between here and Phase 7.6's check, instead of on every intermediate
+housekeeping commit:
 
 ```bash
 git fetch origin <baseRefName>
@@ -355,10 +392,11 @@ check runs against the commit that will actually be merged.
 
 ## PHASE 7.6 — Final validation (the real gate)
 
-This is the only point in the flow where CI and the Devin/DeepWiki scan are checked, because
-Phase 7.5's push is the only push in the whole command — checking earlier would just describe a
-commit that's since been replaced. It also re-checks mergeable state (7.6c), since Phase 1's
-`CLEAN` result can go stale while Phases 2–7.5 run.
+This is the only point in the flow where CI and the Devin/DeepWiki scan are checked. Phase 1b's
+pre-flight rebase may have pushed earlier, but Phase 7.5's push is the last one before this check
+runs, so it's the only push result that ever actually gets read — checking any earlier push would
+just describe a commit that's since been replaced. It also re-checks mergeable state (7.6c), since
+Phase 1's `CLEAN` result can go stale while Phases 2–7.5 run.
 
 ### 7.6a. Wait for CI
 
@@ -406,10 +444,40 @@ the Phase 8 report would otherwise claim "clean, no conflicts" on stale informat
 gh pr view <N> --repo <owner>/<repo> --json mergeable,mergeStateStatus
 ```
 
-`mergeStateStatus` must still be `CLEAN`. If it is now `BEHIND`, tell the user to run
-`/rebase-main` — same as Phase 1b, just caught late — and stop before Phase 8 declares anything
-ready (the housekeeping commits already pushed are not lost; re-run only 7.5–7.6 after the rebase
-lands, no need for the whole command again). If `DIRTY`/`BLOCKED`, report the reason and stop.
+`mergeStateStatus` must still be `CLEAN`. If it is now `BEHIND` (someone else's PR merged into
+`<baseRefName>` while Phases 2–7.6 ran), auto-rebase the same way as Phase 1b instead of stopping:
+
+```bash
+git fetch origin <baseRefName>
+git rebase origin/<baseRefName>
+```
+
+- If it **succeeds**, the branch is already a single commit from Phase 7.5, so the rebase replays
+  cleanly as one commit. Re-validate against the file list Phase 7.5 already proved correct
+  (`finish-pr-files-after.txt`, captured post-squash against the *old* base) — preserve it under
+  its own name first, since the next command overwrites `finish-pr-files-after.txt` in place:
+  ```bash
+  cp /tmp/finish-pr-files-after.txt /tmp/finish-pr-files-preverify.txt
+  git diff origin/<baseRefName> HEAD --name-only | sort > /tmp/finish-pr-files-after.txt
+  diff /tmp/finish-pr-files-preverify.txt /tmp/finish-pr-files-after.txt && echo "MATCH"
+  ```
+  A clean rebase replays the same patch onto a new parent, so this must still match — a mismatch
+  means the rebase silently dropped or altered files and should be treated like a failed diff
+  check anywhere else in this command (stop, do not push). Once it matches, push:
+  ```bash
+  git push --force-with-lease origin HEAD
+  ```
+  This push restarts CI and the Devin/DeepWiki scan, so re-run 7.6a–7.6c from the top against the
+  new commit before Phase 8 declares anything ready — do not reuse the pre-rebase results.
+- If it **hits conflicts**, capture the conflicting files *before* aborting — same as Phase 1b:
+  ```bash
+  git diff --name-only --diff-filter=U
+  git rebase --abort
+  ```
+  Report that file list and stop before Phase 8 (the housekeeping commits already pushed before
+  this rebase attempt are not lost — resolve manually, or run `/rebase-main`, then re-run 7.5–7.6).
+
+If `DIRTY`/`BLOCKED` instead, report the reason and stop.
 
 ---
 

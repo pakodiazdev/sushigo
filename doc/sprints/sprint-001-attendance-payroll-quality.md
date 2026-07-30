@@ -103,6 +103,7 @@ Nothing was intentionally left out of this sprint — it absorbs the full open b
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
 | 2026-07-27 | #340 | Version `.claude/settings.json` and reduce permission prompts | Repeated Bash/gh permission prompts noticed while executing Round 1 work across parallel workspaces (`sushigo-a`, `sushigo-c`) | Read-only allowlist added and versioned in `sushigo-c`; `.claude/settings.json` un-ignored so future workspaces can adopt the same config from git instead of re-deriving it |
+| 2026-07-29 | #355 | Auto-run `/rebase-main` from `/finish-pr` when the branch is BEHIND main | Manual `/rebase-main` + re-invoke round-trip noticed while closing out sprint PRs that had gone `BEHIND` main during review | PR #356 — Phase 1b and Phase 7.6c now auto-rebase on `BEHIND` instead of stopping, falling back to the existing conflict-abort-and-report behavior if the rebase doesn't apply cleanly |
 
 ## 6. Value Ranking
 
