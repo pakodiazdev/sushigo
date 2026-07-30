@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -109,6 +110,8 @@ export function DataGrid<T extends { id: string | number }>({
   totalResults,
   skeletonRows = 5,
 }: Readonly<DataGridProps<T>>) {
+  const perPageId = useId()
+
   function handleSortClick(sortKey: string) {
     if (!onSortChange) return
     const idx = sorting.findIndex(s => s.key === sortKey)
@@ -385,8 +388,9 @@ export function DataGrid<T extends { id: string | number }>({
             <div className="flex items-center gap-4">
               {onPerPageChange && perPage && (
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-muted-foreground">Por pagina:</label>
+                  <label htmlFor={perPageId} className="text-sm text-muted-foreground">Por pagina:</label>
                   <select
+                    id={perPageId}
                     value={perPage}
                     onChange={(e) => onPerPageChange(Number(e.target.value))}
                     className="rounded-md border border-input bg-background px-2 py-1 text-sm"

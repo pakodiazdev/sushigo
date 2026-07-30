@@ -458,6 +458,21 @@ describe('DataGrid', () => {
             fireEvent.change(select, { target: { value: '20' } })
             expect(onPerPageChange).toHaveBeenCalledWith(20)
         })
+
+        it('associates the "Por pagina" label with its select control', () => {
+            const onPerPageChange = vi.fn()
+            const { getByLabelText } = render(
+                <DataGrid
+                    data={testData}
+                    columns={testColumns}
+                    perPage={10}
+                    perPageOptions={[10, 20, 50]}
+                    onPerPageChange={onPerPageChange}
+                />
+            )
+
+            expect(getByLabelText('Por pagina:')).toBeDefined()
+        })
     })
 
     describe('total results', () => {
