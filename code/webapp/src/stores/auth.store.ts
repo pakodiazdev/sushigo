@@ -269,36 +269,32 @@ export const useAuthStore = create<AuthState>()(
       },
 
       refreshUser: async () => {
-        try {
-          const response = await authService.getMe();
-          const userData = response.data as User;
-          let branches = extractBranchesFromUser(userData);
+        const response = await authService.getMe();
+        const userData = response.data as User;
+        let branches = extractBranchesFromUser(userData);
 
-          // me response omits operating_units — fall back to API for all roles
-          if (branches.length === 0) {
-            branches = await fetchBranchesFromApi();
-          }
-
-          // Keep current branch if still valid, otherwise auto-select single branch
-          const { currentBranch } = get();
-          let validatedBranch = currentBranch
-            ? (branches.find((b) => b.id === currentBranch.id) ?? null)
-            : null;
-
-          if (!validatedBranch && branches.length === 1) {
-            validatedBranch = branches[0]!;
-          }
-
-          set({
-            user: userData,
-            isAdmin: checkIsAdmin(userData),
-            isSuperAdmin: checkIsSuperAdmin(userData),
-            availableBranches: branches,
-            currentBranch: validatedBranch,
-          });
-        } catch (err) {
-          throw err;
+        // me response omits operating_units — fall back to API for all roles
+        if (branches.length === 0) {
+          branches = await fetchBranchesFromApi();
         }
+
+        // Keep current branch if still valid, otherwise auto-select single branch
+        const { currentBranch } = get();
+        let validatedBranch = currentBranch
+          ? (branches.find((b) => b.id === currentBranch.id) ?? null)
+          : null;
+
+        if (!validatedBranch && branches.length === 1) {
+          validatedBranch = branches[0]!;
+        }
+
+        set({
+          user: userData,
+          isAdmin: checkIsAdmin(userData),
+          isSuperAdmin: checkIsSuperAdmin(userData),
+          availableBranches: branches,
+          currentBranch: validatedBranch,
+        });
       },
 
       clearError: () => set({ error: null }),
