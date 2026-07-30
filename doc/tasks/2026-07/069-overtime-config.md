@@ -1,3 +1,5 @@
+> Archived from [GitHub issue #69](https://github.com/pakodiazdev/sushigo/issues/69) — closed 2026-07-05T03:01:29Z.
+
 # ⚙️ Task #069: Configure Overtime Payment Method per Employee
 
 ## 📖 Story
@@ -45,3 +47,4 @@ Como Admin, quiero configurar cómo se valoran las horas extra de cada empleado 
 ## ⏱️ Estimates
 
 - **Optimistic:** `2h` · **Pessimistic:** `4h`
+

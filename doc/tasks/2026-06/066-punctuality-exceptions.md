@@ -1,3 +1,5 @@
+> Archived from [GitHub issue #66](https://github.com/pakodiazdev/sushigo/issues/66) — closed 2026-06-14T03:29:01Z.
+
 # 🚫 Task #066: Manage Punctuality Exceptions per Employee
 
 ## 📖 Story
@@ -45,3 +47,4 @@ Como Admin, quiero forzar un 0% de bono de puntualidad para combinaciones espec�
 ## ⏱️ Estimates
 
 - **Optimistic:** `2h` · **Pessimistic:** `3h`
+

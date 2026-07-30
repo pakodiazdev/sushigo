@@ -612,29 +612,33 @@ docker exec -it dev_container bash -c "cd /app/code/api && DB_DATABASE=mydb_test
 
 ## Task Tracking Convention (mandatory)
 
-Tasks live in `doc/tasks/` with this structure:
+The **GitHub issue is the single source of truth** while work is open — see
+[TD-01](doc/decisions/td-01-single-source-issue-tracking.md) for why. `doc/tasks/backlog/` is
+retired; issues are filed directly on GitHub, never as a local file first.
 
 ```
 doc/tasks/
-├── yyyy-mm/          ← completed tasks, one folder per month
-│   └── NNN-task-name.md
-└── backlog/
-    └── <category>/   ← pending tasks grouped by category (e.g. infrastructure)
-        └── NNN-task-name.md
+└── yyyy-mm/          ← archived tasks, one folder per month — written once, at close
+    └── NNN-task-name.md   (NNN = the GitHub issue number, always)
 ```
 
 **Rules:**
-- When a task is completed, move its `.md` file from `backlog/<category>/` to `doc/tasks/yyyy-mm/` where `yyyy-mm` is the **current month** (e.g. `2026-02`)
-- Never create a `done/` folder — completed tasks go directly into the monthly folder
-- The monthly folder is flat (no subfolders by category inside it)
-- If the `yyyy-mm` folder doesn't exist yet, create it
+- Every issue is linked to the **SushiGo Admin** GitHub Project (Status field only — never set
+  **Iteration** until a human explicitly assigns a sprint)
+- Every issue body carries the mandatory sections from `doc/conventions/tasks.md` (Description/
+  Reason/Objective, or for bugs Bug description/Hypothesis/Reproduction guide, plus `## ⏱️ Time`
+  with Estimates and an empty `Sessions` array)
+- While the issue is open, `/start-issue` opens/closes work sessions by editing the issue body
+  directly — **no local `.md` exists or is touched during active work**
+- The local `.md` archive is written **exactly once**, by `/finish-pr`, as a verbatim snapshot of
+  the finished issue — never created or edited before that
 
-**Closing a task (mandatory checklist):**
-1. Fill `Tracked` with the sum of all session durations
-2. Add a `## 📊 Retrospective` section at the bottom of the task file comparing tracked vs estimates and justifying any overrun — see `doc/conventions/tasks.md` for format and rules
-3. Update the corresponding GitHub issue body with the same sessions JSON and `Retrospective` section
-4. Move the task file to `doc/tasks/yyyy-mm/`
-5. Close the GitHub issue
+**Closing an issue (mandatory checklist, done by `/finish-pr`):**
+1. Recompute `Tracked` from the `Sessions` array already in the issue body
+2. Tick completed checklist items on the issue itself
+3. Append a `## 📊 Retrospective` section to the issue body — see `doc/conventions/tasks.md` for format and rules
+4. Archive the finished issue verbatim to `doc/tasks/yyyy-mm/<issue-number>-task-name.md`
+5. Close the GitHub issue (via the PR's `Closes #NNN`, not manually)
 
 ---
 
@@ -647,4 +651,5 @@ doc/tasks/
 - `code/webapp/src/routeTree.gen.ts` - Auto-generated route tree
 - `doc/architecture/` - Domain architecture docs (English/Spanish)
 - `doc/conventions/` - Code standards
-- `doc/tasks/` - Task tracking (backlog + monthly completed)
+- `doc/tasks/` - Archived, closed issues (one snapshot per issue, written at close — see Task Tracking Convention above)
+- `doc/decisions.md` - Technical decisions log index (`doc/decisions/td-NN-*.md` for each entry)

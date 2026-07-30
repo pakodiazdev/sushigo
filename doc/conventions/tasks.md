@@ -1,67 +1,123 @@
-# 📑 Instructions: How to Fill Task Template
+# 📑 Task & Issue Tracking Convention
 
-Use the following structure to describe and track each task.
-Replace placeholders with actual task details.
+See [TD-01](../decisions/td-01-single-source-issue-tracking.md) for the reasoning behind this
+convention and the drift problem it replaced.
 
----
+## Lifecycle
 
-## 1. Title
-- Format: **Short, action-oriented, with emoji**.
-  Example:
-  - `# 🐳 Initialize basic monorepo structure`
-  - `# 🔒 Add authentication middleware`
+1. **File the issue directly on GitHub.** No local file precedes it — `doc/tasks/backlog/` is
+   retired, nothing new lands there. Link the issue to the **SushiGo Admin** GitHub Project (Status
+   field only — never set **Iteration**, the sprint-equivalent field, until a human explicitly
+   assigns it to a sprint).
+2. **While the issue is open, the GitHub issue is the only copy.** `/start-issue` opens and closes
+   work sessions by editing the issue body directly (`gh issue edit`) — no local `.md` is created or
+   touched during active work.
+3. **At close (`/finish-pr`), the issue is finalized in place**: `Tracked` is recomputed from the
+   `Sessions` JSON already in the issue body, completed checklist items are ticked, and a
+   `## 📊 Retrospective` section is appended — all directly on the GitHub issue.
+4. **Only then is a local archive written**, once, to `doc/tasks/yyyy-mm/<issue-number>-slug.md` —
+   a verbatim snapshot of the now-finished issue. The GitHub issue number is the file's only ID,
+   forever; there is no separate local numbering scheme to keep in sync.
 
----
-
-## 2. Story
-- Write in **user story format**:
-  ```
-  As a [role], I need [action/goal], so that [benefit].
-  ```
-- Keep it short and clear.
-  Example:
-  > As a developer, I need to set up a monorepo so that future modules can be versioned and maintained consistently.
-
----
-
-## 3. Technical Tasks
-- List **technical steps** as checklist items.
-- Use `[ ]` for pending, `[x]` for done.
-- Prefix with relevant emoji if useful:
-  - 📂 for folder/file actions
-  - 🔧 for implementation
-  - 🧪 for testing
-  - 📝 for documentation
-- Example:
-  ```
-  - [ ] 📂 Create repository
-  - [ ] 🗂️ Initialize folder structure
-  - [ ] 🔧 Configure CI/CD pipeline
-  ```
+This keeps exactly one live copy at any point in time. The local archive exists for the reasons the
+original template was born from — cheaper for an LLM working in this repo to read a local file than
+to round-trip to GitHub's API, and a portability hedge if the project ever moves off GitHub Issues —
+without the drift cost of editing two copies concurrently.
 
 ---
 
-## 4. Time Tracking
+## Mandatory sections (structure otherwise flexible)
+
+Every issue body must contain, regardless of size or type:
+
+**Feature / enhancement:**
+- `## Description` — what this is
+- `## Reason` — why it's needed (the motivation, not the mechanism)
+- `## Objective` — what "done" looks like
+
+**Bug:**
+- `## Bug description` — what's broken, observed vs. expected
+- `## Hypothesis` — best current theory of the root cause
+- `## Reproduction guide` — concrete steps to trigger it
+
+**Always, on every issue regardless of type** — see "Time Tracking" below:
+- `## ⏱️ Time` (Estimates + Sessions) — required from the moment the issue is filed
+- `## 📊 Retrospective` — required only once the issue is ready to close, not while it's open;
+  added by `/finish-pr`, never pre-created empty
+
+Everything else — Technical Tasks checklists, Acceptance Criteria, backend/frontend breakdowns,
+References — follows the fuller template below **when it fits the issue**. A one-file frontend
+animation fix does not need a Backend Tasks section; a multi-model feature does. Use judgment, not
+a checklist for the checklist's sake.
+
+### Full template (use what applies)
+
+```markdown
+# 🐳 Short, action-oriented title with emoji
+
+## Description
+...
+
+## Reason
+...
+
+## Objective
+...
+
+## ✅ Technical Tasks
+- [ ] 📂 ...
+- [ ] 🔧 ...
+- [ ] 🧪 ...
+
+## 🎯 Acceptance Criteria
+- [ ] ...
+
+## 🔗 References
+- ...
+
+## ⏱️ Time
+
+### 📊 Estimates
+- **Optimistic:** `Xh` · **Pessimistic:** `Yh` · **Tracked:** _in progress_
+
+### 📅 Sessions
+```json
+[]
+```
+```
+
+---
+
+## Time Tracking
+
 ### Estimates
-- Define three values in hours:
-  - **Optimistic:** minimum time if everything goes well.
-  - **Pessimistic:** maximum time if issues appear.
-  - **Tracked:** actual time spent (sum of all sessions).
+Two values in hours, filled when the issue is created:
+- **Optimistic:** minimum time if everything goes well.
+- **Pessimistic:** maximum time if issues appear.
+
+`Tracked` starts as `_in progress_` and is only ever recomputed by `/finish-pr` from the `Sessions`
+array — never edited by hand.
 
 ### Sessions
-- Log working sessions in JSON format:
-  ```json
-  [
-    { "date": "YYYY-MM-DD", "start": "HH:MM", "end": "HH:MM" }
-  ]
-  ```
-- Add multiple objects for multiple sessions.
+Every issue is created with an empty `Sessions` array. `/start-issue` appends an entry when it opens
+a work session and fills its `end` when the session closes:
+
+```json
+[
+  { "date": "YYYY-MM-DD", "start": "HH:MM", "end": "HH:MM" }
+]
+```
+
+An in-progress session has `"end": "?"`. Multiple sessions accumulate across days if work spans more
+than one sitting.
 
 ---
 
-## 5. Retrospective (mandatory when closing a task)
+## Retrospective (added by `/finish-pr`, mandatory when closing)
 
-Fill this section when the task is completed. It compares the tracked time against estimates and justifies any overrun. This serves as historical context for future estimations.
+Appended directly to the GitHub issue body when the PR closing it is finalized. Compares tracked
+time against the original estimates and explains any overrun — this is historical context for
+future estimation, and it is what gets carried into the archived `.md` snapshot.
 
 ### Format
 ```markdown
@@ -77,50 +133,12 @@ discovered technical debt, extra review cycles, scope additions, etc.>
 ```
 
 ### Rules
-- **Always fill it when closing** — even if the task finished within the estimate. In that case, note what went well.
-- **Actual total** must match the sum of all session durations. Show the per-session breakdown in minutes.
-- **Justification** must explain *why*, not just *what*. Reviewers should understand the root cause after reading it.
-- If the task finished under the pessimistic estimate with no surprises, a one-liner justification is enough.
+- **Always fill it when closing** — even if the task finished within the estimate. In that case,
+  note what went well.
+- **Actual total** must match the sum of every session in the `Sessions` array. Show the per-session
+  breakdown in minutes.
+- **Justification** must explain *why*, not just *what*. Reviewers should understand the root cause
+  after reading it.
+- If the task finished under the pessimistic estimate with no surprises, a one-liner justification
+  is enough.
 - Write in English (consistent with the project language rule).
-
----
-
-## ✅ Example (for reference)
-```markdown
-# 🛡️ Implement authentication middleware
-
-## 📖 Story
-As a developer, I need to add authentication middleware so that only authorized users can access protected routes.
-
----
-
-## ✅ Technical Tasks
-- [x] 🔧 Create middleware file
-- [x] 📝 Write unit tests
-- [x] 📂 Register middleware in project config
-
----
-
-## ⏱️ Time
-### 📊 Estimates
-- **Optimistic:** `2h`
-- **Pessimistic:** `5h`
-- **Tracked:** `3h 30m`
-
-### 📅 Sessions
-```json
-[
-  { "date": "2025-09-28", "start": "10:00", "end": "11:30" },
-  { "date": "2025-09-28", "start": "14:00", "end": "16:00" }
-]
-```
-
-## 📊 Retrospective
-- **Actual total:** 3h 30m (90 min + 120 min)
-- **vs optimistic:** +1h 30m
-- **vs pessimistic:** −1h 30m
-
-**Justification:**
-
-The middleware itself was ready within the optimistic estimate. The extra time was caused by setting up the CI pipeline to run integration tests, which was not contemplated in the original scope and required additional research.
-```
