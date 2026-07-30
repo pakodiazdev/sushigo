@@ -20,7 +20,7 @@ export interface EmployeesSearch {
   search?: string
   role?: string
   status?: string
-  form?: 'new' | string
+  form?: string
   /** Public id of the employee whose weekly summary panel is open — persists across refresh/copy-paste. */
   weeklySummary?: string
 }
