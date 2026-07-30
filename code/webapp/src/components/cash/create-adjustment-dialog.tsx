@@ -107,7 +107,7 @@ export function CreateAdjustmentDialog({
 
     // Validate lines
     for (const line of lines) {
-      if (!line.amount || parseFloat(line.amount) <= 0) {
+      if (!line.amount || Number.parseFloat(line.amount) <= 0) {
         return
       }
       if (line.tender_type === TenderType.CARD && !line.card_terminal_id) {
@@ -137,7 +137,7 @@ export function CreateAdjustmentDialog({
 
   const calculateTotal = () => {
     return lines.reduce((sum, line) => {
-      const amount = parseFloat(line.amount || '0')
+      const amount = Number.parseFloat(line.amount || '0')
       return sum + amount
     }, 0)
   }

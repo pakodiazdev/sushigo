@@ -12,7 +12,7 @@ function formatDate(dateString: string): string {
 }
 
 function formatCurrency(amount: number | string): string {
-    const value = typeof amount === 'string' ? parseFloat(amount) : amount
+    const value = typeof amount === 'string' ? Number.parseFloat(amount) : amount
     return new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN',
@@ -25,7 +25,7 @@ interface WageHistoryCardProps {
 
 export function WageHistoryCard({ wage }: WageHistoryCardProps) {
     const isActive = !wage.effective_to
-    const weeklyGross = parseFloat(wage.hourly_rate) * wage.weekly_scheduled_hours
+    const weeklyGross = Number.parseFloat(wage.hourly_rate) * wage.weekly_scheduled_hours
 
     return (
         <Card>
