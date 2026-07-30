@@ -6,11 +6,11 @@ status: In Progress
 created: 2026-07-25
 started: 2026-07-26
 completed:
-last_updated: 2026-07-27
+last_updated: 2026-07-29
 
 base_branch: main
 base_commit: 079a316
-scope_issues: 26
+scope_issues: 27
 
 github_project: SushiGo Admin (#7)
 github_milestone:
@@ -33,7 +33,7 @@ A file-level conflict analysis (parsed directly from each SonarCloud Issue's "Af
 
 Expected outcome: a real attendance-correction capability shipped, payroll-close periods can no longer be closed early or as a partial week, the two highest-connected quality debt nodes (#305, #306) cleared, and the sprint's own estimate-vs-tracked comparison populated so future sprints can calibrate estimates against real data.
 
-**Progress as of 2026-07-29:** 13 of 26 scoped Issues completed (50.0%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge), #327 (Ausentes stat card, PR #336 ready to merge), #329 (payroll close week gate, PR #335 ready to merge), #314 (unused React typed props removed, PR #343 ready to merge), #315 (deeply nested role-toggle handler flattened, PR #344 ready to merge) — all eight in Round 1 — plus #306 (explicit button type attribute, PR #346 ready to merge), #328 (allow correcting an already-recorded attendance event, PR #347 ready to merge), and #312 (stable Context Provider value identities, PR #348 ready to merge), all three in Round 2, plus #311 (cognitive complexity reduced in 3 components, PR #349 ready to merge), in Round 6, plus #324 (dev-only Components catalog page, PR #352 ready to merge), in Round 4.
+**Progress as of 2026-07-29:** 14 of 27 scoped Issues completed (51.9%) — #323 (security), #322 (a11y/reliability), #325 (attendance dialog overlay, PR #334 ready to merge), #309 (list-reorder rendering bug, PR #339 ready to merge), #327 (Ausentes stat card, PR #336 ready to merge), #329 (payroll close week gate, PR #335 ready to merge), #314 (unused React typed props removed, PR #343 ready to merge), #315 (deeply nested role-toggle handler flattened, PR #344 ready to merge), #359 (unify issue/task tracking, PR #361 ready to merge) — all nine in Round 1 — plus #306 (explicit button type attribute, PR #346 ready to merge), #328 (allow correcting an already-recorded attendance event, PR #347 ready to merge), and #312 (stable Context Provider value identities, PR #348 ready to merge), all three in Round 2, plus #311 (cognitive complexity reduced in 3 components, PR #349 ready to merge), in Round 6, plus #324 (dev-only Components catalog page, PR #352 ready to merge), in Round 4.
 
 ## 2. Context
 
@@ -61,7 +61,7 @@ Base state: `main` @ `079a316`, 26 open Issues, zero Issues yet linked to a GitH
 | Target completion (deadline) | 2026-08-09 |
 | Calendar duration (planned) | 14 days |
 | Active workdays | — |
-| Progress (Issues completed) | 13 / 26 (50.0%) — #323, #322, #325, #309, #327, #329, #314, #315, #306, #328, #312, #311, #324 |
+| Progress (Issues completed) | 14 / 27 (51.9%) — #323, #322, #325, #309, #327, #329, #314, #315, #306, #328, #312, #311, #324, #359 |
 
 ### How the deadline was set
 
@@ -97,6 +97,7 @@ Nothing was intentionally left out of this sprint — it absorbs the full open b
 | Date | Status | Item | Change | Reason |
 |---|---|---|---|---|
 | 2026-07-26 | ✅ | — | Sprint created from `sushigo-dev-lab/plan/roadmap.md` | Converting ad hoc planning into the formal sprint process (`sprint-000-introduction.md`) |
+| 2026-07-29 | 🚧 | #359 | Added to sprint scope | Dual-tracking (`doc/tasks/backlog/*.md` + GitHub Issue) had already caused drift — 3 orphaned files for closed issues, 1 issue never migrated to GitHub. Makes the GitHub Issue the single source of truth while work is open, archives a verbatim snapshot only at `/finish-pr` time, and starts a technical decisions log (`doc/decisions.md`) |
 
 ### 5.4 Opportunistic Work
 
@@ -111,7 +112,7 @@ Nothing was intentionally left out of this sprint — it absorbs the full open b
 |---|---|---|
 | **Critical** | #323 (Security), #322 (Reliability bug) | Real security/correctness bugs, not style — always go first regardless of file conflicts |
 | **High** | #325, #329, #328, #327 | User-requested product work: a real UX bug (#325) and three attendance/payroll features that close operational gaps (mistaken time corrections, payroll period integrity, cleaner working screen) |
-| **Medium** | #276, #306, #309, #310, #320, #321, #324 | Real functional/accessibility risk (WhatsApp silently not sending, accidental form submits, list-reorder rendering bugs, a11y gaps) or clear productivity value (#324), but lower urgency than the above |
+| **Medium** | #276, #306, #309, #310, #320, #321, #324, #359 | Real functional/accessibility risk (WhatsApp silently not sending, accidental form submits, list-reorder rendering bugs, a11y gaps) or clear productivity value (#324 dev catalog, #359 fixes dual-tracking drift already causing orphaned task files), but lower urgency than the above |
 | **Low** | #305, #307, #308, #311–#319 (remaining Maintainability code smells) | Pure code-quality cleanup, no user-facing behavior change |
 | **Deferred** | #85 | Large (8–14h), separate Flutter repo, strategically deferred already — kept last on purpose despite having zero file conflicts with anything |
 
@@ -140,8 +141,9 @@ Lower-value maintainability cleanups are interleaved into the same rounds as hig
 | ⏳ | #316 | [Maintainability] Jump statements should not be redundant | Low (filler) | 0.5h | 1h | — | — | Conflict-free, fills spare capacity |
 | ⏳ | #317 | [Maintainability] "catch" clauses should do more than rethrow | Low (filler) | 0.5h | 1h | — | — | Conflict-free, fills spare capacity |
 | ⏳ | #319 | [Maintainability] Type constituents of unions/intersections redundant | Low (filler) | 0.5h | 1h | — | — | Conflict-free, fills spare capacity |
+| ✅ | #359 | Unify issue/task tracking: GitHub Issue as single source, archive-on-close, technical decisions log | Medium | 2h | 4h | 3.0h | PR #361 | Fixed — retired `doc/tasks/backlog/`, started `doc/decisions.md` + TD-01, rewrote `/start-issue`/`/finish-pr` for the issue-first lifecycle, added #359 itself to Sprint 001 scope. 1 Copilot review thread resolved. PR ready, merge pending |
 | ⏳ | #85 | Mobile App — Project Bootstrap (Flutter) | Deferred | 8h | 14h | — | — | Zero conflicts, but **must not** be prioritized over the 13 Issues above — background work for a spare agent only |
-|  |  | **Round 1 total** |  | **21.5h** | **41.5h** | **—** |  |  |
+|  |  | **Round 1 total** |  | **23.5h** | **45.5h** | **—** |  |  |
 
 **If only 5 workspaces are available:** run #323, #322, #325, #329, #327 first — the entire Critical+High tier unblocked today. Cycle #276, #309, #321, then filler, in as workspaces free up.
 
@@ -239,13 +241,13 @@ No product-level dependency chains exist in this sprint (unlike the previous roa
 
 | Round | Issue count | Opt. total | Pess. total | Tracked total | vs Opt. | vs Pess. |
 |---|---:|---:|---:|---:|---:|---:|
-| Round 1 | 14 | 21.5h | 41.5h | — | — | — |
+| Round 1 | 15 | 23.5h | 45.5h | — | — | — |
 | Round 2 | 5 | 10.5h | 18h | — | — | — |
 | Round 3 | 3 | 2.5h | 5h | — | — | — |
 | Round 4 | 2 | 8h | 14h | — | — | — |
 | Round 5 | 1 | 3h | 5h | — | — | — |
 | Round 6 | 1 | 1h | 2h | — | — | — |
-| **Grand total** | **26** | **46.5h** | **85.5h** | **—** | **—** | **—** |
+| **Grand total** | **27** | **48.5h** | **89.5h** | **—** | **—** | **—** |
 
 Update the comparison as each round finishes — do not wait until sprint closure, because a slow round may be hidden by faster work elsewhere.
 
@@ -287,6 +289,7 @@ Update the comparison as each round finishes — do not wait until sprint closur
 | ⏳ | #305, #307–#308, #310, #313, #316–#321 (11 remaining SonarCloud Issues) | Not started | — | — | — | — |
 | ⏳ | #85 | Not started | — | — | — | — |
 | 🚧 | #340 | Opportunistic work (§5.4) — `.claude/settings.json` un-ignored and versioned in `sushigo-c`; read-only permission allowlist added | — | — | — | Not scheduled into a round — see §5.4 |
+| ✅ | #359 | GitHub Issue made the single source of truth for `/start-issue`/`/finish-pr` (no local `.md` created or edited during active work); `/finish-pr` now generates a verbatim archive snapshot under `doc/tasks/yyyy-mm/<issue-number>-slug.md` exactly once at finish time; started `doc/decisions.md` + `doc/decisions/td-NN-*.md` technical decisions log; resolved 5 pre-existing orphaned `doc/tasks/backlog/*.md` files (3 for already-closed issues, 1 never migrated to GitHub, 1 byte-identical duplicate) | PR #361 | — | 3.0h | Docs/tooling only, no application tests apply; ESLint/TypeScript/Pint not touched; 1 Copilot review thread resolved (`## 📊 Retrospective` timing clarified in `doc/conventions/tasks.md`); manual merge-conflict resolution against #355 (concurrent `finish-pr.md` auto-rebase feature) during `/rebase-main`; added to scope mid-sprint (§5.3). Branch `chore/359-unify-issue-tracking`, workspace `sushigo-a`. PR ready, merge pending |
 
 This table should be expanded to one row per Issue as work starts — collapsed here at sprint creation time since nothing has begun.
 

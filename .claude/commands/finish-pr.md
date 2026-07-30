@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git rebase:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Read, Edit, Write, WebFetch
-description: Validate a PR is ready to merge and perform the final housekeeping (squash commits, sync issue/sprint/README time tracking, move the issue to Done) — never merges automatically
+allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git rebase:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Read, Edit, Write, WebFetch
+description: Validate a PR is ready to merge and perform the final housekeeping (squash commits, finalize the issue in place, archive it locally, sync sprint/README, move the issue to Done) — never merges automatically
 argument-hint: [pr-number]
 ---
 
@@ -12,15 +12,21 @@ merging — **except the merge itself**.
 
 **Call this only after the human has manually tested the PR and approved it.** Your job is to
 confirm review threads and mergeable state, then finish the paperwork — squash the branch to one
-commit, close out the task file, sync time tracking back to the GitHub issue, move the issue to
-Done on the project board, and update the sprint document and root README — and only then check
-CI and the automated review (Devin/DeepWiki), once, against the final commit that push produced.
-Doing it in that order (paperwork before the CI/Devin check, not after) means Phases 2–7 add no
-restarts at all, since they only commit locally — the only push whose result actually gets checked
-is Phase 7.5's. A pre-flight rebase (Phase 1b) or a late rebase (Phase 7.6c) still pushes and still
-restarts CI/Devin, same as any other push to the branch, but that restart is irrelevant: nothing
-reads its result before Phase 7.5 pushes again anyway. You report a checklist at the end. **You
-never run `gh pr merge`.** The user merges by hand once your report says everything is green.
+commit, finalize the GitHub issue itself (time tracking, checklist, retrospective), archive it
+locally as a closing snapshot, move the issue to Done on the project board, and update the sprint
+document and root README — and only then check CI and the automated review (Devin/DeepWiki), once,
+against the final commit that push produced. Doing it in that order (paperwork before the CI/Devin
+check, not after) means Phases 2–7 add no restarts at all, since they only commit locally — the
+only push whose result actually gets checked is Phase 7.5's. A pre-flight rebase (Phase 1b) or a
+late rebase (Phase 7.6c) still pushes and still restarts CI/Devin, same as any other push to the
+branch, but that restart is irrelevant: nothing reads its result before Phase 7.5 pushes again
+anyway. You report a checklist at the end. **You never run `gh pr merge`.** The user merges by
+hand once your report says everything is green.
+
+Per [TD-01](../../doc/decisions/td-01-single-source-issue-tracking.md), the GitHub issue is the
+only live document for this work up to this point — nothing under `doc/tasks/` exists yet for it.
+This command is the **only** place that creates the local archive, and it does so exactly once,
+after the issue itself is fully finalized.
 
 ---
 
@@ -162,7 +168,7 @@ Rules for the synthesis:
   Merge near-duplicate bullets (e.g. a style tweak a later commit re-tweaked) into one bullet
   describing the final state, not each intermediate step.
 - Drop pure bookkeeping bullets (`Start work session`, `Close work session`, `Tracked: Xh total`)
-  — that history now lives in the task file's Sessions and in the Retrospective added in Phase 3,
+  — that history now lives in the issue's Sessions array and in the Retrospective added in Phase 3,
   not in the commit log.
 - Reuse the issue number already used throughout the branch's commits.
 
@@ -188,51 +194,64 @@ single push point in this command.
 
 ---
 
-## PHASE 3 — Close out the local task file
+## PHASE 3 — Finalize the GitHub issue
 
-Find the task file: `doc/tasks/**/<NNN>-*.md` (it has already moved out of `backlog/` if
-`/start-issue` was used — if it's still in `backlog/`, that's a sign the issue was never formally
-started; move it to the current month's folder first).
+The issue itself is the only copy of this work's record so far (per TD-01) — everything below is
+written **directly to the issue**, not to a local file. There is no separate "sync" step because
+there is nothing else to sync with.
 
-1. Recompute `Tracked` in `## ⏱️ Time` → Estimates as the sum of every session in the `Sessions`
-   JSON array (do not trust a stale value — recompute from the raw start/end pairs).
-2. Cross-check every unticked `[ ]` box in the Technical Tasks / Acceptance Criteria sections
-   against what actually shipped in this PR's diff. Tick any that are genuinely done. Never tick
-   a box for work you can't verify landed in this PR.
-3. Add a `## 📊 Retrospective` section per `doc/conventions/tasks.md` §5 — actual total (with the
+```bash
+gh issue view <NNN> --repo <owner>/<repo> --json body -q .body > /tmp/finish-pr-issue-body.md
+```
+
+1. In the `## ⏱️ Time` → `Sessions` JSON array, close any session still showing `"end": "?"` with
+   the current local time, then recompute `Tracked` as the sum of every session's duration (do not
+   trust a stale value — recompute from the raw start/end pairs).
+2. Cross-check every unticked `[ ]` box in the issue's Technical Tasks / Acceptance Criteria
+   sections against what actually shipped in this PR's diff. Tick any that are genuinely done.
+   Never tick a box for work you can't verify landed in this PR.
+3. Append a `## 📊 Retrospective` section per `doc/conventions/tasks.md` — actual total (with the
    per-session minute breakdown), variance vs. optimistic and pessimistic, and a narrative
    justification. The justification must explain *why* the tracked time came out the way it did —
    scope changes requested mid-flight, review-response cycles, rework — not just restate *what*
    was built.
 
-Commit this as its own commit (separate from the squashed feature commit). Local only — do not
-push; Phase 7.5 pushes everything once at the end:
+Write the updated body back:
 
 ```bash
-git add doc/tasks/...
-git commit -m "🔧 [#NNN] - Finalize task #NNN before merge 📊
-
-- 📊 Fill Tracked time and add Retrospective per doc/conventions/tasks.md
-- ✅ Tick completed Technical Task / Acceptance Criteria boxes"
-```
-
----
-
-## PHASE 4 — Sync the GitHub issue
-
-```bash
-gh issue view <NNN> --repo <owner>/<repo> --json body
-```
-
-Replace the issue body's `## ⏱️ Time` section with the task file's final `Estimates` and
-`Sessions` (identical content — the issue is the second copy the CLAUDE.md task-closing checklist
-requires), and append the same `## 📊 Retrospective` section added in Phase 3.
-
-```bash
-gh issue edit <NNN> --repo <owner>/<repo> --body "<updated body>"
+gh issue edit <NNN> --repo <owner>/<repo> --body-file /tmp/finish-pr-issue-body.md
 ```
 
 Do **not** close the issue here — merging the PR closes it automatically via `Closes #NNN`.
+
+---
+
+## PHASE 4 — Archive the finished issue locally
+
+This is the **only** point in the whole lifecycle where a file under `doc/tasks/` is created for
+this issue. Write the now-finalized issue (title + body, exactly as it stands after Phase 3) to:
+
+```
+doc/tasks/<current yyyy-mm>/<NNN>-<slug>.md
+```
+
+`<slug>` is a short kebab-case description derived from the issue title. `<current yyyy-mm>` is
+today's month, not when the issue was opened — this is a closing snapshot, not a backdated one.
+
+```bash
+mkdir -p doc/tasks/<yyyy-mm>
+gh issue view <NNN> --repo <owner>/<repo> --json title,body -q '"# " + .title + "\n\n" + .body' > doc/tasks/<yyyy-mm>/<NNN>-<slug>.md
+```
+
+Commit this as its own commit. Local only — do not push; Phase 7.5 pushes everything once at the
+end:
+
+```bash
+git add doc/tasks/<yyyy-mm>/<NNN>-<slug>.md
+git commit -m "📚 [#NNN] - Archive issue #NNN 📂
+
+- 📂 Snapshot the finalized GitHub issue to doc/tasks/<yyyy-mm>/ per doc/conventions/tasks.md"
+```
 
 ---
 
@@ -259,7 +278,8 @@ gh api graphql -f query='
 ' -f owner=<owner> -f repo=<repo> -F issue=<NNN>
 ```
 
-For every project the issue is linked to:
+Every issue should already be linked to the **SushiGo Admin** project (`/start-issue` Phase 1a
+checks this) — for every project the issue is linked to:
 
 ```bash
 gh api graphql -f query='
@@ -293,6 +313,9 @@ gh api graphql -f query='
 ' -f project=<project-id> -f item=<item-id> -f field=<status-field-id> -f option=<done-option-id>
 ```
 
+Do **not** touch the `Iteration` field here — sprint assignment is a decision the user makes
+explicitly, never a side effect of finishing a PR.
+
 ---
 
 ## PHASE 6 — Update the current sprint document
@@ -304,10 +327,15 @@ Determine the current sprint: the **highest-numbered** `sprint-NNN-*.md` file di
 ls doc/sprints/*.md | grep -v README | sort | tail -1
 ```
 
-In that file:
+Only proceed with this phase if the issue is actually listed in that sprint document already (i.e.
+a human previously assigned it there) — an issue with no `Iteration` set and no row in the sprint
+doc is not part of the current sprint, and this phase does not apply to it.
+
+In that file, sourcing `Tracked` from the GitHub issue's `## ⏱️ Time` section as finalized in
+Phase 3 (not a local file — there isn't one until Phase 4, and even that is just a mirror):
 
 1. **§7 Route A execution rounds** — find the row for this issue in whichever round table
-   contains it. Update: status marker → `✅`, `Tracked` → the task file's final Tracked value
+   contains it. Update: status marker → `✅`, `Tracked` → the issue's final Tracked value
    (convert to decimal hours, e.g. `2h35m` → `2.6h`), `PR / Commit` → `PR #<N>`, `Notes` → a
    concise one-line result summary ending in `PR ready, merge pending` (matching the phrasing
    already used for other rows in this document awaiting merge).
@@ -338,6 +366,8 @@ git commit -m "📚 [#NNN] - Update sprint progress for #NNN 📊
 ---
 
 ## PHASE 7 — Update the root README Sprints table
+
+Skip this phase if Phase 6 was skipped (issue not part of the current sprint).
 
 In the root `README.md`'s `## Sprints` table, find the current sprint's row. Since the sprint is
 not yet closed, its `Completed` cell shows the running progress percentage (matching Phase 6's
@@ -372,8 +402,8 @@ git reset --soft origin/<baseRefName>
 ```
 
 Write one final commit message that is the Phase 2 message with any genuinely new substance from
-Phases 3/6/7 folded in as trailing bullets (task file finalized, sprint/README progress updated) —
-do not just concatenate every intermediate commit message verbatim.
+Phases 4/6/7 folded in as trailing bullets (issue archived, sprint/README progress updated) — do
+not just concatenate every intermediate commit message verbatim.
 
 ```bash
 git commit -m "<final consolidated message>"
@@ -435,8 +465,8 @@ so a plain `WebFetch` will only return an empty shell and is not sufficient here
 
 ### 7.6c. Re-validate mergeable state
 
-Phase 1's `mergeStateStatus: CLEAN` check ran before Phases 2–7.5, which can take a while (task
-file writeup, sprint doc, README, waiting on CI/Devin above). If `main` advanced during that
+Phase 1's `mergeStateStatus: CLEAN` check ran before Phases 2–7.5, which can take a while (issue
+finalization, sprint doc, README, waiting on CI/Devin above). If `main` advanced during that
 window — someone else's PR merged — the branch can have silently gone `BEHIND` since Phase 1, and
 the Phase 8 report would otherwise claim "clean, no conflicts" on stale information.
 
@@ -492,11 +522,11 @@ If `DIRTY`/`BLOCKED` instead, report the reason and stop.
 
 ### Final housekeeping (Phases 2–7.5)
 - [x] Commits squashed: <before> → 1 (`<sha>`)
-- [x] Task file closed — Tracked <Xh Ym>, Retrospective added
-- [x] GitHub issue #<NNN> Time section synced
+- [x] GitHub issue #<NNN> finalized — Tracked <Xh Ym>, checklist ticked, Retrospective added
+- [x] Issue archived to doc/tasks/<yyyy-mm>/<NNN>-<slug>.md
 - [x] GitHub Project status → Done
-- [x] Sprint doc updated — progress now <X>/<Y> (<Z%>)
-- [x] README Sprints table updated (Completed: <Z%>)
+- [x] Sprint doc updated — progress now <X>/<Y> (<Z%>) (or: not part of the current sprint, skipped)
+- [x] README Sprints table updated (Completed: <Z%>) (or: skipped, same reason)
 
 ### Final validation on the merge-ready commit (Phase 7.6)
 - [x] CI checks: <M>/<M> passing

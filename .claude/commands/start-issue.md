@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr create:*), Bash(gh repo view:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(find:*), Bash(ls:*), Bash(docker exec:*), Read, Edit, Write
-description: Start a work session on a GitHub issue — load context, create branch, open session in task file, then drive TDD implementation through to PR
+allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr create:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(find:*), Bash(ls:*), Bash(date:*), Bash(docker exec:*), Read, Edit, Write
+description: Start a work session on a GitHub issue — load context, create branch, open a session directly on the issue, then drive TDD implementation through to PR
 ---
 
 # Start Issue #$ARGUMENTS
@@ -8,11 +8,14 @@ description: Start a work session on a GitHub issue — load context, create bra
 You are starting a full development session for issue **#$ARGUMENTS** of the SushiGo monorepo.
 Work through every phase below in order. Do not skip phases.
 
+The GitHub issue is the **only** live document for this work — see
+[TD-01](../../doc/decisions/td-01-single-source-issue-tracking.md) and
+`doc/conventions/tasks.md`. Nothing is created or edited in `doc/tasks/` during this command; the
+local archive is written once, later, by `/finish-pr`.
+
 ---
 
-## PHASE 1 — Load issue and task file
-
-### 1a. Fetch GitHub issue
+## PHASE 1 — Load the issue
 
 ```bash
 gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json number,title,body,labels,state
@@ -24,19 +27,29 @@ Extract from the title/body:
 - The **task type** (feature, fix, refactor, docs, chore) — infer from emoji prefix or label
 - A **2–5 word kebab-case slug** for the branch name
 
-### 1b. Find the local task file
+Check the issue body has the mandatory sections from `doc/conventions/tasks.md` (Description/
+Reason/Objective, or Bug description/Hypothesis/Reproduction guide for bugs, plus a `## ⏱️ Time`
+block with Estimates and a `Sessions` array). If any are missing, add them now via `gh issue edit`
+before continuing — do not silently work around a malformed issue.
 
-Search `doc/tasks/backlog/` for a file matching `<NNN>-*.md` where NNN is the zero-padded issue number (3 digits). If found, read it fully. If not found, note it and continue.
+### 1a. Ensure the issue is linked to the SushiGo Admin project
 
-### 1c. Update the task file description
+```bash
+gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json projectItems -q '.projectItems[].project.title'
+```
 
-Compare the GitHub issue body with the local task file content. If the GitHub issue has details not reflected locally (new acceptance criteria, extra context, corrections), update the local file to match. If there is no local task file and the issue body has enough detail, create one in `doc/tasks/backlog/` following the project format (see other files in that directory for the structure).
+If `"SushiGo Admin"` is not in the list, link it (Status field only — never set the Iteration field,
+that is a sprint-assignment decision the user makes explicitly):
+
+```bash
+gh project item-add 7 --owner pakodiazdev --url https://github.com/pakodiazdev/sushigo/issues/$ARGUMENTS
+```
 
 ---
 
 ## PHASE 2 — Codebase context
 
-Based on the issue description and task file, locate the relevant files in the repository:
+Based on the issue description, locate the relevant files in the repository:
 
 - For **backend changes**: look in `code/api/app/`, `code/api/database/migrations/`, `code/api/database/seeders/`, `code/api/routes/`, `code/api/tests/`
 - For **frontend changes**: look in `code/webapp/src/pages/`, `code/webapp/src/services/`, `code/webapp/src/types/`, `code/webapp/src/components/`
@@ -93,7 +106,8 @@ Format: `<type>/<NNN>-<short-description>`
 | `chore/` | config, tooling |
 
 Rules:
-- NNN is the **issue number zero-padded to 3 digits** (e.g. `066`, `135`)
+- NNN is the **GitHub issue number zero-padded to 3 digits** (e.g. `066`, `135`) — this is now the
+  only ID this work will ever have; there is no separate local numbering to keep in sync
 - Short description is 2–5 words, lowercase, kebab-case, English only
 - Always branch from current `main`
 
@@ -104,50 +118,22 @@ git checkout -b <type>/<NNN>-<short-description> origin/main
 
 ---
 
-## PHASE 5 — Open work session in task file
+## PHASE 5 — Open a work session on the GitHub issue
 
-### 5a. Move task file from backlog to current month
+Do **not** create, move, or edit any file under `doc/tasks/` — the issue itself is the only place
+session data lives while work is open.
 
-If the task file is still in `doc/tasks/backlog/`, move it to `doc/tasks/YYYY-MM/` where `YYYY-MM` is the **current month** (e.g. `2026-06`). Create the monthly folder if it does not exist yet.
-
-```bash
-mkdir -p doc/tasks/YYYY-MM
-git mv doc/tasks/backlog/<NNN>-<slug>.md doc/tasks/YYYY-MM/<NNN>-<slug>.md
-```
-
-If the file is already in a monthly folder (i.e. work was started before), leave it in place.
-
-### 5b. Record session start
-
-Add or update the `## ⏱️ Time` section at the bottom of the (now-moved) task file:
-
-````markdown
-## ⏱️ Time
-
-### 📊 Estimates
-- **Optimistic:** `Xh` · **Pessimistic:** `Yh` · **Tracked:** _in progress_
-
-### 📅 Sessions
-```json
-[
-  { "date": "YYYY-MM-DD", "start": "HH:MM", "end": "?" }
-]
-```
-````
-
-Use today's date and the current local time as `start`. Leave `end` as `"?"` — it will be filled when the session closes.
-
-If the file already has a `Sessions` array with previous entries, append the new entry rather than replacing.
-
-### 5c. Commit the move + session open
+Fetch the current body, append a new entry to the `Sessions` JSON array under `## ⏱️ Time` (create
+the array as `[]` first if the issue somehow doesn't have one yet — see Phase 1's check), using
+today's date and the current local time as `start` and `"?"` as `end`:
 
 ```bash
-git add doc/tasks/
-git commit -m "🔧 [#NNN] - Start work session on task #NNN 📂
-
-- 📂 Move task #NNN from backlog to YYYY-MM/
-- ⏱️ Open session YYYY-MM-DD HH:MM"
+gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json body -q .body > /tmp/issue-body.md
+# edit /tmp/issue-body.md: append { "date": "YYYY-MM-DD", "start": "HH:MM", "end": "?" } to Sessions
+gh issue edit $ARGUMENTS --repo pakodiazdev/sushigo --body-file /tmp/issue-body.md
 ```
+
+If the file already has previous session entries, append to the array rather than replacing it.
 
 ---
 
@@ -240,18 +226,19 @@ The squashed commit(s) must still follow the commit convention above.
 
 ## PHASE 8 — Close session and push
 
-### 8a. Close session in task file
+### 8a. Close the work session on the GitHub issue
 
-Update the `end` field in the Sessions JSON with the current local time. Update `Tracked` in the Estimates line with the total duration. The file is already in `doc/tasks/YYYY-MM/` from Phase 5 — do not move it again.
+Fetch the current body, fill the `end` field of the session opened in Phase 5 with the current
+local time:
 
-Commit the task file change:
 ```bash
-git add doc/tasks/...
-git commit -m "🔧 [#NNN] - Close work session on task #NNN ⏱️
-
-- ⏱️ Session: YYYY-MM-DD HH:MM–HH:MM (~Xh)
-- 📋 Tracked: Xh total"
+gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json body -q .body > /tmp/issue-body.md
+# edit /tmp/issue-body.md: set this session's "end" to "HH:MM"
+gh issue edit $ARGUMENTS --repo pakodiazdev/sushigo --body-file /tmp/issue-body.md
 ```
+
+`Tracked` stays `_in progress_` — it is only recomputed once, by `/finish-pr`, from the full
+`Sessions` array. Do not hand-edit it here.
 
 ### 8b. Push the branch
 
