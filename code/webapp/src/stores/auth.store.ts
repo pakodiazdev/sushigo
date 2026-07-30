@@ -241,7 +241,8 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             error: null,
           });
-        } catch (_err) {
+        } catch (err) {
+          console.error('[auth.store] Failed to restore session in initializeAuth:', err);
           set({
             user: null,
             token: null,
