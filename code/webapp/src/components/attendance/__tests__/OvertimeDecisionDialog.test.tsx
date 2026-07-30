@@ -60,6 +60,21 @@ describe('OvertimeDecisionDialog — rendering', () => {
     const { getByText } = render(<OvertimeDecisionDialog {...defaultProps} />)
     expect(getByText('Cancelar')).toBeDefined()
   })
+
+  it('keeps showing the last employee name and minutes while animating out after close', () => {
+    const { getByText, rerender } = render(<OvertimeDecisionDialog {...defaultProps} />)
+    rerender(
+      <OvertimeDecisionDialog
+        {...defaultProps}
+        isOpen={false}
+        attendanceId={null}
+        employeeName=""
+        overtimeMinutes={0}
+      />
+    )
+    expect(getByText('Carlos Mendoza')).toBeDefined()
+    expect(getByText(/35 min extra/)).toBeDefined()
+  })
 })
 
 describe('OvertimeDecisionDialog — actions', () => {

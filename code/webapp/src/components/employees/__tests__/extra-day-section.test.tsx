@@ -36,8 +36,8 @@ vi.mock('@/services/negotiated-extra-day-hooks', () => ({
   useCancelNegotiatedExtraDay: () => ({ mutate: mockCancelMutate, isPending: false, variables: undefined }),
 }))
 
-vi.mock('../use-dialog-animation', () => ({
-  useDialogAnimation: (isOpen: boolean) => ({ visible: isOpen, backdropCls: '', panelCls: '' }),
+vi.mock('@/components/ui/use-dialog-transition', () => ({
+  useDialogTransition: (isOpen: boolean) => ({ visible: isOpen, backdropCls: '', panelCls: '' }),
 }))
 
 vi.mock('@/components/ui/confirm-dialog', () => ({

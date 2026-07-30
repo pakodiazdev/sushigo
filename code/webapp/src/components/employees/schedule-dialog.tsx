@@ -4,7 +4,7 @@ import { CalendarDays, X, Plus, Pencil, ArrowLeft, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Employee } from '@/types/employee'
 import type { useScheduleSection, ScheduleDialogView } from './use-schedule-section'
-import { useDialogAnimation } from './use-dialog-animation'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 import { CreateScheduleForm } from './create-schedule-form'
 import { ScheduleContent } from './schedule-content'
 import { ScheduleHistorySection } from './schedule-history-section'
@@ -140,7 +140,7 @@ export interface ScheduleDialogProps {
 
 export function ScheduleDialog({ ctx, employee }: ScheduleDialogProps) {
   const { isOpen, close, view, isTransitioning } = ctx
-  const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, close)
+  const { visible, backdropCls, panelCls } = useDialogTransition(isOpen, { onEscape: close, lockScroll: true })
   const [activeTab, setActiveTab] = useState<ScheduleTab>('config')
 
   // Reset to config tab whenever the dialog opens

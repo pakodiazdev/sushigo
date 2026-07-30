@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatLastFirst } from '@/lib/format'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 import {
   useExtraDayNegotiationDialog,
   formatCurrency,
@@ -13,7 +14,8 @@ import type { TodayAttendanceEmployee } from '@/types/attendance'
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 export interface ExtraDayNegotiationDialogProps {
-  employee: TodayAttendanceEmployee
+  isOpen: boolean
+  employee: TodayAttendanceEmployee | null
   date: string
   registeredDailyWage: number | null
   isPending: boolean
@@ -29,6 +31,7 @@ export interface ExtraDayNegotiationDialogProps {
  * NegotiatedExtraDay record. After approval the time-picker dialog opens for the actual check-in.
  */
 export function ExtraDayNegotiationDialog({
+  isOpen,
   employee,
   date,
   registeredDailyWage,
@@ -36,6 +39,12 @@ export function ExtraDayNegotiationDialog({
   onConfirm,
   onCancel,
 }: Readonly<ExtraDayNegotiationDialogProps>) {
+  // The parent clears `employee`/`date`/`registeredDailyWage` the instant it
+  // closes this dialog, so cache the last non-null content for the exit animation.
+  const lastContent = useRef({ employee, date, registeredDailyWage })
+  if (isOpen) lastContent.current = { employee, date, registeredDailyWage }
+  const { employee: cEmployee, date: cDate, registeredDailyWage: cRegisteredDailyWage } = lastContent.current
+
   const {
     register,
     handleSubmit,
@@ -56,22 +65,14 @@ export function ExtraDayNegotiationDialog({
     handlePrimaPercentChange,
     handlePrimaAmountChange,
     finalPrimaPercent,
-  } = useExtraDayNegotiationDialog(registeredDailyWage)
+  } = useExtraDayNegotiationDialog(cRegisteredDailyWage, isOpen)
 
-  // Escape key handler
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isPending) onCancel()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [isPending, onCancel])
+  const { visible, backdropCls, panelCls } = useDialogTransition(isOpen, {
+    onEscape: () => { if (!isPending) onCancel() },
+    lockScroll: true,
+  })
 
-  // Scroll lock
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = 'unset' }
-  }, [])
+  if (!visible || !cEmployee) return null
 
   function onSubmit(formValues: ExtraDayFormValues) {
     onConfirm({
@@ -86,7 +87,7 @@ export function ExtraDayNegotiationDialog({
       {/* Backdrop */}
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 cursor-default appearance-none border-none p-0"
+        className={`absolute inset-0 bg-black/50 ${backdropCls} cursor-default appearance-none border-none p-0`}
         onClick={() => { if (!isPending) onCancel() }}
         aria-label="Cerrar diálogo"
       />
@@ -96,7 +97,7 @@ export function ExtraDayNegotiationDialog({
         open
         aria-modal="true"
         aria-labelledby="extra-day-dialog-title"
-        className="relative z-10 bg-card rounded-xl border shadow-lg p-6 w-full max-w-md mx-4 space-y-4 overflow-y-auto max-h-[90vh]"
+        className={`relative z-10 bg-card rounded-xl border shadow-lg p-6 w-full max-w-md mx-4 space-y-4 overflow-y-auto max-h-[90vh] ${panelCls}`}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
@@ -109,10 +110,10 @@ export function ExtraDayNegotiationDialog({
             </h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               <span className="font-medium text-foreground">
-                {formatLastFirst(employee.user)}
+                {formatLastFirst(cEmployee.user)}
               </span>
               {' · '}
-              <span className="font-mono">{date}</span>
+              <span className="font-mono">{cDate}</span>
             </p>
           </div>
           <button
@@ -138,14 +139,14 @@ export function ExtraDayNegotiationDialog({
                 value="registered"
                 checked={salaryMode === 'registered'}
                 onChange={() => setSalaryMode('registered')}
-                disabled={isPending || registeredDailyWage === null}
+                disabled={isPending || cRegisteredDailyWage === null}
               />
               <span className="text-sm">
                 Salario registrado{' '}
                 <span className="text-muted-foreground">
-                  {registeredDailyWage === null
+                  {cRegisteredDailyWage === null
                     ? '(no configurado)'
-                    : `(${formatCurrency(registeredDailyWage)})`}
+                    : `(${formatCurrency(cRegisteredDailyWage)})`}
                 </span>
               </span>
             </label>
@@ -176,7 +177,7 @@ export function ExtraDayNegotiationDialog({
                     {...register('salary_percent', {
                       onChange: e => handleSalaryPercentChange(e.target.value),
                     })}
-                    disabled={isPending || registeredDailyWage === null}
+                    disabled={isPending || cRegisteredDailyWage === null}
                     className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>

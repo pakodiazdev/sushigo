@@ -27,6 +27,7 @@ const employee: TodayAttendanceEmployee = {
 
 function makeProps(overrides: Partial<ExtraDayNegotiationDialogProps> = {}): ExtraDayNegotiationDialogProps {
   return {
+    isOpen: true,
     employee,
     date: '2026-04-20',
     registeredDailyWage: 200,
@@ -76,6 +77,22 @@ describe('ExtraDayNegotiationDialog — rendering', () => {
     const { getAllByText } = render(<ExtraDayNegotiationDialog {...makeProps()} />)
     // There's both the X button and the text "Cancelar" button
     expect(getAllByText('Cancelar').length).toBeGreaterThan(0)
+  })
+
+  it('renders nothing when isOpen is false', () => {
+    const { queryByText } = render(<ExtraDayNegotiationDialog {...makeProps({ isOpen: false })} />)
+    expect(queryByText('Día extra express')).toBeNull()
+  })
+
+  it('renders nothing when employee is null, even if isOpen is true', () => {
+    const { queryByText } = render(<ExtraDayNegotiationDialog {...makeProps({ isOpen: true, employee: null })} />)
+    expect(queryByText('Día extra express')).toBeNull()
+  })
+
+  it('keeps showing the last employee name while animating out after close', () => {
+    const { getByText, rerender } = render(<ExtraDayNegotiationDialog {...makeProps()} />)
+    rerender(<ExtraDayNegotiationDialog {...makeProps({ isOpen: false })} />)
+    expect(getByText(/García, María/)).toBeDefined()
   })
 })
 

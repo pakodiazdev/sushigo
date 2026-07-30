@@ -83,6 +83,40 @@ describe('useDialogTransition', () => {
     expect(onEscape).not.toHaveBeenCalled()
   })
 
+  it('by default lets Escape also reach a parent document-level listener (e.g. a parent dialog)', () => {
+    const parentHandler = vi.fn()
+    document.addEventListener('keydown', parentHandler)
+
+    const onEscape = vi.fn()
+    renderHook(() => useDialogTransition(true, { onEscape }))
+
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+
+    expect(onEscape).toHaveBeenCalledTimes(1)
+    expect(parentHandler).toHaveBeenCalledTimes(1)
+
+    document.removeEventListener('keydown', parentHandler)
+  })
+
+  it('with stopEscapePropagation stops Escape from reaching a parent document-level listener', () => {
+    const parentHandler = vi.fn()
+    document.addEventListener('keydown', parentHandler)
+
+    const onEscape = vi.fn()
+    renderHook(() => useDialogTransition(true, { onEscape, stopEscapePropagation: true }))
+
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+
+    expect(onEscape).toHaveBeenCalledTimes(1)
+    expect(parentHandler).not.toHaveBeenCalled()
+
+    document.removeEventListener('keydown', parentHandler)
+  })
+
   it('animates out then calls onExitComplete after the exit duration', () => {
     vi.useFakeTimers()
     const onExitComplete = vi.fn()

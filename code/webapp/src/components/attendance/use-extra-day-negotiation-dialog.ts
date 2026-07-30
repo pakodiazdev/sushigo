@@ -68,12 +68,14 @@ export interface ExtraDayNegotiationDialogState {
  */
 export function useExtraDayNegotiationDialog(
   registeredDailyWage: number | null,
+  isOpen: boolean,
 ): ExtraDayNegotiationDialogState {
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<ExtraDayFormValues>({
     resolver: zodResolver(extraDayFormSchema),
@@ -87,6 +89,23 @@ export function useExtraDayNegotiationDialog(
       notes:          '',
     },
   })
+
+  // Reset to a fresh form whenever the dialog (re)opens — it now stays mounted
+  // across close/reopen to allow the exit animation to play.
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        salary_mode:    registeredDailyWage === null ? 'custom' : 'registered',
+        salary_percent: '100.00',
+        salary_amount:  (registeredDailyWage ?? 0).toFixed(2),
+        prima_mode:     'legal',
+        prima_percent:  '100.00',
+        prima_amount:   (registeredDailyWage ?? 0).toFixed(2),
+        notes:          '',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   // Watch all fields used for derived computations and cross-field sync.
   const salaryMode       = watch('salary_mode')

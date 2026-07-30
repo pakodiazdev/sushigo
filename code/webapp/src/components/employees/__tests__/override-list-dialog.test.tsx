@@ -56,6 +56,7 @@ describe('OverrideListDialog', () => {
     it('renders dialog title with day label', () => {
         render(
             <OverrideListDialog
+                isOpen
                 dow={1}
                 dayLabel="Lunes"
                 overrides={mockOverrides}
@@ -70,6 +71,7 @@ describe('OverrideListDialog', () => {
     it('shows empty message when no overrides', () => {
         render(
             <OverrideListDialog
+                isOpen
                 dow={1}
                 dayLabel="Lunes"
                 overrides={[]}
@@ -84,6 +86,7 @@ describe('OverrideListDialog', () => {
     it('renders override with day off label', () => {
         render(
             <OverrideListDialog
+                isOpen
                 dow={1}
                 dayLabel="Lunes"
                 overrides={mockOverrides}
@@ -98,6 +101,7 @@ describe('OverrideListDialog', () => {
     it('calls onClose when backdrop is clicked', () => {
         render(
             <OverrideListDialog
+                isOpen
                 dow={1}
                 dayLabel="Lunes"
                 overrides={mockOverrides}
@@ -115,6 +119,7 @@ describe('OverrideListDialog', () => {
     it('renders without crashing', () => {
         const { container } = render(
             <OverrideListDialog
+                isOpen
                 dow={1}
                 dayLabel="Lunes"
                 overrides={mockOverrides}
@@ -124,5 +129,20 @@ describe('OverrideListDialog', () => {
         )
 
         expect(container).toBeDefined()
+    })
+
+    it('renders nothing when isOpen is false', () => {
+        render(
+            <OverrideListDialog
+                isOpen={false}
+                dow={1}
+                dayLabel="Lunes"
+                overrides={mockOverrides}
+                onSelect={mockOnSelect}
+                onClose={mockOnClose}
+            />,
+        )
+
+        expect(screen.queryByText('Excepciones — Lunes')).toBeNull()
     })
 })

@@ -37,6 +37,7 @@ function makeConflict(id: string, from: string, to: string | null): ScheduleDayO
 }
 
 const BASE_PROPS = {
+  isOpen: true,
   dayLabel: 'Lunes',
   dayOfWeek: 1,
   existingOverrides: [] as ScheduleDayOverride[],
@@ -240,6 +241,17 @@ describe('OverrideScopeDialog', () => {
     render(<OverrideScopeDialog {...BASE_PROPS} onSubmit={onSubmit} />)
     await clickMainSubmit()
     expect(onSubmit).toHaveBeenCalled()
+  })
+
+  it('renders nothing when isOpen is false', () => {
+    render(<OverrideScopeDialog {...BASE_PROPS} isOpen={false} />)
+    expect(document.body.querySelector('dialog')).toBeNull()
+  })
+
+  it('keeps showing the last dayLabel while animating out after close', () => {
+    const { rerender } = render(<OverrideScopeDialog {...BASE_PROPS} dayLabel="Martes" />)
+    rerender(<OverrideScopeDialog {...BASE_PROPS} dayLabel="Martes" isOpen={false} />)
+    expect(document.body.textContent).toContain('Ajuste — Martes')
   })
 })
 

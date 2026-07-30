@@ -143,17 +143,16 @@ export function ScheduleContent({ schedule, employeeId, periodId, viewMode = 'co
             </table>
           </div>
 
-          {override.scopeOpen && override.editingDow && (
-            <OverrideScopeDialog
-              dayLabel={DAY_LABELS[override.editingDow] ?? ''}
-              dayOfWeek={override.editingDow}
-              existingOverrides={overridesByDow[override.editingDow] ?? []}
-              isPending={override.isPending}
-              isError={override.isError}
-              onSubmit={override.submit}
-              onClose={override.closeScopeDialog}
-            />
-          )}
+          <OverrideScopeDialog
+            isOpen={override.scopeOpen}
+            dayLabel={override.editingDow !== null ? (DAY_LABELS[override.editingDow] ?? '') : ''}
+            dayOfWeek={override.editingDow ?? 0}
+            existingOverrides={override.editingDow !== null ? (overridesByDow[override.editingDow] ?? []) : []}
+            isPending={override.isPending}
+            isError={override.isError}
+            onSubmit={override.submit}
+            onClose={override.closeScopeDialog}
+          />
         </>
       ) : (
         <WeeklyCalendar
@@ -166,15 +165,14 @@ export function ScheduleContent({ schedule, employeeId, periodId, viewMode = 'co
       )}
 
       {/* OverrideListDialog — shared between Configuración and Vista semanal */}
-      {overrideListDow !== null && (
-        <OverrideListDialog
-          dow={overrideListDow}
-          dayLabel={DAY_LABELS[overrideListDow] ?? ''}
-          overrides={overridesForDow}
-          onSelect={(o) => handleOverrideSelect(o, onSwitchToWeekView)}
-          onClose={closeOverrideList}
-        />
-      )}
+      <OverrideListDialog
+        isOpen={overrideListDow !== null}
+        dow={overrideListDow ?? 0}
+        dayLabel={overrideListDow !== null ? (DAY_LABELS[overrideListDow] ?? '') : ''}
+        overrides={overridesForDow}
+        onSelect={(o) => handleOverrideSelect(o, onSwitchToWeekView)}
+        onClose={closeOverrideList}
+      />
     </div>
   )
 }

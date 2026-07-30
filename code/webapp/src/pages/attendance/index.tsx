@@ -404,16 +404,15 @@ export function AttendancePage() {
       <CloseDayPanel panel={closeDayPanel} />
 
       {/* Extra Day Negotiation Dialog */}
-      {extraDayRow && (
-        <ExtraDayNegotiationDialog
-          employee={extraDayRow.employee}
-          date={selectedDate}
-          registeredDailyWage={extraDayRow.employee.daily_wage}
-          isPending={isRegisteringExtraDay}
-          onConfirm={confirmExtraDay}
-          onCancel={closeExtraDay}
-        />
-      )}
+      <ExtraDayNegotiationDialog
+        isOpen={extraDayRow !== null}
+        employee={extraDayRow?.employee ?? null}
+        date={selectedDate}
+        registeredDailyWage={extraDayRow?.employee.daily_wage ?? null}
+        isPending={isRegisteringExtraDay}
+        onConfirm={confirmExtraDay}
+        onCancel={closeExtraDay}
+      />
 
       {/* Weekly Summary Slide Panel */}
       <WeeklySummaryPanel weeklySummary={weeklySummary} />

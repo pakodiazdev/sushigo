@@ -3,6 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { SlidePanelOverlayContext } from './slide-panel-context'
 
+/**
+ * SlidePanel is an intentionally separate animation family from the centered
+ * dialogs built on `useDialogTransition` (`components/ui/use-dialog-transition.ts`):
+ * slide-in/out with a configurable duration, vs. the dialog family's fixed
+ * 200ms fade/scale. Do not migrate it onto `useDialogTransition` — see #342.
+ */
+
 /** Default animation duration in ms — shared across all SlidePanels. */
 export const SLIDE_PANEL_DEFAULT_DURATION_MS = 350
 

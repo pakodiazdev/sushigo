@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -60,6 +60,7 @@ export type OverrideScopeFormValues = z.infer<typeof overrideScopeSchema>
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useOverrideScopeDialog(
+  isOpen: boolean,
   dayOfWeek: number,
   existingOverrides: ScheduleDayOverride[],
   onSubmit: (params: {
@@ -82,6 +83,17 @@ export function useOverrideScopeDialog(
       note: '',
     },
   })
+
+  // Reset to the first step and a fresh form whenever the dialog (re)opens —
+  // it now stays mounted across close/reopen to allow the exit animation to play.
+  useEffect(() => {
+    if (isOpen) {
+      setStep('form')
+      setConflicts([])
+      form.reset({ scope: 'single_date', effectiveFrom: nextDateForDow(dayOfWeek), effectiveTo: '', note: '' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, dayOfWeek])
 
   const scope = form.watch('scope')
   const effectiveFrom = form.watch('effectiveFrom')

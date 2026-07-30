@@ -5,7 +5,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth.store'
-import { useDialogAnimation } from './use-dialog-animation'
+import { useDialogTransition } from '@/components/ui/use-dialog-transition'
 import { useNegotiatedExtraDays } from './use-negotiated-extra-days'
 import { useCancelNegotiatedExtraDay } from '@/services/negotiated-extra-day-hooks'
 import { ExtraDayForm } from './extra-day-form'
@@ -58,7 +58,7 @@ function ExtraDayHistoryDialog({
   readonly setFilters: (f: ListExtraDaysFilters) => void
   readonly canCancel: boolean
 }) {
-  const { visible, backdropCls, panelCls } = useDialogAnimation(isOpen, onClose)
+  const { visible, backdropCls, panelCls } = useDialogTransition(isOpen, { onEscape: onClose, lockScroll: true })
   const cancelMutation = useCancelNegotiatedExtraDay()
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
