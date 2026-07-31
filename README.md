@@ -9,7 +9,7 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
 - **Testing discipline, not just volume** — a strict PHPUnit → Vitest → Cypress pyramid (112 / 237 / 45 test files) with SonarCloud enforcing ≥80% coverage on new code as a hard merge gate, not a suggestion.
 - **Clean backend architecture** — Single Action Controllers, dedicated Actions/Services layers, effective-dated domain modeling for wage/schedule history, real Laravel Policy-based authorization (`$user->can(...)`), OpenAPI docs generated from code.
 - **Full CI/CD pipeline** — 5 GitHub Actions workflows gate every PR (backend/frontend tests + lint), plus a one-click manual Cloud Run preview deploy via GCP Workload Identity Federation.
-- **A genuinely distinctive workflow** — [`sushigo-dev-lab`](https://github.com/pakodiazdev/sushigo-dev-lab) orchestrates up to 8 parallel git-worktree "workspaces," each a fully independent Laravel + Vite stack sharing Postgres/Redis/Mailpit, so multiple issues ship as parallel waves instead of one branch at a time.
+- **A genuinely distinctive workflow, with the numbers to back it** — [`sushigo-dev-lab`](https://github.com/pakodiazdev/sushigo-dev-lab) orchestrates up to 8 parallel git-worktree "workspaces," each a fully independent Laravel + Vite stack sharing Postgres/Redis/Mailpit, so multiple issues ship as parallel waves instead of one branch at a time. Measured, not claimed: [Sprint 001](doc/sprints/sprint-001-attendance-payroll-quality.md#wall-clock-time--parallelism) fit 51.1h of summed agent effort into just 36.5h of wall-clock time (**1.40× parallelization**, peaking at 5 Issues worked simultaneously) — closing 25 Issues in 5 calendar days against a 14-day target.
 - **A real business domain, not a CRUD toy** — multi-location inventory, cash sessions, and a full attendance/payroll system (schedules, overtime banking, punctuality bonuses, vacations, leave requests, payroll close/reopen/export) built for a multi-branch restaurant operation.
 
 ---
@@ -253,10 +253,10 @@ These documents capture the target inventory domain (operating units, stock move
 
 Development is organized into documented sprints — see [`doc/conventions/sprints.md`](doc/conventions/sprints.md) for the full convention and [`doc/sprints/`](doc/sprints/) for every sprint document (goal, scope, execution rounds, conflict analysis, and results).
 
-| Sprint | Title | Status | Started | Completed | Target | Document |
-|---|---|---|---|---|---|---|
-| 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
-| 001 | Attendance, Payroll & Quality | In Progress | 2026-07-26 | 81.5% | 2026-08-09 | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
+| Sprint | Title | Status | Started | Completed | Target | Parallelization | Document |
+|---|---|---|---|---|---|---:|---|
+| 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
+| 001 | Attendance, Payroll & Quality | In Progress | 2026-07-26 | — (impl. finished 2026-07-30) | 2026-08-09 | 1.40× (51.1h → 36.5h) | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
 
 ## Development tips
 

@@ -327,6 +327,41 @@ Both must be documented.
 - Negative variance means execution beat the estimate.
 - Positive variance means execution exceeded the estimate.
 
+### Wall-clock time and parallelism
+
+Sprint 001 exposed a real gap: summing every Issue's `Tracked` value answers "how much labor went in," but not "how much calendar time did it actually take" — a sprint run by several agents working simultaneously can finish in far fewer calendar hours than its total tracked effort would suggest. Both numbers are useful and must not be confused with each other.
+
+**Definitions:**
+
+- **Person-hours** — the sum of every logged session's duration across the Issues included in the figure being reported, with every session counted in full. Unlike wall-clock time, sessions are never merged here — if two Issues had agents working on them at the same moment, that moment counts twice, once toward each Issue's total. **This is not automatically equal to the §10/§11 Tracked total** — that total covers only formally-scoped Issues, while a Person-hours figure may deliberately include Opportunistic (§5.4) and Follow-up (§17) work too (see the computation rule below). Always state which population a given Person-hours figure covers.
+- **Wall-clock time (real elapsed time)** — the union of every Issue's session intervals (`date` + `start` + `end`, from each Issue's `## 📅 Sessions` array), with overlapping or back-to-back intervals merged into single blocks before summing their duration. Represents how much calendar time the work actually consumed, independent of how many agents worked at once.
+- **Parallelization factor** — `Person-hours ÷ Wall-clock time`. `1.0×` means every session ran serially with no overlap. A factor above `1.0×` means multiple Issues had agents actively working on them at the same moment — e.g. `1.4×` means, on average, 1.4 sessions were open per wall-clock hour.
+- **Peak concurrency** — the maximum number of Issues with simultaneously open (overlapping) sessions at any single point in the sprint. This is the highest number of agents genuinely working in parallel at once, not an average.
+
+**Computation rules:**
+
+- Computed once, at sprint closure, directly from every included Issue's `## 📅 Sessions` array — never estimated or eyeballed from merge timestamps.
+- Convert every session to a `(start, end)` datetime pair (a session crossing midnight has an `end` earlier than its `start`; treat it as ending the next day). Discard any open session (`"end": "?"`).
+- An Issue with no `## ⏱️ Time` section at all (pre-convention Issues) contributes nothing to either total — do not substitute a guessed value. Record it as a data gap in §12 instead (see the existing rule for Issues with no Time section).
+- To get wall-clock time: sort every interval from every Issue by start time, then merge any interval that starts before or at the same moment the previous merged block ends. Sum the resulting non-overlapping blocks' durations.
+- To get person-hours: sum every individual session's duration directly (no merging) — this should reconcile with the sum of each Issue's own `Tracked` value; a large mismatch means an Issue's `Tracked` field was hand-edited instead of computed from its `Sessions` array, and is itself worth flagging.
+- Opportunistic work (§5.4) and Follow-up work (§17) items with logged sessions are included in both totals — they consumed real time even though they weren't part of the original scope. State clearly whether a given wall-clock/parallelization figure covers formal scope only or the full sprint including opportunistic work, since the two answer different questions.
+- Record the result in a `### Wall-Clock Time & Parallelism` subsection under §11, including: Person-hours, Wall-clock time, Parallelization factor, Peak concurrency (with its timestamp and contributing Issues), and a table of the merged wall-clock blocks showing which Issues' sessions fall inside each one — this is what makes "which tasks ran in parallel, and when" answerable from the document instead of requiring a fresh calculation.
+
+```markdown
+### Wall-Clock Time & Parallelism
+
+- **Person-hours:** 51.1h (sum of every logged session, all Issues with session data)
+- **Wall-clock time:** 36.5h (union of all session intervals, overlaps merged)
+- **Parallelization factor:** 1.40× (Person-hours ÷ Wall-clock time)
+- **Peak concurrency:** 5 simultaneous sessions (2026-07-28 19:46 — Issues #311, #312, #324, #337, #342)
+
+| Wall-clock block | Duration | Issues active in this block |
+|---|---:|---|
+| 2026-07-26 19:06 → 20:51 | 1.75h | #322, #323, #325, #327, #329 |
+| 2026-07-27 20:22 → 2026-07-28 01:21 | 4.98h | #306, #314, #315, #328 |
+```
+
 ---
 
 ## 8. Standard Sprint Document Structure
@@ -549,6 +584,18 @@ Do not wait until sprint closure, because a slow round may be hidden by faster w
 | Rework and corrections | — | — | — |
 | **Total** | **—** | **—** | **—** |
 
+### Wall-Clock Time & Parallelism
+
+This is a cross-file pointer to `doc/conventions/sprints.md` §7 (Time and Duration Rules) for the "Wall-clock time and parallelism" definitions and computation rules — not a same-document §7, since a generated sprint document numbers its own §7 as Route A — Execution Rounds instead.
+
+- **Person-hours:** —
+- **Wall-clock time:** —
+- **Parallelization factor:** —
+- **Peak concurrency:** —
+
+| Wall-clock block | Duration | Issues active in this block |
+|---|---:|---|
+
 ## 12. Notes on Estimate Confidence
 
 Explain the origin and confidence of the estimates.
@@ -664,6 +711,7 @@ Follow-up work belongs in the backlog or in a future document under `planned/`.
 - [ ] Round totals and sprint totals were recalculated.
 - [ ] Estimate variance was calculated.
 - [ ] Consolidated effort was completed.
+- [ ] Wall-clock time, parallelization factor, and peak concurrency were computed (`doc/conventions/sprints.md` §7).
 - [ ] Dependencies reflect actual execution.
 - [ ] Conflict notes reflect actual execution.
 - [ ] Tests and relevant quality metrics were recorded.
@@ -825,6 +873,18 @@ next:
 | Rework and corrections | — | — | — |
 | **Total** | **—** | **—** | **—** |
 
+### Wall-Clock Time & Parallelism
+
+This is a cross-file pointer to `doc/conventions/sprints.md` §7 (Time and Duration Rules) for the "Wall-clock time and parallelism" definitions and computation rules — not a same-document §7, since a generated sprint document numbers its own §7 as Route A — Execution Rounds instead.
+
+- **Person-hours:** —
+- **Wall-clock time:** —
+- **Parallelization factor:** —
+- **Peak concurrency:** —
+
+| Wall-clock block | Duration | Issues active in this block |
+|---|---:|---|
+
 ## 12. Notes on Estimate Confidence
 
 ## 13. Execution Evidence
@@ -858,6 +918,7 @@ next:
 - [ ] Evidence and tracked time are complete.
 - [ ] Estimates and totals were recalculated.
 - [ ] Consolidated effort was completed.
+- [ ] Wall-clock time, parallelization factor, and peak concurrency were computed (`doc/conventions/sprints.md` §7).
 - [ ] Quality results were recorded.
 - [ ] Scope changes and limitations were documented.
 - [ ] Follow-up work and lessons learned were captured.
