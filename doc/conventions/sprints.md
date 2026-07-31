@@ -92,6 +92,14 @@ After this move:
 - the promoted sprint becomes current;
 - the previous highest-numbered sprint becomes completed.
 
+This repository carries **two independent sprint indices** that must both be updated on every
+promotion — updating one and not the other was a real mistake made and caught during Sprint 002's
+own promotion (#386):
+
+- `doc/sprints/README.md` — the detailed per-sprint index (status, document link).
+- root `README.md`'s own `## Sprints` table — a separate summary table (status, dates, target,
+  parallelization) shown to anyone landing on the repo's main page.
+
 ---
 
 ## 3. File Naming Convention

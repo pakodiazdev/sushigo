@@ -256,7 +256,8 @@ Development is organized into documented sprints — see [`doc/conventions/sprin
 | Sprint | Title | Status | Started | Completed | Target | Parallelization | Document |
 |---|---|---|---|---|---|---:|---|
 | 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
-| 001 | Attendance, Payroll & Quality | In Progress | 2026-07-26 | — (impl. finished 2026-07-30) | 2026-08-09 | 1.40× (51.1h → 36.5h) | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
+| 001 | Attendance, Payroll & Quality | Completed | 2026-07-26 | 2026-07-31 (impl. finished 2026-07-30) | 2026-08-09 | 1.40× (51.1h → 36.5h) | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
+| 002 | Platillos Catalog & Platform Hardening | In Progress | 2026-07-31 | — | — | — | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
 
 ## Development tips
 

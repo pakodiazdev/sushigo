@@ -1,12 +1,12 @@
 ---
 sprint: "001"
 title: Attendance, Payroll & Quality
-status: In Progress
+status: Completed
 
 created: 2026-07-25
 started: 2026-07-26
-completed:
-last_updated: 2026-07-30
+completed: 2026-07-31
+last_updated: 2026-07-31
 
 base_branch: main
 base_commit: 079a316
@@ -16,7 +16,7 @@ github_project: SushiGo Admin (#7)
 github_milestone:
 
 previous: sprint-000-introduction.md
-next:
+next: sprint-002-platillos-catalog-platform-hardening.md
 ---
 
 # Sprint 001 — Attendance, Payroll & Quality
@@ -33,7 +33,7 @@ A file-level conflict analysis (parsed directly from each SonarCloud Issue's "Af
 
 Expected outcome: a real attendance-correction capability shipped, payroll-close periods can no longer be closed early or as a partial week, the two highest-connected quality debt nodes (#305, #306) cleared, and the sprint's own estimate-vs-tracked comparison populated so future sprints can calibrate estimates against real data.
 
-**Implementation complete as of 2026-07-30** (sprint remains `In Progress` per `doc/conventions/sprints.md` — formal completion requires Sprint 002 to be promoted first, which hasn't happened yet): 25 of 27 scoped Issues completed (92.6%) — every Issue except #276 and #85. Both were removed from Sprint 001's active scope on 2026-07-30 and deferred rather than completed (see §5.3) — WhatsApp real-provider integration (#276) isn't needed while the webapp's log-based OTP display covers password recovery pre-production, and the Flutter mobile bootstrap (#85) is postponed until the attendance functionality it would mirror is proven out in backend + web first. With those two removed, 100% of Sprint 001's real (non-deferred) scope shipped, 10 days ahead of the 2026-08-09 target deadline. All 19 SonarCloud Issues (#305–#323), all 4 hand-authored product Issues (#325, #327, #328, #329), the dev-tooling Issue (#324), and the mid-sprint addition (#359) merged. See §13 for full evidence and §15–§16 for delivered value and lessons learned.
+**Implementation complete as of 2026-07-30, formal closure completed 2026-07-31** (Sprint 002 was promoted the same day, #386, satisfying `doc/conventions/sprints.md` §4's completion trigger): 25 of 27 scoped Issues completed (92.6%) — every Issue except #276 and #85. Both were removed from Sprint 001's active scope on 2026-07-30 and deferred rather than completed (see §5.3) — WhatsApp real-provider integration (#276) isn't needed while the webapp's log-based OTP display covers password recovery pre-production, and the Flutter mobile bootstrap (#85) is postponed until the attendance functionality it would mirror is proven out in backend + web first. With those two removed, 100% of Sprint 001's real (non-deferred) scope shipped, 10 days ahead of the 2026-08-09 target deadline. All 19 SonarCloud Issues (#305–#323), all 4 hand-authored product Issues (#325, #327, #328, #329), the dev-tooling Issue (#324), and the mid-sprint addition (#359) merged. See §13 for full evidence and §15–§16 for delivered value and lessons learned.
 
 ## 2. Context
 
@@ -57,12 +57,12 @@ Base state: `main` @ `079a316`, 26 open Issues, zero Issues yet linked to a GitH
 |---|---:|
 | Created | 2026-07-25 |
 | Started | 2026-07-26 |
-| Completed | — (implementation finished 2026-07-30; formal closure pending Sprint 002 promotion) |
+| Completed | 2026-07-31 (implementation finished 2026-07-30; formal closure completed 2026-07-31 upon Sprint 002 promotion, #386) |
 | Target completion (deadline) | 2026-08-09 |
 | Calendar duration (planned) | 14 days |
-| Calendar duration (actual) | 5 days (created → completed) |
+| Calendar duration (actual) | 6 days (created → completed) |
 | Active workdays | 5 (2026-07-26 through 2026-07-30 — PR merges recorded every day, several days across multiple parallel `sushigo-a`..`sushigo-e` workspaces) |
-| Progress (Issues completed) | 25 / 27 (92.6%) as of 2026-07-30 — every scoped Issue except #276 and #85. **100% of active scope shipped as of 2026-07-30** — #276 and #85 removed from scope and deferred rather than left incomplete (§5.3); no other `sprint-1`-labeled Issue remains open besides the two deferred ones (verified via `gh issue list --label sprint-1 --state open`). Sprint stays `In Progress` per convention until Sprint 002 is promoted |
+| Progress (Issues completed) | 25 / 27 (92.6%) as of 2026-07-30 — every scoped Issue except #276 and #85. **100% of active scope shipped as of 2026-07-30** — #276 and #85 removed from scope and deferred rather than left incomplete (§5.3); no other `sprint-1`-labeled Issue remains open besides the two deferred ones (verified via `gh issue list --label sprint-1 --state open`). Sprint formally closed 2026-07-31 upon Sprint 002's promotion (#386) |
 
 ### How the deadline was set
 
@@ -276,7 +276,7 @@ See "Wall-clock time and parallelism" under [`doc/conventions/sprints.md` §7](.
 - **Parallelization factor:** 1.40× — on average, 1.40 sessions were open per wall-clock hour
 - **Peak concurrency:** 5 simultaneous sessions, at 2026-07-28 19:46 (#311, #312, #324, #337, #342) — #309/#321's 2026-07-27 01:45 sessions peak at 3 concurrent (#309, #321, #327), below this figure, so it is unaffected
 
-**This is the direct answer to "how much time did the sprint really take vs. how much labor went into it":** 51.13h of summed individual effort fit inside only 36.45h of actual calendar time — a ~15h saving from working several Issues at once across parallel `sushigo-a`..`sushigo-e` workspaces, not from the estimates being wrong (§10 already shows Tracked landing close to the planned Opt./Pess. range). This is the hard-numbers version of the observation in §16: the sprint closed in 5 calendar days against a 14-day target mainly because of concurrency and extended-hours sessions, not because individual tasks were faster than estimated.
+**This is the direct answer to "how much time did the sprint really take vs. how much labor went into it":** 51.13h of summed individual effort fit inside only 36.45h of actual calendar time — a ~15h saving from working several Issues at once across parallel `sushigo-a`..`sushigo-e` workspaces, not from the estimates being wrong (§10 already shows Tracked landing close to the planned Opt./Pess. range). This is the hard-numbers version of the observation in §16: all scoped implementation finished in 5 calendar days against a 14-day target (formal closure followed a day later, §4) mainly because of concurrency and extended-hours sessions, not because individual tasks were faster than estimated.
 
 | Wall-clock block | Duration | Issues active in this block |
 |---|---:|---|
@@ -344,9 +344,9 @@ Note the two densest blocks — 2026-07-27 20:22→2026-07-28 01:21 (#306, #314,
 | ✅ | #342 | Follow-up work (§17) discovered while implementing #327 — promoted the shared `useDialogTransition` hook app-wide, migrated the 5 remaining duplicated-animation dialogs, animated the 6 previously-unanimated ones, reconciled `BranchSelectionDialog` styling | PR #354 | 02531c4 | 4.68h | Not part of original scope — see §17. Merged `2026-07-30` |
 | ✅ | #337 | Follow-up work (§17) deferred from #327/PR #336 — added an "En comida" stat tab for employees at lunch, mechanical extension of #327's bucket-split + clickable-tab pattern | PR #350 | 73f05e6 | 0.5h | Not part of original scope — see §17. Merged `2026-07-29` |
 | ✅ | #359 | GitHub Issue made the single source of truth for `/start-issue`/`/finish-pr` (no local `.md` created or edited during active work); `/finish-pr` now generates a verbatim archive snapshot under `doc/tasks/yyyy-mm/<issue-number>-slug.md` exactly once at finish time; started `doc/decisions.md` + `doc/decisions/td-NN-*.md` technical decisions log; resolved 5 pre-existing orphaned `doc/tasks/backlog/*.md` files (3 for already-closed issues, 1 never migrated to GitHub, 1 byte-identical duplicate) | PR #361 | 0dc2d54 | 3.0h | Docs/tooling only, no application tests apply; ESLint/TypeScript/Pint not touched; 1 Copilot review thread resolved (`## 📊 Retrospective` timing clarified in `doc/conventions/tasks.md`); manual merge-conflict resolution against #355 (concurrent `finish-pr.md` auto-rebase feature) during `/rebase-main`; added to scope mid-sprint (§5.3). Branch `chore/359-unify-issue-tracking`, workspace `sushigo-a`. Merged `2026-07-30` |
-| ✅ | #374 | Follow-up work (§17) — this closure pass itself: deferred #276/#85 from Sprint 001 scope (`deferred`/`priority: low` labels + rationale comments), fixed 5 stale status markers (#305/#316/#319/#320/#321), formalized and computed the wall-clock/parallelism metric (§7 of `doc/conventions/sprints.md`), and corrected several data-integrity gaps found along the way (stale #306 Tracked value, fabricated #309 Tracked value, missing #340 Tracked value, Consolidated Time Tracking Total arithmetic, ambiguous Person-hours definition) | PR #375 | — | 4.4h | docs/-only change — no PHPUnit/Vitest/Cypress applicable; every Issue referenced in the rewrite cross-checked against `gh issue view`/`gh pr list` state before writing it into the document; 2 review threads resolved; commit squashed to 1; Not scheduled into a round — see §17. PR ready, merge pending |
+| ✅ | #374 | Follow-up work (§17) — this closure pass itself: deferred #276/#85 from Sprint 001 scope (`deferred`/`priority: low` labels + rationale comments), fixed 5 stale status markers (#305/#316/#319/#320/#321), formalized and computed the wall-clock/parallelism metric (§7 of `doc/conventions/sprints.md`), and corrected several data-integrity gaps found along the way (stale #306 Tracked value, fabricated #309 Tracked value, missing #340 Tracked value, Consolidated Time Tracking Total arithmetic, ambiguous Person-hours definition) | PR #375 | `4ac51ff` | 4.4h | docs/-only change — no PHPUnit/Vitest/Cypress applicable; every Issue referenced in the rewrite cross-checked against `gh issue view`/`gh pr list` state before writing it into the document; 2 review threads resolved; commit squashed to 1; Not scheduled into a round — see §17. Merged 2026-07-31 |
 
-All scoped work finished 2026-07-30 — all rows above reflect final status; no items remain in `⏳`/`🚧`. Sprint stays `In Progress` (see front matter) until Sprint 002 is promoted.
+All scoped work finished 2026-07-30 — all rows above reflect final status; no items remain in `⏳`/`🚧`. Sprint formally closed 2026-07-31 upon Sprint 002's promotion (#386, see front matter).
 
 ## 14. Quality Results
 
@@ -376,7 +376,7 @@ All scoped work finished 2026-07-30 — all rows above reflect final status; no 
 ### 15.2 Planned vs. Actual
 
 - **Scope:** 27 Issues planned; 25 completed (92.6%); 2 removed from scope and deferred (#276, #85) rather than left incomplete. 4 additional Issues (#340, #355, #342, #337) were delivered opportunistically, beyond the original 27.
-- **Schedule:** target deadline was 2026-08-09 (14 calendar days from creation); actual completion was 2026-07-30 — 5 calendar days from creation, 10 days ahead of the target.
+- **Schedule:** target deadline was 2026-08-09 (14 calendar days from creation); all scoped implementation finished 2026-07-30 (5 calendar days from creation, 10 days ahead of the target), with formal closure following 2026-07-31 (6 calendar days from creation) once Sprint 002 was promoted (§4, #386).
 - **Effort:** completed-scope estimates were 38.5h (Optimistic) to 71.5h (Pessimistic); tracked time totaled 45.64h — 36.2% under the pessimistic estimate, close to the low end of the original range. Across all Issues with logged sessions (scoped + opportunistic), summed effort was 51.13h against 36.45h of actual wall-clock time — a 1.40× parallelization factor (§11). See §16 for why the calendar time was so much shorter than the 14-day window despite tracked effort landing inside the expected range.
 - **Deviations from the planned route:** the file-conflict-driven round order (§7) held with no rework — #325 landed before #328 as planned (§8), and the #305/#306 dependency chain resolved in the planned sequence. The only scope deviation was #359 (added mid-sprint, §5.3) and the two removals (#276, #85) at closure.
 
@@ -391,7 +391,7 @@ All scoped work finished 2026-07-30 — all rows above reflect final status; no 
 
 ## 16. Lessons Learned
 
-- **Why the sprint closed in 5 calendar days against a 14-day window, despite tracked effort (45.64h) landing close to the planned range (38.5h–71.5h):** the 14-day deadline was sized for serial, single-agent, 8-hour-day work. The "Wall-Clock Time & Parallelism" data in §11 makes this precise instead of anecdotal: 51.13h of summed session effort (across all Issues with logged sessions, including opportunistic work) fit inside just 36.45h of actual elapsed calendar time — a 1.40× parallelization factor, peaking at 5 Issues with simultaneously open sessions (2026-07-28 19:46). Sessions also ran well outside a standard 8-hour workday — the two densest overlap blocks are both late-night/overnight (2026-07-27 20:22→2026-07-28 01:21 and 2026-07-29 19:58→2026-07-30 00:01). The estimate-vs-tracked comparison in §10/§11 was accurate; the calendar-time compression came from concurrency and extended hours, not from the estimates being wrong. Future sprint deadlines for this team's shape of work (multi-agent, non-standard hours) should be set from parallel-agent-day capacity — informed by a target parallelization factor, not just headcount — rather than a single-contributor 8-hour-day assumption. The current 14-day cadence (inherited from a prior GitHub Project iteration) is far more conservative than this team's actual throughput; §7 of `doc/conventions/sprints.md` now formalizes how to compute this metric so future sprints don't have to re-derive it from scratch at closure.
+- **Why all scoped implementation finished in 5 calendar days against a 14-day window (formal closure followed a day later, §4), despite tracked effort (45.64h) landing close to the planned range (38.5h–71.5h):** the 14-day deadline was sized for serial, single-agent, 8-hour-day work. The "Wall-Clock Time & Parallelism" data in §11 makes this precise instead of anecdotal: 51.13h of summed session effort (across all Issues with logged sessions, including opportunistic work) fit inside just 36.45h of actual elapsed calendar time — a 1.40× parallelization factor, peaking at 5 Issues with simultaneously open sessions (2026-07-28 19:46). Sessions also ran well outside a standard 8-hour workday — the two densest overlap blocks are both late-night/overnight (2026-07-27 20:22→2026-07-28 01:21 and 2026-07-29 19:58→2026-07-30 00:01). The estimate-vs-tracked comparison in §10/§11 was accurate; the calendar-time compression came from concurrency and extended hours, not from the estimates being wrong. Future sprint deadlines for this team's shape of work (multi-agent, non-standard hours) should be set from parallel-agent-day capacity — informed by a target parallelization factor, not just headcount — rather than a single-contributor 8-hour-day assumption. The current 14-day cadence (inherited from a prior GitHub Project iteration) is far more conservative than this team's actual throughput; §7 of `doc/conventions/sprints.md` now formalizes how to compute this metric so future sprints don't have to re-derive it from scratch at closure.
 - Deferring #85 to the very end of Round 1 and ultimately removing it from scope entirely, without any rework or rescheduling elsewhere, confirms the original Value Ranking call (§6) was right — a large, zero-conflict, low-value Issue can sit at the bottom of the queue indefinitely without ever blocking higher-value work.
 - The #305/#306 conflict-graph dependency chain (§8) correctly predicted that nearly every downstream SonarCloud Issue would need one of those two to land first — the round structure held with zero merge-conflict rework across all 6 rounds.
 - Four Issues (#305's missing Retrospective; #309, #316, #321's Time data living only in the local archive instead of on the live issue) show that the `/finish-pr` Retrospective and Time Tracking conventions (adopted mid-sprint via #359 and #330/#331) don't yet have full backward coverage — worth a follow-up check on whether large or older Issues are systematically more likely to skip these steps. #309's case additionally shows the risk of treating "missing from the live issue" as "missing entirely" without checking the archive first — this closure pass initially made that exact mistake before a Devin/DeepWiki review pass caught it.
@@ -403,7 +403,7 @@ All scoped work finished 2026-07-30 — all rows above reflect final status; no 
 | ⏳ | — | Retrofit real Estimates onto #305–#323 per `doc/conventions/tasks.md` | Current values are rough sizing, not technically scoped. Not done before Sprint 001's implementation finished — carrying forward | Next |
 | ✅ | #342 | Unify dialog component and enter/exit transitions across the system | Discovered while implementing #327: 3 duplicated dialog animation implementations + 6 dialogs with no animation + a separate SlidePanel family; a scoped-to-Attendance version of the shared hook lands in #327's PR, full system migration is cross-cutting frontend work that doesn't fit Sprint 001's scope. Completed opportunistically same-sprint: promoted the shared `useDialogTransition` hook app-wide, migrated the 5 remaining duplicated-animation dialogs, animated the 6 previously-unanimated ones, and reconciled `BranchSelectionDialog`'s styling — 4h 41m tracked, PR #354 merged | Sprint 001 |
 | ✅ | #337 | Add "En comida" stat tab for employees at lunch on Attendance Today | Deferred from #327/PR #336: `computeSummary()` lumped `checked-in`/`at-lunch`/`returned` into one "En trabajo" bucket with no way to see who's at lunch. Completed same-sprint as a mechanical extension of #327's bucket-split + clickable-tab pattern — 0.5h tracked, PR #350 merged | Sprint 001 |
-| ✅ | #374 | Defer #276 and #85, close out Sprint 001 documentation | This closure pass itself — labels/comments on #276 and #85, this document rewrite, and the wall-clock/parallelism metric formalized in `doc/conventions/sprints.md` §7. Tracked separately from Sprint 001's own scope since it's process/documentation work discovered at closure, not a product or quality-debt Issue — 4.4h tracked, PR #375 ready, merge pending | N/A — housekeeping |
+| ✅ | #374 | Defer #276 and #85, close out Sprint 001 documentation | This closure pass itself — labels/comments on #276 and #85, this document rewrite, and the wall-clock/parallelism metric formalized in `doc/conventions/sprints.md` §7. Tracked separately from Sprint 001's own scope since it's process/documentation work discovered at closure, not a product or quality-debt Issue — 4.4h tracked, PR #375 merged 2026-07-31 (`4ac51ff`) | N/A — housekeeping |
 | ⏳ | — | Verify why #305's Issue never received its `/finish-pr` `## 📊 Retrospective` section despite merging (PR #367) — check whether this is an isolated miss or a gap in the automation for large affected-file-count SonarCloud Issues | Found during this sprint's closure pass (§12); the ~4.0h Tracked figure used in §10/§13 for #305 is derived from its raw session data, not a computed Retrospective | Next |
 | ⏳ | — | Sync #309, #316, and #321's real Time/Sessions data from `doc/tasks/2026-07/` back onto their live GitHub issues (and any other pre-TD-01 Issue in the same state) | Their data already exists and is now correctly folded into §10/§11/§13, but it still lives only in the local archive — a future reader of the live issue alone would see no Time section and could repeat this closure pass's initial mistake of treating it as missing | Next |
 | ⏳ | — | Enforce `/start-issue` session tracking on every implementation, opportunistic work included | #355 (§5.4, opportunistic) was implemented directly without opening a session — unlike #309/#316/#321, its missing Estimates/Sessions can't be retrofitted after the fact since no log ever existed (see §12); a process gap, not a documentation gap | Next |
@@ -417,10 +417,10 @@ All scoped work finished 2026-07-30 — all rows above reflect final status; no 
 - [x] Deprecated items identify their replacement. (N/A — no `⚠️ Deprecated` items in this sprint)
 - [x] Cancelled items include a reason. (#276, #85 — see §5.3)
 - [x] Scope changes are recorded.
-- [ ] Tracked time was synchronized from Issue sessions. (Mostly — #305 was merged without its `/finish-pr` Retrospective, and #316/#321 predate the Time convention entirely; see §12 and §17)
+- [x] Tracked time was synchronized from Issue sessions. (§10/§11/§13's Tracked figures are all derived directly from raw session data, incl. #309/#316/#321 recovered from their `doc/tasks/` archives. Two residual gaps are permanent — not fixable by re-running sync — and tracked as follow-up instead: #305 was merged without its `/finish-pr` Retrospective, and #316/#321's session data lives only in their archives, never written back to the live Issue; see §12, §15.3, §17)
 - [x] Round totals and sprint totals were recalculated.
 - [x] Estimate variance was calculated.
-- [ ] Consolidated effort was completed. (Implementation is filled in §11; Planning/Review/Documentation/Rework are not broken out separately — no clean data source without re-deriving from individual session logs)
+- [x] Consolidated effort was completed. (§11's Implementation row is fully computed from session data; Planning/Review/Documentation/Rework are intentionally left as `—` and explained inline — each Issue's `Tracked` figure already lumps review-response passes in with implementation, so there is no clean data source to split them without re-deriving from individual session logs. Documented as a permanent limitation, not a pending sync)
 - [x] Wall-clock time, parallelization factor, and peak concurrency were computed (§7, §11).
 - [x] Dependencies reflect actual execution.
 - [x] Conflict notes reflect actual execution.
@@ -429,4 +429,4 @@ All scoped work finished 2026-07-30 — all rows above reflect final status; no 
 - [x] Follow-up work was created or recorded.
 - [x] Lessons learned were captured.
 - [x] Metadata dates and status were updated.
-- [ ] The next sprint was promoted or created when applicable. (Blocking item — Sprint 002 hasn't been created/promoted yet, which per `doc/conventions/sprints.md` §4 is required before this sprint's `status` can become `Completed`; all other closure items above are done, this is the only remaining gate)
+- [x] The next sprint was promoted or created when applicable. (Sprint 002 — "Platillos Catalog & Platform Hardening" — created directly at `doc/sprints/sprint-002-platillos-catalog-platform-hardening.md` and promoted to current in #386; its `doc/sprints/planned/` draft was never committed to git, so no `git mv` history exists for it — the file simply appears as new in #386's diff, unlike the tracked move `doc/conventions/sprints.md` §2 describes. Promotion still unblocks this sprint's `status: Completed`.)
