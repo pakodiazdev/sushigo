@@ -205,11 +205,11 @@ function InfoItem({
   icon,
   label,
   value,
-}: {
+}: Readonly<{
   icon: React.ReactNode
   label: string
   value: React.ReactNode
-}) {
+}>) {
   return (
     <div className="flex items-start">
       <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-gray-400">

@@ -44,6 +44,8 @@ Issues in a single conflict-free Round 1, with only the two Platillos Issues tha
 technical dependency (`#378`, `#381`) held to Round 2, and the Platillos UI (`#380`) — which needs
 both of those — held to Round 3.
 
+**Progress as of 2026-08-01:** 1/14 Issues complete (7%) — #385.
+
 ## 2. Context
 
 Sprint 001 wrapped up its scoped implementation after 27 Issues, deferring `#276` (WhatsApp
@@ -92,6 +94,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
+| Progress (Issues completed) | 1/14 (7%) |
 
 ## 5. Scope
 
@@ -163,7 +166,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 | ⏳ | #382 | Migrate the daily report employee table to the shared DataGrid component | Medium | 2h | 4h | — | — | `attendance/reports/*`; independent of #383 |
 | ⏳ | #357 | Unify card exit/transition animation across all Attendance Today state changes | Medium | 2h | 4h | — | — | `attendance/index.tsx` + `-use-today-attendance-page.ts`; distinct files from #358 |
 | ⏳ | #365 | [Convention] Run only linters + delivered tests locally; leave full-suite regression check to CI | Medium | 1h | 2h | — | — | Docs only (`doc/conventions/`, `doc/TESTING.md`); no estimate in Issue body — agent-estimated, see §12 |
-| ⏳ | #385 | Clear SonarCloud code-smell debt: mark webapp InfoItem/PropertyItem props as Readonly | Low | 0.5h | 1h | — | — | `inventory/item-details.tsx`, `location-details.tsx`, `variant-details.tsx`; conflict-free filler |
+| ✅ | #385 | Clear SonarCloud code-smell debt: mark webapp InfoItem/PropertyItem props as Readonly | Low | 0.5h | 1h | 0.2h | PR #391 | `inventory/item-details.tsx`, `location-details.tsx`, `variant-details.tsx`; conflict-free filler; PR ready, merge pending |
 | ⏳ | #376 | Remove Insumo/Activo from item Type selector — Inventory scoped to resale products only | Low | 0.5h | 1h | — | — | `inventory/item-form.tsx`, `product-wizard.tsx`; conflict-free filler |
 |  |  | **Round total** |  | **26h** | **52h** | **—** |  |  |
 
@@ -302,7 +305,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ⏳ | #382 | Not started | — | — | — | — |
 | ⏳ | #357 | Not started | — | — | — | — |
 | ⏳ | #365 | Not started | — | — | — | — |
-| ⏳ | #385 | Not started | — | — | — | — |
+| ✅ | #385 | Wrapped `PropertyItem`/`InfoItem` props in `Readonly<...>` across 3 inventory detail components, clearing all 4 open SonarCloud `typescript:S6759` code smells | PR #391 | — | 0.2h | Pure type-annotation change, no runtime behavior change; 24/24 existing Vitest tests passing, lint + typecheck clean; CI 12/12 green, Copilot 0 comments, Devin/DeepWiki 0 bugs/0 flags on first push; PR ready, merge pending |
 | ⏳ | #376 | Not started | — | — | — | — |
 | ⏳ | #378 | Not started | — | — | — | — |
 | ⏳ | #381 | Not started | — | — | — | — |

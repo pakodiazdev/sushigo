@@ -221,13 +221,13 @@ function InfoItem({
   value,
   hint,
   iconColor = 'text-gray-600',
-}: {
+}: Readonly<{
   icon: React.ElementType
   label: string
   value: string
   hint?: string
   iconColor?: string
-}) {
+}>) {
   return (
     <div className="flex items-start gap-3">
       <Icon className={`h-4 w-4 mt-0.5 ${iconColor}`} />
