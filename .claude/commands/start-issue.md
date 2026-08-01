@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr create:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(find:*), Bash(ls:*), Bash(date:*), Bash(docker exec:*), Read, Edit, Write
+allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git rev-parse:*), Bash(basename:*), Bash(tail:*), Bash(find:*), Bash(ls:*), Bash(date:*), Bash(docker exec:*), Read, Edit, Write
 description: Start a work session on a GitHub issue — load context, create branch, open a session directly on the issue, then drive TDD implementation through to PR
 ---
 
@@ -248,17 +248,43 @@ git push -u origin <branch-name>
 
 ### 8c. Create the PR
 
-Populate the `## Workspace` section with the name of the current workspace directory
-(e.g. `sushigo-c`) and the branch name from `git branch --show-current`.
+Detect the workspace letter from the repo root — the `[x]` bracket in the title is mandatory per
+`doc/conventions/git/pull-requests.md` and CLAUDE.md, since dev-lab reviewers rely on it to tell
+workspaces apart in a PR list. Use the repo root, not `pwd` — earlier phases may have left the
+shell inside `code/api` or `code/webapp`, which would make a plain `basename "$(pwd)"` return
+`api`/`webapp` and silently omit the bracket:
 
 ```bash
-gh pr create \
-  --title "<emoji> [#NNN] - <short description> <emoji>" \
+basename "$(git rev-parse --show-toplevel)"   # e.g. sushigo-a → workspace letter is "a"
+```
+
+If the repo root doesn't match `sushigo-<letter>`, omit the `[x]` bracket entirely (standalone
+Docker mode has no workspace letter).
+
+Populate the `## Workspace` section with the name of the current workspace directory
+(e.g. `sushigo-c`) and the branch name from `git branch --show-current`. Write `## Manual Testing`
+with concrete, executable steps — the exact command, URL/route, or UI action and the expected
+result, never "test the feature works"; for a bug fix, give steps to reproduce the original bug
+plus steps confirming it no longer happens. **Never include passwords or other credentials**, even
+for seeded test users — reference them by email only (e.g. `admin@sushigo.com`), per the Test
+Users table in this workspace's `CLAUDE.md`.
+
+The PR number isn't known until `gh pr create` returns it, so `Devin Review:` is added in a
+follow-up edit right after creation, not in the initial body:
+
+```bash
+PR_URL=$(gh pr create \
+  --title "<emoji> [#NNN][<letter>] - <short description> <emoji>" \
   --body "$(cat <<'EOF'
 ## Summary
+Closes #NNN
+
 - <bullet 1>
 - <bullet 2>
 - <bullet 3>
+
+## Manual Testing
+<step-by-step: exact command to run, page/route to visit, inputs to use, expected result>
 
 ## Test plan
 - [ ] PHPUnit: `php artisan test --filter=<TestClass>`
@@ -266,15 +292,25 @@ gh pr create \
 - [ ] Cypress E2E: `make cypress-run SPEC=cypress/e2e/<file>.cy.ts` (if applicable)
 - [ ] Linters: Pint ✅ · ESLint ✅ · TypeScript ✅
 
-## Closes
-Closes #NNN
-
 ## Workspace
 `<workspace-name>` — `<branch-name>`
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
-)"
+)")
+```
+
+`gh pr create` prints the PR **URL** (e.g. `https://github.com/pakodiazdev/sushigo/pull/389`), not
+a bare number — extract the trailing number as `<N>` before using it. `PR_URL` above captures its
+full stdout as-is, which isn't guaranteed to be *only* the URL (some `gh` versions/configs emit
+extra lines before it); the `tail -1` in the extraction step below is what actually takes just the
+last line before extracting the number, not the capture itself. Immediately re-edit the body to
+insert `Devin Review: https://deepwiki.com/pakodiazdev/sushigo/pull/<N>` on its own line, directly
+under `Closes #NNN` — same body as above, that one line added:
+
+```bash
+N=$(basename "$(tail -1 <<< "$PR_URL")")   # last line of gh pr create's output is the URL
+gh pr edit "$N" --body-file <path-to-updated-body>
 ```
 
 **Never merge the PR.** Report the PR URL to the user and stop. The merge must be done by the user from GitHub after review.
