@@ -88,6 +88,7 @@ const mockRow: TodayAttendanceRow = {
     attendance: null,
     schedule: null,
     today_leave: null,
+    today_vacation: false,
 }
 
 const mockRowWithAttendance: TodayAttendanceRow = {
@@ -112,6 +113,7 @@ const mockRowWithAttendance: TodayAttendanceRow = {
     }),
     schedule: null,
     today_leave: null,
+    today_vacation: false,
 }
 
 // ── getPhaseCardClass Tests ────────────────────────────────────────────────────
@@ -346,6 +348,7 @@ describe('EmployeeAttendanceCard', () => {
             }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
 
         const { container } = render(<EmployeeAttendanceCard {...defaultProps} row={onLeaveRow} />)
@@ -462,6 +465,7 @@ describe('EmployeeAttendanceCard', () => {
             attendance: makeAttendance({ id: '01HZATTEND000010', check_in: null, day_status: 'ABSENCE' }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         rerender(<EmployeeAttendanceCard {...defaultProps} row={absenceRow} />)
 
@@ -486,6 +490,7 @@ describe('EmployeeAttendanceCard', () => {
             attendance: makeAttendance({ id: '01HZATTEND000011', check_in: null, day_status: 'ABSENCE' }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={absenceRow} />)
 
@@ -498,6 +503,7 @@ describe('EmployeeAttendanceCard', () => {
             attendance: makeAttendance({ id: '01HZATTEND000009', check_in: null, day_status: 'ABSENCE' }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={absenceRow} />)
         expect(getByTestId('btn-justify-absence')).toBeDefined()
@@ -509,6 +515,7 @@ describe('EmployeeAttendanceCard', () => {
             attendance: makeAttendance({ id: '01HZATTEND000009', check_in: null, day_status: 'ABSENCE' }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { queryByTestId } = render(
             <EmployeeAttendanceCard {...defaultProps} row={absenceRow} canEdit={false} />
@@ -527,6 +534,7 @@ describe('EmployeeAttendanceCard', () => {
             attendance: makeAttendance({ id: '01HZATTEND000009', check_in: null, day_status: 'ABSENCE' }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={absenceRow} />)
 
@@ -568,6 +576,7 @@ describe('EmployeeAttendanceCard', () => {
             attendance: makeAttendance({ id: '01HZATTEND000004' }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={checkedInRow} />)
         expect(getByText('Salir a comer')).toBeDefined()
@@ -580,6 +589,7 @@ describe('EmployeeAttendanceCard', () => {
             attendance: makeAttendance({ id: '01HZATTEND000004' }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} row={checkedInRow} onLunchStart={onLunchStart} />
@@ -600,6 +610,7 @@ describe('EmployeeAttendanceCard', () => {
             }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} row={overtimeRow} />)
         expect(getByTestId('btn-overtime-decision')).toBeDefined()
@@ -618,6 +629,7 @@ describe('EmployeeAttendanceCard', () => {
             }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByTestId } = render(
             <EmployeeAttendanceCard {...defaultProps} row={overtimeRow} onOvertimeDecision={onOvertimeDecision} />
@@ -640,6 +652,7 @@ describe('EmployeeAttendanceCard', () => {
             }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={authorizedRow} />)
         expect(getByText(/Pagadas/)).toBeDefined()
@@ -659,6 +672,7 @@ describe('EmployeeAttendanceCard', () => {
             }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={rejectedRow} />)
         expect(getByText(/No pagadas/)).toBeDefined()
@@ -712,6 +726,7 @@ describe('EmployeeAttendanceCard', () => {
             }),
             schedule: null,
             today_leave: null,
+            today_vacation: false,
         }
         const { getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} row={pendingRow} canEdit={false} />
@@ -966,5 +981,38 @@ describe('EmployeeAttendanceCard — full-day leave hides action buttons', () =>
         )
         expect(getByText('Registrar entrada')).toBeDefined()
         expect(getByTestId('btn-mark-falta')).toBeDefined()
+    })
+})
+
+describe('EmployeeAttendanceCard — approved vacation without an Attendance record hides action buttons', () => {
+    it('hides "Registrar entrada" and "Marcar falta" for a pending row with today_vacation true', () => {
+        const row: TodayAttendanceRow = {
+            ...mockRow,
+            today_vacation: true,
+        }
+        const { queryByTestId, queryByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} row={row} />
+        )
+        expect(queryByText('Registrar entrada')).toBeNull()
+        expect(queryByTestId('btn-mark-falta')).toBeNull()
+    })
+
+    it('shows the "Vacaciones aprobadas" chip on the card', () => {
+        const row: TodayAttendanceRow = {
+            ...mockRow,
+            today_vacation: true,
+        }
+        const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={row} />)
+        expect(getByText('Vacaciones aprobadas')).toBeDefined()
+    })
+
+    it('keeps the checked-in UI once the employee actually checks in, even if today_vacation is still true', () => {
+        const row: TodayAttendanceRow = {
+            ...mockRow,
+            attendance: makeAttendance({ id: '01HZATTEND000012', check_in: '2024-01-15T08:00:00Z' }),
+            today_vacation: true,
+        }
+        const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} row={row} />)
+        expect(getByText('Salir a comer')).toBeDefined()
     })
 })

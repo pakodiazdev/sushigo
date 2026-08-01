@@ -7,6 +7,7 @@ use Database\Seeders\Fakes\FakeEmployeesSeeder;
 use Database\Seeders\OvertimeLftTierSeeder;
 use Database\Seeders\PunctualityBonusGroupSeeder;
 use Database\Seeders\PunctualityRangeSeeder;
+use Database\Seeders\Testing\AttendanceAbsentNoRecordSeeder;
 use Database\Seeders\Testing\AttendanceAbsentStatCardSeeder;
 use Database\Seeders\Testing\AttendanceLunchStatTabSeeder;
 use Database\Seeders\Testing\AttendanceTestSeeder;
@@ -57,6 +58,10 @@ class TestReset extends Command
         'attendance-absent-stat-card' => [
             AttendanceTestSeeder::class,
             AttendanceAbsentStatCardSeeder::class,
+        ],
+        'attendance-absent-no-record' => [
+            AttendanceTestSeeder::class,
+            AttendanceAbsentNoRecordSeeder::class,
         ],
         'attendance-lunch-stat-tab' => [
             AttendanceTestSeeder::class,

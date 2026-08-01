@@ -3,6 +3,7 @@
 namespace Tests\Feature\AttendancePayroll;
 
 use App\Enums\ClockMode;
+use App\Enums\VacationRequestStatus;
 use App\Models\ApplicationClockState;
 use App\Models\Attendance;
 use App\Models\Branch;
@@ -11,6 +12,8 @@ use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\LeaveType;
 use App\Models\User;
+use App\Models\VacationEntitlement;
+use App\Models\VacationRequest;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -463,6 +466,66 @@ class TodayAttendanceApiTest extends TestCase
 
     // #endregion
 
+    // #region Today Vacation
+
+    #[Test]
+    public function employee_with_approved_vacation_covering_today_has_today_vacation_true_even_without_attendance_record(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $this->makeApprovedVacation($employee, $this->today);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertTrue($row['today_vacation']);
+        $this->assertNull($row['attendance']);
+    }
+
+    #[Test]
+    public function employee_without_vacation_has_today_vacation_false(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertFalse($row['today_vacation']);
+    }
+
+    #[Test]
+    public function approved_vacation_not_covering_today_has_today_vacation_false(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $this->makeApprovedVacation($employee, Carbon::parse($this->today)->addDays(10)->toDateString());
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertFalse($row['today_vacation']);
+    }
+
+    #[Test]
+    public function pending_vacation_request_does_not_count_as_today_vacation(): void
+    {
+        $employee = $this->makeEmployeeForBranch($this->branch);
+        $this->makeApprovedVacation($employee, $this->today, approved: false);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $row = collect($response->json('data'))
+            ->firstWhere('employee.id', $employee->public_id);
+
+        $this->assertFalse($row['today_vacation']);
+    }
+
+    // #endregion
+
     // #region Clock simulation
 
     #[Test]
@@ -526,6 +589,38 @@ class TodayAttendanceApiTest extends TestCase
         }
 
         return $employee;
+    }
+
+    /**
+     * Create a VacationRequest (approved by default) covering a single date,
+     * without creating the corresponding Attendance record — TodayAttendanceController's
+     * `today_vacation` signal must not depend on that record existing (see #358).
+     */
+    private function makeApprovedVacation(Employee $employee, string $date, bool $approved = true): VacationRequest
+    {
+        $entitlement = VacationEntitlement::create([
+            'employee_id' => $employee->id,
+            'year' => (int) Carbon::parse($date)->year,
+            'entitled_days' => 12,
+            'used_days' => 0,
+            'rule_key' => 'TEST',
+        ]);
+
+        $vacationRequest = VacationRequest::create([
+            'employee_id' => $employee->id,
+            'vacation_entitlement_id' => $entitlement->id,
+            'start_date' => $date,
+            'end_date' => $date,
+            'days_count' => 1,
+            'status' => $approved ? VacationRequestStatus::APPROVED : VacationRequestStatus::PENDING,
+            'requested_by' => $this->user->id,
+            'approved_by' => $approved ? $this->user->id : null,
+            'approved_at' => $approved ? now() : null,
+        ]);
+
+        $vacationRequest->dates()->create(['date' => $date]);
+
+        return $vacationRequest;
     }
     // #endregion
 
