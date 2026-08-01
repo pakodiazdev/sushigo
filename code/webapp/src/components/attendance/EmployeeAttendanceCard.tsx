@@ -359,6 +359,7 @@ export function EmployeeAttendanceCard({
         phase,
         isScheduledRestDay,
         isFullDayLeave,
+        isPendingVacation,
         displayedActionsPhase,
         actionsFadingOut,
         confirmFaltaOpen,
@@ -374,7 +375,7 @@ export function EmployeeAttendanceCard({
     } = useEmployeeAttendanceCard(row, onMarkDayStatus, onFaltaFlowComplete)
 
     function renderPendingActions() {
-        if (isFullDayLeave) {
+        if (isFullDayLeave || isPendingVacation) {
             return null
         }
         return (
@@ -459,6 +460,18 @@ export function EmployeeAttendanceCard({
 
             {/* Leave context chip (shown when there is an approved leave covering today) */}
             {leave && <LeaveChip leave={leave} />}
+
+            {/* Vacation context chip — mirrors the "Descanso programado" chip; shown
+                whenever renderPendingActions suppresses check-in/falta for this reason,
+                so the card never looks empty for an employee on approved vacation. */}
+            {isPendingVacation && (
+                <div className="flex items-center gap-1.5 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2">
+                    <CalendarX className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                    <span className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                        Vacaciones aprobadas
+                    </span>
+                </div>
+            )}
 
             {/* Attendance details — both canEdit (date rule) and canCorrect (attendances.update)
                 must hold before a correction pencil is shown, so an inconsistent prop

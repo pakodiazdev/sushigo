@@ -102,6 +102,7 @@ function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRo
     attendance: null,
     schedule: null,
     today_leave: null,
+    today_vacation: false,
     ...overrides,
   }
 }
@@ -278,6 +279,32 @@ describe('computeSummary', () => {
     expect(result.absent).toBe(1)
     expect(result.done).toBe(0)
   })
+
+  it('counts today_vacation as absent, even without an attendance record', () => {
+    const rows = [makeRow({ today_vacation: true })]
+    const result = computeSummary(rows)
+    expect(result.absent).toBe(1)
+    expect(result.pending).toBe(0)
+  })
+
+  it('counts a scheduled rest day (schedule.is_day_off) as absent, even without an attendance record', () => {
+    const rows = [
+      makeRow({
+        schedule: {
+          day_of_week: 7,
+          is_day_off: true,
+          expected_start: null,
+          expected_lunch_start: null,
+          expected_lunch_end: null,
+          lunch_duration_minutes: null,
+          expected_end: null,
+        },
+      }),
+    ]
+    const result = computeSummary(rows)
+    expect(result.absent).toBe(1)
+    expect(result.pending).toBe(0)
+  })
 })
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -344,22 +371,38 @@ describe('filterRowsForGrid', () => {
         employee: { id: 'e7', code: 'E7', user: { first_name: 'G', last_name: 'G' }, roles: [], daily_wage: null },
         attendance: { id: 'a7', check_in: '2026-04-01T13:00:00Z', lunch_start: '2026-04-01T14:00:00Z' } as TodayAttendanceRow['attendance'],
       }), // atLunch
+      makeRow({
+        employee: { id: 'e8', code: 'E8', user: { first_name: 'H', last_name: 'H' }, roles: [], daily_wage: null },
+        today_vacation: true,
+      }), // absent (today_vacation, no attendance record yet) — hidden by default
+      makeRow({
+        employee: { id: 'e9', code: 'E9', user: { first_name: 'I', last_name: 'I' }, roles: [], daily_wage: null },
+        schedule: {
+          day_of_week: 7,
+          is_day_off: true,
+          expected_start: null,
+          expected_lunch_start: null,
+          expected_lunch_end: null,
+          lunch_duration_minutes: null,
+          expected_end: null,
+        },
+      }), // absent (schedule.is_day_off, no attendance record yet) — stays visible by default, live check-in action
     ]
   }
 
   it('with null filter, shows everyone except VACATION/DAY_OFF (default view)', () => {
     const visible = filterRowsForGrid(rowsFixture(), null)
-    expect(visible.map((r) => r.employee.code)).toEqual(['E1', 'E2', 'E3', 'E4', 'E7'])
+    expect(visible.map((r) => r.employee.code)).toEqual(['E1', 'E2', 'E3', 'E4', 'E7', 'E9'])
   })
 
   it('with "total" filter, shows literally everyone including VACATION/DAY_OFF', () => {
     const visible = filterRowsForGrid(rowsFixture(), 'total')
-    expect(visible).toHaveLength(7)
+    expect(visible).toHaveLength(9)
   })
 
   it('with "absent" filter, shows only ABSENCE/VACATION/DAY_OFF rows', () => {
     const visible = filterRowsForGrid(rowsFixture(), 'absent')
-    expect(visible.map((r) => r.employee.code)).toEqual(['E4', 'E5', 'E6'])
+    expect(visible.map((r) => r.employee.code)).toEqual(['E4', 'E5', 'E6', 'E8', 'E9'])
   })
 
   it('with "pending" filter, shows only the pending row', () => {

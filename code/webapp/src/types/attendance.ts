@@ -96,6 +96,8 @@ export interface TodayAttendanceRow {
   attendance: TodayAttendanceData | null
   schedule: TodayScheduleDay | null
   today_leave: TodayLeave | null
+  /** True when an approved VacationRequest covers today, independent of whether the Attendance VACATION record has been created yet. */
+  today_vacation: boolean
 }
 
 export interface TodayAttendanceEmployee {
@@ -195,27 +197,73 @@ export function getAttendancePhase(attendance: TodayAttendanceData | null): Atte
  * employee actionable — the backend never creates an Attendance record for
  * those (see LeaveGuards::shouldCreateAttendanceRecords), since the employee
  * is still expected to check in/out normally that day.
+ *
+ * Vacation (`today_vacation`) and a scheduled rest day (`schedule.is_day_off`)
+ * are checked directly on the row rather than through `attendance.day_status`
+ * so the employee counts as absent from the start of the day, even before an
+ * Attendance record exists for today (see #358). Both are gated behind
+ * `phase === 'pending'` — an employee who actually checked in (e.g. an
+ * extra-day negotiation on their rest day, or a vacation that was worked
+ * anyway) must never be reclassified as absent just because the schedule or
+ * an unrelated vacation request says so.
+ *
+ * `day_status === 'EXTRA'` is excluded from the `schedule.is_day_off`
+ * fallback for the same reason: RegisterNegotiatedExtraDayAction eagerly
+ * creates an Attendance EXTRA stub the moment a rest-day extra day is
+ * negotiated, before the employee checks in — so `phase` is still
+ * `'pending'`, but the row already carries direct evidence the employee is
+ * expected to work today, not rest.
  */
 export function isAbsentRow(row: TodayAttendanceRow): boolean {
   const phase = getAttendancePhase(row.attendance)
   if (phase === 'on-leave' || phase === 'absence' || phase === 'day-off') return true
-  return row.today_leave?.time_mode === 'OPEN_ENDED'
+  if (row.today_leave?.time_mode === 'OPEN_ENDED') return true
+  if (phase !== 'pending') return false
+  if (row.attendance?.day_status === 'EXTRA') return false
+  return row.today_vacation === true || row.schedule?.is_day_off === true
 }
 
 /**
  * True when the row should be removed from the default main working grid
- * view: an approved VACATION or a scheduled rest day (DAY_OFF) — neither
- * requires any action from the manager. ABSENCE and LEAVE (day_status LEAVE,
- * or a full-day OPEN_ENDED leave/permiso) stay in the grid — their cards
- * expose live, tested functionality that requires the card to remain
- * visible: ABSENCE shows the "Justificar falta" action
- * (EmployeeAttendanceCard), and LEAVE shows the informational leave
+ * view: an approved VACATION or a manually marked rest day (day_status
+ * DAY_OFF) — both are terminal states that require no further action from
+ * the manager (check-in is even blocked backend-side while an approved
+ * vacation covers the date — see RegisterCheckInAction::guardNoApprovedVacation).
+ * ABSENCE and LEAVE (day_status LEAVE, or a full-day OPEN_ENDED leave/permiso)
+ * stay in the grid — their cards expose live, tested functionality that
+ * requires the card to remain visible: ABSENCE shows the "Justificar falta"
+ * action (EmployeeAttendanceCard), and LEAVE shows the informational leave
  * chip/badge (see attendance-today-leave-context.cy.ts and
  * attendance-register-leave.cy.ts).
+ *
+ * `today_vacation` is the same VACATION case, checked directly on the row so
+ * it's hidden even before an Attendance record exists for today (see #358),
+ * gated behind `phase === 'pending'` for the same reason as `isAbsentRow` —
+ * an employee who actually checked in must never have their card hidden.
+ * Also excluded when `day_status === 'EXTRA'`, same as `isAbsentRow`: an
+ * employee negotiated to work an extra day — even one that contradictorily
+ * overlaps an approved vacation — is (per `isAbsentRow`) no longer counted
+ * absent, so without this exclusion the row would be hidden from the
+ * default grid by `today_vacation` alone AND absent from "Ausentes" (since
+ * it's not absent), leaving only the "Total" tab able to find it. Excluding
+ * EXTRA here keeps the row in the default grid, where the manager can
+ * actually see and resolve the conflicting state.
+ *
+ * `schedule.is_day_off` (a *scheduled* rest day, as opposed to a manually
+ * marked one) is deliberately NOT part of this fallback, even though
+ * `isAbsentRow` does count it as absent: unlike VACATION/manual DAY_OFF, a
+ * scheduled rest day is not terminal — the card still exposes a live
+ * "Registrar entrada" action for same-day extra-day check-ins (see
+ * `isScheduledRestDay` in EmployeeAttendanceCard/use-employee-attendance-card),
+ * so it stays reachable from the default grid instead of requiring a tab
+ * switch to "Ausentes"/"Total" first.
  */
 export function isHiddenFromGrid(row: TodayAttendanceRow): boolean {
   const status = row.attendance?.day_status
-  return status === 'VACATION' || status === 'DAY_OFF'
+  if (status === 'VACATION' || status === 'DAY_OFF') return true
+  if (getAttendancePhase(row.attendance) !== 'pending') return false
+  if (row.attendance?.day_status === 'EXTRA') return false
+  return row.today_vacation === true
 }
 
 /** Format seconds as "Xm" or "Xh Ym" */

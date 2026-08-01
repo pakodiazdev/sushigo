@@ -37,9 +37,10 @@ public repo), a **High**-value Attendance Today correctness bug (`#358`), and fi
 technical-debt Issues already open on the backlog (`#357`, `#360`, `#365`, `#382`, `#383`) plus
 two small Low-tier cleanups (`#376`, `#385`).
 
-**Progress as of 2026-08-01:** 2 of 14 scoped Issues completed (14.3%) — `#384` (Critical
-`APP_KEY` security exposure, PR #393) and `#385` (SonarCloud `Readonly` code-smell cleanup, PR
-#391), both open and ready for merge.
+**Progress as of 2026-08-01:** 3 of 14 scoped Issues completed (21.4%) — `#384` (Critical
+`APP_KEY` security exposure, PR #393), `#385` (SonarCloud `Readonly` code-smell cleanup, PR
+#391), and `#358` (Attendance Today "Ausentes" correctness bug, PR #395), all open and ready for
+merge.
 
 File-conflict analysis (§9) found **zero shared-file collisions** among all 14 Issues — every
 Issue touches a distinct set of files or a distinct route. The only real ordering constraints are
@@ -96,7 +97,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
-| Progress (Issues completed) | 2 / 14 (14.3%) as of 2026-08-01 — `#384` (Critical `APP_KEY` exposure, PR #393) and `#385` (SonarCloud cleanup, PR #391) implemented; both open, ready for merge |
+| Progress (Issues completed) | 3 / 14 (21.4%) as of 2026-08-01 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), and `#358` (Attendance Today "Ausentes" bug, PR #395) implemented; all open, ready for merge |
 
 ## 5. Scope
 
@@ -162,7 +163,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 | ✅ | #384 | Remove hardcoded APP_KEY from docker-compose.prod.yml and docker-compose.preview.yml | Critical | 1h | 2h | 0.6h | PR #393 | Hardcoded key removed from both compose files, rotation process documented; live Cloud Run rotation deferred (needs GCP access) — PR ready, merge pending |
 | ⏳ | #377 | Build a unified media upload system (Storage-backed, cloud-swappable) | High | 4h | 8h | — | — | No dependencies; unblocks #378 (Round 2) |
 | ⏳ | #379 | Build the Platillos (dishes) backend domain: categories, dishes, extras | High | 5h | 10h | — | — | Soft dependency on #377 (photos only, not tables/CRUD) — safe to run in parallel; unblocks #381 (Round 2) |
-| ⏳ | #358 | Employees on vacation or a scheduled rest day today don't appear under "Ausentes" | High | 3h | 6h | — | — | `types/attendance.ts` + backend attendance addition; independent |
+| ✅ | #358 | Employees on vacation or a scheduled rest day today don't appear under "Ausentes" | High | 3h | 6h | 5.2h | PR #395 | `today_vacation` backend field + `isAbsentRow`/`isHiddenFromGrid` frontend fallback; PR ready, merge pending |
 | ⏳ | #360 | Migrate remaining now()/new Date() usages to ApplicationClock | Medium | 4h | 8h | — | — | Wide file surface (Leaves/CashAdjustments/Inventory backend, Employees frontend hooks) but none overlap other sprint Issues |
 | ⏳ | #383 | Migrate Payroll Periods list/detail tables to the shared DataGrid component | Medium | 3h | 6h | — | — | `attendance/payroll/*`; independent of #382 (different route) |
 | ⏳ | #382 | Migrate the daily report employee table to the shared DataGrid component | Medium | 2h | 4h | — | — | `attendance/reports/*`; independent of #383 |
@@ -301,7 +302,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ✅ | #384 | Removed the leaked hardcoded `APP_KEY` from `docker-compose.prod.yml`/`docker-compose.preview.yml`, sourced from a required env var, and documented the generate/rotate process — PR open, not yet merged | PR #393 | — | 0.6h | 1 Copilot review round (require APP_KEY, fail fast) + Devin/DeepWiki scan 0 bugs; live Cloud Run key rotation deliberately deferred (needs GCP project access outside this automation) — PR ready, merge pending |
 | ⏳ | #377 | Not started | — | — | — | — |
 | ⏳ | #379 | Not started | — | — | — | — |
-| ⏳ | #358 | Not started | — | — | — | — |
+| ✅ | #358 | Added `today_vacation` to `TodayAttendanceController`'s response and updated `isAbsentRow`/`isHiddenFromGrid` so vacation/scheduled-rest-day employees classify as "Ausente" from the start of the day without an Attendance record — PR open, not yet merged | PR #395 | — | 5.2h | 25 new/updated PHPUnit assertions, 248 Vitest passing, 5/5 new + 15/15 regression Cypress specs (dev-lab E2E stack); Copilot review fixed 1 real defect (fallback misclassifying an actively-working employee); Devin/DeepWiki review surfaced 1 legitimate UX tradeoff (rest-day visibility in default grid), resolved via a user decision rather than a silent code change; CI 13/13 green — PR ready, merge pending |
 | ⏳ | #360 | Not started | — | — | — | — |
 | ⏳ | #383 | Not started | — | — | — | — |
 | ⏳ | #382 | Not started | — | — | — | — |

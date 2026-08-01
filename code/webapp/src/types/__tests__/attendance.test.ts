@@ -203,6 +203,7 @@ describe('isAbsentRow', () => {
             attendance: null,
             schedule: null,
             today_leave: null,
+            today_vacation: false,
             ...overrides,
         }
     }
@@ -289,6 +290,83 @@ describe('isAbsentRow', () => {
         const row = makeRow({ attendance: makeAttendance({ check_in: '2026-04-09T13:00:00+00:00' }) })
         expect(isAbsentRow(row)).toBe(false)
     })
+
+    it('returns true when today_vacation is true, even without an attendance record', () => {
+        const row = makeRow({ attendance: null, today_vacation: true })
+        expect(isAbsentRow(row)).toBe(true)
+    })
+
+    it('returns true when schedule.is_day_off is true, even without an attendance record', () => {
+        const row = makeRow({
+            attendance: null,
+            schedule: {
+                day_of_week: 7,
+                is_day_off: true,
+                expected_start: null,
+                expected_lunch_start: null,
+                expected_lunch_end: null,
+                lunch_duration_minutes: null,
+                expected_end: null,
+            },
+        })
+        expect(isAbsentRow(row)).toBe(true)
+    })
+
+    it('returns false when schedule.is_day_off is false', () => {
+        const row = makeRow({
+            attendance: null,
+            schedule: {
+                day_of_week: 1,
+                is_day_off: false,
+                expected_start: '09:00',
+                expected_lunch_start: '13:00',
+                expected_lunch_end: '14:00',
+                lunch_duration_minutes: 60,
+                expected_end: '18:00',
+            },
+        })
+        expect(isAbsentRow(row)).toBe(false)
+    })
+
+    it('returns false for today_vacation when the employee actually checked in (e.g. an extra-day negotiation)', () => {
+        const row = makeRow({
+            attendance: makeAttendance({ check_in: '2026-04-09T13:00:00+00:00' }),
+            today_vacation: true,
+        })
+        expect(isAbsentRow(row)).toBe(false)
+    })
+
+    it('returns false for schedule.is_day_off when the employee actually checked in (e.g. an extra-day negotiation)', () => {
+        const row = makeRow({
+            attendance: makeAttendance({ check_in: '2026-04-09T13:00:00+00:00' }),
+            schedule: {
+                day_of_week: 7,
+                is_day_off: true,
+                expected_start: null,
+                expected_lunch_start: null,
+                expected_lunch_end: null,
+                lunch_duration_minutes: null,
+                expected_end: null,
+            },
+        })
+        expect(isAbsentRow(row)).toBe(false)
+    })
+
+    it('returns false for schedule.is_day_off when day_status is EXTRA, even before check-in — a negotiated extra day is already scheduled', () => {
+        const row = makeRow({
+            attendance: makeAttendance({ day_status: 'EXTRA', check_in: null }),
+            schedule: {
+                day_of_week: 7,
+                is_day_off: true,
+                expected_start: null,
+                expected_lunch_start: null,
+                expected_lunch_end: null,
+                lunch_duration_minutes: null,
+                expected_end: null,
+            },
+        })
+        expect(isAbsentRow(row)).toBe(false)
+    })
 })
 
 describe('isHiddenFromGrid', () => {
@@ -304,6 +382,7 @@ describe('isHiddenFromGrid', () => {
             attendance: null,
             schedule: null,
             today_leave: null,
+            today_vacation: false,
             ...overrides,
         }
     }
@@ -382,6 +461,43 @@ describe('isHiddenFromGrid', () => {
     it('returns true when day_status is DAY_OFF — a scheduled rest day never needs action', () => {
         const row = makeRow({ attendance: makeAttendance({ day_status: 'DAY_OFF' }) })
         expect(isHiddenFromGrid(row)).toBe(true)
+    })
+
+    it('returns true when today_vacation is true, even without an attendance record', () => {
+        const row = makeRow({ attendance: null, today_vacation: true })
+        expect(isHiddenFromGrid(row)).toBe(true)
+    })
+
+    it('returns false when schedule.is_day_off is true — a scheduled rest day still exposes a live extra-day check-in action', () => {
+        const row = makeRow({
+            attendance: null,
+            schedule: {
+                day_of_week: 7,
+                is_day_off: true,
+                expected_start: null,
+                expected_lunch_start: null,
+                expected_lunch_end: null,
+                lunch_duration_minutes: null,
+                expected_end: null,
+            },
+        })
+        expect(isHiddenFromGrid(row)).toBe(false)
+    })
+
+    it('returns false for today_vacation when the employee actually checked in — the card must stay visible', () => {
+        const row = makeRow({
+            attendance: makeAttendance({ check_in: '2026-04-09T13:00:00+00:00' }),
+            today_vacation: true,
+        })
+        expect(isHiddenFromGrid(row)).toBe(false)
+    })
+
+    it('returns false for today_vacation when day_status is EXTRA — a negotiated extra day must stay findable, not vanish from every tab', () => {
+        const row = makeRow({
+            attendance: makeAttendance({ day_status: 'EXTRA', check_in: null }),
+            today_vacation: true,
+        })
+        expect(isHiddenFromGrid(row)).toBe(false)
     })
 })
 

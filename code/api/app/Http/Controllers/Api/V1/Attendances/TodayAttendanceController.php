@@ -65,7 +65,8 @@ use Carbon\Carbon;
  *                     @OA\Property(property="employee", ref="#/components/schemas/EmployeeSummaryResponse"),
  *                     @OA\Property(property="attendance", nullable=true, ref="#/components/schemas/AttendanceResponse"),
  *                     @OA\Property(property="schedule", nullable=true, ref="#/components/schemas/ScheduleDayResponse"),
- *                     @OA\Property(property="today_leave", nullable=true, ref="#/components/schemas/TodayLeaveResponse")
+ *                     @OA\Property(property="today_leave", nullable=true, ref="#/components/schemas/TodayLeaveResponse"),
+ *                     @OA\Property(property="today_vacation", type="boolean", description="True when an approved VacationRequest covers today, independent of whether the Attendance VACATION record has been created yet")
  *                 )
  *             )
  *         )
@@ -102,6 +103,18 @@ class TodayAttendanceController extends Controller
                     ->approved()
                     ->forDate($today)
                     ->with('leaveType')
+                    ->reorder()
+                    ->oldest('id'),
+                // Approved vacation covering today. Checked independently of the
+                // Attendance VACATION record so the frontend can classify the
+                // employee as absent from the start of the day, even before that
+                // record exists (see #358) — although in practice
+                // VacationRequestGuards::createAttendanceRecords() always creates it
+                // eagerly at approval time, this decouples the classification from
+                // that implementation detail.
+                'vacationRequests' => fn ($q) => $q
+                    ->approved()
+                    ->forDate($today)
                     ->reorder()
                     ->oldest('id'),
                 // Load the wage record effective today to compute the daily wage shown in the
@@ -147,6 +160,7 @@ class TodayAttendanceController extends Controller
                 'today_leave' => $todayLeave
                     ? (new TodayLeaveResource($todayLeave, $today))->resolve()
                     : null,
+                'today_vacation' => $employee->vacationRequests->isNotEmpty(),
             ];
         });
 

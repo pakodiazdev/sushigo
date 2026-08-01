@@ -36,6 +36,7 @@ function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRo
     attendance: null,
     schedule: null,
     today_leave: null,
+    today_vacation: false,
     ...overrides,
   }
 }
