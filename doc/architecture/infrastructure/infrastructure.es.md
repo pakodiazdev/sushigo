@@ -166,3 +166,59 @@ El conjunto completo de requerimientos funcionales (RF), reglas de negocio (RN) 
 | Vitest + coverage | [#044](https://github.com/pakodiazdev/sushigo/issues/44) | `webapp-tests.yml` — PR + main |
 | SonarCloud | [#045](https://github.com/pakodiazdev/sushigo/issues/45) | Quality gate — PR + main |
 | Branch protection | [#046](https://github.com/pakodiazdev/sushigo/issues/46) | Protección de `main` — checks requeridos: los 5 workflows |
+
+---
+
+## 10. Gestión de Secretos — `APP_KEY`
+
+El `APP_KEY` de Laravel encripta sesiones, cookies y cualquier cast/columna `encrypted`. Debe ser
+único por ambiente y nunca debe committearse a git — ver
+[#384](https://github.com/pakodiazdev/sushigo/issues/384).
+
+### 10.1 Dónde vive realmente la clave de cada ambiente
+
+- **Dev local / dev-lab:** cada workspace genera su propia clave vía `php artisan key:generate`
+  durante el bootstrap. Nunca se comparte entre workspaces.
+- **Pruebas locales de los targets Docker `prod`/`preview`** (`docker-compose.prod.yml`,
+  `docker-compose.preview.yml`): estos archivos compose no despliegan nada — solo permiten a un
+  desarrollador construir y correr los stages `prod`/`preview` del Dockerfile en su propia máquina
+  antes de disparar un deploy real. `docker-compose.preview.yml` lee `APP_KEY` desde el `.env`
+  propio del desarrollador (ver `.env.example` en la raíz); `docker-compose.prod.yml` no tiene
+  ningún build arg `APP_KEY` — el stage `prod` de `docker/app/Dockerfile` nunca declara
+  `ARG APP_KEY`, así que hornear uno en build time sería peso muerto. El proceso Laravel del
+  target `prod` lee el `APP_KEY` que esté en `code/api/.env` en el host que construya/corra la
+  imagen.
+- **Servicios Cloud Run en vivo** (`admin.sushigo-romita.com`, `preview.sushigo-romita.com`):
+  ninguno de los dos archivos compose se usa para desplegar estos — `deploy-preview.yml` construye
+  la imagen directamente con `docker build --target preview` y despliega con `gcloud run deploy`,
+  sin nunca establecer `APP_KEY`. Esto significa que el `APP_KEY` de cada servicio Cloud Run está
+  configurado directamente en el servicio (Cloud Run mantiene una env var no especificada entre
+  revisiones), completamente fuera de este repositorio.
+
+### 10.2 Generar una clave nueva
+
+```bash
+cd code/api && php artisan key:generate --show
+```
+
+Esto imprime un valor sin escribirlo en ningún lado — cópialo al destino para el que es la
+rotación (nunca de vuelta a un docker-compose o a `.env.example`).
+
+### 10.3 Rotar las claves Cloud Run de prod/preview en vivo
+
+```bash
+gcloud run services update <service-name> \
+  --region "<region>" \
+  --update-env-vars APP_KEY="<valor recién generado>"
+```
+
+Rotar `APP_KEY` invalida toda sesión/cookie existente y cualquier dato ya `encrypted` bajo la
+clave anterior — es el efecto esperado, no un bug, para una clave tratada como comprometida.
+Preferir migrar esto a una referencia de GCP Secret Manager (`--update-secrets
+APP_KEY=<secret>:latest`) en vez de una env var plana, para que rotaciones futuras no requieran
+una invocación manual de `gcloud` por ambiente; este repositorio aún no lo hace así — consultar a
+quien tenga acceso al proyecto GCP.
+
+**Hacer esto requiere acceso al proyecto GCP que la automatización de este repositorio no tiene**
+— debe ejecutarlo una persona con acceso al proyecto GCP `sushigo-app`, no un script desde un
+workspace de dev-lab.

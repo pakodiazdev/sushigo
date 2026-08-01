@@ -5,7 +5,6 @@ services:
       dockerfile: docker/app/Dockerfile
       target: prod
       args:
-        APP_KEY: "base64:HiigE2awVygrgb5vyAQoXzdCqyMkEOBViWqhQ0guqnc="
         APP_ENV: "production"
         APP_DEBUG: "false"
         API_URL: "http://localhost:8090"
@@ -32,12 +31,3 @@ services:
     container_name: prod_front_sushigo
     ports:
       - 8005:80
-  # environment:
-  #   - APP_KEY: "base64:HiigE2awVygrgb5vyAQoXzdCqyMkEOBViWqhQ0guqnc="
-  #   - APP_ENV: "production"
-  #   - APP_DEBUG: "false"
-  #   - POSTGRES_DB=${POSTGRES_DB:-mydb}
-  #   - POSTGRES_USER=${POSTGRES_USER:-admin}
-  #   - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
-  #   - DB_HOST=pgsql
-  #   - DB_PORT=5432
