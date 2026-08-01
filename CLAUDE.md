@@ -283,6 +283,7 @@ Every PR title **must** include the workspace letter, in its own bracket right a
 
 - `x` is the workspace letter, lowercase, matching the `workspaces/sushigo-<x>` directory (e.g. `a`, `b`, `c`)
 - No space between the issue bracket and the workspace-letter bracket
+- Omit this bracket only for PRs opened from standalone Docker mode (see "Docker Development" below) — that mode has no `workspaces/sushigo-<x>` clone, so there is no letter to put in it
 
 **Example:** `✨ [#073][a] - Confirm weekly payroll close ✅`
 

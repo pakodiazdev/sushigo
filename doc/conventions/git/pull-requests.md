@@ -7,22 +7,30 @@ This guide establishes the format for PR titles and descriptions, ensuring clari
 ## PR Title Format
 
 ```
-:emoji [#issue] - Short description
+:emoji [#NNN][x] - Short description :emoji
 ```
 
 ### Components
 
-- **Emoji**: Same as the primary commit type (see [commits.md](./commits.md)).
-- **Issue Number**: Enclosed in brackets, preceded by `#`.
+- **Emoji**: The opening emoji matches the primary commit type (see [commits.md](./commits.md)).
+  The title also needs a closing ornamental emoji at the end — per CLAUDE.md it does not have to
+  match the opening one (e.g. `🔨 ... 🗂️`, `✨ ... ✅` are both valid), though reusing the same
+  emoji at both ends is also fine.
+- **Issue Number**: Enclosed in brackets, preceded by `#`, zero-padded to 3 digits (`#016`, not `#16`).
+- **Workspace letter** (mandatory): its own bracket `[x]` immediately after the issue bracket, no
+  space between them — lowercase, matching the `workspaces/sushigo-<x>` directory this PR was
+  developed in (e.g. `a`, `b`, `c`). Dev-lab runs up to 8 parallel workspace clones; without the
+  letter, reviewers scanning a PR list can't tell which workspace a PR came from without opening
+  it. Omit this bracket only for PRs opened from standalone Docker mode (no workspace clone).
 - **Description**: Imperative mood, concise summary of the change.
 
 ### Title Examples
 
 ```
-✨ [#016] Employee CRUD API + Frontend Module
-🐛 [#042] Fix duplicate code validation on employee create
-🔨 [#033] Refactor auth module to use Zustand
-📚 [#028] Add Swagger annotations to all endpoints
+✨ [#016][a] - Employee CRUD API + Frontend Module ✨
+🐛 [#042][b] - Fix duplicate code validation on employee create 🐛
+🔨 [#033][c] - Refactor auth module to use Zustand 🔨
+📚 [#028][a] - Add Swagger annotations to all endpoints 📚
 ```
 
 ---
@@ -32,7 +40,10 @@ This guide establishes the format for PR titles and descriptions, ensuring clari
 Use the following structure for all PR descriptions:
 
 ```markdown
-## 📋 Summary
+## Summary
+
+Closes #NNN
+Devin Review: https://deepwiki.com/pakodiazdev/sushigo/pull/<PR-number>
 
 Brief description of what this PR accomplishes (1-3 sentences).
 
@@ -80,6 +91,15 @@ Brief description of what this PR accomplishes (1-3 sentences).
 
 ---
 
+## Manual Testing
+
+Step-by-step instructions to exercise the change manually: exact command to run, page/route to
+visit, inputs to use, expected result. For a bug fix: steps to reproduce the original bug, plus
+steps confirming it no longer happens. Never include passwords or other credentials — reference
+seeded test users by email only.
+
+---
+
 ## 🔗 References
 
 - **Task**: #NNN
@@ -94,15 +114,25 @@ Items intentionally left out of scope:
 
 - [ ] Future work item 1
 - [ ] Future work item 2
+
+---
+
+## Workspace
+
+`<workspace-name>` — `<branch-name>`
 ```
 
 ---
 
 ## Section Guidelines
 
-### 📋 Summary
+### Summary
 
 - **Required**
+- Start with `Closes #NNN`, then `Devin Review: <deepwiki PR URL>` on the next line — the
+  `Devin Review` link isn't known until the PR is created, so add it via a follow-up
+  `gh pr edit <N> --body-file ...` right after `gh pr create` returns the PR **URL** (not a bare
+  number — extract `<N>` from it first, e.g. `basename <url>`)
 - 1-3 sentences describing the purpose
 - Include the user story if the PR implements a backlog item
 
@@ -131,6 +161,13 @@ Items intentionally left out of scope:
 - Use checkboxes to confirm testing status
 - Mention specific test coverage
 
+### Manual Testing
+
+- **Required** — separate from the automated `🧪 Testing` checklist above
+- Be concrete: exact commands, URLs, or UI steps — not "test the feature works"
+- Never include passwords or other credentials in the PR body, even for seeded test users —
+  reference them by email only and let the reviewer look up the password in its documented location
+
 ### 🔗 References
 
 - **Required**
@@ -142,12 +179,23 @@ Items intentionally left out of scope:
 - Document intentional omissions
 - Link to follow-up issues if created
 
+### Workspace
+
+- **Required** for every PR opened from a dev-lab workspace clone — not applicable to standalone
+  Docker mode
+- Workspace name is the directory under `workspaces/` (e.g. `sushigo-a`); branch name is the full
+  branch name at the time the PR was opened
+- Place it as the last section, just before the `🤖 Generated with` attribution line
+
 ---
 
 ## Complete Example
 
 ```markdown
-## 📋 Summary
+## Summary
+
+Closes #016
+Devin Review: https://deepwiki.com/pakodiazdev/sushigo/pull/294
 
 Complete implementation of Employee management module including full CRUD API endpoints, frontend list/form components, and enhanced DataGrid features.
 
@@ -201,6 +249,17 @@ Complete implementation of Employee management module including full CRUD API en
 
 ---
 
+## Manual Testing
+
+1. `POST /api/v1/employees` with a valid payload (see Swagger UI) — confirm `201` and a welcome
+   email in Mailpit (`http://localhost:8025`)
+2. Visit `/employees` in the webapp — confirm the new employee appears in the list, sorted and
+   paginated correctly
+3. Toggle the employee inactive via the row action — confirm `PATCH /toggle-active` returns `200`
+   and the row updates without a page reload
+
+---
+
 ## 🔗 References
 
 - **Task**: #016
@@ -213,6 +272,12 @@ Complete implementation of Employee management module including full CRUD API en
 
 - [ ] Employee Detail Page with tabs
 - [ ] E2E Cypress tests
+
+---
+
+## Workspace
+
+`sushigo-a` — `feature/016-employee-crud`
 ```
 
 ---
@@ -314,10 +379,13 @@ Every component with **3+ `useState` calls or API mutations** must extract its l
 
 ## Quick Reference
 
-| Element          | Format                               |
-| ---------------- | ------------------------------------ |
-| Title            | `:emoji [#NNN] - Description`        |
-| Commits section  | `**hash** :emoji message`            |
-| Breaking changes | Use ⚠️ section, be explicit          |
-| Testing          | Checkboxes for each test type        |
-| References       | Link task, backlog (AP-), spec (RF-) |
+| Element          | Format                                               |
+| ---------------- | ---------------------------------------------------- |
+| Title            | `:emoji [#NNN][x] - Description :emoji`              |
+| Summary opening  | `Closes #NNN` then `Devin Review: <deepwiki URL>`    |
+| Commits section  | `**hash** :emoji message`                            |
+| Breaking changes | Use ⚠️ section, be explicit                          |
+| Testing          | Checkboxes for each test type                        |
+| Manual Testing   | Concrete steps, no credentials                       |
+| References       | Link task, backlog (AP-), spec (RF-)                 |
+| Workspace        | `` `sushigo-<x>` — `<branch-name>` `` — last section |

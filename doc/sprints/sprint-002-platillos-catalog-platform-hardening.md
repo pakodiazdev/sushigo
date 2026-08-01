@@ -127,7 +127,7 @@ between parallel agents.
 
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
-| — | — | — | No opportunistic work yet — sprint just started | — |
+| 2026-07-31 | #388 | Add /issue slash command for end-to-end autonomous issue delivery | Already implemented ad hoc while working the sprint's issue-delivery workflow; filed and tracked here after the fact rather than left undocumented | `.claude/commands/issue.md` added, PR #389 open |
 
 ## 6. Value Ranking
 
@@ -307,6 +307,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ⏳ | #378 | Not started | — | — | — | — |
 | ⏳ | #381 | Not started | — | — | — | — |
 | ⏳ | #380 | Not started | — | — | — | — |
+| ✅ | #388 (Opportunistic, §5.4) | Added `/issue` slash command composing `/start-issue`, `/pr-comments`, and `/finish-pr` into a single autonomous delivery pipeline — PR open, not yet merged | PR #389 | — | 9.43h | 6 Copilot review rounds + 6 Devin/DeepWiki scan rounds, all defects resolved (no business-rule disputes); PR ready, merge pending |
 
 ## 14. Quality Results
 
