@@ -201,7 +201,7 @@ written **directly to the issue**, not to a local file. There is no separate "sy
 there is nothing else to sync with.
 
 ```bash
-gh issue view <NNN> --repo <owner>/<repo> --json body -q .body > /tmp/finish-pr-issue-body.md
+gh issue view <NNN> --repo <owner>/<repo> --json body -q .body > /tmp/finish-pr-<N>-issue-body.md
 ```
 
 1. In the `## ⏱️ Time` → `Sessions` JSON array, close any session still showing `"end": "?"` with
@@ -219,7 +219,7 @@ gh issue view <NNN> --repo <owner>/<repo> --json body -q .body > /tmp/finish-pr-
 Write the updated body back:
 
 ```bash
-gh issue edit <NNN> --repo <owner>/<repo> --body-file /tmp/finish-pr-issue-body.md
+gh issue edit <NNN> --repo <owner>/<repo> --body-file /tmp/finish-pr-<N>-issue-body.md
 ```
 
 Do **not** close the issue here — merging the PR closes it automatically via `Closes #NNN`.
@@ -397,7 +397,7 @@ housekeeping commit:
 
 ```bash
 git fetch origin <baseRefName>
-git diff origin/<baseRefName> HEAD --name-only | sort > /tmp/finish-pr-files-before.txt
+git diff origin/<baseRefName> HEAD --name-only | sort > /tmp/finish-pr-<N>-files-before.txt
 git reset --soft origin/<baseRefName>
 ```
 
@@ -407,8 +407,8 @@ not just concatenate every intermediate commit message verbatim.
 
 ```bash
 git commit -m "<final consolidated message>"
-git diff origin/<baseRefName> HEAD --name-only | sort > /tmp/finish-pr-files-after.txt
-diff /tmp/finish-pr-files-before.txt /tmp/finish-pr-files-after.txt && echo "MATCH"
+git diff origin/<baseRefName> HEAD --name-only | sort > /tmp/finish-pr-<N>-files-after.txt
+diff /tmp/finish-pr-<N>-files-before.txt /tmp/finish-pr-<N>-files-after.txt && echo "MATCH"
 git push --force-with-lease origin HEAD
 ```
 
@@ -484,12 +484,12 @@ git rebase origin/<baseRefName>
 
 - If it **succeeds**, the branch is already a single commit from Phase 7.5, so the rebase replays
   cleanly as one commit. Re-validate against the file list Phase 7.5 already proved correct
-  (`finish-pr-files-after.txt`, captured post-squash against the *old* base) — preserve it under
-  its own name first, since the next command overwrites `finish-pr-files-after.txt` in place:
+  (`finish-pr-<N>-files-after.txt`, captured post-squash against the *old* base) — preserve it under
+  its own name first, since the next command overwrites `finish-pr-<N>-files-after.txt` in place:
   ```bash
-  cp /tmp/finish-pr-files-after.txt /tmp/finish-pr-files-preverify.txt
-  git diff origin/<baseRefName> HEAD --name-only | sort > /tmp/finish-pr-files-after.txt
-  diff /tmp/finish-pr-files-preverify.txt /tmp/finish-pr-files-after.txt && echo "MATCH"
+  cp /tmp/finish-pr-<N>-files-after.txt /tmp/finish-pr-<N>-files-preverify.txt
+  git diff origin/<baseRefName> HEAD --name-only | sort > /tmp/finish-pr-<N>-files-after.txt
+  diff /tmp/finish-pr-<N>-files-preverify.txt /tmp/finish-pr-<N>-files-after.txt && echo "MATCH"
   ```
   A clean rebase replays the same patch onto a new parent, so this must still match — a mismatch
   means the rebase silently dropped or altered files and should be treated like a failed diff

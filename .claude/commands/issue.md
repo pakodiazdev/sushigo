@@ -64,18 +64,20 @@ This exact bar governs Phase 6 (Copilot) and Phase 8 (Devin). Phase 1 has a rela
 escape valve for planning ambiguities — see that phase for its own research-then-ask rule. Phase 10
 has one deliberate ask at the very end of the run (share `/usage`'s output for cost logging) — that
 is a wrap-up request for data this command cannot read itself, not a decision point in the
-pipeline. Phase 8 also has a narrow infrastructure fallback (asking whether to wait for the Chrome
+pipeline. Phase 8 has a narrow infrastructure fallback (asking whether to wait for the Chrome
 extension to connect, or skip that sub-check) — an environment/tooling question, not a decision
-about the feature or the review. Outside those spots — Phase 1's research-then-ask, Phase 6/8's
-business-rule bar, Phase 8's Chrome-extension fallback, and Phase 10's wrap-up ask — nothing else in
-this command pauses for the user.
+about the feature or the review. Phase 9 delegates to `finish-pr.md` verbatim, which has the exact
+same Chrome-extension fallback in its own Phase 7.6b — so that ask can also surface during close-out,
+not just Phase 8. Outside those spots — Phase 1's research-then-ask, Phase 6/8's business-rule bar,
+the Chrome-extension fallback (Phase 8 or, via delegation, Phase 9/finish-pr's 7.6b), and Phase 10's
+wrap-up ask — nothing else in this command pauses for the user.
 
 ---
 
 ## PHASE 0 — Confirm the issue exists
 
 ```bash
-gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json number,title,body,state,labels
+gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json number,title,body,state,labels
 ```
 
 - **Command fails / issue not found** → stop immediately. Report `❌ Issue #$ARGUMENTS does not
@@ -212,9 +214,9 @@ is the documentation *and* the task, not just the diff.
    re-verifying the same boxes later is harmless — never *un*tick something it finds already
    checked.
    ```bash
-   gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json body -q .body > /tmp/issue-tasks-body.md
+   gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json body -q .body > "/tmp/issue-$ARGUMENTS-tasks-body.md"
    # tick [ ] → [x] only for items you can verify actually shipped in this PR's diff
-   gh issue edit $ARGUMENTS --repo pakodiazdev/sushigo --body-file /tmp/issue-tasks-body.md
+   gh issue edit "$ARGUMENTS" --repo pakodiazdev/sushigo --body-file "/tmp/issue-$ARGUMENTS-tasks-body.md"
    ```
 
 Fold any doc changes into the same commits as the rest of Phase 3 (or their own doc-scoped commit,
@@ -478,10 +480,10 @@ Append one entry to a `## 💸 Token & Cost` section on the issue — same patte
 first time anything logs against this issue, otherwise append.
 
 ```bash
-gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json body -q .body > /tmp/issue-cost-body.md
+gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json body -q .body > "/tmp/issue-$ARGUMENTS-cost-body.md"
 ```
 
-Edit `/tmp/issue-cost-body.md`:
+Edit `/tmp/issue-$ARGUMENTS-cost-body.md`:
 - If `## 💸 Token & Cost` doesn't exist yet, add it (with an empty `### 📅 Runs` json array and a
   `### 📊 Totals` line) after `## ⏱️ Time`.
 - Append to `Runs`:
@@ -495,7 +497,7 @@ Edit `/tmp/issue-cost-body.md`:
   later runs it standalone on a different PR that didn't go through `/issue`.
 
 ```bash
-gh issue edit $ARGUMENTS --repo pakodiazdev/sushigo --body-file /tmp/issue-cost-body.md
+gh issue edit "$ARGUMENTS" --repo pakodiazdev/sushigo --body-file "/tmp/issue-$ARGUMENTS-cost-body.md"
 ```
 
 This applies regardless of how the run ended — log what was actually spent even if Phase 6 or 8
