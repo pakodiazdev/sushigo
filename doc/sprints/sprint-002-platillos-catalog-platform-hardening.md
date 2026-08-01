@@ -37,14 +37,16 @@ public repo), a **High**-value Attendance Today correctness bug (`#358`), and fi
 technical-debt Issues already open on the backlog (`#357`, `#360`, `#365`, `#382`, `#383`) plus
 two small Low-tier cleanups (`#376`, `#385`).
 
+**Progress as of 2026-08-01:** 2 of 14 scoped Issues completed (14.3%) — `#384` (Critical
+`APP_KEY` security exposure, PR #393) and `#385` (SonarCloud `Readonly` code-smell cleanup, PR
+#391), both open and ready for merge.
+
 File-conflict analysis (§9) found **zero shared-file collisions** among all 14 Issues — every
 Issue touches a distinct set of files or a distinct route. The only real ordering constraints are
 inside the Platillos chain itself (§8, Route B). As a result, Route A schedules 11 of the 14
 Issues in a single conflict-free Round 1, with only the two Platillos Issues that have a hard
 technical dependency (`#378`, `#381`) held to Round 2, and the Platillos UI (`#380`) — which needs
 both of those — held to Round 3.
-
-**Progress as of 2026-08-01:** 1/14 Issues complete (7%) — #385.
 
 ## 2. Context
 
@@ -94,7 +96,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
-| Progress (Issues completed) | 1/14 (7%) |
+| Progress (Issues completed) | 2 / 14 (14.3%) as of 2026-08-01 — `#384` (Critical `APP_KEY` exposure, PR #393) and `#385` (SonarCloud cleanup, PR #391) implemented; both open, ready for merge |
 
 ## 5. Scope
 
@@ -157,7 +159,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ⏳ | #384 | Remove hardcoded APP_KEY from docker-compose.prod.yml and docker-compose.preview.yml | Critical | 1h | 2h | — | — | Docker-compose files only; independent of all other Issues |
+| ✅ | #384 | Remove hardcoded APP_KEY from docker-compose.prod.yml and docker-compose.preview.yml | Critical | 1h | 2h | 0.6h | PR #393 | Hardcoded key removed from both compose files, rotation process documented; live Cloud Run rotation deferred (needs GCP access) — PR ready, merge pending |
 | ⏳ | #377 | Build a unified media upload system (Storage-backed, cloud-swappable) | High | 4h | 8h | — | — | No dependencies; unblocks #378 (Round 2) |
 | ⏳ | #379 | Build the Platillos (dishes) backend domain: categories, dishes, extras | High | 5h | 10h | — | — | Soft dependency on #377 (photos only, not tables/CRUD) — safe to run in parallel; unblocks #381 (Round 2) |
 | ⏳ | #358 | Employees on vacation or a scheduled rest day today don't appear under "Ausentes" | High | 3h | 6h | — | — | `types/attendance.ts` + backend attendance addition; independent |
@@ -296,7 +298,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 
 | Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
 |---|---:|---|---:|---|---:|---|
-| ⏳ | #384 | Not started | — | — | — | — |
+| ✅ | #384 | Removed the leaked hardcoded `APP_KEY` from `docker-compose.prod.yml`/`docker-compose.preview.yml`, sourced from a required env var, and documented the generate/rotate process — PR open, not yet merged | PR #393 | — | 0.6h | 1 Copilot review round (require APP_KEY, fail fast) + Devin/DeepWiki scan 0 bugs; live Cloud Run key rotation deliberately deferred (needs GCP project access outside this automation) — PR ready, merge pending |
 | ⏳ | #377 | Not started | — | — | — | — |
 | ⏳ | #379 | Not started | — | — | — | — |
 | ⏳ | #358 | Not started | — | — | — | — |

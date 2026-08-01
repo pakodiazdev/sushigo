@@ -16,7 +16,7 @@ services:
       - APP_ENV=preview
       - APP_DEBUG=false
       - DB_CONNECTION=pgsql
-      - APP_KEY=base64:HiigE2awVygrgb5vyAQoXzdCqyMkEOBViWqhQ0guqnc=
+      - "APP_KEY=${APP_KEY:?APP_KEY must be set, generate one via: cd code/api && php artisan key:generate --show}"
       - APP_URL=http://localhost:8091
       - DB_HOST=${POSTGRES_PREVIEW_HOST:-pgsql}
       - DB_PORT=${POSTGRES_PREVIEW_PORT:-5432}
