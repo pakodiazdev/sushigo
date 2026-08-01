@@ -18,7 +18,7 @@ local archive is written once, later, by `/finish-pr`.
 ## PHASE 1 — Load the issue
 
 ```bash
-gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json number,title,body,labels,state
+gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json number,title,body,labels,state
 ```
 
 If the issue is closed, stop and inform the user.
@@ -35,14 +35,14 @@ before continuing — do not silently work around a malformed issue.
 ### 1a. Ensure the issue is linked to the SushiGo Admin project
 
 ```bash
-gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json projectItems -q '.projectItems[].project.title'
+gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json projectItems -q '.projectItems[].project.title'
 ```
 
 If `"SushiGo Admin"` is not in the list, link it (Status field only — never set the Iteration field,
 that is a sprint-assignment decision the user makes explicitly):
 
 ```bash
-gh project item-add 7 --owner pakodiazdev --url https://github.com/pakodiazdev/sushigo/issues/$ARGUMENTS
+gh project item-add 7 --owner pakodiazdev --url "https://github.com/pakodiazdev/sushigo/issues/$ARGUMENTS"
 ```
 
 ---
@@ -128,9 +128,9 @@ the array as `[]` first if the issue somehow doesn't have one yet — see Phase 
 today's date and the current local time as `start` and `"?"` as `end`:
 
 ```bash
-gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json body -q .body > /tmp/issue-body.md
-# edit /tmp/issue-body.md: append { "date": "YYYY-MM-DD", "start": "HH:MM", "end": "?" } to Sessions
-gh issue edit $ARGUMENTS --repo pakodiazdev/sushigo --body-file /tmp/issue-body.md
+gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json body -q .body > "/tmp/issue-$ARGUMENTS-body.md"
+# edit /tmp/issue-$ARGUMENTS-body.md: append { "date": "YYYY-MM-DD", "start": "HH:MM", "end": "?" } to Sessions
+gh issue edit "$ARGUMENTS" --repo pakodiazdev/sushigo --body-file "/tmp/issue-$ARGUMENTS-body.md"
 ```
 
 If the file already has previous session entries, append to the array rather than replacing it.
@@ -232,9 +232,9 @@ Fetch the current body, fill the `end` field of the session opened in Phase 5 wi
 local time:
 
 ```bash
-gh issue view $ARGUMENTS --repo pakodiazdev/sushigo --json body -q .body > /tmp/issue-body.md
-# edit /tmp/issue-body.md: set this session's "end" to "HH:MM"
-gh issue edit $ARGUMENTS --repo pakodiazdev/sushigo --body-file /tmp/issue-body.md
+gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json body -q .body > "/tmp/issue-$ARGUMENTS-body.md"
+# edit /tmp/issue-$ARGUMENTS-body.md: set this session's "end" to "HH:MM"
+gh issue edit "$ARGUMENTS" --repo pakodiazdev/sushigo --body-file "/tmp/issue-$ARGUMENTS-body.md"
 ```
 
 `Tracked` stays `_in progress_` — it is only recomputed once, by `/finish-pr`, from the full
