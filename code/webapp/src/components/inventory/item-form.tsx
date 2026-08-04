@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { FormField, Select, Textarea, Checkbox } from '@/components/ui/form-fields'
+import { FormField, Textarea, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
 import { itemApi } from '@/services/inventory-api'
@@ -43,7 +43,7 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
       sku: item?.sku || '',
       name: item?.name || '',
       description: item?.description || '',
-      type: item?.type || 'INSUMO',
+      type: item?.type || 'PRODUCTO',
       is_stocked: item?.is_stocked ?? true,
       is_perishable: item?.is_perishable ?? false,
       is_active: item?.is_active ?? true,
@@ -62,7 +62,6 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
   const allErrors = {
     sku: errors.sku?.message || validationErrors.sku,
     name: errors.name?.message || validationErrors.name,
-    type: errors.type?.message || validationErrors.type,
   }
 
   const onSubmit = async (data: ItemFormValues) => {
@@ -75,7 +74,6 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
   const isStocked = watch('is_stocked')
   const isPerishable = watch('is_perishable')
   const isActive = watch('is_active')
-  const formType = watch('type')
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
@@ -106,23 +104,6 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
             placeholder="e.g., Fresh Salmon"
             error={!!allErrors.name}
           />
-        </FormField>
-
-        <FormField
-          label="Type"
-          required
-          error={allErrors.type}
-          hint="Classification type for this item"
-        >
-          <Select
-            value={formType}
-            onChange={(e) => setValue('type', e.target.value as ItemFormValues['type'])}
-            error={!!allErrors.type}
-          >
-            <option value="INSUMO">Insumo (Input/Raw Material)</option>
-            <option value="PRODUCTO">Producto (Finished Product)</option>
-            <option value="ACTIVO">Activo (Asset)</option>
-          </Select>
         </FormField>
 
         <FormField label="Description">

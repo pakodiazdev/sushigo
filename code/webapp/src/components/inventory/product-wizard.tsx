@@ -536,17 +536,6 @@ export function ProductWizard({ onSuccess, onCancel }: Readonly<ProductWizardPro
                             />
                         </FormField>
 
-                        <FormField label="Tipo de Producto" required>
-                            <Select
-                                value={wizardData.item.type}
-                                onChange={(e) => updateItemData('type', e.target.value as WizardData['item']['type'])}
-                            >
-                                <option value="INSUMO">Insumo</option>
-                                <option value="PRODUCTO">Producto Terminado</option>
-                                <option value="ACTIVO">Activo</option>
-                            </Select>
-                        </FormField>
-
                         <div className="space-y-3">
                             <Checkbox
                                 checked={wizardData.item.is_stocked}
