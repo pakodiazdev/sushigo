@@ -163,11 +163,12 @@ export function DataGrid<T extends { id: string | number }>({
     )
   }
 
-  function renderEdgeButton(Icon: LucideIcon, iconCls: string, onClick: () => void, disabled: boolean, roundedCls: string | undefined, key: string) {
+  function renderEdgeButton(Icon: LucideIcon, iconCls: string, onClick: () => void, disabled: boolean, roundedCls: string | undefined, key: string, label: string) {
     return (
       <button
         key={key}
         type="button"
+        aria-label={label}
         onClick={onClick}
         disabled={disabled}
         className={roundedCls ? cn(NAV_BTN, roundedCls) : NAV_BTN}
@@ -179,15 +180,15 @@ export function DataGrid<T extends { id: string | number }>({
 
   function renderLeadingEdges(pag: NonNullable<DataGridProps<T>['pagination']>, iconCls: string) {
     return [
-      renderEdgeButton(ChevronsLeft, iconCls, () => pag.onPageChange(1), pag.currentPage === 1, 'rounded-l-md', 'first'),
-      renderEdgeButton(ChevronLeft, iconCls, () => pag.onPageChange(pag.currentPage - 1), pag.currentPage === 1, undefined, 'prev'),
+      renderEdgeButton(ChevronsLeft, iconCls, () => pag.onPageChange(1), pag.currentPage === 1, 'rounded-l-md', 'first', 'Primera página'),
+      renderEdgeButton(ChevronLeft, iconCls, () => pag.onPageChange(pag.currentPage - 1), pag.currentPage === 1, undefined, 'prev', 'Página anterior'),
     ]
   }
 
   function renderTrailingEdges(pag: NonNullable<DataGridProps<T>['pagination']>, iconCls: string) {
     return [
-      renderEdgeButton(ChevronRight, iconCls, () => pag.onPageChange(pag.currentPage + 1), pag.currentPage === pag.totalPages, undefined, 'next'),
-      renderEdgeButton(ChevronsRight, iconCls, () => pag.onPageChange(pag.totalPages), pag.currentPage === pag.totalPages, 'rounded-r-md', 'last'),
+      renderEdgeButton(ChevronRight, iconCls, () => pag.onPageChange(pag.currentPage + 1), pag.currentPage === pag.totalPages, undefined, 'next', 'Página siguiente'),
+      renderEdgeButton(ChevronsRight, iconCls, () => pag.onPageChange(pag.totalPages), pag.currentPage === pag.totalPages, 'rounded-r-md', 'last', 'Última página'),
     ]
   }
 

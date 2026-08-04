@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { requirePermission } from '@/lib/route-guards'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
-import { Button } from '@/components/ui/button'
+import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { NoBranchState, PayPeriodStatusBadge } from '@/components/attendance'
 import { usePayPeriodsListPage } from './use-pay-periods-list'
-import type { PayPeriodStatus } from '@/types/attendance-payroll'
+import type { PayPeriodListItem, PayPeriodStatus } from '@/types/attendance-payroll'
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 
@@ -20,6 +19,46 @@ const STATUS_OPTIONS: { value: PayPeriodStatus | ''; label: string }[] = [
   { value: 'OPEN', label: 'Abierto' },
   { value: 'CLOSED', label: 'Cerrado' },
   { value: 'REOPENED', label: 'Reabierto' },
+]
+
+const columns: Column<PayPeriodListItem>[] = [
+  {
+    key: 'period',
+    header: 'Periodo',
+    render: (period) => (
+      <Link
+        to="/attendance/payroll/$periodId"
+        params={{ periodId: period.id }}
+        className="font-medium text-primary hover:underline"
+      >
+        {period.period_start} — {period.period_end}
+      </Link>
+    ),
+  },
+  {
+    key: 'status',
+    header: 'Estatus',
+    render: (period) => <PayPeriodStatusBadge status={period.status} />,
+  },
+  {
+    key: 'closed_by',
+    header: 'Cerrado por',
+    render: (period) => period.closed_by ?? '—',
+  },
+  {
+    key: 'closed_at',
+    header: 'Cerrado el',
+    render: (period) =>
+      period.closed_at
+        ? new Date(period.closed_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
+        : '—',
+  },
+  {
+    key: 'total_employees',
+    header: 'Empleados',
+    align: 'right',
+    render: (period) => period.total_employees,
+  },
 ]
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -105,92 +144,18 @@ export function PayPeriodsListPage() {
         </p>
       )}
 
-      {isLoading && <ListSkeleton />}
-
-      {!isLoading && periods.length === 0 && !errorMessage && (
-        <p className="text-sm text-gray-500">No hay periodos que coincidan con los filtros.</p>
-      )}
-
-      {!isLoading && periods.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-xs font-medium uppercase text-gray-500">
-                <th className="px-4 py-2">Periodo</th>
-                <th className="px-4 py-2">Estatus</th>
-                <th className="px-4 py-2">Cerrado por</th>
-                <th className="px-4 py-2">Cerrado el</th>
-                <th className="px-4 py-2 text-right">Empleados</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {periods.map(period => (
-                <tr key={period.id} data-testid="pay-period-row">
-                  <td className="px-4 py-2">
-                    <Link
-                      to="/attendance/payroll/$periodId"
-                      params={{ periodId: period.id }}
-                      className="font-medium text-indigo-600 hover:underline"
-                    >
-                      {period.period_start} — {period.period_end}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2">
-                    <PayPeriodStatusBadge status={period.status} />
-                  </td>
-                  <td className="px-4 py-2 text-gray-700">{period.closed_by ?? '—'}</td>
-                  <td className="px-4 py-2 text-gray-500">
-                    {period.closed_at
-                      ? new Date(period.closed_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-2 text-right">{period.total_employees}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Página {meta.current_page} de {meta.last_page} · {meta.total} periodos
-          </span>
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 w-8 p-0"
-              aria-label="Página anterior"
-              disabled={meta.current_page <= 1}
-              onClick={() => setPage(p => p - 1)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 w-8 p-0"
-              aria-label="Página siguiente"
-              disabled={meta.current_page >= meta.last_page}
-              onClick={() => setPage(p => p + 1)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      {!errorMessage && (
+        <DataGrid
+          data={periods}
+          columns={columns}
+          loading={isLoading}
+          emptyMessage="No hay periodos que coincidan con los filtros."
+          getRowId={(period) => period.id}
+          pagination={meta ? { currentPage: meta.current_page, totalPages: meta.last_page, onPageChange: setPage } : undefined}
+          perPage={meta?.per_page}
+          totalResults={meta?.total}
+        />
       )}
     </PageContainer>
-  )
-}
-
-function ListSkeleton() {
-  return (
-    <div className="space-y-2">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="h-14 animate-pulse rounded-lg bg-gray-100" />
-      ))}
-    </div>
   )
 }

@@ -31,8 +31,8 @@ describe('Payroll Period History — happy path', () => {
     cy.wait('@list')
     cy.closeDevDebugger()
 
-    cy.get('[data-testid="pay-period-row"]').should('have.length', 9)
-    cy.get('[data-testid="pay-period-row"]').first().contains(LATEST_WEEK)
+    cy.get('table tbody tr').should('have.length', 9)
+    cy.get('table tbody tr').first().contains(LATEST_WEEK)
   })
 
   it('filters the history down to a date range', () => {
@@ -46,9 +46,9 @@ describe('Payroll Period History — happy path', () => {
     cy.get('input#pay-period-end').clear({ force: true }).type('2026-05-17', { force: true })
     cy.wait('@filtered')
 
-    cy.get('[data-testid="pay-period-row"]').should('have.length', 2)
-    cy.contains('[data-testid="pay-period-row"]', '2026-05-04 — 2026-05-10').should('be.visible')
-    cy.contains('[data-testid="pay-period-row"]', '2026-05-11 — 2026-05-17').should('be.visible')
+    cy.get('table tbody tr').should('have.length', 2)
+    cy.contains('table tbody tr', '2026-05-04 — 2026-05-10').should('be.visible')
+    cy.contains('table tbody tr', '2026-05-11 — 2026-05-17').should('be.visible')
   })
 
   it('opens a backfilled historical week and shows its frozen breakdown', () => {
@@ -61,7 +61,7 @@ describe('Payroll Period History — happy path', () => {
     cy.wait('@list')
     cy.closeDevDebugger()
 
-    cy.contains('[data-testid="pay-period-row"]', periodLabel)
+    cy.contains('table tbody tr', periodLabel)
       .contains('a', periodLabel)
       .click()
     cy.wait('@detail')
