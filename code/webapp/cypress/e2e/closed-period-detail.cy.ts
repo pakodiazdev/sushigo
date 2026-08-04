@@ -35,8 +35,8 @@ describe('Closed Period Detail — happy path', () => {
     cy.visitWithAuth('/attendance/payroll')
     cy.wait('@list')
 
-    cy.get('[data-testid="pay-period-row"]').should('have.length.gte', 1)
-    cy.contains('[data-testid="pay-period-row"]', `${PERIOD_START} — ${PERIOD_END}`).within(() => {
+    cy.get('table tbody tr').should('have.length.gte', 1)
+    cy.contains('table tbody tr', `${PERIOD_START} — ${PERIOD_END}`).within(() => {
       cy.contains('Cerrado').should('be.visible')
       cy.contains(`${PERIOD_START} — ${PERIOD_END}`).click()
     })
@@ -51,7 +51,7 @@ describe('Closed Period Detail — happy path', () => {
     cy.visitWithAuth('/attendance/payroll')
     cy.wait('@list')
 
-    cy.contains('[data-testid="pay-period-row"]', `${PERIOD_START} — ${PERIOD_END}`)
+    cy.contains('table tbody tr', `${PERIOD_START} — ${PERIOD_END}`)
       .contains(`${PERIOD_START} — ${PERIOD_END}`)
       .click()
     cy.wait('@detail')
@@ -68,7 +68,7 @@ describe('Closed Period Detail — happy path', () => {
     cy.visitWithAuth('/attendance/payroll')
     cy.wait('@list')
 
-    cy.contains('[data-testid="pay-period-row"]', `${PERIOD_START} — ${PERIOD_END}`)
+    cy.contains('table tbody tr', `${PERIOD_START} — ${PERIOD_END}`)
       .contains(`${PERIOD_START} — ${PERIOD_END}`)
       .click()
     cy.wait('@detail')

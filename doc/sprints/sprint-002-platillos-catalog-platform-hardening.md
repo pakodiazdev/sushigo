@@ -37,10 +37,11 @@ public repo), a **High**-value Attendance Today correctness bug (`#358`), and fi
 technical-debt Issues already open on the backlog (`#357`, `#360`, `#365`, `#382`, `#383`) plus
 two small Low-tier cleanups (`#376`, `#385`).
 
-**Progress as of 2026-08-04:** 4 of 14 scoped Issues completed (28.6%) — `#384` (Critical
+**Progress as of 2026-08-04:** 5 of 14 scoped Issues completed (35.7%) — `#384` (Critical
 `APP_KEY` security exposure, PR #393), `#385` (SonarCloud `Readonly` code-smell cleanup, PR
-#391), `#358` (Attendance Today "Ausentes" correctness bug, PR #395), and `#376` (dead item Type
-selector removal, PR #396), all open and ready for merge.
+#391), `#358` (Attendance Today "Ausentes" correctness bug, PR #395), `#376` (dead item Type
+selector removal, PR #396), and `#383` (Payroll Periods `DataGrid` migration, PR #398), all open
+and ready for merge.
 
 File-conflict analysis (§9) found **zero shared-file collisions** among all 14 Issues — every
 Issue touches a distinct set of files or a distinct route. The only real ordering constraints are
@@ -97,7 +98,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
-| Progress (Issues completed) | 4 / 14 (28.6%) as of 2026-08-04 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), and `#376` (dead item Type selector removal, PR #396) implemented; all open, ready for merge |
+| Progress (Issues completed) | 5 / 14 (35.7%) as of 2026-08-04 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), `#376` (dead item Type selector removal, PR #396), and `#383` (Payroll Periods `DataGrid` migration, PR #398) implemented; all open, ready for merge |
 
 ## 5. Scope
 
@@ -165,7 +166,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 | ⏳ | #379 | Build the Platillos (dishes) backend domain: categories, dishes, extras | High | 5h | 10h | — | — | Soft dependency on #377 (photos only, not tables/CRUD) — safe to run in parallel; unblocks #381 (Round 2) |
 | ✅ | #358 | Employees on vacation or a scheduled rest day today don't appear under "Ausentes" | High | 3h | 6h | 5.2h | PR #395 | `today_vacation` backend field + `isAbsentRow`/`isHiddenFromGrid` frontend fallback; PR ready, merge pending |
 | ⏳ | #360 | Migrate remaining now()/new Date() usages to ApplicationClock | Medium | 4h | 8h | — | — | Wide file surface (Leaves/CashAdjustments/Inventory backend, Employees frontend hooks) but none overlap other sprint Issues |
-| ⏳ | #383 | Migrate Payroll Periods list/detail tables to the shared DataGrid component | Medium | 3h | 6h | — | — | `attendance/payroll/*`; independent of #382 (different route) |
+| ✅ | #383 | Migrate Payroll Periods list/detail tables to the shared DataGrid component | Medium | 3h | 6h | 12.1h | PR #398 | List page migrated to `DataGrid<T>`; detail page's employee list kept as cards (expand/collapse can't map to `DataGrid`'s row model) and restyled to semantic tokens; PR ready, merge pending |
 | ⏳ | #382 | Migrate the daily report employee table to the shared DataGrid component | Medium | 2h | 4h | — | — | `attendance/reports/*`; independent of #383 |
 | ⏳ | #357 | Unify card exit/transition animation across all Attendance Today state changes | Medium | 2h | 4h | — | — | `attendance/index.tsx` + `-use-today-attendance-page.ts`; distinct files from #358 |
 | ⏳ | #365 | [Convention] Run only linters + delivered tests locally; leave full-suite regression check to CI | Medium | 1h | 2h | — | — | Docs only (`doc/conventions/`, `doc/TESTING.md`); no estimate in Issue body — agent-estimated, see §12 |
@@ -304,7 +305,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ⏳ | #379 | Not started | — | — | — | — |
 | ✅ | #358 | Added `today_vacation` to `TodayAttendanceController`'s response and updated `isAbsentRow`/`isHiddenFromGrid` so vacation/scheduled-rest-day employees classify as "Ausente" from the start of the day without an Attendance record — PR open, not yet merged | PR #395 | — | 5.2h | 25 new/updated PHPUnit assertions, 248 Vitest passing, 5/5 new + 15/15 regression Cypress specs (dev-lab E2E stack); Copilot review fixed 1 real defect (fallback misclassifying an actively-working employee); Devin/DeepWiki review surfaced 1 legitimate UX tradeoff (rest-day visibility in default grid), resolved via a user decision rather than a silent code change; CI 13/13 green — PR ready, merge pending |
 | ⏳ | #360 | Not started | — | — | — | — |
-| ⏳ | #383 | Not started | — | — | — | — |
+| ✅ | #383 | Migrated the Payroll Periods list page to `DataGrid<T>` (built-in pagination replacing the manual prev/next pager) and restyled `-employee-pay-row.tsx` to semantic tokens; the detail page's expand/collapse employee list stayed as cards since it can't map onto `DataGrid`'s one-row-per-item model — PR open, not yet merged | PR #398 | — | 12.1h | 52 Vitest tests (2 new component test files) + 20 Cypress tests across 6 specs (dev-lab E2E stack) passing; Copilot review fixed 1 real defect (test relying on DataGrid's nav DOM order); Devin/DeepWiki 0 bugs across 2 scan rounds, 1 flag fixed (English pagination-footer fallback), 3 flags evaluated as out-of-scope/matching established convention; CI 12/12 green — PR ready, merge pending |
 | ⏳ | #382 | Not started | — | — | — | — |
 | ⏳ | #357 | Not started | — | — | — | — |
 | ⏳ | #365 | Not started | — | — | — | — |

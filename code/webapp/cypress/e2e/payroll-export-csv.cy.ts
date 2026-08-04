@@ -26,10 +26,10 @@ describe('Payroll Export CSV — happy path', () => {
     cy.loginByApi('admin@sushigo.com', 'admin123456')
     cy.visitWithAuth('/attendance/payroll')
 
-    cy.contains('[data-testid="pay-period-row"]', `${PERIOD_START} — ${PERIOD_END}`).should('be.visible')
+    cy.contains('table tbody tr', `${PERIOD_START} — ${PERIOD_END}`).should('be.visible')
     cy.closeDevDebugger()
 
-    cy.contains('[data-testid="pay-period-row"]', `${PERIOD_START} — ${PERIOD_END}`)
+    cy.contains('table tbody tr', `${PERIOD_START} — ${PERIOD_END}`)
       .contains('a', `${PERIOD_START} — ${PERIOD_END}`)
       .click()
 

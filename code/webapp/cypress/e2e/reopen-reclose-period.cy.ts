@@ -31,7 +31,7 @@ describe('Reopen / Reclose Pay Period — happy path', () => {
     cy.wait('@list')
 
     cy.intercept('GET', '**/pay-periods/*').as('detail')
-    cy.contains('[data-testid="pay-period-row"]', `${PERIOD_START} — ${PERIOD_END}`)
+    cy.contains('table tbody tr', `${PERIOD_START} — ${PERIOD_END}`)
       .contains(`${PERIOD_START} — ${PERIOD_END}`)
       .click()
     cy.wait('@detail')
