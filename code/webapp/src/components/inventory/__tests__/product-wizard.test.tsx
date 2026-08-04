@@ -69,12 +69,18 @@ describe('ProductWizard', () => {
         fireEvent.change(screen.getByPlaceholderText('ej., ROLL-001'), { target: { value: 'ROLL-001' } })
         fireEvent.change(screen.getByPlaceholderText('ej., California Roll'), { target: { value: 'California Roll' } })
         fireEvent.change(screen.getByPlaceholderText('Descripción detallada del producto'), { target: { value: 'Rico' } })
-        fireEvent.change(screen.getByDisplayValue('Producto Terminado'), { target: { value: 'INSUMO' } })
         const checkboxes = screen.getAllByRole('checkbox')
         fireEvent.click(checkboxes[1]!) // is_perishable
         fireEvent.click(checkboxes[2]!) // is_manufactured
         fireEvent.click(checkboxes[3]!) // is_active
     }
+
+    it('does not render a Type selector in Step 1', async () => {
+        render(<ProductWizard onSuccess={onSuccess} onCancel={onCancel} />, { wrapper: createWrapper() })
+
+        await waitFor(() => expect(apiGet).toHaveBeenCalled())
+        expect(screen.queryByText('Tipo de Producto')).toBeNull()
+    })
 
     it('walks through the full wizard and creates a product with stock', async () => {
         createItem.mockResolvedValue({ data: { data: { id: 100 } } })
@@ -90,6 +96,7 @@ describe('ProductWizard', () => {
             fireEvent.click(screen.getByRole('button', { name: /siguiente/i }))
         })
         await waitFor(() => expect(createItem).toHaveBeenCalled())
+        expect(createItem).toHaveBeenCalledWith(expect.objectContaining({ type: 'PRODUCTO' }))
         expect(showSuccess).toHaveBeenCalledWith('Producto creado exitosamente', 'Paso 1 Completo')
 
         // Step 2: Variant

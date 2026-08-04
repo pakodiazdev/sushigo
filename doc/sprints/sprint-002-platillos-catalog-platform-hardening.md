@@ -37,10 +37,10 @@ public repo), a **High**-value Attendance Today correctness bug (`#358`), and fi
 technical-debt Issues already open on the backlog (`#357`, `#360`, `#365`, `#382`, `#383`) plus
 two small Low-tier cleanups (`#376`, `#385`).
 
-**Progress as of 2026-08-01:** 3 of 14 scoped Issues completed (21.4%) — `#384` (Critical
+**Progress as of 2026-08-04:** 4 of 14 scoped Issues completed (28.6%) — `#384` (Critical
 `APP_KEY` security exposure, PR #393), `#385` (SonarCloud `Readonly` code-smell cleanup, PR
-#391), and `#358` (Attendance Today "Ausentes" correctness bug, PR #395), all open and ready for
-merge.
+#391), `#358` (Attendance Today "Ausentes" correctness bug, PR #395), and `#376` (dead item Type
+selector removal, PR #396), all open and ready for merge.
 
 File-conflict analysis (§9) found **zero shared-file collisions** among all 14 Issues — every
 Issue touches a distinct set of files or a distinct route. The only real ordering constraints are
@@ -97,7 +97,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
-| Progress (Issues completed) | 3 / 14 (21.4%) as of 2026-08-01 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), and `#358` (Attendance Today "Ausentes" bug, PR #395) implemented; all open, ready for merge |
+| Progress (Issues completed) | 4 / 14 (28.6%) as of 2026-08-04 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), and `#376` (dead item Type selector removal, PR #396) implemented; all open, ready for merge |
 
 ## 5. Scope
 
@@ -170,7 +170,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 | ⏳ | #357 | Unify card exit/transition animation across all Attendance Today state changes | Medium | 2h | 4h | — | — | `attendance/index.tsx` + `-use-today-attendance-page.ts`; distinct files from #358 |
 | ⏳ | #365 | [Convention] Run only linters + delivered tests locally; leave full-suite regression check to CI | Medium | 1h | 2h | — | — | Docs only (`doc/conventions/`, `doc/TESTING.md`); no estimate in Issue body — agent-estimated, see §12 |
 | ✅ | #385 | Clear SonarCloud code-smell debt: mark webapp InfoItem/PropertyItem props as Readonly | Low | 0.5h | 1h | 0.2h | PR #391 | `inventory/item-details.tsx`, `location-details.tsx`, `variant-details.tsx`; conflict-free filler; PR ready, merge pending |
-| ⏳ | #376 | Remove Insumo/Activo from item Type selector — Inventory scoped to resale products only | Low | 0.5h | 1h | — | — | `inventory/item-form.tsx`, `product-wizard.tsx`; conflict-free filler |
+| ✅ | #376 | Remove Insumo/Activo from item Type selector — Inventory scoped to resale products only | Low | 0.5h | 1h | 12.7h | PR #396 | Type selector removed from item-form.tsx and product-wizard.tsx; new items default to PRODUCTO, existing item types preserved on edit — PR ready, merge pending |
 |  |  | **Round total** |  | **26h** | **52h** | **—** |  |  |
 
 ### Round 2 — Platillos: seed data and uploader component
@@ -309,7 +309,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ⏳ | #357 | Not started | — | — | — | — |
 | ⏳ | #365 | Not started | — | — | — | — |
 | ✅ | #385 | Wrapped `PropertyItem`/`InfoItem` props in `Readonly<...>` across 3 inventory detail components, clearing all 4 open SonarCloud `typescript:S6759` code smells | PR #391 | — | 0.2h | Pure type-annotation change, no runtime behavior change; 24/24 existing Vitest tests passing, lint + typecheck clean; CI 12/12 green, Copilot 0 comments, Devin/DeepWiki 0 bugs/0 flags on first push; PR ready, merge pending |
-| ⏳ | #376 | Not started | — | — | — | — |
+| ✅ | #376 | Removed the Type (Insumo/Producto/Activo) selector from `item-form.tsx` and `product-wizard.tsx`; new items now default to `type: 'PRODUCTO'` without asking the user, and editing an existing item preserves its current type unchanged — PR open, not yet merged | PR #396 | — | 12.7h | 37 Vitest tests updated/passing (86%+ coverage on touched files), lint + typecheck clean, no backend changes; 1 Copilot review comment addressed (brittle select-count assertion swapped for a label-absence check); Devin/DeepWiki 0 bugs, 3 informational-only flags evaluated and found not applicable; CI 12/12 green — PR ready, merge pending |
 | ⏳ | #378 | Not started | — | — | — | — |
 | ⏳ | #381 | Not started | — | — | — | — |
 | ⏳ | #380 | Not started | — | — | — | — |

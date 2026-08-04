@@ -73,10 +73,9 @@ describe('ItemForm', () => {
             expect(inputs.length).toBeGreaterThan(0)
         })
 
-        it('renders item type select', () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const selects = container.querySelectorAll('select')
-            expect(selects.length).toBeGreaterThan(0)
+        it('does not render a Type selector', () => {
+            const { queryByText } = render(<ItemForm {...defaultProps} />)
+            expect(queryByText('Type')).toBeNull()
         })
 
         it('renders checkboxes for boolean fields', () => {
@@ -144,14 +143,6 @@ describe('ItemForm', () => {
             fireEvent.change(skuInput, { target: { value: 'test-sku' } })
             // The mock setField should be called
             expect(skuInput).toBeDefined()
-        })
-
-        it('allows changing item type', () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const select = container.querySelector('select') as HTMLSelectElement
-
-            fireEvent.change(select, { target: { value: 'PRODUCTO' } })
-            expect(select.value).toBe('PRODUCTO')
         })
 
         it('allows toggling is_stocked checkbox', () => {
@@ -231,6 +222,21 @@ describe('ItemForm', () => {
             await waitFor(() => expect(mockExecute).toHaveBeenCalled())
         })
 
+        it('submits new items with type PRODUCTO without asking the user', async () => {
+            const { getByPlaceholderText, container } = render(<ItemForm {...defaultProps} />)
+
+            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+
+            fireEvent.submit(container.querySelector('form')!)
+
+            await waitFor(() =>
+                expect(mockExecute).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'PRODUCTO' })
+                )
+            )
+        })
+
         it('calls execute on valid form submission (update)', async () => {
             const item = {
                 id: 1,
@@ -251,6 +257,32 @@ describe('ItemForm', () => {
             fireEvent.submit(container.querySelector('form')!)
 
             await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(1))
+        })
+
+        it('preserves an existing non-PRODUCTO item type unchanged on update', async () => {
+            const item = {
+                id: 1,
+                sku: 'SAL-001',
+                name: 'Salt Item',
+                description: '',
+                type: 'INSUMO' as const,
+                is_stocked: true,
+                is_perishable: false,
+                is_active: true,
+                is_manufactured: false,
+                created_at: '',
+                updated_at: '',
+            }
+
+            const { container } = render(<ItemForm {...defaultProps} item={item} />)
+
+            fireEvent.submit(container.querySelector('form')!)
+
+            await waitFor(() =>
+                expect(mockExecute).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'INSUMO' })
+                )
+            )
         })
     })
 })
