@@ -183,6 +183,14 @@ Core inventory entities:
 - `Stock` / `StockMovement` / `StockMovementLine` - stock tracking
 - `CashSession` / `CashAdjustment` / `CashExpense` - cash management
 
+Menu / Dishes ("Platillos") entities — the prepared-dish menu catalog, distinct from the resale
+`Item`/`ItemVariant` inventory above (no stock quantity, no recipe costing):
+- `DishCategory` - menu sections (Rollos, Ramen, etc.), ordered by `position`
+- `Dish` - belongs to a category, has `base_price`, and media via the same
+  `mediaAttachments()`/`primaryMediaGallery()` pattern as `Item`
+- `DishExtraGroup` / `DishExtraOption` - per-dish (not shared) customization groups, e.g. "Elige tu
+  salsa", each option carrying a `price_delta` added to the dish's `base_price`
+
 See `doc/architecture/` for detailed diagrams and flows.
 
 ## Conventions

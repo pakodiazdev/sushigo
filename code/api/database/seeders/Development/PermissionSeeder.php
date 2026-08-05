@@ -3,11 +3,14 @@
 namespace Database\Seeders\Development;
 
 use Database\Seeders\Base\LockedSeeder;
+use Database\Seeders\Traits\AssignsBasicRolePermissions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class PermissionSeeder extends LockedSeeder
 {
+    use AssignsBasicRolePermissions;
+
     private const EMPLOYEES_PATTERN = 'employees.%';
 
     private const ITEMS_PATTERN = 'items.%';
@@ -15,6 +18,8 @@ class PermissionSeeder extends LockedSeeder
     private const INVENTORY_LOCATIONS_PATTERN = 'inventory_locations.%';
 
     private const STOCK_PATTERN = 'stock.%';
+
+    private const DISHES_PATTERN = 'dishes.%';
 
     private const EMPLOYEE_REQUESTS_PATTERN = 'employee-requests.%';
 
@@ -28,20 +33,9 @@ class PermissionSeeder extends LockedSeeder
 
     private const ATTENDANCES_PATTERN = 'attendances.%';
 
-    /**
-     * Self-service Solicitudes access — every employee can view/create/cancel
-     * their own requests, including self-service vacation requests (via the
-     * generic employee-requests.create), but never approve or directly
-     * schedule vacations on behalf of someone else (that stays admin-only —
-     * see VACATION_REQUESTS_PATTERN above, granted only to admin).
-     */
-    private const SELF_SERVICE_REQUESTS_PERMISSIONS = [
-        'employee-requests.view',
-        'employee-requests.create',
-        'employee-requests.cancel',
-    ];
-
     private const GROUP_INVENTARIO = 'Inventario';
+
+    private const GROUP_PLATILLOS = 'Platillos';
 
     private const GROUP_CUENTAS_BANCARIAS = 'Cuentas bancarias';
 
@@ -165,6 +159,12 @@ class PermissionSeeder extends LockedSeeder
             'stock.view' => ['label' => 'Ver stock y movimientos',   'group' => self::GROUP_INVENTARIO],
             'stock.manage' => ['label' => 'Registrar movimientos de stock', 'group' => self::GROUP_INVENTARIO],
 
+            // Platillos (menú)
+            'dishes.view' => ['label' => 'Ver platillos y categorías', 'group' => self::GROUP_PLATILLOS],
+            'dishes.create' => ['label' => 'Crear platillo / categoría', 'group' => self::GROUP_PLATILLOS],
+            'dishes.update' => ['label' => 'Editar platillo / categoría', 'group' => self::GROUP_PLATILLOS],
+            'dishes.delete' => ['label' => 'Eliminar platillo / categoría', 'group' => self::GROUP_PLATILLOS],
+
             // Asistencia — registro
             'attendances.view' => ['label' => 'Ver asistencias', 'group' => 'Asistencia'],
             'attendances.create' => ['label' => 'Registrar asistencia', 'group' => 'Asistencia'],
@@ -232,6 +232,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::ITEMS_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
+                            ->orWhere('name', 'like', self::DISHES_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN)
                             ->orWhere('name', 'like', self::ATTENDANCES_PATTERN)
@@ -287,26 +288,6 @@ class PermissionSeeder extends LockedSeeder
                     })
                     ->get()
             );
-        }
-    }
-
-    private function assignBasicRolesPermissions(): void
-    {
-        // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
-        // plus self-service Solicitudes (view/create/cancel their own requests —
-        // never approve, that stays manager/admin-only)
-        foreach (['cook', 'kitchen-assistant', 'delivery-driver', 'acting-manager'] as $roleName) {
-            $role = Role::where('name', $roleName)->where('guard_name', 'api')->first();
-            if ($role) {
-                $role->syncPermissions(
-                    Permission::where('guard_name', 'api')
-                        ->where(function ($q) {
-                            $q->whereIn('name', ['users.show', 'users.index'])
-                                ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
-                        })
-                        ->get()
-                );
-            }
         }
     }
 }
