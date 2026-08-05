@@ -288,12 +288,14 @@ Allí se describe el flujo de asignación, los roles base (`super-admin`, `admin
 
 ### 3.6 Media y galerías reutilizables
 
+> La arquitectura completa a nivel de sistema (autorización de ownership, seguridad ante concurrencia, abstracción de storage) vive en un documento dedicado: [Arquitectura del Sistema de Multimedia](media/media-architecture.es.md). Esta sección solo cubre cómo participa `Item` en él desde el lado del dominio de inventario.
+
 -   **MediaGallery** es el contenedor lógico de imágenes; soporta bandera `is_shared` para reutilizar la misma galería entre modelos.
 -   **MediaAsset** representa cada archivo (ruta en storage, MIME, orden y si es la imagen principal). El campo `position` define el orden y `is_primary` garantiza una portada por galería.
--   **MediaAttachment** permite asociar galerías a cualquier modelo (`attachable_type` + `attachable_id`). El caso más común es `ItemVariant`, pero se deja abierto a futuras entidades como recetas, campañas o activos.
--   Cuando se elimina un `ItemVariant`, se evalúa si la galería es compartida; si no tiene más attachments se marca para limpieza.
+-   **MediaAttachment** permite asociar galerías a cualquier modelo (`attachable_type` + `attachable_id`). `Item` es el primer adoptante ([#377](https://github.com/pakodiazdev/sushigo/issues/377)); se deja abierto a futuras entidades como `Employee`, `User` o el próximo catálogo de Dish — ver `doc/conventions/backend/media-uploads.md` para el patrón upload-first/attach-on-save que sigue cada nuevo adoptante.
+-   Las galerías huérfanas (subidas pero nunca adjuntadas — p. ej. un formulario de "Nuevo Dish" abandonado) no se limpian reactivamente al eliminar; `php artisan media:cleanup-orphans` las barre una vez que superan un periodo de gracia configurable. Ver [TD-02](../decisions/td-02-media-cleanup-strategy.md) para por qué esto corre al iniciar el contenedor en vez de con un schedule recurrente.
 -   Las transformaciones (thumbnails, webp, etc.) se almacenan en `meta` dentro del asset para coordinar con el pipeline de archivos.
--   Los servicios `MediaStorageService::saveAsset()` y `MediaStorageService::getAsset()` abstraen la interacción con el storage. En desarrollo utilizarán el disco local (`storage/app/media`); en producción se configurará un driver para Cloudflare R2. La arquitectura debe permitir añadir adaptadores adicionales (S3, Azure Blob, etc.) sin refactorizar el dominio ni los consumidores.
+-   `App\Services\Media\UploadMediaService`, `UpdateMediaAssetService`, `DeleteMediaAssetService` y `App\Services\Media\MediaAttachmentService` — cada uno una clase invocable (`__invoke()`) de responsabilidad única — encapsulan la interacción con el storage. Todos pasan por `Storage::disk(config('filesystems.default'))` — nunca un disco hardcodeado — de modo que la propia abstracción Flysystem de Laravel (ya configurada con `local`/`public`/`s3` en `config/filesystems.php`) satisface "cambiar de proveedor cloud sin tocar código de negocio" sin necesidad de una interfaz de driver propia.
 
 ---
 
@@ -465,8 +467,9 @@ classDiagram
     +description: string
     +cover_media_id: bigint
     +is_shared: bool
-    +setCover(MediaAsset)
-    +attach(model)
+    +mediaAssets()
+    +coverMedia()
+    +primaryMedia()
   }
 
   class MediaAsset {
@@ -477,8 +480,9 @@ classDiagram
     +position: int
     +is_primary: bool
     +meta: json
-    +markAsPrimary()
-    +getUrl()
+    +isImage()
+    +isVideo()
+    +getUrlAttribute()
   }
 
   class MediaAttachment {
@@ -487,33 +491,28 @@ classDiagram
     +attachable_type: string
     +attachable_id: bigint
     +is_primary: bool
-    +detach()
+    +attachable()
   }
 
-  class MediaStorageDriver {
-    <<interface>>
-    +saveAsset(asset: MediaAsset, file): StorageResult
-    +getAsset(asset: MediaAsset): StorageResponse
+  class UploadMediaService {
+    +__invoke(file, mediaGalleryId): MediaAsset
   }
 
-  class LocalMediaDriver {
-    +root_path: string
-    +saveAsset(asset, file)
-    +getAsset(asset)
+  class UpdateMediaAssetService {
+    +__invoke(asset, data): MediaAsset
   }
 
-  class CloudflareR2Driver {
-    +bucket: string
-    +credentials: object
-    +saveAsset(asset, file)
-    +getAsset(asset)
+  class DeleteMediaAssetService {
+    +__invoke(asset): void
   }
 
-  class MediaStorageService {
-    -driver: MediaStorageDriver
-    +saveAsset(asset, file)
-    +getAsset(asset)
-    +setDriver(MediaStorageDriver)
+  class MediaAttachmentService {
+    +__invoke(attachable, mediaGalleryId, isPrimary): MediaAttachment
+  }
+
+  class CleanupOrphanedMedia {
+    <<command>>
+    +handle(): int
   }
 
   class OperatingUnitType {
@@ -575,11 +574,12 @@ classDiagram
   Sale --o SaleLine
   MediaGallery --o MediaAsset
   MediaGallery --o MediaAttachment
-  MediaAttachment --o ItemVariant
-  MediaStorageService --> MediaStorageDriver
-  MediaStorageService --o MediaAsset
-  MediaStorageDriver <|.. LocalMediaDriver
-  MediaStorageDriver <|.. CloudflareR2Driver
+  MediaAttachment --o Item
+  UploadMediaService --o MediaAsset
+  UpdateMediaAssetService --o MediaAsset
+  DeleteMediaAssetService --o MediaAsset
+  MediaAttachmentService --o MediaAttachment
+  CleanupOrphanedMedia --> DeleteMediaAssetService
 ```
 
 ### 3.8 Resumen de clases
@@ -637,10 +637,12 @@ classDiagram
     -   Acciones: `generateReport()` invoca servicios para KPIs, balances y retornos de stock.
 -   **MediaGallery / MediaAsset / MediaAttachment**
     -   Propiedades principales: galería (`name`, `description`, `cover_media_id`, `is_shared`), assets (`path`, `mime_type`, `position`, `is_primary`, `meta`) y attachments (`attachable_type`, `attachable_id`, `is_primary`).
-    -   Acciones: `setCover()` y `markAsPrimary()` aseguran portada única; `attach(model)`/`detach()` gestionan vínculos polimórficos con productos, variantes u otras entidades.
--   **MediaStorageService & Drivers**
-    -   Interfaz `MediaStorageDriver` con operaciones `saveAsset()` y `getAsset()`; implementaciones locales (disco) y Cloudflare R2 previstas, extensibles a otros providers.
-    -   `MediaStorageService` mantiene el driver activo (configurable por env), orquesta la persistencia de archivos y entrega URLs accesibles (incluyendo firmas temporales en nubes públicas).
+    -   Se suben vía `POST /api/v1/media/upload` (upload-first, antes de que exista la entidad dueña), se reordenan/marcan como primary vía `PATCH /api/v1/media/assets/{id}`, se eliminan vía `DELETE /api/v1/media/assets/{id}` — ver `doc/conventions/backend/media-uploads.md`.
+-   **UploadMediaService, UpdateMediaAssetService, DeleteMediaAssetService y MediaAttachmentService**
+    -   `UploadMediaService`, `UpdateMediaAssetService` y `DeleteMediaAssetService` gestionan, cada una como clase invocable de responsabilidad única, un paso del ciclo de vida de upload/reorden/borrado, siempre vía `Storage::disk(config('filesystems.default'))` — sin interfaz de driver propia, la abstracción Flysystem de Laravel basta para cambiar entre `local`/`s3` por configuración.
+    -   `MediaAttachmentService` (invocable) es el único lugar donde se crea un `MediaAttachment`, vinculando una galería ya subida con su entidad dueña al guardar.
+    -   `CleanupOrphanedMedia` (`php artisan media:cleanup-orphans`) elimina galerías sin attachment tras un periodo de gracia — corre al iniciar el contenedor, ver [TD-02](../decisions/td-02-media-cleanup-strategy.md).
+    -   `MediaGallery::isManageableBy()` protege los tres endpoints de media más allá del permiso base `media.*` de la ruta: una vez adjunta a una entidad, delega en `App\Contracts\AuthorizesMediaOwnership::userCanManageMedia()` de esa entidad (`Item` verifica el permiso dedicado `items.manage-media`, no `items.update` — ese también protege ediciones de catálogo/precio); mientras sigue sin adjuntar, verifica un `owner_token` generado por el cliente y capturado al crearla — ver `doc/conventions/backend/media-uploads.md` § 5.
 
 > Nota: las “acciones” descritas se modelarán como métodos en servicios/aplicaciones (ej. `TransfersService` o acciones de dominio). El diagrama ayuda a visualizar responsabilidades antes de trasladarlas a capas de servicios y jobs.
 

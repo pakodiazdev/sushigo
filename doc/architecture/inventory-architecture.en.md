@@ -287,12 +287,14 @@ It describes the assignment flow, base roles (`super-admin`, `admin`, `user`), a
 
 ### 3.6 Media and Reusable Galleries
 
+> Full system-level architecture (ownership authorization, concurrency safety, storage abstraction) lives in a dedicated document: [Media System Architecture](media/media-architecture.en.md). This section only covers how `Item` participates in it from the inventory domain's side.
+
 -   **MediaGallery** is the logical container of images; supports `is_shared` flag to reuse the same gallery between models.
 -   **MediaAsset** represents each file (storage path, MIME, order, and whether it's the main image). The `position` field defines order and `is_primary` guarantees one cover per gallery.
--   **MediaAttachment** allows associating galleries to any model (`attachable_type` + `attachable_id`). The most common case is `ItemVariant`, but it's left open to future entities like recipes, campaigns, or assets.
--   When an `ItemVariant` is deleted, it evaluates if the gallery is shared; if it has no more attachments, it's marked for cleanup.
+-   **MediaAttachment** allows associating galleries to any model (`attachable_type` + `attachable_id`). `Item` is the first adopter ([#377](https://github.com/pakodiazdev/sushigo/issues/377)); it's left open to future entities like `Employee`, `User`, or the upcoming Dish catalog — see `doc/conventions/backend/media-uploads.md` for the upload-first/attach-on-save pattern every new adopter follows.
+-   Orphaned galleries (uploaded but never attached — e.g. an abandoned "New Dish" form) aren't cleaned up reactively on delete; `php artisan media:cleanup-orphans` sweeps them once they're older than a configurable grace period. See [TD-02](../decisions/td-02-media-cleanup-strategy.md) for why this runs at container startup instead of a recurring schedule.
 -   Transformations (thumbnails, webp, etc.) are stored in `meta` within the asset to coordinate with the file pipeline.
--   Services `MediaStorageService::saveAsset()` and `MediaStorageService::getAsset()` abstract storage interaction. In development, they will use the local disk (`storage/app/media`); in production, a driver for Cloudflare R2 will be configured. The architecture must allow adding additional adapters (S3, Azure Blob, etc.) without refactoring the domain or consumers.
+-   `App\Services\Media\UploadMediaService`, `UpdateMediaAssetService`, `DeleteMediaAssetService`, and `App\Services\Media\MediaAttachmentService` — each a single-responsibility, invokable (`__invoke()`) class — encapsulate storage interaction. All go through `Storage::disk(config('filesystems.default'))` — never a hardcoded disk name — so Laravel's own Flysystem abstraction (already scaffolded with `local`/`public`/`s3` in `config/filesystems.php`) satisfies "swap cloud provider without touching business code" with no custom driver interface needed.
 
 ---
 
@@ -463,8 +465,9 @@ classDiagram
     +description: string
     +cover_media_id: bigint
     +is_shared: bool
-    +setCover(MediaAsset)
-    +attach(model)
+    +mediaAssets()
+    +coverMedia()
+    +primaryMedia()
   }
 
   class MediaAsset {
@@ -475,8 +478,9 @@ classDiagram
     +position: int
     +is_primary: bool
     +meta: json
-    +markAsPrimary()
-    +getUrl()
+    +isImage()
+    +isVideo()
+    +getUrlAttribute()
   }
 
   class MediaAttachment {
@@ -485,33 +489,28 @@ classDiagram
     +attachable_type: string
     +attachable_id: bigint
     +is_primary: bool
-    +detach()
+    +attachable()
   }
 
-  class MediaStorageDriver {
-    <<interface>>
-    +saveAsset(asset: MediaAsset, file): StorageResult
-    +getAsset(asset: MediaAsset): StorageResponse
+  class UploadMediaService {
+    +__invoke(file, mediaGalleryId): MediaAsset
   }
 
-  class LocalMediaDriver {
-    +root_path: string
-    +saveAsset(asset, file)
-    +getAsset(asset)
+  class UpdateMediaAssetService {
+    +__invoke(asset, data): MediaAsset
   }
 
-  class CloudflareR2Driver {
-    +bucket: string
-    +credentials: object
-    +saveAsset(asset, file)
-    +getAsset(asset)
+  class DeleteMediaAssetService {
+    +__invoke(asset): void
   }
 
-  class MediaStorageService {
-    -driver: MediaStorageDriver
-    +saveAsset(asset, file)
-    +getAsset(asset)
-    +setDriver(MediaStorageDriver)
+  class MediaAttachmentService {
+    +__invoke(attachable, mediaGalleryId, isPrimary): MediaAttachment
+  }
+
+  class CleanupOrphanedMedia {
+    <<command>>
+    +handle(): int
   }
 
   class OperatingUnitType {
@@ -573,11 +572,12 @@ classDiagram
   Sale --o SaleLine
   MediaGallery --o MediaAsset
   MediaGallery --o MediaAttachment
-  MediaAttachment --o ItemVariant
-  MediaStorageService --> MediaStorageDriver
-  MediaStorageService --o MediaAsset
-  MediaStorageDriver <|.. LocalMediaDriver
-  MediaStorageDriver <|.. CloudflareR2Driver
+  MediaAttachment --o Item
+  UploadMediaService --o MediaAsset
+  UpdateMediaAssetService --o MediaAsset
+  DeleteMediaAssetService --o MediaAsset
+  MediaAttachmentService --o MediaAttachment
+  CleanupOrphanedMedia --> DeleteMediaAssetService
 ```
 
 ### 3.8 Class Summary
@@ -627,10 +627,12 @@ classDiagram
     -   Actions: `generateReport()` invokes services for KPIs, balances, and stock returns.
 -   **MediaGallery / MediaAsset / MediaAttachment**
     -   Main properties: gallery (`name`, `description`, `cover_media_id`, `is_shared`), assets (`path`, `mime_type`, `position`, `is_primary`, `meta`) and attachments (`attachable_type`, `attachable_id`, `is_primary`).
-    -   Actions: `setCover()` and `markAsPrimary()` ensure unique cover; `attach(model)`/`detach()` manage polymorphic links with products, variants, or other entities.
--   **MediaStorageService & Drivers**
-    -   `MediaStorageDriver` interface with `saveAsset()` and `getAsset()` operations; local (disk) and Cloudflare R2 implementations planned, extensible to other providers.
-    -   `MediaStorageService` maintains active driver (configurable by env), orchestrates file persistence and delivers accessible URLs (including temporary signatures in public clouds).
+    -   Uploaded through `POST /api/v1/media/upload` (upload-first, before the owning entity exists), reordered/marked-primary through `PATCH /api/v1/media/assets/{id}`, removed through `DELETE /api/v1/media/assets/{id}` — see `doc/conventions/backend/media-uploads.md`.
+-   **UploadMediaService, UpdateMediaAssetService, DeleteMediaAssetService & MediaAttachmentService**
+    -   `UploadMediaService`, `UpdateMediaAssetService`, and `DeleteMediaAssetService` each own one step of the upload/reorder/delete lifecycle as a single-responsibility invokable class, always through `Storage::disk(config('filesystems.default'))` — no custom driver interface, Laravel's own Flysystem abstraction is enough to swap `local`/`s3` by config.
+    -   `MediaAttachmentService` (invokable) is the only place a `MediaAttachment` is created, linking an already-uploaded gallery to its owning entity on save.
+    -   `CleanupOrphanedMedia` (`php artisan media:cleanup-orphans`) deletes galleries with no attachment past a grace period — runs at container startup, see [TD-02](../decisions/td-02-media-cleanup-strategy.md).
+    -   `MediaGallery::isManageableBy()` gates all three media endpoints beyond the route's base `media.*` permission: once attached to an entity, it delegates to that entity's `App\Contracts\AuthorizesMediaOwnership::userCanManageMedia()` (`Item` checks the dedicated `items.manage-media` permission, not `items.update` — that also guards catalog/pricing edits); while still unattached, it checks a client-generated `owner_token` captured at creation — see `doc/conventions/backend/media-uploads.md` § 5.
 
 > Note: the described "actions" will be modeled as methods in services/applications (e.g., `TransfersService` or domain actions). The diagram helps visualize responsibilities before moving them to service and job layers.
 

@@ -95,11 +95,16 @@ class CoreTestSeeder extends Seeder
         'dishes.create',
         'dishes.update',
         'dishes.delete',
+        // Distinct from items.update on purpose — see Item::userCanManageMedia().
+        'items.manage-media',
         'inventory_locations.view',
         'inventory_locations.manage',
         'units_of_measure.manage',
         'stock.view',
         'stock.manage',
+        'media.upload',
+        'media.update',
+        'media.delete',
         'attendances.view',
         'attendances.create',
         'attendances.update',
@@ -135,9 +140,15 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'dishes.', 'inventory_locations.', 'stock.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.', '=units_of_measure.manage'],
-        'inventory-manager' => ['items.', 'inventory_locations.', 'stock.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
-        'manager' => [...self::BASIC_USER_VIEW, 'employees.', 'leaves.', 'employee-requests.', 'attendances.', 'reports.', '=payroll.preview', '=payroll.close'],
+        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'dishes.', 'inventory_locations.', 'stock.', 'media.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.', '=units_of_measure.manage'],
+        'inventory-manager' => ['items.', 'inventory_locations.', 'stock.', 'media.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
+        // items.view + items.manage-media only (not items.update, and not the
+        // 'items.' wildcard) — items.update also guards PUT /items/{id} and
+        // PUT /item-variants/{id} (name, sale_price, min_stock, ...), so
+        // granting it just for Item::userCanManageMedia() (#377) would
+        // silently hand manager full catalog/pricing edit rights too.
+        // media. stays the full wildcard since managing an item's photos is the point.
+        'manager' => [...self::BASIC_USER_VIEW, '=items.view', '=items.manage-media', 'media.', 'employees.', 'leaves.', 'employee-requests.', 'attendances.', 'reports.', '=payroll.preview', '=payroll.close'],
         'cook' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
         'kitchen-assistant' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
         'delivery-driver' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],

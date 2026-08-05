@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Items\CreateItemRequest;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Item;
+use App\Services\Media\MediaAttachmentService;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Post(
@@ -34,18 +36,17 @@ use App\Models\Item;
  */
 class CreateItemController extends Controller
 {
-    public function __invoke(CreateItemRequest $request)
+    public function __invoke(CreateItemRequest $request, MediaAttachmentService $mediaAttachmentService)
     {
-        $item = Item::create([
-            'sku' => $request->sku,
-            'name' => $request->name,
-            'description' => $request->description,
-            'type' => $request->type,
-            'is_stocked' => $request->input('is_stocked', true),
-            'is_perishable' => $request->input('is_perishable', false),
-            'is_active' => $request->input('is_active', true),
-            'meta' => [],
-        ]);
+        $item = DB::transaction(function () use ($request, $mediaAttachmentService) {
+            $item = Item::create($request->itemData());
+
+            if ($mediaGalleryId = $request->mediaGalleryId()) {
+                $mediaAttachmentService($item, $mediaGalleryId);
+            }
+
+            return $item;
+        });
 
         return new ResponseEntity(
             data: [

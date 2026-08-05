@@ -37,11 +37,12 @@ public repo), a **High**-value Attendance Today correctness bug (`#358`), and fi
 technical-debt Issues already open on the backlog (`#357`, `#360`, `#365`, `#382`, `#383`) plus
 two small Low-tier cleanups (`#376`, `#385`).
 
-**Progress as of 2026-08-04:** 6 of 14 scoped Issues completed (42.9%) — `#384` (Critical
+**Progress as of 2026-08-05:** 7 of 14 scoped Issues completed (50.0%) — `#384` (Critical
 `APP_KEY` security exposure, PR #393), `#385` (SonarCloud `Readonly` code-smell cleanup, PR
 #391), `#358` (Attendance Today "Ausentes" correctness bug, PR #395), `#376` (dead item Type
-selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), and `#379`
-(Platillos dishes backend domain, PR #394), all open and ready for merge.
+selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379`
+(Platillos dishes backend domain, PR #394), and `#377` (unified media upload system, PR #392),
+all open and ready for merge.
 
 File-conflict analysis (§9) found **zero shared-file collisions** among all 14 Issues — every
 Issue touches a distinct set of files or a distinct route. The only real ordering constraints are
@@ -98,7 +99,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
-| Progress (Issues completed) | 6 / 14 (42.9%) as of 2026-08-04 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), `#376` (dead item Type selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), and `#379` (Platillos dishes backend domain, PR #394) implemented; all open, ready for merge |
+| Progress (Issues completed) | 7 / 14 (50.0%) as of 2026-08-05 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), `#376` (dead item Type selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379` (Platillos dishes backend domain, PR #394), and `#377` (unified media upload system, PR #392) implemented; all open, ready for merge |
 
 ## 5. Scope
 
@@ -162,7 +163,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
 | ✅ | #384 | Remove hardcoded APP_KEY from docker-compose.prod.yml and docker-compose.preview.yml | Critical | 1h | 2h | 0.6h | PR #393 | Hardcoded key removed from both compose files, rotation process documented; live Cloud Run rotation deferred (needs GCP access) — PR ready, merge pending |
-| ⏳ | #377 | Build a unified media upload system (Storage-backed, cloud-swappable) | High | 4h | 8h | — | — | No dependencies; unblocks #378 (Round 2) |
+| ✅ | #377 | Build a unified media upload system (Storage-backed, cloud-swappable) | High | 4h | 8h | 9.5h | PR #392 | Media upload/reorder/delete + Item attach-on-save + orphan-cleanup command, a full ownership-authorization layer (owner_token, AuthorizesMediaOwnership, items.manage-media), and a fault-tolerance fix so concurrent cleanup runs no longer abort mid-sweep; unblocks #378 — PR ready, merge pending |
 | ✅ | #379 | Build the Platillos (dishes) backend domain: categories, dishes, extras | High | 5h | 10h | 8.9h | PR #394 | Full CRUD for categories/dishes/extra groups/extra options, cascading soft-deletes wrapped in transactions, ULID public_id, per-entity subfolders, 20 endpoints + Swagger; PR ready, merge pending |
 | ✅ | #358 | Employees on vacation or a scheduled rest day today don't appear under "Ausentes" | High | 3h | 6h | 5.2h | PR #395 | `today_vacation` backend field + `isAbsentRow`/`isHiddenFromGrid` frontend fallback; PR ready, merge pending |
 | ⏳ | #360 | Migrate remaining now()/new Date() usages to ApplicationClock | Medium | 4h | 8h | — | — | Wide file surface (Leaves/CashAdjustments/Inventory backend, Employees frontend hooks) but none overlap other sprint Issues |
@@ -301,7 +302,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
 |---|---:|---|---:|---|---:|---|
 | ✅ | #384 | Removed the leaked hardcoded `APP_KEY` from `docker-compose.prod.yml`/`docker-compose.preview.yml`, sourced from a required env var, and documented the generate/rotate process — PR open, not yet merged | PR #393 | — | 0.6h | 1 Copilot review round (require APP_KEY, fail fast) + Devin/DeepWiki scan 0 bugs; live Cloud Run key rotation deliberately deferred (needs GCP project access outside this automation) — PR ready, merge pending |
-| ⏳ | #377 | Not started | — | — | — | — |
+| ✅ | #377 | Built POST /media/upload, PATCH/DELETE /media/assets/{id}, media:cleanup-orphans, Item attach-on-save wiring, and — added across two follow-up review rounds — a full per-entity ownership authorization layer (AuthorizesMediaOwnership contract, MediaGallery::isManageableBy(), client-generated owner_token for mid-form galleries, dedicated items.manage-media permission) plus a fault-tolerance fix for concurrent cleanup runs — PR open, not yet merged | PR #392 | — | 9.5h | 40+ PHPUnit tests; 7 Copilot review threads + 4 Devin/DeepWiki cycles in session 1 (10 genuine defects, 0 false positives); a second deep review round fixed 4 more real security defects (authorize() array-input crash, gallery-hijack via unchecked attach-on-save, owner_token leaking into DELETE query strings, fail-open on a soft-deleted attachable) plus 3 more concurrency/correctness bugs; a third round fixed CleanupOrphanedMedia aborting its whole sweep when DeleteMediaAssetService::refresh() threw on an already-deleted asset, contradicting TD-02's "safe to run redundantly" claim — every fix shipped with a regression test confirmed to fail pre-fix and pass post-fix; Devin/DeepWiki final scan: 0 bugs, 7 non-blocking Investigate flags — PR ready, merge pending |
 | ✅ | #379 | Built the Platillos (dishes) backend domain: `dish_categories`/`dishes`/`dish_extra_groups`/`dish_extra_options` migrations, models, full CRUD SAC controllers + FormRequests + JsonResources under 20 endpoints, `dishes.*` permissions, ULID `public_id`, and `Dish::totalPriceFor()` — PR open, not yet merged | PR #394 | — | 8.9h | 33 Dishes Feature tests + 4 `totalPriceFor` unit tests, 1442 full-suite regression (0 failures), Pint clean; Copilot review round 1 flagged 4 cascade soft-delete gaps (chunked-query row skip, soft-deleted FK gaps, non-transactional cascades, missing empty nested relations on create), all fixed; Copilot round 2 asked for per-entity `Dish/DishCategory/DishExtra` subfolders and ULID `public_id` instead of exposing internal FKs, both implemented across all 4 tables; `/pr-comments` removed an out-of-scope Cypress spec already covered by PHPUnit; `/sonar-review` fixed 4 `php:S1192` code smells and required a mid-flight rebase onto `main` (GitHub Actions webhook anomaly on the first Sonar-fix push); all review threads resolved; CI 11/11 green — PR ready, merge pending |
 | ✅ | #358 | Added `today_vacation` to `TodayAttendanceController`'s response and updated `isAbsentRow`/`isHiddenFromGrid` so vacation/scheduled-rest-day employees classify as "Ausente" from the start of the day without an Attendance record — PR open, not yet merged | PR #395 | — | 5.2h | 25 new/updated PHPUnit assertions, 248 Vitest passing, 5/5 new + 15/15 regression Cypress specs (dev-lab E2E stack); Copilot review fixed 1 real defect (fallback misclassifying an actively-working employee); Devin/DeepWiki review surfaced 1 legitimate UX tradeoff (rest-day visibility in default grid), resolved via a user decision rather than a silent code change; CI 13/13 green — PR ready, merge pending |
 | ⏳ | #360 | Not started | — | — | — | — |
