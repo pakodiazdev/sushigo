@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasMediaGallery;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ItemVariant extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasMediaGallery, SoftDeletes;
 
     protected $fillable = [
         'item_id',
@@ -73,26 +73,6 @@ class ItemVariant extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
-    }
-
-    /**
-     * Get media attachments (polymorphic)
-     */
-    public function mediaAttachments(): MorphMany
-    {
-        return $this->morphMany(MediaAttachment::class, 'attachable');
-    }
-
-    /**
-     * Get primary media gallery
-     */
-    public function primaryMediaGallery()
-    {
-        return $this->mediaAttachments()
-            ->where('is_primary', true)
-            ->with('mediaGallery')
-            ->first()
-            ?->mediaGallery;
     }
 
     /**

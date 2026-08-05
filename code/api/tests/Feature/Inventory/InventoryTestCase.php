@@ -42,7 +42,7 @@ abstract class InventoryTestCase extends TestCase
         // Routes now require explicit permission guards — unauthenticated or
         // unpermissioned requests receive 401/403 respectively.
         $inventoryPermissions = [
-            'items.view', 'items.create', 'items.update', 'items.delete',
+            'items.view', 'items.create', 'items.update', 'items.delete', 'items.manage-media',
             'inventory_locations.view', 'inventory_locations.manage',
             'stock.view', 'stock.manage',
         ];

@@ -128,6 +128,10 @@ class PermissionSeeder extends LockedSeeder
             'items.create',
             'items.update',
             'items.delete',
+            // Distinct from items.update on purpose — that also guards catalog/pricing
+            // edits (PUT /items/{id}, PUT /item-variants/{id}). This only lets its
+            // holder attach/reorder/delete an item's photos (Item::userCanManageMedia()).
+            'items.manage-media',
 
             // Inventario — Ubicaciones
             'inventory_locations.view',
@@ -145,6 +149,11 @@ class PermissionSeeder extends LockedSeeder
             'dishes.create',
             'dishes.update',
             'dishes.delete',
+
+            // Media
+            'media.upload',
+            'media.update',
+            'media.delete',
         ];
     }
 
@@ -176,17 +185,26 @@ class PermissionSeeder extends LockedSeeder
         // Does NOT get vacation-requests.% — directly scheduling vacations on behalf
         // of an employee is admin/super-admin-only; manager still reviews self-service
         // vacation requests via employee-requests.approve.
+        // items.view + items.manage-media only — items.update also guards PUT
+        // /items/{id} and PUT /item-variants/{id} (name, sale_price,
+        // min_stock, ...), so granting it just to satisfy
+        // Item::userCanManageMedia() (#377) would silently hand manager full
+        // catalog/pricing edit rights too. items.manage-media is the
+        // dedicated permission that check actually looks for. media.% is the
+        // full wildcard on purpose — managing an item's photos
+        // (upload/reorder/delete) is the actual point.
         $managerRole = Role::where('name', 'manager')->where('guard_name', 'api')->first();
         if ($managerRole) {
             $managerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
-                        $q->whereIn('name', ['users.show', 'users.index'])
+                        $q->whereIn('name', ['users.show', 'users.index', 'items.view', 'items.manage-media'])
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
                             ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', 'attendances.%')
-                            ->orWhere('name', 'like', 'reports.%');
+                            ->orWhere('name', 'like', 'reports.%')
+                            ->orWhere('name', 'like', 'media.%');
                     })
                     ->get()
             );
@@ -212,6 +230,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'dishes.%')
+                            ->orWhere('name', 'like', 'media.%')
                             ->orWhere('name', 'like', 'audit-logs.%')
                             ->orWhereIn('name', ['units_of_measure.manage', 'punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'payroll.reopen', 'payroll.reclose', 'overtime.manage', 'vacation-policy.manage']);
                     })
@@ -233,6 +252,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->where('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
+                            ->orWhere('name', 'like', 'media.%')
                             ->orWhere('name', 'units_of_measure.manage')
                             ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
                     })

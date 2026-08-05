@@ -21,6 +21,8 @@ class PermissionSeeder extends LockedSeeder
 
     private const DISHES_PATTERN = 'dishes.%';
 
+    private const MEDIA_PATTERN = 'media.%';
+
     private const EMPLOYEE_REQUESTS_PATTERN = 'employee-requests.%';
 
     private const LEAVES_PATTERN = 'leaves.%';
@@ -147,6 +149,10 @@ class PermissionSeeder extends LockedSeeder
             'items.create' => ['label' => 'Crear ítem / variante',      'group' => self::GROUP_INVENTARIO],
             'items.update' => ['label' => 'Editar ítem / variante',     'group' => self::GROUP_INVENTARIO],
             'items.delete' => ['label' => 'Eliminar ítem / variante',   'group' => self::GROUP_INVENTARIO],
+            // Distinct from items.update on purpose — that also guards catalog/pricing
+            // edits (PUT /items/{id}, PUT /item-variants/{id}). This only lets its
+            // holder attach/reorder/delete an item's photos (Item::userCanManageMedia()).
+            'items.manage-media' => ['label' => 'Gestionar fotos del ítem', 'group' => self::GROUP_INVENTARIO],
 
             // Inventario — Ubicaciones
             'inventory_locations.view' => ['label' => 'Ver ubicaciones de inventario',    'group' => self::GROUP_INVENTARIO],
@@ -164,6 +170,11 @@ class PermissionSeeder extends LockedSeeder
             'dishes.create' => ['label' => 'Crear platillo / categoría', 'group' => self::GROUP_PLATILLOS],
             'dishes.update' => ['label' => 'Editar platillo / categoría', 'group' => self::GROUP_PLATILLOS],
             'dishes.delete' => ['label' => 'Eliminar platillo / categoría', 'group' => self::GROUP_PLATILLOS],
+
+            // Media
+            'media.upload' => ['label' => 'Subir archivos multimedia', 'group' => 'Media'],
+            'media.update' => ['label' => 'Reordenar / marcar imagen principal', 'group' => 'Media'],
+            'media.delete' => ['label' => 'Eliminar archivos multimedia', 'group' => 'Media'],
 
             // Asistencia — registro
             'attendances.view' => ['label' => 'Ver asistencias', 'group' => 'Asistencia'],
@@ -233,6 +244,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::DISHES_PATTERN)
+                            ->orWhere('name', 'like', self::MEDIA_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN)
                             ->orWhere('name', 'like', self::ATTENDANCES_PATTERN)
@@ -257,6 +269,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->where('name', 'like', self::ITEMS_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
+                            ->orWhere('name', 'like', self::MEDIA_PATTERN)
                             ->orWhere('name', 'units_of_measure.manage')
                             ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
                     })
@@ -273,17 +286,27 @@ class PermissionSeeder extends LockedSeeder
         // reviews self-service vacation requests via employee-requests.approve.
         // Payroll is scoped explicitly (not the PAYROLL_PATTERN wildcard) so that
         // reopen/reclose — admin-only per AP-047 — never leak in here by accident.
+        // items.view + items.manage-media only (not items.update, and not the
+        // full ITEMS_PATTERN wildcard) — items.update also guards PUT
+        // /items/{id} and PUT /item-variants/{id} (name, sale_price,
+        // min_stock, ...), so granting it just to satisfy
+        // Item::userCanManageMedia() (#377) would silently hand manager full
+        // catalog/pricing edit rights too. items.manage-media is the
+        // dedicated permission that check actually looks for. media.* is the
+        // full wildcard on purpose — managing an item's photos
+        // (upload/reorder/delete) is the actual point.
         $managerRole = Role::where('name', 'manager')->where('guard_name', 'api')->first();
         if ($managerRole) {
             $managerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
-                        $q->whereIn('name', ['users.show', 'users.index'])
+                        $q->whereIn('name', ['users.show', 'users.index', 'items.view', 'items.manage-media'])
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', self::LEAVES_PATTERN)
                             ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::ATTENDANCES_PATTERN)
+                            ->orWhere('name', 'like', self::MEDIA_PATTERN)
                             ->orWhereIn('name', ['payroll.preview', 'payroll.close']);
                     })
                     ->get()

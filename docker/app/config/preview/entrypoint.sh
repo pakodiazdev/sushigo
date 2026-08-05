@@ -53,4 +53,7 @@ php artisan view:cache
 echo "Optimizing the application..."
 php artisan optimize
 
+echo "Cleaning up orphaned media uploads..."
+php artisan media:cleanup-orphans || echo "⚠️  media:cleanup-orphans failed — continuing startup anyway (see TD-02)"
+
 exec apache2-foreground

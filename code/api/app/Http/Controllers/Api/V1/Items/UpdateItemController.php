@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Items\UpdateItemRequest;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Item;
+use App\Services\Media\MediaAttachmentService;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Put(
@@ -37,10 +39,17 @@ use App\Models\Item;
  */
 class UpdateItemController extends Controller
 {
-    public function __invoke(UpdateItemRequest $request, int $id)
+    public function __invoke(UpdateItemRequest $request, int $id, MediaAttachmentService $mediaAttachmentService)
     {
         $item = Item::findOrFail($id);
-        $item->update($request->validated());
+
+        DB::transaction(function () use ($request, $item, $mediaAttachmentService) {
+            $item->update($request->itemData());
+
+            if ($mediaGalleryId = $request->mediaGalleryId()) {
+                $mediaAttachmentService($item, $mediaGalleryId);
+            }
+        });
 
         return new ResponseEntity(
             data: [

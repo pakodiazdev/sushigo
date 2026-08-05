@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use App\Contracts\AuthorizesMediaOwnership;
+use App\Models\Concerns\HasMediaGallery;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Item extends Model
+class Item extends Model implements AuthorizesMediaOwnership
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasMediaGallery, SoftDeletes;
 
     protected $fillable = [
         'sku',
@@ -51,26 +52,6 @@ class Item extends Model
     public function activeVariants(): HasMany
     {
         return $this->variants()->where('is_active', true);
-    }
-
-    /**
-     * Get media attachments (polymorphic)
-     */
-    public function mediaAttachments(): MorphMany
-    {
-        return $this->morphMany(MediaAttachment::class, 'attachable');
-    }
-
-    /**
-     * Get primary media gallery
-     */
-    public function primaryMediaGallery()
-    {
-        return $this->mediaAttachments()
-            ->where('is_primary', true)
-            ->with('mediaGallery')
-            ->first()
-            ?->mediaGallery;
     }
 
     /**
@@ -127,5 +108,19 @@ class Item extends Model
     public function isActivo(): bool
     {
         return $this->type === self::TYPE_ACTIVO;
+    }
+
+    /**
+     * Gate media changes (attach/reorder/delete) on a dedicated permission,
+     * not items.update — that's also the guard for PUT /items/{id} and
+     * PUT /item-variants/{id}, which accept name, sale_price, min_stock,
+     * etc. Reusing it here would let anyone granted "manage this item's
+     * photos" also silently edit catalog data and pricing. Not
+     * ItemPolicy::update() either, which is currently a stub that returns
+     * true unconditionally (see #400).
+     */
+    public function userCanManageMedia(User $user): bool
+    {
+        return $user->can('items.manage-media');
     }
 }

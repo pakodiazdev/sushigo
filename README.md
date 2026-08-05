@@ -245,6 +245,7 @@ Uses the workspace's own `docker-compose.e2e.yml` with a Cypress container.
 
 - [Inventory Architecture & Design (modelos, diagramas y flujos)](doc/architecture/inventory-architecture.md)
 - [Security & User System Architecture](doc/architecture/security-and-user-system-architecture.md)
+- [Media System Architecture (storage-backed, cloud-swappable uploads)](doc/architecture/media/media-architecture.en.md)
 - [Task #004 — Auth + Zustand migration](doc/tasks/2025-11/004-authentication-frontend-zustand.md)
 
 These documents capture the target inventory domain (operating units, stock movements, Hashids exposure) and should guide upcoming modules.
@@ -257,7 +258,7 @@ Development is organized into documented sprints — see [`doc/conventions/sprin
 |---|---|---|---|---|---|---:|---|
 | 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
 | 001 | Attendance, Payroll & Quality | Completed | 2026-07-26 | 2026-07-31 (impl. finished 2026-07-30) | 2026-08-09 | 1.40× (51.1h → 36.5h) | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
-| 002 | Platillos Catalog & Platform Hardening | In Progress | 2026-07-31 | 42.9% (6/14) | — | — | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
+| 002 | Platillos Catalog & Platform Hardening | In Progress | 2026-07-31 | 50.0% (7/14) | — | — | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
 
 ## Development tips
 

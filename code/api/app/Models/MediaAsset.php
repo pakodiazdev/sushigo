@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\Traits\HasPublicId;
+use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 
 class MediaAsset extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasPublicId, SerializesPublicIdAsId, SoftDeletes;
 
     protected $fillable = [
         'media_gallery_id',
@@ -39,11 +41,19 @@ class MediaAsset extends Model
     }
 
     /**
-     * Get the full URL for this media asset
+     * Get the full URL for this media asset. Wrapped in url(): the default
+     * 'local' disk (config/filesystems.php) has no 'url' key, so Storage::url()
+     * returns a host-relative path via Laravel's serve route — correct for a
+     * same-origin app, but broken here since the API (api.sushigo.local) and
+     * webapp (sushigo.local) are different origins, so a relative path
+     * resolves against the wrong one. url() turns a relative path into an
+     * absolute one anchored at APP_URL, and leaves an already-absolute URL
+     * (e.g. the 's3' disk's) untouched — safe for both without branching on
+     * which disk is active.
      */
     public function getUrlAttribute(): string
     {
-        return Storage::url($this->path);
+        return url(Storage::url($this->path));
     }
 
     /**
