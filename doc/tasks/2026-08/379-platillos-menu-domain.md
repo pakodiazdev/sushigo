@@ -61,7 +61,7 @@ restaurant's real live menu (sushigo-romita.com/menu) rather than invented.
 ## ⏱️ Time
 
 ### 📊 Estimates
-- **Optimistic:** `5h` · **Pessimistic:** `10h` · **Tracked:** `8h56m`
+- **Optimistic:** `5h` · **Pessimistic:** `10h` · **Tracked:** `12h15m`
 
 ### 📅 Sessions
 ```json
@@ -69,35 +69,45 @@ restaurant's real live menu (sushigo-romita.com/menu) rather than invented.
   { "date": "2026-08-01", "start": "11:47", "end": "17:09" },
   { "date": "2026-08-04", "start": "10:15", "end": "11:29" },
   { "date": "2026-08-04", "start": "17:20", "end": "17:40" },
-  { "date": "2026-08-04", "start": "18:00", "end": "20:00" }
+  { "date": "2026-08-04", "start": "18:00", "end": "20:00" },
+  { "date": "2026-08-04", "start": "20:15", "end": "20:35" },
+  { "date": "2026-08-04", "start": "21:00", "end": "21:40" },
+  { "date": "2026-08-04", "start": "22:00", "end": "23:59" },
+  { "date": "2026-08-05", "start": "00:00", "end": "00:20" }
 ]
 ```
 
 ## 📊 Retrospective
-- **Actual total:** 8h 56m (536m)
-- **vs optimistic:** +3h 56m
-- **vs pessimistic:** −1h 4m
+- **Actual total:** 12h 15m (735m)
+- **vs optimistic:** +7h 15m
+- **vs pessimistic:** +2h 15m
 
 **Justification:** The first session covered the initial build (migrations, models, SAC
 controllers, FormRequests, permissions, routes, Swagger, and the full PHPUnit suite) plus the
-first review-response cycle for cascading soft-delete correctness. Three further rounds of
-external review and quality gating followed before merge, none of which changed the feature's
-scope but each requiring real rework: (2) a second Copilot review round asked for per-entity
-subfolders (`Dish/`, `DishCategory/`, `DishExtra/`, matching the CashAdjustments domain's existing
-convention) and for the internal `dish_id`/`dish_category_id`/`dish_extra_group_id` foreign keys
-to stop being exposed over the API in favor of ULID `public_id`s (`HasPublicId`, matching
-`Employee`/`VacationRequest`/`CashAdjustment`) — a structural and route-binding change across all
-4 tables plus every FormRequest and test; (3) `/pr-comments` addressed one remaining open thread,
-removing a Cypress spec that was out of scope for a backend-only PR once a reviewer pointed out
-the equivalent coverage already existed in PHPUnit; (4) `/sonar-review` fixed 4 SonarCloud
-`php:S1192` code smells (duplicated route-parameter literals) and, separately, had to rebase the
-branch onto `main` after a GitHub Actions webhook anomaly failed to trigger CI on the Sonar-fix
-push — the rebase itself hit conflicts in `README.md` and the sprint-002 doc (both files' shared
-progress-tally lines), resolved by taking the union of completed issues rather than either
-branch's stale snapshot. The combined total still lands under the pessimistic estimate, but
-meaningfully above optimistic — multi-round review response on a new domain's public API surface
-(ULID migration in particular) is real, non-itemized work that the original single-session
-estimate didn't anticipate.
+first review-response cycle for cascading soft-delete correctness. Five further rounds of external
+review and quality gating followed before merge, none of which changed the feature's scope but
+each requiring real rework: (2) a second Copilot review round asked for per-entity subfolders
+(`Dish/`, `DishCategory/`, `DishExtra/`) and ULID `public_id`s replacing internal FKs on the API
+surface — a structural change across all 4 tables plus every FormRequest and test; (3)
+`/pr-comments` removed a Cypress spec out of scope for a backend-only PR; (4) `/sonar-review` fixed
+4 SonarCloud code smells and required a mid-flight rebase after a GitHub Actions webhook anomaly;
+(5) a user-reported N+1 query bug (missing eager-loaded inverse relations on the nested extra-group/
+option resources) required fixes across 7 controllers plus two new query-count regression tests,
+alongside further SonarCloud duplication cleanup (a `ResolvesPublicIdReferences`/
+`NormalizesDishData` trait extraction) that surfaced a second, unrelated pre-existing duplication
+block in the Dev/Production `PermissionSeeder`s; (6) a user-reported ordering bug (dish list sorted
+by the category's internal id instead of its configured `position`) required rejoining the query
+and re-deriving the regression test, since the original test's fixture data happened to make id
+order and position order coincide; (7) a 28-item automated-review flag investigation triaged every
+flag against the current code (most were stale, describing pre-refactor file paths/behavior already
+superseded by rounds 2/5/6), fixed three small real gaps found along the way (an implicit trait
+constant dependency, non-deterministic `extraGroups()` ordering, a test using `syncPermissions`
+instead of `givePermissionTo`), and — per an explicit product decision — filtered inactive extra
+options out of nested dish/group payloads to match `Dish::totalPriceFor()`'s pricing scope, across
+8 controllers with 2 new regression tests. The total lands above the pessimistic estimate:
+unlike the earlier rounds (structural rework with a known shape), rounds 5–7 were genuine
+defect-finding cycles on a brand-new domain's query/ordering/consistency behavior — the kind of
+work an estimate for "build the CRUD" doesn't anticipate, by design.
 
 ## 💸 Token & Cost
 
@@ -123,12 +133,33 @@ estimate didn't anticipate.
     "cache_read_tokens": 0,
     "cache_write_tokens": 0,
     "estimated_cost_usd": 0.0006
+  },
+  {
+    "date": "2026-08-04",
+    "command": "manual session (review response, /pr-comments, /sonar-review, /finish-pr, ordering fix, 28-flag triage)",
+    "model": "claude-sonnet-5",
+    "input_tokens": 24500,
+    "output_tokens": 188800,
+    "cache_read_tokens": 157600000,
+    "cache_write_tokens": 1100000,
+    "estimated_cost_usd": 56.66
+  },
+  {
+    "date": "2026-08-04",
+    "command": "manual session (review response, /pr-comments, /sonar-review, /finish-pr, ordering fix, 28-flag triage)",
+    "model": "claude-haiku-4-5",
+    "input_tokens": 522,
+    "output_tokens": 13,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "estimated_cost_usd": 0.0006
   }
 ]
 ```
 
 ### 📊 Totals
-- **Input:** 1,229 tokens · **Output:** ~165,016 tokens · **Cache read:** ~98.3M tokens · **Cache write:** ~1.5M tokens
-- **Estimated cost:** ~$41.13
-- Note: this figure covers only the `/issue` implementation + review cycles from the first session. The three later sessions (subfolder/ULID review response, `/pr-comments`, `/sonar-review` + rebase) ran without token/cost instrumentation, so no figures are recorded for them here.
+- **Input:** 26,251 tokens · **Output:** ~353,829 tokens · **Cache read:** ~255.9M tokens · **Cache write:** ~2.6M tokens
+- **Estimated cost:** ~$97.79
+- Session 2 above (API duration 53m 4s, wall 7h 30m 20s, 543 lines added / 183 removed) covers sessions 2–7 from the Sessions table collectively — it was a single continuous Claude Code conversation spanning the review-response, `/pr-comments`, `/sonar-review`, `/finish-pr`, ordering-bug-fix, and 28-flag-triage rounds — not one figure per session.
+
 
