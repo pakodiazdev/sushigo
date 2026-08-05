@@ -1,6 +1,6 @@
 # SushiGo Platform
 
-SushiGo is the operations platform for a single restaurant tenant inside the ComandaFlow ecosystem — one business running across multiple branches and temporary events from a single system. It currently covers four live domains: **Inventory & Stock** (multi-location, transfers, auditable movements), **Cash Management** (sessions, adjustments, expenses, card terminals), **Attendance & Payroll** (schedules, check-in/out, overtime, vacations, leave requests, payroll close) and **User & Access Control** (OAuth, roles, granular permissions). The repository bundles the Laravel 12 API, the React 19 admin webapp, and the Docker tooling to run all of it locally in one command — a Flutter mobile app is planned to extend attendance operations into a full point-of-sale with on-device ticket printing.
+SushiGo is the operations platform for a single restaurant tenant inside the ComandaFlow ecosystem — one business running across multiple branches and temporary events from a single system. It currently covers five live domains: **Inventory & Stock** (multi-location, transfers, auditable movements), **Cash Management** (sessions, adjustments, expenses, card terminals), **Attendance & Payroll** (schedules, check-in/out, overtime, vacations, leave requests, payroll close), **User & Access Control** (OAuth, roles, granular permissions) and **Menu / Dishes** (menu categories, dishes with base pricing, per-dish customization extras). The repository bundles the Laravel 12 API, the React 19 admin webapp, and the Docker tooling to run all of it locally in one command — a Flutter mobile app is planned to extend attendance operations into a full point-of-sale with on-device ticket printing.
 
 ## Engineering Highlights
 
@@ -257,7 +257,7 @@ Development is organized into documented sprints — see [`doc/conventions/sprin
 |---|---|---|---|---|---|---:|---|
 | 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
 | 001 | Attendance, Payroll & Quality | Completed | 2026-07-26 | 2026-07-31 (impl. finished 2026-07-30) | 2026-08-09 | 1.40× (51.1h → 36.5h) | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
-| 002 | Platillos Catalog & Platform Hardening | In Progress | 2026-07-31 | 35.7% (5/14) | — | — | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
+| 002 | Platillos Catalog & Platform Hardening | In Progress | 2026-07-31 | 42.9% (6/14) | — | — | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
 
 ## Development tips
 

@@ -3,23 +3,13 @@
 namespace Database\Seeders\Production;
 
 use Database\Seeders\Base\LockedSeeder;
+use Database\Seeders\Traits\AssignsBasicRolePermissions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class PermissionSeeder extends LockedSeeder
 {
-    /**
-     * Self-service Solicitudes access — every employee can view/create/cancel
-     * their own requests, including self-service vacation requests (via the
-     * generic employee-requests.create), but never approve or directly
-     * schedule vacations on behalf of someone else (that stays admin-only —
-     * see vacation-requests.schedule).
-     */
-    private const SELF_SERVICE_REQUESTS_PERMISSIONS = [
-        'employee-requests.view',
-        'employee-requests.create',
-        'employee-requests.cancel',
-    ];
+    use AssignsBasicRolePermissions;
 
     public function run(): void
     {
@@ -149,6 +139,12 @@ class PermissionSeeder extends LockedSeeder
             // Inventario — Stock y movimientos
             'stock.view',
             'stock.manage',
+
+            // Platillos (menú)
+            'dishes.view',
+            'dishes.create',
+            'dishes.update',
+            'dishes.delete',
         ];
     }
 
@@ -215,6 +211,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
+                            ->orWhere('name', 'like', 'dishes.%')
                             ->orWhere('name', 'like', 'audit-logs.%')
                             ->orWhereIn('name', ['units_of_measure.manage', 'punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'payroll.reopen', 'payroll.reclose', 'overtime.manage', 'vacation-policy.manage']);
                     })
@@ -241,26 +238,6 @@ class PermissionSeeder extends LockedSeeder
                     })
                     ->get()
             );
-        }
-    }
-
-    private function assignBasicRolesPermissions(): void
-    {
-        // cook, kitchen-assistant, delivery-driver, acting-manager: basic user access
-        // plus self-service Solicitudes (view/create/cancel their own requests —
-        // never approve, that stays manager/admin-only)
-        foreach (['cook', 'kitchen-assistant', 'delivery-driver', 'acting-manager'] as $roleName) {
-            $role = Role::where('name', $roleName)->where('guard_name', 'api')->first();
-            if ($role) {
-                $role->syncPermissions(
-                    Permission::where('guard_name', 'api')
-                        ->where(function ($q) {
-                            $q->whereIn('name', ['users.show', 'users.index'])
-                                ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
-                        })
-                        ->get()
-                );
-            }
         }
     }
 }

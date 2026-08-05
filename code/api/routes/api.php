@@ -59,4 +59,5 @@ Route::prefix('v1')->group(function () {
     require __DIR__.'/api/attendance.php';
     require __DIR__.'/api/vacation-holidays.php';
     require __DIR__.'/api/cash-adjustments.php';
+    require __DIR__.'/api/dishes.php';
 });
