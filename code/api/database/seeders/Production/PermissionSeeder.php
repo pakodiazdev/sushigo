@@ -11,6 +11,8 @@ class PermissionSeeder extends LockedSeeder
 {
     use AssignsBasicRolePermissions;
 
+    private const MEDIA_WILDCARD = 'media.%';
+
     public function run(): void
     {
         $this->upsertPermissions($this->permissionDefinitions());
@@ -204,7 +206,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'employee-requests.%')
                             ->orWhere('name', 'like', 'attendances.%')
                             ->orWhere('name', 'like', 'reports.%')
-                            ->orWhere('name', 'like', 'media.%');
+                            ->orWhere('name', 'like', self::MEDIA_WILDCARD);
                     })
                     ->get()
             );
@@ -230,7 +232,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'dishes.%')
-                            ->orWhere('name', 'like', 'media.%')
+                            ->orWhere('name', 'like', self::MEDIA_WILDCARD)
                             ->orWhere('name', 'like', 'audit-logs.%')
                             ->orWhereIn('name', ['units_of_measure.manage', 'punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'payroll.reopen', 'payroll.reclose', 'overtime.manage', 'vacation-policy.manage']);
                     })
@@ -252,7 +254,7 @@ class PermissionSeeder extends LockedSeeder
                         $q->where('name', 'like', 'items.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
-                            ->orWhere('name', 'like', 'media.%')
+                            ->orWhere('name', 'like', self::MEDIA_WILDCARD)
                             ->orWhere('name', 'units_of_measure.manage')
                             ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
                     })
