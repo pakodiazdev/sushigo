@@ -1,14 +1,15 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bash(gh run view:*), Bash(gh run watch:*), Bash(gh api:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(tail:*), Bash(date:*), Bash(sleep:*), Bash(cd:*), Bash(basename:*), Bash(docker exec:*), Bash(php artisan:*), Bash(./vendor/bin/pint:*), Bash(npm:*), Bash(npx:*), Bash(make:*), Bash(curl:*), Read, Edit, Write, WebFetch, ToolSearch, AskUserQuestion, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__find, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__read_page
-description: End-to-end autonomous delivery for a single GitHub issue — validate it exists, gather context, implement via TDD, open the PR, then loop through CI, Copilot review, and Devin/DeepWiki review until everything is green. Stops only when an automated reviewer disputes the underlying business rule. Never merges.
+allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bash(gh run view:*), Bash(gh run watch:*), Bash(gh api:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(tail:*), Bash(date:*), Bash(sleep:*), Bash(cd:*), Bash(basename:*), Bash(docker exec:*), Bash(php artisan:*), Bash(./vendor/bin/pint:*), Bash(npm:*), Bash(npx:*), Bash(make:*), Bash(curl:*), Read, Edit, Write, WebFetch, ToolSearch, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__find, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__read_page
+description: End-to-end autonomous delivery for a single GitHub issue — validate it exists, gather context, implement via TDD, open the PR, then loop through CI, Copilot review, and Devin/DeepWiki review until everything is green. Runs fully unattended: never pauses for human input, even on a business-rule dispute — the issue's literal text wins and every override is logged on the PR for later review. Never merges.
 argument-hint: <issue-number>
 ---
 
 # /issue #$ARGUMENTS — Autonomous issue delivery pipeline
 
 You are taking issue **#$ARGUMENTS** of the SushiGo monorepo from "just filed" to "PR ready for
-manual review," in a single run, with as little back-and-forth with the user as the work honestly
-allows.
+manual review," in a single, fully unattended run. This command never asks for input — it is
+designed to be safe to run with nobody watching, including as the target of a scheduled loop that
+picks up newly-assigned issues on its own.
 
 This command **orchestrates existing commands by reference** instead of duplicating their logic.
 Where a phase below says "follow `.claude/commands/X.md`," **read that file** with the Read tool and
@@ -43,34 +44,44 @@ against the *same* issue number (e.g. from two dev-lab workspaces) can clobber e
 to the Sessions array or checklist. This has already happened for real on this project once for a
 different reason (two workspaces independently starting the same issue) — check that no other
 workspace is already running `/issue`, `/start-issue`, `/pr-comments`, or `/finish-pr` against the
-same issue number before starting.
+same issue number before starting. **This check is still manual (Phase 0/1's job) today.** A future
+scheduled loop that invokes `/issue` unattended (see the zero-interruption rule) must perform the
+equivalent check itself — e.g. an existing branch/open PR for that issue number, or a lock file —
+*before* dispatching a run; this command does not defend against a double-dispatch on its own.
 
 ---
 
-## The one-interruption rule
+## The zero-interruption rule
 
 Every decision in this pipeline — what to implement, how to fix a failing test, whether a review
-comment is valid, whether a Devin flag matters, how to resolve an ambiguity in the issue — is made
-by you, using the issue's Description/Reason/Objective/Acceptance Criteria as the source of truth.
+comment is valid, whether a Devin flag matters, how to resolve an ambiguity in the issue, and how to
+resolve a business-rule dispute raised by an automated reviewer — is made by you, alone, using the
+issue's Description/Reason/Objective/Acceptance Criteria as the source of truth. **This command never
+calls `AskUserQuestion` or otherwise pauses waiting for a human reply, at any phase.**
 
-**Stop and ask the user (via `AskUserQuestion`, quoting the exact comment/flag and your read of the
-disagreement) only when an automated reviewer is, in substance, disputing what the feature *should
-do* — not that the code has a defect, a style problem, or a missing test.** A comment that says
-"this validation is missing" or "this endpoint should return 403 here per your own Policy class" is
-a defect — fix it, no question asked. A comment that says "should managers really be allowed to
-void a cash session after close?" is a business-rule dispute — that's the one time you stop.
+**When an automated reviewer (Copilot or Devin) is, in substance, disputing what the feature
+*should* do — not flagging a defect, a style problem, or a missing test — implement the issue
+exactly as written and do not adopt the reviewer's alternative interpretation.** The issue's own
+Description/Reason/Objective/Acceptance Criteria is the authoritative spec; a comment second-
+guessing it is an opinion for the human merging the PR to weigh, not an instruction this pipeline
+acts on. Record every such dispute — the verbatim comment/flag plus a one-line note on why the
+issue's literal reading was kept — in the PR's `## ⚠️ Needs Human Judgment` section (created in
+Phase 4). A comment that says "this validation is missing" or "this endpoint should return 403 here
+per your own Policy class" is still a defect — fix it normally, that's not a dispute.
 
-This exact bar governs Phase 6 (Copilot) and Phase 8 (Devin). Phase 1 has a related but *broader*
-escape valve for planning ambiguities — see that phase for its own research-then-ask rule. Phase 10
-has one deliberate ask at the very end of the run (share `/usage`'s output for cost logging) — that
-is a wrap-up request for data this command cannot read itself, not a decision point in the
-pipeline. Phase 8 has a narrow infrastructure fallback (asking whether to wait for the Chrome
-extension to connect, or skip that sub-check) — an environment/tooling question, not a decision
-about the feature or the review. Phase 9 delegates to `finish-pr.md` verbatim, which has the exact
-same Chrome-extension fallback in its own Phase 7.6b — so that ask can also surface during close-out,
-not just Phase 8. Outside those spots — Phase 1's research-then-ask, Phase 6/8's business-rule bar,
-the Chrome-extension fallback (Phase 8 or, via delegation, Phase 9/finish-pr's 7.6b), and Phase 10's
-wrap-up ask — nothing else in this command pauses for the user.
+This exact bar governs Phase 6 (Copilot) and Phase 8 (Devin). Phase 1's own research-then-ask rule
+resolves the same way, but writes to a **different** PR section: if a genuine ambiguity survives
+researching the issue, its references, `doc/architecture/*`/`doc/conventions/*`, and existing
+similar code, resolve it with the most literal reading of the issue text — falling back to the most
+conservative/restrictive interpretation only if the issue text itself is silent, not merely
+under-specified — and record it under `## 🤔 Assumptions` (Phase 1), never under
+`## ⚠️ Needs Human Judgment` above. The two sections are not interchangeable: `## 🤔 Assumptions`
+is for gaps *you* filled because the issue itself didn't say — no reviewer was involved; `## ⚠️
+Needs Human Judgment` is only for disputes an automated reviewer actually raised (Phase 6/8) and
+this pipeline overrode. Phase 8's Chrome-extension check (also reached via Phase 9/`finish-pr.md`'s
+7.6b) auto-skips instead of asking whether to wait — see that phase for the exact fallback. Phase 10
+does not ask for `/usage` output — cost logging is skipped entirely in this mode, noted as such in
+the final report instead of blocking on it.
 
 ---
 
@@ -112,20 +123,19 @@ do this:
 
    In theory this resolves nearly every doubt: most "open questions" already have an answer
    somewhere in the docs or the codebase, they just weren't obvious from the issue text alone.
-4. **If a doubt survives that research, ask the user.** This phase keeps the ability to pause and
-   request clarification via `AskUserQuestion` — unlike Phases 6 and 8 later in this command, this
-   isn't limited to business-rule disputes here: if you've genuinely checked the references, the
-   architecture docs, and the existing code, and a real ambiguity remains, it's cheaper to ask once
-   now than to build on a wrong guess. Reserve this for doubts that actually survive the research
-   in step 3 — don't skip straight to asking.
+4. **If a doubt survives that research, do not ask — resolve it yourself and flag it.** Per the
+   zero-interruption rule above: take the most literal reading of the issue text; if the issue is
+   genuinely silent on the point (not just under-specified), take the most conservative/restrictive
+   reading instead. Reserve this fallback for doubts that actually survive the research in step 3 —
+   don't skip straight to guessing without checking references, docs, and existing code first.
 5. For anything you *do* resolve yourself through this research (rather than the issue stating it
-   outright), record it as a bullet under a new `### Assumptions` note you'll carry into the PR
-   description (Phase 4), citing where you found the answer (which doc, which existing file) so the
-   reviewer can double-check it in one place.
+   outright), record it as a bullet under a new `## 🤔 Assumptions` note — the same heading Phase 4
+   writes verbatim into the PR description — citing where you found the answer (which doc, which
+   existing file) so the reviewer can double-check it in one place.
 
 Print a short context report (what you're building, files touched, what you resolved from docs vs.
-inferred, any assumptions recorded) so the run is auditable, then proceed — don't wait for
-acknowledgement of this report unless you actually asked a question in step 4.
+inferred, any assumptions recorded) so the run is auditable, then proceed — never wait for
+acknowledgement of this report.
 
 ---
 
@@ -139,14 +149,24 @@ opening the Sessions entry on the issue (`doc/conventions/tasks.md`).
 `end` is only filled in by Phase 9 (via `finish-pr.md`'s Phase 3), on the assumption the run reaches
 that phase in one continuous stretch. This rule only applies once this Sessions entry actually
 exists — a Phase 0 exit happens *before* this phase ever opens it, so there's nothing to close
-there; Phase 0's own stop conditions need no session handling at all. From here on: a **safety cap**
-(Phase 5 or Phase 8) truly ends the run — close this Sessions entry with the current time before
-reporting, the same way Phase 9 would, rather than leaving `"end": "?"` to silently accumulate
-wall-clock time nobody is tracking. A **business-rule pause** (Phase 6 or Phase 8) is different —
-see Phase 10's note on this: close the entry only if the conversation actually ends before the user
-answers, not if they answer right away and the same run resumes. If the run is later resumed after
-a closed entry (same conversation or a fresh one), open a **new** Sessions entry rather than reusing
-the closed one — don't try to reconstruct the exact resume point across a gap of unknown length.
+there; Phase 0's own stop conditions need no session handling at all. Business-rule disputes no
+longer pause the run (see "The zero-interruption rule") — they're overridden in place and logged,
+so they're not a stop point either. From here on, every remaining stop point must close this
+Sessions entry with the current time before reporting — the same way Phase 9's own success path
+would — rather than leaving `"end": "?"` to silently accumulate wall-clock time nobody is tracking.
+That covers:
+- The **safety caps** (Phase 5's CI-failure cap, Phase 8's Devin-cycle cap).
+- **Any stop reached during Phase 9's delegation to `finish-pr.md`'s Phases 0–2** — everything
+  between opening this entry (Phase 2 here) and `finish-pr.md`'s own Phase 3, which is the only
+  later point that fills `end` on the success path. This is deliberately **not** an exhaustive list
+  of `finish-pr.md`'s stop conditions — treat *any* "stop"/"stop here"/"stop immediately" instruction
+  inside its Phases 0–2 the same way, including (non-exhaustively): Phase 0's not-`OPEN`/`isDraft`
+  check, Phase 1a's unresolved-review-threads check, Phase 1b's dirty-working-tree guard before the
+  `BEHIND` auto-rebase, Phase 1b's rebase-conflict abort-and-report, Phase 1b's `DIRTY`/`BLOCKED`
+  mergeable-state check, and Phase 2's post-squash diff-mismatch guard. None of these close the
+  Sessions entry on their own when reached this way — `finish-pr.md`'s own text doesn't know it's
+  being run from inside this pipeline — so it's this pipeline's job to close it, at the point of the
+  stop, before reporting.
 
 ---
 
@@ -228,12 +248,18 @@ per `doc/conventions/git/commits.md`'s 📚 emoji) — they ship in the same PR,
 
 Push and open the PR by following `start-issue.md`'s Phase 8b/8c exactly as written — it already
 covers the workspace-letter title bracket, the `Devin Review:` follow-up edit, and the
-`## Manual Testing` section. The one addition on top of that here:
+`## Manual Testing` section. Two additions on top of that here:
 
 - **`## 🤔 Assumptions` section** (only if Phase 1 recorded any) — the bullet list of judgment
   calls you made where the issue didn't resolve every detail, so the human reviewer can check them
   in one place instead of reverse-engineering them from the diff. Insert it right after the
   `## Manual Testing` section, before `## Test plan`.
+- **`## ⚠️ Needs Human Judgment` section** — every business-rule dispute an automated reviewer
+  raises that this pipeline overrides per the zero-interruption rule: verbatim comment/flag plus the
+  reasoning for keeping the issue's literal reading. Usually empty at PR-creation time and filled in
+  by Phases 6/8 as reviews arrive — create it here (even empty) so those phases have a section to
+  append to. Place it right after `## 🤔 Assumptions` (or right after `## Manual Testing` if there
+  are no Assumptions).
 
 ```bash
 git push -u origin <branch-name>
@@ -265,8 +291,9 @@ This blocks until every check (linters + tests, per the repo's GitHub Actions wo
   same discipline as Phase 3, fix, commit, push, and re-run this gate.
 - **Safety cap:** if the *same* check fails **6 times in a row**, stop looping and report the
   failure to the user instead of continuing indefinitely — this is a protective cap, not a
-  business-rule stop. Close the Sessions entry (Phase 2's rule) and log token/cost (Phase 10a/10b)
-  before reporting — the run still cost real tokens even though it didn't finish.
+  business-rule stop. Close the Sessions entry (Phase 2's rule) before reporting — do not attempt
+  cost logging (Phase 10 skips it entirely per the zero-interruption rule; there's nothing to do
+  here on that front).
 
 Later phases refer back to this gate as "**re-run the CI gate (Phase 5)**" rather than repeating
 this text.
@@ -290,9 +317,10 @@ Once a Copilot review is present, **read and follow `.claude/commands/pr-comment
 in full**, with one addition inserted into Step 4a's analysis:
 
 > **Business-rule dispute** — the comment isn't proposing a code fix, it's disputing what the
-> feature should *do* (see "The one interruption rule"). Stop and ask the user, quoting the comment
-> verbatim plus your read of the disagreement. Do not decide unilaterally and do not resolve that
-> thread until the user answers. Every other comment still follows `pr-comments.md`'s existing
+> feature should *do* (see "The zero-interruption rule"). Keep the issue's literal reading, reply on
+> the thread explaining why (citing the issue's Description/Objective/Acceptance Criteria), resolve
+> the thread, and add a bullet to the PR's `## ⚠️ Needs Human Judgment` section with the comment
+> verbatim and that same reasoning. Every other comment still follows `pr-comments.md`'s existing
 > Address / Skip logic exactly.
 
 If this loop pushed any new commits, **re-run the CI gate (Phase 5)** before moving on — don't act
@@ -363,10 +391,10 @@ use `get_page_text` / `find` (and a screenshot if the text extraction is ambiguo
 - **If the scan is still running** ("in progress"/"scanning"), wait and re-check — a short poll
   loop, or `ScheduleWakeup` if this is running as a background/dispatched session — rather than
   reporting an incomplete result.
-- **If the Chrome extension isn't connected**, try `tabs_context_mcp` once; if it still fails, ask
-  the user whether to wait for them to connect it or skip this phase as best-effort — this
-  sub-check is supplementary to CI and Copilot, not a hard blocker on its own, but don't silently
-  skip it without saying so.
+- **If the Chrome extension isn't connected**, try `tabs_context_mcp` once; if it still fails, skip
+  this phase automatically — this sub-check is supplementary to CI and Copilot, not a hard blocker
+  on its own. Note the skip plainly in the final report (Phase 10) as "Devin/DeepWiki: skipped,
+  Chrome extension unavailable" rather than silently omitting it.
 
 Once loaded, read the **Bugs** count and the **Flags** panel. Then, in a loop:
 
@@ -374,8 +402,9 @@ Once loaded, read the **Bugs** count and the **Flags** panel. Then, in a loop:
    (same discipline as Phase 3). If it's a false positive, note why in your final report and don't
    silently dismiss it without checking.
 2. **For every flag** — evaluate whether it's valid and impactful, using the same business-rule bar
-   as everywhere else in this command: if a flag amounts to disputing intended behavior, stop and
-   ask; otherwise decide yourself. If not valid, record why in your own report — the DeepWiki page
+   as everywhere else in this command: if a flag amounts to disputing intended behavior, keep the
+   issue's literal reading and add it to the PR's `## ⚠️ Needs Human Judgment` section instead of
+   fixing it; otherwise decide yourself. If not valid, record why in your own report — the DeepWiki page
    is a public, unauthenticated mirror (no GitHub connection in this pipeline), so its own
    "Resolve"/"Mark as read" controls may not actually persist anything; try them if available, but
    the written record in your report is what actually matters, not the page's state. If valid,
@@ -395,9 +424,9 @@ Once loaded, read the **Bugs** count and the **Flags** panel. Then, in a loop:
    fixed, or explicitly noted as not applicable).
 
 **Safety cap:** stop after **5 cycles** through this loop and report the remaining state to the
-user rather than continuing indefinitely. Close the Sessions entry (Phase 2's rule) and log
-token/cost (Phase 10a/10b) before reporting — the run still cost real tokens even though it
-didn't finish.
+user rather than continuing indefinitely. Close the Sessions entry (Phase 2's rule) before
+reporting — do not attempt cost logging (Phase 10 skips it entirely per the zero-interruption
+rule; there's nothing to do here on that front).
 
 ---
 
@@ -413,13 +442,25 @@ Follow `.claude/commands/finish-pr.md`'s Phases 0 through 7.6 exactly as written
 on how they interact with the phases already run above. Running its procedure here executes under
 *this* file's own `allowed-tools` frontmatter, not `finish-pr.md`'s — every command its phases use
 (`mkdir`, `grep`, `gh project`, plus everything already covered above) is pre-approved here too, so
-delegating to it doesn't reintroduce an approval prompt:
+delegating to it doesn't reintroduce an approval prompt.
+
+**Any stop reached while executing Phases 0–2 below is a genuine early stop for this pipeline too —
+close the Sessions entry (Phase 2's rule above, which lists the non-exhaustive set of exactly which
+`finish-pr.md` conditions this covers) with the current time before reporting, since `finish-pr.md`'s
+own text doesn't know it's being run from inside this pipeline and won't do that for you.** The
+per-phase notes below call out where each phase's own stop conditions live, but don't repeat this
+instruction at every one — assume it applies anywhere a phase says "stop."
 
 - **Phase 0** (resolve the PR and issue) — the issue number is `$ARGUMENTS`, already known since
   this command started; the PR number has been known since Phase 4 created it. Neither needs
-  re-resolving. But still run this phase's metadata fetch
+  re-resolving, so Phase 0's own `AskUserQuestion` fallbacks ("if it doesn't [have an open PR], ask
+  the user for a PR number instead of guessing" / "if neither is present, ask the user which issue")
+  are unreachable here — this pipeline always has both. Still run this phase's metadata fetch
   (`gh pr view ... --json ...,mergeable,mergeStateStatus,reviewDecision`) — nothing earlier in this
   pipeline has fetched `mergeable`/`mergeStateStatus`, and Phase 1's readiness gate depends on it.
+  Its "Stop immediately" conditions (`state` not `OPEN`, or `isDraft`) are real, if unlikely — this
+  pipeline created the PR itself in Phase 4 as non-draft and open, but something outside this run
+  could still change that between phases.
 - **Phase 1** (pre-flight: review threads + mergeable state) — `finish-pr.md`'s own Phase 1
   deliberately doesn't check CI itself (that's 7.6a's job); the review-thread and mergeable-state
   checks it *does* run should already pass here, since Phase 6 resolved every thread from the
@@ -427,13 +468,20 @@ delegating to it doesn't reintroduce an approval prompt:
   itself triggered. CI on the commit Phase 9 inherits was already validated separately, by this
   pipeline's own Phase 5/7/8 (whichever ran last before Phase 9 started) — not by anything inside
   `finish-pr.md`'s Phase 1. Still run Phase 1 as written — it's cheap and catches drift if something
-  changed between phases. If it reports `BLOCKED` anyway (e.g. `main` picked up branch-protection
-  rules this run didn't anticipate), that's a real stop, not a bug in this pipeline — follow
-  `finish-pr.md`'s own instruction and report it to the user rather than guessing at a workaround.
+  changed between phases. Its stop conditions are broader than just `BLOCKED`: 1a's unresolved-
+  review-threads check, 1b's dirty-working-tree guard before the `BEHIND` auto-rebase, 1b's
+  rebase-conflict abort-and-report, and 1b's `DIRTY`/`BLOCKED` mergeable-state check can each stop
+  the run on their own — e.g. `main` picking up branch-protection rules this run didn't anticipate,
+  or an unrelated local change dirtying the tree between Phase 7's push and Phase 9 starting. None
+  of these are a bug in this pipeline when they fire — follow `finish-pr.md`'s own instruction for
+  that condition (report and stop, or the `/rebase-main` pointer on a rebase conflict) rather than
+  guessing at a workaround.
 - **Phase 2** (squash to one commit) — a single commit from Phase 7 above *if* Phase 8's loop made
   no further fix commits; each Phase 8 cycle commits and pushes its own fix without re-squashing, so
   after even one cycle the branch has more than one commit again. Either way, `finish-pr.md` detects
-  the actual count itself and squashes only if needed — no manual action required here.
+  the actual count itself and squashes only if needed — no manual action required here. Its own stop
+  condition (the post-squash diff not matching the pre-squash diff) is rare — it means the squash
+  itself lost content — but real; don't push a divergent diff if it fires.
 - **Phase 3** (finalize the issue) — this is also where the Sessions entry opened in Phase 2 above
   finally gets its `end` time filled and `Tracked` recomputed. Write the Retrospective's narrative
   to actually reflect what happened in Phases 5, 6, and 8 (CI retries, Copilot threads, Devin
@@ -441,7 +489,11 @@ delegating to it doesn't reintroduce an approval prompt:
 - **Phases 4–7** (local archive, project board → Done, sprint doc, README) — run exactly as
   documented in `finish-pr.md`.
 - **Phase 7.5** (final squash+push) and **7.6** (final CI + Devin re-validation) — this is the true
-  final gate before Phase 10 below presents anything to the human.
+  final gate before Phase 10 below presents anything to the human. **Override:** `finish-pr.md`'s
+  own Phase 7.6b describes an interactive fallback if the Chrome extension isn't connected — when
+  reached from inside this pipeline, that fallback does not apply. Use this file's own
+  zero-interruption auto-skip instead (Phase 8's Chrome-extension bullet above) and note the skip in
+  Phase 10's report rather than prompting.
 
 **This changes when `finish-pr.md`'s stated precondition applies.** Its own text says "call this
 only after the human has manually tested the PR and approved it" — that line still describes
@@ -459,60 +511,17 @@ way to read its own session's exact token usage from inside a Bash call — ther
 session ID or transcript path exposed to tool calls mid-session (this is a known, currently open
 gap in Claude Code itself, not something to paper over with a brittle "most recently modified
 file" heuristic, which breaks under parallel sessions — and this repo routinely runs up to 8 in
-parallel via dev-lab). Don't fabricate a number. Instead, get the real one from the one place it
-actually lives, and log it to the issue so it isn't lost the moment the terminal closes.
+parallel via dev-lab). Per the zero-interruption rule, this pipeline does not stop to ask for
+`/usage`'s output — cost logging is skipped entirely rather than blocking the run on a reply that
+may never come (e.g. when `/issue` is invoked unattended by a scheduled loop).
 
-### 10a. Get the real numbers
+### 10a. Skip cost logging
 
-Ask the user (this is the one deliberate, clearly-labeled ask at the very end of the run — not a
-mid-work interruption):
+Do not call `AskUserQuestion` here. Do not write or touch a `## 💸 Token & Cost` section on the
+issue — if one already exists from a prior manual run, leave it exactly as-is. If you want a given
+run's cost logged, run `/usage` yourself afterward; this command will not ask for it.
 
-> This run is done. Please run `/usage` and share the **Session** block — total tokens (input,
-> output, cache read/write) and the cost estimate it shows. I'll log it to issue #NNN.
-
-`/usage`'s own cost estimate is already the "if this were metered" number — don't recompute it
-yourself, just record what it reports alongside the token breakdown.
-
-### 10b. Log it to the issue
-
-Append one entry to a `## 💸 Token & Cost` section on the issue — same pattern as `## ⏱️ Time`'s
-`Sessions` array (`doc/conventions/tasks.md`): create the section with an empty `Runs` array the
-first time anything logs against this issue, otherwise append.
-
-```bash
-gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json body -q .body > "/tmp/issue-$ARGUMENTS-cost-body.md"
-```
-
-Edit `/tmp/issue-$ARGUMENTS-cost-body.md`:
-- If `## 💸 Token & Cost` doesn't exist yet, add it (with an empty `### 📅 Runs` json array and a
-  `### 📊 Totals` line) after `## ⏱️ Time`.
-- Append to `Runs`:
-  ```json
-  { "date": "YYYY-MM-DD", "command": "/issue", "model": "<model-id>", "input_tokens": N,
-    "output_tokens": N, "cache_read_tokens": N, "cache_write_tokens": N, "estimated_cost_usd": X.XX }
-  ```
-- Recompute `### 📊 Totals` as the sum across every entry in `Runs`. Since Phase 9 folded
-  `finish-pr.md`'s own close-out into this same session, one entry with `"command": "/issue"`
-  already covers the whole lifecycle here — a separate `/finish-pr` entry only shows up if someone
-  later runs it standalone on a different PR that didn't go through `/issue`.
-
-```bash
-gh issue edit "$ARGUMENTS" --repo pakodiazdev/sushigo --body-file "/tmp/issue-$ARGUMENTS-cost-body.md"
-```
-
-This applies regardless of how the run ended — log what was actually spent even if Phase 6 or 8
-stopped early on a business-rule question, or Phase 5/8's own safety cap ended the run early.
-
-**Known tradeoff:** Phase 9's `finish-pr.md` Phase 4 already wrote the local archive snapshot
-(`doc/tasks/<yyyy-mm>/<NNN>-<slug>.md`) before this section is appended, so that archived copy will
-never include this `## 💸 Token & Cost` entry. This is intentional, not an oversight — logging cost
-last is what lets it capture the *whole* run, including `finish-pr.md`'s own work inside Phase 9;
-logging it earlier would under-report. The GitHub issue itself (the source of truth per TD-01)
-always has the complete figure; only the point-in-time archive snapshot lags it by this one
-section. If an exact-match archive is ever needed, re-run `finish-pr.md`'s Phase 4 archive step by
-hand afterward.
-
-### 10c. Print the final report
+### 10b. Print the final report
 
 ````
 ## Issue #<NNN> — Ready for your review
@@ -523,14 +532,21 @@ hand afterward.
 ### Assumptions made (if any)
 - <bullet from Phase 1, if recorded>
 
+### ⚠️ Needs Human Judgment (if any)
+- <bullet: reviewer comment/flag + why the issue's literal reading was kept instead — full list on
+  the PR's `## ⚠️ Needs Human Judgment` section>
+
 ### CI
 ✅ All checks passing (final validation post-close-out, Phase 9 / finish-pr Phase 7.6)
 
 ### Copilot review
-- Threads addressed: <N> · Skipped (justified): <N> · Business-rule questions raised: <N> (see below)
+- Threads addressed: <N> · Skipped (justified): <N> · Business-rule disputes overridden: <N> (see
+  `## ⚠️ Needs Human Judgment` above)
 
 ### Devin / DeepWiki
-- Bugs: 0 · Flags evaluated: <N> (<M> fixed, <K> marked not applicable)
+- Bugs: 0 · Flags evaluated: <N> (<M> fixed, <K> marked not applicable, <J> business-rule disputes
+  overridden — see `## ⚠️ Needs Human Judgment` above)
+- Chrome extension: <connected / skipped, unavailable>
 
 ### Coverage
 - New code: <X>% (≥80% required)
@@ -547,8 +563,8 @@ hand afterward.
 - Project board: moved to Done · Sprint doc / README: updated (or: not part of the current sprint)
 
 ### 💸 Token usage / cost
-Logged to issue #<NNN> — <input>/<output> tokens (<cache reads>/<cache writes> cached), ~$<X>
-estimated (pay-as-you-go equivalent, per `/usage`).
+Not tracked — unattended run (zero-interruption mode skips the `/usage` prompt). Run `/usage`
+yourself afterward if you want this run's cost.
 
 ### ⚠️ Not merged
 Everything that can be automated is done — code, tests, docs, issue finalized and archived,
@@ -560,15 +576,15 @@ gh pr merge <N> --merge
 I have not merged it and will not.
 ````
 
-A business-rule stop in Phase 6 or 8 is a **pause**, not the end of the run — if the user answers
-right away in the same conversation, resume the same loop (Phase 6's `pr-comments.md` thread, or
-Phase 8's bug/flag) right where it left off and continue through Phase 9/10 normally, without
-closing the Sessions entry for that brief gap. If instead this is reported and the conversation
-ends before an answer comes back, close the Sessions entry (Phase 2's rule) before reporting, since
-there's no guarantee *when* — or in which conversation — the answer arrives; a resumed run then
-opens a fresh Sessions entry rather than reusing this one. Either way, while it's still unanswered,
-that's what's blocking close-out: say so plainly, skip Phase 9 entirely (there's nothing ready to
-close out yet), and print only what's blocking instead of the full report above.
+Business-rule disputes from Copilot or Devin no longer pause the run (see "The zero-interruption
+rule") — they're overridden in place, logged under `## ⚠️ Needs Human Judgment`, and the pipeline
+continues straight through Phase 9/10 in the same pass. What can still end a run before Phase 10
+reaches this report: the safety caps (Phase 5's CI-failure cap, Phase 8's Devin-cycle cap), and any
+stop reached during Phase 9's delegation to `finish-pr.md`'s Phases 0–2 (see Phase 2's
+Session-closing rule and Phase 9's own notes above for the non-exhaustive list of which conditions
+that covers). Every one of those closes the Sessions entry (Phase 2's rule) and reports what
+happened before ending the run, since none of them are judgment calls to resolve — they're either a
+protective limit on a runaway loop or a precondition that genuinely isn't met yet.
 
 ---
 
