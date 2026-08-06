@@ -6,7 +6,7 @@ status: In Progress
 created: 2026-07-31
 started: 2026-07-31
 completed:
-last_updated: 2026-07-31
+last_updated: 2026-08-05
 
 base_branch: main
 base_commit: 4ac51ff
@@ -136,6 +136,7 @@ between parallel agents.
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
 | 2026-07-31 | #388 | Add /issue slash command for end-to-end autonomous issue delivery | Already implemented ad hoc while working the sprint's issue-delivery workflow; filed and tracked here after the fact rather than left undocumented | `.claude/commands/issue.md` added, PR #389 open |
+| 2026-08-05 | #404 | Make /issue run fully unattended — zero-interruption mode | Discovered while using `/issue` in practice — every remaining `AskUserQuestion` stop blocks the eventual goal of a scheduled loop that resolves newly-assigned issues with nobody watching; filed and fixed same-session rather than left as a known gap | `.claude/commands/issue.md` rewritten, PR #405 ready to merge |
 
 ## 6. Value Ranking
 
@@ -316,6 +317,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ⏳ | #381 | Not started | — | — | — | — |
 | ⏳ | #380 | Not started | — | — | — | — |
 | ✅ | #388 (Opportunistic, §5.4) | Added `/issue` slash command composing `/start-issue`, `/pr-comments`, and `/finish-pr` into a single autonomous delivery pipeline — PR open, not yet merged | PR #389 | — | 9.43h | 6 Copilot review rounds + 6 Devin/DeepWiki scan rounds, all defects resolved (no business-rule disputes); PR ready, merge pending |
+| ✅ | #404 (Opportunistic, §5.4) | Rewrote `/issue` (`.claude/commands/issue.md`) to remove all 5 `AskUserQuestion` stop points — ambiguities and reviewer business-rule disputes now resolve autonomously per the issue's literal text, logged in a new `## ⚠️ Needs Human Judgment` PR section; Chrome-extension-unavailable auto-skips; cost logging skipped entirely — PR open, not yet merged | PR #405 | — | 1.5h | 11/11 CI checks passing; 1 Copilot thread resolved (Phase 1/Phase 4 assumption-heading mismatch); Devin/DeepWiki 0 bugs (3 defects self-caught via manual review before the automated scan) — 2 non-blocking Investigate flags remain (Sessions-entry resume guidance, finish-pr delegation language audit); PR ready, merge pending |
 
 ## 14. Quality Results
 
