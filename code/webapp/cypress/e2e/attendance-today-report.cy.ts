@@ -73,11 +73,13 @@ it("renders the employee table with headers", () => {
 
 it("shows 'A tiempo' badge for employee checked in on time (EMP-001)", () => {
   // EMP-001 Carlos Mendoza is seeded with check-in at 13:00 (exactly on schedule)
+  cy.contains("Mendoza").scrollIntoView();
   cy.contains("Mendoza").closest("tr").contains("A tiempo").should("be.visible");
 });
 
 it("shows 'Tardanza' badge for late employee (EMP-002)", () => {
   // EMP-002 María García is seeded with check-in at 13:15 (+15 min late)
+  cy.contains("García").scrollIntoView();
   cy.contains("García").closest("tr").contains("Tardanza").should("be.visible");
 });
 
