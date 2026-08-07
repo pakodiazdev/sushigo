@@ -37,12 +37,13 @@ public repo), a **High**-value Attendance Today correctness bug (`#358`), and fi
 technical-debt Issues already open on the backlog (`#357`, `#360`, `#365`, `#382`, `#383`) plus
 two small Low-tier cleanups (`#376`, `#385`).
 
-**Progress as of 2026-08-07:** 8 of 14 scoped Issues completed (57.1%) — `#384` (Critical
+**Progress as of 2026-08-07:** 9 of 14 scoped Issues completed (64.3%) — `#384` (Critical
 `APP_KEY` security exposure, PR #393), `#385` (SonarCloud `Readonly` code-smell cleanup, PR
 #391), `#358` (Attendance Today "Ausentes" correctness bug, PR #395), `#376` (dead item Type
 selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379`
-(Platillos dishes backend domain, PR #394), `#377` (unified media upload system, PR #392), and
-`#382` (daily report employee table `DataGrid` migration, PR #408), all open and ready for merge.
+(Platillos dishes backend domain, PR #394), `#377` (unified media upload system, PR #392),
+`#382` (daily report employee table `DataGrid` migration, PR #408), and `#381` (Platillos
+dishes seed data — Testing/Fakes/Development, PR #406), all open and ready for merge.
 
 File-conflict analysis (§9) found **zero shared-file collisions** among all 14 Issues — every
 Issue touches a distinct set of files or a distinct route. The only real ordering constraints are
@@ -99,7 +100,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
-| Progress (Issues completed) | 8 / 14 (57.1%) as of 2026-08-07 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), `#376` (dead item Type selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379` (Platillos dishes backend domain, PR #394), `#377` (unified media upload system, PR #392), and `#382` (daily report employee table `DataGrid` migration, PR #408) implemented; all open, ready for merge |
+| Progress (Issues completed) | 9 / 14 (64.3%) as of 2026-08-07 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), `#376` (dead item Type selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379` (Platillos dishes backend domain, PR #394), `#377` (unified media upload system, PR #392), `#382` (daily report employee table `DataGrid` migration, PR #408), and `#381` (Platillos dishes seed data, PR #406) implemented; all open, ready for merge |
 
 ## 5. Scope
 
@@ -181,7 +182,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
 | ⏳ | #378 | Build a reusable media gallery uploader component (frontend) | High | 3h | 6h | — | — | Hard dependency: needs #377's upload endpoint merged |
-| ⏳ | #381 | Seed Platillos (dishes) data — Testing/Fakes/Development | Medium | 2h | 4h | — | — | Hard dependency: needs #379's tables/models merged |
+| ✅ | #381 | Seed Platillos (dishes) data — Testing/Fakes/Development | Medium | 2h | 4h | 37.1h | PR #406 | Testing/DishesTestSeeder, Fakes/FakeDishesSeeder, Development/DishCategorySeeder+DishSeeder (9 categories, 36 dishes) all registered and tested; two independent review rounds (Devin + human) fixed a soft-delete restore bug and moved menu data to config/seeders.php; PR ready, merge pending |
 |  |  | **Round total** |  | **5h** | **10h** | **—** |  |  |
 
 ### Round 3 — Platillos: catalog UI
@@ -314,7 +315,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ✅ | #385 | Wrapped `PropertyItem`/`InfoItem` props in `Readonly<...>` across 3 inventory detail components, clearing all 4 open SonarCloud `typescript:S6759` code smells | PR #391 | — | 0.2h | Pure type-annotation change, no runtime behavior change; 24/24 existing Vitest tests passing, lint + typecheck clean; CI 12/12 green, Copilot 0 comments, Devin/DeepWiki 0 bugs/0 flags on first push; PR ready, merge pending |
 | ✅ | #376 | Removed the Type (Insumo/Producto/Activo) selector from `item-form.tsx` and `product-wizard.tsx`; new items now default to `type: 'PRODUCTO'` without asking the user, and editing an existing item preserves its current type unchanged — PR open, not yet merged | PR #396 | — | 12.7h | 37 Vitest tests updated/passing (86%+ coverage on touched files), lint + typecheck clean, no backend changes; 1 Copilot review comment addressed (brittle select-count assertion swapped for a label-absence check); Devin/DeepWiki 0 bugs, 3 informational-only flags evaluated and found not applicable; CI 12/12 green — PR ready, merge pending |
 | ⏳ | #378 | Not started | — | — | — | — |
-| ⏳ | #381 | Not started | — | — | — | — |
+| ✅ | #381 | Built Testing/DishesTestSeeder (2 categories, 3 deterministic dishes covering every extras shape), Fakes/FakeDishesSeeder (factory volume generator), and Development/DishCategorySeeder+DishSeeder (9 live-menu categories, 36 dishes, extras groups on Ramen/Roll/Alitas) — PR open, not yet merged | PR #406 | — | 37.1h | 19 PHPUnit tests across 3 test files; Copilot review fixed 1 real defect (pre-existing backslash-FQCN violation in DevelopmentSeeder touched by this PR); two Devin/DeepWiki rounds plus one independent human-run code review found: (1) updateOrCreate() excluding soft-deleted rows causing duplicates on re-seed — first fix prevented duplicates but didn't restore trashed rows, corrected with a RestoresTrashedOnUpsert trait; (2) live menu catalog hardcoded in seeder classes instead of config/seeders.php per CLAUDE.md's seeder-data rule — moved to config as compact tuples to avoid reintroducing the duplication problem; (3) minor cleanups (model constants over string literals, exact-name test lookups); SonarCloud new-code duplication (23.9%) required refactoring both seeders into per-category/row-builder methods; a GitHub Actions platform outage and a /rebase-main after #382 merged first both extended wall-clock time; CI 12/12 green — PR ready, merge pending |
 | ⏳ | #380 | Not started | — | — | — | — |
 | ✅ | #388 (Opportunistic, §5.4) | Added `/issue` slash command composing `/start-issue`, `/pr-comments`, and `/finish-pr` into a single autonomous delivery pipeline — PR open, not yet merged | PR #389 | — | 9.43h | 6 Copilot review rounds + 6 Devin/DeepWiki scan rounds, all defects resolved (no business-rule disputes); PR ready, merge pending |
 | ✅ | #404 (Opportunistic, §5.4) | Rewrote `/issue` (`.claude/commands/issue.md`) to remove all 5 `AskUserQuestion` stop points — ambiguities and reviewer business-rule disputes now resolve autonomously per the issue's literal text, logged in a new `## ⚠️ Needs Human Judgment` PR section; Chrome-extension-unavailable auto-skips; cost logging skipped entirely — PR open, not yet merged | PR #405 | — | 1.5h | 11/11 CI checks passing; 1 Copilot thread resolved (Phase 1/Phase 4 assumption-heading mismatch); Devin/DeepWiki 0 bugs (3 defects self-caught via manual review before the automated scan) — 2 non-blocking Investigate flags remain (Sessions-entry resume guidance, finish-pr delegation language audit); PR ready, merge pending |
