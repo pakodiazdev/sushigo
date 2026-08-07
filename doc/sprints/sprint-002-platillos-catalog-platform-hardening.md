@@ -37,12 +37,12 @@ public repo), a **High**-value Attendance Today correctness bug (`#358`), and fi
 technical-debt Issues already open on the backlog (`#357`, `#360`, `#365`, `#382`, `#383`) plus
 two small Low-tier cleanups (`#376`, `#385`).
 
-**Progress as of 2026-08-05:** 7 of 14 scoped Issues completed (50.0%) — `#384` (Critical
+**Progress as of 2026-08-07:** 8 of 14 scoped Issues completed (57.1%) — `#384` (Critical
 `APP_KEY` security exposure, PR #393), `#385` (SonarCloud `Readonly` code-smell cleanup, PR
 #391), `#358` (Attendance Today "Ausentes" correctness bug, PR #395), `#376` (dead item Type
 selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379`
-(Platillos dishes backend domain, PR #394), and `#377` (unified media upload system, PR #392),
-all open and ready for merge.
+(Platillos dishes backend domain, PR #394), `#377` (unified media upload system, PR #392), and
+`#382` (daily report employee table `DataGrid` migration, PR #408), all open and ready for merge.
 
 File-conflict analysis (§9) found **zero shared-file collisions** among all 14 Issues — every
 Issue touches a distinct set of files or a distinct route. The only real ordering constraints are
@@ -99,7 +99,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
-| Progress (Issues completed) | 7 / 14 (50.0%) as of 2026-08-05 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), `#376` (dead item Type selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379` (Platillos dishes backend domain, PR #394), and `#377` (unified media upload system, PR #392) implemented; all open, ready for merge |
+| Progress (Issues completed) | 8 / 14 (57.1%) as of 2026-08-07 — `#384` (Critical `APP_KEY` exposure, PR #393), `#385` (SonarCloud cleanup, PR #391), `#358` (Attendance Today "Ausentes" bug, PR #395), `#376` (dead item Type selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379` (Platillos dishes backend domain, PR #394), `#377` (unified media upload system, PR #392), and `#382` (daily report employee table `DataGrid` migration, PR #408) implemented; all open, ready for merge |
 
 ## 5. Scope
 
@@ -169,7 +169,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 | ✅ | #358 | Employees on vacation or a scheduled rest day today don't appear under "Ausentes" | High | 3h | 6h | 5.2h | PR #395 | `today_vacation` backend field + `isAbsentRow`/`isHiddenFromGrid` frontend fallback; PR ready, merge pending |
 | ⏳ | #360 | Migrate remaining now()/new Date() usages to ApplicationClock | Medium | 4h | 8h | — | — | Wide file surface (Leaves/CashAdjustments/Inventory backend, Employees frontend hooks) but none overlap other sprint Issues |
 | ✅ | #383 | Migrate Payroll Periods list/detail tables to the shared DataGrid component | Medium | 3h | 6h | 12.1h | PR #398 | List page migrated to `DataGrid<T>`; detail page's employee list kept as cards (expand/collapse can't map to `DataGrid`'s row model) and restyled to semantic tokens; PR ready, merge pending |
-| ⏳ | #382 | Migrate the daily report employee table to the shared DataGrid component | Medium | 2h | 4h | — | — | `attendance/reports/*`; independent of #383 |
+| ✅ | #382 | Migrate the daily report employee table to the shared DataGrid component | Medium | 2h | 4h | 2.6h | PR #408 | `employee-table-section.tsx` migrated to `DataGrid<T>`, `employee-row.tsx` removed, skeleton loading added; PR ready, merge pending |
 | ⏳ | #357 | Unify card exit/transition animation across all Attendance Today state changes | Medium | 2h | 4h | — | — | `attendance/index.tsx` + `-use-today-attendance-page.ts`; distinct files from #358 |
 | ⏳ | #365 | [Convention] Run only linters + delivered tests locally; leave full-suite regression check to CI | Medium | 1h | 2h | — | — | Docs only (`doc/conventions/`, `doc/TESTING.md`); no estimate in Issue body — agent-estimated, see §12 |
 | ✅ | #385 | Clear SonarCloud code-smell debt: mark webapp InfoItem/PropertyItem props as Readonly | Low | 0.5h | 1h | 0.2h | PR #391 | `inventory/item-details.tsx`, `location-details.tsx`, `variant-details.tsx`; conflict-free filler; PR ready, merge pending |
@@ -308,7 +308,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ✅ | #358 | Added `today_vacation` to `TodayAttendanceController`'s response and updated `isAbsentRow`/`isHiddenFromGrid` so vacation/scheduled-rest-day employees classify as "Ausente" from the start of the day without an Attendance record — PR open, not yet merged | PR #395 | — | 5.2h | 25 new/updated PHPUnit assertions, 248 Vitest passing, 5/5 new + 15/15 regression Cypress specs (dev-lab E2E stack); Copilot review fixed 1 real defect (fallback misclassifying an actively-working employee); Devin/DeepWiki review surfaced 1 legitimate UX tradeoff (rest-day visibility in default grid), resolved via a user decision rather than a silent code change; CI 13/13 green — PR ready, merge pending |
 | ⏳ | #360 | Not started | — | — | — | — |
 | ✅ | #383 | Migrated the Payroll Periods list page to `DataGrid<T>` (built-in pagination replacing the manual prev/next pager) and restyled `-employee-pay-row.tsx` to semantic tokens; the detail page's expand/collapse employee list stayed as cards since it can't map onto `DataGrid`'s one-row-per-item model — PR open, not yet merged | PR #398 | — | 12.1h | 52 Vitest tests (2 new component test files) + 20 Cypress tests across 6 specs (dev-lab E2E stack) passing; Copilot review fixed 1 real defect (test relying on DataGrid's nav DOM order); Devin/DeepWiki 0 bugs across 2 scan rounds, 1 flag fixed (English pagination-footer fallback), 3 flags evaluated as out-of-scope/matching established convention; CI 12/12 green — PR ready, merge pending |
-| ⏳ | #382 | Not started | — | — | — | — |
+| ✅ | #382 | Migrated `employee-table-section.tsx` (daily "Reporte Operacional de Hoy" employee table) to `DataGrid<T>` with a `Column<T>[]` definition, removed `employee-row.tsx` folding its per-cell markup into column renderers, and added per-column skeleton loading (a capability the old table never had) — PR open, not yet merged | PR #408 | — | 2.6h | 11 Vitest tests (including a skeleton-loading assertion that fails against the pre-migration table) + 13 Cypress tests across 2 specs (dev-lab E2E stack) passing; Copilot review fixed 1 real defect (check-in time bypassing the centralized `formatTimeInFrontendTz()` resolver); Devin/DeepWiki 0 bugs across 2 scan rounds, 1 flag fixed (`scrollIntoView()` consistency across all row assertions), 5 flags evaluated as intentional consequences of adopting the shared component; CI 12/12 green — PR ready, merge pending |
 | ⏳ | #357 | Not started | — | — | — | — |
 | ⏳ | #365 | Not started | — | — | — | — |
 | ✅ | #385 | Wrapped `PropertyItem`/`InfoItem` props in `Readonly<...>` across 3 inventory detail components, clearing all 4 open SonarCloud `typescript:S6759` code smells | PR #391 | — | 0.2h | Pure type-annotation change, no runtime behavior change; 24/24 existing Vitest tests passing, lint + typecheck clean; CI 12/12 green, Copilot 0 comments, Devin/DeepWiki 0 bugs/0 flags on first push; PR ready, merge pending |

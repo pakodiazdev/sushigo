@@ -54,6 +54,7 @@ beforeEach(() => {
 // ── Status badge tests ───────────────────────────────────────────────────────
 
 it("shows 'A tiempo' for an employee who checked in on time (EMP-001)", () => {
+  cy.contains("Mendoza").scrollIntoView();
   cy.contains("Mendoza")
     .closest("tr")
     .contains("A tiempo")
@@ -61,6 +62,7 @@ it("shows 'A tiempo' for an employee who checked in on time (EMP-001)", () => {
 });
 
 it("shows 'Tardanza 15 min' for an employee who arrived late (EMP-002)", () => {
+  cy.contains("García").scrollIntoView();
   cy.contains("García")
     .closest("tr")
     .contains("Tardanza 15 min")
@@ -68,6 +70,7 @@ it("shows 'Tardanza 15 min' for an employee who arrived late (EMP-002)", () => {
 });
 
 it("shows 'No registrado' for an employee with no attendance record (EMP-003)", () => {
+  cy.contains("López").scrollIntoView();
   cy.contains("López")
     .closest("tr")
     .contains("No registrado")
