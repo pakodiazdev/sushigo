@@ -40,6 +40,39 @@ vi.mock('@/components/ui/slide-panel', () => ({
     },
 }))
 
+// Mock MediaGalleryUploader — its own behavior is covered by
+// src/components/media/__tests__/*; here we only need to verify item-form
+// wires its onChange/onBusyChange callbacks into the form's state.
+vi.mock('@/components/media', () => ({
+    MediaGalleryUploader: ({
+        disabled,
+        onChange,
+        onBusyChange,
+    }: {
+        disabled?: boolean
+        onChange?: (galleryId?: string, ownerToken?: string) => void
+        onBusyChange?: (isBusy: boolean) => void
+    }) => (
+        <>
+            <span data-testid="media-gallery-uploader-disabled-stub">{String(!!disabled)}</span>
+            <button
+                type="button"
+                data-testid="media-gallery-uploader-stub"
+                onClick={() => onChange?.('gallery-123', 'owner-token-123')}
+            >
+                Simulate upload
+            </button>
+            <button
+                type="button"
+                data-testid="media-gallery-uploader-busy-stub"
+                onClick={() => onBusyChange?.(true)}
+            >
+                Simulate upload in progress
+            </button>
+        </>
+    ),
+}))
+
 const defaultProps = {
     item: null,
     onSuccess: vi.fn(),
@@ -196,6 +229,44 @@ describe('ItemForm', () => {
 
             expect(skuInput.disabled).toBe(true)
         })
+
+        it('does not render the MediaGalleryUploader — uploading here would silently replace the item\'s existing photos', () => {
+            const item = {
+                id: 1,
+                sku: 'SAL-001',
+                name: 'Salt',
+                description: '',
+                type: 'INSUMO' as const,
+                is_stocked: true,
+                is_perishable: false,
+                is_active: true,
+                is_manufactured: false,
+                created_at: '',
+                updated_at: '',
+            }
+            const { queryByTestId } = render(<ItemForm {...defaultProps} item={item} />)
+
+            expect(queryByTestId('media-gallery-uploader-stub')).toBeNull()
+        })
+
+        it('shows an explanatory note in place of the uploader', () => {
+            const item = {
+                id: 1,
+                sku: 'SAL-001',
+                name: 'Salt',
+                description: '',
+                type: 'INSUMO' as const,
+                is_stocked: true,
+                is_perishable: false,
+                is_active: true,
+                is_manufactured: false,
+                created_at: '',
+                updated_at: '',
+            }
+            const { getByText } = render(<ItemForm {...defaultProps} item={item} />)
+
+            expect(getByText(/Photo management for existing items isn.t available yet/)).toBeDefined()
+        })
     })
 
     describe('form structure', () => {
@@ -283,6 +354,97 @@ describe('ItemForm', () => {
                     expect.objectContaining({ type: 'INSUMO' })
                 )
             )
+        })
+    })
+
+    describe('media gallery wiring', () => {
+        it('renders the MediaGalleryUploader', () => {
+            const { getByTestId } = render(<ItemForm {...defaultProps} />)
+            expect(getByTestId('media-gallery-uploader-stub')).toBeDefined()
+        })
+
+        it('does not wrap the uploader in its own "Photos" label (the uploader renders one already)', () => {
+            const { queryByText } = render(<ItemForm {...defaultProps} />)
+            expect(queryByText('Photos')).toBeNull()
+        })
+
+        it('includes media_gallery_id and owner_token in the submitted payload once the uploader reports them', async () => {
+            const { getByPlaceholderText, getByTestId, container } = render(<ItemForm {...defaultProps} />)
+
+            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+            fireEvent.click(getByTestId('media-gallery-uploader-stub'))
+
+            fireEvent.submit(container.querySelector('form')!)
+
+            await waitFor(() =>
+                expect(mockExecute).toHaveBeenCalledWith(
+                    expect.objectContaining({ media_gallery_id: 'gallery-123', owner_token: 'owner-token-123' })
+                )
+            )
+        })
+
+        it('omits media_gallery_id and owner_token when the uploader was never used', async () => {
+            const { getByPlaceholderText, container } = render(<ItemForm {...defaultProps} />)
+
+            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+
+            fireEvent.submit(container.querySelector('form')!)
+
+            await waitFor(() =>
+                expect(mockExecute).toHaveBeenCalledWith(
+                    expect.objectContaining({ media_gallery_id: undefined, owner_token: undefined })
+                )
+            )
+        })
+
+        it('disables the submit button while the uploader reports it is busy', async () => {
+            const { getByTestId, getByText } = render(<ItemForm {...defaultProps} />)
+
+            fireEvent.click(getByTestId('media-gallery-uploader-busy-stub'))
+
+            await waitFor(() => {
+                const submitButton = getByText('Create Item').closest('button') as HTMLButtonElement
+                expect(submitButton.disabled).toBe(true)
+            })
+        })
+
+        it('does not submit while the uploader is busy, even if the form is otherwise valid', async () => {
+            const { getByPlaceholderText, getByTestId, container } = render(<ItemForm {...defaultProps} />)
+
+            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+            fireEvent.click(getByTestId('media-gallery-uploader-busy-stub'))
+
+            await waitFor(() => {
+                const submitButton = container.querySelector('button[type="submit"]') as HTMLButtonElement
+                expect(submitButton.disabled).toBe(true)
+            })
+
+            // Dispatches the form's submit event directly (as Enter-key submission would),
+            // bypassing the submit button entirely — this only stays blocked because onSubmit
+            // itself checks isSubmitDisabled, not because the button happens to be disabled.
+            fireEvent.submit(container.querySelector('form')!)
+
+            expect(mockExecute).not.toHaveBeenCalled()
+        })
+
+        it('passes disabled=false to the uploader while the form is idle', () => {
+            const { getByTestId } = render(<ItemForm {...defaultProps} />)
+            expect(getByTestId('media-gallery-uploader-disabled-stub').textContent).toBe('false')
+        })
+
+        it('does not show a loading spinner while merely blocked by the uploader (e.g. an unresolved upload error) — nothing is actually being saved', async () => {
+            const { getByTestId, getByText } = render(<ItemForm {...defaultProps} />)
+
+            fireEvent.click(getByTestId('media-gallery-uploader-busy-stub'))
+
+            await waitFor(() => {
+                const submitButton = getByText('Create Item').closest('button') as HTMLButtonElement
+                expect(submitButton.disabled).toBe(true)
+                expect(submitButton.querySelector('.animate-spin')).toBeNull()
+            })
         })
     })
 })

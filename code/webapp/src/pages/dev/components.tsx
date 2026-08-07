@@ -15,7 +15,7 @@ function ComponentsCatalogPage() {
     <PageContainer>
       <PageHeader
         title="Componentes"
-        description="Catálogo de los componentes reutilizables en src/components/ui/. Solo visible en desarrollo (npm run dev)."
+        description="Catálogo de los componentes reutilizables (src/components/ui/ y otros paquetes de componentes compartidos, como src/components/media/). Solo visible en desarrollo (npm run dev)."
       />
 
       <p className="text-sm text-muted-foreground">

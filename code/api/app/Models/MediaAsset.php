@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class MediaAsset extends Model
 {
@@ -41,18 +42,50 @@ class MediaAsset extends Model
     }
 
     /**
-     * Get the full URL for this media asset. Wrapped in url(): the default
-     * 'local' disk (config/filesystems.php) has no 'url' key, so Storage::url()
-     * returns a host-relative path via Laravel's serve route — correct for a
-     * same-origin app, but broken here since the API (api.sushigo.local) and
-     * webapp (sushigo.local) are different origins, so a relative path
-     * resolves against the wrong one. url() turns a relative path into an
-     * absolute one anchored at APP_URL, and leaves an already-absolute URL
-     * (e.g. the 's3' disk's) untouched — safe for both without branching on
-     * which disk is active.
+     * Get the full URL for this media asset.
+     *
+     * Only a 'local'-driver disk with 'serve' => true and a non-public
+     * 'visibility' is routed through Laravel's own protected serve route
+     * (config/filesystems.php — see Illuminate\Filesystem\FilesystemServiceProvider)
+     * — that's the only case where Storage::url() alone (no signature) 403s,
+     * since ServeFile::hasValidSignature() requires a valid *relative*
+     * signature unless the disk is public. temporarySignedRoute(...,
+     * absolute: false) produces the signature that route actually checks.
+     *
+     * Every other disk (s3, or a 'local' disk with 'visibility' => 'public')
+     * is served directly by Storage::url() without going through that route
+     * at all, so no signature applies there. The disk's driver/config is
+     * the right discriminator for this, not whether a 'url' key happens to
+     * be set — the 's3' disk's 'url' (env('AWS_URL')) is optional; S3 builds
+     * a fully-qualified URL from the bucket/endpoint on its own when it's
+     * absent, and no 'storage.s3' route exists to fall back on (that route
+     * is only ever registered for local-driver disks), so misreading a null
+     * 'url' as "needs signing" would throw a RouteNotFoundException instead
+     * of returning a link.
+     *
+     * url() anchors an already-relative signed path at APP_URL, and leaves
+     * an already-absolute URL (e.g. the 's3' disk's) untouched — safe for
+     * both without branching again, since the API (api.sushigo.local) and
+     * webapp (sushigo.local) are different origins.
      */
     public function getUrlAttribute(): string
     {
+        $disk = config('filesystems.default');
+        $diskConfig = config("filesystems.disks.{$disk}", []);
+
+        $isServedThroughApp = ($diskConfig['driver'] ?? null) === 'local'
+            && ($diskConfig['serve'] ?? false)
+            && ($diskConfig['visibility'] ?? 'private') !== 'public';
+
+        if ($isServedThroughApp) {
+            return url(URL::temporarySignedRoute(
+                'storage.'.$disk,
+                now()->addHours(24),
+                ['path' => $this->path],
+                absolute: false
+            ));
+        }
+
         return url(Storage::url($this->path));
     }
 
