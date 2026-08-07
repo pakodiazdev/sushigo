@@ -2,6 +2,7 @@ import { apiClient } from '@/lib/api-client'
 import type {
   InventoryLocation,
   Item,
+  ItemMediaAttachment,
   ItemVariant,
   Stock,
   StockMovement,
@@ -38,10 +39,10 @@ export const itemApi = {
   get: (id: number) =>
     api.get<EntityResponse<Item>>(`/items/${id}`),
 
-  create: (data: Partial<Item>) =>
+  create: (data: Partial<Item> & Partial<ItemMediaAttachment>) =>
     api.post<EntityResponse<Item>>('/items', data),
 
-  update: (id: number, data: Partial<Item>) =>
+  update: (id: number, data: Partial<Item> & Partial<ItemMediaAttachment>) =>
     api.put<EntityResponse<Item>>(`/items/${id}`, data),
 
   delete: (id: number) =>

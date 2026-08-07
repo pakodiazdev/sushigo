@@ -22,7 +22,14 @@ describe('catalogSections', () => {
       for (const entry of section.entries) {
         expect(entry.name).toBeTruthy()
         expect(entry.description).toBeTruthy()
-        expect(entry.importPath).toMatch(/^@\/components\/ui\//)
+        // ui/ holds the generic design-system atoms; media/ (and any future
+        // sibling reusable-but-not-generic package) holds components that
+        // are reusable across domains without being part of the design
+        // system itself — both belong in this catalog, a one-off
+        // domain-specific component (e.g. src/components/inventory/) does
+        // not. (\/|$) also allows importing straight from a package's own
+        // barrel (e.g. `@/components/media`, no trailing file segment).
+        expect(entry.importPath).toMatch(/^@\/components\/(ui|media)(\/|$)/)
         expect(entry.code).toBeTruthy()
       }
     }

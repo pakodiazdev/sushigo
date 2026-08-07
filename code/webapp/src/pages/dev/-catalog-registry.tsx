@@ -636,4 +636,18 @@ export const catalogSections: CatalogSection[] = [
       },
     ],
   },
+  {
+    id: 'media',
+    title: 'Media',
+    entries: [
+      {
+        id: 'media-gallery-uploader',
+        name: 'MediaGalleryUploader',
+        description: 'Subida de fotos/video con drag-and-drop, miniaturas, reordenar, marcar principal y eliminar — envuelve el flujo upload-first/attach-on-save del sistema de media (#377). Item es el primer adoptante (#378); Employee/Dish le siguen con la misma forma.',
+        importPath: '@/components/media',
+        code: `<MediaGalleryUploader\n  disabled={isSubmitting}\n  onChange={(galleryId, ownerToken) => {\n    setValue('media_gallery_id', galleryId)\n    setValue('owner_token', ownerToken)\n  }}\n  onBusyChange={setIsUploaderBusy}\n/>`,
+        note: 'No se renderiza en vivo aquí: a diferencia de los demás demos de esta página, cada subida hace un POST real a /media/upload contra el backend (igual que RestDayPicker arriba) — mostrarlo en vivo rompería la premisa de este catálogo de no tener efectos secundarios. Pruébalo end-to-end en Inventario → Items → Item Rápido (solo al crear un ítem nuevo, no al editar uno existente — ver el Known Limitation en doc/architecture/media/media-architecture.en.md §9).',
+      },
+    ],
+  },
 ]

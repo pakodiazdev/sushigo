@@ -74,6 +74,29 @@ class MediaUploadTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_a_signed_url_that_is_actually_fetchable(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        $response = $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('photo.jpg'),
+            'owner_token' => 'token-1',
+        ]);
+
+        $relativeUrl = substr($response->json('data.url'), strlen(config('app.url')));
+
+        // Regression guard: the 'local' disk's Laravel-registered serve route
+        // (config/filesystems.php's 'serve' => true) 403s any request
+        // without a valid *relative* signature, since the disk isn't
+        // 'visibility' => 'public' (Illuminate\Filesystem\ServeFile). A plain
+        // Storage::url() path carries no signature at all, so a fully
+        // authenticated, permitted admin used to get a 403 fetching a URL
+        // this very endpoint just handed back — assertJsonStructure alone
+        // (above) can't catch that, since it never fetches the URL.
+        $this->get($relativeUrl)->assertOk();
+    }
+
+    #[Test]
     public function it_reuses_the_existing_gallery_when_gallery_id_given(): void
     {
         Passport::actingAs($this->adminUser());

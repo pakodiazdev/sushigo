@@ -32,6 +32,17 @@ export interface Item {
   updated_at?: string
 }
 
+/**
+ * Request-only fields accepted by POST/PUT /items to attach a media gallery — never present on
+ * a GET response, so kept out of `Item` itself (see doc/conventions/backend/media-uploads.md).
+ */
+export interface ItemMediaAttachment {
+  /** Gallery public_id (ULID) to attach */
+  media_gallery_id?: string
+  /** Required alongside media_gallery_id only while that gallery is still unattached */
+  owner_token?: string
+}
+
 // Item Variant Types
 export interface ItemVariant {
   id: number
