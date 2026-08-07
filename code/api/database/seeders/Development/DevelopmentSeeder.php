@@ -2,10 +2,19 @@
 
 namespace Database\Seeders\Development;
 
+use Database\Seeders\BankAccountSeeder;
+use Database\Seeders\BranchSeeder;
+use Database\Seeders\CashRegisterSeeder;
+use Database\Seeders\CashTerminalSeeder;
 use Database\Seeders\HolidaySeeder;
+use Database\Seeders\InventoryLocationSeeder;
+use Database\Seeders\LeaveTypeSeeder;
+use Database\Seeders\OperatingUnitSeeder;
 use Database\Seeders\OvertimeLftTierSeeder;
 use Database\Seeders\PunctualityBonusGroupSeeder;
 use Database\Seeders\PunctualityRangeSeeder;
+use Database\Seeders\UnitOfMeasureSeeder;
+use Database\Seeders\UomConversionSeeder;
 use Illuminate\Database\Seeder;
 
 class DevelopmentSeeder extends Seeder
@@ -19,12 +28,12 @@ class DevelopmentSeeder extends Seeder
             PassportClientSeeder::class,
             RoleSeeder::class,
             PermissionSeeder::class,
-            \Database\Seeders\BranchSeeder::class,
-            \Database\Seeders\OperatingUnitSeeder::class,
-            \Database\Seeders\InventoryLocationSeeder::class,
-            \Database\Seeders\CashTerminalSeeder::class,
-            \Database\Seeders\BankAccountSeeder::class,
-            \Database\Seeders\CashRegisterSeeder::class,
+            BranchSeeder::class,
+            OperatingUnitSeeder::class,
+            InventoryLocationSeeder::class,
+            CashTerminalSeeder::class,
+            BankAccountSeeder::class,
+            CashRegisterSeeder::class,
             UserSeeder::class,
             UserRoleSeeder::class,
             AdminEmployeeSeeder::class,
@@ -33,9 +42,11 @@ class DevelopmentSeeder extends Seeder
             ScheduleHistorySeeder::class,
             WageSeeder::class,
             VacationEntitlementSeeder::class,
-            \Database\Seeders\UnitOfMeasureSeeder::class,
-            \Database\Seeders\UomConversionSeeder::class,
-            \Database\Seeders\LeaveTypeSeeder::class,
+            UnitOfMeasureSeeder::class,
+            UomConversionSeeder::class,
+            DishCategorySeeder::class,
+            DishSeeder::class,
+            LeaveTypeSeeder::class,
             AttendanceHistorySeeder::class,
             AttendanceAuditLogSeeder::class,
             PunctualityRangeSeeder::class,
