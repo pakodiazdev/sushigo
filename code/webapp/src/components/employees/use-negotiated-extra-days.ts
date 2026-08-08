@@ -2,31 +2,28 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { negotiatedExtraDayApi } from '@/services/negotiated-extra-day-api'
 import type { ListExtraDaysFilters, NegotiatedExtraDay } from '@/types/negotiated-extra-day'
+import { todayDateCdmx } from '@/lib/datetime'
+import { addDays } from '@/lib/week'
+import { useBusinessDate } from '@/stores/clock.store'
 
-function monthBounds(): { monthStart: string; monthEnd: string } {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
+function monthBounds(today: string): { monthStart: string; monthEnd: string } {
+  const [y, m] = today.split('-') as [string, string]
+  const lastDay = new Date(Number(y), Number(m), 0).getDate()
   return {
     monthStart: `${y}-${m}-01`,
     monthEnd: `${y}-${m}-${String(lastDay).padStart(2, '0')}`,
   }
 }
 
-function tomorrowIso(): string {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
-  ].join('-')
+function tomorrowIso(today: string): string {
+  return addDays(today, 1)
 }
 
 export function useNegotiatedExtraDays(employeeId: string) {
-  const { monthStart, monthEnd } = useMemo(monthBounds, [])
-  const tomorrow = useMemo(tomorrowIso, [])
+  const businessDate = useBusinessDate()
+  const today = businessDate ?? todayDateCdmx()
+  const { monthStart, monthEnd } = useMemo(() => monthBounds(today), [today])
+  const tomorrow = useMemo(() => tomorrowIso(today), [today])
 
   const [showHistory, setShowHistory] = useState(false)
   const [historyFilters, setHistoryFilters] = useState<ListExtraDaysFilters>({})

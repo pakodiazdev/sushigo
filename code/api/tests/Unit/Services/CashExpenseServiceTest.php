@@ -13,6 +13,7 @@ use App\Models\CashSession;
 use App\Models\CashTerminal;
 use App\Models\User;
 use App\Services\CashAdjustments\CashExpenseService;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -32,7 +33,7 @@ class CashExpenseServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CashExpenseService;
+        $this->service = new CashExpenseService(app(ApplicationClock::class));
 
         $this->branch = Branch::factory()->create();
         $register = CashRegister::factory()->for($this->branch)->create();

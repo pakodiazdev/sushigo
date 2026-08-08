@@ -1,5 +1,6 @@
 import { formatTime } from '@/lib/time-format'
 import { useApplicationClockStore } from '@/stores/clock.store'
+import { todayDateCdmx } from '@/lib/datetime'
 import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
 
 // ── Schedule summary helpers ──────────────────────────────────────────────────
@@ -11,9 +12,7 @@ import type { ScheduleDay, ScheduleDayOverride } from '@/types/schedule'
  */
 function getLocalDate(): string {
   const businessDate = useApplicationClockStore.getState().clockState?.business_date
-  if (businessDate) return businessDate
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return businessDate ?? todayDateCdmx()
 }
 
 /** Single-letter abbreviations for ISO DOW 1=Mon…7=Sun (Mexican convention). */

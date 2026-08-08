@@ -10,6 +10,7 @@ use App\Http\Resources\Holiday\HolidayDefinitionResource;
 use App\Models\Holiday;
 use App\Models\HolidayDefinition;
 use App\Services\HolidayGeneratorService;
+use App\Support\Clock\ApplicationClock;
 
 /**
  * @OA\Post(
@@ -45,7 +46,10 @@ use App\Services\HolidayGeneratorService;
  */
 class CreateHolidayDefinitionController extends Controller
 {
-    public function __construct(private readonly HolidayGeneratorService $generator) {}
+    public function __construct(
+        private readonly HolidayGeneratorService $generator,
+        private readonly ApplicationClock $clock,
+    ) {}
 
     public function __invoke(StoreHolidayDefinitionRequest $request): HolidayDefinitionResource
     {
@@ -55,7 +59,7 @@ class CreateHolidayDefinitionController extends Controller
 
         if ($definition->is_annual) {
             // Auto-generate instances for current year via lazy generator
-            $this->generator->generateForYear((int) now()->year);
+            $this->generator->generateForYear((int) $this->clock->nowInBusinessTz()->year);
         } elseif (isset($data['date'])) {
             // One-off holiday: create a single instance from the provided date
             Holiday::create([

@@ -7,6 +7,9 @@ import { useToast } from '@/components/ui/toast-context'
 import { scheduleApi } from '@/services/schedule-api'
 import { DAY_LABELS, LUNCH_DURATION_OPTIONS } from '@/types/schedule'
 import type { EmployeeSchedule } from '@/types/schedule'
+import { todayDateCdmx } from '@/lib/datetime'
+import { addDays } from '@/lib/week'
+import { useApplicationClockStore } from '@/stores/clock.store'
 
 // ── Schema ─────────────────────────────────────────────────────────────────────
 
@@ -53,18 +56,14 @@ const DOW_KEYS: DowKey[] = [
  * If today is Monday, returns today.
  */
 export function getNextMonday(): string {
-  const today = new Date()
-  const dayOfWeek = today.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  const businessDate = useApplicationClockStore.getState().clockState?.business_date
+  const today = businessDate ?? todayDateCdmx()
+  const dayOfWeek = new Date(today + 'T00:00:00').getDay() // 0=Sun, 1=Mon, ..., 6=Sat
   // If today is Monday (1), daysUntilMonday = 0
   // If today is Sunday (0), daysUntilMonday = 1
   // If today is Tuesday (2), daysUntilMonday = 6
   const daysUntilMonday = dayOfWeek === 1 ? 0 : (8 - dayOfWeek) % 7 || 7
-  const nextMonday = new Date(today)
-  nextMonday.setDate(today.getDate() + daysUntilMonday)
-  const y = nextMonday.getFullYear()
-  const m = String(nextMonday.getMonth() + 1).padStart(2, '0')
-  const d = String(nextMonday.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  return addDays(today, daysUntilMonday)
 }
 
 /**

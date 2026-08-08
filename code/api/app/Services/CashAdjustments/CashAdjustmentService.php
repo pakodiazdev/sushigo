@@ -8,10 +8,13 @@ use App\Models\CashAdjustment;
 use App\Models\CashAdjustmentLine;
 use App\Models\CashSession;
 use App\Models\User;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 
 class CashAdjustmentService
 {
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     /**
      * Create a new adjustment with lines
      *
@@ -119,7 +122,7 @@ class CashAdjustmentService
         }
 
         $adjustment->posted_by = $user->id;
-        $adjustment->posted_at = now();
+        $adjustment->posted_at = $this->clock->nowUtc();
         $adjustment->save();
 
         return $adjustment;

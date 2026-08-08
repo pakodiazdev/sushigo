@@ -4,6 +4,7 @@ namespace App\Actions\VacationRequests;
 
 use App\Actions\VacationRequests\Concerns\VacationRequestGuards;
 use App\Models\VacationRequest;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +21,11 @@ use Illuminate\Validation\ValidationException;
 class ApproveVacationRequestAction
 {
     use VacationRequestGuards;
+
+    // $clock is used by VacationRequestGuards::finalizeApproval(), a trait
+    // method defined in a separate file that Sonar's per-file analysis
+    // doesn't resolve as a usage of this property.
+    public function __construct(private readonly ApplicationClock $clock) {} // NOSONAR
 
     /**
      * @throws ValidationException

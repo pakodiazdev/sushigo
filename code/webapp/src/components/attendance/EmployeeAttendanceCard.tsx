@@ -30,6 +30,7 @@ import type {
 import { getPhaseCardClass } from './attendance-helpers'
 import { RegisterLeaveDialog } from './RegisterLeaveDialog'
 import { useEmployeeAttendanceCard } from './use-employee-attendance-card'
+import { useApplicationNowMs } from '@/stores/clock.store'
 
 // ── Sub-components ─────────────────────────────────────────────────────���───────
 
@@ -265,10 +266,13 @@ export function RoleBadges({ roles }: Readonly<RoleBadgesProps>) {
 
 interface LeaveChipProps {
     leave: TodayLeave
-    nowMs?: number  // injectable for tests; defaults to Date.now()
+    nowMs?: number  // injectable for tests; defaults to a ticking Application Clock (or Date.now() when unavailable)
 }
 
-export function LeaveChip({ leave, nowMs = Date.now() }: Readonly<LeaveChipProps>) {
+export function LeaveChip({ leave, nowMs }: Readonly<LeaveChipProps>) {
+    const tickingNowMs = useApplicationNowMs()
+    const effectiveNowMs = nowMs ?? tickingNowMs
+
     if (leave.time_mode === 'OPEN_ENDED') {
         return (
             <div
@@ -293,10 +297,10 @@ export function LeaveChip({ leave, nowMs = Date.now() }: Readonly<LeaveChipProps
     let label: string
     if (endsAtMs === null) {
         label = `Permiso ${payLabel} (horario no disponible)`
-    } else if (startsAtMs !== null && startsAtMs > nowMs) {
+    } else if (startsAtMs !== null && startsAtMs > effectiveNowMs) {
         // Leave hasn't started yet — employee will arrive at work when the leave ends
         label = `Llega a las ${formatTime(leave.ends_at)} (permiso ${payLabel})`
-    } else if (endsAtMs < nowMs) {
+    } else if (endsAtMs < effectiveNowMs) {
         // Leave is over — employee left work when the leave started
         label = `Salió a las ${formatTime(leave.starts_at)} (permiso ${payLabel})`
     } else {

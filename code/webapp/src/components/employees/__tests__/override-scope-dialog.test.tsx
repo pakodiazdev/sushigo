@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act, cleanup } from '@testing-library/react'
 import { nextDateForDow, detectConflicts } from '@/components/employees/use-override-scope-dialog'
 import { OverrideScopeDialog } from '@/components/employees/override-scope-dialog'
@@ -258,6 +258,18 @@ describe('OverrideScopeDialog', () => {
 // ── nextDateForDow ─────────────────────────────────────────────────────────────
 
 describe('nextDateForDow', () => {
+  // Pinned mid-day instant (16:00 CDMX / 22:00 UTC, same calendar day in both)
+  // so these tests don't flake during the ~6h/day window where UTC and CDMX
+  // (or the CI runner's local timezone) disagree on the date.
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-02T22:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('returns a string in YYYY-MM-DD format', () => {
     const result = nextDateForDow(1)
     expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/)

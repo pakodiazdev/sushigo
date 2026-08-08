@@ -6,6 +6,7 @@ use App\Actions\VacationRequests\Concerns\VacationRequestGuards;
 use App\Enums\VacationRequestStatus;
 use App\Models\Employee;
 use App\Models\VacationRequest;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -23,6 +24,11 @@ use Illuminate\Support\Facades\DB;
 class RegisterVacationRequestAction
 {
     use VacationRequestGuards;
+
+    // $clock is used by VacationRequestGuards::createApprovedVacationRequest()
+    // and ::persistVacationRequestDates(), trait methods defined in a separate
+    // file that Sonar's per-file analysis doesn't resolve as a usage of this property.
+    public function __construct(private readonly ApplicationClock $clock) {} // NOSONAR
 
     /**
      * @param  array<string, mixed>  $data

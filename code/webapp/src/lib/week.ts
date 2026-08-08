@@ -18,7 +18,8 @@
  *    next month.
  */
 
-import { getFrontendTimezone } from './timezone'
+import { todayDateCdmx } from './datetime'
+import { useApplicationClockStore } from '@/stores/clock.store'
 
 const WEEK_START_DAY = Number.parseInt(import.meta.env.VITE_WEEK_START_DAY ?? '1', 10)
 
@@ -42,14 +43,14 @@ function toIsoDate(d: Date): string {
   return `${year}-${month}-${day}`
 }
 
-/** Today's date as observed in the business timezone — "YYYY-MM-DD". */
+/**
+ * Today's date as observed in the business timezone — "YYYY-MM-DD".
+ * Prefers the Application Clock store's `business_date` (honours simulated
+ * time) and falls back to the browser clock only when the store hasn't
+ * loaded yet.
+ */
 function todayInBusinessTz(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: getFrontendTimezone(),
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
+  return useApplicationClockStore.getState().clockState?.business_date ?? todayDateCdmx()
 }
 
 /** Shifts a `YYYY-MM-DD` date string by `n` days (negative to go back). */

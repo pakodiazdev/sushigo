@@ -123,7 +123,7 @@ trait LeaveGuards
      */
     private function persistLeaveDates(Leave $leave, array $dates): void
     {
-        $now = now();
+        $now = $this->clock->nowUtc();
 
         $leave->dates()->insert(array_map(fn (string $date) => [
             'leave_id' => $leave->id,

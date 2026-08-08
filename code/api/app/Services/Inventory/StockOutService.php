@@ -14,11 +14,14 @@ use App\Models\StockMovement;
 use App\Models\StockMovementLine;
 use App\Models\UnitOfMeasure;
 use App\Services\Inventory\Concerns\ConvertsUomQuantities;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 
 class StockOutService
 {
     use ConvertsUomQuantities;
+
+    public function __construct(private readonly ApplicationClock $clock) {}
 
     /**
      * Register a stock outbound movement (SALE or CONSUMPTION)
@@ -104,7 +107,7 @@ class StockOutService
                     'sale_price' => $salePrice,
                     'profit_margin' => $profitMargin,
                 ],
-                'posted_at' => now(),
+                'posted_at' => $this->clock->nowUtc(),
             ]);
 
             // Create movement line

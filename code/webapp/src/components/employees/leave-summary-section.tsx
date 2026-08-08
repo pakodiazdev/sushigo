@@ -221,7 +221,7 @@ interface LeaveSummarySectionProps {
 
 export function LeaveSummarySection({ employeeId, employee }: LeaveSummarySectionProps) {
     const ctx = useLeaveSummarySection(employeeId, employee)
-    const monthLabel = new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
+    const monthLabel = new Date(`${ctx.today}T00:00:00`).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
 
     return (
         <>

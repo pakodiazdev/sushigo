@@ -15,6 +15,11 @@ vi.mock('@/stores/auth.store', () => ({
         }),
 }))
 
+const mockUseBusinessDate = vi.fn<() => string | null>(() => null)
+vi.mock('@/stores/clock.store', () => ({
+    useBusinessDate: () => mockUseBusinessDate(),
+}))
+
 import { useRehireForm } from '../use-rehire-form'
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -25,6 +30,7 @@ describe('useRehireForm', () => {
         vi.setSystemTime(new Date('2026-04-15T12:00:00'))
         mockCurrentBranch.mockReturnValue({ id: 1, name: 'Central' })
         mockAvailableBranches.mockReturnValue([{ id: 1, name: 'Central' }])
+        mockUseBusinessDate.mockReturnValue(null)
     })
 
     afterEach(() => {
@@ -90,5 +96,34 @@ describe('useRehireForm', () => {
         // Current date should be valid
         const isValid = await result.current.form.trigger('start_date')
         expect(isValid).toBe(true)
+    })
+
+    describe('syncing start_date when businessDate resolves asynchronously', () => {
+        it('updates the untouched start_date when businessDate arrives after mount', () => {
+            // businessDate starts null (falls back to the pinned 2026-04-15 browser date)
+            const { result, rerender } = renderHook(() => useRehireForm())
+            expect(result.current.form.getValues('start_date')).toBe('2026-04-15')
+
+            // businessDate resolves later to an earlier simulated date
+            mockUseBusinessDate.mockReturnValue('2026-04-10')
+            rerender()
+
+            expect(result.current.form.getValues('start_date')).toBe('2026-04-10')
+        })
+
+        it('does not overwrite start_date once the user has edited it', () => {
+            const { result, rerender } = renderHook(() => useRehireForm())
+
+            act(() => {
+                result.current.form.setValue('start_date', '2026-04-01', { shouldDirty: true })
+            })
+            expect(result.current.form.getValues('start_date')).toBe('2026-04-01')
+
+            // businessDate resolves after the user has already picked a date
+            mockUseBusinessDate.mockReturnValue('2026-04-10')
+            rerender()
+
+            expect(result.current.form.getValues('start_date')).toBe('2026-04-01')
+        })
     })
 })

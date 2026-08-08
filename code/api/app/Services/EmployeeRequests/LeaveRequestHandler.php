@@ -8,6 +8,7 @@ use App\Enums\LeaveStatus;
 use App\Models\EmployeeRequest;
 use App\Models\Leave;
 use App\Models\LeaveType;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -23,6 +24,8 @@ use Illuminate\Validation\ValidationException;
 class LeaveRequestHandler implements RequestHandler
 {
     use LeaveGuards;
+
+    public function __construct(private readonly ApplicationClock $clock) {}
 
     /**
      * @throws ValidationException
@@ -65,7 +68,7 @@ class LeaveRequestHandler implements RequestHandler
             [
                 'status' => LeaveStatus::APPROVED,
                 'approved_by' => $approvedBy,
-                'approved_at' => $employeeRequest->approved_at ?? now(),
+                'approved_at' => $employeeRequest->approved_at ?? $this->clock->nowUtc(),
                 'notes' => $employeeRequest->notes,
             ]
         );

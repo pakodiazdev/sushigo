@@ -3,15 +3,16 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useWageHistory } from '@/services/employee-hooks'
 import { useRequestExtraDay } from '@/services/employee-request-hooks'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useApplicationClockStore } from '@/stores/clock.store'
 
 const extraDayRequestSchema = z.object({
   date: z
     .string()
     .min(1, 'La fecha es requerida')
     .refine((d) => {
-      const now = new Date()
-      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-      return d > localToday
+      const businessDate = useApplicationClockStore.getState().clockState?.business_date
+      return d > (businessDate ?? todayDateCdmx())
     }, 'Solo se permiten fechas futuras'),
   prima_pct: z.number().min(0, 'Mínimo 0%').max(200, 'Máximo 200%'),
   notes: z.string().max(1000).optional(),

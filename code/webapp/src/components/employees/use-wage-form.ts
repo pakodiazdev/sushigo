@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { CreateWageData } from '@/types/wage-history'
 import { calcularNetoDesdebruto, calcularBrutoDesdeNeto } from './use-wage-calculations'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 
 export type ActiveSalaryInput = 'bruto' | 'neto' | 'diario' | null
 
@@ -27,7 +29,8 @@ export interface WageFormActions {
 }
 
 export function useWageForm(): WageFormState & WageFormActions {
-    const today = new Date().toISOString().split('T')[0] ?? ''
+    const businessDate = useBusinessDate()
+    const today = businessDate ?? todayDateCdmx()
 
     const [formData, setFormData] = useState<CreateWageData>({
         hourly_rate: 0,
@@ -42,6 +45,7 @@ export function useWageForm(): WageFormState & WageFormActions {
     const [activeInput, setActiveInput] = useState<ActiveSalaryInput>(null)
     const [errors, setErrors] = useState<Partial<Record<keyof CreateWageData, string>>>({})
     const [weeklySalaryError, setWeeklySalaryError] = useState<string>('')
+    const effectiveFromTouchedRef = useRef(false)
 
     // ─── Handlers Sincronizados ────────────────────────────────────────────────
 
@@ -86,12 +90,22 @@ export function useWageForm(): WageFormState & WageFormActions {
     }, [])
 
     const handleEffectiveFromChange = useCallback((value: string) => {
+        effectiveFromTouchedRef.current = true
         setFormData((prev) => ({ ...prev, effective_from: value }))
     }, [])
 
     const handleNotesChange = useCallback((value: string) => {
         setFormData((prev) => ({ ...prev, notes: value }))
     }, [])
+
+    // businessDate resolves asynchronously, later than the browser-clock
+    // fallback used for the initial state — keep effective_from in sync
+    // while the user hasn't picked a date manually.
+    useEffect(() => {
+        if (!effectiveFromTouchedRef.current) {
+            setFormData((prev) => ({ ...prev, effective_from: today }))
+        }
+    }, [today])
 
     // ─── Actualizar hourly_rate cuando cambia bruto o horas ────────────────────
 

@@ -5,6 +5,7 @@ namespace App\Actions\VacationRequests;
 use App\Actions\VacationRequests\Concerns\VacationRequestGuards;
 use App\Enums\VacationRequestStatus;
 use App\Models\VacationRequest;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +21,8 @@ class RejectVacationRequestAction
 {
     use VacationRequestGuards;
 
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     /**
      * @throws ValidationException
      */
@@ -33,7 +36,7 @@ class RejectVacationRequestAction
             $vacationRequest->update([
                 'status' => VacationRequestStatus::REJECTED,
                 'approved_by' => $rejectedById,
-                'approved_at' => now(),
+                'approved_at' => $this->clock->nowUtc(),
             ]);
 
             return $vacationRequest;

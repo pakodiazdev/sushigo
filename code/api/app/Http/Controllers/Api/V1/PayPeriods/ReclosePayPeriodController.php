@@ -11,6 +11,7 @@ use App\Models\PayPeriod;
 use App\Models\PayPeriodEmployee;
 use App\Models\PunctualityRange;
 use App\Repositories\EmployeeRepository;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -50,6 +51,7 @@ class ReclosePayPeriodController extends Controller
     public function __construct(
         private RecalculatePayPeriodEmployeesAction $recalculate,
         private EmployeeRepository $employeeRepository,
+        private ApplicationClock $clock,
     ) {}
 
     public function __invoke(ReclosePayPeriodRequest $request, PayPeriod $payPeriod): PayPeriodResource
@@ -77,7 +79,7 @@ class ReclosePayPeriodController extends Controller
             $payPeriod->update([
                 'status' => PayPeriod::STATUS_CLOSED,
                 'closed_by' => $request->user()->id,
-                'closed_at' => now(),
+                'closed_at' => $this->clock->nowUtc(),
             ]);
         });
 

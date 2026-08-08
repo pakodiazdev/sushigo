@@ -4,20 +4,20 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { OverrideScope } from './use-create-day-override'
 import type { ScheduleDayOverride } from '@/types/schedule'
+import { todayDateCdmx } from '@/lib/datetime'
+import { addDays } from '@/lib/week'
+import { useApplicationClockStore } from '@/stores/clock.store'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Returns the next calendar date (local) that falls on the given ISO day-of-week (1=Mon … 7=Sun). */
+/** Returns the next calendar date (business tz, honours simulated time) that falls on the given ISO day-of-week (1=Mon … 7=Sun). */
 export function nextDateForDow(dow: number): string {
   const jsTarget = dow === 7 ? 0 : dow
-  const today = new Date()
-  const daysAhead = (jsTarget - today.getDay() + 7) % 7 // 0 = today, >0 = next occurrence
-  const result = new Date(today)
-  result.setDate(today.getDate() + daysAhead)
-  const y = result.getFullYear()
-  const m = String(result.getMonth() + 1).padStart(2, '0')
-  const d = String(result.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  const businessDate = useApplicationClockStore.getState().clockState?.business_date
+  const today = businessDate ?? todayDateCdmx()
+  const todayDow = new Date(today + 'T00:00:00').getDay()
+  const daysAhead = (jsTarget - todayDow + 7) % 7 // 0 = today, >0 = next occurrence
+  return addDays(today, daysAhead)
 }
 
 /**

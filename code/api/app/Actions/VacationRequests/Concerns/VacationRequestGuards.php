@@ -201,7 +201,7 @@ trait VacationRequestGuards
      */
     private function persistVacationRequestDates(VacationRequest $vacationRequest, array $dates): void
     {
-        $now = now();
+        $now = $this->clock->nowUtc();
 
         $vacationRequest->dates()->insert(array_map(fn (string $date) => [
             'vacation_request_id' => $vacationRequest->id,
@@ -239,7 +239,7 @@ trait VacationRequestGuards
         $vacationRequest->update([
             'status' => VacationRequestStatus::APPROVED,
             'approved_by' => $approvedById,
-            'approved_at' => now(),
+            'approved_at' => $this->clock->nowUtc(),
         ]);
 
         $this->createAttendanceRecords($vacationRequest->employee_id, $dates);
@@ -282,7 +282,7 @@ trait VacationRequestGuards
             'status' => VacationRequestStatus::APPROVED,
             'requested_by' => $requestedById,
             'approved_by' => $approvedById,
-            'approved_at' => $approvedAt ?? now(),
+            'approved_at' => $approvedAt ?? $this->clock->nowUtc(),
             'notes' => $notes,
         ]);
 

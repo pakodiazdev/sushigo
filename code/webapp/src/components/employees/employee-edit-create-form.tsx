@@ -8,6 +8,8 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
 import type { Employee, EmployeePositionRole } from '@/types/employee'
 import { Loader2, RefreshCw } from 'lucide-react'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 
 // ─── Schema ────────────────────────────────────────────────────────────────────
 // A single schema shape covers both create and edit modes.
@@ -136,8 +138,9 @@ export function EmployeeEditCreateForm({
 }: Readonly<EmployeeEditCreateFormProps>) {
   const canEditContact = mode === 'create' || isAdmin
 
+  const businessDate = useBusinessDate()
   // Fresh per mount — avoids stale module-level date when the app stays open past midnight.
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const today = useMemo(() => businessDate ?? todayDateCdmx(), [businessDate])
 
   // Rebuild schema whenever assignable roles change (validates role values against server list).
   const schema = useMemo(() => buildSchema(assignableRoles), [assignableRoles])
@@ -190,6 +193,7 @@ export function EmployeeEditCreateForm({
     reset,
     setValue,
     watch,
+    getFieldState,
     formState: { errors },
   } = useForm<EmployeeFormValues>({
     resolver: zodResolver(schema),
@@ -214,6 +218,16 @@ export function EmployeeEditCreateForm({
   useEffect(() => {
     setValue('hasBranch', hasBranch, { shouldValidate: false })
   }, [hasBranch, setValue])
+
+  // businessDate resolves asynchronously, later than the browser-clock
+  // fallback used for baseDefaultValues on first render — keep start_date
+  // in sync while the user hasn't picked a date manually (create mode only).
+  useEffect(() => {
+    if (mode === 'create' && !getFieldState('start_date').isDirty) {
+      setValue('start_date', today, { shouldValidate: false })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, today])
 
   const emailValue = watch('email')
   const rolesValue = watch('roles')

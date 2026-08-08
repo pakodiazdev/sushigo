@@ -5,6 +5,7 @@ namespace App\Actions\Leaves;
 use App\Actions\Leaves\Concerns\LeaveGuards;
 use App\Enums\LeaveStatus;
 use App\Models\Leave;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\DB;
 class RegisterDirectLeaveAction
 {
     use LeaveGuards;
+
+    public function __construct(private readonly ApplicationClock $clock) {}
 
     /**
      * @param  array<string, mixed>  $data  Must include 'dates' (array of date strings)
@@ -46,7 +49,7 @@ class RegisterDirectLeaveAction
                 $this->guardNoExistingWorkedAttendance($employee->id, $dates);
             }
 
-            $attributes['approved_at'] = now();
+            $attributes['approved_at'] = $this->clock->nowUtc();
             $leave = Leave::create($attributes);
             $this->persistLeaveDates($leave, $dates);
 

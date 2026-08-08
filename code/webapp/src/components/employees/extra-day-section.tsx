@@ -12,20 +12,14 @@ import { ExtraDayForm } from './extra-day-form'
 import type { Employee } from '@/types/employee'
 import type { ListExtraDaysFilters, NegotiatedExtraDay } from '@/types/negotiated-extra-day'
 import { useState } from 'react'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useApplicationClockStore } from '@/stores/clock.store'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function todayIso(): string {
-  const d = new Date()
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
-  ].join('-')
-}
-
 function isFuture(dateStr: string): boolean {
-  return dateStr >= todayIso()
+  const businessDate = useApplicationClockStore.getState().clockState?.business_date
+  return dateStr >= (businessDate ?? todayDateCdmx())
 }
 
 function formatDate(dateStr: string): string {
