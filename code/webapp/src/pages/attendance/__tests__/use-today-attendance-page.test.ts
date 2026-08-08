@@ -77,6 +77,28 @@ function makeWrapper() {
   return { queryClient, wrapper }
 }
 
+/**
+ * Same as makeWrapper(), but under <StrictMode> — which the real app renders
+ * under (main.tsx) and which double-invokes setState updater functions in
+ * dev mode to catch impure ones. Used to reproduce bugs that only manifest
+ * under that double-invocation.
+ */
+function makeStrictWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false },
+    },
+  })
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(
+      React.StrictMode,
+      null,
+      React.createElement(QueryClientProvider, { client: queryClient }, children),
+    )
+  return { queryClient, wrapper }
+}
+
 /** Creates a test employee with all required fields */
 function makeEmployee(overrides: Partial<{ id: string; code: string; user: { first_name: string; last_name: string }; roles: string[]; daily_wage: number | null }> = {}) {
   return {
@@ -567,6 +589,7 @@ describe('useTodayAttendancePage', () => {
     vi.mocked(attendanceApi.checkIn).mockResolvedValue({ data: { status: 200, data: {} } } as never)
     vi.mocked(attendanceApi.lunchStart).mockResolvedValue({ data: { status: 200, data: {} } } as never)
     vi.mocked(attendanceApi.lunchReturn).mockResolvedValue({ data: { status: 200, data: {} } } as never)
+    vi.mocked(attendanceApi.checkOut).mockResolvedValue({ data: { status: 200, data: {} } } as never)
   })
 
   afterEach(() => {
@@ -770,6 +793,415 @@ describe('useTodayAttendancePage', () => {
         expect(result.current.pendingCheckInEmployee).toBeNull()
       })
     })
+
+    it('confirmCheckIn plays the exit animation when a fresh check-in moves the card out of the active tab', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(true)
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
+
+      // The pin/exit override clears itself once the timer fires — whether the
+      // card actually leaves `visibleRows` afterward depends on the refetched
+      // `data` reflecting the new bucket, which is covered separately by the
+      // "pin + exit animation" suite below.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+      vi.useRealTimers()
+    })
+
+    it('does not get stuck hidden after the selected date changes mid-animation', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+      expect(result.current.isCardExiting('emp-001')).toBe(true)
+
+      // Manager switches to a different date before the 350ms exit-animation
+      // timer fires. `data` is now a different day's rows, entirely
+      // unrelated to the check-in that was just confirmed on the original
+      // day — the pending override must not survive the switch.
+      act(() => result.current.setSelectedDate('2026-02-24'))
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+      vi.useRealTimers()
+
+      // Without the fix, the timer would still fire against the OLD day's
+      // pinned bucket check, find a permanent mismatch (a past day's data
+      // never changes), and force the row 'hidden' on the newly selected
+      // date too — even though nothing about that date has anything to do
+      // with the original check-in.
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
+    })
+
+    it('does not animate an unrelated card on the newly selected date if the manager switches dates while a check-in is still in flight', async () => {
+      let resolveCheckIn: (value: unknown) => void
+      vi.mocked(attendanceApi.checkIn).mockReturnValueOnce(
+        new Promise((resolve) => { resolveCheckIn = resolve }) as never
+      )
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+      act(() => { result.current.confirmCheckIn('14:00') })
+
+      // Manager switches to a different date BEFORE the in-flight check-in
+      // request resolves — not after, which the existing "changes
+      // mid-animation" test already covers (a timer already armed against
+      // the old day). Here no timer has been armed yet at all: the mutation
+      // itself is still pending when the date changes.
+      act(() => result.current.setSelectedDate('2026-02-24'))
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        resolveCheckIn({ data: { status: 200, data: {} } })
+        await Promise.resolve()
+      })
+
+      // Without the fix, onSuccess would call startExitAnimation for
+      // emp-001 against whatever the NEWLY selected date's data says —
+      // animating and potentially permanently hiding a card on a day the
+      // original check-in has nothing to do with.
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(35_000)
+      })
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
+      vi.useRealTimers()
+    })
+
+    it('does not play the exit animation using a stale tab if the manager switches tabs while check-in is still in flight', async () => {
+      let resolveCheckIn: (value: unknown) => void
+      vi.mocked(attendanceApi.checkIn).mockReturnValueOnce(
+        new Promise((resolve) => { resolveCheckIn = resolve }) as never
+      )
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+      act(() => { result.current.confirmCheckIn('14:00') })
+
+      // Manager switches to the "checkedIn" tab while the request is still in
+      // flight — the row's target bucket ('checkedIn') now matches the active
+      // tab, so once the request resolves it must NOT play the exit animation,
+      // even though the tab was "pending" (a mismatch) at the moment the
+      // request was originally sent.
+      act(() => result.current.toggleFilter('checkedIn'))
+
+      await act(async () => {
+        resolveCheckIn({ data: { status: 200, data: {} } })
+        await Promise.resolve()
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+    })
+
+    it('does not let a card flash back into view when the exit animation finishes before the refetch lands', async () => {
+      // `attendanceApi.daily` is never re-mocked here, so the refetch that
+      // useCheckIn's onSuccess triggers still resolves to the same stale
+      // "pending" row even after the 350ms exit animation completes.
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+      expect(result.current.isCardExiting('emp-001')).toBe(true)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+
+      // Without the fix, the card would reappear here: the override is
+      // cleared and the still-stale (pending) row still matches the "pending"
+      // tab, so it would flash back to full opacity instead of staying gone.
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual([])
+      vi.useRealTimers()
+    })
+
+    it('does not stay hidden forever if the guessed target bucket never materializes — a bounded fallback reveals it', async () => {
+      // `attendanceApi.daily` is never re-mocked, so the row stays "pending"
+      // forever — the exact-match cleanup effect can never fire, since it
+      // requires attendanceBucket(row) === 'checkedIn'. This simulates a
+      // concurrent change (e.g. another manager approving a full-day leave)
+      // routing the row to a bucket other than the one assumed when the exit
+      // animation started, which the exact-match check alone can never recover
+      // from.
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+
+      // 'hidden' forces the row out of the bucket-specific tab it left.
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual([])
+
+      // Without the fallback, the row would stay hidden indefinitely on THIS
+      // tab — the 30s poll keeps returning the same stale "pending" data, so
+      // the exact bucket match never happens. The fallback timer (35s) must
+      // force the card back into view regardless.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(35_000)
+      })
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
+      vi.useRealTimers()
+    })
+
+    it('does not leave "Ver todos" pointing at an equally empty grid while a card is force-hidden', async () => {
+      // Same setup as the fallback test above: `attendanceApi.daily` is never
+      // re-mocked, so the row stays "pending" and the exact-match cleanup
+      // effect can never clear the 'hidden' override on its own.
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+
+      // Still suppressed on the bucket-specific tab it left...
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual([])
+
+      // ...but "Total" (NoMatchesForFilterState's onShowAll target) must NOT
+      // be an equally empty dead end — 'hidden' only guards against a stale
+      // row incorrectly re-matching its OWN bucket-specific tab, which can't
+      // happen on a view that shows every row regardless of bucket.
+      act(() => result.current.toggleFilter('total'))
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
+
+      // Switching back to the bucket-specific tab re-suppresses it, since the
+      // override is still 'hidden' and the underlying data still hasn't
+      // refetched to confirm the new bucket.
+      act(() => result.current.toggleFilter('pending'))
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual([])
+
+      vi.useRealTimers()
+    })
+
+    it('reveals the card once fresh data lands, even if the manager already switched to the tab it now belongs to', async () => {
+      const { wrapper, queryClient } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+      // Still hidden — the refetch hasn't landed yet.
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual([])
+
+      // Manager switches to the tab the employee actually moved to — an
+      // earlier, buggier version of the cleanup effect could never reveal
+      // the card here, since it only cleared 'hidden' when the row did NOT
+      // match the active tab.
+      act(() => result.current.toggleFilter('checkedIn'))
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual([])
+
+      vi.useRealTimers()
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({ attendance: { id: 'att-1', check_in: '2026-02-23T14:00:00Z' } as TodayAttendanceRow['attendance'] }),
+          ],
+        },
+      } as never)
+      await act(async () => {
+        await queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
+      })
+
+      // The cleanup effect needs an extra render/commit cycle to settle after
+      // the refetch lands, which isn't always fully flushed within a single
+      // act() call under heavier parallel load — waitFor tolerates that.
+      await waitFor(() => {
+        expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
+      })
+    })
+
+    it('reveals the card once fresh data lands under <StrictMode> (setCardOverrides updater must stay pure)', async () => {
+      // Same scenario as the test above, but under <StrictMode> — which the
+      // real app renders under (main.tsx) and which double-invokes setState
+      // updater functions in dev mode specifically to catch impure ones. If
+      // the cleanup effect's ref bookkeeping (targetBucketByEmployee) were
+      // mutated INSIDE the setCardOverrides updater instead of in the effect
+      // body, the first invocation would correctly clear the override and
+      // delete the ref entry as a side effect; the second invocation would
+      // then find that entry already gone, compute "nothing to clear", and
+      // React would keep that (wrong) result — leaving the card stuck
+      // 'hidden' only in development.
+      const { wrapper, queryClient } = makeStrictWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual([])
+
+      // Manager switches to the tab the employee actually moved to.
+      act(() => result.current.toggleFilter('checkedIn'))
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual([])
+
+      vi.useRealTimers()
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({ attendance: { id: 'att-1', check_in: '2026-02-23T14:00:00Z' } as TodayAttendanceRow['attendance'] }),
+          ],
+        },
+      } as never)
+      await act(async () => {
+        await queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
+      })
+
+      await waitFor(() => {
+        expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
+      })
+    })
+
+    it('does not get stuck hidden on every tab when the refetch lands before the exit animation finishes', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      const row = makeRow()
+      act(() => result.current.openCheckIn(row))
+
+      // Mocked BEFORE confirming, not after: invalidateQueries fires inside
+      // useCheckIn's onSuccess, and with no artificial network delay on the
+      // mock, that refetch can settle within the same microtask flush as
+      // confirmCheckIn itself — well before the 350ms exit animation timer
+      // even starts ticking. This is the fast-API case the fix targets.
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({ attendance: { id: 'att-1', check_in: '2026-02-23T14:00:00Z' } as TodayAttendanceRow['attendance'] }),
+          ],
+        },
+      } as never)
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckIn('14:00')
+      })
+      expect(result.current.isCardExiting('emp-001')).toBe(true)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+      vi.useRealTimers()
+
+      // Without the fix, the row would now be forced out of every tab via
+      // the 'hidden' override (the hide-time `data` snapshot would already
+      // equal the fresh reference, so the cleanup effect would never see a
+      // later mismatch) — stuck until the next 30s poll happens to change
+      // the reference again. Switching to the tab the employee actually
+      // belongs to must reveal it immediately instead.
+      act(() => result.current.toggleFilter('checkedIn'))
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
+    })
+
+    it('confirmCheckIn does not play the exit animation when correcting an already-recorded check-in', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({ attendance: { id: 'att-1', check_in: '2026-02-23T13:00:00Z' } as TodayAttendanceRow['attendance'] }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('checkedIn'))
+
+      const row = makeRow({ attendance: { id: 'att-1', check_in: '2026-02-23T13:00:00Z' } as TodayAttendanceRow['attendance'] })
+      act(() => result.current.openCheckIn(row))
+      expect(result.current.pendingCheckInCurrentValue).toBe('2026-02-23T13:00:00Z')
+
+      await act(async () => {
+        result.current.confirmCheckIn('14:05')
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+    })
   })
 
   // ── Lunch-start flow tests ───────────────────────────────────────────────────
@@ -865,6 +1297,106 @@ describe('useTodayAttendancePage', () => {
         expect(result.current.pendingLunchStart).toBeNull()
       })
     })
+
+    it('confirmLunchStart plays the exit animation when a fresh lunch-start moves the card out of the active tab', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({ attendance: { id: 'att-1', check_in: '2026-02-23T13:00:00Z' } as TodayAttendanceRow['attendance'] }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('checkedIn'))
+
+      act(() => result.current.openLunchStart(makeEmployee(), 'att-1'))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmLunchStart('14:00')
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(true)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+      vi.useRealTimers()
+    })
+
+    it('confirmLunchStart does not play the exit animation when correcting an already-recorded lunch-start', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({
+              attendance: {
+                id: 'att-1',
+                check_in: '2026-02-23T13:00:00Z',
+                lunch_start: '2026-02-23T16:00:00Z',
+              } as TodayAttendanceRow['attendance'],
+            }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('atLunch'))
+
+      act(() => result.current.openLunchStart(makeEmployee(), 'att-1', '2026-02-23T16:00:00Z'))
+
+      await act(async () => {
+        result.current.confirmLunchStart('16:05')
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+    })
+
+    it('does not incorrectly animate a fresh lunch-start when the row also carries a full-day (OPEN_ENDED) leave, since it stays in the "absent" bucket', async () => {
+      // Checked-in AND a full-day leave was approved after the fact — the row
+      // is still "absent" per isAbsentRow/attendanceBucket regardless of
+      // check-in phase, so the naive 'atLunch' target would be wrong here.
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({
+              attendance: { id: 'att-1', check_in: '2026-02-23T13:00:00Z' } as TodayAttendanceRow['attendance'],
+              today_leave: {
+                id: 'leave-1',
+                time_mode: 'OPEN_ENDED',
+                calculation_mode: 'FIXED_PERCENTAGE',
+                is_paid: true,
+                starts_at: null,
+                ends_at: null,
+                note: null,
+              },
+            }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      // Only bucket with anyone in it is "absent" (per isAbsentRow), so the
+      // smart default lands there.
+      await waitFor(() => expect(result.current.selectedFilter).toBe('absent'))
+
+      act(() => result.current.openLunchStart(makeEmployee(), 'att-1'))
+
+      await act(async () => {
+        result.current.confirmLunchStart('14:00')
+      })
+
+      // The row's real target bucket is 'absent' (matches the active tab), not
+      // the naive 'atLunch' — must NOT play the exit animation.
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+    })
   })
 
   // ── Lunch-return flow tests ──────────────────────────────────────────────────
@@ -959,6 +1491,313 @@ describe('useTodayAttendancePage', () => {
       await waitFor(() => {
         expect(result.current.pendingLunchReturn).toBeNull()
       })
+    })
+
+    it('confirmLunchReturn plays the exit animation when a fresh lunch-return moves the card out of the active tab', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({
+              attendance: {
+                id: 'att-1',
+                check_in: '2026-02-23T13:00:00Z',
+                lunch_start: '2026-02-23T16:00:00Z',
+              } as TodayAttendanceRow['attendance'],
+            }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('atLunch'))
+
+      act(() => result.current.openLunchReturn(makeEmployee(), 'att-1'))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmLunchReturn('17:00')
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(true)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+      vi.useRealTimers()
+    })
+
+    it('confirmLunchReturn does not play the exit animation when correcting an already-recorded lunch-return', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({
+              attendance: {
+                id: 'att-1',
+                check_in: '2026-02-23T13:00:00Z',
+                lunch_start: '2026-02-23T16:00:00Z',
+                lunch_end: '2026-02-23T17:00:00Z',
+              } as TodayAttendanceRow['attendance'],
+            }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('checkedIn'))
+
+      act(() => result.current.openLunchReturn(makeEmployee(), 'att-1', '2026-02-23T17:00:00Z'))
+
+      await act(async () => {
+        result.current.confirmLunchReturn('17:05')
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+    })
+  })
+
+  // ── Check-out flow tests ─────────────────────────────────────────────────────
+
+  describe('check-out flow', () => {
+    it('openCheckOut sets pending data', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openCheckOut(employee, 'att-789')
+      })
+
+      expect(result.current.pendingCheckOut).toEqual({
+        employee,
+        attendanceId: 'att-789',
+      })
+    })
+
+    it('closeCheckOut clears pending data', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openCheckOut(employee, 'att-789')
+      })
+
+      act(() => {
+        result.current.closeCheckOut()
+      })
+
+      expect(result.current.pendingCheckOut).toBeNull()
+    })
+
+    it('confirmCheckOut does nothing if no pending data', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      act(() => {
+        result.current.confirmCheckOut('18:00')
+      })
+
+      expect(attendanceApi.checkOut).not.toHaveBeenCalled()
+    })
+
+    it('confirmCheckOut calls API with correct data', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openCheckOut(employee, 'att-789')
+      })
+
+      await act(async () => {
+        result.current.confirmCheckOut('18:00')
+      })
+
+      await waitFor(() => {
+        expect(attendanceApi.checkOut).toHaveBeenCalledWith(
+          'att-789',
+          expect.objectContaining({
+            check_out: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T18:00:00[+-]\d{2}:\d{2}$/),
+          })
+        )
+      })
+    })
+
+    it('confirmCheckOut clears pending data after success', async () => {
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+      const employee = makeEmployee()
+
+      act(() => {
+        result.current.openCheckOut(employee, 'att-789')
+      })
+
+      await act(async () => {
+        result.current.confirmCheckOut('18:00')
+      })
+
+      await waitFor(() => {
+        expect(result.current.pendingCheckOut).toBeNull()
+      })
+    })
+
+    it('confirmCheckOut plays the exit animation when a fresh check-out moves the card out of the active tab', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({
+              attendance: {
+                id: 'att-1',
+                check_in: '2026-02-23T13:00:00Z',
+                lunch_start: '2026-02-23T16:00:00Z',
+                lunch_end: '2026-02-23T17:00:00Z',
+              } as TodayAttendanceRow['attendance'],
+            }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('checkedIn'))
+
+      act(() => result.current.openCheckOut(makeEmployee(), 'att-1'))
+
+      vi.useFakeTimers()
+      await act(async () => {
+        result.current.confirmCheckOut('22:00')
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(true)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+      vi.useRealTimers()
+    })
+
+    it('confirmCheckOut does not play the exit animation when correcting an already-recorded check-out', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: {
+          data: [
+            makeRow({
+              attendance: {
+                id: 'att-1',
+                check_in: '2026-02-23T13:00:00Z',
+                lunch_start: '2026-02-23T16:00:00Z',
+                lunch_end: '2026-02-23T17:00:00Z',
+                check_out: '2026-02-23T22:00:00Z',
+              } as TodayAttendanceRow['attendance'],
+            }),
+          ],
+        },
+      } as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('done'))
+
+      act(() => result.current.openCheckOut(makeEmployee(), 'att-1', '2026-02-23T22:00:00Z'))
+
+      await act(async () => {
+        result.current.confirmCheckOut('22:05')
+      })
+
+      expect(result.current.isCardExiting('emp-001')).toBe(false)
+    })
+  })
+
+  // ── Mark day status flow ──────────────────────────────────────────────────────
+
+  describe('mark day status flow', () => {
+    it('only marks the acted-on employee busy while their absence write is in flight, not every other card', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: { data: [makeRow(), makeRow({ employee: makeEmployee({ id: 'emp-002' }) })] },
+      } as never)
+
+      let resolveMarkDayStatus: (value: unknown) => void
+      vi.mocked(attendanceApi.markDayStatus).mockReturnValueOnce(
+        new Promise((resolve) => { resolveMarkDayStatus = resolve }) as never
+      )
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+      expect(result.current.markingDayStatusEmployeeIds.size).toBe(0)
+
+      act(() => { void result.current.markDayStatus(makeEmployee({ id: 'emp-001' }), 'ABSENCE') })
+
+      // Only emp-001 (the one actually being marked) should read as busy —
+      // emp-002 must stay fully interactive while emp-001's write is in flight.
+      expect(result.current.markingDayStatusEmployeeIds.has('emp-001')).toBe(true)
+      expect(result.current.markingDayStatusEmployeeIds.has('emp-002')).toBe(false)
+
+      await act(async () => {
+        resolveMarkDayStatus({ data: { status: 200, data: {} } })
+        await Promise.resolve()
+      })
+
+      expect(result.current.markingDayStatusEmployeeIds.size).toBe(0)
+    })
+
+    it('keeps a second employee marked busy even after a first, overlapping absence write settles', async () => {
+      vi.mocked(attendanceApi.daily).mockResolvedValue({
+        data: { data: [makeRow(), makeRow({ employee: makeEmployee({ id: 'emp-002' }) })] },
+      } as never)
+
+      let resolveA: (value: unknown) => void
+      let resolveB: (value: unknown) => void
+      vi.mocked(attendanceApi.markDayStatus)
+        .mockReturnValueOnce(new Promise((resolve) => { resolveA = resolve }) as never)
+        .mockReturnValueOnce(new Promise((resolve) => { resolveB = resolve }) as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      // Manager confirms falta for emp-001, then — before that request returns —
+      // also confirms it for emp-002. Both writes are genuinely in flight at once.
+      act(() => { void result.current.markDayStatus(makeEmployee({ id: 'emp-001' }), 'ABSENCE') })
+      act(() => { void result.current.markDayStatus(makeEmployee({ id: 'emp-002' }), 'ABSENCE') })
+
+      expect(result.current.markingDayStatusEmployeeIds.has('emp-001')).toBe(true)
+      expect(result.current.markingDayStatusEmployeeIds.has('emp-002')).toBe(true)
+
+      // emp-001's write settles first — a single shared "last one wins" marker
+      // would clear to nothing here and falsely re-enable emp-002's card even
+      // though emp-002's own write is still pending.
+      await act(async () => {
+        resolveA({ data: { status: 200, data: {} } })
+        await Promise.resolve()
+      })
+
+      expect(result.current.markingDayStatusEmployeeIds.has('emp-001')).toBe(false)
+      expect(result.current.markingDayStatusEmployeeIds.has('emp-002')).toBe(true)
+
+      await act(async () => {
+        resolveB({ data: { status: 200, data: {} } })
+        await Promise.resolve()
+      })
+
+      expect(result.current.markingDayStatusEmployeeIds.size).toBe(0)
     })
   })
 
@@ -1146,6 +1985,41 @@ describe('useTodayAttendancePage', () => {
 
       expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001'])
       expect(result.current.isCardExiting('emp-002')).toBe(false)
+    })
+
+    it('does not get stuck hidden on every tab when the refetch already confirmed the bucket before the animation even started', async () => {
+      // `mockPendingPlusAbsent()` has emp-002 already ABSENCE in `data` from the
+      // very first load — simulating the real mark-falta timing: the manager
+      // can sit on the "¿Deseas justificar la falta ahora?" dialog for a while
+      // after the mutation's own refetch already landed, so by the time
+      // onFaltaFlowComplete finally calls startExitAnimation, `data` has long
+      // since confirmed the new bucket. A snapshot taken only at animation
+      // start (or only at animation end) is already the fresh reference in
+      // this case, so a reference-based check can never detect a "later"
+      // change — this must be decided from the row's live computed bucket
+      // instead (see attendanceBucket() in startExitAnimation).
+      mockPendingPlusAbsent()
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      act(() => result.current.pinEmployeeCard('emp-002'))
+
+      vi.useFakeTimers()
+      act(() => result.current.onFaltaFlowComplete('emp-002'))
+      act(() => vi.advanceTimersByTime(350))
+      vi.useRealTimers()
+
+      // Without the fix, the row would now be forced out of every tab via the
+      // 'hidden' override, since the reference captured whenever the timer
+      // read `data` would already equal whatever it's compared against later
+      // — stuck until some unrelated future refetch happens to change the
+      // reference. Switching to the tab the employee actually belongs to
+      // must reveal it immediately instead.
+      act(() => result.current.toggleFilter('absent'))
+      expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-002'])
     })
 
     it('onFaltaFlowComplete plays the exit animation even when `data` has not refetched yet (still shows the row as pending)', async () => {

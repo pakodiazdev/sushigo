@@ -288,7 +288,7 @@ const defaultProps = {
     onLunchReturn: vi.fn(),
     onCheckOut: vi.fn(),
     onOvertimeDecision: vi.fn(),
-    onMarkDayStatus: vi.fn(),
+    onMarkDayStatus: vi.fn().mockResolvedValue(undefined),
 }
 
 describe('EmployeeAttendanceCard', () => {
@@ -376,7 +376,7 @@ describe('EmployeeAttendanceCard', () => {
     })
 
     it('calls onMarkDayStatus with ABSENCE when confirm dialog is confirmed', () => {
-        const onMarkDayStatus = vi.fn()
+        const onMarkDayStatus = vi.fn().mockResolvedValue(undefined)
         const { getByTestId, getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
         )
@@ -399,20 +399,61 @@ describe('EmployeeAttendanceCard', () => {
         expect(onMarkDayStatus).not.toHaveBeenCalled()
     })
 
-    it('asks whether to justify the falta right after confirming it', () => {
+    it('asks whether to justify the falta right after confirming it', async () => {
         const { getByTestId, getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
 
         fireEvent.click(getByTestId('btn-mark-falta'))
-        fireEvent.click(getByText('Confirmar falta'))
+        await act(async () => {
+            fireEvent.click(getByText('Confirmar falta'))
+        })
 
         expect(getByText('¿Deseas justificar la falta ahora?')).toBeDefined()
     })
 
-    it('opens RegisterLeaveDialog when choosing to justify the falta right away', () => {
+    it('does not ask to justify the falta when the mutation fails', async () => {
+        // A failed markDayStatus (e.g. a 422 because an Attendance record
+        // already exists for that date) must not walk the card through the
+        // justify-now? flow as if the absence had actually been recorded —
+        // the row never became 'absent', so there's nothing to justify.
+        const onMarkDayStatus = vi.fn().mockRejectedValue(new Error('422'))
+        const { getByTestId, getByText, queryByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
+        )
+
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        await act(async () => {
+            fireEvent.click(getByText('Confirmar falta'))
+        })
+
+        expect(queryByText('¿Deseas justificar la falta ahora?')).toBeNull()
+    })
+
+    it('disables "Marcar falta" AND "Registrar entrada" while a mutation is already in flight, and shows a spinner', () => {
+        // confirmFalta now awaits onMarkDayStatus before opening the justify-now?
+        // dialog, so between the click and the mutation resolving the card would
+        // otherwise still show its normal pending actions fully clickable —
+        // letting the manager fire a second "Marcar falta" (a duplicate request)
+        // or a conflicting "Registrar entrada" (a check-in racing the in-flight
+        // absence write) for the same employee/date. The confirm-falta dialog is
+        // already closed by this point (confirmFalta closes it synchronously
+        // before awaiting), so it can never show a busy state — the spinner on
+        // the button itself is the only feedback the manager gets.
+        const { getByTestId, getByText, container } = render(
+            <EmployeeAttendanceCard {...defaultProps} isMarkingDayStatus />
+        )
+
+        expect((getByTestId('btn-mark-falta') as HTMLButtonElement).disabled).toBe(true)
+        expect((getByText('Registrar entrada') as HTMLButtonElement).disabled).toBe(true)
+        expect(container.querySelector('.animate-spin')).not.toBeNull()
+    })
+
+    it('opens RegisterLeaveDialog when choosing to justify the falta right away', async () => {
         const { getByTestId, getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
 
         fireEvent.click(getByTestId('btn-mark-falta'))
-        fireEvent.click(getByText('Confirmar falta'))
+        await act(async () => {
+            fireEvent.click(getByText('Confirmar falta'))
+        })
         fireEvent.click(getByText('Justificar ahora'))
 
         expect(mockRegisterLeaveDialog).toHaveBeenLastCalledWith(
@@ -420,27 +461,31 @@ describe('EmployeeAttendanceCard', () => {
         )
     })
 
-    it('calls onFaltaFlowComplete when declining to justify the falta right away', () => {
+    it('calls onFaltaFlowComplete when declining to justify the falta right away', async () => {
         const onFaltaFlowComplete = vi.fn()
         const { getByTestId, getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} onFaltaFlowComplete={onFaltaFlowComplete} />
         )
 
         fireEvent.click(getByTestId('btn-mark-falta'))
-        fireEvent.click(getByText('Confirmar falta'))
+        await act(async () => {
+            fireEvent.click(getByText('Confirmar falta'))
+        })
         fireEvent.click(getByText('Ahora no'))
 
         expect(onFaltaFlowComplete).toHaveBeenCalledWith(mockRow.employee.id)
     })
 
-    it('calls onFaltaFlowComplete when RegisterLeaveDialog closes', () => {
+    it('calls onFaltaFlowComplete when RegisterLeaveDialog closes', async () => {
         const onFaltaFlowComplete = vi.fn()
         const { getByTestId, getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} onFaltaFlowComplete={onFaltaFlowComplete} />
         )
 
         fireEvent.click(getByTestId('btn-mark-falta'))
-        fireEvent.click(getByText('Confirmar falta'))
+        await act(async () => {
+            fireEvent.click(getByText('Confirmar falta'))
+        })
         fireEvent.click(getByText('Justificar ahora'))
 
         const calls = mockRegisterLeaveDialog.mock.calls

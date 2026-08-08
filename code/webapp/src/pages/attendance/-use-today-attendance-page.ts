@@ -149,6 +149,7 @@ export interface UseTodayAttendancePageResult {
   // then plays an exit animation once the flow concludes
   isCardExiting: (employeeId: string) => boolean
   pinEmployeeCard: (employeeId: string) => void
+  unpinEmployeeCard: (employeeId: string) => void
   onFaltaFlowComplete: (employeeId: string) => void
   // Date selection
   selectedDate: string
@@ -192,8 +193,8 @@ export interface UseTodayAttendancePageResult {
   confirmBulkOvertimeDecision: (authorize: boolean, valuationMethod?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number, applyToRest?: boolean) => void
   closeBulkOvertimeDecision: () => void
   // Mark day status action
-  isMarkingDayStatus: boolean
-  markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string) => void
+  markingDayStatusEmployeeIds: Set<string>
+  markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string) => Promise<void>
   // Extra day express action
   extraDayRow: TodayAttendanceRow | null
   isRegisteringExtraDay: boolean
@@ -223,12 +224,56 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   const bulkOvertimeDecisionMutation = useBulkOvertimeDecision()
   const markDayStatusMutation = useMarkDayStatus()
   const extraDayMutation = useExtraDayExpress()
+  // Tracks WHICH employee(s) have an absence write in flight — markDayStatusMutation.isPending
+  // alone is shared across the whole page's single mutation instance, so using it directly
+  // would show every other employee's card as busy while only one is actually being marked.
+  // A Set (not a single id) because the mutation isn't gated on the previous one settling: if a
+  // manager confirms falta for employee A and then, before A's request returns, confirms it for
+  // employee B too, both writes are genuinely in flight at once. A single scalar id would get
+  // overwritten by B's start and then cleared to null by WHICHEVER request's .finally() runs
+  // first — re-enabling and un-spinnering a card whose own write was still pending.
+  const [markingDayStatusEmployeeIds, setMarkingDayStatusEmployeeIds] = useState<Set<string>>(new Set())
 
   const summary = computeSummary(data)
 
   // ── Stat tab filter ───────────────────────────────────────────────────────────
   const [selectedFilter, setSelectedFilter] = useState<AttendanceFilter | null>(initialFilter)
   const hasAppliedDefaultFilter = useRef(initialFilter !== null)
+  // Mirrors `selectedFilter` for startExitAnimation to read at async onSuccess
+  // time — a mutation's onSuccess closure is fixed to whatever `selectedFilter`
+  // was when `.mutate()` was called, so if the manager switches tabs while the
+  // request is in flight, the callback would otherwise judge against a stale
+  // tab and either animate a card that now belongs in the active tab, or skip
+  // animating one that doesn't.
+  const selectedFilterRef = useRef(selectedFilter)
+  useEffect(() => {
+    selectedFilterRef.current = selectedFilter
+  }, [selectedFilter])
+  // Same staleness concern as selectedFilterRef, for reading the row's
+  // `today_leave` from within an onSuccess closure (see resolveTargetBucket).
+  const dataRef = useRef(data)
+  useEffect(() => {
+    dataRef.current = data
+  }, [data])
+  // Same staleness concern again, but for detecting whether the manager
+  // switched date/branch WHILE a check-in/lunch/check-out mutation was still
+  // in flight. `cardOverrides`/timers already get reset when selectedDate or
+  // branchId change (see the effect below), but that reset only clears state
+  // already armed at that moment — it can't stop a mutation's onSuccess that
+  // hasn't fired yet from later calling startExitAnimation against whatever
+  // day/branch happens to be selected by then, animating (and potentially
+  // permanently hiding) an unrelated employee's card on a day/branch the
+  // action has nothing to do with. Each confirm* callback compares the
+  // selectedDate/branchId it captured at `.mutate()` time against these refs
+  // inside its onSuccess and no-ops if either has since changed.
+  const selectedDateRef = useRef(selectedDate)
+  useEffect(() => {
+    selectedDateRef.current = selectedDate
+  }, [selectedDate])
+  const branchIdRef = useRef(branchId)
+  useEffect(() => {
+    branchIdRef.current = branchId
+  }, [branchId])
 
   // Apply the smart default (Pendientes, or En trabajo if nothing is pending)
   // once the first load resolves, unless a tab was already chosen (e.g. from
@@ -252,16 +297,60 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   // 'pinned'  — the underlying row no longer matches the active tab, but a dialog
   //             flow on this exact card is still in progress; render normally,
   //             fully interactive, so the flow isn't yanked out from under the user.
-  // 'exiting' — the flow just concluded; play the exit animation, then remove.
-  const [cardOverrides, setCardOverrides] = useState<Map<string, 'pinned' | 'exiting'>>(new Map())
+  // 'exiting' — the flow just concluded; play the exit animation for 350ms.
+  // 'hidden'  — the animation finished, but `data` hasn't refetched to confirm
+  //             the row's new bucket yet; force it out of the grid (unlike
+  //             'pinned'/'exiting', which force it IN) so it can't flash back
+  //             to full opacity once the exit animation's CSS class is gone.
+  //             Cleared by the effect below once fresh data confirms it.
+  const [cardOverrides, setCardOverrides] = useState<Map<string, 'pinned' | 'exiting' | 'hidden'>>(new Map())
   const exitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  // The bucket each row is expected to land in once its mutation's refetch
+  // confirms it — checked against the row's LIVE computed bucket (via
+  // attendanceBucket()) rather than comparing `data` object references, so
+  // it doesn't matter whether the refetch already landed before this was
+  // set, lands mid-animation, or lands later: the check is always "does the
+  // row's current data already say what we expect", never "has some
+  // reference changed since an arbitrary snapshot point". See
+  // startExitAnimation and the cleanup effect below.
+  const targetBucketByEmployee = useRef<Map<string, AttendanceBucket>>(new Map())
+  // Backstop for 'hidden' overrides whose guessed targetBucket never actually
+  // materializes — e.g. a concurrent change (another manager approving a
+  // full-day leave between the action and its refetch) routes the row to a
+  // different bucket than the one assumed when the animation started. The
+  // exact-match cleanup effect below would otherwise never fire and the card
+  // would stay hidden on every tab forever. See the timer scheduled inside
+  // startExitAnimation.
+  const hiddenFallbackTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(() => {
     const timers = exitTimers.current
+    const fallbackTimers = hiddenFallbackTimers.current
     return () => {
       timers.forEach((timer) => clearTimeout(timer))
+      fallbackTimers.forEach((timer) => clearTimeout(timer))
     }
   }, [])
+
+  // `cardOverrides` is keyed only by employeeId, but `data` comes from
+  // useDailyAttendance(branchId, selectedDate) — nothing else ties an
+  // override to the specific day/branch it was set for. Without this,
+  // switching the date (or branch) while an animation timer is still
+  // pending left it armed against the NEW day's `data`: the timer fires,
+  // resolves the employee's row in the wrong day, finds a bucket mismatch
+  // that can never resolve (a past/different day's data never changes), and
+  // the card ends up permanently 'hidden' on a date it has nothing to do
+  // with the original action. Any pinned/exiting/hidden state is meaningless
+  // once the underlying data set it was computed against is gone, so treat a
+  // date/branch change as a hard reset instead of trying to carry it over.
+  useEffect(() => {
+    exitTimers.current.forEach((timer) => clearTimeout(timer))
+    exitTimers.current.clear()
+    hiddenFallbackTimers.current.forEach((timer) => clearTimeout(timer))
+    hiddenFallbackTimers.current.clear()
+    targetBucketByEmployee.current.clear()
+    setCardOverrides(new Map())
+  }, [selectedDate, branchId])
 
   const pinEmployeeCard = useCallback((employeeId: string) => {
     setCardOverrides((current) => {
@@ -272,42 +361,55 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     })
   }, [])
 
-  // The mark-falta flow always ends with the row in the 'absent' bucket,
-  // regardless of which choice the manager makes:
-  //  - Decline / no leave registered → day_status stays ABSENCE.
-  //  - Justify with a full-day (non-SCHEDULED) leave → RegisterDirectLeaveAction
-  //    overwrites the existing Attendance record's day_status to LEAVE.
-  //  - Justify with a partial (SCHEDULED) leave → shouldCreateAttendanceRecords()
-  //    is false, so RegisterDirectLeaveAction skips touching Attendance entirely
-  //    and day_status is left as ABSENCE (see RegisterDirectLeaveAction.php).
-  // Either way day_status ends up ABSENCE or LEAVE, so isAbsentRow is true and
-  // isHiddenFromGrid is false — today_leave.time_mode never overrides this,
-  // since isAbsentRow checks getAttendancePhase(row.attendance) first and only
-  // falls back to today_leave for rows with NO attendance record at all.
-  // This is computed from `filter` alone — deliberately NOT from `data` —
-  // because `data` can still reflect the pre-mutation row when the flow
-  // concludes quickly (useMarkDayStatus only invalidates/refetches on
-  // success, and the manager can dismiss the justify-now prompt before that
-  // refetch lands). Deciding from `data` in that window used the stale
-  // (still-pending) bucket and produced the wrong answer once the real data
-  // arrived a moment later.
-  function matchesFilterAfterFalta(filter: AttendanceFilter | null): boolean {
-    return filter === null || filter === 'total' || filter === 'absent'
+  // Releases a pin started by pinEmployeeCard without playing an exit
+  // animation — for flows that pin optimistically (e.g. mark-falta, before
+  // its mutation resolves) and need to undo that pin on failure, when there
+  // is no new bucket to animate toward and the card should just stay put.
+  // Deliberately only touches a 'pinned' override, never 'exiting'/'hidden',
+  // so it can't interfere with an unrelated animation already in flight.
+  const unpinEmployeeCard = useCallback((employeeId: string) => {
+    setCardOverrides((current) => {
+      if (current.get(employeeId) !== 'pinned') return current
+      const next = new Map(current)
+      next.delete(employeeId)
+      return next
+    })
+  }, [])
+
+  // Whether a row ending up in `targetBucket` still belongs in the active tab —
+  // shared by every action below to decide if a card needs to animate out.
+  // Deliberately computed from `filter` alone, never from `data`: `data` can
+  // still reflect the pre-mutation row when a flow concludes quickly (a
+  // mutation only invalidates/refetches on success, and e.g. the mark-falta
+  // flow lets the manager dismiss the justify-now prompt before that refetch
+  // lands). Deciding from `data` in that window used the stale (still-pending)
+  // bucket and produced the wrong answer once the real data arrived a moment
+  // later.
+  function staysInActiveTab(targetBucket: AttendanceBucket, filter: AttendanceFilter | null): boolean {
+    return filter === null || filter === 'total' || filter === targetBucket
   }
 
-  // Ends the pin started by pinEmployeeCard once the mark-falta → justify-now?
-  // flow concludes. If the row's final status still belongs in the active tab
-  // (e.g. ABSENCE stays visible on the default view), it never actually needs
-  // to leave the grid — clear the pin immediately instead of playing the
-  // fade/slide-out animation, which would otherwise make the card vanish and
-  // then abruptly pop back in.
-  const startExitAnimation = useCallback((employeeId: string) => {
-    if (matchesFilterAfterFalta(selectedFilter)) {
+  // Shared exit-animation trigger for every action that can move a card out of
+  // the active tab (check-in, lunch-start/return, check-out, and — via
+  // onFaltaFlowComplete below — the mark-falta → justify-now? flow, whose final
+  // bucket is always 'absent', see isAbsentRow). If the row's final bucket
+  // still belongs in the active tab (e.g. the default view shows everything),
+  // it never actually needs to leave the grid — clear any pin immediately
+  // instead of playing the fade/slide-out animation, which would otherwise
+  // make the card vanish and then abruptly pop back in.
+  const startExitAnimation = useCallback((employeeId: string, targetBucket: AttendanceBucket) => {
+    if (staysInActiveTab(targetBucket, selectedFilterRef.current)) {
       const existingTimer = exitTimers.current.get(employeeId)
       if (existingTimer) {
         clearTimeout(existingTimer)
         exitTimers.current.delete(employeeId)
       }
+      const existingFallback = hiddenFallbackTimers.current.get(employeeId)
+      if (existingFallback) {
+        clearTimeout(existingFallback)
+        hiddenFallbackTimers.current.delete(employeeId)
+      }
+      targetBucketByEmployee.current.delete(employeeId)
       setCardOverrides((current) => {
         if (!current.has(employeeId)) return current
         const next = new Map(current)
@@ -326,23 +428,165 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     const existingTimer = exitTimers.current.get(employeeId)
     if (existingTimer) clearTimeout(existingTimer)
 
+    const existingFallback = hiddenFallbackTimers.current.get(employeeId)
+    if (existingFallback) {
+      clearTimeout(existingFallback)
+      hiddenFallbackTimers.current.delete(employeeId)
+    }
+
+    targetBucketByEmployee.current.set(employeeId, targetBucket)
+
     const timer = setTimeout(() => {
+      const row = dataRef.current.find((r) => r.employee.id === employeeId)
+      const alreadyConfirmed = !!row && attendanceBucket(row) === targetBucket
+
+      if (alreadyConfirmed) {
+        // `data` already reflects the row in `targetBucket` — whether the
+        // refetch landed mid-animation (a fast API outracing the 350ms
+        // timer) or long before this timer was even set (e.g. mark-falta's
+        // justify-now? dialog can keep the manager away for a while after
+        // the mutation's own refetch already completed). Either way there's
+        // nothing left to hide; clear the override outright instead of
+        // entering 'hidden', which would otherwise wait on a future `data`
+        // change that may not come for another 30s (poll interval).
+        setCardOverrides((current) => {
+          if (!current.has(employeeId)) return current
+          const next = new Map(current)
+          next.delete(employeeId)
+          return next
+        })
+        targetBucketByEmployee.current.delete(employeeId)
+        exitTimers.current.delete(employeeId)
+        return
+      }
+
       setCardOverrides((current) => {
         if (!current.has(employeeId)) return current
         const next = new Map(current)
-        next.delete(employeeId)
+        next.set(employeeId, 'hidden')
         return next
       })
       exitTimers.current.delete(employeeId)
+
+      // Give the normal 30s poll one full cycle plus margin to confirm the
+      // guessed targetBucket via the exact-match cleanup effect below. If it
+      // never does — the row landed in some OTHER bucket than assumed —
+      // force the card back into view with whatever data has landed by then
+      // instead of leaving it hidden on every tab indefinitely.
+      const fallbackTimer = setTimeout(() => {
+        hiddenFallbackTimers.current.delete(employeeId)
+        targetBucketByEmployee.current.delete(employeeId)
+        setCardOverrides((current) => {
+          if (current.get(employeeId) !== 'hidden') return current
+          const next = new Map(current)
+          next.delete(employeeId)
+          return next
+        })
+      }, 35_000)
+      hiddenFallbackTimers.current.set(employeeId, fallbackTimer)
     }, 350)
     exitTimers.current.set(employeeId, timer)
-  }, [selectedFilter])
+  }, [])
 
-  // Pinned/exiting rows are kept in their natural `data` position (not appended
-  // at the end) so the card doesn't visibly jump while its dialog flow plays out.
+  // Clears 'hidden' overrides once `data` actually confirms the row landed in
+  // its expected bucket — without this, a card whose exit animation finishes
+  // before the refetch lands would otherwise flash back to full opacity the
+  // instant the animation's CSS class is removed, since `data` would still
+  // be evaluating the stale (pre-mutation) row.
+  //
+  // Checked via attendanceBucket() against the target bucket captured in
+  // targetBucketByEmployee — a semantic, value-based check — rather than
+  // "does the row currently (mis)match the active tab" or "has the `data`
+  // array reference changed". Both of those earlier approaches had real
+  // bugs: filter-matching could never clear the override once the manager
+  // switched to the tab the row correctly moved TO (a real match never
+  // satisfies "does NOT match"); array-reference comparison could leave a
+  // row stuck forever whenever the reference already happened to be the
+  // fresh one by the time it was snapshotted (a fast refetch outracing the
+  // 350ms timer, or — for mark-falta specifically — the justify-now? dialog
+  // delaying startExitAnimation's call well past when the mutation's own
+  // refetch had already completed).
+  //
+  // The employeeIds to clear are computed here, in the effect body, and the
+  // `targetBucketByEmployee` ref mutations happen right after — deliberately
+  // NOT inside the setCardOverrides updater below. A setState updater must
+  // be pure: <StrictMode> (enabled in main.tsx) invokes it twice per commit
+  // to catch exactly this kind of impurity, discarding the first result and
+  // keeping only the second. Deleting from the ref inside the updater meant
+  // the first invocation correctly computed the cleared map but also
+  // deleted the ref entries as a side effect; the second invocation then
+  // found those entries already gone, computed "nothing to clear" instead,
+  // and React kept THAT (wrong) result — leaving the card stuck 'hidden' in
+  // development.
+  useEffect(() => {
+    const toClear: string[] = []
+    for (const [employeeId, state] of cardOverrides) {
+      if (state !== 'hidden') continue
+      const targetBucket = targetBucketByEmployee.current.get(employeeId)
+      const row = data.find((r) => r.employee.id === employeeId)
+      if (targetBucket && row && attendanceBucket(row) === targetBucket) {
+        toClear.push(employeeId)
+      }
+    }
+    if (toClear.length === 0) return
+
+    toClear.forEach((employeeId) => {
+      targetBucketByEmployee.current.delete(employeeId)
+      const fallbackTimer = hiddenFallbackTimers.current.get(employeeId)
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer)
+        hiddenFallbackTimers.current.delete(employeeId)
+      }
+    })
+    setCardOverrides((current) => {
+      const next = new Map(current)
+      toClear.forEach((employeeId) => next.delete(employeeId))
+      return next
+    })
+  }, [data, cardOverrides])
+
+  // Resolves the bucket a row will actually land in once a mutation succeeds.
+  // The four call sites below assume a "normal" forward progression (e.g.
+  // check-in → checkedIn), but attendanceBucket()/isAbsentRow() route a row to
+  // 'absent' whenever it carries a full-day (OPEN_ENDED) approved leave,
+  // regardless of its check-in/lunch/check-out phase — an employee can still
+  // have those actions performed on them if the leave was approved after they
+  // were already mid-shift. `today_leave` isn't affected by these mutations,
+  // so reading it from `dataRef` (as of just before the mutation) is accurate.
+  const resolveTargetBucket = useCallback((employeeId: string, normalTarget: AttendanceBucket): AttendanceBucket => {
+    const row = dataRef.current.find((r) => r.employee.id === employeeId)
+    if (row?.today_leave?.time_mode === 'OPEN_ENDED') return 'absent'
+    return normalTarget
+  }, [])
+
+  const onFaltaFlowComplete = useCallback((employeeId: string) => {
+    startExitAnimation(employeeId, 'absent')
+  }, [startExitAnimation])
+
+  // Pinned/exiting/hidden rows are kept in their natural `data` position (not
+  // appended at the end) so the card doesn't visibly jump while its dialog
+  // flow plays out — except 'hidden', which is forced OUT instead, since it
+  // exists specifically to suppress a stale-data false-positive match on a
+  // BUCKET-SPECIFIC tab (a card that just left "Pendientes" whose refetch
+  // hasn't landed yet would otherwise still read as "pending" and flash back
+  // into that same tab). "Total" (and the default null view) show every row
+  // regardless of bucket, so that false-positive can't happen there — nothing
+  // to protect against — and suppressing 'hidden' rows anyway turned "Ver
+  // todos" into a dead end: if the hidden card was the last one visible, its
+  // own "show all" button switched to a filter that excluded it too.
   const visibleRows = useMemo(() => {
     if (cardOverrides.size === 0) return filterRowsForGrid(data, selectedFilter)
-    return data.filter((row) => cardOverrides.has(row.employee.id) || matchesGridFilter(row, selectedFilter))
+    return data.filter((row) => {
+      const override = cardOverrides.get(row.employee.id)
+      if (override === 'hidden') {
+        if (selectedFilter === 'total' || selectedFilter === null) {
+          return matchesGridFilter(row, selectedFilter)
+        }
+        return false
+      }
+      if (override === 'pinned' || override === 'exiting') return true
+      return matchesGridFilter(row, selectedFilter)
+    })
   }, [data, selectedFilter, cardOverrides])
 
   // ── Extra day express state (declared first — openCheckIn depends on it) ──────
@@ -381,11 +625,21 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
 
   const confirmCheckIn = useCallback((time: string, reason?: string) => {
     if (!pendingCheckInEmployee) return
+    const employeeId = pendingCheckInEmployee.id
+    // A correction of an already-recorded check-in never changes the row's
+    // bucket, regardless of which tab is active — only a fresh check-in does.
+    const isFreshCheckIn = !pendingCheckInCurrentValue
     checkInMutation.mutate(
-      { employee_id: pendingCheckInEmployee.id, check_in: timeToIso(time, selectedDate), reason },
-      { onSettled: closeCheckIn }
+      { employee_id: employeeId, check_in: timeToIso(time, selectedDate), reason },
+      {
+        onSuccess: () => {
+          if (selectedDate !== selectedDateRef.current || branchId !== branchIdRef.current) return
+          if (isFreshCheckIn) startExitAnimation(employeeId, resolveTargetBucket(employeeId, 'checkedIn'))
+        },
+        onSettled: closeCheckIn,
+      }
     )
-  }, [pendingCheckInEmployee, checkInMutation, closeCheckIn, selectedDate])
+  }, [pendingCheckInEmployee, pendingCheckInCurrentValue, checkInMutation, closeCheckIn, selectedDate, branchId, startExitAnimation, resolveTargetBucket])
 
   // ── Lunch-start state ────────────────────────────────────────────────────────
   const [pendingLunchStart, setPendingLunchStart] =
@@ -401,11 +655,18 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
 
   const confirmLunchStart = useCallback((time: string, reason?: string) => {
     if (!pendingLunchStart) return
+    const { employee, attendanceId, currentValue } = pendingLunchStart
     lunchStartMutation.mutate(
-      { attendance_id: pendingLunchStart.attendanceId, lunch_start: timeToIso(time, selectedDate), reason },
-      { onSettled: closeLunchStart }
+      { attendance_id: attendanceId, lunch_start: timeToIso(time, selectedDate), reason },
+      {
+        onSuccess: () => {
+          if (selectedDate !== selectedDateRef.current || branchId !== branchIdRef.current) return
+          if (!currentValue) startExitAnimation(employee.id, resolveTargetBucket(employee.id, 'atLunch'))
+        },
+        onSettled: closeLunchStart,
+      }
     )
-  }, [pendingLunchStart, lunchStartMutation, closeLunchStart, selectedDate])
+  }, [pendingLunchStart, lunchStartMutation, closeLunchStart, selectedDate, branchId, startExitAnimation, resolveTargetBucket])
 
   // ── Lunch-return state ───────────────────────────────────────────────────────
   const [pendingLunchReturn, setPendingLunchReturn] =
@@ -421,11 +682,18 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
 
   const confirmLunchReturn = useCallback((time: string, reason?: string) => {
     if (!pendingLunchReturn) return
+    const { employee, attendanceId, currentValue } = pendingLunchReturn
     lunchReturnMutation.mutate(
-      { attendance_id: pendingLunchReturn.attendanceId, lunch_end: timeToIso(time, selectedDate), reason },
-      { onSettled: closeLunchReturn }
+      { attendance_id: attendanceId, lunch_end: timeToIso(time, selectedDate), reason },
+      {
+        onSuccess: () => {
+          if (selectedDate !== selectedDateRef.current || branchId !== branchIdRef.current) return
+          if (!currentValue) startExitAnimation(employee.id, resolveTargetBucket(employee.id, 'checkedIn'))
+        },
+        onSettled: closeLunchReturn,
+      }
     )
-  }, [pendingLunchReturn, lunchReturnMutation, closeLunchReturn, selectedDate])
+  }, [pendingLunchReturn, lunchReturnMutation, closeLunchReturn, selectedDate, branchId, startExitAnimation, resolveTargetBucket])
 
   // ── Check-out state ──────────────────────────────────────────────────────────
   const [pendingCheckOut, setPendingCheckOut] =
@@ -441,11 +709,18 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
 
   const confirmCheckOut = useCallback((time: string, reason?: string) => {
     if (!pendingCheckOut) return
+    const { employee, attendanceId, currentValue } = pendingCheckOut
     checkOutMutation.mutate(
-      { attendance_id: pendingCheckOut.attendanceId, check_out: timeToIso(time, selectedDate), reason },
-      { onSettled: closeCheckOut }
+      { attendance_id: attendanceId, check_out: timeToIso(time, selectedDate), reason },
+      {
+        onSuccess: () => {
+          if (selectedDate !== selectedDateRef.current || branchId !== branchIdRef.current) return
+          if (!currentValue) startExitAnimation(employee.id, resolveTargetBucket(employee.id, 'done'))
+        },
+        onSettled: closeCheckOut,
+      }
     )
-  }, [pendingCheckOut, checkOutMutation, closeCheckOut, selectedDate])
+  }, [pendingCheckOut, checkOutMutation, closeCheckOut, selectedDate, branchId, startExitAnimation, resolveTargetBucket])
 
   // ── Overtime decision state ───────────────────────────────────────────────────
   const [pendingOvertimeDecision, setPendingOvertimeDecision] =
@@ -522,13 +797,34 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   }, [])
 
   // ── Mark day status ───────────────────────────────────────────────────────────
+  // Returns the mutation's promise (mutateAsync, not the fire-and-forget
+  // mutate) so callers — specifically confirmFalta in
+  // use-employee-attendance-card.ts — can gate the justify-now? dialog on
+  // actual success instead of opening it unconditionally: without this, a
+  // failed mutation (e.g. a 422 because an Attendance record already exists
+  // for that date) still walked through the full justify-now?  → exit-
+  // animation flow as if it had succeeded, permanently hiding a card whose
+  // bucket never actually changed to 'absent'.
   const markDayStatus = useCallback(
-    (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string) => {
-      markDayStatusMutation.mutate({
+    (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string): Promise<void> => {
+      setMarkingDayStatusEmployeeIds((current) => {
+        if (current.has(employee.id)) return current
+        const next = new Set(current)
+        next.add(employee.id)
+        return next
+      })
+      return markDayStatusMutation.mutateAsync({
         employee_id: employee.id,
         date: selectedDate,
         day_status: status,
         reason,
+      }).then(() => undefined).finally(() => {
+        setMarkingDayStatusEmployeeIds((current) => {
+          if (!current.has(employee.id)) return current
+          const next = new Set(current)
+          next.delete(employee.id)
+          return next
+        })
       })
     },
     [markDayStatusMutation, selectedDate],
@@ -586,7 +882,8 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     toggleFilter,
     isCardExiting: (employeeId) => cardOverrides.get(employeeId) === 'exiting',
     pinEmployeeCard,
-    onFaltaFlowComplete: startExitAnimation,
+    unpinEmployeeCard,
+    onFaltaFlowComplete,
     selectedDate,
     setSelectedDate,
     // Check-in
@@ -628,7 +925,7 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     confirmBulkOvertimeDecision,
     closeBulkOvertimeDecision,
     // Mark day status
-    isMarkingDayStatus: markDayStatusMutation.isPending,
+    markingDayStatusEmployeeIds,
     markDayStatus,
     // Extra day express
     extraDayRow,

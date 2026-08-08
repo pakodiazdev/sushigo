@@ -14,6 +14,7 @@ import {
     BarChart3,
     History,
     Pencil,
+    Loader2,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -329,7 +330,11 @@ export interface EmployeeAttendanceCardProps {
     onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
-    onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
+    /** Resolves once the mutation succeeds, rejects on failure — confirmFalta in
+     *  use-employee-attendance-card.ts awaits this before opening the justify-now?
+     *  dialog, so a failed mutation never walks the card through the exit-animation
+     *  flow toward a bucket it never actually reached. */
+    onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => Promise<void>
     onWeeklySummary?: (employee: TodayAttendanceEmployee) => void
     onViewAudit?: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     /** Called once the mark-falta flow concludes (justified now or declined), so the
@@ -340,6 +345,20 @@ export interface EmployeeAttendanceCardProps {
     canEdit?: boolean
     /** True when the user may correct an already-recorded event (canEdit + attendances.update permission). */
     canCorrect?: boolean
+    /** True while THIS employee's markDayStatus mutation is in flight — the page hook
+     *  exposes markingDayStatusEmployeeIds (a Set, not the mutation's own isPending, and
+     *  not a single scalar id — two absence writes for different employees can genuinely
+     *  overlap since one isn't gated on the other settling) precisely so callers can scope
+     *  this per card instead of broadcasting one page-wide mutation instance's busy state
+     *  to every employee. confirmFalta closes the confirm-falta
+     *  dialog synchronously and only THEN awaits the mutation, so by the time this is
+     *  true the dialog is already closed — a busy state on it would never be visible.
+     *  Disables both "Registrar entrada" and "Marcar falta" instead (any action that
+     *  could race the in-flight day-status write for this employee), and shows a
+     *  spinner directly on "Marcar falta" so the manager isn't left with no feedback
+     *  during the round trip confirmFalta awaits before opening the justify-now?
+     *  dialog. */
+    isMarkingDayStatus?: boolean
 }
 
 export function EmployeeAttendanceCard({
@@ -356,6 +375,7 @@ export function EmployeeAttendanceCard({
     isExiting = false,
     canEdit = true,
     canCorrect = false,
+    isMarkingDayStatus = false,
 }: Readonly<EmployeeAttendanceCardProps>) {
     const att = row.attendance
     const leave = row.today_leave
@@ -396,6 +416,7 @@ export function EmployeeAttendanceCard({
                     size="sm"
                     className="w-full"
                     onClick={() => onCheckIn(row)}
+                    disabled={isMarkingDayStatus}
                 >
                     <LogIn className="h-3.5 w-3.5 mr-1.5" />
                     Registrar entrada
@@ -407,8 +428,11 @@ export function EmployeeAttendanceCard({
                         className="w-full"
                         data-testid="btn-mark-falta"
                         onClick={openConfirmFalta}
+                        disabled={isMarkingDayStatus}
                     >
-                        <UserX className="h-3.5 w-3.5 mr-1.5" />
+                        {isMarkingDayStatus
+                            ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            : <UserX className="h-3.5 w-3.5 mr-1.5" />}
                         Marcar falta
                     </Button>
                 )}
@@ -521,7 +545,10 @@ export function EmployeeAttendanceCard({
                 </div>
             )}
 
-            {/* Confirm-falta dialog */}
+            {/* Confirm-falta dialog — confirmFalta closes this synchronously before
+                awaiting the mutation, so it's never open while isMarkingDayStatus is
+                true; the busy feedback lives on the "Marcar falta" button instead
+                (see renderPendingActions above). */}
             <ConfirmDialog
                 isOpen={confirmFaltaOpen}
                 onClose={closeConfirmFalta}

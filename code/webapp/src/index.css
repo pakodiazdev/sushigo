@@ -303,15 +303,19 @@
 
 /* ── EmployeeAttendanceCard exit animation (e.g. after marking falta) ───── */
 @keyframes card-exit {
-    from {
+    0% {
         opacity: 1;
         transform: translateX(0) scale(1);
     }
-    to {
+    40% {
+        opacity: 0.65;
+        transform: translateX(18px) scale(0.98);
+    }
+    100% {
         opacity: 0;
-        transform: translateX(24px) scale(0.96);
+        transform: translateX(48px) scale(0.88);
     }
 }
 .animate-card-exit {
-    animation: card-exit 0.35s ease-in forwards;
+    animation: card-exit 0.35s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
