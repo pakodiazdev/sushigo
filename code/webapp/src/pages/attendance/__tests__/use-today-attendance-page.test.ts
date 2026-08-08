@@ -2095,6 +2095,41 @@ describe('useTodayAttendancePage', () => {
       expect(result.current.visibleRows.map((r) => r.employee.id)).toEqual(['emp-001', 'emp-002'])
     })
 
+    it('does not animate a card against the newly selected date if the manager switches dates while a mark-falta flow is still open', async () => {
+      // Unlike the four confirm* actions, onFaltaFlowComplete isn't called
+      // from a mutation's onSuccess — it fires whenever the manager dismisses
+      // the justify-now?/RegisterLeaveDialog UI, which can happen well after
+      // markDayStatus started the flow (and well after a date switch reset
+      // cardOverrides underneath the still-open dialog).
+      mockPendingPlusAbsent()
+      vi.mocked(attendanceApi.markDayStatus).mockReturnValueOnce(new Promise(() => {}) as never)
+
+      const { wrapper } = makeWrapper()
+      const { result } = renderHook(() => useTodayAttendancePage(), { wrapper })
+
+      await waitFor(() => expect(result.current.selectedFilter).toBe('pending'))
+
+      act(() => result.current.pinEmployeeCard('emp-002'))
+      act(() => { void result.current.markDayStatus(makeEmployee({ id: 'emp-002' }), 'ABSENCE') })
+
+      // Manager switches to a different date before dismissing the
+      // justify-now? dialog that follows a successful falta.
+      act(() => result.current.setSelectedDate('2026-02-24'))
+
+      vi.useFakeTimers()
+      act(() => result.current.onFaltaFlowComplete('emp-002'))
+
+      // Without the fix, this would start the exit animation against
+      // whatever the newly selected date's row says — and since it never
+      // matches the guessed 'absent' target bucket on an unrelated day, the
+      // card would end up force-hidden on every tab for up to 35s.
+      expect(result.current.isCardExiting('emp-002')).toBe(false)
+
+      act(() => vi.advanceTimersByTime(35_000))
+      expect(result.current.isCardExiting('emp-002')).toBe(false)
+      vi.useRealTimers()
+    })
+
     it('keeps a pinned/exiting row in its original grid position instead of moving it to the end', async () => {
       vi.mocked(attendanceApi.daily).mockResolvedValue({
         data: {

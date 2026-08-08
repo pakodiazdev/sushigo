@@ -274,6 +274,15 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   useEffect(() => {
     branchIdRef.current = branchId
   }, [branchId])
+  // Same staleness concern as selectedDateRef/branchIdRef, but for the
+  // mark-falta flow specifically: unlike the four confirm* actions above,
+  // onFaltaFlowComplete isn't called from a mutation's onSuccess — it fires
+  // whenever the manager dismisses the justify-now?/RegisterLeaveDialog UI,
+  // which can be arbitrarily later (and the card is keyed by employee.id, so
+  // its dialog state survives a date/branch switch underneath it). Recorded
+  // when markDayStatus starts the flow (the actual "mutate time" for this
+  // flow), consulted and cleared in onFaltaFlowComplete below.
+  const faltaFlowStartedForByEmployee = useRef<Map<string, { date: string; branchId: number | null }>>(new Map())
 
   // Apply the smart default (Pendientes, or En trabajo if nothing is pending)
   // once the first load resolves, unless a tab was already chosen (e.g. from
@@ -560,6 +569,9 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   }, [])
 
   const onFaltaFlowComplete = useCallback((employeeId: string) => {
+    const startedFor = faltaFlowStartedForByEmployee.current.get(employeeId)
+    faltaFlowStartedForByEmployee.current.delete(employeeId)
+    if (startedFor && (startedFor.date !== selectedDateRef.current || startedFor.branchId !== branchIdRef.current)) return
     startExitAnimation(employeeId, 'absent')
   }, [startExitAnimation])
 
@@ -813,12 +825,21 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
         next.add(employee.id)
         return next
       })
+      // See faltaFlowStartedForByEmployee: this is the flow's real "mutate
+      // time" — the value onFaltaFlowComplete will later check itself
+      // against, no matter how much later the manager dismisses the
+      // justify-now?/RegisterLeaveDialog UI that follows a success.
+      faltaFlowStartedForByEmployee.current.set(employee.id, { date: selectedDate, branchId })
       return markDayStatusMutation.mutateAsync({
         employee_id: employee.id,
         date: selectedDate,
         day_status: status,
         reason,
-      }).then(() => undefined).finally(() => {
+      }).then(() => undefined).catch((error: unknown) => {
+        // No justify-now?/onFaltaFlowComplete will follow a failed write.
+        faltaFlowStartedForByEmployee.current.delete(employee.id)
+        throw error
+      }).finally(() => {
         setMarkingDayStatusEmployeeIds((current) => {
           if (!current.has(employee.id)) return current
           const next = new Set(current)
@@ -827,7 +848,7 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
         })
       })
     },
-    [markDayStatusMutation, selectedDate],
+    [markDayStatusMutation, selectedDate, branchId],
   )
 
   // ── Extra day express ─────────────────────────────────────────────────────────
