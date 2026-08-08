@@ -31,11 +31,18 @@ describe('useManualOvertimeMovementDialog', () => {
   })
 
   it('defaults date to today', () => {
-    const today = new Date().toISOString().slice(0, 10)
-    const { result } = renderHook(() =>
-      useManualOvertimeMovementDialog({ employee: mockEmployee, onSuccess: vi.fn() })
-    )
-    expect(result.current.form.getValues('date')).toBe(today)
+    // Pinned mid-day instant (16:00 CDMX / 22:00 UTC, same calendar day in both)
+    // so this doesn't flake during the ~6h/day window where UTC and CDMX disagree.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-02T22:00:00Z'))
+    try {
+      const { result } = renderHook(() =>
+        useManualOvertimeMovementDialog({ employee: mockEmployee, onSuccess: vi.fn() })
+      )
+      expect(result.current.form.getValues('date')).toBe('2026-04-02')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('submits the movement payload and calls onSuccess', async () => {

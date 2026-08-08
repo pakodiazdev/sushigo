@@ -3,6 +3,8 @@ import { useEmployeeLeaves, useLeaveTypes } from '@/services/leave-hooks'
 import type { LeaveFilters } from '@/services/leave-api'
 import type { Leave } from '@/types/leave'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 
 export function useLeaveSummarySection(employeeId: string, employee: { id: string; code: string; user: { first_name: string | null; last_name: string | null } } | undefined) {
     const [showFullHistory, setShowFullHistory] = useState(false)
@@ -10,9 +12,11 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
     const [page, setPage] = useState(1)
 
     // Current month range for summary
-    const now = new Date()
-    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-    const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`
+    const businessDate = useBusinessDate()
+    const today = businessDate ?? todayDateCdmx()
+    const [y, m] = today.split('-') as [string, string]
+    const monthStart = `${y}-${m}-01`
+    const monthEnd = `${y}-${m}-${String(new Date(Number(y), Number(m), 0).getDate()).padStart(2, '0')}`
 
     // Summary query: current month, all results (overlap semantics for cross-boundary leaves)
     const summaryQuery = useEmployeeLeaves(employeeId, { overlap_from: monthStart, overlap_to: monthEnd, per_page: 100 })
@@ -81,6 +85,7 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
     }
 
     return {
+        today,
         monthlySummary,
         recentLeaves: recentQuery.data?.data ?? [] as Leave[],
         isLoadingSummary: summaryQuery.isLoading || recentQuery.isLoading,

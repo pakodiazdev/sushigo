@@ -11,11 +11,14 @@ use App\Models\StockMovement;
 use App\Models\StockMovementLine;
 use App\Models\UnitOfMeasure;
 use App\Services\Inventory\Concerns\ConvertsUomQuantities;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 
 class OpeningBalanceService
 {
     use ConvertsUomQuantities;
+
+    public function __construct(private readonly ApplicationClock $clock) {}
 
     /**
      * Register opening balance for an item variant at a specific location
@@ -77,7 +80,7 @@ class OpeningBalanceService
                     'unit_cost' => $unitCost,
                     'base_cost' => $baseCost,
                 ],
-                'posted_at' => now(),
+                'posted_at' => $this->clock->nowUtc(),
             ]);
 
             // Create movement line

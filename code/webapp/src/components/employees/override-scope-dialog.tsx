@@ -12,6 +12,8 @@ import { useOverrideScopeDialog } from './use-override-scope-dialog'
 import type { OverrideScopeFormValues } from './use-override-scope-dialog'
 import { calcDayHours, formatHours, overrideDateLabel } from './schedule-section-utils'
 import { formatTime } from '@/lib/time-format'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 
 const SCOPE_OPTIONS: { value: OverrideScope; label: string; description: string }[] = [
   {
@@ -46,7 +48,8 @@ interface ScopeFormStepProps {
 }
 
 function ScopeFormStep({ register, errors, scope, effectiveFrom, isError, isPending, isValid, onClose, onPrimaryClick }: ScopeFormStepProps) {
-  const today = new Date().toISOString().slice(0, 10)
+  const businessDate = useBusinessDate()
+  const today = businessDate ?? todayDateCdmx()
   const isIndefinite = scope === 'indefinite'
   const dateLabel = scope === 'single_date' ? 'Fecha' : 'A partir de'
   const submitLabel = isIndefinite ? 'Aplicar cambio permanente' : 'Guardar excepción'

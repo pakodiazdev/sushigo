@@ -1,12 +1,27 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, cleanup, act } from '@testing-library/react'
 import { useDeactivateForm } from '../use-deactivate-form'
 
+const mockUseBusinessDate = vi.fn<() => string | null>(() => null)
+vi.mock('@/stores/clock.store', () => ({
+    useBusinessDate: () => mockUseBusinessDate(),
+}))
+
+// Pinned mid-day instant (16:00 CDMX / 22:00 UTC, same calendar day in both) so
+// "today" is deterministic regardless of when the suite actually runs — avoids
+// flakiness during the ~6h/day window where UTC and CDMX disagree on the date.
+beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-02T22:00:00Z'))
+    mockUseBusinessDate.mockReturnValue(null)
+})
+
 afterEach(() => {
     cleanup()
+    vi.useRealTimers()
     vi.restoreAllMocks()
 })
 
@@ -162,6 +177,35 @@ describe('useDeactivateForm', () => {
             expect(typeof result.current.form.handleSubmit).toBe('function')
             expect(typeof result.current.form.setValue).toBe('function')
             expect(typeof result.current.form.getValues).toBe('function')
+        })
+    })
+
+    describe('syncing end_date when businessDate resolves asynchronously', () => {
+        it('updates the untouched end_date when businessDate arrives after mount', () => {
+            // businessDate starts null (falls back to the pinned 2026-04-02 browser date)
+            const { result, rerender } = renderHook(() => useDeactivateForm())
+            expect(result.current.form.getValues('end_date')).toBe('2026-04-02')
+
+            // businessDate resolves later to an earlier simulated date
+            mockUseBusinessDate.mockReturnValue('2026-03-30')
+            rerender()
+
+            expect(result.current.form.getValues('end_date')).toBe('2026-03-30')
+        })
+
+        it('does not overwrite end_date once the user has edited it', () => {
+            const { result, rerender } = renderHook(() => useDeactivateForm())
+
+            act(() => {
+                result.current.form.setValue('end_date', '2026-03-15', { shouldDirty: true })
+            })
+            expect(result.current.form.getValues('end_date')).toBe('2026-03-15')
+
+            // businessDate resolves after the user has already picked a date
+            mockUseBusinessDate.mockReturnValue('2026-03-30')
+            rerender()
+
+            expect(result.current.form.getValues('end_date')).toBe('2026-03-15')
         })
     })
 })

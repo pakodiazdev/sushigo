@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select } from '@/components/ui/form-fields'
@@ -6,6 +6,8 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { Loader2 } from 'lucide-react'
 import { useCreateCashSession, useCashRegisters } from '@/services/cash-hooks'
 import { getApiErrorMessage, getApiValidationErrors, hasApiValidationErrors } from '@/lib/api-error'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 import { CashRegisterType, type CashSessionFormData } from '@/types/cash'
 
 interface OpenSessionDialogProps {
@@ -35,24 +37,29 @@ export function OpenSessionDialog({
   // Create session mutation
   const createMutation = useCreateCashSession()
 
-  // Get today's date in YYYY-MM-DD format
-  const getTodayDate = () => {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
+  const businessDate = useBusinessDate()
+  const operatingDateTouchedRef = useRef(false)
 
   // Reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
       setCashRegisterId('')
-      setOperatingDate(getTodayDate())
+      setOperatingDate(businessDate ?? todayDateCdmx())
       setOpeningBalance('')
       setErrors({})
+      operatingDateTouchedRef.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
+
+  // businessDate resolves asynchronously and can land after the dialog is
+  // already open with the browser-clock fallback — keep operatingDate in
+  // sync until the user picks a date manually.
+  useEffect(() => {
+    if (isOpen && businessDate && !operatingDateTouchedRef.current) {
+      setOperatingDate(businessDate)
+    }
+  }, [isOpen, businessDate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -165,7 +172,10 @@ export function OpenSessionDialog({
             name="operating_date"
             type="date"
             value={operatingDate}
-            onChange={(e) => setOperatingDate(e.target.value)}
+            onChange={(e) => {
+              operatingDateTouchedRef.current = true
+              setOperatingDate(e.target.value)
+            }}
             disabled={createMutation.isPending}
           />
         </FormField>

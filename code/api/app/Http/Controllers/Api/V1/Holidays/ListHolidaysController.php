@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Holiday\HolidayResource;
 use App\Models\Holiday;
 use App\Services\HolidayGeneratorService;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -46,7 +47,10 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class ListHolidaysController extends Controller
 {
-    public function __construct(private readonly HolidayGeneratorService $generator) {}
+    public function __construct(
+        private readonly HolidayGeneratorService $generator,
+        private readonly ApplicationClock $clock,
+    ) {}
 
     public function __invoke(Request $request): AnonymousResourceCollection
     {
@@ -57,7 +61,7 @@ class ListHolidaysController extends Controller
         $year = isset($validated['year']) ? (int) $validated['year'] : null;
 
         // Lazy generation: trigger for the requested year (or current year by default)
-        $generationYear = $year ?? (int) now()->year;
+        $generationYear = $year ?? (int) $this->clock->nowInBusinessTz()->year;
         $result = $this->generator->generateForYear($generationYear);
 
         $query = Holiday::query()->orderBy('date');

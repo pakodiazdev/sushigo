@@ -10,13 +10,17 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\OvertimeBankMovement;
 use App\Models\PartialLeave;
+use App\Support\Clock\ApplicationClock;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class PayrollSeedService
 {
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     // Base shift: 08:00–17:00, lunch 13:00–14:00 → 480 min net
     private const SHIFT_START = '08:00:00';
 
@@ -69,7 +73,7 @@ class PayrollSeedService
             ->delete();
 
         $weekdays = $this->weekdaysInRange($periodStart, $periodEnd);
-        $now = now();
+        $now = $this->clock->nowUtc();
         $created = 0;
 
         foreach ($employees as $employeeIndex => $employee) {
@@ -106,7 +110,7 @@ class PayrollSeedService
     /**
      * @return list<array{attendance: array<string, mixed>, partial_leave: array<string, mixed>|null, overtime: array<string, mixed>|null}>
      */
-    private function buildRows(int $employeeId, Collection $weekdays, SeedScenario $scenario, Carbon $now, int $employeeIndex = 0): array
+    private function buildRows(int $employeeId, Collection $weekdays, SeedScenario $scenario, CarbonImmutable $now, int $employeeIndex = 0): array
     {
         $rows = [];
 

@@ -7,6 +7,7 @@ use App\Enums\EmployeeRequestType;
 use App\Models\Employee;
 use App\Models\EmployeeRequest;
 use App\Models\User;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,7 @@ class EmployeeRequestService
         private readonly ExtraDayRequestHandler $extraDayRequestHandler,
         private readonly LeaveRequestHandler $leaveRequestHandler,
         private readonly VacationRequestHandler $vacationRequestHandler,
+        private readonly ApplicationClock $clock,
     ) {}
 
     /**
@@ -81,7 +83,7 @@ class EmployeeRequestService
             $updatedFields = [
                 'status' => EmployeeRequestStatus::APPROVED,
                 'approved_by' => $approver->id,
-                'approved_at' => now(),
+                'approved_at' => $this->clock->nowUtc(),
             ];
 
             if (! empty($payloadOverrides)) {
@@ -119,7 +121,7 @@ class EmployeeRequestService
             $employeeRequest->update([
                 'status' => EmployeeRequestStatus::REJECTED,
                 'approved_by' => $approver->id,
-                'approved_at' => now(),
+                'approved_at' => $this->clock->nowUtc(),
                 'rejection_reason' => $reason,
             ]);
 

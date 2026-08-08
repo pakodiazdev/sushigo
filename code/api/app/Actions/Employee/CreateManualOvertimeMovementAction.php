@@ -7,11 +7,14 @@ use App\Enums\OvertimeOrigin;
 use App\Models\Employee;
 use App\Models\OvertimeBankMovement;
 use App\Models\User;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CreateManualOvertimeMovementAction
 {
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     /**
      * @param  array{date: string, movement_type: OvertimeMovementType, minutes: int, reason: string}  $data
      *
@@ -39,7 +42,7 @@ class CreateManualOvertimeMovementAction
                 'origin' => OvertimeOrigin::MANUAL,
                 'minutes' => $data['minutes'],
                 'authorized_by' => $authorizedBy->id,
-                'authorized_at' => now(),
+                'authorized_at' => $this->clock->nowUtc(),
                 'reason' => $data['reason'],
             ]);
 

@@ -2,6 +2,8 @@ import type { EmployeeSchedule, ScheduleDayOverride } from '@/types/schedule'
 import { useCreateDayOverride } from './use-create-day-override'
 import { useWeeklyCalendar } from './use-weekly-calendar'
 import { calcDayHours } from './schedule-section-utils'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 
 export function useScheduleContent(
   schedule: EmployeeSchedule,
@@ -19,12 +21,12 @@ export function useScheduleContent(
 
   const sortedDays = [...(schedule.days ?? [])].sort((a, b) => a.day_of_week - b.day_of_week)
 
-  // Use the browser's local date so that late-evening sessions in Mexico don't
-  // accidentally roll over to UTC tomorrow when checking if an override is active.
-  const todayLocal = (() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })()
+  // Prefer the Application Clock store's business_date (honours simulated time,
+  // and avoids late-evening sessions in Mexico rolling over to UTC tomorrow);
+  // fall back to the browser clock (still business-timezone-formatted) only
+  // when the store hasn't loaded.
+  const businessDate = useBusinessDate()
+  const todayLocal = businessDate ?? todayDateCdmx()
 
   // Returns the most-recently-started indefinite override for a day-of-week that
   // has already taken effect. Sorting DESC by effective_from ensures we get the

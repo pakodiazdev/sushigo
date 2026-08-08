@@ -8,9 +8,12 @@ use App\Exceptions\InvalidCashExpenseException;
 use App\Models\CashExpense;
 use App\Models\CashSession;
 use App\Models\User;
+use App\Support\Clock\ApplicationClock;
 
 class CashExpenseService
 {
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     /**
      * Register a new expense
      *
@@ -35,7 +38,7 @@ class CashExpenseService
             'notes' => $data->notes,
             'card_terminal_id' => $data->cardTerminalId,
             'bank_account_id' => $data->bankAccountId,
-            'incurred_at' => $data->incurredAt ?? now(),
+            'incurred_at' => $data->incurredAt ?? $this->clock->nowUtc(),
             'created_by' => $data->createdBy->id,
             'meta' => $data->meta,
         ]);
@@ -53,7 +56,7 @@ class CashExpenseService
         }
 
         $expense->posted_by = $user->id;
-        $expense->posted_at = now();
+        $expense->posted_at = $this->clock->nowUtc();
         $expense->save();
 
         return $expense;

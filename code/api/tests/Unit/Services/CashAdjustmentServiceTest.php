@@ -11,6 +11,7 @@ use App\Models\CashRegister;
 use App\Models\CashSession;
 use App\Models\User;
 use App\Services\CashAdjustments\CashAdjustmentService;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -28,7 +29,7 @@ class CashAdjustmentServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CashAdjustmentService;
+        $this->service = new CashAdjustmentService(app(ApplicationClock::class));
 
         $branch = Branch::factory()->create();
         $register = CashRegister::factory()->for($branch)->create();

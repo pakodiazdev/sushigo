@@ -10,6 +10,7 @@ use App\Models\Holiday;
 use App\Models\PayPeriod;
 use App\Models\PunctualityRange;
 use App\Repositories\EmployeeRepository;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -51,6 +52,7 @@ class ConfirmCloseController extends Controller
     public function __construct(
         private RecalculatePayPeriodEmployeesAction $recalculate,
         private EmployeeRepository $employeeRepository,
+        private ApplicationClock $clock,
     ) {}
 
     public function __invoke(ConfirmClosePayPeriodRequest $request): ResponseEntity
@@ -89,7 +91,7 @@ class ConfirmCloseController extends Controller
                     'period_end' => $periodEnd,
                     'status' => PayPeriod::STATUS_CLOSED,
                     'closed_by' => $request->user()->id,
-                    'closed_at' => now(),
+                    'closed_at' => $this->clock->nowUtc(),
                 ]);
 
                 ($this->recalculate)($payPeriod, $employees, $holidays, $punctualityRanges);

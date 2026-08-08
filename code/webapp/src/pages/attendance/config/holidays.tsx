@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Pencil, Trash2, Plus, AlertTriangle } from 'lucide-react'
 import { requirePermission } from '@/lib/route-guards'
@@ -16,6 +16,8 @@ import {
   type HolidayFormValues,
 } from './use-holiday-management'
 import type { Holiday, HolidayType } from '@/types/attendance-payroll'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 
 export const Route = createFileRoute('/attendance/config/holidays')({
   beforeLoad: requirePermission('holidays.manage'),
@@ -23,9 +25,6 @@ export const Route = createFileRoute('/attendance/config/holidays')({
 })
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const CURRENT_YEAR = new Date().getFullYear()
-const YEAR_OPTIONS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1]
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -442,7 +441,26 @@ function EditHolidayForm({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function HolidaysPage() {
-  const [selectedYear, setSelectedYear] = useState<number>(CURRENT_YEAR)
+  const businessDate = useBusinessDate()
+  const currentYear = Number((businessDate ?? todayDateCdmx()).slice(0, 4))
+  const yearOptions = [currentYear - 1, currentYear, currentYear + 1]
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear)
+
+  // businessDate resolves asynchronously (after login) and can land on a
+  // different year than the browser-clock fallback used for the very first
+  // render, leaving selectedYear pointing outside the recomputed yearOptions.
+  // Re-sync only when selectedYear still equals the last value *we* set it
+  // to — if the user picked a year themselves (via the <select> below) in
+  // the meantime, selectedYear no longer matches and this leaves it alone,
+  // even across later clock changes (e.g. the devtools clock simulator).
+  const lastAutoYearRef = useRef(currentYear)
+  useEffect(() => {
+    if (selectedYear === lastAutoYearRef.current && currentYear !== lastAutoYearRef.current) {
+      setSelectedYear(currentYear)
+    }
+    lastAutoYearRef.current = currentYear
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentYear])
 
   const {
     holidays,
@@ -543,7 +561,7 @@ function HolidaysPage() {
             onChange={(e) => setSelectedYear(Number(e.target.value))}
             className="border rounded px-3 py-1.5 text-sm bg-background"
           >
-            {YEAR_OPTIONS.map((y) => (
+            {yearOptions.map((y) => (
               <option key={y} value={y}>
                 {y}
               </option>

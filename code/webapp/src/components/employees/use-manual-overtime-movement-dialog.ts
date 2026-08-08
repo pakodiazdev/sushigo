@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import type { UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCreateManualOvertimeMovement } from '@/services/overtime-bank-hooks'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 
 const schema = z
   .object({
@@ -48,7 +51,8 @@ export function useManualOvertimeMovementDialog({
 }: UseManualOvertimeMovementDialogProps): UseManualOvertimeMovementDialogResult {
   const mutation = useCreateManualOvertimeMovement(employee?.id ?? '')
 
-  const today = new Date().toISOString().slice(0, 10)
+  const businessDate = useBusinessDate()
+  const today = businessDate ?? todayDateCdmx()
 
   const form = useForm<ManualOvertimeMovementFormValues>({
     resolver: zodResolver(schema),
@@ -59,6 +63,16 @@ export function useManualOvertimeMovementDialog({
       reason: '',
     },
   })
+
+  // businessDate resolves asynchronously, later than the browser-clock
+  // fallback used for the initial defaultValues — keep date in sync while
+  // the user hasn't touched it.
+  useEffect(() => {
+    if (!form.getFieldState('date').isDirty) {
+      form.setValue('date', today)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today])
 
   const handleSubmit = form.handleSubmit((values) => {
     if (!employee) return

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { create } from 'zustand';
 import {
     getClock,
@@ -159,6 +160,35 @@ export const useApplicationClockStore = create<ApplicationClockStore>((set) => (
  */
 export function useApplicationNow(): string | null {
     return useApplicationClockStore(selectApplicationNowUtc);
+}
+
+const APPLICATION_NOW_TICK_MS = 30_000;
+
+/**
+ * Hook to get the current application time as epoch milliseconds, ticking
+ * locally between server refreshes instead of freezing at the snapshot
+ * captured when the clock was last fetched (e.g. right after login).
+ */
+export function useApplicationNowMs(): number {
+    const applicationNowUtc = useApplicationClockStore(selectApplicationNowUtc);
+    const [tick, setTick] = useState(0);
+
+    useEffect(() => {
+        // Ticks unconditionally — including while applicationNowUtc is null
+        // (clock feature disabled / not yet fetched) — so the Date.now()
+        // fallback below keeps advancing instead of freezing at first render.
+        const interval = setInterval(() => setTick((t) => t + 1), APPLICATION_NOW_TICK_MS);
+        return () => clearInterval(interval);
+    }, []);
+
+    return useMemo(() => {
+        if (!applicationNowUtc) return Date.now();
+        const lastFetched = useApplicationClockStore.getState().lastFetched;
+        const snapshotMs = new Date(applicationNowUtc).getTime();
+        const elapsedMs = lastFetched ? Date.now() - lastFetched.getTime() : 0;
+        return snapshotMs + elapsedMs;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [applicationNowUtc, tick]);
 }
 
 /**

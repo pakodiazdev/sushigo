@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
 import { useWageForm } from '../use-wage-form'
 
@@ -22,9 +22,17 @@ describe('useWageForm', () => {
         })
 
         it('initializes with today date for effective_from', () => {
-            const { result } = renderHook(() => useWageForm())
-            const today = new Date().toISOString().split('T')[0]
-            expect(result.current.formData.effective_from).toBe(today)
+            // Pinned mid-day instant (16:00 CDMX / 22:00 UTC, same calendar day in
+            // both) so this doesn't flake during the ~6h/day window where UTC and
+            // CDMX disagree on the date.
+            vi.useFakeTimers()
+            vi.setSystemTime(new Date('2026-04-02T22:00:00Z'))
+            try {
+                const { result } = renderHook(() => useWageForm())
+                expect(result.current.formData.effective_from).toBe('2026-04-02')
+            } finally {
+                vi.useRealTimers()
+            }
         })
 
         it('initializes with empty notes', () => {

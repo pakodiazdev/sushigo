@@ -5,6 +5,7 @@ namespace App\Services\EmployeeRequests;
 use App\Actions\VacationRequests\Concerns\VacationRequestGuards;
 use App\Enums\EmployeeRequestType;
 use App\Models\EmployeeRequest;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +19,11 @@ use Illuminate\Validation\ValidationException;
 class VacationRequestHandler implements RequestHandler
 {
     use VacationRequestGuards;
+
+    // $clock is used by VacationRequestGuards::createApprovedVacationRequest(),
+    // a trait method defined in a separate file that Sonar's per-file analysis
+    // doesn't resolve as a usage of this property.
+    public function __construct(private readonly ApplicationClock $clock) {} // NOSONAR
 
     /**
      * @throws ValidationException

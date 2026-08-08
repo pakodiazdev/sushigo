@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDatesLabel, formatDayLabel } from '@/lib/format'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 import { useLeaveTypes } from '@/services/leave-hooks'
 import type { EmployeeRequest, ExtraDayPayload, LeavePayload, VacationPayload } from '@/types/employee-request'
 
@@ -35,15 +37,6 @@ const CANCEL_DESCRIPTIONS: Record<EmployeeRequest['type'], { approved: string; p
 function cancelDescription(type: EmployeeRequest['type'], status: EmployeeRequest['status']): string {
   const { approved, pending } = CANCEL_DESCRIPTIONS[type]
   return status === 'APPROVED' ? approved : pending
-}
-
-function todayIso(): string {
-  const d = new Date()
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
-  ].join('-')
 }
 
 const STATUS_CONFIG = {
@@ -153,9 +146,10 @@ export function RequestStatusCard({ request, onCancel, isCancelling }: RequestSt
 
   const config = STATUS_CONFIG[request.status]
 
+  const businessDate = useBusinessDate()
   const cancellable =
     request.status === 'PENDING' ||
-    (request.status === 'APPROVED' && endDate >= todayIso())
+    (request.status === 'APPROVED' && endDate >= (businessDate ?? todayDateCdmx()))
 
   return (
     <>

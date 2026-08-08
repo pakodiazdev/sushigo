@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ReopenPayPeriodRequest;
 use App\Http\Resources\PayPeriods\PayPeriodResource;
 use App\Models\PayPeriod;
+use App\Support\Clock\ApplicationClock;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -51,6 +52,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ReopenPayPeriodController extends Controller
 {
+    public function __construct(private readonly ApplicationClock $clock) {}
+
     public function __invoke(ReopenPayPeriodRequest $request, PayPeriod $payPeriod): PayPeriodResource
     {
         if (! $payPeriod->isClosed()) {
@@ -63,7 +66,7 @@ class ReopenPayPeriodController extends Controller
         $payPeriod->update([
             'status' => PayPeriod::STATUS_REOPENED,
             'reopened_by' => $request->user()->id,
-            'reopened_at' => now(),
+            'reopened_at' => $this->clock->nowUtc(),
             'reopen_reason' => $request->reason(),
         ]);
 

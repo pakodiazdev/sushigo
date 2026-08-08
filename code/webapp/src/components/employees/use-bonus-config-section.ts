@@ -3,6 +3,8 @@ import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useBonusGroups, useEmployeeBonusConfig, useAssignBonusConfig } from '@/services/punctuality-config-hooks'
+import { todayDateCdmx } from '@/lib/datetime'
+import { useBusinessDate } from '@/stores/clock.store'
 
 const assignSchema = z.object({
   bonus_group_id: z.string().min(1, 'Selecciona un grupo'),
@@ -23,7 +25,8 @@ export function useBonusConfigSection(employeeId: string) {
     defaultValues: { bonus_group_id: '', effective_from: '' },
   })
 
-  const today = new Date().toISOString().slice(0, 10)
+  const businessDate = useBusinessDate()
+  const today = businessDate ?? todayDateCdmx()
   const current =
     configs?.find(
       (c) => c.effective_from <= today && (c.effective_to === null || c.effective_to >= today),

@@ -1,3 +1,5 @@
+import { todayDateCdmx } from '@/lib/datetime'
+
 export const MONTH_LABELS_FULL = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
@@ -14,7 +16,7 @@ export function toIso(date: Date): string {
 }
 
 export function todayIso(): string {
-  return toIso(new Date())
+  return todayDateCdmx()
 }
 
 export function mondayFirstIndex(jsDay: number): number {

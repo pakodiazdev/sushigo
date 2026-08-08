@@ -9,6 +9,7 @@ use App\Http\Requests\Holidays\UpdateHolidayDefinitionRequest;
 use App\Http\Resources\Holiday\HolidayDefinitionResource;
 use App\Models\HolidayDefinition;
 use App\Services\HolidayGeneratorService;
+use App\Support\Clock\ApplicationClock;
 
 /**
  * @OA\Put(
@@ -47,7 +48,10 @@ use App\Services\HolidayGeneratorService;
  */
 class UpdateHolidayDefinitionController extends Controller
 {
-    public function __construct(private readonly HolidayGeneratorService $generator) {}
+    public function __construct(
+        private readonly HolidayGeneratorService $generator,
+        private readonly ApplicationClock $clock,
+    ) {}
 
     public function __invoke(
         UpdateHolidayDefinitionRequest $request,
@@ -58,7 +62,7 @@ class UpdateHolidayDefinitionController extends Controller
 
         // Generate current-year instance if now annual (and not already generated)
         if ($holidayDefinition->is_annual) {
-            $this->generator->generateForYear((int) now()->year);
+            $this->generator->generateForYear((int) $this->clock->nowInBusinessTz()->year);
         }
 
         return new HolidayDefinitionResource($holidayDefinition);

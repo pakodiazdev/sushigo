@@ -107,9 +107,11 @@ for forbidden in "${FRONTEND_FORBIDDEN_PATTERNS[@]}"; do
     
     if [[ -n "${filtered// }" ]]; then
         echo -e "${YELLOW}⚠️  Found pattern that may need review: $forbidden${NC}"
-        echo "$filtered" | while read -r line; do
-            [[ -n "$line" ]] && echo "   $line"
-        done
+        while IFS= read -r line; do
+            if [[ -n "$line" ]]; then
+                echo "   $line"
+            fi
+        done <<< "$filtered"
         echo "   → If this is for display/formatting, it's OK. If for business logic, use ApplicationClock."
     fi
 done
