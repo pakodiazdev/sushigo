@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Dishes\Dish;
 
+use App\Http\Controllers\Api\V1\Dishes\Dish\Concerns\LoadsDishRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Dishes\Dish\DishResource;
 use App\Models\Dish;
@@ -41,6 +42,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class ListDishesController extends Controller
 {
+    use LoadsDishRelations;
+
     public function __invoke(Request $request): AnonymousResourceCollection
     {
         // position only orders dishes within their own category, so order by the
@@ -48,14 +51,7 @@ class ListDishesController extends Controller
         // dish_category_id instead would reflect category creation order, not
         // the menu's configured section order, and wouldn't move if a category
         // is reordered.
-        $query = Dish::with([
-            'category',
-            'extraGroups.dish',
-            // Nested payloads only show active options — matches totalPriceFor()'s
-            // notion of "available extras". Direct option management still goes
-            // through the dedicated dish-extra-options endpoints.
-            'extraGroups.options' => fn ($q) => $q->where('is_active', true)->with('extraGroup'),
-        ])
+        $query = Dish::with($this->dishEagerLoadRelations())
             ->select('dishes.*')
             ->join('dish_categories', 'dishes.dish_category_id', '=', 'dish_categories.id')
             ->orderBy('dish_categories.position')

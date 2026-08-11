@@ -23,6 +23,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *     @OA\Property(property="base_price", type="number", format="float", example=120.00),
  *     @OA\Property(property="is_active", type="boolean"),
  *     @OA\Property(property="position", type="integer"),
+ *     @OA\Property(property="photo_url", type="string", nullable=true, description="URL of the dish's primary photo, or null when no gallery is attached"),
  *     @OA\Property(property="extra_groups", type="array", @OA\Items(ref="#/components/schemas/DishExtraGroupResponse")),
  *     @OA\Property(property="created_at", type="string", format="date-time")
  * )
@@ -39,6 +40,12 @@ class DishResource extends BaseResource
             'base_price' => (float) $this->base_price,
             'is_active' => $this->is_active,
             'position' => $this->position,
+            // Reads the eager-loaded mediaAttachments.mediaGallery.mediaAssets chain (each
+            // controller constrains it to the primary attachment/asset) instead of calling
+            // primaryMediaGallery()/primaryMedia() — those always issue fresh queries per
+            // call, which turns a list response into an N+1 (see DishCrudTest's dedicated
+            // query-count regression test).
+            'photo_url' => $this->mediaAttachments->first()?->mediaGallery?->mediaAssets->first()?->url,
             'extra_groups' => $this->whenLoaded(
                 'extraGroups',
                 fn (): AnonymousResourceCollection => DishExtraGroupResource::collection($this->extraGroups)

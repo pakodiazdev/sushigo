@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Contracts\AuthorizesMediaOwnership;
 use App\Support\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Dish extends Model
+class Dish extends Model implements AuthorizesMediaOwnership
 {
     use HasFactory, HasPublicId, SoftDeletes;
 
@@ -65,6 +66,17 @@ class Dish extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Distinct from dishes.update on purpose — that also guards catalog/pricing
+     * edits (PUT /dishes/{id}, name/description/base_price/category). Reusing
+     * it here would let anyone granted "manage this dish's photo" also silently
+     * edit its menu data. Mirrors Item::userCanManageMedia().
+     */
+    public function userCanManageMedia(User $user): bool
+    {
+        return $user->can('dishes.manage-media');
     }
 
     /**

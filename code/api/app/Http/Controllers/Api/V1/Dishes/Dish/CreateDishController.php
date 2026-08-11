@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Dishes\Dish;
 
+use App\Http\Controllers\Api\V1\Dishes\Dish\Concerns\LoadsDishRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dishes\Dish\StoreDishRequest;
 use App\Http\Resources\Dishes\Dish\DishResource;
 use App\Models\Dish;
+use App\Services\Media\MediaAttachmentService;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Post(
@@ -38,17 +41,21 @@ use App\Models\Dish;
  */
 class CreateDishController extends Controller
 {
-    public function __invoke(StoreDishRequest $request): DishResource
+    use LoadsDishRelations;
+
+    public function __invoke(StoreDishRequest $request, MediaAttachmentService $mediaAttachmentService): DishResource
     {
-        $dish = Dish::create($request->dishData());
-        $dish->load([
-            'category',
-            'extraGroups.dish',
-            // Nested payloads only show active options — matches totalPriceFor()'s
-            // notion of "available extras". Direct option management still goes
-            // through the dedicated dish-extra-options endpoints.
-            'extraGroups.options' => fn ($query) => $query->where('is_active', true)->with('extraGroup'),
-        ]);
+        $dish = DB::transaction(function () use ($request, $mediaAttachmentService) {
+            $dish = Dish::create($request->dishData());
+
+            if ($mediaGalleryId = $request->mediaGalleryId()) {
+                $mediaAttachmentService($dish, $mediaGalleryId);
+            }
+
+            return $dish;
+        });
+
+        $dish->load($this->dishEagerLoadRelations());
 
         return (new DishResource($dish))->setStatusCode(201);
     }

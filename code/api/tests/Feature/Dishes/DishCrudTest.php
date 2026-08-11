@@ -19,7 +19,7 @@ class DishCrudTest extends DishesTestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'data' => [
-                    '*' => ['id', 'dish_category_id', 'name', 'base_price', 'is_active', 'position', 'extra_groups'],
+                    '*' => ['id', 'dish_category_id', 'name', 'base_price', 'is_active', 'position', 'extra_groups', 'photo_url'],
                 ],
             ]);
 

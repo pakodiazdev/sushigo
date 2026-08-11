@@ -170,6 +170,11 @@ class PermissionSeeder extends LockedSeeder
             'dishes.create' => ['label' => 'Crear platillo / categoría', 'group' => self::GROUP_PLATILLOS],
             'dishes.update' => ['label' => 'Editar platillo / categoría', 'group' => self::GROUP_PLATILLOS],
             'dishes.delete' => ['label' => 'Eliminar platillo / categoría', 'group' => self::GROUP_PLATILLOS],
+            // Distinct from dishes.update on purpose — same reasoning as items.manage-media:
+            // dishes.update also guards catalog/pricing edits (PUT /dishes/{id}), so reusing
+            // it here would let anyone granted "manage this dish's photo" also silently edit
+            // its name/price/category. See Dish::userCanManageMedia().
+            'dishes.manage-media' => ['label' => 'Gestionar fotos del platillo', 'group' => self::GROUP_PLATILLOS],
 
             // Media
             'media.upload' => ['label' => 'Subir archivos multimedia', 'group' => 'Media'],

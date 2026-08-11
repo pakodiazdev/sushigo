@@ -95,8 +95,10 @@ class CoreTestSeeder extends Seeder
         'dishes.create',
         'dishes.update',
         'dishes.delete',
-        // Distinct from items.update on purpose — see Item::userCanManageMedia().
+        // Distinct from items.update/dishes.update on purpose — see
+        // Item::userCanManageMedia() / Dish::userCanManageMedia().
         'items.manage-media',
+        'dishes.manage-media',
         'inventory_locations.view',
         'inventory_locations.manage',
         'units_of_measure.manage',

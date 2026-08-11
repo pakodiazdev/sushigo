@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Dishes\Dish;
 
+use App\Http\Requests\Concerns\ReadsRawStringInput;
 use App\Http\Requests\Dishes\Dish\Concerns\NormalizesDishData;
+use App\Models\MediaGallery;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,16 +20,44 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="description", type="string", nullable=true, example="Kanikama, aguacate, pepino"),
  *   @OA\Property(property="base_price", type="number", format="float", example=120.00),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Active status (default: true)"),
- *   @OA\Property(property="position", type="integer", example=0, description="Display order within category (default: 0)")
+ *   @OA\Property(property="position", type="integer", example=0, description="Display order within category (default: 0)"),
+ *   @OA\Property(property="media_gallery_id", type="string", example="01JKABC0987654321ZYXWVUTS", nullable=true, description="Gallery public_id (ULID) uploaded via POST /media/upload to attach as this dish's photo"),
+ *   @OA\Property(property="owner_token", type="string", example="c9c9f9b0-...", nullable=true, description="Only checked when media_gallery_id points at a gallery still unattached to anything — the token from the POST /media/upload call that created it")
  * )
  */
 class StoreDishRequest extends FormRequest
 {
-    use NormalizesDishData;
+    use NormalizesDishData, ReadsRawStringInput;
 
     public function authorize(): bool
     {
-        return true;
+        return $this->authorizesMediaGalleryOwnership();
+    }
+
+    /**
+     * Without this, attaching an unattached gallery to a new dish never
+     * checked owner_token — a caller who merely learns another user's
+     * in-progress gallery public_id could claim its photo on their own
+     * dish, since MediaAttachmentService attaches unconditionally. Mirrors
+     * CreateItemRequest::authorizesMediaGalleryOwnership().
+     */
+    private function authorizesMediaGalleryOwnership(): bool
+    {
+        // Raw input, not validated('media_gallery_id'): authorize() runs
+        // before the validator, so validated() isn't available yet here.
+        $publicId = $this->rawStringInput('media_gallery_id');
+
+        if (! $publicId) {
+            return true;
+        }
+
+        $gallery = MediaGallery::where('public_id', $publicId)->first();
+
+        if (! $gallery) {
+            return true; // let the `exists` rule produce a clean 422
+        }
+
+        return $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'));
     }
 
     public function rules(): array
@@ -39,7 +69,17 @@ class StoreDishRequest extends FormRequest
             'base_price' => ['required', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
             'position' => ['nullable', 'integer', 'min:0'],
+            'media_gallery_id' => ['nullable', 'string', 'exists:media_galleries,public_id'],
+            'owner_token' => ['sometimes', 'string'],
         ];
+    }
+
+    /**
+     * Resolved numeric FK for the gallery to attach — null when omitted.
+     */
+    public function mediaGalleryId(): ?int
+    {
+        return $this->resolvePublicId(MediaGallery::class, 'media_gallery_id');
     }
 
     /**
@@ -47,6 +87,8 @@ class StoreDishRequest extends FormRequest
      */
     public function dishData(): array
     {
-        return $this->normalizedDishData(applyCreateDefaults: true);
+        $data = $this->normalizedDishData(applyCreateDefaults: true);
+
+        return collect($data)->except(['media_gallery_id', 'owner_token'])->all();
     }
 }

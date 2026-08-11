@@ -23,7 +23,7 @@ abstract class DishesTestCase extends TestCase
     {
         parent::setUp();
 
-        $dishesPermissions = ['dishes.view', 'dishes.create', 'dishes.update', 'dishes.delete'];
+        $dishesPermissions = ['dishes.view', 'dishes.create', 'dishes.update', 'dishes.delete', 'dishes.manage-media'];
 
         foreach ($dishesPermissions as $name) {
             Permission::firstOrCreate(['name' => $name, 'guard_name' => 'api']);
