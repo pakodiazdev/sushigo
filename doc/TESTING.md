@@ -50,7 +50,9 @@ Ambas corren en el mismo contenedor PostgreSQL (`pgsql`).
 <env name="DB_CONNECTION" value="pgsql"/>
 <env name="DB_HOST" value="pgsql"/>
 <env name="DB_PORT" value="5432"/>
-<env name="DB_DATABASE" value="mydb_test"/>
+<!-- DB_DATABASE is intentionally NOT set here — it must be supplied by the environment
+     running the tests (e.g. DB_DATABASE=mydb_test), otherwise tests silently fall back
+     to the dev database (mydb). See "Ejecutar Tests" below. -->
 <env name="DB_USERNAME" value="admin"/>
 <env name="DB_PASSWORD" value="admin"/>
 ```
@@ -68,18 +70,31 @@ DB_PASSWORD=admin
 
 ### 🧪 Ejecutar Tests
 
+**Local (pre-PR): solo linters + los tests que entregaste.** No corras la suite completa como paso
+local — es responsabilidad de CI, que ya la corre con su propia base de datos aislada en cada PR;
+correrla también en local es trabajo duplicado. Los comandos abajo pasan `DB_DATABASE=mydb_test`
+explícitamente porque `phpunit.xml` no la fija por defecto (ver arriba) — sin ese valor, `php
+artisan test` usaría la base de datos de desarrollo (`mydb`). Si trabajas en dev-lab, ver
+`doc/conventions/testing/testing-strategy.md` → "Local vs CI" para el equivalente con la base de
+datos aislada por workspace, que `code/api/.env.testing` ya provee automáticamente.
+
 ```bash
-# Todas las pruebas
-docker exec -it dev_container php artisan test
+# Test específico (uso local recomendado antes de abrir un PR)
+docker exec -it dev_container bash -c "cd /app/code/api && DB_DATABASE=mydb_test php artisan test --filter=OpeningBalanceTest"
 
 # Suite específica
-docker exec -it dev_container php artisan test --testsuite=Feature
+docker exec -it dev_container bash -c "cd /app/code/api && DB_DATABASE=mydb_test php artisan test --testsuite=Feature"
+```
 
-# Test específico
-docker exec -it dev_container php artisan test --filter=OpeningBalanceTest
+Suite completa — opcional localmente, solo para paridad con CI (por ejemplo, para reproducir un
+fallo reportado por CI):
+
+```bash
+# Todas las pruebas
+docker exec -it dev_container bash -c "cd /app/code/api && DB_DATABASE=mydb_test php artisan test"
 
 # Con cobertura
-docker exec -it dev_container php artisan test --coverage
+docker exec -it dev_container bash -c "cd /app/code/api && DB_DATABASE=mydb_test php artisan test --coverage"
 ```
 
 ### 👤 Usuarios de Testing
