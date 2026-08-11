@@ -119,17 +119,20 @@ describe('SkeletonGrid', () => {
     it('renders in a grid layout', () => {
         const { container } = render(<SkeletonGrid />)
 
-        const grid = container.firstChild as HTMLElement
-        expect(grid?.className).toContain('grid')
-        expect(grid?.className).toContain('gap-3')
+        const grid = container.querySelector('.attendance-card-grid') as HTMLElement
+        expect(grid).not.toBeNull()
     })
 
-    it('is responsive with grid columns', () => {
+    it('shares the real card grid\'s container-query column rules, not viewport breakpoints', () => {
         const { container } = render(<SkeletonGrid />)
 
-        const grid = container.firstChild as HTMLElement
-        expect(grid?.className).toContain('sm:grid-cols-2')
-        expect(grid?.className).toContain('lg:grid-cols-3')
-        expect(grid?.className).toContain('xl:grid-cols-4')
+        // Guards against the loading and loaded grids disagreeing on column count
+        // for the same width — see the comment on SkeletonGrid in AttendanceStates.tsx.
+        expect(container.querySelector('.attendance-grid-container')).not.toBeNull()
+        expect(container.querySelector('.attendance-card-grid')).not.toBeNull()
+        const grid = container.querySelector('.attendance-card-grid') as HTMLElement
+        expect(grid.className).not.toContain('sm:grid-cols-2')
+        expect(grid.className).not.toContain('lg:grid-cols-3')
+        expect(grid.className).not.toContain('xl:grid-cols-4')
     })
 })

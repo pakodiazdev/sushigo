@@ -2,11 +2,11 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useDailyAttendance, useCheckIn, useLunchStart, useLunchReturn, useCheckOut, useOvertimeDecision, useBulkOvertimeDecision, useMarkDayStatus } from '@/services/attendance-hooks'
 import { useExtraDayExpress } from '@/components/attendance/use-extra-day-express'
-import { getAttendancePhase, isAbsentRow, isHiddenFromGrid } from '@/types/attendance'
+import { getAttendancePhase, isAbsentRow, isHiddenFromGrid, attendanceRecordToRowData } from '@/types/attendance'
 import { todayDateCdmx } from '@/lib/datetime'
 import { timeToIsoWithOffset } from '@/lib/timezone'
 import { useBusinessDate } from '@/stores/clock.store'
-import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, OvertimeDecisionPayload, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendancePhase, TodayAttendanceEmployee, AttendanceRecord, OvertimeDecisionPayload, OvertimePendingEntry, OvertimeValuationMethod } from '@/types/attendance'
 import type { AttendanceSummary, AttendanceFilter } from '@/components/attendance'
 
 // Re-export from shared utilities for backwards compatibility
@@ -145,10 +145,9 @@ export interface UseTodayAttendancePageResult {
   // Stat tab filter
   selectedFilter: AttendanceFilter | null
   toggleFilter: (filter: AttendanceFilter) => void
-  // Keeps a card rendered through the mark-falta → justify-now? → (dialog) flow,
-  // then plays an exit animation once the flow concludes
+  // Card exit animation — true for any of the 5 actions below once its
+  // confirmed result no longer belongs in the active tab
   isCardExiting: (employeeId: string) => boolean
-  pinEmployeeCard: (employeeId: string) => void
   onFaltaFlowComplete: (employeeId: string) => void
   // Date selection
   selectedDate: string
@@ -192,8 +191,8 @@ export interface UseTodayAttendancePageResult {
   confirmBulkOvertimeDecision: (authorize: boolean, valuationMethod?: OvertimeValuationMethod, agreedRate?: number, agreedFactor?: number, applyToRest?: boolean) => void
   closeBulkOvertimeDecision: () => void
   // Mark day status action
-  isMarkingDayStatus: boolean
-  markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string) => void
+  isMarkingDayStatus: (employeeId: string) => boolean
+  markDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string) => Promise<boolean>
   // Extra day express action
   extraDayRow: TodayAttendanceRow | null
   isRegisteringExtraDay: boolean
@@ -229,6 +228,25 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   // ── Stat tab filter ───────────────────────────────────────────────────────────
   const [selectedFilter, setSelectedFilter] = useState<AttendanceFilter | null>(initialFilter)
   const hasAppliedDefaultFilter = useRef(initialFilter !== null)
+  // Mirrors selectedFilter/selectedDate/branchId for the shared exit-animation
+  // trigger to read at async onSuccess time — a mutation's onSuccess closure
+  // captures whatever these were when `.mutate()` was called, so if the
+  // manager switches tabs/date/branch while the request is in flight, reading
+  // these refs (rather than the captured values) lets the trigger judge
+  // against what's actually on screen NOW, not what was true when the action
+  // started. See startExitAnimation below.
+  const selectedFilterRef = useRef(selectedFilter)
+  useEffect(() => {
+    selectedFilterRef.current = selectedFilter
+  }, [selectedFilter])
+  const selectedDateRef = useRef(selectedDate)
+  useEffect(() => {
+    selectedDateRef.current = selectedDate
+  }, [selectedDate])
+  const branchIdRef = useRef(branchId)
+  useEffect(() => {
+    branchIdRef.current = branchId
+  }, [branchId])
 
   // Apply the smart default (Pendientes, or En trabajo if nothing is pending)
   // once the first load resolves, unless a tab was already chosen (e.g. from
@@ -248,13 +266,35 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     setSelectedFilter((current) => (current === filter ? null : filter))
   }, [])
 
-  // ── Keep a card rendered through the mark-falta → justify-now? → (dialog) flow ──
-  // 'pinned'  — the underlying row no longer matches the active tab, but a dialog
-  //             flow on this exact card is still in progress; render normally,
-  //             fully interactive, so the flow isn't yanked out from under the user.
-  // 'exiting' — the flow just concluded; play the exit animation, then remove.
+  // ── Card exit animation ──────────────────────────────────────────────────────
+  // 'pinned'  — a multi-step dialog flow (mark-falta → justify-now? → justify
+  //             dialog) is still in progress on this card even though its
+  //             confirmed result no longer matches the active tab; render
+  //             normally, fully interactive, so the flow isn't yanked out
+  //             from under the user.
+  // 'exiting' — the action (or flow) just concluded and its confirmed result
+  //             no longer belongs in the active tab; play the fade/slide-out
+  //             animation for 350ms, then remove.
+  //
+  // No 'hidden' state and no guessed target bucket: every trigger below
+  // already has the mutation's own confirmed AttendanceRecord in hand by the
+  // time it decides whether to animate (see startExitAnimation), so there is
+  // nothing left to guess or wait on a future poll to confirm.
   const [cardOverrides, setCardOverrides] = useState<Map<string, 'pinned' | 'exiting'>>(new Map())
   const exitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  // Bridges markDayStatus (flow start) to onFaltaFlowComplete (flow end,
+  // fired later from a dialog close — not from a mutation onSuccess, so it
+  // has no mutation response in scope of its own). Carries the row already
+  // merged with the confirmed post-mutation attendance data, the UNMERGED
+  // pre-mutation row (so startExitAnimation can tell whether the card was
+  // ever part of the currently active tab — see its own comment), and the
+  // date/branch the flow started for.
+  const faltaFlowContext = useRef(new Map<string, { date: string; branchId: number | null; row: TodayAttendanceRow; preMutationRow: TodayAttendanceRow }>())
+  const [markingDayStatusEmployeeIds, setMarkingDayStatusEmployeeIds] = useState<Set<string>>(new Set())
+  const isMarkingDayStatus = useCallback(
+    (employeeId: string) => markingDayStatusEmployeeIds.has(employeeId),
+    [markingDayStatusEmployeeIds],
+  )
 
   useEffect(() => {
     const timers = exitTimers.current
@@ -263,57 +303,106 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     }
   }, [])
 
-  const pinEmployeeCard = useCallback((employeeId: string) => {
-    setCardOverrides((current) => {
-      if (current.get(employeeId) === 'pinned') return current
-      const next = new Map(current)
-      next.set(employeeId, 'pinned')
-      return next
-    })
-  }, [])
+  // `cardOverrides`/`exitTimers`/`faltaFlowContext` are keyed only by
+  // employeeId, but `data` comes from useDailyAttendance(branchId,
+  // selectedDate) — nothing else ties them to the specific day/branch they
+  // were set for. Any pinned/exiting state (or a flow context captured mid-
+  // dialog) is meaningless once the underlying data set it was computed
+  // against is gone, so treat a date/branch change as a hard reset instead
+  // of trying to carry it over. markingDayStatusEmployeeIds is deliberately
+  // NOT touched here — it self-clears unconditionally in markDayStatus's
+  // .finally(), decoupled on purpose (see markDayStatus below).
+  useEffect(() => {
+    exitTimers.current.forEach((timer) => clearTimeout(timer))
+    exitTimers.current.clear()
+    faltaFlowContext.current.clear()
+    setCardOverrides(new Map())
+  }, [selectedDate, branchId])
 
-  // The mark-falta flow always ends with the row in the 'absent' bucket,
-  // regardless of which choice the manager makes:
-  //  - Decline / no leave registered → day_status stays ABSENCE.
-  //  - Justify with a full-day (non-SCHEDULED) leave → RegisterDirectLeaveAction
-  //    overwrites the existing Attendance record's day_status to LEAVE.
-  //  - Justify with a partial (SCHEDULED) leave → shouldCreateAttendanceRecords()
-  //    is false, so RegisterDirectLeaveAction skips touching Attendance entirely
-  //    and day_status is left as ABSENCE (see RegisterDirectLeaveAction.php).
-  // Either way day_status ends up ABSENCE or LEAVE, so isAbsentRow is true and
-  // isHiddenFromGrid is false — today_leave.time_mode never overrides this,
-  // since isAbsentRow checks getAttendancePhase(row.attendance) first and only
-  // falls back to today_leave for rows with NO attendance record at all.
-  // This is computed from `filter` alone — deliberately NOT from `data` —
-  // because `data` can still reflect the pre-mutation row when the flow
-  // concludes quickly (useMarkDayStatus only invalidates/refetches on
-  // success, and the manager can dismiss the justify-now prompt before that
-  // refetch lands). Deciding from `data` in that window used the stale
-  // (still-pending) bucket and produced the wrong answer once the real data
-  // arrived a moment later.
-  function matchesFilterAfterFalta(filter: AttendanceFilter | null): boolean {
-    return filter === null || filter === 'total' || filter === 'absent'
+  function cancelExitTimer(employeeId: string) {
+    const timer = exitTimers.current.get(employeeId)
+    if (timer !== undefined) {
+      clearTimeout(timer)
+      exitTimers.current.delete(employeeId)
+    }
   }
 
-  // Ends the pin started by pinEmployeeCard once the mark-falta → justify-now?
-  // flow concludes. If the row's final status still belongs in the active tab
-  // (e.g. ABSENCE stays visible on the default view), it never actually needs
-  // to leave the grid — clear the pin immediately instead of playing the
-  // fade/slide-out animation, which would otherwise make the card vanish and
-  // then abruptly pop back in.
-  const startExitAnimation = useCallback((employeeId: string) => {
-    if (matchesFilterAfterFalta(selectedFilter)) {
-      const existingTimer = exitTimers.current.get(employeeId)
-      if (existingTimer) {
-        clearTimeout(existingTimer)
-        exitTimers.current.delete(employeeId)
-      }
-      setCardOverrides((current) => {
-        if (!current.has(employeeId)) return current
-        const next = new Map(current)
-        next.delete(employeeId)
-        return next
-      })
+  function clearOverride(employeeId: string) {
+    setCardOverrides((current) => {
+      if (!current.has(employeeId)) return current
+      const next = new Map(current)
+      next.delete(employeeId)
+      return next
+    })
+  }
+
+  // An 'exiting' override's animation is only meaningful for the tab it was
+  // triggered from — the tab the card was actually leaving. If the manager
+  // switches tabs while that 350ms fade/slide is still playing, continuing
+  // it in the newly selected tab is wrong either way: the card might now
+  // genuinely belong there (so it should render normally, not fade out of a
+  // tab it just entered) or it might not belong there at all (so it should
+  // never have appeared in the first place, per the same reasoning
+  // startExitAnimation's own preMutationRow guard applies at trigger time).
+  // Cancel any in-flight exit the instant the filter changes; visibleRows'
+  // own matchesGridFilter check takes over immediately, with no animation.
+  // 'pinned' overrides are deliberately left alone — a mark-falta dialog
+  // flow in progress must survive a tab switch, not get cut short by one.
+  useEffect(() => {
+    cardOverrides.forEach((value, employeeId) => {
+      if (value !== 'exiting') return
+      cancelExitTimer(employeeId)
+      clearOverride(employeeId)
+    })
+    // Intentionally scoped to selectedFilter alone — cardOverrides is read
+    // via the closure, not a dependency, since including it would re-run
+    // this on every override change (pins, other exits settling) instead of
+    // only when the active tab itself changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFilter])
+
+  // Shared exit-animation trigger for every action that can move a card out
+  // of the active tab (check-in, lunch-start/return, check-out, and mark-
+  // falta via onFaltaFlowComplete below). `mergedRow` must already carry the
+  // mutation's confirmed `attendance` — callers build it by spreading a row
+  // captured SYNCHRONOUSLY before the mutation started (safe: only
+  // `.attendance` is affected by these actions, never `today_leave`/
+  // `today_vacation`/`schedule`) over the response's own fresh `attendance`.
+  // Deliberately never reads `data`/a data ref here: the mutation hook's own
+  // onSuccess (which writes the query cache) and this call-site onSuccess
+  // run synchronously back-to-back, before React re-renders, so `data` would
+  // still be the PRE-mutation snapshot at this exact point — reading it here
+  // would silently reintroduce the same "decide from a value that hasn't
+  // caught up yet" class of bug this design otherwise avoids entirely.
+  const startExitAnimation = useCallback((employeeId: string, mergedRow: TodayAttendanceRow, preMutationRow: TodayAttendanceRow, forDate: string, forBranchId: number | null) => {
+    // The date/branch reset effect above already clears every override the
+    // instant selectedDate/branchId changes — synchronously, well before
+    // this async callback (at least one network round-trip later) could
+    // ever fire. So by the time forDate/forBranchId are stale here, any
+    // cardOverrides entry still present for this employeeId is guaranteed
+    // to belong to a NEW action started after the switch (e.g. a mark-falta
+    // pin on the day now on screen), never a leftover from this stale one.
+    // Deliberately do NOT clearOverride here — doing so would clobber that
+    // live hold and make the card vanish mid-flow on the day the manager is
+    // actually looking at (bug regression, see the test for this exact
+    // sequence).
+    if (forDate !== selectedDateRef.current || forBranchId !== branchIdRef.current) return
+
+    cancelExitTimer(employeeId)
+
+    if (matchesGridFilter(mergedRow, selectedFilterRef.current)) {
+      clearOverride(employeeId)
+      return
+    }
+
+    // The row no longer matches the active tab — but if it wasn't part of
+    // that tab BEFORE this action either (e.g. the manager switched tabs
+    // while the request was still in flight, so this card was never visible
+    // here), there is nothing to animate OUT of it: forcing an 'exiting'
+    // override would flash a card that never belonged to this tab into it,
+    // only to immediately slide it back out.
+    if (!matchesGridFilter(preMutationRow, selectedFilterRef.current)) {
+      clearOverride(employeeId)
       return
     }
 
@@ -323,23 +412,32 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
       return next
     })
 
-    const existingTimer = exitTimers.current.get(employeeId)
-    if (existingTimer) clearTimeout(existingTimer)
-
     const timer = setTimeout(() => {
-      setCardOverrides((current) => {
-        if (!current.has(employeeId)) return current
-        const next = new Map(current)
-        next.delete(employeeId)
-        return next
-      })
       exitTimers.current.delete(employeeId)
+      clearOverride(employeeId)
     }, 350)
     exitTimers.current.set(employeeId, timer)
-  }, [selectedFilter])
+  }, [])
 
-  // Pinned/exiting rows are kept in their natural `data` position (not appended
-  // at the end) so the card doesn't visibly jump while its dialog flow plays out.
+  const onFaltaFlowComplete = useCallback((employeeId: string) => {
+    const context = faltaFlowContext.current.get(employeeId)
+    faltaFlowContext.current.delete(employeeId)
+    // No context means either the mutation failed (pin already cleared by
+    // markDayStatus's own failure path) or rowBeforeMutation wasn't found at
+    // mutation time (markDayStatus pinned the card but had nothing to hand
+    // off to this flow) — clear defensively either way so a card can never
+    // stay pinned in a tab it no longer belongs to with no flow left to
+    // release it.
+    if (!context) {
+      clearOverride(employeeId)
+      return
+    }
+    startExitAnimation(employeeId, context.row, context.preMutationRow, context.date, context.branchId)
+  }, [startExitAnimation])
+
+  // Pinned/exiting rows are kept in their natural `data` position (not
+  // appended at the end) so the card doesn't visibly jump while its
+  // animation/dialog flow plays out.
   const visibleRows = useMemo(() => {
     if (cardOverrides.size === 0) return filterRowsForGrid(data, selectedFilter)
     return data.filter((row) => cardOverrides.has(row.employee.id) || matchesGridFilter(row, selectedFilter))
@@ -381,11 +479,30 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
 
   const confirmCheckIn = useCallback((time: string, reason?: string) => {
     if (!pendingCheckInEmployee) return
+    const employee = pendingCheckInEmployee
+    // A correction of an already-recorded check-in never changes the row's
+    // bucket, regardless of which tab is active — only a fresh check-in does.
+    const isFreshCheckIn = !pendingCheckInCurrentValue
+    const rowBeforeMutation = data.find((r) => r.employee.id === employee.id)
+    const forDate = selectedDate
+    const forBranchId = branchId
     checkInMutation.mutate(
-      { employee_id: pendingCheckInEmployee.id, check_in: timeToIso(time, selectedDate), reason },
-      { onSettled: closeCheckIn }
+      { employee_id: employee.id, check_in: timeToIso(time, forDate), reason },
+      {
+        onSuccess: (response) => {
+          if (!isFreshCheckIn || !rowBeforeMutation) return
+          startExitAnimation(
+            employee.id,
+            { ...rowBeforeMutation, attendance: attendanceRecordToRowData(response.data.data) },
+            rowBeforeMutation,
+            forDate,
+            forBranchId,
+          )
+        },
+        onSettled: closeCheckIn,
+      }
     )
-  }, [pendingCheckInEmployee, checkInMutation, closeCheckIn, selectedDate])
+  }, [pendingCheckInEmployee, pendingCheckInCurrentValue, data, checkInMutation, closeCheckIn, selectedDate, branchId, startExitAnimation])
 
   // ── Lunch-start state ────────────────────────────────────────────────────────
   const [pendingLunchStart, setPendingLunchStart] =
@@ -401,11 +518,27 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
 
   const confirmLunchStart = useCallback((time: string, reason?: string) => {
     if (!pendingLunchStart) return
+    const { employee, attendanceId, currentValue } = pendingLunchStart
+    const rowBeforeMutation = data.find((r) => r.employee.id === employee.id)
+    const forDate = selectedDate
+    const forBranchId = branchId
     lunchStartMutation.mutate(
-      { attendance_id: pendingLunchStart.attendanceId, lunch_start: timeToIso(time, selectedDate), reason },
-      { onSettled: closeLunchStart }
+      { attendance_id: attendanceId, lunch_start: timeToIso(time, forDate), reason },
+      {
+        onSuccess: (response) => {
+          if (currentValue || !rowBeforeMutation) return
+          startExitAnimation(
+            employee.id,
+            { ...rowBeforeMutation, attendance: attendanceRecordToRowData(response.data.data) },
+            rowBeforeMutation,
+            forDate,
+            forBranchId,
+          )
+        },
+        onSettled: closeLunchStart,
+      }
     )
-  }, [pendingLunchStart, lunchStartMutation, closeLunchStart, selectedDate])
+  }, [pendingLunchStart, data, lunchStartMutation, closeLunchStart, selectedDate, branchId, startExitAnimation])
 
   // ── Lunch-return state ───────────────────────────────────────────────────────
   const [pendingLunchReturn, setPendingLunchReturn] =
@@ -421,11 +554,27 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
 
   const confirmLunchReturn = useCallback((time: string, reason?: string) => {
     if (!pendingLunchReturn) return
+    const { employee, attendanceId, currentValue } = pendingLunchReturn
+    const rowBeforeMutation = data.find((r) => r.employee.id === employee.id)
+    const forDate = selectedDate
+    const forBranchId = branchId
     lunchReturnMutation.mutate(
-      { attendance_id: pendingLunchReturn.attendanceId, lunch_end: timeToIso(time, selectedDate), reason },
-      { onSettled: closeLunchReturn }
+      { attendance_id: attendanceId, lunch_end: timeToIso(time, forDate), reason },
+      {
+        onSuccess: (response) => {
+          if (currentValue || !rowBeforeMutation) return
+          startExitAnimation(
+            employee.id,
+            { ...rowBeforeMutation, attendance: attendanceRecordToRowData(response.data.data) },
+            rowBeforeMutation,
+            forDate,
+            forBranchId,
+          )
+        },
+        onSettled: closeLunchReturn,
+      }
     )
-  }, [pendingLunchReturn, lunchReturnMutation, closeLunchReturn, selectedDate])
+  }, [pendingLunchReturn, data, lunchReturnMutation, closeLunchReturn, selectedDate, branchId, startExitAnimation])
 
   // ── Check-out state ──────────────────────────────────────────────────────────
   const [pendingCheckOut, setPendingCheckOut] =
@@ -441,11 +590,27 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
 
   const confirmCheckOut = useCallback((time: string, reason?: string) => {
     if (!pendingCheckOut) return
+    const { employee, attendanceId, currentValue } = pendingCheckOut
+    const rowBeforeMutation = data.find((r) => r.employee.id === employee.id)
+    const forDate = selectedDate
+    const forBranchId = branchId
     checkOutMutation.mutate(
-      { attendance_id: pendingCheckOut.attendanceId, check_out: timeToIso(time, selectedDate), reason },
-      { onSettled: closeCheckOut }
+      { attendance_id: attendanceId, check_out: timeToIso(time, forDate), reason },
+      {
+        onSuccess: (response) => {
+          if (currentValue || !rowBeforeMutation) return
+          startExitAnimation(
+            employee.id,
+            { ...rowBeforeMutation, attendance: attendanceRecordToRowData(response.data.data) },
+            rowBeforeMutation,
+            forDate,
+            forBranchId,
+          )
+        },
+        onSettled: closeCheckOut,
+      }
     )
-  }, [pendingCheckOut, checkOutMutation, closeCheckOut, selectedDate])
+  }, [pendingCheckOut, data, checkOutMutation, closeCheckOut, selectedDate, branchId, startExitAnimation])
 
   // ── Overtime decision state ───────────────────────────────────────────────────
   const [pendingOvertimeDecision, setPendingOvertimeDecision] =
@@ -522,16 +687,77 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
   }, [])
 
   // ── Mark day status ───────────────────────────────────────────────────────────
+  // Pins the card immediately (so the justify-now?/justify-dialog flow that
+  // follows a success isn't yanked out from under the user), and unpins it
+  // again on failure — collapsed into this single function rather than split
+  // across the page component and this hook, so a failed mutation can never
+  // leave a card pinned forever with no flow left to release it.
+  //
+  // Returns whether the mutation succeeded (not its raw promise/rejection —
+  // attendance-hooks.ts's onError already surfaces the failure toast, the
+  // caller only needs to know whether to continue the justify-now? flow).
   const markDayStatus = useCallback(
-    (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string) => {
-      markDayStatusMutation.mutate({
+    (employee: TodayAttendanceEmployee, status: 'ABSENCE', reason?: string): Promise<boolean> => {
+      const rowBeforeMutation = data.find((r) => r.employee.id === employee.id)
+      const forDate = selectedDate
+      const forBranchId = branchId
+
+      setCardOverrides((current) => {
+        if (current.get(employee.id) === 'pinned') return current
+        const next = new Map(current)
+        next.set(employee.id, 'pinned')
+        return next
+      })
+      // Written synchronously, before the mutation's promise even settles,
+      // so a same-tick double-click already sees the button disabled on the
+      // next render — no separate in-flight-request dedup needed.
+      setMarkingDayStatusEmployeeIds((current) => {
+        if (current.has(employee.id)) return current
+        const next = new Set(current)
+        next.add(employee.id)
+        return next
+      })
+
+      return markDayStatusMutation.mutateAsync({
         employee_id: employee.id,
-        date: selectedDate,
+        date: forDate,
         day_status: status,
         reason,
+      }).then(
+        (response: { data: { data: AttendanceRecord } }) => {
+          if (rowBeforeMutation) {
+            faltaFlowContext.current.set(employee.id, {
+              date: forDate,
+              branchId: forBranchId,
+              row: { ...rowBeforeMutation, attendance: attendanceRecordToRowData(response.data.data) },
+              preMutationRow: rowBeforeMutation,
+            })
+          }
+          return true
+        },
+        () => {
+          setCardOverrides((current) => {
+            if (current.get(employee.id) !== 'pinned') return current
+            const next = new Map(current)
+            next.delete(employee.id)
+            return next
+          })
+          return false
+        },
+      ).finally(() => {
+        // Unconditional — never gated by the date/branch this flow started
+        // for. Gating it would leave a switch-away-and-back employee's
+        // buttons disabled forever if the mutation settled while a
+        // different date/branch was selected.
+        setMarkingDayStatusEmployeeIds((current) => {
+          if (!current.has(employee.id)) return current
+          const next = new Set(current)
+          next.delete(employee.id)
+          return next
+        })
       })
     },
-    [markDayStatusMutation, selectedDate],
+    [markDayStatusMutation, data, selectedDate, branchId],
   )
 
   // ── Extra day express ─────────────────────────────────────────────────────────
@@ -585,8 +811,7 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     selectedFilter,
     toggleFilter,
     isCardExiting: (employeeId) => cardOverrides.get(employeeId) === 'exiting',
-    pinEmployeeCard,
-    onFaltaFlowComplete: startExitAnimation,
+    onFaltaFlowComplete,
     selectedDate,
     setSelectedDate,
     // Check-in
@@ -628,7 +853,7 @@ export function useTodayAttendancePage(initialFilter: AttendanceFilter | null = 
     confirmBulkOvertimeDecision,
     closeBulkOvertimeDecision,
     // Mark day status
-    isMarkingDayStatus: markDayStatusMutation.isPending,
+    isMarkingDayStatus,
     markDayStatus,
     // Extra day express
     extraDayRow,

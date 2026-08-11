@@ -41,6 +41,25 @@ function makeWrapper() {
   return { queryClient, wrapper }
 }
 
+/**
+ * Same as makeWrapper(), but with the library's default (non-zero) gcTime —
+ * for tests that seed cache data directly via setQueryData() with no active
+ * useQuery observer keeping it alive. makeWrapper()'s gcTime: 0 schedules
+ * that unobserved data for garbage collection almost immediately, which
+ * would make it disappear before the test can assert on it.
+ */
+function makeLiveWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children)
+  return { queryClient, wrapper }
+}
+
 // ── useCheckOut ────────────────────────────────────────────────────────────────
 
 describe('useCheckOut', () => {
@@ -50,6 +69,7 @@ describe('useCheckOut', () => {
       data: {
         id: 'att-123',
         employee_id: 'emp-001',
+        date: '2026-04-01',
         check_out: '2026-04-01T22:00:00-06:00',
         net_worked_minutes: 420,
         overtime_minutes: 0,
@@ -133,6 +153,27 @@ describe('useCheckOut', () => {
     })
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['attendances', 'daily'] })
+  })
+
+  it('splices the confirmed attendance record into the cached row', async () => {
+    vi.mocked(attendanceApi.checkOut).mockResolvedValueOnce(mockCheckOutResponse as never)
+    const { wrapper, queryClient } = makeLiveWrapper()
+    const queryKey = ['attendances', 'daily', '2026-04-01', 5]
+    queryClient.setQueryData(queryKey, [
+      { employee: { id: 'emp-001', code: 'EMP-001', user: { first_name: 'Carlos', last_name: 'Mendoza' }, roles: [], daily_wage: null }, attendance: { id: 'att-123', check_in: '2026-04-01T13:00:00-06:00', check_out: null }, schedule: null, today_leave: null, today_vacation: false },
+    ])
+
+    const { result } = renderHook(() => useCheckOut(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        attendance_id: 'att-123',
+        check_out: '2026-04-01T22:00:00-06:00',
+      })
+    })
+
+    const rows = queryClient.getQueryData<{ employee: { id: string }; attendance: { check_out: string | null } | null }[]>(queryKey)
+    expect(rows?.[0]?.attendance?.check_out).toBe('2026-04-01T22:00:00-06:00')
   })
 })
 

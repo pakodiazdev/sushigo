@@ -136,6 +136,36 @@ export interface TodayAttendanceResponse {
   data: TodayAttendanceRow[]
 }
 
+/**
+ * Narrows a mutation's returned `AttendanceRecord` (check-in/lunch/check-out/
+ * mark-day-status responses all share this shape) down to `TodayAttendanceData`
+ * — every field `TodayAttendanceData` has is already present on `AttendanceRecord`
+ * with a matching name/type. Lets a mutation's `onSuccess` splice its own
+ * confirmed result directly into the cached daily-attendance row instead of
+ * waiting for the next poll/invalidation-triggered refetch to find out what
+ * it already knows.
+ */
+export function attendanceRecordToRowData(record: AttendanceRecord): TodayAttendanceData {
+  return {
+    id: record.id,
+    check_in: record.check_in,
+    lunch_start: record.lunch_start,
+    lunch_end: record.lunch_end,
+    check_out: record.check_out,
+    day_status: record.day_status,
+    entry_late_seconds: record.entry_late_seconds,
+    entry_late_minutes: record.entry_late_minutes,
+    is_entry_deductible: record.is_entry_deductible,
+    overtime_minutes: record.overtime_minutes,
+    overtime_authorized: record.overtime_authorized,
+    overtime_authorized_at: record.overtime_authorized_at,
+    overtime_valuation_method: record.overtime_valuation_method,
+    overtime_rate_applied: record.overtime_rate_applied,
+    overtime_amount: record.overtime_amount,
+    requires_overtime_decision: record.requires_overtime_decision,
+  }
+}
+
 // #region Close Day types
 
 export interface CloseDayLunchReturn {

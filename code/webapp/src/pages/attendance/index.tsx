@@ -25,6 +25,7 @@ import { useAttendancePermissions } from '@/components/attendance/use-attendance
 import { AuditLogDialog } from '@/components/audit'
 import { AUDITABLE_TYPE_ATTENDANCE } from '@/services/audit.service'
 import { useTodayAttendancePage } from './-use-today-attendance-page'
+import { useAttendanceGridFlip } from './-use-attendance-grid-flip'
 import { useApplicationTimeLabel } from '@/hooks/use-application-time-label'
 import { useAuthStore } from '@/stores/auth.store'
 import { todayDateCdmx } from '@/lib/datetime'
@@ -148,7 +149,6 @@ export function AttendancePage() {
     selectedFilter,
     toggleFilter,
     isCardExiting,
-    pinEmployeeCard,
     onFaltaFlowComplete,
     selectedDate,
     setSelectedDate,
@@ -192,12 +192,15 @@ export function AttendancePage() {
     closeBulkOvertimeDecision,
     // Mark day status
     markDayStatus,
+    isMarkingDayStatus,
     // Extra day express
     extraDayRow,
     isRegisteringExtraDay,
     closeExtraDay,
     confirmExtraDay,
   } = useTodayAttendancePage(search.tab ?? null)
+
+  const { setCardRef: getCardRef, containerRef: gridContainerRef } = useAttendanceGridFlip(visibleRows.map((row) => row.employee.id))
 
   const maxTime = useApplicationTimeLabel()
   const closeDayPanel = useCloseDayPanel(rows, branchId, maxTime)
@@ -294,38 +297,45 @@ export function AttendancePage() {
         if (rows.length === 0) return <EmptyState />
         if (visibleRows.length === 0) return <NoMatchesForFilterState onShowAll={() => toggleFilter('total')} />
         return (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visibleRows.map((row) => (
-              <EmployeeAttendanceCard
-                key={row.employee.id}
-                row={row}
-                canEdit={canEdit}
-                canCorrect={canCorrect}
-                isExiting={isCardExiting(row.employee.id)}
-                onFaltaFlowComplete={onFaltaFlowComplete}
-                onCheckIn={openCheckIn}
-                onLunchStart={openLunchStart}
-                onLunchReturn={openLunchReturn}
-                onCheckOut={openCheckOut}
-                onOvertimeDecision={openOvertimeDecision}
-                onMarkDayStatus={(employee, status) => {
-                  // Keep this card rendered through the justify-now? flow —
-                  // its bucket is about to change and would otherwise vanish
-                  // from the current tab mid-flow (see onFaltaFlowComplete).
-                  pinEmployeeCard(employee.id)
-                  markDayStatus(employee, status)
-                }}
-                onWeeklySummary={can('reports.weekly-summary')
-                  ? (emp) => weeklySummary.open(emp.id, formatLastFirst(emp.user))
-                  : undefined}
-                onViewAudit={can('audit-logs.view')
-                  ? (emp, attendanceId) => setAuditRecord({
-                    employeeName: formatLastFirst(emp.user),
-                    attendanceId,
-                  })
-                  : undefined}
-              />
-            ))}
+          // The inner grid's column count responds to ITS OWN available width
+          // (via this wrapper's `attendance-grid-container` CSS containment),
+          // not the viewport — see the comment above .attendance-card-grid in
+          // index.css for why: the sidebar eats into the real content width
+          // in a way viewport-based sm:/lg:/xl: breakpoints can't see.
+          <div className="attendance-grid-container">
+            <div ref={gridContainerRef} className="attendance-card-grid">
+              {/* Each wrapper is itself `grid` (not `flex`/`block`) — a single-item nested
+                  grid keeps the default stretch behavior the card relied on when it was
+                  directly the outer grid's item, so it still fills both the column width
+                  and the row height every other card in the row stretches to. */}
+              {visibleRows.map((row) => (
+                <div key={row.employee.id} ref={getCardRef(row.employee.id)} className="grid">
+                  <EmployeeAttendanceCard
+                    row={row}
+                    canEdit={canEdit}
+                    canCorrect={canCorrect}
+                    isExiting={isCardExiting(row.employee.id)}
+                    isMarkingDayStatus={isMarkingDayStatus(row.employee.id)}
+                    onFaltaFlowComplete={onFaltaFlowComplete}
+                    onCheckIn={openCheckIn}
+                    onLunchStart={openLunchStart}
+                    onLunchReturn={openLunchReturn}
+                    onCheckOut={openCheckOut}
+                    onOvertimeDecision={openOvertimeDecision}
+                    onMarkDayStatus={markDayStatus}
+                    onWeeklySummary={can('reports.weekly-summary')
+                      ? (emp) => weeklySummary.open(emp.id, formatLastFirst(emp.user))
+                      : undefined}
+                    onViewAudit={can('audit-logs.view')
+                      ? (emp, attendanceId) => setAuditRecord({
+                        employeeName: formatLastFirst(emp.user),
+                        attendanceId,
+                      })
+                      : undefined}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )
       })()}

@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, cleanup, fireEvent, act } from '@testing-library/react'
+import { render, cleanup, fireEvent, act, waitFor } from '@testing-library/react'
 import type { TodayAttendanceEmployee } from '@/types/attendance'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ const defaultProps = {
     onLunchReturn: vi.fn(),
     onCheckOut: vi.fn(),
     onOvertimeDecision: vi.fn(),
-    onMarkDayStatus: vi.fn(),
+    onMarkDayStatus: vi.fn().mockResolvedValue(true),
 }
 
 describe('EmployeeAttendanceCard', () => {
@@ -376,7 +376,7 @@ describe('EmployeeAttendanceCard', () => {
     })
 
     it('calls onMarkDayStatus with ABSENCE when confirm dialog is confirmed', () => {
-        const onMarkDayStatus = vi.fn()
+        const onMarkDayStatus = vi.fn().mockResolvedValue(true)
         const { getByTestId, getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
         )
@@ -388,7 +388,7 @@ describe('EmployeeAttendanceCard', () => {
     })
 
     it('does NOT call onMarkDayStatus when confirm dialog is cancelled', () => {
-        const onMarkDayStatus = vi.fn()
+        const onMarkDayStatus = vi.fn().mockResolvedValue(true)
         const { getByTestId, getByText } = render(
             <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
         )
@@ -399,20 +399,23 @@ describe('EmployeeAttendanceCard', () => {
         expect(onMarkDayStatus).not.toHaveBeenCalled()
     })
 
-    it('asks whether to justify the falta right after confirming it', () => {
-        const { getByTestId, getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
+    it('asks whether to justify the falta right after confirming it', async () => {
+        const { getByTestId, getByText, findByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
 
         fireEvent.click(getByTestId('btn-mark-falta'))
         fireEvent.click(getByText('Confirmar falta'))
 
-        expect(getByText('¿Deseas justificar la falta ahora?')).toBeDefined()
+        // confirmFalta now awaits onMarkDayStatus before opening this dialog
+        // (gates it on success — see use-employee-attendance-card.ts)
+        expect(await findByText('¿Deseas justificar la falta ahora?')).toBeDefined()
     })
 
-    it('opens RegisterLeaveDialog when choosing to justify the falta right away', () => {
-        const { getByTestId, getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
+    it('opens RegisterLeaveDialog when choosing to justify the falta right away', async () => {
+        const { getByTestId, getByText, findByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
 
         fireEvent.click(getByTestId('btn-mark-falta'))
         fireEvent.click(getByText('Confirmar falta'))
+        await findByText('¿Deseas justificar la falta ahora?')
         fireEvent.click(getByText('Justificar ahora'))
 
         expect(mockRegisterLeaveDialog).toHaveBeenLastCalledWith(
@@ -420,27 +423,29 @@ describe('EmployeeAttendanceCard', () => {
         )
     })
 
-    it('calls onFaltaFlowComplete when declining to justify the falta right away', () => {
+    it('calls onFaltaFlowComplete when declining to justify the falta right away', async () => {
         const onFaltaFlowComplete = vi.fn()
-        const { getByTestId, getByText } = render(
+        const { getByTestId, getByText, findByText } = render(
             <EmployeeAttendanceCard {...defaultProps} onFaltaFlowComplete={onFaltaFlowComplete} />
         )
 
         fireEvent.click(getByTestId('btn-mark-falta'))
         fireEvent.click(getByText('Confirmar falta'))
+        await findByText('¿Deseas justificar la falta ahora?')
         fireEvent.click(getByText('Ahora no'))
 
         expect(onFaltaFlowComplete).toHaveBeenCalledWith(mockRow.employee.id)
     })
 
-    it('calls onFaltaFlowComplete when RegisterLeaveDialog closes', () => {
+    it('calls onFaltaFlowComplete when RegisterLeaveDialog closes', async () => {
         const onFaltaFlowComplete = vi.fn()
-        const { getByTestId, getByText } = render(
+        const { getByTestId, getByText, findByText } = render(
             <EmployeeAttendanceCard {...defaultProps} onFaltaFlowComplete={onFaltaFlowComplete} />
         )
 
         fireEvent.click(getByTestId('btn-mark-falta'))
         fireEvent.click(getByText('Confirmar falta'))
+        await findByText('¿Deseas justificar la falta ahora?')
         fireEvent.click(getByText('Justificar ahora'))
 
         const calls = mockRegisterLeaveDialog.mock.calls
@@ -745,6 +750,55 @@ describe('EmployeeAttendanceCard', () => {
         const { container } = render(<EmployeeAttendanceCard {...defaultProps} />)
         const root = container.firstChild as HTMLElement
         expect(root.className).not.toContain('animate-card-exit')
+    })
+
+    // ── isMarkingDayStatus (per-employee busy state) ──────────────────────────────
+
+    it('disables both "Registrar entrada" and "Marcar falta" while isMarkingDayStatus is true', () => {
+        const { getByText, getByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} isMarkingDayStatus />
+        )
+        expect((getByText('Registrar entrada').closest('button') as HTMLButtonElement).disabled).toBe(true)
+        expect((getByTestId('btn-mark-falta') as HTMLButtonElement).disabled).toBe(true)
+    })
+
+    it('shows a spinner instead of the icon on "Marcar falta" while isMarkingDayStatus is true', () => {
+        const { getByTestId, queryByTestId } = render(
+            <EmployeeAttendanceCard {...defaultProps} isMarkingDayStatus />
+        )
+        expect(getByTestId('btn-mark-falta').querySelector('.animate-spin')).not.toBeNull()
+        expect(queryByTestId('btn-mark-falta')).toBeDefined()
+    })
+
+    it('neither button is disabled by default (isMarkingDayStatus defaults to false)', () => {
+        const { getByText, getByTestId } = render(<EmployeeAttendanceCard {...defaultProps} />)
+        expect((getByText('Registrar entrada').closest('button') as HTMLButtonElement).disabled).toBe(false)
+        expect((getByTestId('btn-mark-falta') as HTMLButtonElement).disabled).toBe(false)
+    })
+
+    it('confirmFalta only opens the justify-now? dialog when onMarkDayStatus resolves true', async () => {
+        const onMarkDayStatus = vi.fn().mockResolvedValue(true)
+        const { getByTestId, getByText, findByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
+        )
+
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        fireEvent.click(getByText('Confirmar falta'))
+
+        expect(await findByText('¿Deseas justificar la falta ahora?')).toBeDefined()
+    })
+
+    it('confirmFalta does not open the justify-now? dialog when onMarkDayStatus resolves false', async () => {
+        const onMarkDayStatus = vi.fn().mockResolvedValue(false)
+        const { getByTestId, getByText, queryByText } = render(
+            <EmployeeAttendanceCard {...defaultProps} onMarkDayStatus={onMarkDayStatus} />
+        )
+
+        fireEvent.click(getByTestId('btn-mark-falta'))
+        fireEvent.click(getByText('Confirmar falta'))
+
+        await waitFor(() => expect(onMarkDayStatus).toHaveBeenCalled())
+        expect(queryByText('¿Deseas justificar la falta ahora?')).toBeNull()
     })
 
     // ── Correction pencils (canCorrect) ─────────────────────────────────────────
