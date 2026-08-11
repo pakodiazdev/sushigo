@@ -83,6 +83,47 @@ The rule "required when complex" is tied to the Custom Hook Convention: **if a h
 
 ---
 
+## Local vs CI
+
+**Locally, run only linters and the tests you delivered in your branch** (new/modified test
+files) — not the full suite. **CI runs the full suite as the regression gate**, against its own
+isolated database service, on every PR.
+
+This split exists mainly for speed: the full suite takes longer than the tests you touched, and CI
+already re-runs everything as the regression gate against its own isolated database on every PR —
+running it again locally is duplicate work. Each dev-lab workspace already runs its own isolated
+test database (`sushigo_ws_<letter>_test`, configured via `code/api/.env.testing` — see
+`code/api/phpunit.xml`), introduced specifically to prevent the `SQLSTATE[40P01]` deadlocks a
+shared test database caused (see #268, #84); keeping local runs scoped avoids masking a
+misconfigured `.env.testing` behind an accidental full-suite pass.
+
+| Where | What to run | Command |
+|---|---|---|
+| **Local (pre-PR), dev-lab** | Linters + delivered tests only | `php artisan test --filter=<TestClass>` · `npx vitest run <path>` |
+| **CI (every PR)** | Full suite (regression gate) | `php artisan test` · `npx vitest run` |
+
+Dev-lab workspaces load `DB_DATABASE` automatically from `code/api/.env.testing`, so the commands
+above are safe to run as shown. **Outside dev-lab** (standalone Docker mode), `phpunit.xml` does
+not hardcode `DB_DATABASE` — you MUST pass it explicitly (`DB_DATABASE=mydb_test php artisan
+test --filter=...`, see `doc/TESTING.md`), otherwise the command silently falls back to the dev
+database and `RefreshDatabase` wipes it.
+
+**Rules:**
+
+- Before opening a PR, run linters (Pint, ESLint, TypeScript) and only the test file(s) you added
+  or modified — scoped with `--filter=<TestClass>` or `npx vitest run <path>`.
+- Do **not** run the full local suite (`php artisan test` / `npx vitest run` with no scope) as a
+  pre-PR step — that's CI's job. Running it anyway is unnecessary duplicate work, not a
+  workaround for a shared-database risk: each dev-lab workspace already has its own isolated test
+  database.
+- If CI finds a regression, it MUST be fixed for real — no `skip`/`xfail`/`markTestSkipped` to make
+  CI pass. Once fixed, add that test to the PR's local run list so it stays verified locally for
+  the rest of the session.
+- The full suite remains available locally as an optional CI-parity check (e.g. reproducing a CI
+  failure) — it's just not the default pre-PR step.
+
+---
+
 ## Test Data Management
 
 Full convention: [`test-data-seeders.md`](./test-data-seeders.md)
@@ -156,9 +197,9 @@ Every PR that modifies application code MUST satisfy:
 - [ ] **Backend Unit tests** — complex logic, edge cases, hard-to-reach scenarios
 - [ ] **Frontend Vitest tests** — route guards/config; error feedback (nice-to-have)
 - [ ] **Cypress happy path** — at least one E2E spec for the delivered feature
-- [ ] **No regressions** — all existing tests pass (`make cypress-run`, `php artisan test`, `npx vitest run`)
+- [ ] **Local pre-PR check** — linters pass and the delivered tests pass locally, scoped with `--filter=<TestClass>` / `npx vitest run <path>` (see "Local vs CI" above — the full suite is CI's job, not a local step)
 - [ ] **Coverage gate** — SonarCloud reports >= 80% line coverage on new code (backend and frontend)
-- [ ] **Test fixes** — if changes break existing tests, the PR includes the necessary test updates with a comment explaining why
+- [ ] **CI regressions fixed for real** — if CI finds a broken test, it's fixed with no skip/xfail and added to the PR's local run list going forward
 
 ---
 

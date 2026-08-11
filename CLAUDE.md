@@ -587,7 +587,7 @@ Full convention reference: `doc/conventions/testing/testing-strategy.md`
 **PR merge requirements:**
 - SonarCloud line coverage >= 80% on new code (backend and frontend)
 - At least one Cypress spec with the happy path of the delivered feature
-- All existing tests pass — if changes break prior tests, the PR includes fixes with explanation
+- All existing tests pass — enforced by CI's full-suite run, not a local pre-PR step (see `doc/conventions/testing/testing-strategy.md` → "Local vs CI"); if changes break prior tests, the PR includes fixes with explanation
 - PHPUnit Feature tests for every new/changed endpoint (happy path + unauthorized access)
 
 ## Access URLs (Local Development)
