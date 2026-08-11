@@ -14,6 +14,7 @@ import {
     BarChart3,
     History,
     Pencil,
+    Loader2,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -329,7 +330,11 @@ export interface EmployeeAttendanceCardProps {
     onLunchReturn: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
     onCheckOut: (employee: TodayAttendanceEmployee, attendanceId: string, currentValue?: string | null) => void
     onOvertimeDecision: (employee: TodayAttendanceEmployee, attendanceId: string) => void
-    onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void
+    /** Resolves once the mutation succeeds, false on failure — confirmFalta in
+     *  use-employee-attendance-card.ts awaits this before opening the justify-now?
+     *  dialog, so a failed mutation never walks the card through the exit-animation
+     *  flow toward a bucket it never actually reached. */
+    onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => Promise<boolean>
     onWeeklySummary?: (employee: TodayAttendanceEmployee) => void
     onViewAudit?: (employee: TodayAttendanceEmployee, attendanceId: string) => void
     /** Called once the mark-falta flow concludes (justified now or declined), so the
@@ -337,6 +342,13 @@ export interface EmployeeAttendanceCardProps {
     onFaltaFlowComplete?: (employeeId: string) => void
     /** True while the card is playing its exit animation before leaving the grid. */
     isExiting?: boolean
+    /** True while THIS employee's markDayStatus mutation is in flight — scoped per
+     *  card (not the mutation's own page-wide isPending) since two absence writes for
+     *  different employees can genuinely overlap. Disables both "Registrar entrada"
+     *  and "Marcar falta" (either could race the in-flight day-status write for this
+     *  employee) and shows a spinner on "Marcar falta" so the manager isn't left with
+     *  no feedback while the request is in flight. */
+    isMarkingDayStatus?: boolean
     canEdit?: boolean
     /** True when the user may correct an already-recorded event (canEdit + attendances.update permission). */
     canCorrect?: boolean
@@ -354,6 +366,7 @@ export function EmployeeAttendanceCard({
     onViewAudit,
     onFaltaFlowComplete,
     isExiting = false,
+    isMarkingDayStatus = false,
     canEdit = true,
     canCorrect = false,
 }: Readonly<EmployeeAttendanceCardProps>) {
@@ -396,6 +409,7 @@ export function EmployeeAttendanceCard({
                     size="sm"
                     className="w-full"
                     onClick={() => onCheckIn(row)}
+                    disabled={isMarkingDayStatus}
                 >
                     <LogIn className="h-3.5 w-3.5 mr-1.5" />
                     Registrar entrada
@@ -407,8 +421,11 @@ export function EmployeeAttendanceCard({
                         className="w-full"
                         data-testid="btn-mark-falta"
                         onClick={openConfirmFalta}
+                        disabled={isMarkingDayStatus}
                     >
-                        <UserX className="h-3.5 w-3.5 mr-1.5" />
+                        {isMarkingDayStatus
+                            ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            : <UserX className="h-3.5 w-3.5 mr-1.5" />}
                         Marcar falta
                     </Button>
                 )}

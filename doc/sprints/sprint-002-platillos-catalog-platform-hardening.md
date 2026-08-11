@@ -6,7 +6,7 @@ status: In Progress
 created: 2026-07-31
 started: 2026-07-31
 completed:
-last_updated: 2026-08-05
+last_updated: 2026-08-10
 
 base_branch: main
 base_commit: 4ac51ff
@@ -37,14 +37,14 @@ public repo), a **High**-value Attendance Today correctness bug (`#358`), and fi
 technical-debt Issues already open on the backlog (`#357`, `#360`, `#365`, `#382`, `#383`) plus
 two small Low-tier cleanups (`#376`, `#385`).
 
-**Progress as of 2026-08-07:** 10 of 14 scoped Issues completed (71.4%) — `#384` (Critical
+**Progress as of 2026-08-10:** 10 of 14 scoped Issues completed (71.4%) — `#384` (Critical
 `APP_KEY` security exposure, PR #393), `#385` (SonarCloud `Readonly` code-smell cleanup, PR
 #391), `#358` (Attendance Today "Ausentes" correctness bug, PR #395), `#376` (dead item Type
 selector removal, PR #396), `#383` (Payroll Periods `DataGrid` migration, PR #398), `#379`
 (Platillos dishes backend domain, PR #394), `#377` (unified media upload system, PR #392),
-`#382` (daily report employee table `DataGrid` migration, PR #408), and `#381` (Platillos dishes
-seed data — Testing/Fakes/Development, PR #406) merged to `main`; `#378` (reusable media gallery
-uploader component, PR #407) implemented and fully reviewed, PR open and ready for merge.
+`#382` (daily report employee table `DataGrid` migration, PR #408), `#381` (Platillos dishes
+seed data — Testing/Fakes/Development, PR #406), and `#378` (reusable media gallery uploader
+component, PR #407) merged to `main`.
 
 File-conflict analysis (§9) found **zero shared-file collisions** among all 14 Issues — every
 Issue touches a distinct set of files or a distinct route. The only real ordering constraints are
@@ -101,7 +101,7 @@ between parallel agents.
 | Completed | — |
 | Calendar duration | — |
 | Active workdays | — |
-| Progress (Issues completed) | 10 / 14 (71.4%) as of 2026-08-07 — `#384` (PR #393), `#385` (PR #391), `#358` (PR #395), `#376` (PR #396), `#383` (PR #398), `#379` (PR #394), `#377` (PR #392), `#382` (PR #408), and `#381` (PR #406) merged to `main`; `#378` (reusable media gallery uploader component, PR #407) implemented and fully reviewed, PR open and ready for merge |
+| Progress (Issues completed) | 10 / 14 (71.4%) as of 2026-08-10 — `#384` (PR #393), `#385` (PR #391), `#358` (PR #395), `#376` (PR #396), `#383` (PR #398), `#379` (PR #394), `#377` (PR #392), `#382` (PR #408), `#381` (PR #406), and `#378` (PR #407) merged to `main` |
 
 ## 5. Scope
 
@@ -182,7 +182,7 @@ because every Round 1 Issue is independently assignable to its own agent/workspa
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ✅ | #378 | Build a reusable media gallery uploader component (frontend) | High | 3h | 6h | 29.9h | PR #407 | `<MediaGalleryUploader />` + `useMediaGalleryUploader()` wired into ItemForm; 100 Vitest tests + 1 Cypress E2E; PR ready, merge pending |
+| ✅ | #378 | Build a reusable media gallery uploader component (frontend) | High | 3h | 6h | 29.9h | PR #407 | `<MediaGalleryUploader />` + `useMediaGalleryUploader()` wired into ItemForm; 100 Vitest tests + 1 Cypress E2E; merged to `main` (c1404a3) |
 | ✅ | #381 | Seed Platillos (dishes) data — Testing/Fakes/Development | Medium | 2h | 4h | 37.1h | PR #406 | Testing/DishesTestSeeder, Fakes/FakeDishesSeeder, Development/DishCategorySeeder+DishSeeder (9 categories, 36 dishes) all registered and tested; two independent review rounds (Devin + human) fixed a soft-delete restore bug and moved menu data to config/seeders.php; merged to `main` (b6cd1ad) |
 |  |  | **Round total** |  | **5h** | **10h** | **—** |  |  |
 
@@ -315,7 +315,7 @@ since this document numbers its own §7 as Route A — Execution Rounds instead.
 | ⏳ | #365 | Not started | — | — | — | — |
 | ✅ | #385 | Wrapped `PropertyItem`/`InfoItem` props in `Readonly<...>` across 3 inventory detail components, clearing all 4 open SonarCloud `typescript:S6759` code smells | PR #391 | `a322131` | 0.2h | Pure type-annotation change, no runtime behavior change; 24/24 existing Vitest tests passing, lint + typecheck clean; CI 12/12 green, Copilot 0 comments, Devin/DeepWiki 0 bugs/0 flags on first push; merged to `main` (a322131) |
 | ✅ | #376 | Removed the Type (Insumo/Producto/Activo) selector from `item-form.tsx` and `product-wizard.tsx`; new items now default to `type: 'PRODUCTO'` without asking the user, and editing an existing item preserves its current type unchanged | PR #396 | `c1bbe27` | 12.7h | 37 Vitest tests updated/passing (86%+ coverage on touched files), lint + typecheck clean, no backend changes; 1 Copilot review comment addressed (brittle select-count assertion swapped for a label-absence check); Devin/DeepWiki 0 bugs, 3 informational-only flags evaluated and found not applicable; CI 12/12 green — merged to `main` (c1bbe27) |
-| ✅ | #378 | Built `<MediaGalleryUploader />` + `useMediaGalleryUploader()`: drag-drop/file-picker upload, thumbnail grid with image/video preview, reorder via arrow buttons (sequential PATCHes with rollback on partial failure), remove, mark-primary, all thumbnail controls locked while a mutation is in flight; `owner_token` generated via `crypto.randomUUID()`, failing loudly rather than degrading to a predictable fallback; wired end-to-end into `ItemForm` as the first consumer — PR open, not yet merged | PR #407 | — | 29.9h | 100 Vitest tests (service, hook, component) + 1 Cypress E2E happy path passing against the real dev-lab backend; hit a ~15h18m external GitHub Actions infrastructure outage (jobs stuck `queued`, resolved via retrigger, unrelated to this PR's code); 5 Copilot review threads resolved; Devin/DeepWiki ran its full 5-cycle safety cap, each round fixing a genuine defect (lost primary-photo badge after delete, thumbnail controls not respecting `disabled`, batch-upload abort-on-first-failure, unsafe concurrent PATCH reorder, `Item` request/response type conflation, keyboard-inaccessible controls, a reorder race condition from rapid double-clicks); CI 12/12 green — PR ready, merge pending |
+| ✅ | #378 | Built `<MediaGalleryUploader />` + `useMediaGalleryUploader()`: drag-drop/file-picker upload, thumbnail grid with image/video preview, reorder via arrow buttons (sequential PATCHes with rollback on partial failure), remove, mark-primary, all thumbnail controls locked while a mutation is in flight; `owner_token` generated via `crypto.randomUUID()`, failing loudly rather than degrading to a predictable fallback; wired end-to-end into `ItemForm` as the first consumer — merged to `main` (c1404a3) | PR #407 | `c1404a3` | 29.9h | 100 Vitest tests (service, hook, component) + 1 Cypress E2E happy path passing against the real dev-lab backend; hit a ~15h18m external GitHub Actions infrastructure outage (jobs stuck `queued`, resolved via retrigger, unrelated to this PR's code); 5 Copilot review threads resolved; Devin/DeepWiki ran its full 5-cycle safety cap, each round fixing a genuine defect (lost primary-photo badge after delete, thumbnail controls not respecting `disabled`, batch-upload abort-on-first-failure, unsafe concurrent PATCH reorder, `Item` request/response type conflation, keyboard-inaccessible controls, a reorder race condition from rapid double-clicks); CI 12/12 green — merged to `main` (c1404a3) |
 | ✅ | #381 | Built Testing/DishesTestSeeder (2 categories, 3 deterministic dishes covering every extras shape), Fakes/FakeDishesSeeder (factory volume generator), and Development/DishCategorySeeder+DishSeeder (9 live-menu categories, 36 dishes, extras groups on Ramen/Roll/Alitas) | PR #406 | `b6cd1ad` | 37.1h | 19 PHPUnit tests across 3 test files; Copilot review fixed 1 real defect (pre-existing backslash-FQCN violation in DevelopmentSeeder touched by this PR); two Devin/DeepWiki rounds plus one independent human-run code review found: (1) updateOrCreate() excluding soft-deleted rows causing duplicates on re-seed — first fix prevented duplicates but didn't restore trashed rows, corrected with a RestoresTrashedOnUpsert trait; (2) live menu catalog hardcoded in seeder classes instead of config/seeders.php per CLAUDE.md's seeder-data rule — moved to config as compact tuples to avoid reintroducing the duplication problem; (3) minor cleanups (model constants over string literals, exact-name test lookups); SonarCloud new-code duplication (23.9%) required refactoring both seeders into per-category/row-builder methods; a GitHub Actions platform outage and a /rebase-main after #382 merged first both extended wall-clock time; CI 12/12 green — merged to `main` (b6cd1ad) |
 | ⏳ | #380 | Not started | — | — | — | — |
 | ✅ | #388 (Opportunistic, §5.4) | Added `/issue` slash command composing `/start-issue`, `/pr-comments`, and `/finish-pr` into a single autonomous delivery pipeline | PR #389 | `a570ed8` | 9.43h | 6 Copilot review rounds + 6 Devin/DeepWiki scan rounds, all defects resolved (no business-rule disputes); merged to `main` (a570ed8) |

@@ -315,3 +315,42 @@
 .animate-card-exit {
     animation: card-exit 0.35s ease-in forwards;
 }
+
+/* ── Attendance card grid — container-query columns ─────────────────────
+   Tailwind's sm:/lg:/xl: prefixes respond to VIEWPORT width, not the actual
+   space this grid has available — which is viewport width minus the
+   sidebar (256px expanded, 80px collapsed, see Sidebar.tsx). That mismatch
+   made the grid jump to more columns than the real content area could fit
+   whenever the sidebar was expanded, overlapping cards in roughly the
+   1279–1490px viewport range. Container queries measure the grid's own
+   wrapper (.attendance-grid-container, given `container-type: inline-size`
+   in index.tsx) instead of the viewport, so the column count always
+   matches the space actually available — sidebar expanded or not — with
+   no need to track sidebar state in JS. */
+.attendance-grid-container {
+    container-type: inline-size;
+}
+
+.attendance-card-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@container (min-width: 640px) {
+    .attendance-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@container (min-width: 1024px) {
+    .attendance-card-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@container (min-width: 1490px) {
+    .attendance-card-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}

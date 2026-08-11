@@ -34,7 +34,7 @@ export interface EmployeeAttendanceCardState {
  */
 export function useEmployeeAttendanceCard(
   row: TodayAttendanceRow,
-  onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => void,
+  onMarkDayStatus: (employee: TodayAttendanceEmployee, status: 'ABSENCE') => Promise<boolean>,
   onFaltaFlowComplete?: (employeeId: string) => void,
 ): EmployeeAttendanceCardState {
   const phase = getAttendancePhase(row.attendance)
@@ -89,8 +89,16 @@ export function useEmployeeAttendanceCard(
     closeConfirmFalta: () => setConfirmFaltaOpen(false),
     confirmFalta: () => {
       setConfirmFaltaOpen(false)
-      onMarkDayStatus(row.employee, 'ABSENCE')
-      setAskJustifyOpen(true)
+      // Only open the justify-now? dialog once the mutation actually
+      // succeeds — a failure (e.g. a 422 because an Attendance record
+      // already exists for that date) must not walk the card through the
+      // justify-now? → exit-animation flow toward 'absent' when the row
+      // never actually landed there; the mutation's own onError already
+      // surfaces a toast, and the page-level markDayStatus already released
+      // the pin so the card doesn't stay stuck.
+      onMarkDayStatus(row.employee, 'ABSENCE').then((succeeded) => {
+        if (succeeded) setAskJustifyOpen(true)
+      })
     },
     askJustifyOpen,
     declineJustifyNow: () => {

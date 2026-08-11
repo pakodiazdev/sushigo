@@ -74,15 +74,21 @@ interface SkeletonGridProps {
 // Stable keys generated once at module load - avoids array index as key
 const SKELETON_KEYS = Array.from({ length: 20 }, (_, i) => `skeleton-${i}`)
 
+// Shares `.attendance-grid-container`/`.attendance-card-grid` (index.css) with
+// the real card grid (attendance/index.tsx) so both agree on column count for
+// the same available width — a mismatch here would make the page jump columns
+// the instant loading data replaces these placeholders.
 export function SkeletonGrid({ count = 6 }: Readonly<SkeletonGridProps>) {
     return (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {SKELETON_KEYS.slice(0, count).map((key) => (
-                <div
-                    key={key}
-                    className="rounded-xl border bg-card p-4 h-36 animate-pulse bg-muted/30"
-                />
-            ))}
+        <div className="attendance-grid-container">
+            <div className="attendance-card-grid">
+                {SKELETON_KEYS.slice(0, count).map((key) => (
+                    <div
+                        key={key}
+                        className="rounded-xl border bg-card p-4 h-36 animate-pulse bg-muted/30"
+                    />
+                ))}
+            </div>
         </div>
     )
 }

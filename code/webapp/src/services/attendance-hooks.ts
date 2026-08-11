@@ -1,8 +1,34 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { attendanceApi } from './attendance-api'
 import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { TodayAttendanceRow, CloseDayRequest, OvertimeDecisionPayload, OvertimeValuationMethod, OvertimeValuationPreview, BulkOvertimeDecisionPayload } from '@/types/attendance'
+import { attendanceRecordToRowData } from '@/types/attendance'
+import type { TodayAttendanceRow, AttendanceRecord, CloseDayRequest, OvertimeDecisionPayload, OvertimeValuationMethod, OvertimeValuationPreview, BulkOvertimeDecisionPayload } from '@/types/attendance'
+
+/**
+ * Splices a mutation's own confirmed AttendanceRecord into the cached daily-
+ * attendance list(s) for the record's own date (queryKey[2] — see
+ * useDailyAttendance below), instead of waiting for the invalidateQueries
+ * call each caller makes right after this — or the next 30s poll — to find
+ * out what the mutation's own response already said. Scoped by date so a
+ * record for one day never overwrites another cached day's list for the same
+ * employee_id (which every one of these mutations' responses carries,
+ * regardless of whether the request itself was keyed by employee_id or
+ * attendance_id).
+ */
+function applyAttendanceRecord(queryClient: QueryClient, record: AttendanceRecord) {
+  queryClient.setQueriesData<TodayAttendanceRow[]>(
+    { queryKey: ['attendances', 'daily'], predicate: (query) => query.queryKey[2] === record.date },
+    (rows) => {
+      if (!rows) return rows
+      return rows.map((row) =>
+        row.employee.id === record.employee_id
+          ? { ...row, attendance: attendanceRecordToRowData(record) }
+          : row
+      )
+    }
+  )
+}
 
 /**
  * Fetch attendance for all active employees of a branch for a given date.
@@ -41,7 +67,8 @@ export function useCheckIn() {
   return useMutation({
     mutationFn: (data: { employee_id: string; check_in: string; reason?: string }) =>
       attendanceApi.checkIn(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      applyAttendanceRecord(queryClient, response.data.data)
       queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       showSuccess('Entrada registrada correctamente.', 'Check-in')
     },
@@ -64,7 +91,8 @@ export function useLunchStart() {
   return useMutation({
     mutationFn: (data: { attendance_id: string; lunch_start: string; reason?: string }) =>
       attendanceApi.lunchStart(data.attendance_id, { lunch_start: data.lunch_start, reason: data.reason }),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      applyAttendanceRecord(queryClient, response.data.data)
       queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       showSuccess('Salida a comida registrada correctamente.', 'Lunch Start')
     },
@@ -87,7 +115,8 @@ export function useLunchReturn() {
   return useMutation({
     mutationFn: (data: { attendance_id: string; lunch_end: string; reason?: string }) =>
       attendanceApi.lunchReturn(data.attendance_id, { lunch_end: data.lunch_end, reason: data.reason }),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      applyAttendanceRecord(queryClient, response.data.data)
       queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       showSuccess('Regreso de comida registrado correctamente.', 'Lunch Return')
     },
@@ -110,7 +139,8 @@ export function useCheckOut() {
   return useMutation({
     mutationFn: (data: { attendance_id: string; check_out: string; reason?: string }) =>
       attendanceApi.checkOut(data.attendance_id, { check_out: data.check_out, reason: data.reason }),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      applyAttendanceRecord(queryClient, response.data.data)
       queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       showSuccess('Salida registrada correctamente.', 'Check-out')
     },
@@ -194,7 +224,8 @@ export function useMarkDayStatus() {
   return useMutation({
     mutationFn: (data: { employee_id: string; date: string; day_status: 'ABSENCE'; reason?: string }) =>
       attendanceApi.markDayStatus(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      applyAttendanceRecord(queryClient, response.data.data)
       queryClient.invalidateQueries({ queryKey: ['attendances', 'daily'] })
       showSuccess('Día marcado como falta.', 'Día marcado')
     },

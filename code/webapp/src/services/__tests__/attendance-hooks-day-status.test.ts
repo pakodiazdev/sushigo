@@ -43,6 +43,25 @@ function makeWrapper() {
   return { queryClient, wrapper }
 }
 
+/**
+ * Same as makeWrapper(), but with the library's default (non-zero) gcTime —
+ * for tests that seed cache data directly via setQueryData() with no active
+ * useQuery observer keeping it alive. makeWrapper()'s gcTime: 0 schedules
+ * that unobserved data for garbage collection almost immediately, which
+ * would make it disappear before the test can assert on it.
+ */
+function makeLiveWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children)
+  return { queryClient, wrapper }
+}
+
 const mockAbsenceResponse = {
   data: {
     status: 201,
@@ -141,5 +160,29 @@ describe('useMarkDayStatus', () => {
         expect.objectContaining({ queryKey: ['attendances', 'daily'] })
       )
     )
+  })
+
+  it('splices the confirmed attendance record into the cached row', async () => {
+    vi.mocked(attendanceApi.markDayStatus).mockResolvedValue(mockAbsenceResponse as never)
+    const { wrapper, queryClient } = makeLiveWrapper()
+    const queryKey = ['attendances', 'daily', '2026-04-12', 5]
+    queryClient.setQueryData(queryKey, [
+      { employee: { id: 'emp-001', code: 'EMP-001', user: { first_name: 'Carlos', last_name: 'Mendoza' }, roles: [], daily_wage: null }, attendance: null, schedule: null, today_leave: null, today_vacation: false },
+    ])
+
+    const { result } = renderHook(() => useMarkDayStatus(), { wrapper })
+
+    act(() => {
+      result.current.mutate({
+        employee_id: 'emp-001',
+        date: '2026-04-12',
+        day_status: 'ABSENCE',
+      })
+    })
+
+    await waitFor(() => {
+      const rows = queryClient.getQueryData<{ employee: { id: string }; attendance: { day_status: string } | null }[]>(queryKey)
+      expect(rows?.[0]?.attendance?.day_status).toBe('ABSENCE')
+    })
   })
 })
