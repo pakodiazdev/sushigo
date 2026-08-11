@@ -151,6 +151,8 @@ class PermissionSeeder extends LockedSeeder
             'dishes.create',
             'dishes.update',
             'dishes.delete',
+            // Distinct from dishes.update on purpose — see Dish::userCanManageMedia().
+            'dishes.manage-media',
 
             // Media
             'media.upload',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Dishes\Dish;
 
+use App\Http\Controllers\Api\V1\Dishes\Dish\Concerns\LoadsDishRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Dishes\Dish\DishResource;
 use App\Models\Dish;
@@ -37,16 +38,11 @@ use App\Models\Dish;
  */
 class ShowDishController extends Controller
 {
+    use LoadsDishRelations;
+
     public function __invoke(Dish $dish): DishResource
     {
-        $dish->load([
-            'category',
-            'extraGroups.dish',
-            // Nested payloads only show active options — matches totalPriceFor()'s
-            // notion of "available extras". Direct option management still goes
-            // through the dedicated dish-extra-options endpoints.
-            'extraGroups.options' => fn ($query) => $query->where('is_active', true)->with('extraGroup'),
-        ]);
+        $dish->load($this->dishEagerLoadRelations());
 
         return new DishResource($dish);
     }
