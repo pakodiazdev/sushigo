@@ -27,7 +27,7 @@ next: sprint-004-product-catalog-reconstruction.md
 
 ## 1. Executive Summary
 
-Sprint 003 is the **current, scope-complete sprint** with five planned Issues from
+Sprint 003 is the **current sprint, with scope selection complete and locked**, and contains five planned Issues from
 `pakodiazdev/sushigo-dev-lab` and five Issues from `pakodiazdev/sushigo`. The dev-lab increment adds
 automated coverage for the shared workspace-bootstrap helpers, a reliable
 workspace-status command, an opt-in pgAdmin database browser, corrected troubleshooting guidance,
