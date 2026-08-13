@@ -181,7 +181,7 @@ change and must update estimates, dependencies, conflicts, and the scope-change 
 | ⏳ | #401 | `sushigo` | Add administrator-managed employee avatars with reusable initials fallback | High | 4h | 7h | — | — | Foundation required by #420 |
 | ✅ | #400 | `sushigo` | Enforce permissions in Item, ItemVariant, and InventoryLocation policies | High | 2h | 4h | 3.2h | PR #445 | PR ready, merge pending |
 | ⏳ | #430 | `sushigo` | Prevent concurrent stock overselling and enforce balance invariants | Critical | 4h | 8h | — | — | Land early; required before future purchase receiving (#432) |
-| ⏳ | #421 | `sushigo` | Design the Product Inventory target architecture and migration plan | Medium | 3h | 6h | — | — | Design-only gate; #422/#423 remain outside Sprint 3 |
+| ✅ | #421 | `sushigo` | Design the Product Inventory target architecture and migration plan | Medium | 3h | 6h | 3.75h | PR #446 | Domain model, ERD, SlidePanel flow, API outline, TD-03; PR ready, merge pending |
 |  |  |  | **Round total** |  | **18h** | **35h** | **—** |  |  |
 
 ### Round 2 — Add On-Demand Database Inspection
@@ -349,7 +349,7 @@ Sessions arrays. Estimates remain planning ranges until execution evidence is re
 | ⏳ | #420 | `sushigo` | Pending | — | — | — | Self-service editing and remaining identity-surface rollout |
 | ✅ | #400 | `sushigo` | Replaced unconditional `return true` stubs in ItemPolicy/ItemVariantPolicy/InventoryLocationPolicy with real Spatie permission checks; 72 new unit assertions | PR #445 | — | 3.2h | 72 policy unit tests + 44 regression tests passing; Pint clean; SonarCloud quality gate passing (100% new coverage); Copilot review clean; Devin/DeepWiki 0 bugs, 2 flags fixed (stale comment, nullable-param footgun), 4 evaluated as false positive/informational |
 | ⏳ | #430 | `sushigo` | Pending | — | — | — | Atomic Stock mutation and balance-invariant enforcement |
-| ⏳ | #421 | `sushigo` | Pending | — | — | — | Design/ERD/UI/API/migration gate only; no production implementation |
+| ✅ | #421 | `sushigo` | Finalized the Product → Variant → Purchase Presentation domain model, ERD, SlidePanel UX flow, API contract outline, and additive-first migration sequencing for #422-#442; recorded TD-03 | PR #446 | — | 3.75h | Design/ERD/UI/API/migration gate only, no production implementation; 4 Copilot threads + 5 Devin review cycles resolved, all real findings |
 | 🚧 | #443 | `sushigo` | Sprint lifecycle and planning documentation | — | — | In progress | Opportunistic startup work; branch and PR carry the session-created documentation |
 
 ## 14. Quality Results

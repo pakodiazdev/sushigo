@@ -34,13 +34,21 @@ The system must guarantee:
 | **Inventory by Location**      | Stock segregated by `InventoryLocation` (MAIN, KITCHEN, BAR, etc.).         |
 | **Complete Traceability**      | Each movement generates `StockMovement` and detailed lines.                 |
 | **Expandable Architecture**    | Ready for purchases, batches, production, and analytics.                    |
-| **Secure IDs**                 | Internal incremental IDs, external exposed as Hashids.                      |
+| **Secure IDs**                 | Internal incremental IDs, external exposed as `public_id` (ULID).           |
 | **Service-Oriented Layering**  | Thin controllers → Domain services → Models.                                |
 | **Laravel Native**             | Use of Laravel 12 + Spatie Permission native patterns.                      |
 
 ---
 
 ## 3. Domain Model
+
+> **Note (2026-08-12):** the `Item`/`ItemVariant` shapes below (§3.2 ER diagram, §3.7 class diagram)
+> still show today's flat schema, including `sale_price`/`min_stock`/`max_stock`-equivalent fields
+> that the Product vertical is removing from its catalog write path. See
+> [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.en.md) and
+> [TD-03](../decisions/td-03-product-catalog-separation.md) for the target Product/Variant/Purchase
+> Presentation model and the migration sequence; this document is updated to match once that
+> migration completes (`#442`).
 
 ### 3.1 Main Entities
 
@@ -723,8 +731,18 @@ stateDiagram-v2
 
 ## 5. Obfuscated Identifiers
 
--   No incremental ID is exposed in APIs; we use Hashids to avoid enumeration and information leaks.
--   The complete configuration guide, risks, and helpers are in [Hashids Identifiers](./identifiers-hashids.md).
+> **Stale note (2026-08-12):** this section described a planned Hashids strategy that was never
+> implemented and links to a document that doesn't exist in this repository. The convention actually
+> in use is `public_id` (ULID) via the `HasPublicId`/`SerializesPublicIdAsId` traits — already
+> adopted by `Dish`, `MediaGallery`, `CashAdjustment`, and others. Bringing `Item`/`ItemVariant` (and
+> the rest of this domain) onto that convention is tracked by
+> [#399](https://github.com/pakodiazdev/sushigo/issues/399); the new Product-catalog tables
+> (`Brand`, `InventoryCategory`, `PurchasePresentationTemplate`, `VariantPurchasePresentation`) adopt
+> it from the start — see
+> [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.en.md) §2.
+
+-   No incremental ID is exposed in APIs; internal auto-increment IDs stay internal, external IDs are
+    ULIDs (`public_id`).
 
 ---
 
@@ -733,10 +751,10 @@ stateDiagram-v2
 | Layer                        | Responsibility                                                    |
 | ---------------------------- | ----------------------------------------------------------------- |
 | **Controllers**              | Receive requests, validate, and delegate to services.             |
-| **FormRequests**             | Validate payloads, decode Hashids, and sanitize data.             |
+| **FormRequests**             | Validate payloads, resolve `public_id` route bindings, and sanitize data. |
 | **Services**                 | Orchestrate business rules (transfers, sales, closures, costing). |
 | **Policies**                 | Authorization per operating unit and role.                        |
-| **Resources / Transformers** | Serialize responses exposing `hashid` and calculated data.        |
+| **Resources / Transformers** | Serialize responses exposing `public_id` (as `id`) and calculated data. |
 
 Main services:
 
@@ -751,7 +769,6 @@ Main services:
 ## 7. References
 
 -   [Tenancy for Laravel](https://tenancyforlaravel.com/docs)
--   [vinkla/hashids](https://github.com/vinkla/hashids)
 -   [Martin Fowler — DDD Aggregates](https://martinfowler.com/bliki/DDD_Aggregate.html)
 -   [Eric Evans — Domain Driven Design](https://domainlanguage.com/ddd/)
 -   [Inventory Management Overview (MS Docs)](https://learn.microsoft.com/en-us/dynamics365/supply-chain/inventory/inventory-overview)

@@ -243,12 +243,13 @@ Uses the workspace's own `docker-compose.e2e.yml` with a Cypress container.
 
 ## Architecture & domain documentation
 
-- [Inventory Architecture & Design (modelos, diagramas y flujos)](doc/architecture/inventory-architecture.md)
-- [Security & User System Architecture](doc/architecture/security-and-user-system-architecture.md)
+- [Inventory Architecture & Design](doc/architecture/inventory-architecture.en.md)
+- [Product Catalog Architecture (Product → Variant → Purchase Presentation target design)](doc/architecture/product-catalog/product-catalog-architecture.en.md)
+- [Security & User System Architecture](doc/architecture/security-and-user-system-architecture.en.md)
 - [Media System Architecture (storage-backed, cloud-swappable uploads)](doc/architecture/media/media-architecture.en.md)
 - [Task #004 — Auth + Zustand migration](doc/tasks/2025-11/004-authentication-frontend-zustand.md)
 
-These documents capture the target inventory domain (operating units, stock movements, Hashids exposure) and should guide upcoming modules.
+These documents capture the target inventory domain (operating units, stock movements, `public_id` exposure) and should guide upcoming modules.
 
 ## Sprints
 
@@ -259,7 +260,7 @@ Development is organized into documented sprints — see [`doc/conventions/sprin
 | 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
 | 001 | Attendance, Payroll & Quality | Completed | 2026-07-26 | 2026-07-31 (impl. finished 2026-07-30) | 2026-08-09 | 1.40× (51.1h → 36.5h) | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
 | 002 | Platillos Catalog & Platform Hardening | Completed | 2026-07-31 | 2026-08-12 (impl. finished 2026-08-11) | — | 1.85× (170.8h → 92.5h, scoped + opportunistic issues) | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
-| 003 | Development Platform & Product Reliability | In Progress | 2026-08-12 | — | 2026-09-05 | — | [sprint-003-development-platform-and-product-reliability.md](doc/sprints/sprint-003-development-platform-and-product-reliability.md) |
+| 003 | Development Platform & Product Reliability | In Progress | 2026-08-12 | 10% (1/10) | 2026-09-05 | — | [sprint-003-development-platform-and-product-reliability.md](doc/sprints/sprint-003-development-platform-and-product-reliability.md) |
 
 ## Development tips
 
