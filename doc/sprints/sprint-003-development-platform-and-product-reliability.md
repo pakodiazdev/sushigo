@@ -409,7 +409,8 @@ Additional lessons will be added from actual execution evidence.
 | Status | Proposed Issue | Title | Reason | Candidate Sprint |
 |---|---:|---|---|---|
 | ⏳ | #422–#429 | Deliver the Product → Variant → Purchase Presentation catalog vertical | Intentionally gated by the reviewed target design from #421 | Sprint 004 |
-| ⏳ | #431–#442 | Deliver purchasing/pricing and complete Stock cleanup/hardening | Later roadmap; must not inflate Sprint 3 after scope lock | Future |
+| ⏳ | #431–#437 | Deliver purchasing, acquisition cost, price lists, and operational seed data | Depends on the Product catalog completed in Sprint 4 | Sprint 005 |
+| ⏳ | #438–#442 | Complete Stock integrity, access, navigation, and legacy cleanup | Requires the replacement operational domains before final cleanup | Sprint 006 |
 | ⏳ | TBD | Reassess dev-lab portability only if Linux support becomes a product need | Explicitly excluded from #64's macOS-focused CI scope | Future |
 
 ## 18. Sprint Closure Checklist

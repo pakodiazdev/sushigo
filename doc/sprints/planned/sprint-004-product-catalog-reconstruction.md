@@ -16,7 +16,7 @@ github_project: SushiGo Admin (#7)
 github_milestone:
 
 previous: sprint-003-development-platform-and-product-reliability.md
-next:
+next: sprint-005-purchasing-cost-and-pricing.md
 ---
 
 # Sprint 004 — Product Catalog Reconstruction
@@ -313,9 +313,9 @@ Additional lessons will be added from execution evidence.
 
 | Status | Proposed Issue | Title | Reason | Candidate Sprint |
 |---|---:|---|---|---|
-| ⏳ | #431–#434 | Supplier offerings, Purchase Receipts, receiving UI, and acquisition cost | Consume the stable Purchase Presentation and Stock mutation contracts | Sprint 005+ |
-| ⏳ | #435–#437 | Branch-aware price lists, UI, and operational seed data | Sale price belongs outside Product/Variant catalog identity | Future |
-| ⏳ | #438–#442 | Stock movement, replenishment, access, navigation, and final schema cleanup | Finish Inventory hardening after replacement domains exist | Future |
+| ⏳ | #431–#434 | Supplier offerings, Purchase Receipts, receiving UI, and acquisition cost | Consume the stable Purchase Presentation and Stock mutation contracts | Sprint 005 |
+| ⏳ | #435–#437 | Branch-aware price lists, UI, and operational seed data | Complete the commercial operating story after purchasing | Sprint 005 |
+| ⏳ | #438–#442 | Stock movement, replenishment, access, navigation, and final schema cleanup | Finish Inventory hardening after replacement domains exist | Sprint 006 |
 
 ## 18. Sprint Closure Checklist
 

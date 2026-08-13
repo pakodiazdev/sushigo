@@ -1,0 +1,268 @@
+---
+sprint: "005"
+title: Purchasing, Cost & Pricing
+status: Planned
+
+created: 2026-08-12
+started:
+completed:
+last_updated: 2026-08-12
+
+base_branch: main
+base_commit: 68ee117
+scope_issues: 7
+
+github_project: SushiGo Admin (#7)
+github_milestone:
+
+previous: sprint-004-product-catalog-reconstruction.md
+next: sprint-006-stock-integrity-and-inventory-completion.md
+---
+
+# Sprint 005 — Purchasing, Cost & Pricing
+
+> Turn the Product catalog into an operational commercial flow: configure suppliers, receive
+> packages, calculate effective acquisition cost, and resolve branch-aware sale prices.
+
+## 1. Executive Summary
+
+Sprint 005 contains `#431`–`#437`, a seven-Issue vertical estimated at **36h optimistic / 67h
+pessimistic**. It builds Supplier offerings over the Purchase Presentations delivered in Sprint 4,
+adds immutable Purchase Receipts and receiving UI, unifies weighted-average acquisition cost, adds
+effective branch-aware price lists and UI, and proves the complete story with operational seed data.
+
+The outcome is usable functionality rather than backend scaffolding: operators can record what was
+actually bought, including paid/bonus packages and expenses, inspect the resulting effective unit
+cost, and configure distinct sale prices by branch or approved operating context.
+
+## 2. Context
+
+Sprint 4 deliberately keeps catalog identity free of supplier, cost, price, Stock, and transaction
+data. Sprint 5 consumes that stable Product → Variant → Purchase Presentation model and the
+concurrency-safe Stock mutation contract from `#430` to implement the next lifecycle boundary.
+
+Cost belongs to the purchase evidence that produced it, not the Product form. Sale price belongs to
+an effective operational context, not a global Variant fallback. This sprint groups both domains
+because the final seed and demonstration flow must explain how package, supplier, promotion,
+expense, acquisition cost, and branch price differ without conflating them.
+
+The SushiGo Admin Iteration is scheduled for **2026-09-20 through 2026-10-03**. Promotion requires
+Sprint 4 completion and verified compatibility with its final Presentation contracts.
+
+## 3. Sprint Goal
+
+**Sprint Goal:** Deliver auditable purchase receiving and branch-aware pricing end to end, with one
+authoritative acquisition-cost source and deterministic operational data.
+
+## 4. Sprint Timeline
+
+| Metric | Value |
+|---|---:|
+| Created | 2026-08-12 |
+| Planned start | 2026-09-20 |
+| Planned end | 2026-10-03 |
+| Started | — |
+| Completed | — |
+| Target calendar duration | 14 days |
+| Active workdays | — |
+
+## 5. Scope
+
+### 5.1 Included
+
+- Suppliers and purchasable Variant Presentation offerings (`#431`).
+- Purchase Receipt posting, promotions, expenses, and effective unit cost (`#432`).
+- Purchase receiving UI and canonical cost preview (`#433`).
+- One weighted-average acquisition-cost source across Variant, Stock, and reports (`#434`).
+- Effective branch/operating-context price lists (`#435`).
+- Price-list management UI (`#436`).
+- Deterministic Suppliers, Receipts, costs, and branch-price seed data (`#437`).
+
+### 5.2 Excluded
+
+- Product/Variant/Presentation catalog reconstruction (`#422`–`#429`), completed first in Sprint 4.
+- Stock movement normalization, replenishment policies, horizontal access, navigation, and final
+  legacy cleanup (`#438`–`#442`), assigned to Sprint 6.
+- A Product or Variant form fallback for cost or sale price.
+- Redis-dependent price resolution or speculative promotion/channel engines.
+- Deferred technical debt `#85`, `#276`, `#399`, and `#415`.
+
+### 5.3 Scope Changes
+
+| Date | Status | Item | Change | Reason |
+|---|---|---|---|---|
+| — | — | — | None yet | Sprint not started |
+
+### 5.4 Opportunistic Work
+
+| Date | Issue | Title | Trigger | Result |
+|---|---:|---|---|---|
+| — | — | — | None yet | — |
+
+## 6. Value Ranking
+
+| Tier | Issues | Rationale |
+|---|---|---|
+| **Critical** | `#432`, `#434` | Purchase posting and authoritative acquisition cost directly affect Stock value and margins |
+| **High** | `#431`, `#433`, `#435`, `#436` | Complete supplier, receiving, and branch-price functionality for operators |
+| **Medium** | `#437` | Demonstrate and regression-test the full operational story |
+| **Deferred** | `#438`–`#442` | Final Stock hardening follows in Sprint 6 |
+
+### Ordering principle
+
+> Stabilize supplier offerings, post purchases through atomic Stock mutation, reconcile cost, add
+> pricing, and seed only after every canonical calculation exists.
+
+## 7. Route A — Execution Rounds
+
+### Round 1 — Supplier and Price Foundations
+
+| Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
+|---|---:|---|---|---:|---:|---:|---|---|
+| ⏳ | #431 | Build Suppliers and purchasable Variant Presentations | High | 5h | 9h | — | — | Requires Sprint 4 presentation contract |
+| ⏳ | #435 | Build effective Product price lists by branch/context | High | 6h | 11h | — | — | Independent pricing lane after Variant contract |
+|  |  | **Round total** |  | **11h** | **20h** | **—** |  |  |
+
+### Round 2 — Post Purchases and Manage Prices
+
+| Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
+|---|---:|---|---|---:|---:|---:|---|---|
+| ⏳ | #432 | Receive Product Presentations and calculate effective unit cost | Critical | 7h | 13h | — | — | Reuses #430 atomic Stock mutation |
+| ⏳ | #436 | Add branch-aware price-list management UI | High | 5h | 9h | — | — | Consumes #435 |
+|  |  | **Round total** |  | **12h** | **22h** | **—** |  |  |
+
+### Round 3 — Complete Receiving and Reconcile Cost
+
+| Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
+|---|---:|---|---|---:|---:|---:|---|---|
+| ⏳ | #433 | Add purchase receiving UI and cost preview | High | 6h | 11h | — | — | Consumes #432 |
+| ⏳ | #434 | Unify weighted-average acquisition cost | Critical | 4h | 8h | — | — | Reconcile before final seed evidence |
+|  |  | **Round total** |  | **10h** | **19h** | **—** |  |  |
+
+### Round 4 — Prove the Operational Story
+
+| Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
+|---|---:|---|---|---:|---:|---:|---|---|
+| ⏳ | #437 | Seed Suppliers, Receipts, costs, and branch prices | Medium | 3h | 6h | — | — | Requires #431–#436 |
+|  |  | **Round total** |  | **3h** | **6h** | **—** |  |  |
+
+## 8. Route B — Sequential Dependencies
+
+```text
+#431 → #432 → #433
+          └→ #434
+#435 → #436
+#431 + #432 + #433 + #434 + #435 + #436 → #437
+```
+
+Supplier and pricing foundations can run in parallel. Purchase posting must precede its UI and cost
+reconciliation. Operational seed data is last because it validates the canonical calculations and
+both visible workflows rather than inventing interim behavior.
+
+## 9. Conflict Risk Map
+
+| Shared area | Issues | Rounds | Coordination |
+|---|---|---|---|
+| Supplier/Presentation API and receipt services | `#431`, `#432`, `#437` | 1, 2, 4 | Sequential contract consumption |
+| Stock cost fields/services/reports | `#432`, `#434`, `#437` | 2–4 | Reconcile one source before seed assertions |
+| Receiving API types and UI | `#432`, `#433` | 2, 3 | Backend contract first |
+| Price-list API/types/UI | `#435`, `#436`, `#437` | 1, 2, 4 | Backend then UI then seed evidence |
+| Seeder configuration | `#437` | 4 | Single final owner |
+
+## 10. Estimate Tracking by Round
+
+| Round | Issues | Opt. | Pess. | Tracked | vs Opt. | vs Pess. |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 | 2 | 11h | 20h | — | — | — |
+| 2 | 2 | 12h | 22h | — | — | — |
+| 3 | 2 | 10h | 19h | — | — | — |
+| 4 | 1 | 3h | 6h | — | — | — |
+| **Total** | **7** | **36h** | **67h** | **—** | **—** | **—** |
+
+## 11. Consolidated Time Tracking
+
+| Category | Estimated | Tracked | Variance |
+|---|---:|---:|---:|
+| Suppliers and purchasing (`#431`–`#433`) | 18h–33h | — | — |
+| Acquisition-cost reconciliation (`#434`) | 4h–8h | — | — |
+| Branch-aware pricing (`#435`, `#436`) | 11h–20h | — | — |
+| Operational seed data (`#437`) | 3h–6h | — | — |
+| **Total** | **36h–67h** | **—** | **—** |
+
+### Wall-Clock Time & Parallelism
+
+- **Person-hours:** —
+- **Wall-clock time:** —
+- **Parallelization factor:** —
+- **Peak concurrency:** —
+
+| Wall-clock block | Duration | Issues active in this block |
+|---|---:|---|
+| — | — | No sessions yet |
+
+## 12. Notes on Estimate Confidence
+
+Confidence is **medium**. Boundaries and formulas are scoped in the Issues, but purchase posting and
+cost migration carry meaningful database/concurrency risk. Estimates assume Sprint 4 contracts and
+`#430` remain stable, exact-decimal money handling is preserved, and no unrelated pricing engine is
+introduced.
+
+## 13. Execution Evidence
+
+| Status | Issue | Result | PR / Commit | Tracked | Notes |
+|---|---:|---|---|---:|---|
+| ⏳ | #431 | Pending | — | — | Supplier offerings |
+| ⏳ | #432 | Pending | — | — | Receipt posting and effective cost |
+| ⏳ | #433 | Pending | — | — | Receiving UI |
+| ⏳ | #434 | Pending | — | — | Cost reconciliation |
+| ⏳ | #435 | Pending | — | — | Price-list backend |
+| ⏳ | #436 | Pending | — | — | Price-list UI |
+| ⏳ | #437 | Pending | — | — | Operational seeds |
+
+## 14. Quality Results
+
+| Metric | Before | Target | After | Result |
+|---|---|---|---|---|
+| Purchase evidence | Manual conversions/no canonical receipt | Immutable posted receipt with exact calculations | — | ⏳ |
+| Acquisition cost | Competing Variant/Stock sources | One reconciled weighted-average source | — | ⏳ |
+| Sale price | Global Variant assumption | Effective deterministic branch/context resolution | — | ⏳ |
+| Operational data | Catalog-only examples | Suppliers, promotion, receipt, cost, and branch-price story | — | ⏳ |
+
+## 15. Results
+
+### 15.1 Delivered Value
+
+Not yet delivered. Expected value is an auditable purchase-to-Stock-cost flow plus locally resolved
+sale prices that operators can configure and inspect.
+
+### 15.2 Planned vs. Actual
+
+- Planned: 7 Issues, 36h–67h.
+- Completed: 0.
+- Tracked: no sessions yet.
+
+### 15.3 Known Limitations
+
+- Sprint 5 depends on Sprints 3–4 and cannot be safely promoted early.
+- Final Stock movement, replenishment, access, navigation, and schema cleanup remains in Sprint 6.
+- Promotion/discount engines beyond receipt evidence are out of scope.
+
+## 16. Lessons Learned
+
+Planning lesson: cost must be derived from immutable purchase evidence, while price must resolve
+from operational context. Keeping them outside the Product catalog prevents competing defaults.
+
+## 17. Follow-up Work
+
+| Status | Issues | Work | Candidate Sprint |
+|---|---:|---|---|
+| ⏳ | #438–#442 | Stock integrity and final Inventory completion | Sprint 006 |
+
+## 18. Sprint Closure Checklist
+
+- [x] All seven Issues are linked, labeled `sprint-5`, and assigned to Sprint 5.
+- [ ] Every Issue has a final status and PR/commit evidence.
+- [ ] Scope changes and tracked Sessions are synchronized.
+- [ ] Estimates, wall-clock time, parallelism, and quality results are finalized.
+- [ ] Dependencies, conflicts, delivered value, limitations, and lessons reflect execution.
+- [ ] Sprint 6 is promoted when applicable.
