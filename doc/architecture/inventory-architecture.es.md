@@ -34,13 +34,36 @@ El sistema debe garantizar:
 | **Inventory by Location**      | Stock segregado por `InventoryLocation` (MAIN, KITCHEN, BAR, etc.).                    |
 | **Traceabilidad total**        | Cada movimiento genera `StockMovement` y líneas detalladas.                            |
 | **Expandable Architecture**    | Preparado para compras, lotes, producción y analítica.                                 |
-| **Secure IDs**                 | IDs internos incrementales, externos expuestos como Hashids.                           |
+| **Secure IDs**                 | IDs internos incrementales, externos expuestos como `public_id` (ULID).                |
 | **Service-Oriented Layering**  | Controladores delgados → Servicios de dominio → Modelos.                               |
 | **Laravel Native**             | Uso de patrones propios de Laravel 12 + Spatie Permission.                             |
 
 ---
 
 ## 3. Modelo de dominio
+
+> **Nota (2026-08-12):** las formas de `Item`/`ItemVariant` de abajo (diagrama ER §3.2, diagrama de
+> clases §3.7) todavía muestran el esquema plano actual, incluyendo campos equivalentes a
+> `sale_price`/`min_stock`/`max_stock` que la vertical de Producto está retirando de su ruta de
+> escritura de catálogo. Ver
+> [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.es.md) y
+> [TD-03](../decisions/td-03-product-catalog-separation.md) para el modelo objetivo de
+> Producto/Variante/Presentación de Compra y la secuencia de migración; este documento se
+> actualizará para coincidir una vez que esa migración concluya (`#442`).
+>
+> **Nota adicional:** esta versión en español anteriormente incluía `Item.is_manufactured` en el
+> diagrama ER, el diagrama de clases y el resumen de clases, con una descripción de negocio que no
+> tiene respaldo real: la migración que debía agregar esa columna
+> (`2025_11_12_092126_add_is_manufactured_to_items_table.php`) quedó vacía (no-op). Se removió de
+> esta versión para que coincida con la versión en inglés (que nunca lo tuvo); el campo muerto en
+> `product-wizard.tsx` que lo leía/escribía sigue señalado para limpieza en
+> [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.es.md) §9.4
+> (`#429`). Por la misma razón, también se removió del resumen de clases (§3.8) el bloque
+> "Aplicación"/"Casos de uso" de `UomConversion` que daba ejemplos de `PRODUCTO` (bandeja/caja) —
+> contradecía la propia regla de la §3.3 ("Only INSUMO enables multiple conversions; PRODUCTO and
+> ACTIVO operate 1:1") y es exactamente el antipatrón que
+> [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.es.md) §4 y
+> §9.3 reemplazan con `VariantPurchasePresentation`; la versión en inglés nunca tuvo ese bloque.
 
 ### 3.1 Entidades principales
 
@@ -127,7 +150,6 @@ erDiagram
     enum type "INSUMO|PRODUCTO|ACTIVO"
     boolean is_stocked
     boolean is_perishable
-    boolean is_manufactured
   }
 
   ITEM_VARIANT {
@@ -341,7 +363,6 @@ classDiagram
     +type: ItemType
     +is_stocked: bool
     +is_perishable: bool
-    +is_manufactured: bool
     +registerVariant(data)
   }
 
@@ -595,10 +616,7 @@ classDiagram
     -   Propiedades: `id`, `operating_unit_id`, `name`, `type`, `is_primary`.
     -   Acciones: `markPrimary()` (se usa en ajustes iniciales de la unidad).
 -   **Item**
-    -   Propiedades: `id`, `sku`, `name`, `type`, `is_stocked`, `is_perishable`, `is_manufactured`.
-    -   **`is_manufactured`**: Indica si el item se fabrica/prepara internamente (`true`) o se compra para reventa (`false`). Esto permite diferenciar entre:
-        -   **Productos manufacturados** (`is_manufactured=true`): Platillos del menú que se preparan en cocina usando insumos según recetas.
-        -   **Productos de reventa** (`is_manufactured=false`): Items que se compran ya terminados (ej: dulcería coreana, bebidas embotelladas) y se revenden directamente sin transformación.
+    -   Propiedades: `id`, `sku`, `name`, `type`, `is_stocked`, `is_perishable`.
     -   Acciones: `registerVariant(data)` encapsula la creación de variantes a través de factories/acciones.
 -   **ItemVariant**
     -   Propiedades: `id`, `item_id`, `code`, `name`, `uom_id`, `track_lot`, `track_serial`.
@@ -608,11 +626,6 @@ classDiagram
     -   Usada como catálogo; no expone métodos adicionales.
 -   **UomConversion**
     -   Propiedades: `id`, `from_uom_id`, `to_uom_id`, `factor`, `tolerance`, `is_active`.
-    -   **Aplicación**: Disponible para cualquier item con `is_stocked=true`, no solo INSUMOS.
-    -   **Casos de uso**:
-        -   **INSUMO**: 1 kg = 1000 g (conversión entre escalas de medida)
-        -   **PRODUCTO manufacturado**: 1 bandeja = 8 piezas (presentaciones de venta)
-        -   **PRODUCTO reventa**: 1 caja = 24 unidades (compra mayoreo vs venta individual)
     -   Acción: `convert(qty)` aplica factor y tolerancia (en la práctica se resuelve vía `TransfersService`/`CostingService`).
 -   **Stock**
     -   Propiedades: `id`, `inventory_location_id`, `item_variant_id`, `on_hand`, `reserved`.
@@ -733,8 +746,18 @@ stateDiagram-v2
 
 ## 5. Identificadores ofuscados
 
--   Ningún ID incremental se expone en APIs; utilizamos Hashids para evitar enumeración y fugas de información.
--   La guía completa de configuración, riesgos y helpers está en [Identificadores Hashids](./identifiers-hashids.md).
+> **Nota de obsolescencia (2026-08-12):** esta sección describía una estrategia Hashids planeada que
+> nunca se implementó y enlaza a un documento que no existe en este repositorio. La convención
+> realmente en uso es `public_id` (ULID) mediante los traits `HasPublicId`/`SerializesPublicIdAsId`
+> — ya adoptada por `Dish`, `MediaGallery`, `CashAdjustment`, entre otros. Migrar `Item`/`ItemVariant`
+> (y el resto de este dominio) a esa convención se rastrea en
+> [#399](https://github.com/pakodiazdev/sushigo/issues/399); las nuevas tablas del catálogo de
+> Producto (`Brand`, `InventoryCategory`, `PurchasePresentationTemplate`,
+> `VariantPurchasePresentation`) la adoptan desde el inicio — ver
+> [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.es.md) §2.
+
+-   Ningún ID incremental se expone en APIs; los IDs internos autoincrementales permanecen internos,
+    los IDs externos son ULIDs (`public_id`).
 
 ---
 
@@ -743,10 +766,10 @@ stateDiagram-v2
 | Capa                         | Responsabilidad                                                         |
 | ---------------------------- | ----------------------------------------------------------------------- |
 | **Controllers**              | Reciben requests, validan y delegan a servicios.                        |
-| **FormRequests**             | Validan payloads, decodifican Hashids y sanitizan datos.                |
+| **FormRequests**             | Validan payloads, resuelven route bindings por `public_id` y sanitizan datos. |
 | **Services**                 | Orquestan reglas de negocio (transferencias, ventas, cierres, costing). |
 | **Policies**                 | Autorización por unidad operativa y rol.                                |
-| **Resources / Transformers** | Serializan respuestas exponiendo `hashid` y datos calculados.           |
+| **Resources / Transformers** | Serializan respuestas exponiendo `public_id` (como `id`) y datos calculados. |
 
 Servicios principales:
 
@@ -761,7 +784,6 @@ Servicios principales:
 ## 7. Referencias
 
 -   [Tenancy for Laravel](https://tenancyforlaravel.com/docs)
--   [vinkla/hashids](https://github.com/vinkla/hashids)
 -   [Martin Fowler — DDD Aggregates](https://martinfowler.com/bliki/DDD_Aggregate.html)
 -   [Eric Evans — Domain Driven Design](https://domainlanguage.com/ddd/)
 -   [Inventory Management Overview (MS Docs)](https://learn.microsoft.com/en-us/dynamics365/supply-chain/inventory/inventory-overview)

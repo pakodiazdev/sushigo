@@ -1,9 +1,5 @@
 # 📚 Documentation Structure
 
-This directory contains all project documentation organized by language.
-
-# 📚 Documentation Structure
-
 This directory contains all project documentation with a pragmatic language strategy.
 
 ## Structure
@@ -12,8 +8,7 @@ This directory contains all project documentation with a pragmatic language stra
 doc/
 ├── architecture/          # System architecture and design docs
 │   ├── *.en.md           # English versions
-│   ├── *.es.md           # Spanish versions
-│   └── identifiers-hashids.md
+│   └── *.es.md           # Spanish versions
 │
 ├── conventions/           # Development standards (English only)
 │   ├── backend/          # Laravel standards
@@ -32,8 +27,12 @@ doc/
 Available in **English and Spanish** (`.en.md` and `.es.md` suffixes):
 
 -   **Inventory Architecture**: Complete domain model, ER diagrams, and operational flows for the inventory system
+-   **Product Catalog Architecture** (`architecture/product-catalog/`): Target design for Product → Variant → Purchase Presentation, replacing the legacy `ProductWizard`
 -   **Security & User System**: Authentication, authorization, roles, and permissions design
--   **Hashids Identifiers**: Guidelines for secure ID obfuscation in APIs (English only)
+
+### Decisions (`decisions.md` + `decisions/`)
+
+Index and individual ADRs recording accepted technical decisions — see [Technical Decisions](decisions.md).
 
 ### Conventions (`conventions/`)
 
@@ -78,8 +77,8 @@ For conventions and tasks:
 ### Architecture (Bilingual)
 
 -   [Inventory Architecture](architecture/inventory-architecture.en.md) | [Arquitectura de Inventarios](architecture/inventory-architecture.es.md)
+-   [Product Catalog Architecture](architecture/product-catalog/product-catalog-architecture.en.md) | [Arquitectura del Catálogo de Producto](architecture/product-catalog/product-catalog-architecture.es.md)
 -   [Security Architecture](architecture/security-and-user-system-architecture.en.md) | [Arquitectura de Seguridad](architecture/security-and-user-system-architecture.es.md)
--   [Hashids Identifiers](architecture/identifiers-hashids.md)
 
 ### Conventions (English)
 
@@ -94,62 +93,7 @@ For conventions and tasks:
 -   [#005 - Inventory Design Documentation](tasks/2025-11/005-inventory-product-onboarding.md)
 -   [#006 - Inventory Product Onboarding](tasks/2025-11/006-inventory-product-onboarding.md)
 
-## Content Overview
-
-### Architecture (`architecture/`)
-
--   **Inventory Architecture**: Complete domain model, ER diagrams, and operational flows for the inventory system
--   **Security & User System**: Authentication, authorization, roles, and permissions design
--   **Hashids Identifiers**: Guidelines for secure ID obfuscation in APIs
-
-### Conventions (`conventions/`)
-
--   **Backend**: Laravel standards for controllers, services, actions, repositories, API rules, and seeder system
--   **Frontend**: React/TypeScript routing structure and component organization
--   **Git**: Commit message format and branching strategy
-
-### Tasks (`tasks/`)
-
-Engineering task logs organized by date, documenting:
-
--   Implementation details
--   Technical decisions
--   Progress tracking
--   Code examples and patterns
-
-## Language Strategy
-
--   **English (en/)**: Primary language for code, APIs, and technical documentation
--   **Spanish (es/)**: Secondary language for architecture docs and team collaboration
-
-Both directories maintain identical structure and equivalent content, only differing in language.
-
-## Contributing
-
-When adding new documentation:
-
-1. Create the document in English first (`en/`)
-2. Translate and add to Spanish (`es/`)
-3. Ensure both versions maintain the same structure and content
-4. Update this README if adding new categories
-
-## Quick Links
-
-### English
-
--   [Inventory Architecture](en/architecture/inventory-architecture.md)
--   [Security Architecture](en/architecture/security-and-user-system-architecture.md)
--   [Git Commit Conventions](en/conventions/git/commits.md)
--   [Task Documentation Guide](en/conventions/tasks.md)
-
-### Español
-
--   [Arquitectura de Inventarios](es/architecture/inventory-architecture.md)
--   [Arquitectura de Seguridad](es/architecture/security-and-user-system-architecture.md)
--   [Convenciones de Commits Git](es/conventions/git/commits.md)
--   [Guía de Documentación de Tareas](es/conventions/tasks.md)
-
 ---
 
-**Last Updated**: 2025-11-05
+**Last Updated**: 2026-08-12
 **Maintained by**: SushiGo / ComandaFlow Team
