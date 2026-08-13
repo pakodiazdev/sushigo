@@ -1,12 +1,12 @@
 ---
 sprint: "002"
 title: Platillos Catalog & Platform Hardening
-status: In Progress
+status: Completed
 
 created: 2026-07-31
 started: 2026-07-31
-completed:
-last_updated: 2026-08-11
+completed: 2026-08-12
+last_updated: 2026-08-12
 
 base_branch: main
 base_commit: 4ac51ff
@@ -16,7 +16,7 @@ github_project: SushiGo Admin (#7)
 github_milestone:
 
 previous: sprint-001-attendance-payroll-quality.md
-next:
+next: sprint-003-development-platform-and-product-reliability.md
 ---
 
 # Sprint 002 — Platillos Catalog & Platform Hardening
@@ -110,8 +110,8 @@ between parallel agents.
 |---|---:|
 | Created | 2026-07-31 |
 | Started | 2026-07-31 |
-| Completed | — (all scope delivered 2026-08-11; formal closure per `doc/conventions/sprints.md` §4 is still pending Sprint 003's promotion — see §17/§18) |
-| Calendar duration | 11 days so far (created → 2026-08-11, last scope delivered) |
+| Completed | 2026-08-12 (all scope delivered 2026-08-11; formally closed upon Sprint 003 promotion, #443) |
+| Calendar duration | 13 days (2026-07-31 → 2026-08-12; implementation completed 2026-08-11) |
 | Active workdays | 8 days (2026-07-31, 08-01, 08-03 through 08-07, 08-11 — session data recorded; no sessions logged 08-02, 08-08, 08-09, 08-10) |
 | Progress (Issues completed) | 14 / 14 (100%) — `#384` (PR #393), `#385` (PR #391), `#358` (PR #395), `#376` (PR #396), `#383` (PR #398), `#379` (PR #394), `#377` (PR #392), `#382` (PR #408), `#381` (PR #406), `#378` (PR #407), `#365` (PR #413), `#360` (PR #409), and `#380` (PR #414) merged to `main`; `#357` deprecated in favor of `#410`/PR #411 (§13) |
 
@@ -565,7 +565,7 @@ worked genuinely concurrently — Peak concurrency (5) is roughly in line with S
 | ⏳ | — | Archive `#357` and `#410` to `doc/tasks/2026-08/` and correct `#357`'s live Retrospective total (28h51m → 32h58m, all 6 sessions) | Neither Issue has a local archive snapshot — `#357` because its delivering PR (#411) is filed under `#410`, `#410` because it was never run through `/finish-pr`'s archive step; `#357`'s Retrospective narrative undercounts its own Sessions array (§12) | Next |
 | ⏳ | — | Fix `#381`'s live Issue Sessions entry — its second session's `end` date is one day off (`2026-08-06` instead of `2026-08-07`), contradicted by its own Retrospective arithmetic (§12) | Found during this closure pass; corrected only in this document's §11 computation, not on the live Issue | Next |
 | ⏳ | — | File and fix the pre-existing `attendance-day-status.cy.ts` test-order dependency found (not fixed) during `#410`'s regression testing — its "Justificar Falta" case depends on run order within a shared `before()` reset | Explicitly flagged as out-of-scope in PR #411's own description; unrelated to `#410`'s diff (`git diff main` empty for that file) | Next |
-| ⏳ | — | Plan and promote Sprint 003 | Per `doc/conventions/sprints.md` §4, a sprint is *formally* complete only once its closure checklist is done **and** the next sprint becomes current — no Sprint 003 exists in `doc/sprints/planned/` yet, so Sprint 002 remains the highest-numbered (i.e. "current" by location) sprint even though its own scope is 100% delivered (§18) | Next |
+| ✅ | #443 | Plan and promote Sprint 003 | Sprint 003 was planned, promoted to `doc/sprints/`, and made current; this formally closes Sprint 002 under `doc/conventions/sprints.md` §4 | Completed 2026-08-12 |
 
 ## 18. Sprint Closure Checklist
 
@@ -585,5 +585,7 @@ worked genuinely concurrently — Peak concurrency (5) is roughly in line with S
 - [x] Delivered value and known limitations were documented. (§15)
 - [x] Follow-up work was created or recorded. (§17 — 3 already-filed Issues linked, 6 net-new follow-ups recorded, none yet filed as their own GitHub Issues)
 - [x] Lessons learned were captured. (§16)
-- [x] Metadata dates and status were updated. (front matter `last_updated: 2026-08-11`; `status` deliberately kept `In Progress` and `completed` deliberately left empty — per `doc/conventions/sprints.md` §6, both are only set at *formal* closure, which per §4 requires the next sprint's promotion, not yet done — see next item)
-- [ ] The next sprint was promoted or created when applicable. **Not done** — no Sprint 003 exists yet in `doc/sprints/planned/`. Per `doc/conventions/sprints.md` §4, this is the one checklist item that keeps Sprint 002 from being *formally* complete even though every other item above is done and its own scope is 100% delivered (§1/§4/§7/§13); recorded as the last §17 follow-up item. Until a Sprint 003 is planned and promoted, this document's `status` field correctly stays `In Progress` per the location-based lifecycle rule (§4's own lifecycle table: "highest-numbered sprint in `doc/sprints/`" = current/in progress), even though every Issue in its scope is done.
+- [x] Metadata dates and status were updated. (front matter records `status: Completed`,
+      `completed: 2026-08-12`, and the Sprint 003 successor.)
+- [x] The next sprint was promoted or created when applicable. (Sprint 003 was moved from
+      `doc/sprints/planned/` to `doc/sprints/` and marked `In Progress` by #443 on 2026-08-12.)

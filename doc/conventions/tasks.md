@@ -26,6 +26,87 @@ without the drift cost of editing two copies concurrently.
 
 ---
 
+## Roadmap planning aliases
+
+Large initiatives may use short aliases to group prospective Issues while the roadmap is being
+designed. These aliases are **planning coordinates, not task identifiers**. The GitHub Issue number
+is still the only permanent ID once an Issue exists.
+
+### Format
+
+```text
+<LANE>-<NN>
+```
+
+- `LANE` is an uppercase, documented acronym of 2–5 letters.
+- `NN` is a zero-padded sequence starting at `01` within that lane and roadmap.
+- A roadmap must define its lane glossary before using an alias.
+- Sequence numbers express grouping/order only; they do not imply priority, sprint, or execution
+  status.
+
+Example:
+
+```text
+DES-01  Design the target architecture
+CAT-03  Redesign the Variant contract
+OPS-02  Implement purchase receiving
+STK-01  Harden concurrent Stock mutations
+```
+
+### Standard Inventory roadmap lanes
+
+| Alias | Full name | Scope | Examples |
+|---|---|---|---|
+| `DES` | Design & Discovery | Architecture, domain decisions, contracts, migration and UI-flow design before implementation | ERD, ADR, API outline, migration plan |
+| `CAT` | Catalog | Master/catalog data that defines what is managed, independent of a transaction | Products, Variants, Brands, Categories, Purchase Presentations |
+| `OPS` | Inventory Operations | Business transactions and commercial configuration that operate on catalog data | Suppliers, receipts, acquisition cost, price lists |
+| `STK` | Stock & Integrity | Stock balances, movements, replenishment, authorization scope and structural cleanup | Concurrency, reversals, thresholds, Operating Unit access |
+
+Within an Inventory roadmap, `OPS` always means **Inventory Operations**, never DevOps. Platform or
+developer-experience work uses its existing `dev-tooling`/platform terminology; if it ever needs a
+roadmap alias, define a distinct acronym instead of overloading `OPS`.
+
+### Usage rules
+
+1. Use aliases only in a roadmap/design document or its GitHub roadmap index while work is being
+   decomposed.
+2. Do not place the alias in the GitHub Issue title, branch name, commit, PR title, session record,
+   or archive filename. Those use the real `#<number>` identity and the existing conventions.
+3. When the Issues are created, add one mapping table to the roadmap:
+
+   ```markdown
+   | Planning alias | GitHub Issue |
+   |---|---:|
+   | DES-01 | #421 |
+   | CAT-01 | #422 |
+   ```
+
+4. From that point forward, dependencies and execution evidence must reference `#421`, `#422`,
+   etc., not only `DES-01` or `CAT-01`.
+5. Never maintain a second live Issue body under the alias. The roadmap may retain a frozen summary
+   and mapping, but scope, checklists, estimates, Sessions, and Retrospective live only on GitHub.
+6. An alias is unique only inside its declared roadmap. Cross-roadmap communication must use the
+   GitHub Issue number and title to avoid collisions such as two unrelated `CAT-01` entries.
+7. If a new lane is needed, document its acronym, full name, scope boundary, and examples here or in
+   the domain's convention before using it. Prefer an existing lane when the boundary already fits.
+8. Reclassifying an Issue never changes its GitHub number. Update the roadmap mapping/glossary and
+   dependency explanation; do not rename historical IDs as if they were permanent task numbers.
+
+### What aliases do not encode
+
+Planning aliases never encode:
+
+- GitHub Issue identity.
+- Priority or value tier.
+- GitHub Project Status.
+- Sprint label or Iteration.
+- Backend/frontend ownership.
+- Completion state.
+
+Those remain explicit GitHub fields, labels, Issue references, and sprint evidence.
+
+---
+
 ## Mandatory sections (structure otherwise flexible)
 
 Every issue body must contain, regardless of size or type:

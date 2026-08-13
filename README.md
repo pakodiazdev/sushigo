@@ -258,7 +258,8 @@ Development is organized into documented sprints — see [`doc/conventions/sprin
 |---|---|---|---|---|---|---:|---|
 | 000 | Introduction | Completed | 2026-07-26 | 2026-07-26 | — | — | [sprint-000-introduction.md](doc/sprints/sprint-000-introduction.md) |
 | 001 | Attendance, Payroll & Quality | Completed | 2026-07-26 | 2026-07-31 (impl. finished 2026-07-30) | 2026-08-09 | 1.40× (51.1h → 36.5h) | [sprint-001-attendance-payroll-quality.md](doc/sprints/sprint-001-attendance-payroll-quality.md) |
-| 002 | Platillos Catalog & Platform Hardening | In Progress | 2026-07-31 | 100% (14/14) | — | 1.85× (170.8h → 92.5h, scoped + opportunistic issues) | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
+| 002 | Platillos Catalog & Platform Hardening | Completed | 2026-07-31 | 2026-08-12 (impl. finished 2026-08-11) | — | 1.85× (170.8h → 92.5h, scoped + opportunistic issues) | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
+| 003 | Development Platform & Product Reliability | In Progress | 2026-08-12 | — | 2026-09-05 | — | [sprint-003-development-platform-and-product-reliability.md](doc/sprints/sprint-003-development-platform-and-product-reliability.md) |
 
 ## Development tips
 
