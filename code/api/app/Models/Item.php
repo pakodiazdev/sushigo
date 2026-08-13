@@ -116,8 +116,9 @@ class Item extends Model implements AuthorizesMediaOwnership
      * PUT /item-variants/{id}, which accept name, sale_price, min_stock,
      * etc. Reusing it here would let anyone granted "manage this item's
      * photos" also silently edit catalog data and pricing. Not
-     * ItemPolicy::update() either, which is currently a stub that returns
-     * true unconditionally (see #400).
+     * ItemPolicy::update() either — even now that it enforces items.update
+     * (see #400) — since that permission is still the catalog/pricing one,
+     * not this narrower media-only permission.
      */
     public function userCanManageMedia(User $user): bool
     {

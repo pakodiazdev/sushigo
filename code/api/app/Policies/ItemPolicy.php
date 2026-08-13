@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Item;
 use App\Models\User;
 
 class ItemPolicy
@@ -9,64 +10,56 @@ class ItemPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(?User $user): bool // NOSONAR - $user kept nullable so Gate::methodAllowsGuests() permits guest access
+    public function viewAny(?User $user): bool
     {
-        // Public endpoint - anyone can list items
-        return true;
+        return $user !== null && $user->can('items.view');
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(?User $user): bool // NOSONAR - $user kept nullable so Gate::methodAllowsGuests() permits guest access
+    public function view(?User $user, ?Item $item = null): bool // NOSONAR - $item required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        // Public endpoint - anyone can view items
-        return true;
+        return $user !== null && $user->can('items.view');
     }
 
     /**
      * Determine whether the user can create models.
      */
-    public function create(): bool
+    public function create(?User $user): bool
     {
-        // Any authenticated user can create items
-        // In production, you might want to check for specific roles/permissions
-        return true;
+        return $user !== null && $user->can('items.create');
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(): bool
+    public function update(?User $user, ?Item $item = null): bool // NOSONAR - $item required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        // Any authenticated user can update items
-        // In production, you might want to check for specific roles/permissions
-        return true;
+        return $user !== null && $user->can('items.update');
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(): bool
+    public function delete(?User $user, ?Item $item = null): bool // NOSONAR - $item required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        // Any authenticated user can delete items
-        // In production, you might want to check for specific roles/permissions
-        return true;
+        return $user !== null && $user->can('items.delete');
     }
 
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(): bool
+    public function restore(?User $user, ?Item $item = null): bool // NOSONAR - $item required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        return true;
+        return $user !== null && $user->can('items.delete');
     }
 
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(): bool
+    public function forceDelete(?User $user, ?Item $item = null): bool // NOSONAR - $item required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        return true;
+        return $user !== null && $user->can('items.delete');
     }
 }
