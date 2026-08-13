@@ -179,7 +179,7 @@ change and must update estimates, dependencies, conflicts, and the scope-change 
 | ⏳ | #64 | `sushigo-dev-lab` | Add Bats coverage and macOS CI for workspace-bootstrap configuration helpers | High | 3h | 6h | — | — | Use `tests/README.md` to avoid a README conflict with #67 |
 | ⏳ | #67 | `sushigo-dev-lab` | Add `make status` for a reliable workspace runtime overview | Medium | 2h | 4h | — | — | Distinguish live, degraded, stopped, stale-socket, and unconfigured states |
 | ⏳ | #401 | `sushigo` | Add administrator-managed employee avatars with reusable initials fallback | High | 4h | 7h | — | — | Foundation required by #420 |
-| ⏳ | #400 | `sushigo` | Enforce permissions in Item, ItemVariant, and InventoryLocation policies | High | 2h | 4h | — | — | Independent authorization lane; keep `items.manage-media` separate |
+| ✅ | #400 | `sushigo` | Enforce permissions in Item, ItemVariant, and InventoryLocation policies | High | 2h | 4h | 3.2h | PR #445 | PR ready, merge pending |
 | ⏳ | #430 | `sushigo` | Prevent concurrent stock overselling and enforce balance invariants | Critical | 4h | 8h | — | — | Land early; required before future purchase receiving (#432) |
 | ⏳ | #421 | `sushigo` | Design the Product Inventory target architecture and migration plan | Medium | 3h | 6h | — | — | Design-only gate; #422/#423 remain outside Sprint 3 |
 |  |  |  | **Round total** |  | **18h** | **35h** | **—** |  |  |
@@ -347,7 +347,7 @@ Sessions arrays. Estimates remain planning ranges until execution evidence is re
 | ⏳ | #65 | `sushigo-dev-lab` | Pending | — | — | — | ADR list expands to include #68 |
 | ⏳ | #401 | `sushigo` | Pending | — | — | — | Admin employee-avatar foundation; continuation split to #420 |
 | ⏳ | #420 | `sushigo` | Pending | — | — | — | Self-service editing and remaining identity-surface rollout |
-| ⏳ | #400 | `sushigo` | Pending | — | — | — | Three inventory policies aligned with route/Form Request permissions |
+| ✅ | #400 | `sushigo` | Replaced unconditional `return true` stubs in ItemPolicy/ItemVariantPolicy/InventoryLocationPolicy with real Spatie permission checks; 72 new unit assertions | PR #445 | — | 3.2h | 72 policy unit tests + 44 regression tests passing; Pint clean; SonarCloud quality gate passing (100% new coverage); Copilot review clean; Devin/DeepWiki 0 bugs, 2 flags fixed (stale comment, nullable-param footgun), 4 evaluated as false positive/informational |
 | ⏳ | #430 | `sushigo` | Pending | — | — | — | Atomic Stock mutation and balance-invariant enforcement |
 | ⏳ | #421 | `sushigo` | Pending | — | — | — | Design/ERD/UI/API/migration gate only; no production implementation |
 | 🚧 | #443 | `sushigo` | Sprint lifecycle and planning documentation | — | — | In progress | Opportunistic startup work; branch and PR carry the session-created documentation |

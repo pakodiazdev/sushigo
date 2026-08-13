@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\InventoryLocation;
 use App\Models\User;
 
 class InventoryLocationPolicy
@@ -9,61 +10,56 @@ class InventoryLocationPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(?User $user): bool // NOSONAR - $user kept nullable so Gate::methodAllowsGuests() permits guest access
+    public function viewAny(?User $user): bool
     {
-        // Public endpoint - anyone can list inventory locations
-        return true;
+        return $user !== null && $user->can('inventory_locations.view');
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(?User $user): bool // NOSONAR - $user kept nullable so Gate::methodAllowsGuests() permits guest access
+    public function view(?User $user, ?InventoryLocation $inventoryLocation = null): bool // NOSONAR - $inventoryLocation required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        // Public endpoint - anyone can view inventory locations
-        return true;
+        return $user !== null && $user->can('inventory_locations.view');
     }
 
     /**
      * Determine whether the user can create models.
      */
-    public function create(): bool
+    public function create(?User $user): bool
     {
-        // Any authenticated user can create inventory locations
-        return true;
+        return $user !== null && $user->can('inventory_locations.manage');
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(): bool
+    public function update(?User $user, ?InventoryLocation $inventoryLocation = null): bool // NOSONAR - $inventoryLocation required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        // Any authenticated user can update inventory locations
-        return true;
+        return $user !== null && $user->can('inventory_locations.manage');
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(): bool
+    public function delete(?User $user, ?InventoryLocation $inventoryLocation = null): bool // NOSONAR - $inventoryLocation required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        // Any authenticated user can delete inventory locations
-        return true;
+        return $user !== null && $user->can('inventory_locations.manage');
     }
 
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(): bool
+    public function restore(?User $user, ?InventoryLocation $inventoryLocation = null): bool // NOSONAR - $inventoryLocation required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        return true;
+        return $user !== null && $user->can('inventory_locations.manage');
     }
 
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(): bool
+    public function forceDelete(?User $user, ?InventoryLocation $inventoryLocation = null): bool // NOSONAR - $inventoryLocation required by Laravel's policy contract; unused because authorization here is permission-only, no per-instance check; nullable so a class-string Gate check (no instance) is denied instead of crashing
     {
-        return true;
+        return $user !== null && $user->can('inventory_locations.manage');
     }
 }
