@@ -61,6 +61,12 @@ export function useEmployeeForm({
 
   const isAdmin = useAuthStore((s) => s.isAdmin)
   const currentBranch = useAuthStore((s) => s.currentBranch)
+  // Precise counterpart to the backend's avatar-replacement gate
+  // (User::userCanManageMedia / UpdateEmployeeRequest::authorizesAvatarReplacement,
+  // which check the users.update permission, not the admin/super-admin role name) — kept
+  // separate from isAdmin so a role that carries users.update without being named
+  // admin/super-admin still sees the uploader, and one that lacks it never does.
+  const canManageUsers = useAuthStore((s) => s.can('users.update'))
 
   // ── Panel mode ───────────────────────────────────────────────────────────────
 
@@ -105,64 +111,97 @@ export function useEmployeeForm({
 
   // ── Submit handlers ──────────────────────────────────────────────────────────
 
+  // Extracted from handleFormSubmit (which just dispatches to one of these + the shared
+  // catch) to keep each branch's own nesting independently readable, rather than one
+  // function carrying both the edit and create flows plus their inner conditionals at once.
+
+  const submitEmployeeUpdate = async (values: EmployeeFormValues) => {
+    if (!employee) return
+
+    // Only send roles the current user is allowed to assign.
+    // Roles outside the assignable set (e.g. 'super-admin' for non-super-admins)
+    // are filtered out here — syncPositionRoles() on the backend preserves them.
+    const assignableRoles = (assignableRolesQuery.data || []) as EmployeePositionRole[]
+    const updateData: EmployeeUpdateData = {
+      first_name: values.first_name,
+      last_name: values.last_name,
+      roles: (values.roles as EmployeePositionRole[]).filter((r) =>
+        assignableRoles.includes(r),
+      ),
+      attendance_exempt: values.attendance_exempt,
+    }
+
+    if (isAdmin) {
+      // Only send contact fields if they changed from the original value.
+      // This preserves the backend `required_without` cross-validation:
+      // absent fields are ignored, and the rule only fires when both are present.
+      const originalEmail = fullEmployee?.user.email ?? ''
+      const originalPhone = fullEmployee?.user.phone ?? ''
+      const newEmail = (values.email ?? '').trim()
+      const newPhone = (values.phone ?? '').trim()
+      if (newEmail !== originalEmail) updateData.email = newEmail
+      if (newPhone !== originalPhone) updateData.phone = newPhone
+    }
+
+    // Only present when MediaGalleryUploader produced a completed upload this session —
+    // omitted entirely otherwise, so an edit with no avatar change behaves exactly as before.
+    if (values.media_gallery_id) {
+      updateData.media_gallery_id = values.media_gallery_id
+      updateData.owner_token = values.owner_token
+    }
+
+    await updateMutation.mutateAsync({ id: employee.id, data: updateData })
+    setMode('detail')
+  }
+
+  const submitNewEmployee = async (values: EmployeeFormValues) => {
+    // Guard: zod blocks submission when hasBranch=false, but we add an
+    // explicit runtime check as a second line of defence (same pattern as
+    // handleRehireSubmit in useEmployeeDetailActions).
+    if (!currentBranch) return
+
+    const response = await createMutation.mutateAsync({
+      code: (values as { code: string }).code,
+      first_name: values.first_name,
+      last_name: values.last_name,
+      roles: values.roles as EmployeePositionRole[],
+      email: values.email,
+      phone: values.phone,
+      start_date: (values as { start_date: string }).start_date,
+      branch_id: currentBranch.id,
+      attendance_exempt: values.attendance_exempt,
+      // Only present when MediaGalleryUploader produced a completed upload this session —
+      // omitted entirely otherwise, so creating an employee with no avatar behaves exactly
+      // as before.
+      ...(values.media_gallery_id
+        ? { media_gallery_id: values.media_gallery_id, owner_token: values.owner_token }
+        : {}),
+    })
+
+    // Stay on the panel so the admin can assign a schedule right away.
+    // Store the created employee for immediate rendering, then notify the
+    // parent so it can update the URL (?form=<id>). This ensures the
+    // `employee` prop gets populated, the edit guard works correctly, and
+    // a page refresh doesn't revert to a blank create form.
+    const newEmployee = (response.data as EntityResponse<Employee>).data
+    setJustCreatedEmployee(newEmployee)
+    setMode('detail')
+    onCreated?.(newEmployee)
+  }
+
   const handleFormSubmit = async (values: EmployeeFormValues) => {
     try {
       if (mode === 'edit' && employee) {
-        // Only send roles the current user is allowed to assign.
-        // Roles outside the assignable set (e.g. 'super-admin' for non-super-admins)
-        // are filtered out here — syncPositionRoles() on the backend preserves them.
-        const assignableRoles = (assignableRolesQuery.data || []) as EmployeePositionRole[]
-        const updateData: EmployeeUpdateData = {
-          first_name: values.first_name,
-          last_name: values.last_name,
-          roles: (values.roles as EmployeePositionRole[]).filter((r) =>
-            assignableRoles.includes(r),
-          ),
-          attendance_exempt: values.attendance_exempt,
-        }
-
-        if (isAdmin) {
-          // Only send contact fields if they changed from the original value.
-          // This preserves the backend `required_without` cross-validation:
-          // absent fields are ignored, and the rule only fires when both are present.
-          const originalEmail = fullEmployee?.user.email ?? ''
-          const originalPhone = fullEmployee?.user.phone ?? ''
-          const newEmail = (values.email ?? '').trim()
-          const newPhone = (values.phone ?? '').trim()
-          if (newEmail !== originalEmail) updateData.email = newEmail
-          if (newPhone !== originalPhone) updateData.phone = newPhone
-        }
-
-        await updateMutation.mutateAsync({ id: employee.id, data: updateData })
-        setMode('detail')
+        await submitEmployeeUpdate(values)
       } else {
-        // Guard: zod blocks submission when hasBranch=false, but we add an
-        // explicit runtime check as a second line of defence (same pattern as
-        // handleRehireSubmit in useEmployeeDetailActions).
-        if (!currentBranch) return
-        const response = await createMutation.mutateAsync({
-          code: (values as { code: string }).code,
-          first_name: values.first_name,
-          last_name: values.last_name,
-          roles: values.roles as EmployeePositionRole[],
-          email: values.email,
-          phone: values.phone,
-          start_date: (values as { start_date: string }).start_date,
-          branch_id: currentBranch.id,
-          attendance_exempt: values.attendance_exempt,
-        })
-        // Stay on the panel so the admin can assign a schedule right away.
-        // Store the created employee for immediate rendering, then notify the
-        // parent so it can update the URL (?form=<id>). This ensures the
-        // `employee` prop gets populated, the edit guard works correctly, and
-        // a page refresh doesn't revert to a blank create form.
-        const newEmployee = (response.data as EntityResponse<Employee>).data
-        setJustCreatedEmployee(newEmployee)
-        setMode('detail')
-        onCreated?.(newEmployee)
+        await submitNewEmployee(values)
       }
     } catch (error) {
-      console.error('Error submitting employee form:', error)
+      // createMutation/updateMutation already show a toast via their own onError
+      // (employee-hooks.ts). This catch only stops the rejection (e.g. the
+      // avatar-replacement 403 from UpdateEmployeeRequest::authorizesAvatarReplacement)
+      // from propagating further — a second showError here would duplicate that toast.
+      console.error('Error saving employee:', error)
     }
   }
 
@@ -232,6 +271,7 @@ export function useEmployeeForm({
     panelDescription,
     // Auth
     isAdmin,
+    canManageUsers,
     currentBranch,
     // Data
     fullEmployee,

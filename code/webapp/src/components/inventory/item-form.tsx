@@ -158,6 +158,7 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
         ) : (
           // No outer FormField here — MediaGalleryUploader renders its own "Photos" label
           <MediaGalleryUploader
+            context="item"
             disabled={isSubmitting}
             onChange={(galleryId, ownerToken) => {
               setValue('media_gallery_id', galleryId)

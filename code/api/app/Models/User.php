@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
+use App\Contracts\AuthorizesMediaOwnership;
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasMediaGallery;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements AuthorizesMediaOwnership
 {
-    use Auditable, HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use Auditable, HasApiTokens, HasFactory, HasMediaGallery, HasRoles, Notifiable;
 
     protected $fillable = [
         'first_name',
@@ -96,5 +98,39 @@ class User extends Authenticatable
     protected function auditExcluded(): array
     {
         return ['password', 'remember_token'];
+    }
+
+    /**
+     * Gate avatar-gallery changes (attach/reorder/delete) on either being
+     * the account's own owner, or holding `users.update` — the same
+     * permission that already gates admin edits to another user's identity
+     * fields via the employee update flow. Deliberately not pure ownership
+     * alone (see doc/conventions/backend/media-uploads.md §5, which
+     * predates this and sketches ownership-only): #401 explicitly requires
+     * an administrator to be able to attach/replace another employee's
+     * avatar from the employee form, not just their own.
+     */
+    public function userCanManageMedia(User $user): bool
+    {
+        return $user->id === $this->id || $user->can('users.update');
+    }
+
+    /**
+     * Single point of truth for reading the primary avatar photo, used by
+     * EmployeeResource, MeController, and AuthTokenResponse. Filters with
+     * firstWhere('is_primary', true) rather than first() so this is correct
+     * whether mediaAttachments/mediaGallery.mediaAssets were eager-loaded
+     * pre-constrained to is_primary (every list/show endpoint, via
+     * LoadsEmployeeUserAvatarRelations) or left entirely unloaded (the
+     * create-employee response, which reads a freshly-created $employee
+     * without that eager load) — an unconstrained first() picks the
+     * position-0 asset instead of the chosen primary one when a gallery
+     * holds more than one photo.
+     */
+    public function avatarUrl(): ?string
+    {
+        return $this->mediaAttachments->firstWhere('is_primary', true)
+            ?->mediaGallery?->mediaAssets->firstWhere('is_primary', true)
+            ?->url;
     }
 }

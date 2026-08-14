@@ -15,6 +15,7 @@ const mockEmployee: Employee = {
         email: null,
         phone: null,
         phone_country: null,
+        avatar_url: null,
     },
     is_active: true,
     attendance_exempt: false,
@@ -78,6 +79,14 @@ describe('getEmployeeColumns', () => {
 
         render(<>{nameColumn.render!(mockEmployee)}</>)
         expect(screen.getByText('Juan Pérez')).toBeDefined()
+    })
+
+    it('renders an Avatar with the employee name in the name column', () => {
+        const columns = getEmployeeColumns(mockOnEdit)
+        const nameColumn = columns.find((c) => c.key === 'name')!
+
+        render(<>{nameColumn.render!(mockEmployee)}</>)
+        expect(screen.getByRole('img', { name: 'Juan Pérez' })).toBeDefined()
     })
 
     it('renders roles column with badges', () => {

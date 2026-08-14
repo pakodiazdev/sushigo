@@ -21,6 +21,7 @@ class MediaGallery extends Model
         'cover_media_id',
         'is_shared',
         'owner_token',
+        'context',
         'meta',
     ];
 
@@ -60,6 +61,23 @@ class MediaGallery extends Model
     public function primaryMedia()
     {
         return $this->mediaAssets()->where('is_primary', true)->first();
+    }
+
+    /**
+     * Extensions the file being uploaded into this gallery must match — the
+     * empty array for a legacy gallery with no stored context (pre-dates
+     * this column, see the backfill migration) falls back to rejecting
+     * everything rather than silently allowing anything. Plain array lookup,
+     * not config("media.contexts.{$this->context}"): config()'s dot-path
+     * resolution would treat a stray "." in a stored context value as a
+     * path into the contexts array, returning a single extension string
+     * instead of the [] default — a TypeError against this method's array
+     * return type. Array access on the resolved contexts array can't do
+     * that: a bogus key just misses and falls through to [].
+     */
+    public function allowedExtensions(): array
+    {
+        return config('media.contexts')[$this->context] ?? [];
     }
 
     /**

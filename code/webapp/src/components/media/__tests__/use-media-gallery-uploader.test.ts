@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
-import { useMediaGalleryUploader } from '../use-media-gallery-uploader'
+import { mediaContextAccept, useMediaGalleryUploader } from '../use-media-gallery-uploader'
 
 const mockUpload = vi.fn()
 const mockUpdateAsset = vi.fn()
@@ -53,27 +53,27 @@ function makeFile(name = 'photo.jpg', type = 'image/jpeg', size = 1024): File {
 describe('useMediaGalleryUploader', () => {
   describe('initial state', () => {
     it('starts with no assets', () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       expect(result.current.assets).toEqual([])
     })
 
     it('starts with an undefined galleryId', () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       expect(result.current.galleryId).toBeUndefined()
     })
 
     it('starts with an undefined ownerToken', () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       expect(result.current.ownerToken).toBeUndefined()
     })
 
     it('starts with isUploading false', () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       expect(result.current.isUploading).toBe(false)
     })
 
     it('starts with no error', () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       expect(result.current.error).toBeNull()
     })
   })
@@ -83,7 +83,7 @@ describe('useMediaGalleryUploader', () => {
       const asset = makeAsset()
       mockUpload.mockResolvedValue(asset)
 
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -97,7 +97,7 @@ describe('useMediaGalleryUploader', () => {
       const second = makeAsset({ asset_id: 'asset-2', position: 1, is_primary: false })
       mockUpload.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
 
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
@@ -114,7 +114,7 @@ describe('useMediaGalleryUploader', () => {
       const second = makeAsset({ asset_id: 'asset-2', gallery_id: 'gallery-1', position: 1, is_primary: false })
       mockUpload.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
 
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
@@ -124,9 +124,47 @@ describe('useMediaGalleryUploader', () => {
       expect(mockUpload.mock.calls[1]?.[1]?.mediaGalleryId).toBe('gallery-1')
     })
 
+    it('passes the hook context to every mediaApi.upload call', async () => {
+      const first = makeAsset({ asset_id: 'asset-1', position: 0 })
+      const second = makeAsset({ asset_id: 'asset-2', position: 1, is_primary: false })
+      mockUpload.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
+
+      const { result } = renderHook(() => useMediaGalleryUploader('avatar'))
+
+      await act(async () => {
+        await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
+      })
+
+      expect(mockUpload.mock.calls[0]?.[1]?.context).toBe('avatar')
+      expect(mockUpload.mock.calls[1]?.[1]?.context).toBe('avatar')
+    })
+
+    it('rejects a video file for the avatar context without calling the API', async () => {
+      const { result } = renderHook(() => useMediaGalleryUploader('avatar'))
+
+      await act(async () => {
+        await result.current.uploadFiles([makeFile('clip.mp4', 'video/mp4')])
+      })
+
+      expect(mockUpload).not.toHaveBeenCalled()
+      expect(result.current.error).toContain('not a supported file type')
+    })
+
+    it('allows a video file for the item context', async () => {
+      mockUpload.mockResolvedValue(makeAsset({ mime_type: 'video/mp4', filename: 'clip.mp4' }))
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
+
+      await act(async () => {
+        await result.current.uploadFiles([makeFile('clip.mp4', 'video/mp4')])
+      })
+
+      expect(mockUpload).toHaveBeenCalledTimes(1)
+      expect(result.current.error).toBeNull()
+    })
+
     it('exposes galleryId once an asset exists', async () => {
       mockUpload.mockResolvedValue(makeAsset({ gallery_id: 'gallery-42' }))
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -136,7 +174,7 @@ describe('useMediaGalleryUploader', () => {
     })
 
     it('rejects a disallowed file extension without calling the API', async () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile('malware.exe', 'application/octet-stream')])
@@ -147,7 +185,7 @@ describe('useMediaGalleryUploader', () => {
     })
 
     it('rejects a file over the 8000 KB limit without calling the API', async () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       const oversized = makeFile('big.jpg', 'image/jpeg')
       Object.defineProperty(oversized, 'size', { value: 8000 * 1024 + 1 })
 
@@ -161,7 +199,7 @@ describe('useMediaGalleryUploader', () => {
 
     it('sets an error message when the upload API call fails', async () => {
       mockUpload.mockRejectedValue(new Error('Network error'))
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -175,7 +213,7 @@ describe('useMediaGalleryUploader', () => {
       mockUpload
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce(makeAsset({ asset_id: 'asset-2' }))
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
@@ -187,7 +225,7 @@ describe('useMediaGalleryUploader', () => {
     })
 
     it('combines every validation error instead of only keeping the last one', async () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([
@@ -201,7 +239,7 @@ describe('useMediaGalleryUploader', () => {
     })
 
     it('does nothing when given an empty file list', async () => {
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([])
@@ -216,7 +254,7 @@ describe('useMediaGalleryUploader', () => {
       // defineProperty shadows it with an own property instead.
       Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true })
       try {
-        const { result } = renderHook(() => useMediaGalleryUploader())
+        const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
         await act(async () => {
           await result.current.uploadFiles([makeFile()])
@@ -234,7 +272,7 @@ describe('useMediaGalleryUploader', () => {
     it('removes the asset from state on success', async () => {
       mockUpload.mockResolvedValue(makeAsset({ asset_id: 'asset-1' }))
       mockDeleteAsset.mockResolvedValue(undefined)
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -249,7 +287,7 @@ describe('useMediaGalleryUploader', () => {
     it('passes the owner_token used at upload time', async () => {
       mockUpload.mockResolvedValue(makeAsset({ asset_id: 'asset-1' }))
       mockDeleteAsset.mockResolvedValue(undefined)
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -267,7 +305,7 @@ describe('useMediaGalleryUploader', () => {
       const second = makeAsset({ asset_id: 'asset-2', position: 1, is_primary: false })
       mockUpload.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
       mockDeleteAsset.mockResolvedValue(undefined)
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
@@ -284,7 +322,7 @@ describe('useMediaGalleryUploader', () => {
       const second = makeAsset({ asset_id: 'asset-2', position: 1, is_primary: false })
       mockUpload.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
       mockDeleteAsset.mockResolvedValue(undefined)
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
@@ -299,7 +337,7 @@ describe('useMediaGalleryUploader', () => {
     it('exposes galleryId as undefined again once the last asset is removed', async () => {
       mockUpload.mockResolvedValue(makeAsset({ asset_id: 'asset-1', gallery_id: 'gallery-1' }))
       mockDeleteAsset.mockResolvedValue(undefined)
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -314,7 +352,7 @@ describe('useMediaGalleryUploader', () => {
     it('sets an error message when the delete API call fails, keeping the asset in state', async () => {
       mockUpload.mockResolvedValue(makeAsset({ asset_id: 'asset-1' }))
       mockDeleteAsset.mockRejectedValue(new Error('Forbidden'))
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -335,7 +373,7 @@ describe('useMediaGalleryUploader', () => {
       mockUpload.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
       mockUpdateAsset.mockResolvedValue({ ...second, is_primary: true })
 
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
       })
@@ -351,7 +389,7 @@ describe('useMediaGalleryUploader', () => {
     it('sets an error message when the API call fails', async () => {
       mockUpload.mockResolvedValue(makeAsset({ asset_id: 'asset-1' }))
       mockUpdateAsset.mockRejectedValue(new Error('Forbidden'))
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -373,7 +411,7 @@ describe('useMediaGalleryUploader', () => {
         .mockResolvedValueOnce({ ...second, position: 0 })
         .mockResolvedValueOnce({ ...first, position: 1 })
 
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
       })
@@ -394,7 +432,7 @@ describe('useMediaGalleryUploader', () => {
         () => new Promise((resolve) => { resolveFirstPatch = resolve })
       )
 
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
       })
@@ -420,7 +458,7 @@ describe('useMediaGalleryUploader', () => {
 
     it('is a no-op when moving the first asset left', async () => {
       mockUpload.mockResolvedValue(makeAsset({ asset_id: 'asset-1', position: 0 }))
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -434,7 +472,7 @@ describe('useMediaGalleryUploader', () => {
 
     it('is a no-op when moving the last asset right', async () => {
       mockUpload.mockResolvedValue(makeAsset({ asset_id: 'asset-1', position: 0 }))
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -452,7 +490,7 @@ describe('useMediaGalleryUploader', () => {
       mockUpload.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
       mockUpdateAsset.mockRejectedValue(new Error('Conflict'))
 
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
       })
@@ -472,7 +510,7 @@ describe('useMediaGalleryUploader', () => {
         .mockRejectedValueOnce(new Error('Conflict')) // asset-1 -> position 1 fails
         .mockResolvedValueOnce({ ...second, position: 1 }) // rollback: asset-2 back to position 1
 
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
       await act(async () => {
         await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
       })
@@ -493,7 +531,7 @@ describe('useMediaGalleryUploader', () => {
   describe('clearError', () => {
     it('resets the error to null', async () => {
       mockUpload.mockRejectedValue(new Error('Network error'))
-      const { result } = renderHook(() => useMediaGalleryUploader())
+      const { result } = renderHook(() => useMediaGalleryUploader('item'))
 
       await act(async () => {
         await result.current.uploadFiles([makeFile()])
@@ -506,5 +544,17 @@ describe('useMediaGalleryUploader', () => {
 
       expect(result.current.error).toBeNull()
     })
+  })
+})
+
+describe('mediaContextAccept', () => {
+  it('includes video mime types for item and dish', () => {
+    expect(mediaContextAccept('item')).toContain('video/mp4')
+    expect(mediaContextAccept('dish')).toContain('video/mp4')
+  })
+
+  it('excludes video mime types for avatar', () => {
+    expect(mediaContextAccept('avatar')).not.toContain('video')
+    expect(mediaContextAccept('avatar')).toContain('image/jpeg')
   })
 })

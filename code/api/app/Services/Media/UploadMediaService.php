@@ -31,7 +31,7 @@ use Throwable;
  */
 class UploadMediaService
 {
-    public function __invoke(UploadedFile $file, ?int $mediaGalleryId, ?string $ownerToken = null): MediaAsset
+    public function __invoke(UploadedFile $file, ?int $mediaGalleryId, ?string $ownerToken = null, ?string $context = null): MediaAsset
     {
         // config/filesystems.php sets 'throw' => false on both disks, so a
         // storage failure (disk full, permissions) returns false instead of
@@ -45,10 +45,10 @@ class UploadMediaService
         }
 
         try {
-            return DB::transaction(function () use ($file, $mediaGalleryId, $ownerToken, $path) {
+            return DB::transaction(function () use ($file, $mediaGalleryId, $ownerToken, $context, $path) {
                 $gallery = $mediaGalleryId
                     ? MediaGallery::lockForUpdate()->findOrFail($mediaGalleryId)
-                    : MediaGallery::create(['name' => 'Untitled gallery', 'owner_token' => $ownerToken]);
+                    : MediaGallery::create(['name' => 'Untitled gallery', 'owner_token' => $ownerToken, 'context' => $context]);
 
                 // max(position)+1, not count(): after a deletion leaves a gap
                 // (e.g. positions 0,2 remain), count() would recompute 2 and

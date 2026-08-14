@@ -2,7 +2,11 @@
 
 namespace App\Http\Requests\Employees;
 
+use App\Http\Requests\Concerns\AuthorizesMediaGalleryOwnership;
+use App\Http\Requests\Concerns\ReadsRawStringInput;
+use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Models\Employee;
+use App\Models\MediaGallery;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -21,13 +25,31 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="start_date", type="string", format="date", example="2026-01-15", description="Start date for the initial employment period"),
  *   @OA\Property(property="attendance_exempt", type="boolean", example=false, description="True for roles (e.g. admin, super-admin) that do not check in/out — excluded from the attendance list. Defaults to false."),
  *   @OA\Property(property="meta", type="object", nullable=true, description="Additional metadata"),
+ *   @OA\Property(property="media_gallery_id", type="string", example="01JKABC0987654321ZYXWVUTS", nullable=true, description="Gallery public_id (ULID) uploaded via POST /media/upload to attach as the linked user's avatar"),
+ *   @OA\Property(property="owner_token", type="string", example="c9c9f9b0-...", nullable=true, description="Only checked when media_gallery_id points at a gallery still unattached to anything — the token from the POST /media/upload call that created it"),
  * )
  */
 class StoreEmployeeRequest extends FormRequest
 {
+    use AuthorizesMediaGalleryOwnership, ReadsRawStringInput, ResolvesPublicIdReferences;
+
+    /**
+     * Route-level `permission:employees.create` middleware already gates this
+     * endpoint — the only extra check here is the same gallery-ownership rule
+     * every media-adopting entity's create request runs (see
+     * doc/conventions/backend/media-uploads.md §3.2). The employee's own linked
+     * User doesn't exist yet at this point (created by CreateEmployeeAction),
+     * so for a normal upload — a brand-new gallery from this session — this
+     * only ever hits the unattached-owner_token branch. It's still possible to
+     * reach `User::userCanManageMedia()` here, though: a caller could supply a
+     * `media_gallery_id` already attached to some *other*, pre-existing user's
+     * avatar, in which case `isManageableBy()` falls through to that other
+     * user's own ownership rule — correctly rejecting the claim unless the
+     * caller is that user or holds `users.update`.
+     */
     public function authorize(): bool
     {
-        return true;
+        return $this->authorizesMediaGalleryOwnership();
     }
 
     public function rules(): array
@@ -44,7 +66,18 @@ class StoreEmployeeRequest extends FormRequest
             'branch_id' => ['required', 'integer', Rule::exists('branches', 'id')->whereNull('deleted_at')],
             'start_date' => ['required', 'date'],
             'attendance_exempt' => ['sometimes', 'boolean'],
+            'media_gallery_id' => ['nullable', 'string', Rule::exists('media_galleries', 'public_id')->whereNull('deleted_at')],
+            'owner_token' => ['sometimes', 'string'],
         ];
+    }
+
+    /**
+     * Resolved numeric FK for the avatar gallery to attach to the linked
+     * User once it's created — null when omitted.
+     */
+    public function mediaGalleryId(): ?int
+    {
+        return $this->resolvePublicId(MediaGallery::class, 'media_gallery_id');
     }
 
     public function prepareForValidation(): void

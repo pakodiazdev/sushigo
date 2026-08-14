@@ -1,5 +1,6 @@
 import { Eye, BarChart3, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Avatar } from '@/components/ui/avatar'
 import type { Column } from '@/components/ui/data-grid'
 import { formatFirstLast } from '@/lib/format'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
@@ -44,11 +45,19 @@ export function getEmployeeColumns(
       header: 'Nombre',
       sortKey: 'first_name',
       render: (item) => (
-        <div className="font-medium">
-          {formatFirstLast(item.user)}
+        <div className="flex items-center gap-2">
+          <Avatar name={formatFirstLast(item.user)} imageUrl={item.user.avatar_url} size="sm" />
+          <div className="font-medium">
+            {formatFirstLast(item.user)}
+          </div>
         </div>
       ),
-      skeleton: () => <div className="h-4 w-32 rounded bg-muted animate-pulse" />,
+      skeleton: () => (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+          <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+        </div>
+      ),
     },
     {
       key: 'roles',

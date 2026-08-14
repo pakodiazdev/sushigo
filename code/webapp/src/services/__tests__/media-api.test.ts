@@ -79,6 +79,24 @@ describe('mediaApi.upload', () => {
     expect(sentFormData.get('media_gallery_id')).toBeNull()
   })
 
+  it('includes the context field when given', async () => {
+    mockPost.mockResolvedValue({ data: { data: mockAsset } })
+
+    await mediaApi.upload(makeFile(), { ownerToken: 'token-1', context: 'avatar' })
+
+    const sentFormData = mockPost.mock.calls[0]?.[1] as FormData
+    expect(sentFormData.get('context')).toBe('avatar')
+  })
+
+  it('omits the context field when not given', async () => {
+    mockPost.mockResolvedValue({ data: { data: mockAsset } })
+
+    await mediaApi.upload(makeFile(), { mediaGalleryId: 'gallery-123', ownerToken: 'token-1' })
+
+    const sentFormData = mockPost.mock.calls[0]?.[1] as FormData
+    expect(sentFormData.get('context')).toBeNull()
+  })
+
   it('returns the created asset from response.data.data', async () => {
     mockPost.mockResolvedValue({ data: { data: mockAsset } })
 

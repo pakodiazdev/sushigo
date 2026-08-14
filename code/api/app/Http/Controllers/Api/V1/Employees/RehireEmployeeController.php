@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Employees;
 
+use App\Http\Controllers\Api\V1\Employees\Concerns\LoadsEmployeeUserAvatarRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\RehireEmployeeRequest;
 use App\Http\Resources\Employee\EmployeeResource;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 class RehireEmployeeController extends Controller
 {
+    use LoadsEmployeeUserAvatarRelations;
+
     public function __invoke(RehireEmployeeRequest $request, Employee $employee): EmployeeResource
     {
         DB::transaction(function () use ($request, $employee) {
@@ -28,7 +31,7 @@ class RehireEmployeeController extends Controller
             $employee->update(['is_active' => true]);
         });
 
-        $employee->load(['user.roles', 'employmentPeriods.branch']);
+        $employee->load(array_merge(['user.roles', 'employmentPeriods.branch'], $this->employeeUserAvatarRelations()));
 
         return new EmployeeResource($employee);
     }

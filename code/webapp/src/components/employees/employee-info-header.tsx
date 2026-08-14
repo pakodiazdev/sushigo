@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { Avatar } from '@/components/ui/avatar'
 import { formatFirstLast } from '@/lib/format'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
 import type { Employee, EmployeePositionRole } from '@/types/employee'
@@ -29,11 +30,14 @@ export function EmployeeInfoHeader({ employee, hasActivePeriod }: Readonly<Emplo
     <div className="space-y-6">
       {/* Name + status badges */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">
-            {formatFirstLast(employee.user)}
-          </h3>
-          <span className="font-mono text-sm text-muted-foreground">{employee.code}</span>
+        <div className="flex items-center gap-3">
+          <Avatar name={formatFirstLast(employee.user)} imageUrl={employee.user.avatar_url} size="lg" />
+          <div>
+            <h3 className="text-lg font-semibold">
+              {formatFirstLast(employee.user)}
+            </h3>
+            <span className="font-mono text-sm text-muted-foreground">{employee.code}</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {!hasActivePeriod && (

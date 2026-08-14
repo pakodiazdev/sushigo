@@ -53,6 +53,7 @@ class MediaUploadTest extends TestCase
         $response = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('photo.jpg'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ]);
 
         $response->assertCreated()
@@ -81,6 +82,7 @@ class MediaUploadTest extends TestCase
         $response = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('photo.jpg'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ]);
 
         $relativeUrl = substr($response->json('data.url'), strlen(config('app.url')));
@@ -104,6 +106,7 @@ class MediaUploadTest extends TestCase
         $first = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('first.jpg'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ])->json('data');
 
         $second = $this->postJson('/api/v1/media/upload', [
@@ -128,6 +131,7 @@ class MediaUploadTest extends TestCase
         $first = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('first.jpg'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ])->json('data');
 
         $this->postJson('/api/v1/media/upload', [
@@ -145,6 +149,7 @@ class MediaUploadTest extends TestCase
         $first = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('first.jpg'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ])->json('data');
 
         $this->postJson('/api/v1/media/upload', [
@@ -161,6 +166,7 @@ class MediaUploadTest extends TestCase
         $first = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('first.jpg'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ])->json('data');
         $galleryId = $first['gallery_id'];
 
@@ -201,6 +207,7 @@ class MediaUploadTest extends TestCase
         $response = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image($longName),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ]);
 
         $response->assertCreated();
@@ -223,6 +230,7 @@ class MediaUploadTest extends TestCase
             'file' => UploadedFile::fake()->image('photo.jpg'),
             'media_gallery_id' => ['not-a-string'],
             'owner_token' => 'token-1',
+            'context' => 'item',
         ])->assertUnprocessable()->assertJsonValidationErrors('media_gallery_id');
     }
 
@@ -234,6 +242,7 @@ class MediaUploadTest extends TestCase
         $gallery = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('first.jpg'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ])->json('data.gallery_id');
 
         // authorize() reads owner_token raw and passes it into
@@ -268,6 +277,7 @@ class MediaUploadTest extends TestCase
         $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->create('doc.exe', 10, 'application/x-msdownload'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ])->assertUnprocessable()->assertJsonValidationErrors('file');
     }
 
@@ -278,7 +288,117 @@ class MediaUploadTest extends TestCase
 
         $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('photo.jpg'),
+            'context' => 'item',
         ])->assertUnprocessable()->assertJsonValidationErrors('owner_token');
+    }
+
+    #[Test]
+    public function it_requires_a_context_when_starting_a_new_gallery(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('photo.jpg'),
+            'owner_token' => 'token-1',
+        ])->assertUnprocessable()->assertJsonValidationErrors('context');
+    }
+
+    #[Test]
+    public function it_rejects_an_unknown_context_when_starting_a_new_gallery(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('photo.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'not-a-real-context',
+        ])->assertUnprocessable()->assertJsonValidationErrors('context');
+
+        $this->assertSame(0, MediaGallery::count());
+    }
+
+    #[Test]
+    public function it_rejects_a_dot_path_context_with_a_clean_422_instead_of_a_500(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        // config("media.contexts.{$context}") would resolve this as a path into the
+        // contexts array (media.contexts.item.0 -> 'jpg', a string) instead of missing
+        // entirely — a TypeError against allowedExtensionsForFile()'s array return type
+        // (500) rather than the clean validation error an unknown context should produce.
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('photo.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'item.0',
+        ])->assertUnprocessable()->assertJsonValidationErrors('context');
+
+        $this->assertSame(0, MediaGallery::count());
+    }
+
+    #[Test]
+    public function it_rejects_a_video_upload_for_the_avatar_context(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->create('clip.mp4', 500, 'video/mp4'),
+            'owner_token' => 'token-1',
+            'context' => 'avatar',
+        ])->assertUnprocessable()->assertJsonValidationErrors('file');
+    }
+
+    #[Test]
+    public function it_allows_a_video_upload_for_the_item_context(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->create('clip.mp4', 500, 'video/mp4'),
+            'owner_token' => 'token-1',
+            'context' => 'item',
+        ])->assertCreated();
+    }
+
+    #[Test]
+    public function a_second_upload_into_the_same_gallery_is_validated_against_the_gallerys_own_stored_context(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        $gallery = $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('first.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'avatar',
+        ])->json('data.gallery_id');
+
+        // The gallery's own stored context (avatar) governs here, regardless of what
+        // context this second request claims — a client can't relabel an existing
+        // gallery to smuggle a disallowed file type past the first upload's restriction.
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->create('clip.mp4', 500, 'video/mp4'),
+            'media_gallery_id' => $gallery,
+            'owner_token' => 'token-1',
+            'context' => 'item',
+        ])->assertUnprocessable()->assertJsonValidationErrors('file');
+    }
+
+    #[Test]
+    public function it_rejects_any_upload_into_a_gallery_with_no_stored_context(): void
+    {
+        Passport::actingAs($this->adminUser());
+
+        // Simulates a gallery created before the context column existed (or one the
+        // backfill migration couldn't infer — an unattached legacy gallery). Must fail
+        // closed: previously the mimes: rule was skipped entirely for an unresolved
+        // context, letting *any* file type — svg/html/exe included — through unrestricted.
+        $legacyGallery = MediaGallery::create(['name' => 'Legacy gallery', 'owner_token' => 'legacy-token']);
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('harmless.jpg'),
+            'media_gallery_id' => $legacyGallery->public_id,
+            'owner_token' => 'legacy-token',
+        ])->assertUnprocessable()->assertJsonValidationErrors('file');
+
+        $this->assertSame(0, MediaAsset::count());
     }
 
     #[Test]

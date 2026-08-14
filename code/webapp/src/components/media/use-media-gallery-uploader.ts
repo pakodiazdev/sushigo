@@ -1,12 +1,34 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { mediaApi } from '@/services/media-api'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { MediaGalleryAsset } from '@/types/media'
+import type { MediaContext, MediaGalleryAsset } from '@/types/media'
 
-// Mirrors config('media.allowed_mimes') and UploadMediaRequest's 8000 KB cap
+// Mirrors config('media.contexts') and UploadMediaRequest's 8000 KB cap
 // (code/api/config/media.php, code/api/app/Http/Requests/Media/UploadMediaRequest.php)
-// for immediate client-side feedback — the backend remains the source of truth.
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'])
+// for immediate client-side feedback — the backend remains the source of truth, and
+// re-validates every upload against the context declared here (or, for a gallery this
+// hook is reusing, the context that gallery was actually created with).
+const MEDIA_CONTEXT_EXTENSIONS: Record<MediaContext, readonly string[]> = {
+  item: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'],
+  dish: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'],
+  avatar: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+}
+
+const EXTENSION_MIME_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+}
+
+/** Value for the file input's `accept` attribute — restricts the OS file picker per context. */
+export function mediaContextAccept(context: MediaContext): string {
+  return MEDIA_CONTEXT_EXTENSIONS[context].map((extension) => EXTENSION_MIME_TYPES[extension]).join(',')
+}
+
 const MAX_FILE_SIZE_BYTES = 8000 * 1024
 
 // owner_token is a bearer-style credential (see doc/architecture/media/media-architecture.en.md
@@ -24,8 +46,8 @@ function fileExtension(file: File): string {
   return file.name.split('.').pop()?.toLowerCase() ?? ''
 }
 
-function validateFile(file: File): string | null {
-  if (!ALLOWED_EXTENSIONS.has(fileExtension(file))) {
+function validateFile(file: File, allowedExtensions: readonly string[]): string | null {
+  if (!allowedExtensions.includes(fileExtension(file))) {
     return `"${file.name}" is not a supported file type.`
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -50,7 +72,7 @@ export interface UseMediaGalleryUploaderResult {
   clearError: () => void
 }
 
-export function useMediaGalleryUploader(): UseMediaGalleryUploaderResult {
+export function useMediaGalleryUploader(context: MediaContext): UseMediaGalleryUploaderResult {
   const [assets, setAssets] = useState<MediaGalleryAsset[]>([])
   const [isUploading, setIsUploading] = useState(false)
   // Guards removeAsset/setPrimaryAsset/moveAsset against overlapping calls — e.g. a rapid
@@ -61,6 +83,10 @@ export function useMediaGalleryUploader(): UseMediaGalleryUploaderResult {
   const ownerTokenRef = useRef<string | undefined>(undefined)
   const galleryIdRef = useRef<string | undefined>(undefined)
 
+  // MEDIA_CONTEXT_EXTENSIONS[context] is already a stable module-level array reference per
+  // context key — useMemo just keeps this from re-deriving on every render for no reason.
+  const allowedExtensions = useMemo(() => MEDIA_CONTEXT_EXTENSIONS[context], [context])
+
   const clearError = useCallback(() => setError(null), [])
 
   const uploadOne = useCallback(async (file: File) => {
@@ -69,10 +95,11 @@ export function useMediaGalleryUploader(): UseMediaGalleryUploaderResult {
     const asset = await mediaApi.upload(file, {
       mediaGalleryId: galleryIdRef.current,
       ownerToken: ownerTokenRef.current,
+      context,
     })
     galleryIdRef.current = asset.gallery_id
     setAssets((prev) => [...prev, asset])
-  }, [])
+  }, [context])
 
   const uploadFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files)
@@ -88,7 +115,7 @@ export function useMediaGalleryUploader(): UseMediaGalleryUploaderResult {
     const failures: string[] = []
     try {
       for (const file of fileArray) {
-        const validationError = validateFile(file)
+        const validationError = validateFile(file, allowedExtensions)
         if (validationError) {
           failures.push(validationError)
           continue
@@ -105,7 +132,7 @@ export function useMediaGalleryUploader(): UseMediaGalleryUploaderResult {
       setIsUploading(false)
     }
     setError(failures.length > 0 ? failures.join(' ') : null)
-  }, [uploadOne])
+  }, [uploadOne, allowedExtensions])
 
   const removeAsset = useCallback(async (assetId: string) => {
     if (isMutating) {

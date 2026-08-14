@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
  * Attaches an already-uploaded MediaGallery to its owning entity. This is
  * the only point where a MediaAttachment is created — see
  * doc/conventions/backend/media-uploads.md for the upload-first/attach-on-save
- * pattern this implements. Item is the first adopter; Employee/User/Dish
- * follow the same call once they're ready.
+ * pattern this implements. Item was the first adopter; Dish and User
+ * (employee avatars, #401) call it the same way.
  */
 class MediaAttachmentService
 {
@@ -25,6 +25,16 @@ class MediaAttachmentService
      * stay attached, and therefore unreachable by cleanup, forever). The
      * old gallery itself is left alone — cleanup picks it up normally once
      * it's genuinely orphaned and past the grace period.
+     *
+     * Deliberately does *not* remove this gallery's attachment to any
+     * *other* attachable: doc/architecture/media/media-architecture.en.md
+     * §9 documents "a gallery can end up attached to more than one entity"
+     * as accepted debt shared by every adopter (Item, Dish, User) — an
+     * earlier version of this method also stripped the other attachable's
+     * row here, which silently deleted an unrelated Item/Dish's photo the
+     * moment its gallery id was reused elsewhere. If a future issue needs
+     * single-owner exclusivity for one specific adopter, that belongs in
+     * that adopter's own authorization/request layer, not here.
      */
     public function __invoke(Model $attachable, int $mediaGalleryId, bool $isPrimary = true): MediaAttachment
     {

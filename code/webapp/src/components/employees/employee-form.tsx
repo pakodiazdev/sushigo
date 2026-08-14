@@ -28,6 +28,7 @@ export function EmployeeForm({ employee, isOpen, onClose, onSuccess, onCreated }
     panelTitle,
     panelDescription,
     isAdmin,
+    canManageUsers,
     currentBranch,
     fullEmployee,
     assignableRoles,
@@ -78,13 +79,21 @@ export function EmployeeForm({ employee, isOpen, onClose, onSuccess, onCreated }
       {/* Edit / Create mode */}
       {(mode === 'edit' || mode === 'create') && (
         <EmployeeEditCreateForm
-          key={mode}
+          // Keyed by employee id too, not just mode: without it, switching the panel from
+          // one employee to another while staying in edit mode (e.g. browser back/forward
+          // across two ?form=<id> URLs without closing the panel) reuses the same
+          // MediaGalleryUploader instance. Its galleryId/ownerToken live in refs that only
+          // reset on remount, so a photo uploaded for the first employee stays associated
+          // with that stale gallery — a later interaction (or a fresh upload, which resumes
+          // the same non-empty gallery) can then attach it to the second employee instead.
+          key={mode === 'edit' ? `edit-${fullEmployee?.id ?? ''}` : mode}
           mode={mode}
           employee={fullEmployee}
           assignableRoles={assignableRoles as EmployeePositionRole[]}
           assignableRolesLoading={assignableRolesLoading}
           assignableRolesError={assignableRolesError}
           isAdmin={isAdmin}
+          canManageUsers={canManageUsers}
           branchName={currentBranch?.name}
           hasBranch={!!currentBranch}
           isLoading={isLoading}

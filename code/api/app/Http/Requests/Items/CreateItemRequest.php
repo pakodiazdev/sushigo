@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Items;
 
+use App\Http\Requests\Concerns\AuthorizesMediaGalleryOwnership;
 use App\Http\Requests\Concerns\ReadsRawStringInput;
 use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Models\Item;
@@ -27,7 +28,7 @@ use Illuminate\Validation\Rule;
  */
 class CreateItemRequest extends FormRequest
 {
-    use ReadsRawStringInput, ResolvesPublicIdReferences;
+    use AuthorizesMediaGalleryOwnership, ReadsRawStringInput, ResolvesPublicIdReferences;
 
     public function authorize(): bool
     {
@@ -36,31 +37,6 @@ class CreateItemRequest extends FormRequest
         }
 
         return $this->authorizesMediaGalleryOwnership();
-    }
-
-    /**
-     * Without this, attaching an unattached gallery to a new item never
-     * checked owner_token — a caller who merely learns another user's
-     * in-progress gallery public_id could claim its photos on their own
-     * item, since MediaAttachmentService attaches unconditionally.
-     */
-    private function authorizesMediaGalleryOwnership(): bool
-    {
-        // Raw input, not validated('media_gallery_id'): authorize() runs
-        // before the validator, so validated() isn't available yet here.
-        $publicId = $this->rawStringInput('media_gallery_id');
-
-        if (! $publicId) {
-            return true;
-        }
-
-        $gallery = MediaGallery::where('public_id', $publicId)->first();
-
-        if (! $gallery) {
-            return true; // let the `exists` rule produce a clean 422
-        }
-
-        return $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'));
     }
 
     public function rules(): array

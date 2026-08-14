@@ -4,6 +4,8 @@ export interface User {
   id: number
   name: string
   email: string
+  /** URL of the user's primary avatar photo, or null/undefined when none is attached. */
+  avatar_url?: string | null
   email_verified_at: string | null
   is_active: boolean
   meta: Record<string, unknown> | null

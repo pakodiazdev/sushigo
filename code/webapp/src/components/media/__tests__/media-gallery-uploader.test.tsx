@@ -38,6 +38,7 @@ vi.mock('../use-media-gallery-uploader', () => ({
     moveAsset: mockMoveAsset,
     clearError: mockClearError,
   }),
+  mediaContextAccept: () => 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime',
 }))
 
 function resetHookState() {
@@ -61,42 +62,42 @@ describe('MediaGalleryUploader', () => {
 
   describe('rendering', () => {
     it('renders the drop zone', () => {
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       expect(getByTestId('media-uploader-dropzone')).toBeDefined()
     })
 
     it('renders a hidden file input', () => {
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       const input = getByTestId('media-uploader-input') as HTMLInputElement
       expect(input.type).toBe('file')
       expect(input.multiple).toBe(true)
     })
 
     it('renders the given label', () => {
-      const { getByText } = render(<MediaGalleryUploader label="Item photos" />)
+      const { getByText } = render(<MediaGalleryUploader context="item" label="Item photos" />)
       expect(getByText('Item photos')).toBeDefined()
     })
 
     it('shows the uploading indicator while isUploading is true', () => {
       mockHookState.isUploading = true
-      const { getByText } = render(<MediaGalleryUploader />)
+      const { getByText } = render(<MediaGalleryUploader context="item" />)
       expect(getByText('Uploading…')).toBeDefined()
     })
 
     it('does not render the assets grid when there are no assets', () => {
-      const { queryByTestId } = render(<MediaGalleryUploader />)
+      const { queryByTestId } = render(<MediaGalleryUploader context="item" />)
       expect(queryByTestId('media-uploader-assets')).toBeNull()
     })
 
     it('does not render an error banner when there is no error', () => {
-      const { queryByTestId } = render(<MediaGalleryUploader />)
+      const { queryByTestId } = render(<MediaGalleryUploader context="item" />)
       expect(queryByTestId('media-uploader-error')).toBeNull()
     })
   })
 
   describe('file selection', () => {
     it('calls uploadFiles with the selected files', () => {
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       const input = getByTestId('media-uploader-input') as HTMLInputElement
       const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' })
 
@@ -108,13 +109,13 @@ describe('MediaGalleryUploader', () => {
 
     it('disables the input while uploading', () => {
       mockHookState.isUploading = true
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       const input = getByTestId('media-uploader-input') as HTMLInputElement
       expect(input.disabled).toBe(true)
     })
 
     it('disables the input when the disabled prop is set', () => {
-      const { getByTestId } = render(<MediaGalleryUploader disabled />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" disabled />)
       const input = getByTestId('media-uploader-input') as HTMLInputElement
       expect(input.disabled).toBe(true)
     })
@@ -122,7 +123,7 @@ describe('MediaGalleryUploader', () => {
 
   describe('drag and drop', () => {
     it('calls uploadFiles with the dropped files', () => {
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       const dropzone = getByTestId('media-uploader-dropzone')
       const file = new File(['x'], 'roll.png', { type: 'image/png' })
 
@@ -132,7 +133,7 @@ describe('MediaGalleryUploader', () => {
     })
 
     it('does not call uploadFiles when the drop carries no files', () => {
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       const dropzone = getByTestId('media-uploader-dropzone')
 
       fireEvent.drop(dropzone, { dataTransfer: { files: [] } })
@@ -141,7 +142,7 @@ describe('MediaGalleryUploader', () => {
     })
 
     it('tracks dragOver/dragLeave without throwing', () => {
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       const dropzone = getByTestId('media-uploader-dropzone')
 
       expect(() => {
@@ -153,7 +154,7 @@ describe('MediaGalleryUploader', () => {
 
   describe('click to browse', () => {
     it('forwards a click on the dropzone to the hidden file input', () => {
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       const input = getByTestId('media-uploader-input') as HTMLInputElement
       const clickSpy = vi.spyOn(input, 'click')
 
@@ -166,13 +167,13 @@ describe('MediaGalleryUploader', () => {
   describe('error banner', () => {
     it('shows the error message', () => {
       mockHookState.error = 'Something went wrong'
-      const { getByTestId } = render(<MediaGalleryUploader />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" />)
       expect(getByTestId('media-uploader-error').textContent).toContain('Something went wrong')
     })
 
     it('calls clearError when dismissed', () => {
       mockHookState.error = 'Something went wrong'
-      const { getByLabelText } = render(<MediaGalleryUploader />)
+      const { getByLabelText } = render(<MediaGalleryUploader context="item" />)
 
       fireEvent.click(getByLabelText('Dismiss error'))
 
@@ -207,12 +208,12 @@ describe('MediaGalleryUploader', () => {
     })
 
     it('renders one thumbnail per asset', () => {
-      const { getAllByTestId } = render(<MediaGalleryUploader />)
+      const { getAllByTestId } = render(<MediaGalleryUploader context="item" />)
       expect(getAllByTestId('media-uploader-asset')).toHaveLength(2)
     })
 
     it('renders an <img> for an image asset', () => {
-      const { getAllByTestId } = render(<MediaGalleryUploader />)
+      const { getAllByTestId } = render(<MediaGalleryUploader context="item" />)
       const [firstAsset] = getAllByTestId('media-uploader-asset')
       expect(firstAsset!.querySelector('img')).not.toBeNull()
       expect(firstAsset!.querySelector('video')).toBeNull()
@@ -231,61 +232,61 @@ describe('MediaGalleryUploader', () => {
           is_primary: true,
         },
       ]
-      const { getAllByTestId } = render(<MediaGalleryUploader />)
+      const { getAllByTestId } = render(<MediaGalleryUploader context="item" />)
       const [asset] = getAllByTestId('media-uploader-asset')
       expect(asset!.querySelector('video')).not.toBeNull()
       expect(asset!.querySelector('img')).toBeNull()
     })
 
     it('marks the primary asset with a badge', () => {
-      const { getByText } = render(<MediaGalleryUploader />)
+      const { getByText } = render(<MediaGalleryUploader context="item" />)
       expect(getByText('Primary')).toBeDefined()
     })
 
     it('calls removeAsset with the asset id', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" />)
       fireEvent.click(getAllByLabelText('Remove photo')[0]!)
       expect(mockRemoveAsset).toHaveBeenCalledWith('asset-1')
     })
 
     it('calls setPrimaryAsset for a non-primary asset', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" />)
       fireEvent.click(getAllByLabelText('Set as primary')[1]!)
       expect(mockSetPrimaryAsset).toHaveBeenCalledWith('asset-2')
     })
 
     it('disables "set as primary" for the already-primary asset', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" />)
       const button = getAllByLabelText('Set as primary')[0] as HTMLButtonElement
       expect(button.disabled).toBe(true)
     })
 
     it('disables "move left" on the first asset', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" />)
       const button = getAllByLabelText('Move left')[0] as HTMLButtonElement
       expect(button.disabled).toBe(true)
     })
 
     it('disables "move right" on the last asset', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" />)
       const button = getAllByLabelText('Move right')[1] as HTMLButtonElement
       expect(button.disabled).toBe(true)
     })
 
     it('calls moveAsset with the direction when reordering right', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" />)
       fireEvent.click(getAllByLabelText('Move right')[0]!)
       expect(mockMoveAsset).toHaveBeenCalledWith('asset-1', 'right')
     })
 
     it('calls moveAsset with the direction when reordering left', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" />)
       fireEvent.click(getAllByLabelText('Move left')[1]!)
       expect(mockMoveAsset).toHaveBeenCalledWith('asset-2', 'left')
     })
 
     it('disables every thumbnail action button when disabled is true, even ones a bare index check would allow', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader disabled />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" disabled />)
       const removeButtons = getAllByLabelText('Remove photo') as HTMLButtonElement[]
       const primaryButtons = getAllByLabelText('Set as primary') as HTMLButtonElement[]
       const leftButtons = getAllByLabelText('Move left') as HTMLButtonElement[]
@@ -300,14 +301,14 @@ describe('MediaGalleryUploader', () => {
 
     it('disables every thumbnail action button while isMutating is true', () => {
       mockHookState.isMutating = true
-      const { getAllByLabelText } = render(<MediaGalleryUploader />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" />)
 
       expect(getAllByLabelText('Remove photo').every((btn) => (btn as HTMLButtonElement).disabled)).toBe(true)
       expect(getAllByLabelText('Set as primary').every((btn) => (btn as HTMLButtonElement).disabled)).toBe(true)
     })
 
     it('does not call removeAsset/setPrimaryAsset when disabled', () => {
-      const { getAllByLabelText } = render(<MediaGalleryUploader disabled />)
+      const { getAllByLabelText } = render(<MediaGalleryUploader context="item" disabled />)
       fireEvent.click(getAllByLabelText('Remove photo')[0]!)
       fireEvent.click(getAllByLabelText('Set as primary')[1]!)
       expect(mockRemoveAsset).not.toHaveBeenCalled()
@@ -317,7 +318,7 @@ describe('MediaGalleryUploader', () => {
 
   describe('disabled dropzone', () => {
     it('ignores a drop while disabled instead of relying solely on the native disabled attribute', () => {
-      const { getByTestId } = render(<MediaGalleryUploader disabled />)
+      const { getByTestId } = render(<MediaGalleryUploader context="item" disabled />)
       const dropzone = getByTestId('media-uploader-dropzone')
       const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' })
 
@@ -333,7 +334,7 @@ describe('MediaGalleryUploader', () => {
       mockHookState.ownerToken = 'token-1'
       const onChange = vi.fn()
 
-      render(<MediaGalleryUploader onChange={onChange} />)
+      render(<MediaGalleryUploader context="item" onChange={onChange} />)
 
       await waitFor(() => expect(onChange).toHaveBeenCalledWith('gallery-1', 'token-1'))
     })
@@ -341,7 +342,7 @@ describe('MediaGalleryUploader', () => {
     it('fires with undefined when nothing has been uploaded', async () => {
       const onChange = vi.fn()
 
-      render(<MediaGalleryUploader onChange={onChange} />)
+      render(<MediaGalleryUploader context="item" onChange={onChange} />)
 
       await waitFor(() => expect(onChange).toHaveBeenCalledWith(undefined, undefined))
     })
@@ -352,7 +353,7 @@ describe('MediaGalleryUploader', () => {
       mockHookState.isUploading = true
       const onBusyChange = vi.fn()
 
-      render(<MediaGalleryUploader onBusyChange={onBusyChange} />)
+      render(<MediaGalleryUploader context="item" onBusyChange={onBusyChange} />)
 
       await waitFor(() => expect(onBusyChange).toHaveBeenCalledWith(true))
     })
@@ -361,7 +362,7 @@ describe('MediaGalleryUploader', () => {
       mockHookState.isMutating = true
       const onBusyChange = vi.fn()
 
-      render(<MediaGalleryUploader onBusyChange={onBusyChange} />)
+      render(<MediaGalleryUploader context="item" onBusyChange={onBusyChange} />)
 
       await waitFor(() => expect(onBusyChange).toHaveBeenCalledWith(true))
     })
@@ -369,7 +370,7 @@ describe('MediaGalleryUploader', () => {
     it('fires with false when neither uploading, mutating, nor errored', async () => {
       const onBusyChange = vi.fn()
 
-      render(<MediaGalleryUploader onBusyChange={onBusyChange} />)
+      render(<MediaGalleryUploader context="item" onBusyChange={onBusyChange} />)
 
       await waitFor(() => expect(onBusyChange).toHaveBeenCalledWith(false))
     })
@@ -378,7 +379,7 @@ describe('MediaGalleryUploader', () => {
       mockHookState.error = 'Failed to upload "photo.jpg": User does not have the right permissions.'
       const onBusyChange = vi.fn()
 
-      render(<MediaGalleryUploader onBusyChange={onBusyChange} />)
+      render(<MediaGalleryUploader context="item" onBusyChange={onBusyChange} />)
 
       await waitFor(() => expect(onBusyChange).toHaveBeenCalledWith(true))
     })

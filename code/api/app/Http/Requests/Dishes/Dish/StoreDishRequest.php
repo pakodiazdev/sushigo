@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Dishes\Dish;
 
+use App\Http\Requests\Concerns\AuthorizesMediaGalleryOwnership;
 use App\Http\Requests\Concerns\ReadsRawStringInput;
 use App\Http\Requests\Dishes\Dish\Concerns\NormalizesDishData;
 use App\Models\MediaGallery;
@@ -27,37 +28,11 @@ use Illuminate\Validation\Rule;
  */
 class StoreDishRequest extends FormRequest
 {
-    use NormalizesDishData, ReadsRawStringInput;
+    use AuthorizesMediaGalleryOwnership, NormalizesDishData, ReadsRawStringInput;
 
     public function authorize(): bool
     {
         return $this->authorizesMediaGalleryOwnership();
-    }
-
-    /**
-     * Without this, attaching an unattached gallery to a new dish never
-     * checked owner_token — a caller who merely learns another user's
-     * in-progress gallery public_id could claim its photo on their own
-     * dish, since MediaAttachmentService attaches unconditionally. Mirrors
-     * CreateItemRequest::authorizesMediaGalleryOwnership().
-     */
-    private function authorizesMediaGalleryOwnership(): bool
-    {
-        // Raw input, not validated('media_gallery_id'): authorize() runs
-        // before the validator, so validated() isn't available yet here.
-        $publicId = $this->rawStringInput('media_gallery_id');
-
-        if (! $publicId) {
-            return true;
-        }
-
-        $gallery = MediaGallery::where('public_id', $publicId)->first();
-
-        if (! $gallery) {
-            return true; // let the `exists` rule produce a clean 422
-        }
-
-        return $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'));
     }
 
     public function rules(): array
