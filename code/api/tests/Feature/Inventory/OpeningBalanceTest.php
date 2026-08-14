@@ -321,6 +321,44 @@ class OpeningBalanceTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_increments_an_already_existing_stock_row_instead_of_duplicating_it()
+    {
+        // Simulates a concurrent request having already created the Stock
+        // row for this location+variant a moment before this request runs —
+        // the endpoint must increment the existing row, not crash or create
+        // a second one for the same unique Location+Variant pair.
+        $item = $this->createItem(['name' => 'Nori']);
+        $variant = $this->createItemVariant($item, [
+            'name' => 'Nori Sheets',
+            'uom_id' => $this->uomKg->id,
+        ]);
+
+        Stock::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 10,
+            'reserved' => 0,
+        ]);
+
+        $response = $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'quantity' => 5,
+            'uom_id' => $this->uomKg->id,
+            'unit_cost' => 100,
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertEquals(1, Stock::where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->count());
+
+        $stock = Stock::where('item_variant_id', $variant->id)->first();
+        $this->assertEquals(15, (float) $stock->on_hand);
+    }
+
+    #[Test]
     public function it_stores_movement_metadata_correctly()
     {
         // Arrange

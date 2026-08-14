@@ -21,7 +21,10 @@ class StockOutService
 {
     use ConvertsUomQuantities;
 
-    public function __construct(private readonly ApplicationClock $clock) {}
+    public function __construct(
+        private readonly ApplicationClock $clock,
+        private readonly StockMutationService $stockMutation,
+    ) {}
 
     /**
      * Register a stock outbound movement (SALE or CONSUMPTION)
@@ -127,8 +130,8 @@ class StockOutService
                 'meta' => [],
             ]);
 
-            // Decrement stock
-            $stock->decrement('on_hand', $baseQuantity);
+            // Decrement stock (guarded against a negative result — see StockMutationService)
+            $this->stockMutation->decreaseOnHand($stock, $baseQuantity);
 
             return $movement->fresh(['lines', 'fromLocation', 'itemVariant.item', 'itemVariant.unitOfMeasure']);
         });
@@ -142,9 +145,10 @@ class StockOutService
      */
     private function assertAvailableStock(int $inventoryLocationId, int $itemVariantId, float $baseQuantity, ItemVariant $variant, InventoryLocation $location): Stock
     {
-        $stock = Stock::where('inventory_location_id', $inventoryLocationId)
-            ->where('item_variant_id', $itemVariantId)
-            ->first();
+        // Locked for the remainder of this transaction — a second concurrent
+        // stock-out on the same row blocks here until this one commits or
+        // rolls back, instead of reading a stale on_hand and overselling.
+        $stock = $this->stockMutation->lockAndGet($inventoryLocationId, $itemVariantId);
 
         if (! $stock) {
             throw new StockNotFoundException(

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Exceptions\InvalidStockBalanceException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -62,34 +63,94 @@ class Stock extends Model
 
     /**
      * Increase on_hand quantity
+     *
+     * @throws InvalidStockBalanceException if $qty is not positive
      */
     public function increaseOnHand(float $qty): void
     {
+        $this->assertPositiveQuantity($qty);
+
         $this->increment('on_hand', $qty);
     }
 
     /**
      * Decrease on_hand quantity
+     *
+     * @throws InvalidStockBalanceException if $qty is not positive, or the result would be negative or leave on_hand below reserved
      */
     public function decreaseOnHand(float $qty): void
     {
+        $this->assertPositiveQuantity($qty);
+
+        $resultingOnHand = (float) $this->on_hand - $qty;
+
+        if ($resultingOnHand < 0) {
+            throw new InvalidStockBalanceException(
+                "Cannot decrease on_hand below zero for stock #{$this->id}. Current: {$this->on_hand}, Requested: {$qty}"
+            );
+        }
+
+        if ($resultingOnHand < (float) $this->reserved) {
+            throw new InvalidStockBalanceException(
+                "Cannot decrease on_hand below reserved for stock #{$this->id}. Resulting on_hand: {$resultingOnHand}, Reserved: {$this->reserved}"
+            );
+        }
+
         $this->decrement('on_hand', $qty);
     }
 
     /**
      * Reserve quantity
+     *
+     * @throws InvalidStockBalanceException if $qty is not positive, or the result would exceed on_hand
      */
     public function reserve(float $qty): void
     {
+        $this->assertPositiveQuantity($qty);
+
+        $available = (float) $this->on_hand - (float) $this->reserved;
+
+        if ($available < $qty) {
+            throw new InvalidStockBalanceException(
+                "Cannot reserve more than available for stock #{$this->id}. Available: {$available}, Requested: {$qty}"
+            );
+        }
+
         $this->increment('reserved', $qty);
     }
 
     /**
      * Release reserved quantity
+     *
+     * @throws InvalidStockBalanceException if $qty is not positive, or the result would be negative
      */
     public function release(float $qty): void
     {
+        $this->assertPositiveQuantity($qty);
+
+        if ((float) $this->reserved < $qty) {
+            throw new InvalidStockBalanceException(
+                "Cannot release more than reserved for stock #{$this->id}. Reserved: {$this->reserved}, Requested: {$qty}"
+            );
+        }
+
         $this->decrement('reserved', $qty);
+    }
+
+    /**
+     * Reject a non-positive quantity before it can invert the intended
+     * mutation (e.g. a negative $qty passed to decreaseOnHand would
+     * silently increase on_hand instead of being rejected).
+     *
+     * @throws InvalidStockBalanceException if $qty is not positive
+     */
+    private function assertPositiveQuantity(float $qty): void
+    {
+        if ($qty <= 0) {
+            throw new InvalidStockBalanceException(
+                "Quantity must be positive for stock #{$this->id}. Requested: {$qty}"
+            );
+        }
     }
 
     /**

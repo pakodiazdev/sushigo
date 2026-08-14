@@ -6,7 +6,6 @@ use App\DataTransferObjects\Inventory\RegisterOpeningBalanceData;
 use App\Exceptions\UomConversionNotFoundException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
-use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockMovementLine;
 use App\Models\UnitOfMeasure;
@@ -18,7 +17,10 @@ class OpeningBalanceService
 {
     use ConvertsUomQuantities;
 
-    public function __construct(private readonly ApplicationClock $clock) {}
+    public function __construct(
+        private readonly ApplicationClock $clock,
+        private readonly StockMutationService $stockMutation,
+    ) {}
 
     /**
      * Register opening balance for an item variant at a specific location
@@ -96,8 +98,9 @@ class OpeningBalanceService
                 'meta' => [],
             ]);
 
-            // Update or create stock record
-            $this->upsertStock($inventoryLocationId, $itemVariantId, $baseQuantity);
+            // Update or create stock record — race-safe against a concurrent
+            // first receipt for the same location+variant (see StockMutationService)
+            $this->stockMutation->receiveInto($inventoryLocationId, $itemVariantId, $baseQuantity);
 
             // Update variant costing if cost provided
             if ($baseCost !== null && $baseCost > 0) {
@@ -142,29 +145,5 @@ class OpeningBalanceService
         }
 
         return $conversionFactor != 0 ? $unitCost / $conversionFactor : 0;
-    }
-
-    /**
-     * Increment on-hand quantity for an existing stock record, or create one.
-     */
-    private function upsertStock(int $inventoryLocationId, int $itemVariantId, float $baseQuantity): Stock
-    {
-        $stock = Stock::where('inventory_location_id', $inventoryLocationId)
-            ->where('item_variant_id', $itemVariantId)
-            ->first();
-
-        if ($stock) {
-            $stock->increment('on_hand', $baseQuantity);
-
-            return $stock;
-        }
-
-        return Stock::create([
-            'inventory_location_id' => $inventoryLocationId,
-            'item_variant_id' => $itemVariantId,
-            'on_hand' => $baseQuantity,
-            'reserved' => 0,
-            'meta' => [],
-        ]);
     }
 }
