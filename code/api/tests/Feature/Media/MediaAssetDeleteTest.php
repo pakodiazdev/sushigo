@@ -50,6 +50,7 @@ class MediaAssetDeleteTest extends TestCase
         $uploaded = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('photo.jpg'),
             'owner_token' => 'token-1',
+            'context' => 'item',
         ])->json('data');
 
         $asset = MediaAsset::where('public_id', $uploaded['asset_id'])->firstOrFail();

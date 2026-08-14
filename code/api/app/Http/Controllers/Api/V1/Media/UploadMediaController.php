@@ -46,7 +46,7 @@ class UploadMediaController extends Controller
 {
     public function __invoke(UploadMediaRequest $request, UploadMediaService $uploadMedia)
     {
-        $asset = $uploadMedia($request->file('file'), $request->mediaGalleryId(), $request->ownerToken());
+        $asset = $uploadMedia($request->file('file'), $request->mediaGalleryId(), $request->ownerToken(), $request->context());
 
         return new ResponseEntity(
             data: [

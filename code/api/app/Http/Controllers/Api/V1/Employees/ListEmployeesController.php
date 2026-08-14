@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Employees;
 
+use App\Http\Controllers\Api\V1\Employees\Concerns\LoadsEmployeeUserAvatarRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\ListEmployeesRequest;
 use App\Http\Resources\Employee\EmployeeResource;
@@ -37,12 +38,14 @@ use App\Models\Employee;
  */
 class ListEmployeesController extends Controller
 {
+    use LoadsEmployeeUserAvatarRelations;
+
     public function __invoke(ListEmployeesRequest $request): ResponsePaginated
     {
         $query = Employee::query()
             ->select('employees.*')
             ->leftJoin('users', 'users.id', '=', 'employees.user_id')
-            ->with(['user.roles'])
+            ->with(array_merge(['user.roles'], $this->employeeUserAvatarRelations()))
             ->withCount(['employmentPeriods as active_employment_periods_count' => function ($q) {
                 $q->where('is_active', true);
             }]);

@@ -16,7 +16,8 @@ use App\Http\Resources\BaseResource;
  *         @OA\Property(property="last_name", type="string", nullable=true, example="Perez"),
  *         @OA\Property(property="email", type="string", format="email", nullable=true, example="juan@sushigo.com"),
  *         @OA\Property(property="phone", type="string", nullable=true, example="5512345678"),
- *         @OA\Property(property="phone_country", type="string", nullable=true, example="+52")
+ *         @OA\Property(property="phone_country", type="string", nullable=true, example="+52"),
+ *         @OA\Property(property="avatar_url", type="string", nullable=true, example="https://api.sushigo.local/storage/avatars/abc.jpg", description="URL of the user's primary avatar photo, or null when none is attached")
  *     ),
  *     @OA\Property(property="roles", type="array", @OA\Items(type="string", enum={"manager", "cook", "kitchen-assistant", "delivery-driver", "acting-manager"}), example={"cook"}, description="Position roles"),
  *     @OA\Property(property="is_active", type="boolean", example=true),
@@ -59,6 +60,12 @@ class EmployeeResource extends BaseResource
                 'email' => $this->user?->email,
                 'phone' => $this->user?->phone,
                 'phone_country' => $this->user?->phone_country,
+                // User::avatarUrl() reads the eager-loaded user.mediaAttachments.mediaGallery.
+                // mediaAssets chain (each controller constrains it to the primary
+                // attachment/asset via LoadsEmployeeUserAvatarRelations) instead of calling
+                // primaryMediaGallery()/primaryMedia() on the user — those always issue a fresh
+                // query per call, which turns a list response into an N+1.
+                'avatar_url' => $this->user?->avatarUrl(),
             ],
             'roles' => $this->getPositionRoles(),
             'is_active' => $this->is_active,

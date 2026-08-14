@@ -1,9 +1,12 @@
 import { apiClient } from '@/lib/api-client'
-import type { EntityResponse, MediaGalleryAsset } from '@/types/media'
+import type { EntityResponse, MediaContext, MediaGalleryAsset } from '@/types/media'
 
 export interface UploadMediaParams {
   mediaGalleryId?: string
   ownerToken?: string
+  /** Required when mediaGalleryId is omitted (starting a new gallery) — ignored otherwise, since
+   *  the backend validates against the existing gallery's own stored context instead. */
+  context?: MediaContext
 }
 
 export interface UpdateMediaAssetParams {
@@ -21,6 +24,9 @@ export const mediaApi = {
     }
     if (params.ownerToken) {
       formData.append('owner_token', params.ownerToken)
+    }
+    if (params.context) {
+      formData.append('context', params.context)
     }
 
     // apiClient defaults to 'Content-Type: application/json', which would make axios

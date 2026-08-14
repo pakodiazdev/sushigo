@@ -19,6 +19,7 @@ const mockEmployee: Employee = {
         email: 'john.doe@example.com',
         phone: '555-1234',
         phone_country: '+1',
+        avatar_url: null,
     },
     is_active: true,
     attendance_exempt: false,
@@ -45,6 +46,13 @@ describe('EmployeeInfoHeader', () => {
                 <EmployeeInfoHeader employee={mockEmployee} hasActivePeriod={true} />
             )
             expect(getByText('EMP-001')).toBeDefined()
+        })
+
+        it('renders an Avatar with the employee name', () => {
+            const { getByRole } = render(
+                <EmployeeInfoHeader employee={mockEmployee} hasActivePeriod={true} />
+            )
+            expect(getByRole('img', { name: 'John Doe' })).toBeDefined()
         })
     })
 

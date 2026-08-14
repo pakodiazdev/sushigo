@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1\Employees;
 
+use App\Http\Controllers\Api\V1\Employees\Concerns\LoadsEmployeeUserAvatarRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employees\UpdateEmployeeRequest;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\Employee;
+use App\Services\Media\MediaAttachmentService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -38,9 +40,14 @@ use Illuminate\Support\Facades\DB;
  */
 class UpdateEmployeeController extends Controller
 {
-    public function __invoke(UpdateEmployeeRequest $request, Employee $employee): EmployeeResource
-    {
-        DB::transaction(function () use ($request, $employee) {
+    use LoadsEmployeeUserAvatarRelations;
+
+    public function __invoke(
+        UpdateEmployeeRequest $request,
+        Employee $employee,
+        MediaAttachmentService $mediaAttachmentService
+    ): EmployeeResource {
+        DB::transaction(function () use ($request, $employee, $mediaAttachmentService) {
             $employee->update($request->employeeFields());
 
             $roles = $request->roles();
@@ -52,9 +59,13 @@ class UpdateEmployeeController extends Controller
             if (! empty($userFields) && $employee->user) {
                 $employee->user->update($userFields);
             }
+
+            if (($mediaGalleryId = $request->mediaGalleryId()) && $employee->user) {
+                $mediaAttachmentService($employee->user, $mediaGalleryId);
+            }
         });
 
-        $employee->load(['user.roles', 'employmentPeriods.branch']);
+        $employee->load(array_merge(['user.roles', 'employmentPeriods.branch'], $this->employeeUserAvatarRelations()));
 
         return new EmployeeResource($employee);
     }

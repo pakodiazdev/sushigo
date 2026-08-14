@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
+import { AxiosError, AxiosHeaders } from 'axios'
 import { useEmployeeForm } from '@/components/employees/use-employee-form'
 import type { Employee } from '@/types/employee'
 import type { EmployeeFormValues } from '@/components/employees/employee-edit-create-form'
@@ -8,9 +9,15 @@ import type { EmployeeFormValues } from '@/components/employees/employee-edit-cr
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 vi.mock('@/stores/auth.store', () => ({
-  useAuthStore: vi.fn((selector: (s: { isAdmin: boolean; currentBranch: { id: number; name: string } | null }) => unknown) =>
-    selector({ isAdmin: true, currentBranch: { id: 1, name: 'Branch 1' } })
+  useAuthStore: vi.fn((selector: (s: { isAdmin: boolean; currentBranch: { id: number; name: string } | null; can: (permission: string) => boolean }) => unknown) =>
+    selector({ isAdmin: true, currentBranch: { id: 1, name: 'Branch 1' }, can: () => true })
   ),
+}))
+
+const mockShowError = vi.fn()
+
+vi.mock('@/components/ui/toast-context', () => ({
+  useToast: () => ({ showSuccess: vi.fn(), showError: mockShowError }),
 }))
 
 const mockCreateMutateAsync = vi.fn()
@@ -41,6 +48,7 @@ const mockEmployee: Employee = {
     email: 'juan@example.com',
     phone: null,
     phone_country: null,
+    avatar_url: null,
   },
   is_active: true,
   attendance_exempt: false,
@@ -282,5 +290,111 @@ describe('useEmployeeForm — handleFormSubmit (edit mode)', () => {
     const sentData = mockUpdateMutateAsync.mock.calls[0]?.[0]?.data
     expect(sentData).not.toHaveProperty('email')
     expect(sentData).not.toHaveProperty('phone')
+  })
+
+  it('omits media_gallery_id and owner_token when no avatar was uploaded', async () => {
+    mockUpdateMutateAsync.mockResolvedValueOnce({})
+    const { result } = renderHook(() =>
+      useEmployeeForm({ ...BASE_PARAMS, employee: mockEmployee })
+    )
+    act(() => { result.current.setMode('edit') })
+
+    await act(async () => { await result.current.handleFormSubmit(editValues) })
+
+    const sentData = mockUpdateMutateAsync.mock.calls[0]?.[0]?.data
+    expect(sentData).not.toHaveProperty('media_gallery_id')
+    expect(sentData).not.toHaveProperty('owner_token')
+  })
+
+  it('includes media_gallery_id and owner_token when an avatar was uploaded', async () => {
+    mockUpdateMutateAsync.mockResolvedValueOnce({})
+    const { result } = renderHook(() =>
+      useEmployeeForm({ ...BASE_PARAMS, employee: mockEmployee })
+    )
+    act(() => { result.current.setMode('edit') })
+
+    await act(async () => {
+      await result.current.handleFormSubmit({
+        ...editValues,
+        media_gallery_id: 'gallery-abc',
+        owner_token: 'token-xyz',
+      })
+    })
+
+    expect(mockUpdateMutateAsync).toHaveBeenCalledWith({
+      id: 'emp-1',
+      data: expect.objectContaining({ media_gallery_id: 'gallery-abc', owner_token: 'token-xyz' }),
+    })
+  })
+
+  it('swallows a rejected submit (e.g. the avatar-replacement 403) without a second toast or an unhandled rejection', async () => {
+    const apiError = new AxiosError<{ message?: string }>('Request failed')
+    apiError.response = {
+      data: { message: 'No autorizado' },
+      status: 403,
+      statusText: 'Forbidden',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    }
+    mockUpdateMutateAsync.mockRejectedValueOnce(apiError)
+    const { result } = renderHook(() =>
+      useEmployeeForm({ ...BASE_PARAMS, employee: mockEmployee })
+    )
+    act(() => { result.current.setMode('edit') })
+
+    // useUpdateEmployee's own onError (employee-hooks.ts) already shows the toast for
+    // this rejection. handleFormSubmit's catch must not show a second, duplicate one —
+    // it only needs to stop the rejection from propagating as unhandled.
+    await expect(
+      act(async () => { await result.current.handleFormSubmit(editValues) })
+    ).resolves.not.toThrow()
+
+    expect(mockShowError).not.toHaveBeenCalled()
+  })
+})
+
+describe('useEmployeeForm — handleFormSubmit (create mode)', () => {
+  afterEach(() => { vi.clearAllMocks() })
+
+  const createValues: EmployeeFormValues = {
+    mode: 'create',
+    code: 'EMP-002',
+    first_name: 'Maria',
+    last_name: 'Lopez',
+    roles: [],
+    attendance_exempt: false,
+    canEditContact: true,
+    hasBranch: true,
+    email: 'maria@example.com',
+    phone: '',
+    start_date: '2026-01-15',
+  }
+
+  it('omits media_gallery_id and owner_token when no avatar was uploaded', async () => {
+    mockCreateMutateAsync.mockResolvedValueOnce({ data: { data: mockEmployee } })
+    const { result } = renderHook(() => useEmployeeForm({ ...BASE_PARAMS, employee: null }))
+
+    await act(async () => { await result.current.handleFormSubmit(createValues) })
+
+    const sentData = mockCreateMutateAsync.mock.calls[0]?.[0]
+    expect(sentData).not.toHaveProperty('media_gallery_id')
+    expect(sentData).not.toHaveProperty('owner_token')
+  })
+
+  it('includes media_gallery_id and owner_token when an avatar was uploaded', async () => {
+    mockCreateMutateAsync.mockResolvedValueOnce({ data: { data: mockEmployee } })
+    const { result } = renderHook(() => useEmployeeForm({ ...BASE_PARAMS, employee: null }))
+
+    await act(async () => {
+      await result.current.handleFormSubmit({
+        ...createValues,
+        media_gallery_id: 'gallery-abc',
+        owner_token: 'token-xyz',
+      })
+    })
+
+    expect(mockCreateMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ media_gallery_id: 'gallery-abc', owner_token: 'token-xyz' })
+    )
   })
 })

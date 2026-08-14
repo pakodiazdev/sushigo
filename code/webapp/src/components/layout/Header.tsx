@@ -1,10 +1,11 @@
-import { Menu, Moon, Sun, Bell, Search, User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Menu, Moon, Sun, Bell, Search, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { useTheme } from '@/contexts/theme-context';
 import { useSidebar } from '@/contexts/sidebar-context';
 import { useAuthStore } from '@/stores/auth.store';
 import { useRouter } from '@tanstack/react-router';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ClockBadge } from '@/components/devtools/ClockBadge';
 import { DigitalClock } from '@/components/devtools/DigitalClock';
@@ -126,9 +127,7 @@ export default function Header() {
                                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                                 className="flex items-center gap-2 px-2 py-1.5 md:px-3 md:py-2 rounded-lg hover:bg-sushigo-cream/10 transition-colors"
                             >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sushigo-cream to-sushigo-cream/80 flex items-center justify-center text-sushigo-navy shadow-sm">
-                                    <User className="h-4 w-4" />
-                                </div>
+                                <Avatar name={user?.name || 'Usuario'} imageUrl={user?.avatar_url} size="sm" />
                                 {/* Mostrar nombre en tablet (md) y ocultar en móvil pequeño */}
                                 <span className="hidden md:inline-block font-medium text-sushigo-cream">{user?.name || 'Usuario'}</span>
                                 <ChevronDown className="hidden md:block h-4 w-4 text-sushigo-cream/80" />
@@ -172,9 +171,7 @@ export default function Header() {
                                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors"
                             >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sushigo-navy to-sushigo-navy/80 flex items-center justify-center text-sushigo-cream shadow-sm">
-                                    <User className="h-4 w-4" />
-                                </div>
+                                <Avatar name={user?.name || 'Usuario'} imageUrl={user?.avatar_url} size="sm" />
                                 <span className="font-medium">{user?.name || 'Usuario'}</span>
                                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
                             </DropdownMenuTrigger>

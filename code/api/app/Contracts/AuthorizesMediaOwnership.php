@@ -8,8 +8,8 @@ use App\Models\User;
  * Implemented by any model that can own a MediaGallery attachment, so
  * MediaGallery::isManageableBy() can defer to entity-specific rules instead
  * of hardcoding them — see doc/conventions/backend/media-uploads.md.
- * Item checks a permission; a future User avatar would check pure
- * ownership ($user->id === $this->id).
+ * Item checks a dedicated permission; User (employee avatars, #401) checks
+ * owner-or-permission ($user->id === $this->id || $user->can('users.update')).
  */
 interface AuthorizesMediaOwnership
 {

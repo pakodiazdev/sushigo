@@ -103,6 +103,7 @@ export function DishForm({ dish, onSuccess, onCancel }: Readonly<DishFormProps>)
           </FormField>
         ) : (
           <MediaGalleryUploader
+            context="dish"
             disabled={isSubmitting}
             onChange={(galleryId, ownerToken) => {
               setValue('media_gallery_id', galleryId)

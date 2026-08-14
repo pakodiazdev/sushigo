@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Star, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useMediaGalleryUploader } from './use-media-gallery-uploader'
+import { mediaContextAccept, useMediaGalleryUploader } from './use-media-gallery-uploader'
+import type { MediaContext } from '@/types/media'
 
 export interface MediaGalleryUploaderProps {
+  /** What this gallery is for — fixes both the client-side file picker restriction (accept
+   *  attribute) and the server-side validation of every upload into it (see
+   *  config('media.contexts') / UploadMediaRequest on the backend). */
+  context: MediaContext
   label?: string
   disabled?: boolean
   /** Fires whenever the resulting gallery changes — wire into react-hook-form via setValue. */
@@ -25,6 +30,7 @@ export interface MediaGalleryUploaderProps {
 }
 
 export function MediaGalleryUploader({
+  context,
   label = 'Photos',
   disabled = false,
   onChange,
@@ -42,7 +48,7 @@ export function MediaGalleryUploader({
     setPrimaryAsset,
     moveAsset,
     clearError,
-  } = useMediaGalleryUploader()
+  } = useMediaGalleryUploader(context)
 
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -113,7 +119,7 @@ export function MediaGalleryUploader({
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime"
+        accept={mediaContextAccept(context)}
         className="hidden"
         data-testid="media-uploader-input"
         disabled={isDisabled}

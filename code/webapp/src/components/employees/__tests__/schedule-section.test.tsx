@@ -110,6 +110,7 @@ const mockEmployee: Employee = {
     email: null,
     phone: null,
     phone_country: null,
+    avatar_url: null,
   },
   roles: ['cook'],
   is_active: true,

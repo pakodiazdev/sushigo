@@ -43,6 +43,7 @@ class DishMediaAttachmentTest extends DishesTestCase
         $galleryId = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('photo.jpg'),
             'owner_token' => $ownerToken,
+            'context' => 'dish',
         ])->json('data.gallery_id');
 
         return ['gallery_id' => $galleryId, 'owner_token' => $ownerToken];

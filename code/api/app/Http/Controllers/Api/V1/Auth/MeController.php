@@ -42,13 +42,19 @@ class MeController extends Controller
     public function __invoke(Request $request)
     {
         $user = $request->user();
-        $user->load('roles');
+        $user->load([
+            'roles',
+            'mediaAttachments' => fn ($query) => $query->where('is_primary', true),
+            'mediaAttachments.mediaGallery.mediaAssets' => fn ($query) => $query->where('is_primary', true),
+        ]);
 
         return new ResponseEntity(
             data: [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                // See User::avatarUrl() — reads the eager-loaded chain above.
+                'avatar_url' => $user->avatarUrl(),
                 'roles' => $user->roles->map(fn ($role) => [
                     'id' => $role->id,
                     'name' => $role->name,

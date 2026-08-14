@@ -27,7 +27,14 @@ class AuthTokenResponse implements Responsable
 
     public function toResponse($request): JsonResponse
     {
-        $this->user->load('roles');
+        // Same eager-loaded chain as MeController::avatar_url — without it, the header
+        // avatar would only show the photo after a later /auth/me call (e.g. on refresh),
+        // not immediately after login.
+        $this->user->load([
+            'roles',
+            'mediaAttachments' => fn ($query) => $query->where('is_primary', true),
+            'mediaAttachments.mediaGallery.mediaAssets' => fn ($query) => $query->where('is_primary', true),
+        ]);
 
         return response()->json([
             'status' => $this->status,
@@ -38,6 +45,7 @@ class AuthTokenResponse implements Responsable
                     'id' => $this->user->id,
                     'name' => $this->user->name,
                     'email' => $this->user->email,
+                    'avatar_url' => $this->user->avatarUrl(),
                     'roles' => $this->user->roles->map(fn ($role) => [
                         'id' => $role->id,
                         'name' => $role->name,

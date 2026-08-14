@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Repositories\EmployeeRepository;
 use App\Repositories\UserRepository;
+use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -27,10 +28,18 @@ class CreateEmployeeAction
      * Every employee gets a system user created automatically.
      * The user is created with a random password — they must set their
      * own password via the reset link sent by email or WhatsApp.
+     *
+     * $afterCreate (optional) runs inside the same transaction, right after
+     * the employee/user/employment period are created — e.g. attaching an
+     * uploaded avatar gallery to the new user (#401). Running it here,
+     * rather than after this method returns, keeps it atomic with the rest
+     * of creation: if it throws, the whole employee/user creation rolls
+     * back instead of leaving a created employee with a silently-orphaned
+     * upload.
      */
-    public function __invoke(array $data): Employee
+    public function __invoke(array $data, ?Closure $afterCreate = null): Employee
     {
-        $employee = DB::transaction(function () use ($data) {
+        $employee = DB::transaction(function () use ($data, $afterCreate) {
             $user = $this->createUserForEmployee($data);
 
             $employee = $this->employeeRepository->create([
@@ -50,7 +59,13 @@ class CreateEmployeeAction
                 'is_active' => true,
             ]);
 
-            return $employee->load(['user.roles', 'employmentPeriods.branch']);
+            $employee = $employee->load(['user.roles', 'employmentPeriods.branch']);
+
+            if ($afterCreate) {
+                $afterCreate($employee);
+            }
+
+            return $employee;
         });
 
         try {

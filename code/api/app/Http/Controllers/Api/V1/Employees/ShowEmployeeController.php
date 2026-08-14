@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Employees;
 
+use App\Http\Controllers\Api\V1\Employees\Concerns\LoadsEmployeeUserAvatarRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Models\Employee;
@@ -33,9 +34,11 @@ use App\Models\Employee;
  */
 class ShowEmployeeController extends Controller
 {
+    use LoadsEmployeeUserAvatarRelations;
+
     public function __invoke(Employee $employee): EmployeeResource
     {
-        $employee->load(['user.roles', 'employmentPeriods.branch']);
+        $employee->load(array_merge(['user.roles', 'employmentPeriods.branch'], $this->employeeUserAvatarRelations()));
 
         return new EmployeeResource($employee);
     }

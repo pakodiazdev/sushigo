@@ -1,7 +1,7 @@
 # 🖼️ Media System Architecture — SushiGo
 
 **Scope**
-The polymorphic, cloud-swappable media upload system introduced in [#377](https://github.com/pakodiazdev/sushigo/issues/377): storage, domain model, service architecture, ownership authorization, concurrency safety, and orphan cleanup. `Item` is the first adopter; the system is designed for `Employee`/`User` avatars ([#401](https://github.com/pakodiazdev/sushigo/issues/401)) and the Dish catalog to follow the same shape.
+The polymorphic, cloud-swappable media upload system introduced in [#377](https://github.com/pakodiazdev/sushigo/issues/377): storage, domain model, service architecture, ownership authorization, concurrency safety, and orphan cleanup. `Item` is the first adopter; the Dish catalog and `User` (employee avatars, [#401](https://github.com/pakodiazdev/sushigo/issues/401)) have since followed the same shape.
 
 ---
 
@@ -29,7 +29,7 @@ erDiagram
     MEDIA_GALLERY ||--o{ MEDIA_ASSET : contains
     MEDIA_GALLERY ||--o{ MEDIA_ATTACHMENT : "attached via"
     MEDIA_GALLERY ||--o| MEDIA_ASSET : "cover_media_id"
-    MEDIA_ATTACHMENT }o--|| ITEM : "attachable (polymorphic — Item today)"
+    MEDIA_ATTACHMENT }o--|| ITEM : "attachable (polymorphic — Item, Dish, User today)"
 
     MEDIA_GALLERY {
         bigint id PK
@@ -39,6 +39,7 @@ erDiagram
         bigint cover_media_id FK "nullable"
         boolean is_shared
         string owner_token "nullable, write-only, hidden from JSON"
+        string context "nullable, fixed at creation — see §5.3"
         json meta "nullable"
         timestamp created_at
         timestamp updated_at
@@ -75,7 +76,7 @@ erDiagram
 
 ### 2.2 Table Notes
 
-- **`media_galleries`** — the logical container. `is_shared` reserves the ability to reuse one gallery across models (not yet exercised). `owner_token` is a client-generated bearer credential set only when a gallery is created **without** a `media_gallery_id` (a brand-new, still-unattached gallery); it is `$hidden` on the model — never serialized in any response, only compared. `cover_media_id`'s FK to `media_assets` is added in a second migration step since the tables are mutually referential.
+- **`media_galleries`** — the logical container. `is_shared` reserves the ability to reuse one gallery across models (not yet exercised). `owner_token` is a client-generated bearer credential set only when a gallery is created **without** a `media_gallery_id` (a brand-new, still-unattached gallery); it is `$hidden` on the model — never serialized in any response, only compared. `context` declares what a gallery is for and fixes its allowed file types — see §5.3. `cover_media_id`'s FK to `media_assets` is added in a second migration step since the tables are mutually referential.
 - **`media_assets`** — one row per uploaded file. `media_gallery_id` has `cascadeOnDelete()`, so force-deleting a gallery removes its assets at the DB level too. `position` is computed as `max(position) + 1` on insert, not `count()` — after a deletion leaves a gap (positions `0, 2`), `count()` would recompute `2` and collide with the asset already there.
 - **`media_attachments`** — the polymorphic join. The unique constraint is on `(media_gallery_id, attachable_type, attachable_id)` — a given gallery can only be attached once to a given entity, but nothing today stops the **same gallery** from being attached to two **different** entities (a known limitation — see §9). `MediaAttachmentService` is the only place a row here is created.
 - Both `media_galleries` and `media_assets` carry `deleted_at` (`SoftDeletes`), but every delete path in this system is a **hard** delete (`forceDelete()`) — a soft-deleted row pointing at an already-deleted file serves no purpose. The column exists for a future soft-delete adopter, not because anything uses it today; `MediaGallery::isManageableBy()` (§5) already accounts for that gap.
@@ -151,7 +152,7 @@ Two details that only surface once you serve files across two different origins 
 
 - **`MediaAsset::getUrlAttribute()` wraps `Storage::url($path)` in `url()`.** The default `local` disk has no `url` key configured, so `Storage::url()` alone returns a host-relative path (`/storage/media/xxx.jpg`) via Laravel's serve route — correct only when the API and the page requesting it share an origin. `url()` anchors a relative path at `APP_URL` and leaves an already-absolute URL (e.g. the `s3` disk's) untouched, so the same code is correct on both disks without branching.
 - **Uploaded filenames are client-controlled and unbounded.** `getClientOriginalName()` comes straight from the multipart `Content-Disposition` header, so it's truncated to fit the `filename` column (`varchar(255)`) before the insert, instead of letting an oversized value reach the DB as an uncaught error.
-- **`svg` is deliberately excluded** from `config('media.allowed_mimes')`. An SVG can embed `<script>` and is served back from the API's own domain — a stored-XSS vector this project has no sanitization step to neutralize.
+- **`svg` is deliberately excluded** from every key in `config('media.contexts')` (see §5.3). An SVG can embed `<script>` and is served back from the API's own domain — a stored-XSS vector this project has no sanitization step to neutralize.
 
 ---
 
@@ -202,7 +203,15 @@ public function userCanManageMedia(User $user): bool
 
 An entity that hasn't implemented `AuthorizesMediaOwnership` yet is treated the same as "unattached with no token" — allowed by the base route permission alone. This is what lets entities adopt the contract one at a time without breaking the ones that haven't gotten to it yet.
 
-**`withTrashed()` and the null-attachable edge case.** `Item`/`ItemVariant`/the Dish models all use `SoftDeletes`, and their own delete endpoints only ever soft-delete. Loading `attachable` with the default `MorphTo` scope meant a soft-deleted owner's `attachable` resolved to `null` — indistinguishable, at the time, from "this entity hasn't adopted the contract" — silently falling back to the base permission instead of running the entity's real rule. The eager load now uses `MorphTo::withTrashed()`, which is safe across heterogeneous morph types on its own: Laravel's implementation checks `$query->hasMacro('withTrashed')` per resolved type before applying it, so a future attachable that *doesn't* soft-delete (a `User` avatar gallery, most likely) doesn't crash — it's simply not affected. A `null` attachable that survives `withTrashed()` (the row is genuinely gone — hard-deleted, or a dangling reference) is denied outright, distinct from both cases above.
+**`withTrashed()` and the null-attachable edge case.** `Item`/`ItemVariant`/the Dish models all use `SoftDeletes`, and their own delete endpoints only ever soft-delete. Loading `attachable` with the default `MorphTo` scope meant a soft-deleted owner's `attachable` resolved to `null` — indistinguishable, at the time, from "this entity hasn't adopted the contract" — silently falling back to the base permission instead of running the entity's real rule. The eager load now uses `MorphTo::withTrashed()`, which is safe across heterogeneous morph types on its own: Laravel's implementation checks `$query->hasMacro('withTrashed')` per resolved type before applying it, so an attachable that *doesn't* soft-delete (`User`, since #401 — no `SoftDeletes` on that model) doesn't crash — it's simply not affected. A `null` attachable that survives `withTrashed()` (the row is genuinely gone — hard-deleted, or a dangling reference) is denied outright, distinct from both cases above.
+
+### 5.3 Upload Contexts — per-adopter file types
+
+`config('media.contexts')` maps a context key (`item`, `dish`, `avatar`) to the extensions `POST /media/upload` will accept for it — every adopter used to share one global list (`config('media.allowed_mimes')`), so an employee avatar accepted the same video formats as an Item photo even though every avatar surface only ever renders through an `<img>` (flagged in #401's review; a selected video would upload successfully and then just silently fail to render, with the initials fallback masking the failure entirely).
+
+`context` is now required in the request when starting a **new** gallery (no `media_gallery_id` given) — `UploadMediaRequest` rejects an unknown key outright (a clean 422, not a fallback) and stores the value on the gallery. Every later upload into that **same** gallery is validated against the gallery's own stored `context`, not whatever the request claims — a client can't relabel an existing gallery mid-session to slip a disallowed file type past the restriction its first upload already fixed. `MediaGallery::allowedExtensions()` is the single place this is resolved (`config("media.contexts.{$this->context}")`); a legacy gallery predating this column falls back to no restriction rather than breaking an in-flight pre-deployment session (see the `2026_08_13_000000_add_context_to_media_galleries_table` migration's backfill for already-attached galleries).
+
+The frontend mirrors this for immediate feedback: `MediaGalleryUploaderProps.context` sets the file input's `accept` attribute and the same allowed-extensions check `useMediaGalleryUploader` runs client-side — the backend remains the source of truth either way.
 
 ---
 
@@ -322,5 +331,5 @@ Carried forward from review (Copilot + Devin/DeepWiki) as documented, accepted t
 - [#293](https://github.com/pakodiazdev/sushigo/issues/293) — the ULID `public_id` convention this system's API boundary follows.
 - [#400](https://github.com/pakodiazdev/sushigo/issues/400) — `ItemPolicy`'s abilities are currently stubs (`return true` unconditionally); `Item::userCanManageMedia()` deliberately checks a Spatie permission directly instead of going through it.
 - [#401](https://github.com/pakodiazdev/sushigo/issues/401) — the next planned adopter: employee avatars, with ownership resolved by identity (`$user->id === $this->id`) rather than a permission.
-- [#378](https://github.com/pakodiazdev/sushigo/issues/378) — the reusable frontend counterpart to this system: `<MediaGalleryUploader />` + `useMediaGalleryUploader()` (`code/webapp/src/components/media/`), wired end-to-end into `ItemForm` (§7.1's "Client (Webapp)" participant). Any future adopter (Dish, Employee/User avatars) reuses this component rather than re-implementing the upload/gallery-tracking logic.
+- [#378](https://github.com/pakodiazdev/sushigo/issues/378) — the reusable frontend counterpart to this system: `<MediaGalleryUploader />` + `useMediaGalleryUploader()` (`code/webapp/src/components/media/`), wired end-to-end into `ItemForm` (§7.1's "Client (Webapp)" participant). Dish's and the employee form's avatar uploader ([#401](https://github.com/pakodiazdev/sushigo/issues/401)) reuse this same component rather than re-implementing the upload/gallery-tracking logic.
 - [Inventory Architecture](../inventory-architecture.en.md) § 3.6 — how `Item` fits into this system from the inventory domain's side.

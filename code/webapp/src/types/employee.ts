@@ -29,6 +29,8 @@ export interface EmployeeUser {
   email: string | null
   phone: string | null
   phone_country: string | null
+  /** URL of the user's primary avatar photo, or null when none is attached. */
+  avatar_url: string | null
 }
 
 export interface Employee {
@@ -86,6 +88,9 @@ export interface EmployeeFormData {
   branch_id?: number
   start_date?: string
   attendance_exempt?: boolean
+  /** Gallery public_id from POST /media/upload — only sent when the admin uploaded an avatar. */
+  media_gallery_id?: string
+  owner_token?: string
 }
 
 export interface DeactivateEmployeeData {
@@ -106,6 +111,9 @@ export interface EmployeeUpdateData {
   phone?: string
   meta?: Record<string, unknown>
   attendance_exempt?: boolean
+  /** Gallery public_id from POST /media/upload — only sent when the admin uploaded an avatar. */
+  media_gallery_id?: string
+  owner_token?: string
 }
 
 // ============================================================================

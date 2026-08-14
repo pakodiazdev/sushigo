@@ -29,6 +29,7 @@ const mockEmployee: Employee = {
         email: 'juan@test.com',
         phone: '5551234567',
         phone_country: 'MX',
+        avatar_url: null,
     },
     roles: ['cook'] as EmployeePositionRole[],
     is_active: true,

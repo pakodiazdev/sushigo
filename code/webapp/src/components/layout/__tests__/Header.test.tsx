@@ -156,6 +156,11 @@ describe('Header — basic rendering', () => {
     render(<Header />)
     expect(screen.getAllByText('Test User').length).toBeGreaterThan(0)
   })
+
+  it('renders an Avatar with the user name (mobile and desktop)', () => {
+    render(<Header />)
+    expect(screen.getAllByRole('img', { name: 'Test User' }).length).toBe(2)
+  })
 })
 
 // ─── Theme Toggle ────────────────────────────────────────────────────────────

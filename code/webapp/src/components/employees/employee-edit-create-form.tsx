@@ -1,15 +1,18 @@
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/ui/form-fields'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
+import { Avatar } from '@/components/ui/avatar'
+import { MediaGalleryUploader } from '@/components/media'
 import { EMPLOYEE_POSITION_ROLES } from '@/types/employee'
 import type { Employee, EmployeePositionRole } from '@/types/employee'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { todayDateCdmx } from '@/lib/datetime'
 import { useBusinessDate } from '@/stores/clock.store'
+import { formatFirstLast } from '@/lib/format'
 
 // ─── Schema ────────────────────────────────────────────────────────────────────
 // A single schema shape covers both create and edit modes.
@@ -35,6 +38,9 @@ function buildSchema(assignableRoles: string[]) {
       email: z.string().max(255).optional(),
       phone: z.string().max(10).optional(),
       attendance_exempt: z.boolean(),
+      // ── avatar (optional — omitted from the payload unless an upload happened) ──
+      media_gallery_id: z.string().optional(),
+      owner_token: z.string().optional(),
       // ── context flags (not submitted, used for conditional validation) ───────
       canEditContact: z.boolean(),
       // hasBranch reflects whether the auth store has a currentBranch selected.
@@ -102,6 +108,8 @@ interface EmployeeEditCreateFormProps {
   assignableRolesLoading: boolean
   assignableRolesError: boolean
   isAdmin: boolean
+  /** Precise users.update permission — gates the avatar uploader specifically (see canEditAvatar) */
+  canManageUsers: boolean
   /** Branch name shown as hint on start_date field (create mode only) */
   branchName?: string
   /** Whether the auth store has a currentBranch selected (used to block create submission) */
@@ -126,6 +134,7 @@ export function EmployeeEditCreateForm({
   assignableRolesLoading,
   assignableRolesError,
   isAdmin,
+  canManageUsers,
   branchName,
   hasBranch,
   isLoading,
@@ -137,6 +146,21 @@ export function EmployeeEditCreateForm({
   isSuggestedCodeLoading,
 }: Readonly<EmployeeEditCreateFormProps>) {
   const canEditContact = mode === 'create' || isAdmin
+  // Deliberately not the same boolean as canEditContact (isAdmin/role-based): the backend
+  // gates avatar replacement on the users.update *permission*
+  // (User::userCanManageMedia / UpdateEmployeeRequest::authorizesAvatarReplacement), which a
+  // role could hold without carrying the admin/super-admin role name. Matching the exact
+  // permission here avoids showing the uploader to someone who would get a 403 on save.
+  // Also excludes an edit-mode employee with has_user === false: UpdateEmployeeRequest
+  // prohibits media_gallery_id entirely for one (no linked User to attach a gallery to),
+  // so completing an upload there would fail the whole save and discard every other field
+  // submitted in the same request.
+  const canEditAvatar = mode === 'create' || (canManageUsers && employee?.has_user !== false)
+
+  // Blocks submit while the uploader has an upload/remove in flight, or a failed upload's error
+  // is still unacknowledged — same guard as ItemForm's isUploaderBusy (see item-form.tsx), so a
+  // submit never races an in-flight avatar upload or silently proceeds past a failed one.
+  const [isUploaderBusy, setIsUploaderBusy] = useState(false)
 
   const businessDate = useBusinessDate()
   // Fresh per mount — avoids stale module-level date when the app stays open past midnight.
@@ -232,10 +256,57 @@ export function EmployeeEditCreateForm({
   const emailValue = watch('email')
   const rolesValue = watch('roles')
 
+  // Cancel stays enabled while a photo is uploading (same accepted tradeoff as ItemForm) — only
+  // the submit path needs to wait, so it doesn't ship the employee without the avatar.
+  const isSubmitDisabled = isLoading || isUploaderBusy
+
+  const guardedSubmit = handleSubmit((values) => {
+    // Guards the handler itself, not just the submit button's disabled attribute — pressing
+    // Enter in a text field dispatches the form's submit event directly and would otherwise
+    // still reach onSubmit while busy.
+    if (isSubmitDisabled) {
+      return
+    }
+    onSubmit(values)
+  })
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 animate-fade-in">
+    <form onSubmit={guardedSubmit} className="space-y-6 animate-fade-in">
+      {/* Avatar — preview of the current photo (edit mode) plus an uploader to attach/replace it.
+          Gated on canEditAvatar (the exact users.update permission, see its definition above):
+          only the avatar's owner or a users.update holder may attach/replace it server-side (see
+          UpdateEmployeeRequest::authorizesAvatarReplacement) — showing the uploader to someone
+          without that permission here would let them fill it in only to hit a 403 on save. */}
+      <FormField label="Foto">
+        <div className="flex items-start gap-4">
+          {mode === 'edit' && employee && (
+            <Avatar name={formatFirstLast(employee.user)} imageUrl={employee.user.avatar_url} size="lg" />
+          )}
+          <div className="flex-1">
+            {canEditAvatar ? (
+              <MediaGalleryUploader
+                context="avatar"
+                label=""
+                disabled={isLoading}
+                onChange={(galleryId, ownerToken) => {
+                  setValue('media_gallery_id', galleryId, { shouldValidate: false })
+                  setValue('owner_token', ownerToken, { shouldValidate: false })
+                }}
+                onBusyChange={setIsUploaderBusy}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {mode === 'edit' && employee?.has_user === false
+                  ? 'Este empleado no tiene una cuenta de usuario vinculada, así que no puede tener foto.'
+                  : 'Solo un administrador puede cambiar la foto de este empleado.'}
+              </p>
+            )}
+          </div>
+        </div>
+      </FormField>
+
       {/* Code — create mode only (immutable on edit) */}
       {mode === 'create' && (
         <FormField
@@ -440,7 +511,7 @@ export function EmployeeEditCreateForm({
         <Button
           type="submit"
           variant="info"
-          disabled={isLoading}
+          disabled={isSubmitDisabled}
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {mode === 'edit' ? 'Actualizar' : 'Crear'}

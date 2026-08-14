@@ -35,6 +35,7 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $galleryId = $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('photo.jpg'),
             'owner_token' => $ownerToken,
+            'context' => 'item',
         ])->json('data.gallery_id');
 
         return ['gallery_id' => $galleryId, 'owner_token' => $ownerToken];
@@ -167,6 +168,42 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $this->assertDatabaseHas('media_attachments', [
             'media_gallery_id' => $this->galleryNumericId($secondGallery['gallery_id']),
             'attachable_id' => $item->id,
+            'is_primary' => true,
+        ]);
+    }
+
+    #[Test]
+    public function attaching_a_gallery_already_used_by_another_item_does_not_detach_it_from_that_item(): void
+    {
+        // doc/architecture/media/media-architecture.en.md §9 documents "a gallery can end
+        // up attached to more than one entity" as accepted debt shared by every adopter —
+        // MediaAttachmentService must only ever clear the *current* attachable's other
+        // attachments, never strip a *different* attachable's claim to this gallery.
+        $firstItem = $this->createItem();
+        $secondItem = $this->createItem();
+        $gallery = $this->uploadGallery();
+
+        $this->putJson("/api/v1/items/{$firstItem->id}", [
+            'media_gallery_id' => $gallery['gallery_id'],
+            'owner_token' => $gallery['owner_token'],
+        ])->assertOk();
+
+        $this->putJson("/api/v1/items/{$secondItem->id}", [
+            'media_gallery_id' => $gallery['gallery_id'],
+        ])->assertOk();
+
+        $galleryId = $this->galleryNumericId($gallery['gallery_id']);
+
+        $this->assertDatabaseHas('media_attachments', [
+            'media_gallery_id' => $galleryId,
+            'attachable_type' => Item::class,
+            'attachable_id' => $firstItem->id,
+            'is_primary' => true,
+        ]);
+        $this->assertDatabaseHas('media_attachments', [
+            'media_gallery_id' => $galleryId,
+            'attachable_type' => Item::class,
+            'attachable_id' => $secondItem->id,
             'is_primary' => true,
         ]);
     }

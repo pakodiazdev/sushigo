@@ -21,7 +21,9 @@ polymorphic `MediaGallery` / `MediaAsset` / `MediaAttachment` models
 1. **Upload first.** `POST /api/v1/media/upload` accepts a file and an optional
    `media_gallery_id` (the gallery's `public_id` ULID, not its numeric id). With no
    `media_gallery_id`, it creates a new (still-unattached) `MediaGallery` and returns its
-   `public_id` — the frontend holds onto this value across the rest of the form.
+   `public_id` — the frontend holds onto this value across the rest of the form. A new gallery
+   also requires `context` (one of `config('media.contexts')`'s keys) — see §6 for what it does
+   and how a new adopter declares one.
 2. **Reuse the gallery for more files.** Uploading again with that same `media_gallery_id` adds
    another `MediaAsset` to the same gallery instead of creating a new one. The first asset in a
    gallery is automatically `is_primary`; later uploads default to not-primary.
@@ -46,34 +48,37 @@ Item (`app/Http/Requests/Items/{Create,Update}ItemRequest.php` +
 `app/Http/Controllers/Api/V1/Items/{Create,Update}ItemController.php`) is the reference
 implementation. To add another entity:
 
+0. Add a `context` key for the entity to `config('media.contexts')` (extensions it should accept —
+   see §6) and a `MediaContext` union member on the frontend
+   (`code/webapp/src/types/media.ts`) — every `<MediaGalleryUploader context="...">` call site for
+   this entity passes it through to every upload.
 1. Add `media_gallery_id` (nullable string, `exists:media_galleries,public_id`) and `owner_token`
    (`sometimes`, `string`) to that entity's create/update `FormRequest` rules,
    `use App\Http\Requests\Concerns\{ReadsRawStringInput,ResolvesPublicIdReferences};`, and expose a
    `mediaGalleryId(): ?int` accessor via `$this->resolvePublicId(MediaGallery::class,
    'media_gallery_id')` — the service layer still works with the numeric FK internally, only the
    API boundary is public_id (see #293 for why).
-2. **In `authorize()`, before delegating to the entity's own create/update permission check**,
-   resolve the gallery from the *raw* input (`$this->rawStringInput('media_gallery_id')` —
-   `validated()` isn't available yet, `authorize()` runs before the validator) and call
+2. **In `authorize()`, before delegating to the entity's own create/update permission check**, call
+   `$this->authorizesMediaGalleryOwnership()` via
+   `use App\Http\Requests\Concerns\AuthorizesMediaGalleryOwnership;` — the trait resolves the
+   gallery from the *raw* input (`$this->rawStringInput('media_gallery_id')` — `validated()` isn't
+   available yet, `authorize()` runs before the validator) and calls
    `$gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))`:
    ```php
-   public function authorize(): bool
+   use App\Http\Requests\Concerns\AuthorizesMediaGalleryOwnership;
+
+   class UpdateEntityRequest extends FormRequest
    {
-       if (! $this->user()->can('update', $entity)) {
-           return false;
-       }
+       use AuthorizesMediaGalleryOwnership, ReadsRawStringInput, ResolvesPublicIdReferences;
 
-       $publicId = $this->rawStringInput('media_gallery_id');
-       if (! $publicId) {
-           return true;
-       }
+       public function authorize(): bool
+       {
+           if (! $this->user()->can('update', $entity)) {
+               return false;
+           }
 
-       $gallery = MediaGallery::where('public_id', $publicId)->first();
-       if (! $gallery) {
-           return true; // let the `exists` rule produce a clean 422
+           return $this->authorizesMediaGalleryOwnership();
        }
-
-       return $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'));
    }
    ```
    Skipping this step means `MediaAttachmentService` attaches unconditionally — anyone who learns
@@ -118,8 +123,11 @@ it:
   `PUT /item-variants/{id}`: name, `sale_price`, `min_stock`, ...). Reusing `items.update` here
   would let anyone granted "manage this item's photos" silently edit catalog data too. Not
   `ItemPolicy::update()` either, which is currently a stub that always returns `true` regardless of
-  the user (see #400). A future `User` avatar gallery would instead check pure ownership:
-  `$user->id === $this->id`.
+  the user (see #400). `User` (employee avatars,
+  [#401](https://github.com/pakodiazdev/sushigo/issues/401)) instead checks owner-or-permission:
+  `$user->id === $this->id || $user->can('users.update')` — pure ownership alone wasn't enough
+  there, since #401 explicitly requires an administrator to be able to attach/replace *another*
+  employee's avatar from the employee form, not just their own.
   An entity that hasn't implemented the contract yet is treated as "no additional rule" — adopting
   it per entity is opt-in and never breaks entities that haven't gotten to it yet.
 - **Not attached to anything yet** (mid-form — e.g. uploading photos before a new Item is saved) —
@@ -142,4 +150,35 @@ public function userCanManageMedia(User $user): bool
 {
     return $user->can('items.manage-media');
 }
+
+// User.php (#401) — owner-or-permission, not a dedicated permission
+public function userCanManageMedia(User $user): bool
+{
+    return $user->id === $this->id || $user->can('users.update');
+}
 ```
+
+## 6) Upload Contexts
+
+Every adopter used to share one global allowed-extensions list — an employee avatar accepted the
+same video formats as an Item photo, even though every avatar surface only ever renders through an
+`<img>` (a selected video uploaded fine and then just silently failed to render, the initials
+fallback masking it entirely; flagged in #401's review). `config('media.contexts')` fixes that by
+mapping a context key (`item`, `dish`, `avatar`) to the extensions valid for it.
+
+- `POST /media/upload` **requires** `context` when starting a new gallery (no `media_gallery_id`)
+  — an unknown key is a clean 422, not a fallback to some default list.
+- The gallery's `context` is set once, at creation, and never changes. Every later upload into that
+  same gallery is validated against the gallery's own stored value — not whatever the request
+  claims — so a context can't be swapped mid-gallery to slip a disallowed file type past the
+  restriction the first upload already fixed.
+- `MediaGallery::allowedExtensions()` is the one place this resolves:
+  `config("media.contexts.{$this->context}")`. A gallery from before this column existed has no
+  stored context and falls back to no extra restriction, rather than breaking an in-flight
+  pre-deployment upload session.
+- On the frontend, `<MediaGalleryUploader context="...">` threads the same value to every
+  `mediaApi.upload()` call and sets the file input's `accept` attribute — client-side convenience
+  only, the backend is still the source of truth.
+
+Adding a context for a new adopter is step 0 of §3 above: add its key to `config('media.contexts')`
+and add it to the `MediaContext` union (`code/webapp/src/types/media.ts`).

@@ -39,6 +39,7 @@ erDiagram
         bigint cover_media_id FK "nullable"
         boolean is_shared
         string owner_token "nullable, write-only, oculto en JSON"
+        string context "nullable, fijado al crearse — ver §5.3"
         json meta "nullable"
         timestamp created_at
         timestamp updated_at
@@ -75,7 +76,7 @@ erDiagram
 
 ### 2.2 Notas sobre las Tablas
 
-- **`media_galleries`** — el contenedor lógico. `is_shared` reserva la posibilidad de reutilizar una galería entre modelos (aún no se ejerce). `owner_token` es una credencial tipo bearer generada por el cliente, guardada solo cuando una galería se crea **sin** un `media_gallery_id` (galería nueva, todavía sin adjuntar); está `$hidden` en el modelo — nunca se serializa en ninguna respuesta, solo se compara. La FK de `cover_media_id` hacia `media_assets` se agrega en un segundo paso de migración porque ambas tablas se referencian mutuamente.
+- **`media_galleries`** — el contenedor lógico. `is_shared` reserva la posibilidad de reutilizar una galería entre modelos (aún no se ejerce). `owner_token` es una credencial tipo bearer generada por el cliente, guardada solo cuando una galería se crea **sin** un `media_gallery_id` (galería nueva, todavía sin adjuntar); está `$hidden` en el modelo — nunca se serializa en ninguna respuesta, solo se compara. `context` declara para qué es una galería y fija sus tipos de archivo permitidos — ver §5.3. La FK de `cover_media_id` hacia `media_assets` se agrega en un segundo paso de migración porque ambas tablas se referencian mutuamente.
 - **`media_assets`** — una fila por archivo subido. `media_gallery_id` tiene `cascadeOnDelete()`, así que forzar el borrado de una galería elimina sus assets también a nivel de BD. `position` se calcula como `max(position) + 1` al insertar, no `count()` — después de que un borrado deja un hueco (posiciones `0, 2`), `count()` recalcularía `2` y colisionaría con el asset que ya está ahí.
 - **`media_attachments`** — el join polimórfico. La restricción única es sobre `(media_gallery_id, attachable_type, attachable_id)` — una galería dada solo puede adjuntarse una vez a una entidad dada, pero nada hoy impide que la **misma galería** se adjunte a dos entidades **distintas** (limitación conocida — ver §9). `MediaAttachmentService` es el único lugar donde se crea una fila aquí.
 - Tanto `media_galleries` como `media_assets` tienen `deleted_at` (`SoftDeletes`), pero toda ruta de borrado en este sistema es un borrado **duro** (`forceDelete()`) — una fila soft-deleted apuntando a un archivo ya eliminado no sirve de nada. La columna existe para un futuro adoptante de soft-delete, no porque algo la use hoy; `MediaGallery::isManageableBy()` (§5) ya contempla ese hueco.
@@ -151,7 +152,7 @@ Dos detalles que solo salen a la luz cuando se sirven archivos entre dos orígen
 
 - **`MediaAsset::getUrlAttribute()` envuelve `Storage::url($path)` en `url()`.** El disco `local` por defecto no tiene configurada la clave `url`, así que `Storage::url()` solo devuelve una ruta relativa al host (`/storage/media/xxx.jpg`) vía la ruta de servido de Laravel — correcta solo cuando la API y la página que la solicita comparten origen. `url()` ancla una ruta relativa a `APP_URL` y deja intacta una URL ya absoluta (la del disco `s3`, por ejemplo), así que el mismo código es correcto en ambos discos sin ramificar.
 - **Los nombres de archivo subidos son controlados por el cliente y sin límite.** `getClientOriginalName()` viene directo del header multipart `Content-Disposition`, así que se trunca para caber en la columna `filename` (`varchar(255)`) antes del insert, en vez de dejar que un valor sobredimensionado llegue a la BD como un error sin capturar.
-- **`svg` está excluido deliberadamente** de `config('media.allowed_mimes')`. Un SVG puede incrustar `<script>` y se sirve de vuelta desde el propio dominio de la API — un vector de XSS almacenado que este proyecto no tiene ningún paso de sanitización para neutralizar.
+- **`svg` está excluido deliberadamente** de cada clave en `config('media.contexts')` (ver §5.3). Un SVG puede incrustar `<script>` y se sirve de vuelta desde el propio dominio de la API — un vector de XSS almacenado que este proyecto no tiene ningún paso de sanitización para neutralizar.
 
 ---
 
@@ -203,6 +204,14 @@ public function userCanManageMedia(User $user): bool
 Una entidad que aún no implementa `AuthorizesMediaOwnership` se trata igual que "sin adjuntar y sin token" — permitida solo por el permiso base de la ruta. Esto es lo que permite que las entidades adopten el contrato una a la vez sin romper las que aún no lo han hecho.
 
 **`withTrashed()` y el caso límite del attachable nulo.** `Item`/`ItemVariant`/los modelos de Platillos usan todos `SoftDeletes`, y sus propios endpoints de borrado solo hacen soft-delete. Cargar `attachable` con el scope por defecto de `MorphTo` hacía que el `attachable` de un dueño soft-deleted resolviera a `null` — indistinguible, en ese momento, de "esta entidad no ha adoptado el contrato" — cayendo silenciosamente al permiso base en vez de correr la regla real de la entidad. El eager load ahora usa `MorphTo::withTrashed()`, que es seguro por sí solo entre tipos polimórficos heterogéneos: la implementación de Laravel revisa `$query->hasMacro('withTrashed')` por cada tipo resuelto antes de aplicarlo, así que un futuro attachable que *no* haga soft-delete (el más probable, la galería de avatar de un `User`) no truena — simplemente no se ve afectado. Un `attachable` nulo que sobrevive a `withTrashed()` (la fila realmente ya no existe — borrado duro, o una referencia colgante) se deniega directamente, distinto de los dos casos anteriores.
+
+### 5.3 Contextos de Subida — tipos de archivo por adoptante
+
+`config('media.contexts')` mapea una clave de contexto (`item`, `dish`, `avatar`) a las extensiones que `POST /media/upload` aceptará para ella — antes, cada adoptante compartía una lista global (`config('media.allowed_mimes')`), así que el avatar de un empleado aceptaba los mismos formatos de video que una foto de Item aunque toda superficie de avatar solo se renderiza vía `<img>` (detectado en la revisión de #401; un video seleccionado se subía con éxito y luego simplemente no se renderizaba, con el fallback de iniciales enmascarando por completo la falla).
+
+`context` ahora es obligatorio en la petición al iniciar una galería **nueva** (sin `media_gallery_id`) — `UploadMediaRequest` rechaza una clave desconocida directamente (un 422 limpio, no un fallback) y guarda el valor en la galería. Cada subida posterior a esa **misma** galería se valida contra el `context` guardado en la galería, no contra lo que la petición declare — un cliente no puede re-etiquetar una galería existente a mitad de sesión para colar un tipo de archivo no permitido por la restricción que ya fijó su primera subida. `MediaGallery::allowedExtensions()` es el único lugar donde esto se resuelve (`config("media.contexts.{$this->context}")`); una galería antigua anterior a esta columna cae de vuelta a no tener restricción, en vez de romper una sesión en curso previa al despliegue (ver el backfill de la migración `2026_08_13_000000_add_context_to_media_galleries_table` para galerías ya adjuntas).
+
+El frontend refleja esto para dar retroalimentación inmediata: `MediaGalleryUploaderProps.context` fija el atributo `accept` del input de archivo y la misma validación de extensiones permitidas que corre `useMediaGalleryUploader` del lado del cliente — el backend sigue siendo la fuente de verdad en cualquier caso.
 
 ---
 
