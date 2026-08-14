@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bash(gh run view:*), Bash(gh run watch:*), Bash(gh api:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(tail:*), Bash(date:*), Bash(sleep:*), Bash(cd:*), Bash(basename:*), Bash(docker exec:*), Bash(php artisan:*), Bash(./vendor/bin/pint:*), Bash(npm:*), Bash(npx:*), Bash(make:*), Bash(curl:*), Read, Edit, Write, WebFetch, ToolSearch, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__find, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__read_page
+allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bash(gh run view:*), Bash(gh run watch:*), Bash(gh api:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(tail:*), Bash(wc:*), Bash(date:*), Bash(sleep:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(basename:*), Bash(docker exec:*), Bash(php artisan:*), Bash(./vendor/bin/pint:*), Bash(npm:*), Bash(npx:*), Bash(make:*), Bash(curl:*), Read, Edit, Write, WebFetch, ToolSearch, Agent, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__find, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__read_page
 description: End-to-end autonomous delivery for a single GitHub issue — validate it exists, gather context, implement via TDD, open the PR, then loop through CI, Copilot review, and Devin/DeepWiki review until everything is green. Runs fully unattended: never pauses for human input, even on a business-rule dispute — the issue's literal text wins and every override is logged on the PR for later review. Never merges.
 argument-hint: <issue-number>
 ---
@@ -82,6 +82,29 @@ this pipeline overrode. Phase 8's Chrome-extension check (also reached via Phase
 7.6b) auto-skips instead of asking whether to wait — see that phase for the exact fallback. Phase 10
 does not ask for `/usage` output — cost logging is skipped entirely in this mode, noted as such in
 the final report instead of blocking on it.
+
+### Automated-review subagent boundary
+
+Phases 6, 7, and 8 deliberately dispatch their automated-review work through the `Agent` tool.
+Use **one foreground, general-purpose subagent for each whole loop**, not one subagent per poll or
+per review cycle. A whole-loop dispatch keeps every poll response, diff/context read, test log,
+CI-watch update, and Chrome page read in one disposable context and gives the parent a single
+summary. Dispatching per cycle would create repeated handoffs, force each worker to rebuild the
+same PR context, and make ownership of the shared checkout ambiguous. Foreground execution is
+required because every loop can edit, commit, and push the same branch; never run these review
+subagents concurrently with the parent or with each other.
+
+Subagents cannot spawn other subagents. Therefore Phase 8's single Devin worker also performs the
+Copilot re-poll required after each Devin-driven push. That nested Copilot work is still isolated
+from the parent `/issue` session, which is the boundary this command requires.
+
+For every dispatch, give the subagent the repository, issue number, PR number, branch name, the
+applicable safety cap/window, and the exact command sections it must follow. Require it to do the
+complete loop — polling, analysis, fixes, relevant tests, commits, pushes, review replies/thread
+resolution, and CI re-validation — and to return **only** the compact contract specified by that
+phase. The parent must not repeat or request the worker's raw polling responses, file reads,
+browser output, or CI-watch log. It may act only on the returned summary and on its own single CI
+gate required below.
 
 ---
 
@@ -302,29 +325,42 @@ this text.
 
 ## PHASE 6 — Copilot review loop
 
-Poll for Copilot's automated review (it posts asynchronously, usually within a few minutes):
+Dispatch one foreground, general-purpose subagent for the entire Copilot poll-and-response loop.
+Pass it the repository, issue, PR, and branch identifiers and instruct it to:
 
-```bash
-gh api --paginate repos/pakodiazdev/sushigo/pulls/<N>/reviews --jq '.[].user.login'
+1. Poll every ~30s for up to ~10 minutes for a review whose author login contains `copilot`
+   case-insensitively. If none arrives, finish as `no-review`; do not block indefinitely.
+2. Once a review exists, read and follow `.claude/commands/pr-comments.md` Steps 1–7 in full.
+3. Add this third outcome to Step 4a alongside Address / Skip:
+   - **Business-rule dispute** — keep the issue's literal behavior, reply with the relevant
+     Description/Objective/Acceptance Criteria, resolve the thread, and append the verbatim
+     comment plus that reasoning to the PR's `## ⚠️ Needs Human Judgment` section.
+4. Run the locally relevant tests and linters for every fix, commit and push as the referenced
+   command requires, then run the Phase 5 CI gate if it pushed commits. If that gate reaches its
+   six-identical-failures safety cap, return `status: failed` with `ci: failed`; never pair
+   `ci: failed` with `status: completed` or `status: no-review`.
+
+Require the subagent to return only:
+
+```text
+COPILOT_LOOP
+status: completed | no-review | failed
+threads: found=<N> addressed=<N> skipped=<N> business_rule_disputes=<N>
+commits: pushed=<yes|no> shas=<comma-separated short SHAs or none>
+ci: success | failed | not-rerun
+notes: <one compact line; no raw comments, diffs, polls, or CI log>
 ```
 
-Poll every ~30s for up to ~10 minutes. If nothing from a login containing `copilot` (case-
-insensitive — GitHub's bot login is `copilot-pull-request-reviewer`, but don't rely on exact casing)
-shows up in that window, treat it as "no review to attend" and continue to Phase 7 — don't block
-forever on a review that may not fire for this diff.
-
-Once a Copilot review is present, **read and follow `.claude/commands/pr-comments.md`'s Steps 1–7
-in full**, with one addition inserted into Step 4a's analysis:
-
-> **Business-rule dispute** — the comment isn't proposing a code fix, it's disputing what the
-> feature should *do* (see "The zero-interruption rule"). Keep the issue's literal reading, reply on
-> the thread explaining why (citing the issue's Description/Objective/Acceptance Criteria), resolve
-> the thread, and add a bullet to the PR's `## ⚠️ Needs Human Judgment` section with the comment
-> verbatim and that same reasoning. Every other comment still follows `pr-comments.md`'s existing
-> Address / Skip logic exactly.
-
-If this loop pushed any new commits, **re-run the CI gate (Phase 5)** before moving on — don't act
-on a stale CI result.
+If `status: failed`, the parent must fetch the issue body and fill the current Sessions entry's
+`end` **only if it is still `"?"`**, then write it back and stop with the compact reason. This makes
+cleanup idempotent when the worker already closed the session through Phase 5's safety-cap path.
+Also stop through this same idempotent cleanup path if the contract is malformed as `ci: failed`
+with any non-failed status; never restart a CI gate whose safety cap the worker already exhausted.
+Only when `pushed=yes` and `ci` is `success` or `not-rerun`, the parent must **invoke the complete CI
+gate (Phase 5) once** before Phase 7. That invocation follows Phase 5's normal failure handling:
+diagnose, fix, commit, push, and re-run checks until green or the six-identical-failures safety cap;
+"once" means one invocation of that whole gate, not one `gh pr checks` attempt. Do not perform any
+Copilot polling in the parent session, and do not continue to Phase 7 unless the gate passes.
 
 ---
 
@@ -356,77 +392,98 @@ git push --force-with-lease origin HEAD
 ```
 
 This push restarts CI, the Devin/DeepWiki scan, **and** Copilot's automated review (any push does,
-force or not) — it can post a fresh review with new threads on the squashed commit. **Re-run the CI
-gate (Phase 5)** once before entering Phase 8.
+force or not) — it can post a fresh review with new threads on the squashed commit. **Invoke the
+complete CI gate (Phase 5)** before entering Phase 8, including its normal diagnose/fix/retry loop
+until green or its safety cap.
 
-Also re-poll for Copilot, but not with Phase 6's plain existence check — a Copilot review from
-*before* this push already exists in the list by now, so "does any `copilot` login show up" would
-trivially pass immediately without waiting for anything new, letting a fresh comment from *this*
-push slip past unnoticed. Instead, record the latest existing review's `submitted_at` (or the
-review count) right before pushing, then poll (same ~30s / ~10min cadence as Phase 6) until either
-a *newer* `submitted_at` appears or the count increases:
+After the squash push and its parent-owned CI gate pass, dispatch a new foreground,
+general-purpose subagent for the post-squash Copilot loop. The parent does not fetch Copilot review
+state itself. Instruct the worker to resolve the exact pushed SHA with `git rev-parse HEAD`, then
+poll the PR reviews at the same ~30s / ~10min cadence until a Copilot review whose `commit_id`
+equals that SHA appears. Compare full SHAs, not timestamps, review counts, or local/server clock
+values. A review submitted after the push can still belong to the previous SHA, so recency alone is
+not proof that it reviewed the squashed commit. Exact `commit_id` matching prevents a late review
+of the pre-squash head from ending the poll before feedback for the pushed commit arrives, without
+leaking any poll responses into the parent context.
 
-```bash
-gh api --paginate repos/pakodiazdev/sushigo/pulls/<N>/reviews --jq '.[] | select(.user.login | test("copilot"; "i")) | .submitted_at' | tail -1
-```
+If a new review arrives, the worker follows `pr-comments.md` Steps 1–7 with Phase 6's exact
+business-rule-dispute behavior, runs relevant tests/linters, commits and pushes fixes, and runs the
+Phase 5 CI gate after any push. If that gate reaches its safety cap, it must return `status: failed`
+with `ci: failed`. If no qualifying review arrives, it returns `no-review`.
 
-If a genuinely new Copilot review shows up, follow `pr-comments.md`'s Steps 1–7 in full (same
-business-rule-dispute addition as Phase 6). If nothing newer appears within the window, treat it
-like Phase 6 — no review to attend — and continue to Phase 8.
+Require the same `COPILOT_LOOP` return contract as Phase 6. If it returns `status: failed`, the
+parent must fetch the issue body and fill the current Sessions entry's `end` **only if it is still
+`"?"`**, then write it back and stop. This preserves an end time the worker may already have written
+through Phase 5's safety-cap path. If it returns `pushed=yes`, the parent must **invoke the complete
+CI gate (Phase 5) once** before Phase 8 only when `ci` is `success` or `not-rerun`, following its
+normal diagnose/fix/retry loop until green or its safety cap; do not continue on a failed gate. If
+the worker ever returns the invalid combination `ci: failed` with a non-failed status, use the same
+idempotent session cleanup and stop instead of restarting CI. Do not copy raw findings into the
+parent report; retain only the contract counts, commit SHAs, CI state, and compact note.
 
 ---
 
 ## PHASE 8 — Devin / DeepWiki review loop
 
-This project is on Devin's free tier — the review surface is the public DeepWiki-mirrored page, not
-a private API. Use the Chrome browser tools (load via `ToolSearch` if deferred):
+Dispatch one foreground, general-purpose subagent for the **entire** Devin/DeepWiki loop, including
+all Copilot re-polls caused by Devin-driven pushes. Pass it the repository, issue, PR, branch, and
+the same **5-cycle safety cap**. The worker owns the following workflow without returning any
+intermediate browser, diff, test, poll, or CI output to the parent:
 
+1. Load the `mcp__claude-in-chrome__*` tools with `ToolSearch` first if they are deferred in the
+   worker's fresh context, then open `https://app.devin.ai/review/pakodiazdev/sushigo/pull/<N>`.
+   The page is a client-rendered SPA, so `WebFetch` is insufficient; use page text/find and a
+   screenshot only when needed. If scanning is in progress, wait and re-check. Do not treat tools
+   that merely need deferred loading as unavailable.
+2. Only if the Chrome tools still cannot be invoked after that `ToolSearch` loading attempt, try
+   `tabs_context_mcp` once. If it succeeds, the connection recovered: continue the review from
+   step 1 with the now-connected Chrome tools. Only if it still fails, return `skipped` with
+   `chrome: unavailable`; this supplementary check must not prompt the user.
+3. Verify every reported bug against the code. Fix real bugs; record false positives as
+   not-applicable with a compact reason.
+4. Evaluate every flag as fixed, not-applicable, or a business-rule dispute. For a dispute, keep
+   the issue's literal behavior and append the verbatim flag plus reasoning to the PR's
+   `## ⚠️ Needs Human Judgment` section. Every flag must receive an outcome, but the page itself
+   does not need to show zero flags.
+5. After Devin-driven changes, run the locally relevant tests/linters, commit, and push. Run the
+   Phase 5 CI gate **before** polling Copilot so any fixes that gate commits and pushes are included
+   in the reviewed head. If the gate reaches its safety cap, return `status: failed` with
+   `ci: failed` immediately. Once CI is green, resolve the resulting final pushed SHA, then perform
+   Phase 7's exact-`commit_id` Copilot poll for that SHA with the shorter few-minute window and
+   process any new threads through `pr-comments.md` Steps 1–7 plus the business-rule-dispute rule.
+   If Copilot handling pushes further commits, run the complete Phase 5 CI gate again against that
+   new head before reloading Devin for the next cycle. The same safety-cap-to-failed mapping applies
+   to this second gate. Never report a completed, skipped, or safety-cap Devin outcome with
+   `ci: failed`.
+6. Finish when Devin shows 0 bugs and every flag has been evaluated, or stop after 5 cycles. Before
+   returning either `safety-cap` or `failed`, attempt to close the issue's open Sessions entry with
+   the current time. The parent still verifies this independently, because a worker can fail before
+   it reaches its own cleanup path.
+
+Require the subagent to return only:
+
+```text
+DEVIN_LOOP
+status: completed | skipped | safety-cap | failed
+cycles: <N>/5
+bugs: found=<N> fixed=<N> not_applicable=<N> remaining=<N>
+flags: evaluated=<N> fixed=<N> not_applicable=<N> business_rule_disputes=<N>
+copilot: threads_addressed=<N> skipped=<N> business_rule_disputes=<N>
+commits: pushed=<yes|no> shas=<comma-separated short SHAs or none>
+ci: success | failed | not-rerun
+chrome: connected | unavailable
+notes: <one compact line; no raw findings, diffs, polls, browser text, or CI log>
 ```
-navigate → https://app.devin.ai/review/pakodiazdev/sushigo/pull/<N>
-```
 
-The page is a client-rendered SPA — `WebFetch` returns an empty shell and is not sufficient here;
-use `get_page_text` / `find` (and a screenshot if the text extraction is ambiguous).
-
-- **If the scan is still running** ("in progress"/"scanning"), wait and re-check — a short poll
-  loop, or `ScheduleWakeup` if this is running as a background/dispatched session — rather than
-  reporting an incomplete result.
-- **If the Chrome extension isn't connected**, try `tabs_context_mcp` once; if it still fails, skip
-  this phase automatically — this sub-check is supplementary to CI and Copilot, not a hard blocker
-  on its own. Note the skip plainly in the final report (Phase 10) as "Devin/DeepWiki: skipped,
-  Chrome extension unavailable" rather than silently omitting it.
-
-Once loaded, read the **Bugs** count and the **Flags** panel. Then, in a loop:
-
-1. **For every reported bug** — read the referenced code and verify it's real. If real, fix it
-   (same discipline as Phase 3). If it's a false positive, note why in your final report and don't
-   silently dismiss it without checking.
-2. **For every flag** — evaluate whether it's valid and impactful, using the same business-rule bar
-   as everywhere else in this command: if a flag amounts to disputing intended behavior, keep the
-   issue's literal reading and add it to the PR's `## ⚠️ Needs Human Judgment` section instead of
-   fixing it; otherwise decide yourself. If not valid, record why in your own report — the DeepWiki page
-   is a public, unauthenticated mirror (no GitHub connection in this pipeline), so its own
-   "Resolve"/"Mark as read" controls may not actually persist anything; try them if available, but
-   the written record in your report is what actually matters, not the page's state. If valid,
-   treat it like a bug and fix it. **You don't need to reach zero flags** — but every flag
-   must be explicitly evaluated and the reasoning recorded, even if the conclusion is "not
-   applicable."
-3. **If anything changed as a result:**
-   - Run the locally-relevant tests again (Phase 3's scope + discipline).
-   - Commit and push.
-   - Re-check Copilot the same way Phase 7 does — a plain "does a `copilot` login exist" check
-     would trivially pass on a review already sitting there from before this push; record the
-     latest existing review's `submitted_at` (or count) right before pushing, then poll (shorter
-     window — a few minutes is enough since this is a smaller diff) until a *newer* one appears.
-   - **Re-run the CI gate (Phase 5).**
-   - Reload the Devin page and re-check for new bugs/flags introduced by this round's fix.
-4. Repeat from step 1 until Devin shows **0 bugs** and every flag has been evaluated (resolved,
-   fixed, or explicitly noted as not applicable).
-
-**Safety cap:** stop after **5 cycles** through this loop and report the remaining state to the
-user rather than continuing indefinitely. Close the Sessions entry (Phase 2's rule) before
-reporting — do not attempt cost logging (Phase 10 skips it entirely per the zero-interruption
-rule; there's nothing to do here on that front).
+If `status: safety-cap` or `status: failed`, the parent must fetch the issue body, fill the current
+Sessions entry's `end` if it is still `"?"`, write it back, and only then stop with the compact
+remaining state. This verification is mandatory even if the worker reports that it already closed
+the entry. If `status: skipped`, continue and preserve the skip for Phase 10. If the summary says
+`pushed=yes` and `ci` is `success` or `not-rerun`, the parent must **invoke the complete CI gate
+(Phase 5) once** before Phase 9, following its normal diagnose/fix/retry loop until green or its
+safety cap; do not continue on a failed gate. If the contract is malformed as `ci: failed` with any
+non-failed status, perform the same idempotent session cleanup and stop instead of restarting CI.
+The parent must never open the Devin page or poll Copilot during this phase.
 
 ---
 
@@ -522,6 +579,18 @@ issue — if one already exists from a prior manual run, leave it exactly as-is.
 run's cost logged, run `/usage` yourself afterward; this command will not ask for it.
 
 ### 10b. Print the final report
+
+Before printing, fetch the current PR body and read its canonical `## ⚠️ Needs Human Judgment`
+section:
+
+```bash
+gh pr view <N> --repo pakodiazdev/sushigo --json body --jq .body
+```
+
+Copy every bullet from that section into the matching final-report section below. This read does
+not violate the subagent boundary: the PR body is the durable decision record written by the
+workers, not raw polling, browser, diff, or CI output. If the section is empty, omit the report
+subsection instead of leaving placeholder bullets.
 
 ````
 ## Issue #<NNN> — Ready for your review

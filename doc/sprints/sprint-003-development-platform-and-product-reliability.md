@@ -6,7 +6,7 @@ status: In Progress
 created: 2026-08-12
 started: 2026-08-12
 completed:
-last_updated: 2026-08-12
+last_updated: 2026-08-13
 
 base_branch: main
 base_commit: cfd6cfb
@@ -147,6 +147,7 @@ scope. Changes made after promotion must be recorded here without deleting histo
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
 | 2026-08-12 | #443 | Formally close Sprint 002, promote Sprint 003, and record Sprint 004 planning | Sprint lifecycle transition and planning documents were ready for permanent review | Sprint 002 closed; Sprint 003 promoted; Sprint 004 and roadmap convention submitted together |
+| 2026-08-13 | #448 | Move `/issue` automated-review loops to isolated subagents | Review-loop context growth and `finish-pr` approval interruptions required an unplanned reliability pass | Copilot/Devin loops isolated, CI/session safeguards hardened, and file-list captures stabilized; 9.3h tracked; PR #451, merge pending |
 
 ## 6. Value Ranking
 
@@ -351,6 +352,7 @@ Sessions arrays. Estimates remain planning ranges until execution evidence is re
 | ⏳ | #430 | `sushigo` | Pending | — | — | — | Atomic Stock mutation and balance-invariant enforcement |
 | ✅ | #421 | `sushigo` | Finalized the Product → Variant → Purchase Presentation domain model, ERD, SlidePanel UX flow, API contract outline, and additive-first migration sequencing for #422-#442; recorded TD-03 | PR #446 | — | 3.75h | Design/ERD/UI/API/migration gate only, no production implementation; 4 Copilot threads + 5 Devin review cycles resolved, all real findings |
 | 🚧 | #443 | `sushigo` | Sprint lifecycle and planning documentation | — | — | In progress | Opportunistic startup work; branch and PR carry the session-created documentation |
+| ✅ | #448 | `sushigo` | Isolated Copilot and Devin review loops into foreground workers and hardened unattended close-out safeguards | PR #451 | — | 9.3h | Docs/command-file change, no test suite: `git diff --check`, frontmatter/allow-list, and compact-contract/safe-capture structural assertions all passing; 6 Copilot review threads resolved (SHA-anchored re-checks, idempotent session cleanup, squash-verification stabilization, allow-list completion, canonical-body dispute sourcing); PR ready, merge pending |
 
 ## 14. Quality Results
 
@@ -378,11 +380,12 @@ Inventory authorization and Stock mutation, and an implementation-ready Product 
 
 - **Confirmed planned Issues:** 5 dev-lab Issues and 5 SushiGo Issues.
 - **Pending planned Issues:** 0; scope selection is complete.
-- **Opportunistic startup Issues:** 1 (`#443`), tracked outside the ten-Issue implementation total.
+- **Opportunistic Issues:** 2 (`#443`, `#448`), tracked outside the ten-Issue implementation total;
+  `#443` covers sprint startup and `#448` covers in-progress pipeline reliability work.
 - **Confirmed estimate:** 27h optimistic / 53h pessimistic.
 - **Completed:** 0.
 - **Deprecated or cancelled:** 0.
-- **Tracked:** no sessions yet.
+- **Tracked:** 9.3h for opportunistic #448; planned-scope totals remain separate.
 
 ### 15.3 Known Limitations
 
