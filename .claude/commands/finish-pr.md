@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git rebase:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(tail:*), Bash(wc:*), Read, Edit, Write, WebFetch
-description: Validate a PR is ready to merge and perform the final housekeeping (squash commits, finalize the issue in place, archive it locally, sync sprint/README, move the issue to Done) — never merges automatically
+description: Validate a PR is ready to merge and perform the final housekeeping (squash commits, finalize the issue in place, archive it locally, update the sprint doc's per-issue row, move the issue to Done) — never merges automatically
 argument-hint: [pr-number]
 ---
 
@@ -14,14 +14,14 @@ merging — **except the merge itself**.
 confirm review threads and mergeable state, then finish the paperwork — squash the branch to one
 commit, finalize the GitHub issue itself (time tracking, checklist, retrospective), archive it
 locally as a closing snapshot, move the issue to Done on the project board, and update the sprint
-document and root README — and only then check CI and the automated review (Devin/DeepWiki), once,
-against the final commit that push produced. Doing it in that order (paperwork before the CI/Devin
-check, not after) means Phases 2–7 add no restarts at all, since they only commit locally — the
-only push whose result actually gets checked is Phase 7.5's. A pre-flight rebase (Phase 1b) or a
-late rebase (Phase 7.6c) still pushes and still restarts CI/Devin, same as any other push to the
-branch, but that restart is irrelevant: nothing reads its result before Phase 7.5 pushes again
-anyway. You report a checklist at the end. **You never run `gh pr merge`.** The user merges by
-hand once your report says everything is green.
+document's own row for this issue — and only then check CI and the automated review (Devin/
+DeepWiki), once, against the final commit that push produced. Doing it in that order (paperwork
+before the CI/Devin check, not after) means Phases 2–6 add no restarts at all, since they only
+commit locally — the only push whose result actually gets checked is Phase 7.5's. A pre-flight
+rebase (Phase 1b) or a late rebase (Phase 7.6c) still pushes and still restarts CI/Devin, same as
+any other push to the branch, but that restart is irrelevant: nothing reads its result before
+Phase 7.5 pushes again anyway. You report a checklist at the end. **You never run `gh pr merge`.**
+The user merges by hand once your report says everything is green.
 
 Per [TD-01](../../doc/decisions/td-01-single-source-issue-tracking.md), the GitHub issue is the
 only live document for this work up to this point — nothing under `doc/tasks/` exists yet for it.
@@ -98,8 +98,9 @@ Build a checklist for the items that survive the rest of this flow unchanged. Do
 to Phase 2+ unless every item here passes.
 
 CI status and the Devin/DeepWiki scan are deliberately **not** checked here: Phase 7.5 is the only
-push in this entire command (Phases 2, 3, 6, 7 only commit locally — see those phases), and every
-push force-restarts both CI and the Devin scan. A result captured now would just describe a commit
+push in this entire command (Phases 2, 4, and 6 only commit locally — see those phases; Phase 3
+only edits the GitHub issue via `gh issue edit`, no local git commit), and every push
+force-restarts both CI and the Devin scan. A result captured now would just describe a commit
 that's about to be replaced, and Phase 8 would end up reporting stale status. They're checked
 authoritatively in **Phase 7.6**, right after that single final push — that is the real gate before
 Phase 8 declares the PR ready to merge.
@@ -403,51 +404,31 @@ Phase 3 (not a local file — there isn't one until Phase 4, and even that is ju
    `Result Summary` → 1–2 sentence description of what shipped, `Pull Request` → `PR #<N>`,
    `Merge Commit` → `—` (still unmerged), `Tracked` → same value as above, `Evidence Notes` →
    test counts, linter results, review-response summary.
-3. **§1 Executive Summary** — update the `Progress as of <date>:` line: increment the completed
-   count, recompute the percentage (`completed / scope_issues`), add this issue to the list, and
-   update the date to today.
-4. **§4 Sprint Timeline** — update the `Progress (Issues completed)` row the same way.
 
-Do **not** touch round-total footer rows, §10's aggregate table, or any other issue's row — per
-`doc/conventions/sprints.md` §9, an implementation agent may only update the row and evidence tied
-to its own issue, never aggregate totals (those are recalculated by the coordination agent at
-round/sprint boundaries, not per-PR).
+Do **not** touch round-total footer rows, §1's Executive Summary, §4's Sprint Timeline, §10's
+aggregate table, the root `README.md`, or any other issue's row — per `doc/conventions/sprints.md`
+§9, an implementation agent may only update the row and evidence tied to its own issue, never
+aggregate totals. With dev-lab running several parallel workspaces, more than one PR can finish in
+the same window; each one recomputing the same aggregate percentage from its own local view means
+whichever merges last silently clobbers the others' numbers. The sprint doc's aggregate percentage
+and README's `Completed` cell are therefore a deliberate manual concern from here on: run
+`/sync-sprint-progress` yourself, against a stable target, whenever you want them refreshed — this
+command does not touch either as a side effect of closing a single PR.
 
 Commit separately. Local only — do not push; Phase 7.5 pushes everything once at the end:
 
 ```bash
 git add doc/sprints/
-git commit -m "📚 [#NNN] - Update sprint progress for #NNN 📊
+git commit -m "📚 [#NNN] - Mark #NNN's row complete in the sprint doc 📊
 
-- 📊 Mark #NNN complete in Round table and Execution Evidence
-- 📊 Update sprint progress percentage in Executive Summary and Timeline"
-```
-
----
-
-## PHASE 7 — Update the root README Sprints table
-
-Skip this phase if Phase 6 was skipped (issue not part of the current sprint).
-
-In the root `README.md`'s `## Sprints` table, find the current sprint's row. Since the sprint is
-not yet closed, its `Completed` cell shows the running progress percentage (matching Phase 6's
-recomputed value) instead of a date — that cell only becomes the actual completion date once the
-sprint formally closes (`doc/conventions/sprints.md` §6, `completed` metadata field is filled).
-
-Local only — do not push:
-
-```bash
-git add README.md
-git commit -m "📚 [#NNN] - Update README sprint progress for #NNN 📊
-
-- 📊 Refresh the Completed cell with the current sprint progress percentage"
+- 📊 Mark #NNN complete in Round table and Execution Evidence"
 ```
 
 ---
 
 ## PHASE 7.5 — Final squash and single push
 
-Phases 2–7 commit incrementally on purpose (so partial progress is never lost to a mid-flow typo
+Phases 2–6 commit incrementally on purpose (so partial progress is never lost to a mid-flow typo
 or crash), but none of them push. Phase 1b may already have pushed once, if it had to auto-rebase
 a `BEHIND` branch — that push's CI/Devin result was never read, though, so it doesn't count against
 what follows: this phase's push is the one whose result Phase 7.6 actually checks. Folding
@@ -466,12 +447,12 @@ git reset --soft "$SQUASH_BASE"
 ```
 
 Do not reset to the freshly fetched `origin/<baseRefName>` tip. If the base advanced during
-Phases 2–7, that would create a commit whose tree reverses the newly merged base work. Keeping the
+Phases 2–6, that would create a commit whose tree reverses the newly merged base work. Keeping the
 pre-squash merge base as the new commit's parent also keeps both three-dot captures anchored to the
 same starting point; Phase 7.6c handles any resulting `BEHIND` state with its validated rebase path.
 
 Write one final commit message that is the Phase 2 message with any genuinely new substance from
-Phases 4/6/7 folded in as trailing bullets (issue archived, sprint/README progress updated) — do
+Phases 4/6 folded in as trailing bullets (issue archived, sprint doc row updated) — do
 not just concatenate every intermediate commit message verbatim.
 
 After committing, confirm the shell is still at the resolved workspace root, then run the
@@ -502,7 +483,7 @@ This is the only point in the flow where CI and the Devin/DeepWiki scan are chec
 pre-flight rebase may have pushed earlier, but Phase 7.5's push is the last one before this check
 runs, so it's the only push result that ever actually gets read — checking any earlier push would
 just describe a commit that's since been replaced. It also re-checks mergeable state (7.6c), since
-Phase 1's `CLEAN` result can go stale while Phases 2–7.5 run.
+Phase 1's `CLEAN` result can go stale while Phases 2–6 and 7.5 run.
 
 ### 7.6a. Wait for CI
 
@@ -541,8 +522,8 @@ so a plain `WebFetch` will only return an empty shell and is not sufficient here
 
 ### 7.6c. Re-validate mergeable state
 
-Phase 1's `mergeStateStatus: CLEAN` check ran before Phases 2–7.5, which can take a while (issue
-finalization, sprint doc, README, waiting on CI/Devin above). If `main` advanced during that
+Phase 1's `mergeStateStatus: CLEAN` check ran before Phases 2–6 and 7.5, which can take a while
+(issue finalization, sprint doc, waiting on CI/Devin above). If `main` advanced during that
 window — someone else's PR merged — the branch can have silently gone `BEHIND` since Phase 1, and
 the Phase 8 report would otherwise claim "clean, no conflicts" on stale information.
 
@@ -551,7 +532,8 @@ gh pr view <N> --repo <owner>/<repo> --json mergeable,mergeStateStatus
 ```
 
 `mergeStateStatus` must still be `CLEAN`. If it is now `BEHIND` (someone else's PR merged into
-`<baseRefName>` while Phases 2–7.6 ran), auto-rebase the same way as Phase 1b instead of stopping:
+`<baseRefName>` while Phases 2–6, 7.5, and 7.6 ran), auto-rebase the same way as Phase 1b instead
+of stopping:
 
 ```bash
 git fetch origin <baseRefName>
@@ -598,13 +580,13 @@ If `DIRTY`/`BLOCKED` instead, report the reason and stop.
 - [x] Review threads: all resolved (<M> total)
 - [x] Mergeable: clean, no conflicts (as of Phase 1 — re-validated below)
 
-### Final housekeeping (Phases 2–7.5)
+### Final housekeeping (Phases 2–6, 7.5)
 - [x] Commits squashed: <before> → 1 (`<sha>`)
 - [x] GitHub issue #<NNN> finalized — Tracked <Xh Ym>, checklist ticked, Retrospective added
 - [x] Issue archived to doc/tasks/<yyyy-mm>/<NNN>-<slug>.md
 - [x] GitHub Project status → Done
-- [x] Sprint doc updated — progress now <X>/<Y> (<Z%>) (or: not part of the current sprint, skipped)
-- [x] README Sprints table updated (Completed: <Z%>) (or: skipped, same reason)
+- [x] Sprint doc updated — this issue's row marked complete in Round table + Execution Evidence
+      (or: not part of the current sprint, skipped)
 
 ### Final validation on the merge-ready commit (Phase 7.6)
 - [x] CI checks: <M>/<M> passing
@@ -617,8 +599,8 @@ Everything above is green. I have not merged it — that's on you:
 ```
 
 If Phase 1 failed, print only that checklist (with the failing items marked ❌ and what's
-blocking them) and stop — do not run Phases 2–7.6. If Phase 7.6 failed, print all three sections
-(Phase 1 and the housekeeping already happened) with 7.6's failing items marked ❌, and stop before
-the "Ready to merge" line.
+blocking them) and stop — do not run Phases 2–6, 7.5, or 7.6. If Phase 7.6 failed, print all three
+sections (Phase 1 and the housekeeping already happened) with 7.6's failing items marked ❌, and
+stop before the "Ready to merge" line.
 
 **Never run `gh pr merge` yourself, regardless of how clean the checklist is.**
