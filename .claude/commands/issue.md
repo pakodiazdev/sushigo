@@ -543,8 +543,10 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   finally gets its `end` time filled and `Tracked` recomputed. Write the Retrospective's narrative
   to actually reflect what happened in Phases 5, 6, and 8 (CI retries, Copilot threads, Devin
   cycles) — not just "implemented the feature," since those cycles are real time and real cost.
-- **Phases 4–7** (local archive, project board → Done, sprint doc, README) — run exactly as
-  documented in `finish-pr.md`.
+- **Phases 4–6** (local archive, project board → Done, sprint doc's per-issue row) — run exactly
+  as documented in `finish-pr.md`, which no longer touches the sprint doc's aggregate percentage
+  or README as a side effect of closing a single PR (see `/sync-sprint-progress` for that, run
+  deliberately by a human).
 - **Phase 7.5** (final squash+push) and **7.6** (final CI + Devin re-validation) — this is the true
   final gate before Phase 10 below presents anything to the human. **Override:** `finish-pr.md`'s
   own Phase 7.6b describes an interactive fallback if the Chrome extension isn't connected — when
@@ -629,7 +631,7 @@ subsection instead of leaving placeholder bullets.
 
 ### 📋 Close-out (Phase 9 / finish-pr)
 - Issue finalized: Tracked <Xh Ym>, Retrospective added · Archived: `doc/tasks/<yyyy-mm>/<NNN>-<slug>.md`
-- Project board: moved to Done · Sprint doc / README: updated (or: not part of the current sprint)
+- Project board: moved to Done · Sprint doc: issue's row updated (or: not part of the current sprint)
 
 ### 💸 Token usage / cost
 Not tracked — unattended run (zero-interruption mode skips the `/usage` prompt). Run `/usage`
