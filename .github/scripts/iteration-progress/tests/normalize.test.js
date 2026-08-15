@@ -30,6 +30,21 @@ test('pickActiveIteration returns null for an empty iteration list', () => {
   assert.equal(pickActiveIteration([], '2026-08-15'), null);
 });
 
+test('pickActiveIteration accepts a Date reference and stays consistent across repeated calls', () => {
+  // iteration.startDate as a Date instance (not a string) used to be returned
+  // as-is by parseDateOnly, so iterationEndDate's setUTCDate() call mutated
+  // that same object in place — corrupting iteration.startDate on every call.
+  const iterations = [
+    { id: 'active', title: 'Sprint X', startDate: new Date('2026-08-09T00:00:00Z'), duration: 14 },
+  ];
+
+  pickActiveIteration(iterations, '2026-08-15');
+  pickActiveIteration(iterations, '2026-08-15');
+
+  assert.equal(iterations[0].startDate.toISOString(), '2026-08-09T00:00:00.000Z');
+  assert.equal(pickActiveIteration(iterations, '2026-08-15').id, 'active');
+});
+
 test('normalizeProjectData: iteration with a healthy mix of tasks', () => {
   const items = [
     { status: 'Done', iterationId: 'active' },
