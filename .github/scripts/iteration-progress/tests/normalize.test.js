@@ -32,7 +32,7 @@ test('pickActiveIteration returns null for an empty iteration list', () => {
 
 test('pickActiveIteration accepts a Date reference and stays consistent across repeated calls', () => {
   // iteration.startDate as a Date instance (not a string) used to be returned
-  // as-is by parseDateOnly, so iterationEndDate's setUTCDate() call mutated
+  // as-is by parseDateOnly, so iterationBoundaryDate's setUTCDate() call mutated
   // that same object in place — corrupting iteration.startDate on every call.
   const iterations = [
     { id: 'active', title: 'Sprint X', startDate: new Date('2026-08-09T00:00:00Z'), duration: 14 },
@@ -60,6 +60,12 @@ test('normalizeProjectData: iteration with a healthy mix of tasks', () => {
 
   assert.equal(result.hasActiveIteration, true);
   assert.equal(result.iteration.title, 'Sprint 2');
+  assert.equal(result.iteration.startDate, '2026-08-09');
+  // startDate + duration (2026-08-23) is the exclusive matching boundary and
+  // also Sprint 3's own startDate — the displayed endDate must be the day
+  // before that, not the boundary itself, or the range overlaps the next
+  // sprint and reads as one day longer than it really is.
+  assert.equal(result.iteration.endDate, '2026-08-22');
   assert.equal(result.done, 2);
   assert.equal(result.inProgress, 1);
   assert.equal(result.todo, 1);
