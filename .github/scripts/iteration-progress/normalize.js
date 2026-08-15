@@ -3,7 +3,8 @@
 const KNOWN_STATUSES = new Set(['Done', 'In Progress', 'Todo']);
 
 function parseDateOnly(value) {
-  return value instanceof Date ? value : new Date(`${value}T00:00:00Z`);
+  const date = value instanceof Date ? value : new Date(`${value}T00:00:00Z`);
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
 function iterationEndDate(iteration) {
