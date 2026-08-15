@@ -7,10 +7,20 @@ function parseDateOnly(value) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
-function iterationEndDate(iteration) {
+// Exclusive upper bound of the iteration's window — one day *past* its last
+// day. Used for matching (`ref < end`); never for display.
+function iterationBoundaryDate(iteration) {
   const end = parseDateOnly(iteration.startDate);
   end.setUTCDate(end.getUTCDate() + iteration.duration);
   return end;
+}
+
+// Inclusive last calendar day of the iteration — what a human expects to see
+// as the "end date" (matches what GitHub Projects itself displays).
+function iterationLastDay(iteration) {
+  const lastDay = iterationBoundaryDate(iteration);
+  lastDay.setUTCDate(lastDay.getUTCDate() - 1);
+  return lastDay;
 }
 
 function pickActiveIteration(iterations, referenceDate) {
@@ -18,7 +28,7 @@ function pickActiveIteration(iterations, referenceDate) {
   return (
     iterations.find((iteration) => {
       const start = parseDateOnly(iteration.startDate);
-      const end = iterationEndDate(iteration);
+      const end = iterationBoundaryDate(iteration);
       return ref >= start && ref < end;
     }) ?? null
   );
@@ -60,7 +70,7 @@ function normalizeProjectData({ iterations, items }, referenceDate) {
     iteration: {
       title: active.title,
       startDate: active.startDate,
-      endDate: iterationEndDate(active).toISOString().slice(0, 10),
+      endDate: iterationLastDay(active).toISOString().slice(0, 10),
     },
     done,
     inProgress,
