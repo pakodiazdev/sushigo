@@ -1,0 +1,57 @@
+name: Update Iteration Progress Badge
+
+# Deliberately no `on: push` — this workflow's own commit must never re-trigger
+# itself. `workflow_dispatch` covers manual runs, `schedule` keeps the badge
+# fresh daily.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  update-badge:
+    name: update-badge
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run unit tests
+        run: node --test .github/scripts/iteration-progress/tests/*.test.js
+
+      # PROJECTS_TOKEN: a classic PAT with the `read:project` scope (Fine-grained
+      # PATs work too — grant "Projects: Read-only" for the pakodiazdev account).
+      # The default GITHUB_TOKEN cannot read a user-owned Projects v2 board, only
+      # org-owned ones, so this repo secret is required and must be created
+      # manually (Settings → Secrets and variables → Actions).
+      - name: Generate badge
+        env:
+          PROJECTS_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+        run: node .github/scripts/iteration-progress/generate.js
+
+      - name: Commit and push if the badge changed
+        run: |
+          if git diff --quiet -- .github/badges/iteration-progress.svg; then
+            echo "Badge unchanged — nothing to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/iteration-progress.svg
+          git commit -m "$(cat <<'EOF'
+          🔧 [#453] - Regenerate iteration progress badge 📊
+
+          - 📊 Updated .github/badges/iteration-progress.svg from live GitHub Projects data
+          EOF
+          )"
+          git push
