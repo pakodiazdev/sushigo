@@ -1,0 +1,114 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { pickActiveIteration, normalizeProjectData } = require('../normalize.js');
+
+const ITERATIONS = [
+  { id: 'prev', title: 'Sprint 1', startDate: '2026-07-26', duration: 14 },
+  { id: 'active', title: 'Sprint 2', startDate: '2026-08-09', duration: 14 },
+  { id: 'next', title: 'Sprint 3', startDate: '2026-08-23', duration: 14 },
+];
+
+test('pickActiveIteration returns the iteration whose window contains the reference date', () => {
+  const result = pickActiveIteration(ITERATIONS, '2026-08-15');
+  assert.equal(result.id, 'active');
+});
+
+test('pickActiveIteration treats the window as [startDate, startDate + duration)', () => {
+  assert.equal(pickActiveIteration(ITERATIONS, '2026-08-09').id, 'active');
+  assert.equal(pickActiveIteration(ITERATIONS, '2026-08-22').id, 'active');
+  assert.equal(pickActiveIteration(ITERATIONS, '2026-08-23').id, 'next');
+});
+
+test('pickActiveIteration returns null when no iteration covers the reference date', () => {
+  const result = pickActiveIteration(ITERATIONS, '2026-12-01');
+  assert.equal(result, null);
+});
+
+test('pickActiveIteration returns null for an empty iteration list', () => {
+  assert.equal(pickActiveIteration([], '2026-08-15'), null);
+});
+
+test('normalizeProjectData: iteration with a healthy mix of tasks', () => {
+  const items = [
+    { status: 'Done', iterationId: 'active' },
+    { status: 'Done', iterationId: 'active' },
+    { status: 'In Progress', iterationId: 'active' },
+    { status: 'Todo', iterationId: 'active' },
+    { status: 'Todo', iterationId: 'other-iteration-ignored' },
+  ];
+  const result = normalizeProjectData(
+    { iterations: ITERATIONS, items },
+    '2026-08-15',
+  );
+
+  assert.equal(result.hasActiveIteration, true);
+  assert.equal(result.iteration.title, 'Sprint 2');
+  assert.equal(result.done, 2);
+  assert.equal(result.inProgress, 1);
+  assert.equal(result.todo, 1);
+  assert.equal(result.unexpectedCount, 0);
+  assert.equal(result.total, 4);
+});
+
+test('normalizeProjectData: empty iteration has zero counts, no crash', () => {
+  const result = normalizeProjectData(
+    { iterations: ITERATIONS, items: [] },
+    '2026-08-15',
+  );
+
+  assert.equal(result.hasActiveIteration, true);
+  assert.equal(result.done, 0);
+  assert.equal(result.inProgress, 0);
+  assert.equal(result.todo, 0);
+  assert.equal(result.total, 0);
+});
+
+test('normalizeProjectData: 100% complete iteration', () => {
+  const items = [
+    { status: 'Done', iterationId: 'active' },
+    { status: 'Done', iterationId: 'active' },
+    { status: 'Done', iterationId: 'active' },
+  ];
+  const result = normalizeProjectData({ iterations: ITERATIONS, items }, '2026-08-15');
+
+  assert.equal(result.done, 3);
+  assert.equal(result.total, 3);
+});
+
+test('normalizeProjectData: 0% complete iteration', () => {
+  const items = [
+    { status: 'Todo', iterationId: 'active' },
+    { status: 'In Progress', iterationId: 'active' },
+  ];
+  const result = normalizeProjectData({ iterations: ITERATIONS, items }, '2026-08-15');
+
+  assert.equal(result.done, 0);
+  assert.equal(result.total, 2);
+});
+
+test('normalizeProjectData: unexpected status values are counted separately, not folded into known buckets', () => {
+  const items = [
+    { status: 'Done', iterationId: 'active' },
+    { status: 'Blocked', iterationId: 'active' },
+    { status: null, iterationId: 'active' },
+  ];
+  const result = normalizeProjectData({ iterations: ITERATIONS, items }, '2026-08-15');
+
+  assert.equal(result.done, 1);
+  assert.equal(result.inProgress, 0);
+  assert.equal(result.todo, 0);
+  assert.equal(result.unexpectedCount, 2);
+  assert.deepEqual(result.unexpectedStatuses.sort(), ['Blocked', 'null']);
+  assert.equal(result.total, 3);
+});
+
+test('normalizeProjectData: no active iteration is reported explicitly', () => {
+  const result = normalizeProjectData(
+    { iterations: ITERATIONS, items: [] },
+    '2026-12-01',
+  );
+
+  assert.equal(result.hasActiveIteration, false);
+});
