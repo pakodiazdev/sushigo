@@ -58,10 +58,23 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
 
 ---
 
+## 📊 Development Progress
+
+![Iteration Progress](.github/badges/iteration-progress.svg)
+
+Sourced live from the `SushiGo Admin` GitHub Project's current iteration — no sprint name, date
+range, or task count is hand-maintained here. Regenerated daily (and on demand) by
+[`update-iteration-progress.yml`](.github/workflows/update-iteration-progress.yml); see
+[`.github/scripts/iteration-progress/`](.github/scripts/iteration-progress/) for the
+fetch → normalize → calculate → render pipeline.
+
+---
+
 ## Table of contents
 
 - [SushiGo Platform](#sushigo-platform)
   - [Engineering Highlights](#engineering-highlights)
+  - [Development Progress](#-development-progress)
   - [Table of contents](#table-of-contents)
   - [Project layout](#project-layout)
   - [Tech stack](#tech-stack)
