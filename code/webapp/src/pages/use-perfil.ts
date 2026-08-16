@@ -6,16 +6,28 @@ import { useMyEmployee } from '@/services/employee-hooks'
 import { profileApi } from '@/services/profile-api'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { formatFirstLast } from '@/lib/format'
+import type { MediaGalleryAsset } from '@/types/media'
 
 export interface UsePerfilResult {
   displayName: string
   email: string
   avatarUrl: string | null | undefined
+  /** The caller's existing avatar gallery, if any — hydrates the uploader so it
+   *  can manage that gallery across page loads instead of only ever starting a
+   *  brand-new one. */
+  initialGalleryId: string | undefined
+  initialAssets: MediaGalleryAsset[] | undefined
   isLoadingEmployee: boolean
   isUploaderBusy: boolean
   setIsUploaderBusy: (busy: boolean) => void
   onAvatarChange: (galleryId: string | undefined, ownerToken: string | undefined) => void
   onAssetsChange: () => void
+  /** True after the attach mutation has failed and hasn't been retried yet. */
+  attachFailed: boolean
+  /** Re-submits the same gallery/token the last failed attach used — the uploader's
+   *  own onChange effect won't re-fire on its own (galleryId/ownerToken don't change
+   *  between the failed attempt and a retry), so this must be triggered explicitly. */
+  retryAttach: () => void
   isSaving: boolean
 }
 
@@ -25,6 +37,10 @@ export function usePerfilPage(): UsePerfilResult {
   const refreshUser = useAuthStore((s) => s.refreshUser)
   const { data: employee, isLoading: isLoadingEmployee } = useMyEmployee()
   const [isUploaderBusy, setIsUploaderBusy] = useState(false)
+  // Retained so a failed attach can be retried with the exact same params — the
+  // uploader's onChange effect is keyed on [galleryId, ownerToken] and neither
+  // changes between the failed attempt and a retry, so it won't re-fire on its own.
+  const [pendingAvatar, setPendingAvatar] = useState<{ mediaGalleryId: string; ownerToken?: string } | null>(null)
 
   const updateAvatarMutation = useMutation({
     mutationFn: (params: { mediaGalleryId: string; ownerToken?: string }) =>
@@ -44,7 +60,15 @@ export function usePerfilPage(): UsePerfilResult {
     if (!galleryId) {
       return
     }
-    updateAvatarMutation.mutate({ mediaGalleryId: galleryId, ownerToken })
+    const params = { mediaGalleryId: galleryId, ownerToken }
+    setPendingAvatar(params)
+    updateAvatarMutation.mutate(params)
+  }
+
+  const retryAttach = () => {
+    if (pendingAvatar) {
+      updateAvatarMutation.mutate(pendingAvatar)
+    }
   }
 
   // Covers every in-gallery mutation after the first attach (set-primary, remove,
@@ -63,11 +87,15 @@ export function usePerfilPage(): UsePerfilResult {
     displayName: formatFirstLast(employee?.user) || user?.name || '',
     email: user?.email ?? '',
     avatarUrl: user?.avatar_url,
+    initialGalleryId: user?.avatar_gallery?.id,
+    initialAssets: user?.avatar_gallery?.assets,
     isLoadingEmployee,
     isUploaderBusy,
     setIsUploaderBusy,
     onAvatarChange,
     onAssetsChange,
+    attachFailed: updateAvatarMutation.isError,
+    retryAttach,
     isSaving: updateAvatarMutation.isPending,
   }
 }

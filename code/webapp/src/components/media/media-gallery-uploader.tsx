@@ -11,6 +11,12 @@ export interface MediaGalleryUploaderProps {
   context: MediaContext
   label?: string
   disabled?: boolean
+  /** An already-attached gallery to hydrate the uploader with (e.g. the caller's
+   *  own current avatar gallery on the self-service profile page), instead of
+   *  always starting empty — lets its reorder/set-primary/remove/add controls
+   *  manage an existing gallery across page loads, not only a brand-new one. */
+  initialGalleryId?: string
+  initialAssets?: MediaGalleryAsset[]
   /** Fires whenever the resulting gallery changes — wire into react-hook-form via setValue. */
   onChange?: (galleryId: string | undefined, ownerToken: string | undefined) => void
   /**
@@ -42,6 +48,8 @@ export function MediaGalleryUploader({
   context,
   label = 'Photos',
   disabled = false,
+  initialGalleryId,
+  initialAssets,
   onChange,
   onBusyChange,
   onAssetsChange,
@@ -58,7 +66,7 @@ export function MediaGalleryUploader({
     setPrimaryAsset,
     moveAsset,
     clearError,
-  } = useMediaGalleryUploader(context)
+  } = useMediaGalleryUploader(context, { galleryId: initialGalleryId, assets: initialAssets })
 
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
