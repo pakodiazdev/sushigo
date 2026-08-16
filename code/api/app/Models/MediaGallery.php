@@ -110,7 +110,16 @@ class MediaGallery extends Model
      * Unattached (mid-form, no owning entity yet): the only signal is the
      * client-generated owner_token captured at creation — a gallery created
      * before this check existed (no stored token) falls back to allowing
-     * anyone with the route's base media.* permission, same as before.
+     * anyone with the route's base media.* permission, same as before. That
+     * fallback only stays safe for contexts that still require a base
+     * media.* permission on top of this check (item, dish, ...) — avatar
+     * context bypasses that permission entirely for its own owner (#420
+     * self-service avatars), so a token-less, unattached *avatar* gallery
+     * (a legacy row from before the owner_token column existed, now orphaned
+     * — e.g. a previous avatar detached by MediaAttachmentService on replace)
+     * must never fall back to "anyone can manage it": nobody can prove
+     * ownership of it anymore, so nobody may claim, edit, or delete it
+     * through this endpoint.
      *
      * Attached: delegates to each attached entity's own
      * AuthorizesMediaOwnership::userCanManageMedia() — an entity that
@@ -134,7 +143,7 @@ class MediaGallery extends Model
 
         if ($attachments->isEmpty()) {
             if (! $this->owner_token) {
-                return true;
+                return $this->context !== 'avatar';
             }
 
             return $providedToken !== null && hash_equals($this->owner_token, $providedToken);

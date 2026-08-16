@@ -290,4 +290,27 @@ class MediaAssetDeleteTest extends TestCase
 
         $this->deleteJson("/api/v1/media/assets/{$asset->public_id}")->assertForbidden();
     }
+
+    #[Test]
+    public function a_stranger_cannot_delete_an_orphaned_avatar_gallery_with_no_owner_token(): void
+    {
+        // See the matching test in MediaAssetUpdateTest for the full rationale — a
+        // token-less, unattached avatar gallery must be unmanageable by anyone now
+        // that avatar context bypasses the media.delete permission entirely.
+        $gallery = MediaGallery::create(['name' => 'Orphaned avatar gallery', 'context' => 'avatar']);
+        $asset = MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/photo.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'photo.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+
+        Passport::actingAs(User::factory()->create());
+
+        $this->deleteJson("/api/v1/media/assets/{$asset->public_id}")->assertForbidden();
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+    }
 }

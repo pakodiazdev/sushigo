@@ -157,7 +157,13 @@ be `avatar` (`Rule::exists(...)->where('context', 'avatar')`) — otherwise a ca
   the JSON body regardless of HTTP verb, so `DeleteMediaAssetRequest` needs no special handling —
   only the client-side contract differs. A gallery created with no token (shouldn't happen going
   forward, since the field is required) falls back to allowing anyone with the base permission,
-  same as before this existed.
+  same as before this existed — **except for `avatar` context**, where that fallback is refused
+  outright (`context !== 'avatar'` guard in `isManageableBy()`): avatar operations bypass the base
+  permission entirely (#420 self-service avatars), so "anyone" would otherwise mean literally
+  anyone, with no gate left at all. A token-less unattached avatar gallery is a real case, not a
+  hypothetical — it's a legacy row from before the `owner_token` column existed, or a previous
+  avatar `MediaAttachmentService` detached on replace, and it stays permanently unmanageable
+  through this endpoint once it exists (no one can prove ownership of it anymore).
 
 ```php
 // Item.php

@@ -565,4 +565,23 @@ class MediaUploadTest extends TestCase
             'owner_token' => 'token-1',
         ])->assertForbidden();
     }
+
+    #[Test]
+    public function no_one_can_continue_uploading_into_an_orphaned_avatar_gallery_with_no_owner_token(): void
+    {
+        // A legacy row from before the owner_token column existed, or a previous
+        // avatar detached by MediaAttachmentService on replace — now unattached and
+        // token-less. isManageableBy()'s "no token -> anyone" fallback only stayed
+        // safe while media.upload still gated every caller; since avatar context
+        // bypasses that permission entirely, nobody may add to it, not even an
+        // admin who separately holds media.upload.
+        $gallery = MediaGallery::create(['name' => 'Orphaned avatar gallery', 'context' => 'avatar']);
+
+        Passport::actingAs($this->adminUser());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('second.jpg'),
+            'media_gallery_id' => $gallery->public_id,
+        ])->assertForbidden();
+    }
 }
