@@ -6,7 +6,7 @@ import type { TodayAttendanceEmployee } from '@/types/attendance'
 import { todayDateCdmx } from '@/lib/datetime'
 import { useBusinessDate } from '@/stores/clock.store'
 
-export function useLeaveSummarySection(employeeId: string, employee: { id: string; code: string; user: { first_name: string | null; last_name: string | null } } | undefined) {
+export function useLeaveSummarySection(employeeId: string, employee: { id: string; code: string; user: { first_name: string | null; last_name: string | null; avatar_url: string | null } } | undefined) {
     const [showFullHistory, setShowFullHistory] = useState(false)
     const [filters, setFilters] = useState<LeaveFilters>({})
     const [page, setPage] = useState(1)
@@ -59,6 +59,7 @@ export function useLeaveSummarySection(employeeId: string, employee: { id: strin
             user: {
                 first_name: employee.user.first_name,
                 last_name: employee.user.last_name,
+                avatar_url: employee.user.avatar_url,
             },
             roles: [],
             daily_wage: null,

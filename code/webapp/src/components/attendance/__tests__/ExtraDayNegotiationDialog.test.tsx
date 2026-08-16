@@ -20,6 +20,7 @@ const employee: TodayAttendanceEmployee = {
   user: {
     first_name: 'María',
     last_name: 'García',
+            avatar_url: null,
   },
   roles: ['mesero'],
   daily_wage: null,

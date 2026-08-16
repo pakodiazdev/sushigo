@@ -15,7 +15,7 @@ vi.mock('@/services/overtime-bank-hooks', async (importOriginal) => {
   }
 })
 
-const mockEmployee = { id: 'emp-1', user: { first_name: 'Carlos', last_name: 'Mendoza' } }
+const mockEmployee = { id: 'emp-1', user: { first_name: 'Carlos', last_name: 'Mendoza', avatar_url: null } }
 
 describe('useManualOvertimeMovementDialog', () => {
   afterEach(() => {

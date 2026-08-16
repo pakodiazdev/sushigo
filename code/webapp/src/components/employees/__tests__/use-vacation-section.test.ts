@@ -49,7 +49,7 @@ const fakeEntitlement: VacationEntitlement = {
 
 const EMP_ID = 'emp-001'
 
-const fakeEmployee = { id: EMP_ID, user: { first_name: 'Carlos', last_name: 'Mendoza' } }
+const fakeEmployee = { id: EMP_ID, user: { first_name: 'Carlos', last_name: 'Mendoza', avatar_url: null } }
 
 beforeEach(() => {
   vi.clearAllMocks()

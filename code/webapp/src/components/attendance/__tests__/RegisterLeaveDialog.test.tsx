@@ -69,6 +69,7 @@ const mockEmployee: TodayAttendanceEmployee = {
     user: {
         first_name: 'Carlos',
         last_name: 'Mendoza',
+            avatar_url: null,
     },
     roles: [],
     daily_wage: null,

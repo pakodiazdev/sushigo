@@ -81,6 +81,7 @@ const mockRow: TodayAttendanceRow = {
         user: {
             first_name: 'John',
             last_name: 'Doe',
+            avatar_url: null,
         },
         roles: ['cajero'],
         daily_wage: null,
@@ -98,6 +99,7 @@ const mockRowWithAttendance: TodayAttendanceRow = {
         user: {
             first_name: 'Jane',
             last_name: 'Smith',
+            avatar_url: null,
         },
         roles: ['mesero', 'cocina'],
         daily_wage: null,

@@ -57,6 +57,7 @@ const mockEmployee: RegisterVacationRequestEmployee = {
     user: {
         first_name: 'Carlos',
         last_name: 'Mendoza',
+            avatar_url: null,
     },
 }
 

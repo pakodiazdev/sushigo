@@ -10,7 +10,7 @@ afterEach(() => {
 
 function buildRow(overrides: Partial<PayPeriodEmployeePreview> = {}): PayPeriodEmployeePreview {
   return {
-    employee: { id: 'EMP-001', first_name: 'Ana', last_name: 'Payroll', code: 'EMP-001' },
+    employee: { id: 'EMP-001', first_name: 'Ana', last_name: 'Payroll', code: 'EMP-001', avatar_url: null },
     base_pay: 1900,
     late_deductions: 50,
     unpaid_leave_deductions: 0,
