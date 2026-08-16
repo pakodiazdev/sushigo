@@ -368,6 +368,30 @@ describe('MediaGalleryUploader', () => {
       await waitFor(() => expect(onChange).toHaveBeenCalledWith('gallery-1', 'token-1'))
     })
 
+    it('fires again with undefined when the gallery returns to its hydrated (empty) starting values after a real upload-then-remove', async () => {
+      // Uploading then deleting the same photo brings galleryId/ownerToken back to
+      // exactly their mount-time values (undefined here) — a fix comparing against a
+      // value frozen once at mount would misread that as "still the initial state" and
+      // never report it, leaving the parent form still pointing at the deleted upload.
+      const onChange = vi.fn()
+
+      const { rerender } = render(<MediaGalleryUploader context="item" onChange={onChange} />)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onChange).not.toHaveBeenCalled()
+
+      mockHookState.galleryId = 'gallery-1'
+      mockHookState.ownerToken = 'token-1'
+      rerender(<MediaGalleryUploader context="item" onChange={onChange} />)
+      await waitFor(() => expect(onChange).toHaveBeenCalledWith('gallery-1', 'token-1'))
+
+      mockHookState.galleryId = undefined
+      mockHookState.ownerToken = undefined
+      rerender(<MediaGalleryUploader context="item" onChange={onChange} />)
+
+      await waitFor(() => expect(onChange).toHaveBeenCalledWith(undefined, undefined))
+      expect(onChange).toHaveBeenCalledTimes(2)
+    })
+
     it('still does not fire for the hydrated gallery under StrictMode, which mounts, tears down, and re-mounts effects', async () => {
       // A one-shot "have we run yet" ref survives StrictMode's simulated remount (refs
       // aren't reset by it) but reads as already-spent on the second invocation, so it
@@ -498,6 +522,34 @@ describe('MediaGalleryUploader', () => {
 
       await waitFor(() => expect(onAssetsChange).toHaveBeenCalledWith([updatedAsset]))
       expect(onAssetsChange).toHaveBeenCalledTimes(1)
+    })
+
+    it('fires again with an empty array when assets return to their hydrated (empty) starting value after a real upload-then-remove', async () => {
+      const asset = {
+        gallery_id: 'gallery-1',
+        asset_id: 'asset-1',
+        url: 'https://example.com/photo.jpg',
+        filename: 'photo.jpg',
+        mime_type: 'image/jpeg',
+        size: 100,
+        position: 0,
+        is_primary: true,
+      }
+      const onAssetsChange = vi.fn()
+
+      const { rerender } = render(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onAssetsChange).not.toHaveBeenCalled()
+
+      mockHookState.assets = [asset]
+      rerender(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
+      await waitFor(() => expect(onAssetsChange).toHaveBeenCalledWith([asset]))
+
+      mockHookState.assets = []
+      rerender(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
+
+      await waitFor(() => expect(onAssetsChange).toHaveBeenCalledWith([]))
+      expect(onAssetsChange).toHaveBeenCalledTimes(2)
     })
   })
 })

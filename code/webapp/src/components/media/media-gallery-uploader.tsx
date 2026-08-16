@@ -87,25 +87,35 @@ export function MediaGalleryUploader({
   const onAssetsChangeRef = useRef(onAssetsChange)
   onAssetsChangeRef.current = onAssetsChange
 
-  // Skipped for both effects below whenever the current value still matches the hydrated
-  // `initial` mount-time snapshot (see useMediaGalleryUploader) — that's not a change the
-  // parent needs to react to. Without this, a returning user with an existing gallery
-  // (e.g. the self-service avatar page) had their current photo silently re-submitted for
-  // saving on every page load, popping a misleading "photo updated" confirmation.
+  // Skipped for both effects below whenever the current value still matches the *last
+  // value actually reported* (seeded to the hydrated `initial` mount-time state, see
+  // useMediaGalleryUploader) — that's not a change the parent needs to react to. Without
+  // this, a returning user with an existing gallery (e.g. the self-service avatar page)
+  // had their current photo silently re-submitted for saving on every page load, popping
+  // a misleading "photo updated" confirmation.
+  //
+  // Comparing against the last *reported* value (updated every time the effect actually
+  // fires below) rather than a value frozen once at mount is what makes the
+  // return-to-initial transition still report: uploading a photo then deleting it again
+  // resets galleryId/assets back to exactly their mount-time values, and a frozen mount
+  // snapshot would wrongly treat that as "no change" too, leaving the parent form still
+  // pointing at the (now nonexistent) upload — see use-media-gallery-uploader.ts's own
+  // "the parent form never attaches an empty gallery on save" invariant.
   //
   // A one-shot "have we run yet" ref (flip a flag, skip once) is NOT StrictMode-safe: React
   // dev mode mounts, tears down, and re-mounts effects to surface hidden side effects, and
   // refs — unlike a fresh flag — survive that simulated remount, so the flag reads as
   // already-spent on the second (real) invocation and the hydrated state fires anyway.
-  // Comparing against a frozen mount-time snapshot instead is idempotent: every extra
-  // invocation with the same still-initial values keeps comparing equal and skipping, no
-  // matter how many times StrictMode re-runs it.
-  const initialGalleryIdentityRef = useRef({ galleryId, ownerToken })
+  // Comparing against last-reported instead is idempotent under that too: nothing else
+  // changes the underlying values between the two simulated invocations, so both compare
+  // against the same still-unmoved last-reported ref and both skip.
+  const lastReportedGalleryIdentityRef = useRef({ galleryId, ownerToken })
   useEffect(() => {
-    const initial = initialGalleryIdentityRef.current
-    if (galleryId === initial.galleryId && ownerToken === initial.ownerToken) {
+    const last = lastReportedGalleryIdentityRef.current
+    if (galleryId === last.galleryId && ownerToken === last.ownerToken) {
       return
     }
+    lastReportedGalleryIdentityRef.current = { galleryId, ownerToken }
     onChangeRef.current?.(galleryId, ownerToken)
   }, [galleryId, ownerToken])
 
@@ -113,11 +123,12 @@ export function MediaGalleryUploader({
     onBusyChangeRef.current?.(isUploading || isMutating || error !== null)
   }, [isUploading, isMutating, error])
 
-  const initialAssetsRef = useRef(assets)
+  const lastReportedAssetsRef = useRef(assets)
   useEffect(() => {
-    if (assets === initialAssetsRef.current) {
+    if (assets === lastReportedAssetsRef.current) {
       return
     }
+    lastReportedAssetsRef.current = assets
     onAssetsChangeRef.current?.(assets)
   }, [assets])
 
