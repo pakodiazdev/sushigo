@@ -13,6 +13,47 @@ import logoImage from '@/assets/sushigo-logo.png';
 import { useState, useRef, useEffect } from 'react';
 import { useCanAccess } from '@/hooks/use-can-access';
 
+interface UserMenuActionsProps {
+    readonly canAccessConfig: boolean;
+    readonly onProfile: () => void;
+    readonly onConfig: () => void;
+    readonly onLogout: () => void;
+}
+
+// Shared between the mobile and desktop dropdown menus, which otherwise
+// render an identical Mi perfil/Configuración/Cerrar Sesión item list.
+function UserMenuActions({ canAccessConfig, onProfile, onConfig, onLogout }: UserMenuActionsProps) {
+    return (
+        <>
+            <DropdownMenuItem
+                icon={<UserIcon className="h-4 w-4" />}
+                onClick={onProfile}
+            >
+                Mi perfil
+            </DropdownMenuItem>
+
+            {canAccessConfig && (
+                <DropdownMenuItem
+                    icon={<Settings className="h-4 w-4" />}
+                    onClick={onConfig}
+                >
+                    Configuración
+                </DropdownMenuItem>
+            )}
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+                icon={<LogOut className="h-4 w-4" />}
+                onClick={onLogout}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+                Cerrar Sesión
+            </DropdownMenuItem>
+        </>
+    );
+}
+
 export default function Header() {
     const { theme, toggleTheme } = useTheme();
     const { toggleMobileSidebar } = useSidebar();
@@ -26,6 +67,16 @@ export default function Header() {
     const handleLogout = () => {
         setIsUserMenuOpen(false);
         router.navigate({ to: '/logout' });
+    };
+
+    const handleNavigateProfile = () => {
+        setIsUserMenuOpen(false);
+        router.navigate({ to: '/perfil' });
+    };
+
+    const handleNavigateConfig = () => {
+        setIsUserMenuOpen(false);
+        router.navigate({ to: '/configuracion' });
     };
 
     // Cerrar menú al hacer clic fuera
@@ -139,37 +190,12 @@ export default function Header() {
                                     <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
                                 </div>
 
-                                <DropdownMenuItem
-                                    icon={<UserIcon className="h-4 w-4" />}
-                                    onClick={() => {
-                                        setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/perfil' });
-                                    }}
-                                >
-                                    Mi perfil
-                                </DropdownMenuItem>
-
-                                {canAccessConfig && (
-                                    <DropdownMenuItem
-                                        icon={<Settings className="h-4 w-4" />}
-                                        onClick={() => {
-                                            setIsUserMenuOpen(false);
-                                            router.navigate({ to: '/configuracion' });
-                                        }}
-                                    >
-                                        Configuración
-                                    </DropdownMenuItem>
-                                )}
-
-                                <DropdownMenuSeparator />
-
-                                <DropdownMenuItem
-                                    icon={<LogOut className="h-4 w-4" />}
-                                    onClick={handleLogout}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                    Cerrar Sesión
-                                </DropdownMenuItem>
+                                <UserMenuActions
+                                    canAccessConfig={canAccessConfig}
+                                    onProfile={handleNavigateProfile}
+                                    onConfig={handleNavigateConfig}
+                                    onLogout={handleLogout}
+                                />
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -187,37 +213,12 @@ export default function Header() {
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent open={isUserMenuOpen} align="right">
-                                <DropdownMenuItem
-                                    icon={<UserIcon className="h-4 w-4" />}
-                                    onClick={() => {
-                                        setIsUserMenuOpen(false);
-                                        router.navigate({ to: '/perfil' });
-                                    }}
-                                >
-                                    Mi perfil
-                                </DropdownMenuItem>
-
-                                {canAccessConfig && (
-                                    <DropdownMenuItem
-                                        icon={<Settings className="h-4 w-4" />}
-                                        onClick={() => {
-                                            setIsUserMenuOpen(false);
-                                            router.navigate({ to: '/configuracion' });
-                                        }}
-                                    >
-                                        Configuración
-                                    </DropdownMenuItem>
-                                )}
-
-                                <DropdownMenuSeparator />
-
-                                <DropdownMenuItem
-                                    icon={<LogOut className="h-4 w-4" />}
-                                    onClick={handleLogout}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                    Cerrar Sesión
-                                </DropdownMenuItem>
+                                <UserMenuActions
+                                    canAccessConfig={canAccessConfig}
+                                    onProfile={handleNavigateProfile}
+                                    onConfig={handleNavigateConfig}
+                                    onLogout={handleLogout}
+                                />
                             </DropdownMenuContent>
                         </DropdownMenu>
 
