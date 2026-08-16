@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Star, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { mediaContextAccept, useMediaGalleryUploader } from './use-media-gallery-uploader'
-import type { MediaContext } from '@/types/media'
+import type { MediaContext, MediaGalleryAsset } from '@/types/media'
 
 export interface MediaGalleryUploaderProps {
   /** What this gallery is for — fixes both the client-side file picker restriction (accept
@@ -27,6 +27,15 @@ export interface MediaGalleryUploaderProps {
    *    happen for them.
    */
   onBusyChange?: (isBusy: boolean) => void
+  /**
+   * Fires whenever the asset list itself changes — a new upload, a remove, a
+   * set-primary, or a reorder. Unlike onChange, this also fires for
+   * mutations that don't change galleryId/ownerToken (every one after the
+   * first upload): a consumer showing a preview of the *current* primary
+   * photo (e.g. the self-service avatar page) needs this to know its
+   * primary asset may have changed even when the gallery identity didn't.
+   */
+  onAssetsChange?: (assets: MediaGalleryAsset[]) => void
 }
 
 export function MediaGalleryUploader({
@@ -35,6 +44,7 @@ export function MediaGalleryUploader({
   disabled = false,
   onChange,
   onBusyChange,
+  onAssetsChange,
 }: Readonly<MediaGalleryUploaderProps>) {
   const {
     assets,
@@ -62,6 +72,8 @@ export function MediaGalleryUploader({
   onChangeRef.current = onChange
   const onBusyChangeRef = useRef(onBusyChange)
   onBusyChangeRef.current = onBusyChange
+  const onAssetsChangeRef = useRef(onAssetsChange)
+  onAssetsChangeRef.current = onAssetsChange
 
   useEffect(() => {
     onChangeRef.current?.(galleryId, ownerToken)
@@ -70,6 +82,10 @@ export function MediaGalleryUploader({
   useEffect(() => {
     onBusyChangeRef.current?.(isUploading || isMutating || error !== null)
   }, [isUploading, isMutating, error])
+
+  useEffect(() => {
+    onAssetsChangeRef.current?.(assets)
+  }, [assets])
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) {

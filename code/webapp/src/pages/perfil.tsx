@@ -21,6 +21,7 @@ export function PerfilPage() {
     isUploaderBusy,
     setIsUploaderBusy,
     onAvatarChange,
+    onAssetsChange,
     isSaving,
   } = usePerfilPage()
 
@@ -45,6 +46,7 @@ export function PerfilPage() {
               disabled={isSaving}
               onChange={onAvatarChange}
               onBusyChange={setIsUploaderBusy}
+              onAssetsChange={onAssetsChange}
             />
             {(isSaving || isUploaderBusy) && (
               <p className="mt-2 text-sm text-muted-foreground">Guardando...</p>

@@ -384,4 +384,53 @@ describe('MediaGalleryUploader', () => {
       await waitFor(() => expect(onBusyChange).toHaveBeenCalledWith(true))
     })
   })
+
+  describe('onAssetsChange callback', () => {
+    it('fires with the current assets on mount', async () => {
+      const asset = {
+        gallery_id: 'gallery-1',
+        asset_id: 'asset-1',
+        url: 'https://example.com/photo.jpg',
+        filename: 'photo.jpg',
+        mime_type: 'image/jpeg',
+        size: 100,
+        position: 0,
+        is_primary: true,
+      }
+      mockHookState.assets = [asset]
+      const onAssetsChange = vi.fn()
+
+      render(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
+
+      await waitFor(() => expect(onAssetsChange).toHaveBeenCalledWith([asset]))
+    })
+
+    it('fires again when the assets array reference changes without galleryId changing', async () => {
+      // Models set-primary/remove/reorder: the gallery itself doesn't change,
+      // only which asset the array holds — onChange's effect (keyed on
+      // galleryId/ownerToken) would not re-fire for this, but onAssetsChange must.
+      const asset = {
+        gallery_id: 'gallery-1',
+        asset_id: 'asset-1',
+        url: 'https://example.com/photo.jpg',
+        filename: 'photo.jpg',
+        mime_type: 'image/jpeg',
+        size: 100,
+        position: 0,
+        is_primary: true,
+      }
+      mockHookState.assets = [asset]
+      mockHookState.galleryId = 'gallery-1'
+      const onAssetsChange = vi.fn()
+
+      const { rerender } = render(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
+      await waitFor(() => expect(onAssetsChange).toHaveBeenCalledTimes(1))
+
+      const updatedAsset = { ...asset, is_primary: false }
+      mockHookState.assets = [updatedAsset]
+      rerender(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
+
+      await waitFor(() => expect(onAssetsChange).toHaveBeenCalledWith([updatedAsset]))
+    })
+  })
 })
