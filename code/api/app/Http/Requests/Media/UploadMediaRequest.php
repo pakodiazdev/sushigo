@@ -42,20 +42,28 @@ class UploadMediaRequest extends FormRequest
         // reaching the query below.
         $publicId = $this->rawStringInput('media_gallery_id');
 
-        if (! $publicId) {
-            $context = $this->rawStringInput('context');
+        return $publicId
+            ? $this->authorizesExistingGallery($publicId)
+            : $this->authorizesNewGallery();
+    }
 
-            // A missing/unrecognized context can never actually create anything —
-            // rules() rejects it with a clean 422 regardless of this outcome — so
-            // deferring to validation here is safe, and avoids masking that 422
-            // behind an unrelated 403 for a caller who also lacks media.upload.
-            if ($context === null || ! in_array($context, array_keys(config('media.contexts')), true)) {
-                return true;
-            }
+    private function authorizesNewGallery(): bool
+    {
+        $context = $this->rawStringInput('context');
 
-            return $context === 'avatar' || $this->user()->can('media.upload');
+        // A missing/unrecognized context can never actually create anything —
+        // rules() rejects it with a clean 422 regardless of this outcome — so
+        // deferring to validation here is safe, and avoids masking that 422
+        // behind an unrelated 403 for a caller who also lacks media.upload.
+        if ($context === null || ! in_array($context, array_keys(config('media.contexts')), true)) {
+            return true;
         }
 
+        return $context === 'avatar' || $this->user()->can('media.upload');
+    }
+
+    private function authorizesExistingGallery(string $publicId): bool
+    {
         $gallery = MediaGallery::where('public_id', $publicId)->first();
 
         if (! $gallery) {
