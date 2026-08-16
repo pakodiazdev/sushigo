@@ -41,11 +41,19 @@ export function usePerfilPage(): UsePerfilResult {
   // uploader's onChange effect is keyed on [galleryId, ownerToken] and neither
   // changes between the failed attempt and a retry, so it won't re-fire on its own.
   const [pendingAvatar, setPendingAvatar] = useState<{ mediaGalleryId: string; ownerToken?: string } | null>(null)
+  // True once the uploader's gallery is actually attached to this user — seeded from
+  // whether they already had an avatar_gallery when the page loaded (hydration counts as
+  // already attached, since MediaGalleryUploader intentionally does not re-run the attach
+  // mutation for its own hydrated initial state) and flipped by a successful attach
+  // mutation afterwards. Drives onAssetsChange below instead of updateAvatarMutation's own
+  // isSuccess, which never becomes true for a returning user unless they upload again.
+  const [isAttached, setIsAttached] = useState(() => Boolean(user?.avatar_gallery?.id))
 
   const updateAvatarMutation = useMutation({
     mutationFn: (params: { mediaGalleryId: string; ownerToken?: string }) =>
       profileApi.updateMyAvatar(params),
     onSuccess: async () => {
+      setIsAttached(true)
       // Re-pulls /auth/me so the store's user.avatar_url updates immediately —
       // this is what makes the header reflect the change without a new login.
       await refreshUser()
@@ -74,11 +82,11 @@ export function usePerfilPage(): UsePerfilResult {
   // Covers every in-gallery mutation after the first attach (set-primary, remove,
   // reorder) — none of those change galleryId/ownerToken, so onAvatarChange's effect
   // never re-fires for them, yet the resolved primary photo (and therefore
-  // avatarUrl()) can still change. Gated on isSuccess so this doesn't also fire a
-  // premature refresh for the very first upload, before the initial attach mutation
-  // above has actually completed.
+  // avatarUrl()) can still change. Gated on isAttached (not updateAvatarMutation's own
+  // isSuccess) so this also refreshes for a returning user managing their already-
+  // hydrated gallery, not just after a fresh attach in this session.
   const onAssetsChange = () => {
-    if (updateAvatarMutation.isSuccess) {
+    if (isAttached) {
       void refreshUser()
     }
   }

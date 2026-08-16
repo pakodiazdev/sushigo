@@ -17,7 +17,9 @@ export interface MediaGalleryUploaderProps {
    *  manage an existing gallery across page loads, not only a brand-new one. */
   initialGalleryId?: string
   initialAssets?: MediaGalleryAsset[]
-  /** Fires whenever the resulting gallery changes — wire into react-hook-form via setValue. */
+  /** Fires whenever the resulting gallery changes — wire into react-hook-form via setValue.
+   *  Does not fire on mount for the hydrated `initialGalleryId`/`initialAssets` state itself,
+   *  only for changes that happen afterwards (upload, remove, gallery reset). */
   onChange?: (galleryId: string | undefined, ownerToken: string | undefined) => void
   /**
    * Fires whenever an upload/remove/set-primary/reorder call is in flight, OR a prior upload
@@ -40,6 +42,8 @@ export interface MediaGalleryUploaderProps {
    * first upload): a consumer showing a preview of the *current* primary
    * photo (e.g. the self-service avatar page) needs this to know its
    * primary asset may have changed even when the gallery identity didn't.
+   * Like onChange, does not fire on mount for the hydrated `initialAssets`
+   * state itself.
    */
   onAssetsChange?: (assets: MediaGalleryAsset[]) => void
 }
@@ -83,7 +87,17 @@ export function MediaGalleryUploader({
   const onAssetsChangeRef = useRef(onAssetsChange)
   onAssetsChangeRef.current = onAssetsChange
 
+  // Skipped on mount for both effects below: galleryId/assets on the first render are
+  // exactly the hydrated `initial` values (see useMediaGalleryUploader), not a change the
+  // parent needs to react to. Without this, a returning user with an existing gallery
+  // (e.g. the self-service avatar page) had their current photo silently re-submitted for
+  // saving on every page load, popping a misleading "photo updated" confirmation.
+  const hasReportedChangeRef = useRef(false)
   useEffect(() => {
+    if (!hasReportedChangeRef.current) {
+      hasReportedChangeRef.current = true
+      return
+    }
     onChangeRef.current?.(galleryId, ownerToken)
   }, [galleryId, ownerToken])
 
@@ -91,7 +105,12 @@ export function MediaGalleryUploader({
     onBusyChangeRef.current?.(isUploading || isMutating || error !== null)
   }, [isUploading, isMutating, error])
 
+  const hasReportedAssetsRef = useRef(false)
   useEffect(() => {
+    if (!hasReportedAssetsRef.current) {
+      hasReportedAssetsRef.current = true
+      return
+    }
     onAssetsChangeRef.current?.(assets)
   }, [assets])
 
