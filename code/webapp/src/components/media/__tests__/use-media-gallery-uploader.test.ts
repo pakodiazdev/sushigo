@@ -78,6 +78,41 @@ describe('useMediaGalleryUploader', () => {
     })
   })
 
+  describe('hydration from initial', () => {
+    it('seeds assets and galleryId from an already-attached gallery (#420 self-service avatar)', () => {
+      const asset = makeAsset()
+      const { result } = renderHook(() =>
+        useMediaGalleryUploader('avatar', { galleryId: 'gallery-1', assets: [asset] })
+      )
+
+      expect(result.current.assets).toEqual([asset])
+      expect(result.current.galleryId).toBe('gallery-1')
+    })
+
+    it('leaves ownerToken undefined even when hydrated — an already-attached gallery proves ownership via the attachment, not a token', () => {
+      const asset = makeAsset()
+      const { result } = renderHook(() =>
+        useMediaGalleryUploader('avatar', { galleryId: 'gallery-1', assets: [asset] })
+      )
+
+      expect(result.current.ownerToken).toBeUndefined()
+    })
+
+    it('falls back to empty state when no initial is given', () => {
+      const { result } = renderHook(() => useMediaGalleryUploader('avatar', undefined))
+
+      expect(result.current.assets).toEqual([])
+      expect(result.current.galleryId).toBeUndefined()
+    })
+
+    it('falls back to empty state when initial has no galleryId', () => {
+      const { result } = renderHook(() => useMediaGalleryUploader('avatar', {}))
+
+      expect(result.current.assets).toEqual([])
+      expect(result.current.galleryId).toBeUndefined()
+    })
+  })
+
   describe('uploadFiles', () => {
     it('uploads a file and adds it to assets', async () => {
       const asset = makeAsset()

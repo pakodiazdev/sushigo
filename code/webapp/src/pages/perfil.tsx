@@ -3,6 +3,7 @@ import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { MediaGalleryUploader } from '@/components/media/media-gallery-uploader'
 import { usePerfilPage } from './use-perfil'
 
@@ -18,10 +19,14 @@ export function PerfilPage() {
     displayName,
     email,
     avatarUrl,
+    initialGalleryId,
+    initialAssets,
     isUploaderBusy,
     setIsUploaderBusy,
     onAvatarChange,
     onAssetsChange,
+    attachFailed,
+    retryAttach,
     isSaving,
   } = usePerfilPage()
 
@@ -44,12 +49,22 @@ export function PerfilPage() {
               context="avatar"
               label="Foto de perfil"
               disabled={isSaving}
+              initialGalleryId={initialGalleryId}
+              initialAssets={initialAssets}
               onChange={onAvatarChange}
               onBusyChange={setIsUploaderBusy}
               onAssetsChange={onAssetsChange}
             />
             {(isSaving || isUploaderBusy) && (
               <p className="mt-2 text-sm text-muted-foreground">Guardando...</p>
+            )}
+            {attachFailed && (
+              <div className="mt-2 flex items-center justify-between rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                <span>No se pudo guardar tu nueva foto de perfil.</span>
+                <Button type="button" variant="outline" size="sm" onClick={retryAttach} disabled={isSaving}>
+                  Reintentar
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>

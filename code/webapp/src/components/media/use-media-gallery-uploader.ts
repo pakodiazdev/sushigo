@@ -56,6 +56,14 @@ function validateFile(file: File, allowedExtensions: readonly string[]): string 
   return null
 }
 
+export interface UseMediaGalleryUploaderInitial {
+  /** An already-attached gallery's public_id (e.g. the caller's own current
+   *  avatar gallery) to hydrate the uploader with, instead of starting empty. */
+  galleryId?: string
+  /** That gallery's full asset list, in the same shape POST /media/upload returns. */
+  assets?: MediaGalleryAsset[]
+}
+
 export interface UseMediaGalleryUploaderResult {
   assets: MediaGalleryAsset[]
   /** Undefined until at least one asset exists this session — never sent for an emptied gallery. */
@@ -72,16 +80,28 @@ export interface UseMediaGalleryUploaderResult {
   clearError: () => void
 }
 
-export function useMediaGalleryUploader(context: MediaContext): UseMediaGalleryUploaderResult {
-  const [assets, setAssets] = useState<MediaGalleryAsset[]>([])
+export function useMediaGalleryUploader(
+  context: MediaContext,
+  initial?: UseMediaGalleryUploaderInitial,
+): UseMediaGalleryUploaderResult {
+  // Read once, at mount, via lazy initializers — matches useState/useRef's own
+  // one-time-initial-value semantics, and the callers that pass `initial`
+  // (e.g. the self-service avatar page) only render this component once
+  // their own data has already loaded (Layout's auth-loading gate), so
+  // there's no later value to react to.
+  const [assets, setAssets] = useState<MediaGalleryAsset[]>(() => initial?.assets ?? [])
   const [isUploading, setIsUploading] = useState(false)
   // Guards removeAsset/setPrimaryAsset/moveAsset against overlapping calls — e.g. a rapid
   // double-click on a reorder arrow before the first click's request resolves would otherwise
   // let two calls both read the same pre-move `assets` snapshot and race to mutate the server.
   const [isMutating, setIsMutating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // owner_token is never seeded from `initial`: it's only checked for a gallery
+  // still unattached to anything (MediaGallery::isManageableBy()) — a hydrated
+  // gallery is already attached to the caller themselves, so ownership there is
+  // proven by that attachment, not a token.
   const ownerTokenRef = useRef<string | undefined>(undefined)
-  const galleryIdRef = useRef<string | undefined>(undefined)
+  const galleryIdRef = useRef<string | undefined>(initial?.galleryId)
 
   // MEDIA_CONTEXT_EXTENSIONS[context] is already a stable module-level array reference per
   // context key — useMemo just keeps this from re-deriving on every render for no reason.

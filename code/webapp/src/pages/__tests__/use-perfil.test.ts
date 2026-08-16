@@ -13,7 +13,13 @@ vi.mock('@/components/ui/toast-context', () => ({
 }))
 
 const mockRefreshUser = vi.fn()
-const mockUser = { id: 1, name: 'Ana García', email: 'ana@sushigo.com', avatar_url: null }
+const mockUser: {
+  id: number
+  name: string
+  email: string
+  avatar_url: string | null
+  avatar_gallery: { id: string; assets: Array<{ asset_id: string; is_primary: boolean }> } | null
+} = { id: 1, name: 'Ana García', email: 'ana@sushigo.com', avatar_url: null, avatar_gallery: null }
 vi.mock('@/stores/auth.store', () => ({
   useAuthStore: (selector: (state: { user: typeof mockUser; refreshUser: () => Promise<void> }) => unknown) =>
     selector({ user: mockUser, refreshUser: mockRefreshUser }),
@@ -31,6 +37,7 @@ vi.mock('@/services/profile-api', () => ({
 
 afterEach(() => {
   vi.clearAllMocks()
+  mockUser.avatar_gallery = null
 })
 
 import { usePerfilPage } from '../use-perfil'
@@ -153,5 +160,81 @@ describe('usePerfilPage', () => {
     })
 
     await waitFor(() => expect(mockRefreshUser).toHaveBeenCalled())
+  })
+
+  it('derives initialGalleryId/initialAssets from the auth store users avatar_gallery, so a returning user can manage their existing gallery', () => {
+    mockUser.avatar_gallery = { id: 'gallery-99', assets: [{ asset_id: 'asset-1', is_primary: true }] }
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    const { wrapper } = makeWrapper()
+
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    expect(result.current.initialGalleryId).toBe('gallery-99')
+    expect(result.current.initialAssets).toEqual([{ asset_id: 'asset-1', is_primary: true }])
+  })
+
+  it('leaves initialGalleryId/initialAssets undefined when there is no existing avatar gallery', () => {
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    const { wrapper } = makeWrapper()
+
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    expect(result.current.initialGalleryId).toBeUndefined()
+    expect(result.current.initialAssets).toBeUndefined()
+  })
+
+  it('marks attachFailed after the attach mutation fails', async () => {
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    mockUpdateMyAvatar.mockRejectedValueOnce(new Error('Network error'))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    expect(result.current.attachFailed).toBe(false)
+
+    act(() => {
+      result.current.onAvatarChange('01JKGALLERY0000000000000', 'token-1')
+    })
+
+    await waitFor(() => expect(result.current.attachFailed).toBe(true))
+  })
+
+  it('retries the same gallery/token on retryAttach, since onChange will not re-fire on its own', async () => {
+    // The uploader's onChange effect is keyed on [galleryId, ownerToken] — neither
+    // changes between the failed attempt and a retry, so usePerfilPage must retain
+    // and resubmit the same params itself.
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    mockUpdateMyAvatar.mockRejectedValueOnce(new Error('Network error'))
+    mockUpdateMyAvatar.mockResolvedValueOnce({ ...mockUser, avatar_url: 'https://example.com/new.jpg' })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    act(() => {
+      result.current.onAvatarChange('01JKGALLERY0000000000000', 'token-1')
+    })
+    await waitFor(() => expect(result.current.attachFailed).toBe(true))
+
+    act(() => {
+      result.current.retryAttach()
+    })
+
+    await waitFor(() =>
+      expect(mockUpdateMyAvatar).toHaveBeenNthCalledWith(2, {
+        mediaGalleryId: '01JKGALLERY0000000000000',
+        ownerToken: 'token-1',
+      }),
+    )
+    await waitFor(() => expect(result.current.attachFailed).toBe(false))
+  })
+
+  it('does nothing when retryAttach is called with no prior failed attempt', () => {
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    act(() => {
+      result.current.retryAttach()
+    })
+
+    expect(mockUpdateMyAvatar).not.toHaveBeenCalled()
   })
 })
