@@ -5,6 +5,7 @@ namespace Tests\Feature\Media;
 use App\Models\MediaAsset;
 use App\Models\MediaGallery;
 use App\Models\User;
+use App\Services\Media\MediaAttachmentService;
 use App\Services\Media\UploadMediaService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Filesystem\FilesystemAdapter;
@@ -563,6 +564,31 @@ class MediaUploadTest extends TestCase
             'file' => UploadedFile::fake()->image('second.jpg'),
             'media_gallery_id' => $gallery,
             'owner_token' => 'token-1',
+        ])->assertForbidden();
+    }
+
+    #[Test]
+    public function a_user_with_users_update_but_not_media_upload_cannot_add_to_another_users_avatar_gallery(): void
+    {
+        // See the matching test in MediaAssetUpdateTest for the full rationale —
+        // isManageableBy()'s users.update admin override must not also skip
+        // media.upload on someone else's already-attached avatar gallery.
+        Permission::firstOrCreate(['name' => 'users.update', 'guard_name' => 'api']);
+        $role = Role::firstOrCreate(['name' => 'users-update-only', 'guard_name' => 'api']);
+        $role->givePermissionTo('users.update');
+        $caller = User::factory()->create();
+        $caller->assignRole('users-update-only');
+
+        $owner = User::factory()->create();
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery', 'context' => 'avatar', 'owner_token' => 'owner-token']);
+        app(MediaAttachmentService::class)($owner, $gallery->id);
+
+        Passport::actingAs($caller);
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('second.jpg'),
+            'media_gallery_id' => $gallery->public_id,
+            'owner_token' => 'owner-token',
         ])->assertForbidden();
     }
 

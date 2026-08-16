@@ -163,4 +163,31 @@ class MediaGallery extends Model
             return $attachable->userCanManageMedia($user);
         });
     }
+
+    /**
+     * True only when $user is this avatar gallery's own owner — narrower than
+     * isManageableBy(), which for an attached gallery also passes for anyone
+     * holding users.update via User::userCanManageMedia()'s admin override.
+     * That override exists so an admin can manage an *employee's* avatar
+     * through the employee form (#401); it must not additionally let that
+     * admin skip media.update/media.delete/media.upload on someone else's
+     * avatar assets via the #420 self-service bypass, which is meant only
+     * for a caller managing their own avatar. Callers must already have
+     * confirmed isManageableBy() before calling this — an unattached gallery
+     * with a token match is trivially "own" here since only its owner could
+     * have supplied that token.
+     */
+    public function isOwnAvatarOf(User $user): bool
+    {
+        $attachments = $this->attachments;
+
+        if ($attachments->isEmpty()) {
+            return true;
+        }
+
+        return $attachments->every(
+            fn (MediaAttachment $attachment) => $attachment->attachable_type === User::class
+                && (int) $attachment->attachable_id === $user->id
+        );
+    }
 }
