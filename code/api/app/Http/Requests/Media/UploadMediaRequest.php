@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Media;
 
+use App\Http\Requests\Concerns\AuthorizesMediaGalleryContextAccess;
 use App\Http\Requests\Concerns\ReadsRawStringInput;
 use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Models\MediaGallery;
@@ -22,7 +23,7 @@ use Illuminate\Validation\Rule;
  */
 class UploadMediaRequest extends FormRequest
 {
-    use ReadsRawStringInput, ResolvesPublicIdReferences;
+    use AuthorizesMediaGalleryContextAccess, ReadsRawStringInput, ResolvesPublicIdReferences;
 
     /**
      * The route carries no `permission:media.upload` middleware (see
@@ -70,21 +71,10 @@ class UploadMediaRequest extends FormRequest
             return true; // let the `exists` rule produce a clean 422
         }
 
-        if (! $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
-            return false;
-        }
-
         // The gallery's own stored context governs here, not this request's
         // (possibly absent/spoofed) `context` input — same reasoning as
-        // allowedExtensionsForFile() below. isOwnAvatarOf(), not
-        // isManageableBy() alone, gates the bypass — see
-        // UpdateMediaAssetRequest::authorize() for why the users.update admin
-        // override must not also skip media.upload on someone else's avatar.
-        if ($gallery->context === 'avatar' && $gallery->isOwnAvatarOf($this->user())) {
-            return true;
-        }
-
-        return $this->user()->can('media.upload');
+        // allowedExtensionsForFile() below.
+        return $this->authorizeMediaGalleryContextAccess($gallery, 'media.upload');
     }
 
     public function rules(): array

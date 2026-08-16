@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Media;
 
+use App\Http\Requests\Concerns\AuthorizesMediaGalleryContextAccess;
 use App\Http\Requests\Concerns\ReadsRawStringInput;
 use App\Models\MediaAsset;
 use Illuminate\Foundation\Http\FormRequest;
@@ -15,16 +16,13 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class DeleteMediaAssetRequest extends FormRequest
 {
-    use ReadsRawStringInput;
+    use AuthorizesMediaGalleryContextAccess, ReadsRawStringInput;
 
     /**
      * The route carries no `permission:media.delete` middleware (see
-     * routes/api/media.php) — see UpdateMediaAssetRequest::authorize() for
+     * routes/api/media.php) — see AuthorizesMediaGalleryContextAccess for
      * why: avatar assets are open to their owner once ownership is
-     * established below, every other context still requires media.delete.
-     * isOwnAvatarOf(), not isManageableBy() alone, gates the bypass — see
-     * UpdateMediaAssetRequest::authorize() for why the users.update admin
-     * override must not also skip media.delete here.
+     * established, every other context still requires media.delete.
      */
     public function authorize(): bool
     {
@@ -34,17 +32,7 @@ class DeleteMediaAssetRequest extends FormRequest
             return true;
         }
 
-        $gallery = $asset->mediaGallery;
-
-        if (! $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
-            return false;
-        }
-
-        if ($gallery->context === 'avatar' && $gallery->isOwnAvatarOf($this->user())) {
-            return true;
-        }
-
-        return $this->user()->can('media.delete');
+        return $this->authorizeMediaGalleryContextAccess($asset->mediaGallery, 'media.delete');
     }
 
     public function rules(): array
