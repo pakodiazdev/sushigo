@@ -7,12 +7,15 @@ use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentPeriod;
+use App\Models\MediaAsset;
+use App\Models\MediaGallery;
 use App\Models\PayPeriod;
 use App\Models\PayPeriodEmployee;
 use App\Models\PayPeriodLine;
 use App\Models\ScheduleDay;
 use App\Models\User;
 use App\Models\WageHistory;
+use App\Services\Media\MediaAttachmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Permission;
@@ -152,6 +155,30 @@ class ReclosePayPeriodApiTest extends TestCase
         $this->assertDatabaseMissing('pay_period_employees', ['id' => $staleEmployeeRowId]);
         $this->assertDatabaseCount('pay_period_employees', 1);
         $this->assertGreaterThan(0, PayPeriodLine::count());
+    }
+
+    public function test_reclose_exposes_the_employees_avatar_url(): void
+    {
+        $employee = $this->createActiveEmployee();
+
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery']);
+        MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/'.uniqid().'.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'avatar.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+        app(MediaAttachmentService::class)($employee->user, $gallery->id);
+
+        $payPeriod = $this->createReopenedPeriod();
+
+        $response = $this->patchJson("/api/v1/pay-periods/{$payPeriod->public_id}/reclose");
+
+        $response->assertStatus(200);
+        $this->assertNotNull($response->json('data.employees.0.employee.avatar_url'));
     }
 
     public function test_manager_cannot_reclose_a_period(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\PayPeriods;
 
 use App\Actions\Payroll\RecalculatePayPeriodEmployeesAction;
+use App\Http\Controllers\Api\V1\PayPeriods\Concerns\LoadsPayPeriodEmployeeAvatarRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ReclosePayPeriodRequest;
 use App\Http\Resources\PayPeriods\PayPeriodResource;
@@ -48,6 +49,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ReclosePayPeriodController extends Controller
 {
+    use LoadsPayPeriodEmployeeAvatarRelations;
+
     public function __construct(
         private RecalculatePayPeriodEmployeesAction $recalculate,
         private EmployeeRepository $employeeRepository,
@@ -83,7 +86,10 @@ class ReclosePayPeriodController extends Controller
             ]);
         });
 
-        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines']);
+        $payPeriod->load(array_merge(
+            ['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines'],
+            $this->payPeriodEmployeeAvatarRelations()
+        ));
 
         return new PayPeriodResource($payPeriod);
     }

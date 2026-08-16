@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\PayPeriods;
 
+use App\Http\Controllers\Api\V1\PayPeriods\Concerns\LoadsPayPeriodEmployeeAvatarRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ShowPayPeriodRequest;
 use App\Http\Resources\PayPeriods\PayPeriodResource;
@@ -37,17 +38,14 @@ use App\Models\PayPeriod;
  */
 class ShowPayPeriodController extends Controller
 {
+    use LoadsPayPeriodEmployeeAvatarRelations;
+
     public function __invoke(ShowPayPeriodRequest $request, PayPeriod $payPeriod): PayPeriodResource
     {
-        $payPeriod->load([
-            'closedBy',
-            'reopenedBy',
-            'payPeriodEmployees.employee.user',
-            // #420 — matches PayPeriodEmployeeResource::avatar_url's read chain.
-            'payPeriodEmployees.employee.user.mediaAttachments' => fn ($q) => $q->where('is_primary', true),
-            'payPeriodEmployees.employee.user.mediaAttachments.mediaGallery.mediaAssets' => fn ($q) => $q->where('is_primary', true),
-            'payPeriodEmployees.lines',
-        ]);
+        $payPeriod->load(array_merge(
+            ['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines'],
+            $this->payPeriodEmployeeAvatarRelations()
+        ));
 
         return new PayPeriodResource($payPeriod);
     }
