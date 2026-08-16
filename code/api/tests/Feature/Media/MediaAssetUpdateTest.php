@@ -263,6 +263,31 @@ class MediaAssetUpdateTest extends TestCase
     }
 
     #[Test]
+    public function a_user_with_users_update_but_not_media_update_cannot_modify_another_users_avatar_asset(): void
+    {
+        // isManageableBy() would allow this via User::userCanManageMedia()'s
+        // users.update admin override (meant to let an admin manage an
+        // *employee's* avatar through the employee form, #401) — the avatar
+        // self-service bypass must not extend that override into skipping
+        // media.update here too.
+        Permission::firstOrCreate(['name' => 'users.update', 'guard_name' => 'api']);
+        $role = Role::firstOrCreate(['name' => 'users-update-only', 'guard_name' => 'api']);
+        $role->givePermissionTo('users.update');
+        $caller = User::factory()->create();
+        $caller->assignRole('users-update-only');
+
+        $owner = User::factory()->create();
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery', 'context' => 'avatar']);
+        app(MediaAttachmentService::class)($owner, $gallery->id);
+        $asset = $this->createAsset(['media_gallery_id' => $gallery->id, 'is_primary' => true]);
+
+        Passport::actingAs($caller);
+
+        $this->patchJson("/api/v1/media/assets/{$asset->public_id}", ['position' => 1])
+            ->assertForbidden();
+    }
+
+    #[Test]
     public function a_stranger_cannot_update_an_orphaned_avatar_gallery_with_no_owner_token(): void
     {
         // A legacy row from before the owner_token column existed (or a previous avatar

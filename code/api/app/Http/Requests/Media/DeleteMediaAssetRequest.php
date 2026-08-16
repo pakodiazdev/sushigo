@@ -22,6 +22,9 @@ class DeleteMediaAssetRequest extends FormRequest
      * routes/api/media.php) — see UpdateMediaAssetRequest::authorize() for
      * why: avatar assets are open to their owner once ownership is
      * established below, every other context still requires media.delete.
+     * isOwnAvatarOf(), not isManageableBy() alone, gates the bypass — see
+     * UpdateMediaAssetRequest::authorize() for why the users.update admin
+     * override must not also skip media.delete here.
      */
     public function authorize(): bool
     {
@@ -31,11 +34,17 @@ class DeleteMediaAssetRequest extends FormRequest
             return true;
         }
 
-        if (! $asset->mediaGallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
+        $gallery = $asset->mediaGallery;
+
+        if (! $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
             return false;
         }
 
-        return $asset->mediaGallery->context === 'avatar' || $this->user()->can('media.delete');
+        if ($gallery->context === 'avatar' && $gallery->isOwnAvatarOf($this->user())) {
+            return true;
+        }
+
+        return $this->user()->can('media.delete');
     }
 
     public function rules(): array

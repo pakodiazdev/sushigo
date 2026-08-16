@@ -27,6 +27,14 @@ class UpdateMediaAssetRequest extends FormRequest
      * assets are open to their owner (self-service replace/reorder/set-
      * primary, #420) once ownership is established below, while every
      * other context still requires media.update on top of ownership.
+     *
+     * The avatar bypass deliberately checks isOwnAvatarOf(), not just
+     * isManageableBy(): the latter also passes for anyone holding
+     * users.update via User::userCanManageMedia()'s admin override (meant to
+     * let an admin manage an *employee's* avatar through the employee form,
+     * #401), which must still require media.update here like any other
+     * admin-managed mutation — the self-service bypass is only for a caller
+     * managing their own avatar.
      */
     public function authorize(): bool
     {
@@ -36,11 +44,17 @@ class UpdateMediaAssetRequest extends FormRequest
             return true;
         }
 
-        if (! $asset->mediaGallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
+        $gallery = $asset->mediaGallery;
+
+        if (! $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
             return false;
         }
 
-        return $asset->mediaGallery->context === 'avatar' || $this->user()->can('media.update');
+        if ($gallery->context === 'avatar' && $gallery->isOwnAvatarOf($this->user())) {
+            return true;
+        }
+
+        return $this->user()->can('media.update');
     }
 
     public function rules(): array

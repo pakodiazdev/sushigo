@@ -76,8 +76,15 @@ class UploadMediaRequest extends FormRequest
 
         // The gallery's own stored context governs here, not this request's
         // (possibly absent/spoofed) `context` input — same reasoning as
-        // allowedExtensionsForFile() below.
-        return $gallery->context === 'avatar' || $this->user()->can('media.upload');
+        // allowedExtensionsForFile() below. isOwnAvatarOf(), not
+        // isManageableBy() alone, gates the bypass — see
+        // UpdateMediaAssetRequest::authorize() for why the users.update admin
+        // override must not also skip media.upload on someone else's avatar.
+        if ($gallery->context === 'avatar' && $gallery->isOwnAvatarOf($this->user())) {
+            return true;
+        }
+
+        return $this->user()->can('media.upload');
     }
 
     public function rules(): array

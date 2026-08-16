@@ -117,14 +117,27 @@ None of `POST /media/upload`, `PATCH /media/assets/{id}`, or `DELETE /media/asse
 route-level `permission:media.*` middleware — each permission check moved into its own
 `FormRequest::authorize()` instead, gated per **context** rather than per route: once ownership
 passes, an `avatar`-context operation (a new gallery, or continuing/mutating one whose *stored*
-context is `avatar`) is open to any authenticated user, since
+context is `avatar`) is open to the gallery's own owner, since
 [#420](https://github.com/pakodiazdev/sushigo/issues/420) requires the self-service avatar flow —
 upload, replace, reorder, set-primary, remove — to work end to end for every role, not just
 `admin`/`manager`. Every other context still requires the matching `media.upload`/`media.update`/
 `media.delete` permission on top of ownership. Uploading is additionally safe to open up
-unconditionally because it only ever creates or extends an *unattached* gallery — it grants no
-capability by itself; the real security boundary stays at the entity-specific attach step below
-(`UpdateMyAvatarRequest`, `UpdateEmployeeRequest`, ...), which is unaffected by this bypass.
+unconditionally for a brand-new gallery because it only ever creates or extends an *unattached*
+gallery — it grants no capability by itself; the real security boundary stays at the
+entity-specific attach step below (`UpdateMyAvatarRequest`, `UpdateEmployeeRequest`, ...), which is
+unaffected by this bypass.
+
+**"the gallery's own owner", not just `isManageableBy()`.** The three `FormRequest`s gate the
+avatar bypass on `MediaGallery::isOwnAvatarOf(User $user)`, a check narrower than
+`isManageableBy()` alone: for an *attached* gallery, `isManageableBy()` also passes for anyone
+holding `users.update` via `User::userCanManageMedia()`'s admin override below — that override
+exists so an admin can manage an *employee's* avatar through the employee form (#401), and must
+not additionally let that admin skip `media.update`/`media.delete`/`media.upload` on someone
+else's avatar assets through the raw `/media/assets/{id}` or continuing-upload endpoints. The
+self-service bypass is only for a caller managing their **own** avatar; every other caller
+(including one with `users.update`) still needs the matching `media.*` permission there, same as
+before #420. An *unattached* gallery is trivially "own" once `isManageableBy()` has already
+confirmed the caller supplied a matching `owner_token` — only its owner could have done that.
 `UpdateMyAvatarRequest` additionally requires the referenced gallery's stored `context` to already
 be `avatar` (`Rule::exists(...)->where('context', 'avatar')`) — otherwise a caller who can manage an
 `item`/`dish` gallery (those contexts allow MP4/MOV) could attach it as their avatar, and

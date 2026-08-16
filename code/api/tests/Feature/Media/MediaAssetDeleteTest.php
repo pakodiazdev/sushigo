@@ -292,6 +292,35 @@ class MediaAssetDeleteTest extends TestCase
     }
 
     #[Test]
+    public function a_user_with_users_update_but_not_media_delete_cannot_delete_another_users_avatar_asset(): void
+    {
+        // See the matching test in MediaAssetUpdateTest for the full rationale.
+        Permission::firstOrCreate(['name' => 'users.update', 'guard_name' => 'api']);
+        $role = Role::firstOrCreate(['name' => 'users-update-only', 'guard_name' => 'api']);
+        $role->givePermissionTo('users.update');
+        $caller = User::factory()->create();
+        $caller->assignRole('users-update-only');
+
+        $owner = User::factory()->create();
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery', 'context' => 'avatar']);
+        app(MediaAttachmentService::class)($owner, $gallery->id);
+        $asset = MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/photo.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'photo.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+
+        Passport::actingAs($caller);
+
+        $this->deleteJson("/api/v1/media/assets/{$asset->public_id}")->assertForbidden();
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+    }
+
+    #[Test]
     public function a_stranger_cannot_delete_an_orphaned_avatar_gallery_with_no_owner_token(): void
     {
         // See the matching test in MediaAssetUpdateTest for the full rationale — a
