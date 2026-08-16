@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\PayPeriods;
 
+use App\Http\Controllers\Api\V1\PayPeriods\Concerns\LoadsPayPeriodEmployeeAvatarRelations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PayPeriods\ReopenPayPeriodRequest;
 use App\Http\Resources\PayPeriods\PayPeriodResource;
@@ -52,6 +53,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ReopenPayPeriodController extends Controller
 {
+    use LoadsPayPeriodEmployeeAvatarRelations;
+
     public function __construct(private readonly ApplicationClock $clock) {}
 
     public function __invoke(ReopenPayPeriodRequest $request, PayPeriod $payPeriod): PayPeriodResource
@@ -70,7 +73,10 @@ class ReopenPayPeriodController extends Controller
             'reopen_reason' => $request->reason(),
         ]);
 
-        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines']);
+        $payPeriod->load(array_merge(
+            ['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines'],
+            $this->payPeriodEmployeeAvatarRelations()
+        ));
 
         return new PayPeriodResource($payPeriod);
     }

@@ -4,8 +4,12 @@ namespace Tests\Feature\AttendancePayroll;
 
 use App\Models\Branch;
 use App\Models\Employee;
+use App\Models\MediaAsset;
+use App\Models\MediaGallery;
 use App\Models\PayPeriod;
+use App\Models\PayPeriodEmployee;
 use App\Models\User;
+use App\Services\Media\MediaAttachmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Permission;
@@ -71,6 +75,46 @@ class ReopenPayPeriodApiTest extends TestCase
         $this->assertEquals($this->admin->id, $payPeriod->reopened_by);
         $this->assertNotNull($payPeriod->reopened_at);
         $this->assertEquals('Corrección de horas extra mal capturadas', $payPeriod->reopen_reason);
+    }
+
+    public function test_reopen_exposes_the_employees_avatar_url(): void
+    {
+        $payPeriod = $this->createClosedPeriod();
+
+        $employee = Employee::factory()->create(['is_active' => true]);
+        PayPeriodEmployee::create([
+            'pay_period_id' => $payPeriod->id,
+            'employee_id' => $employee->id,
+            'base_pay' => 350,
+            'late_deductions' => 0,
+            'unpaid_leave_deductions' => 0,
+            'overtime_pay' => 0,
+            'extra_day_pay' => 0,
+            'punctuality_bonus' => 0,
+            'holiday_pay' => 0,
+            'other_adjustments' => 0,
+            'total_pay' => 350,
+            'free_hours_earned' => 0,
+        ]);
+
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery']);
+        MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/'.uniqid().'.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'avatar.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+        app(MediaAttachmentService::class)($employee->user, $gallery->id);
+
+        $response = $this->patchJson("/api/v1/pay-periods/{$payPeriod->public_id}/reopen", [
+            'reason' => 'Corrección de horas extra mal capturadas',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertNotNull($response->json('data.employees.0.employee.avatar_url'));
     }
 
     public function test_reopen_creates_an_audit_log_entry(): void
