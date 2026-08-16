@@ -113,6 +113,26 @@ describe('usePerfilPage', () => {
     await waitFor(() => expect(mockShowSuccess).toHaveBeenCalled())
   })
 
+  it('treats the save as successful even when the post-save refresh fails, instead of marking attachFailed', async () => {
+    // TanStack Query runs onSuccess inside the mutation's own try/catch — an
+    // unhandled rejection from refreshUser() would otherwise flip the mutation to
+    // its error state (attachFailed true, error toast) over an unrelated refresh
+    // hiccup, even though the avatar PATCH itself already succeeded.
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    mockUpdateMyAvatar.mockResolvedValueOnce({ ...mockUser, avatar_url: 'https://example.com/new.jpg' })
+    mockRefreshUser.mockRejectedValueOnce(new Error('Network error'))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    act(() => {
+      result.current.onAvatarChange('01JKGALLERY0000000000000', 'token-1')
+    })
+
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalled())
+    expect(result.current.attachFailed).toBe(false)
+    expect(mockShowError).not.toHaveBeenCalled()
+  })
+
   it('shows an error toast and does not refresh the store when the attach fails', async () => {
     mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
     mockUpdateMyAvatar.mockRejectedValueOnce(new Error('Network error'))
@@ -243,6 +263,22 @@ describe('usePerfilPage', () => {
 
     await waitFor(() => expect(mockRefreshUser).toHaveBeenCalled())
     expect(mockUpdateMyAvatar).not.toHaveBeenCalled()
+  })
+
+  it('does not throw when the refresh triggered by an in-gallery asset change fails', async () => {
+    mockUser.avatar_gallery = { id: 'gallery-99', assets: [{ asset_id: 'asset-1', is_primary: true }] }
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    mockRefreshUser.mockRejectedValueOnce(new Error('Network error'))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    expect(() => {
+      act(() => {
+        result.current.onAssetsChange()
+      })
+    }).not.toThrow()
+
+    await waitFor(() => expect(mockRefreshUser).toHaveBeenCalled())
   })
 
   it('does nothing when retryAttach is called with no prior failed attempt', () => {
