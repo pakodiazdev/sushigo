@@ -54,9 +54,18 @@ export function usePerfilPage(): UsePerfilResult {
       profileApi.updateMyAvatar(params),
     onSuccess: async () => {
       setIsAttached(true)
-      // Re-pulls /auth/me so the store's user.avatar_url updates immediately —
-      // this is what makes the header reflect the change without a new login.
-      await refreshUser()
+      try {
+        // Re-pulls /auth/me so the store's user.avatar_url updates immediately —
+        // this is what makes the header reflect the change without a new login.
+        // Wrapped in its own try/catch: TanStack Query runs onSuccess inside the
+        // mutation's own try/catch, so letting this reject would flip an
+        // already-successful PATCH /auth/me/avatar into the mutation's error
+        // state (red "no se pudo guardar" banner) over an unrelated refresh
+        // hiccup — the photo was saved either way.
+        await refreshUser()
+      } catch (error: unknown) {
+        console.error('[usePerfilPage] Failed to refresh the signed-in user after saving the avatar:', error)
+      }
       showSuccess('Tu foto de perfil ha sido actualizada.', 'Foto actualizada')
     },
     onError: (error: unknown) => {
@@ -87,7 +96,12 @@ export function usePerfilPage(): UsePerfilResult {
   // hydrated gallery, not just after a fresh attach in this session.
   const onAssetsChange = () => {
     if (isAttached) {
-      void refreshUser()
+      // .catch, not a bare void call: an uncaught rejection here would surface as an
+      // unhandled promise rejection — this refresh is best-effort, same reasoning as
+      // the one in updateAvatarMutation's onSuccess above.
+      refreshUser().catch((error: unknown) => {
+        console.error('[usePerfilPage] Failed to refresh the signed-in user after an in-gallery change:', error)
+      })
     }
   }
 
