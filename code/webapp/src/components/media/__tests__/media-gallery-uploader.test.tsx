@@ -1,6 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
+import { StrictMode } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { MediaGalleryUploader } from '../media-gallery-uploader'
@@ -366,6 +367,25 @@ describe('MediaGalleryUploader', () => {
 
       await waitFor(() => expect(onChange).toHaveBeenCalledWith('gallery-1', 'token-1'))
     })
+
+    it('still does not fire for the hydrated gallery under StrictMode, which mounts, tears down, and re-mounts effects', async () => {
+      // A one-shot "have we run yet" ref survives StrictMode's simulated remount (refs
+      // aren't reset by it) but reads as already-spent on the second invocation, so it
+      // would incorrectly let the hydrated state through on that second pass — this is
+      // what regresses without the mount-time snapshot comparison.
+      mockHookState.galleryId = 'gallery-1'
+      mockHookState.ownerToken = 'token-1'
+      const onChange = vi.fn()
+
+      render(
+        <StrictMode>
+          <MediaGalleryUploader context="item" onChange={onChange} />
+        </StrictMode>
+      )
+
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onChange).not.toHaveBeenCalled()
+    })
   })
 
   describe('onBusyChange callback', () => {
@@ -421,6 +441,30 @@ describe('MediaGalleryUploader', () => {
       const onAssetsChange = vi.fn()
 
       render(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
+
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onAssetsChange).not.toHaveBeenCalled()
+    })
+
+    it('still does not fire for the hydrated assets under StrictMode, which mounts, tears down, and re-mounts effects', async () => {
+      const asset = {
+        gallery_id: 'gallery-1',
+        asset_id: 'asset-1',
+        url: 'https://example.com/photo.jpg',
+        filename: 'photo.jpg',
+        mime_type: 'image/jpeg',
+        size: 100,
+        position: 0,
+        is_primary: true,
+      }
+      mockHookState.assets = [asset]
+      const onAssetsChange = vi.fn()
+
+      render(
+        <StrictMode>
+          <MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />
+        </StrictMode>
+      )
 
       await new Promise((resolve) => setTimeout(resolve, 0))
       expect(onAssetsChange).not.toHaveBeenCalled()
