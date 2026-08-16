@@ -64,6 +64,11 @@ describe('VacationReviewContent', () => {
     vi.clearAllMocks()
   })
 
+  it('renders an Avatar next to the employee name', () => {
+    render(<VacationReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByRole('img', { name: 'Ana García' })).toBeDefined()
+  })
+
   it('renders the "Vacaciones" title and the requested dates', () => {
     render(<VacationReviewContent request={makeRequest()} onClose={vi.fn()} />)
 

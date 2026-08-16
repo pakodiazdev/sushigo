@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { ManualOvertimeMovementDialog } from '../ManualOvertimeMovementDialog'
 import type { UseManualOvertimeMovementDialogResult, ManualOvertimeMovementEmployee } from '../use-manual-overtime-movement-dialog'
 
@@ -80,6 +80,13 @@ describe('ManualOvertimeMovementDialog', () => {
             <ManualOvertimeMovementDialog isOpen={true} employee={mockEmployee} onClose={vi.fn()} />
         )
         expect(document.body.textContent).toContain('Mendoza, Carlos')
+    })
+
+    it('renders an Avatar next to the employee name', () => {
+        render(
+            <ManualOvertimeMovementDialog isOpen={true} employee={mockEmployee} onClose={vi.fn()} />
+        )
+        expect(screen.getByRole('img', { name: 'Mendoza, Carlos' })).toBeDefined()
     })
 
     it('renders movement type, date, minutes and reason fields', () => {

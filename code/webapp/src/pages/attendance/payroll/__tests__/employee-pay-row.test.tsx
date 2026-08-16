@@ -35,6 +35,7 @@ describe('EmployeePayRow', () => {
     const { container } = render(<EmployeePayRow row={buildRow()} testId="employee-detail-row" />)
 
     expect(screen.getByText('Ana Payroll')).toBeDefined()
+    expect(screen.getByRole('img', { name: 'Ana Payroll' })).toBeDefined()
     expect(screen.getByText(/Base:/)).toBeDefined()
     expect(container.textContent).toContain('−$50.00')
     expect(container.textContent).toContain('+$150.00')

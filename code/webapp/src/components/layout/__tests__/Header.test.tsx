@@ -210,6 +210,31 @@ describe('Header — user dropdown', () => {
   })
 })
 
+// ─── Profile Navigation ──────────────────────────────────────────────────────
+
+describe('Header — profile', () => {
+  it('navigates to /perfil when "Mi perfil" item is clicked', () => {
+    render(<Header />)
+    const triggers = screen.getAllByTestId('dropdown-trigger')
+    if (triggers[0]) fireEvent.click(triggers[0])
+
+    const items = screen.getAllByTestId('dropdown-item')
+    const profileItem = items.find((item) => item.textContent?.includes('Mi perfil'))
+    expect(profileItem).toBeDefined()
+    if (profileItem) {
+      fireEvent.click(profileItem)
+      expect(mockRouterNavigate).toHaveBeenCalledWith({ to: '/perfil' })
+    }
+  })
+
+  it('renders "Mi perfil" in both mobile and desktop menus', () => {
+    render(<Header />)
+    const items = screen.getAllByTestId('dropdown-item')
+    const profileItems = items.filter((item) => item.textContent?.includes('Mi perfil'))
+    expect(profileItems.length).toBe(2)
+  })
+})
+
 // ─── Logout Navigation ───────────────────────────────────────────────────────
 
 describe('Header — logout', () => {

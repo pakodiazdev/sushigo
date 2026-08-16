@@ -95,6 +95,11 @@ describe('LeaveReviewContent', () => {
     expect(screen.getByText('Incapacidad médica')).toBeDefined()
   })
 
+  it('renders an Avatar next to the employee name', () => {
+    render(<LeaveReviewContent request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByRole('img', { name: 'Ana García' })).toBeDefined()
+  })
+
   it('falls back to "Permiso" when leave type is not found', () => {
     render(<LeaveReviewContent request={makeRequest({ payload: { leave_type_id: 999, dates: ['2026-06-15'] } })} onClose={vi.fn()} />)
     expect(screen.getByText('Permiso')).toBeDefined()

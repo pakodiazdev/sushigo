@@ -380,3 +380,49 @@ describe('logout', () => {
         expect(useAuthStore.getState().isAuthenticated).toBe(false)
     })
 })
+
+// ─── refreshUser ───────────────────────────────────────────────────────────────
+
+describe('refreshUser', () => {
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
+
+    it('updates the store with a fresh /auth/me response — e.g. after a self-service avatar change (#420)', async () => {
+        const branch = createBranch(1, 'Sucursal Centro')
+        const ou = createOperatingUnit(branch)
+        const assignment = createAssignment(ou)
+        const refreshedUser = createUser({
+            avatar_url: 'https://example.com/new-avatar.jpg',
+            roles: [createRole('admin')],
+            operating_units: [assignment],
+        })
+        vi.spyOn(authService, 'getMe').mockResolvedValueOnce({ status: 200, data: refreshedUser })
+
+        useAuthStore.setState({
+            user: createUser({ avatar_url: null }),
+            isAdmin: false,
+            isSuperAdmin: false,
+            currentBranch: branch,
+        })
+
+        await useAuthStore.getState().refreshUser()
+
+        expect(useAuthStore.getState().user?.avatar_url).toBe('https://example.com/new-avatar.jpg')
+        expect(useAuthStore.getState().isAdmin).toBe(true)
+    })
+
+    it('keeps the current branch when it is still among the refreshed branches', async () => {
+        const branch = createBranch(1, 'Sucursal Centro')
+        const ou = createOperatingUnit(branch)
+        const assignment = createAssignment(ou)
+        const refreshedUser = createUser({ operating_units: [assignment] })
+        vi.spyOn(authService, 'getMe').mockResolvedValueOnce({ status: 200, data: refreshedUser })
+
+        useAuthStore.setState({ user: createUser(), currentBranch: branch })
+
+        await useAuthStore.getState().refreshUser()
+
+        expect(useAuthStore.getState().currentBranch?.id).toBe(branch.id)
+    })
+})

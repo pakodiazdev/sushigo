@@ -298,6 +298,11 @@ describe('EmployeeAttendanceCard', () => {
         expect(getByText('Doe, John')).toBeDefined()
     })
 
+    it('renders an Avatar next to the employee name', () => {
+        const { getByRole } = render(<EmployeeAttendanceCard {...defaultProps} />)
+        expect(getByRole('img', { name: 'Doe, John' })).toBeDefined()
+    })
+
     it('renders employee code', () => {
         const { getByText } = render(<EmployeeAttendanceCard {...defaultProps} />)
         expect(getByText('EMP001')).toBeDefined()

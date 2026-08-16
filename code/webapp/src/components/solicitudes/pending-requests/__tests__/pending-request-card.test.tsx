@@ -59,6 +59,11 @@ describe('PendingRequestCard — basic render', () => {
     expect(screen.getByText('Ana García')).toBeDefined()
   })
 
+  it('renders an Avatar next to the employee name', () => {
+    render(<PendingRequestCard request={makeRequest()} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
+    expect(screen.getByRole('img', { name: 'Ana García' })).toBeDefined()
+  })
+
   it('renders the request type label', () => {
     render(<PendingRequestCard request={makeRequest()} onReview={vi.fn()} onCancel={vi.fn()} isCancelling={false} />)
     expect(screen.getByText('➕ Día extra')).toBeDefined()
