@@ -5,6 +5,7 @@ namespace Tests\Feature\Media;
 use App\Models\MediaAsset;
 use App\Models\MediaGallery;
 use App\Models\User;
+use App\Services\Media\MediaAttachmentService;
 use App\Services\Media\UpdateMediaAssetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -224,6 +225,38 @@ class MediaAssetUpdateTest extends TestCase
     {
         Passport::actingAs(User::factory()->create());
         $asset = $this->createAsset();
+
+        $this->patchJson("/api/v1/media/assets/{$asset->public_id}", ['position' => 1])
+            ->assertForbidden();
+    }
+
+    #[Test]
+    public function a_user_without_media_update_permission_can_reorder_their_own_avatar_asset(): void
+    {
+        // #420 — the self-service avatar uploader's reorder/set-primary controls call
+        // this endpoint directly, so avatar-context assets must bypass media.update for
+        // their own owner, same as the upload step already does.
+        $user = User::factory()->create();
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery', 'context' => 'avatar']);
+        app(MediaAttachmentService::class)($user, $gallery->id);
+        $asset = $this->createAsset(['media_gallery_id' => $gallery->id, 'is_primary' => true]);
+
+        Passport::actingAs($user);
+
+        $this->patchJson("/api/v1/media/assets/{$asset->public_id}", ['position' => 2])
+            ->assertOk()
+            ->assertJsonPath('data.position', 2);
+    }
+
+    #[Test]
+    public function a_user_without_media_update_permission_still_cannot_update_a_non_avatar_asset_they_own(): void
+    {
+        $user = User::factory()->create();
+        $gallery = MediaGallery::create(['name' => 'Item gallery', 'context' => 'item']);
+        app(MediaAttachmentService::class)($user, $gallery->id);
+        $asset = $this->createAsset(['media_gallery_id' => $gallery->id]);
+
+        Passport::actingAs($user);
 
         $this->patchJson("/api/v1/media/assets/{$asset->public_id}", ['position' => 1])
             ->assertForbidden();

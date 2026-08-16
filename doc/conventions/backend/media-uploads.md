@@ -109,21 +109,27 @@ instead of a recurring schedule.
 
 ## 5) Ownership authorization
 
-`PATCH /media/assets/{id}` and `DELETE /media/assets/{id}` are gated by route-level
-`media.update`/`media.delete` permissions, but that alone only proves the caller can touch *some*
-gallery — not that they're allowed to touch *this* one. `MediaGallery::isManageableBy(User $user,
-?string $ownerToken)` (`app/Models/MediaGallery.php`) closes that gap, and every media
-`FormRequest::authorize()` calls it:
+Being able to touch *some* gallery isn't enough to prove a caller is allowed to touch *this* one.
+`MediaGallery::isManageableBy(User $user, ?string $ownerToken)` (`app/Models/MediaGallery.php`)
+closes that gap, and every media `FormRequest::authorize()` calls it before anything else below.
 
-`POST /media/upload` carries **no** route-level `media.upload` middleware — that check moved into
-`UploadMediaRequest::authorize()` instead, gated per **context** rather than per route: an
-`avatar`-context upload (new gallery, or continuing an existing gallery whose *stored* context is
-`avatar`) is open to any authenticated user, since [#420](https://github.com/pakodiazdev/sushigo/issues/420)
-requires self-service avatar uploads to work for every role, not just `admin`/`manager`. Every other
-context still requires `$user->can('media.upload')`. This is safe because uploading only ever
-creates or extends an *unattached* gallery — it grants no capability by itself; the real security
-boundary stays at the entity-specific attach step below (`UpdateMyAvatarRequest`,
-`UpdateEmployeeRequest`, ...), which is unaffected by this bypass.
+None of `POST /media/upload`, `PATCH /media/assets/{id}`, or `DELETE /media/assets/{id}` carry a
+route-level `permission:media.*` middleware — each permission check moved into its own
+`FormRequest::authorize()` instead, gated per **context** rather than per route: once ownership
+passes, an `avatar`-context operation (a new gallery, or continuing/mutating one whose *stored*
+context is `avatar`) is open to any authenticated user, since
+[#420](https://github.com/pakodiazdev/sushigo/issues/420) requires the self-service avatar flow —
+upload, replace, reorder, set-primary, remove — to work end to end for every role, not just
+`admin`/`manager`. Every other context still requires the matching `media.upload`/`media.update`/
+`media.delete` permission on top of ownership. Uploading is additionally safe to open up
+unconditionally because it only ever creates or extends an *unattached* gallery — it grants no
+capability by itself; the real security boundary stays at the entity-specific attach step below
+(`UpdateMyAvatarRequest`, `UpdateEmployeeRequest`, ...), which is unaffected by this bypass.
+`UpdateMyAvatarRequest` additionally requires the referenced gallery's stored `context` to already
+be `avatar` (`Rule::exists(...)->where('context', 'avatar')`) — otherwise a caller who can manage an
+`item`/`dish` gallery (those contexts allow MP4/MOV) could attach it as their avatar, and
+`User::avatarUrl()` would return a video URL that every avatar surface renders through a plain
+`<img>`.
 
 - **Attached to an entity** (has one or more `MediaAttachment` rows) — delegates to each attached
   model's `App\Contracts\AuthorizesMediaOwnership::userCanManageMedia(User $user)`. `Item`

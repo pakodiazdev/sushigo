@@ -20,6 +20,14 @@ class UpdateMediaAssetRequest extends FormRequest
 {
     use ReadsRawStringInput;
 
+    /**
+     * The route carries no `permission:media.update` middleware (see
+     * routes/api/media.php) — that check now lives here, gated per the
+     * asset's stored gallery context, mirroring UploadMediaRequest: avatar
+     * assets are open to their owner (self-service replace/reorder/set-
+     * primary, #420) once ownership is established below, while every
+     * other context still requires media.update on top of ownership.
+     */
     public function authorize(): bool
     {
         $asset = $this->route('mediaAsset');
@@ -28,7 +36,11 @@ class UpdateMediaAssetRequest extends FormRequest
             return true;
         }
 
-        return $asset->mediaGallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'));
+        if (! $asset->mediaGallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
+            return false;
+        }
+
+        return $asset->mediaGallery->context === 'avatar' || $this->user()->can('media.update');
     }
 
     public function rules(): array

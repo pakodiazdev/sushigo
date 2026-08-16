@@ -17,6 +17,12 @@ class DeleteMediaAssetRequest extends FormRequest
 {
     use ReadsRawStringInput;
 
+    /**
+     * The route carries no `permission:media.delete` middleware (see
+     * routes/api/media.php) — see UpdateMediaAssetRequest::authorize() for
+     * why: avatar assets are open to their owner once ownership is
+     * established below, every other context still requires media.delete.
+     */
     public function authorize(): bool
     {
         $asset = $this->route('mediaAsset');
@@ -25,7 +31,11 @@ class DeleteMediaAssetRequest extends FormRequest
             return true;
         }
 
-        return $asset->mediaGallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'));
+        if (! $asset->mediaGallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
+            return false;
+        }
+
+        return $asset->mediaGallery->context === 'avatar' || $this->user()->can('media.delete');
     }
 
     public function rules(): array
