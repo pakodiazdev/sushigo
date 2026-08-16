@@ -37,6 +37,7 @@ function makeRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest 
     id: '01HZTEST00000001',
     employee_id: '01HZTEST00000002',
     employee_name: 'Ana García',
+    avatar_url: null,
     type: 'EXTRA_DAY',
     status: 'PENDING',
     payload: {

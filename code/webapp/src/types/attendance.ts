@@ -106,6 +106,7 @@ export interface TodayAttendanceEmployee {
   user: {
     first_name: string | null
     last_name: string | null
+    avatar_url?: string | null
   }
   roles: string[]
   /** Computed daily wage: hourly_rate × weekly_scheduled_hours / 6. Null when no wage is configured. */

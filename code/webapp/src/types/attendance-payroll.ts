@@ -96,6 +96,7 @@ export interface PayPeriodEmployeePreview {
     first_name: string
     last_name: string
     code: string
+    avatar_url?: string | null
   }
   base_pay: number
   late_deductions: number

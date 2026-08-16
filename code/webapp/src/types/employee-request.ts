@@ -5,6 +5,7 @@ export interface EmployeeRequest {
   id: string
   employee_id: string
   employee_name: string
+  avatar_url: string | null
   type: EmployeeRequestType
   status: EmployeeRequestStatus
   payload: Record<string, unknown> | null

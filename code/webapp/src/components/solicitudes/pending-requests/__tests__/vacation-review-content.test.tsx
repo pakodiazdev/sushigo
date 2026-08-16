@@ -37,6 +37,7 @@ function makeRequest(overrides: Partial<EmployeeRequest> = {}): EmployeeRequest 
     id: 'req-1',
     employee_id: 'emp-1',
     employee_name: 'Ana García',
+    avatar_url: null,
     type: 'VACATION',
     status: 'PENDING',
     payload: { dates: ['2026-08-10', '2026-08-12'] },
