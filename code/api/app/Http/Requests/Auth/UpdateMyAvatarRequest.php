@@ -22,14 +22,28 @@ class UpdateMyAvatarRequest extends FormRequest
     use AuthorizesMediaGalleryOwnership, ReadsRawStringInput, ResolvesPublicIdReferences;
 
     /**
-     * Unlike UpdateEmployeeRequest, no separate "who owns the target" check is
-     * needed here: the target is always $this->user() itself, so
-     * User::userCanManageMedia() is trivially satisfied by identity alone —
-     * the generic gallery-hijack guard is the only rule this endpoint needs.
+     * authorizesMediaGalleryOwnership() alone is not enough here: for an already
+     * *attached* gallery, MediaGallery::isManageableBy() delegates to
+     * User::userCanManageMedia(), which also passes for anyone holding
+     * users.update via its admin override (added in #401 so an admin can manage
+     * an *employee's* avatar through the employee form) — not just the gallery's
+     * actual owner. Left unchecked, a caller with users.update could PATCH this
+     * strictly self-service endpoint with another employee's already-attached
+     * avatar gallery id and silently claim it as their own. isOwnAvatarOf() is
+     * the narrower "true owner, no admin override" check — same reasoning as
+     * AuthorizesMediaGalleryContextAccess, except this endpoint has no
+     * permission-based fallback at all: an admin must use the employee form to
+     * manage someone else's avatar, never this one.
      */
     public function authorize(): bool
     {
-        return $this->authorizesMediaGalleryOwnership();
+        if (! $this->authorizesMediaGalleryOwnership()) {
+            return false;
+        }
+
+        $gallery = MediaGallery::where('public_id', $this->rawStringInput('media_gallery_id'))->first();
+
+        return ! $gallery || $gallery->isOwnAvatarOf($this->user());
     }
 
     public function rules(): array

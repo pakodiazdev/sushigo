@@ -18,10 +18,12 @@ use Tests\TestCase;
 /**
  * #420 — PATCH /auth/me/avatar lets an authenticated user attach/replace
  * their own avatar without holding users.update. Mirrors EmployeeAvatarTest's
- * upload-first/attach-on-save pattern, but the acting user and the avatar's
- * target are always the same User, so User::userCanManageMedia() is
- * trivially satisfied and no separate "who owns the target" check is needed
- * beyond the generic gallery-hijack guard (see UpdateMyAvatarRequest).
+ * upload-first/attach-on-save pattern, but this endpoint is strictly
+ * self-service: the acting user and the avatar's target must always be the
+ * same User, so it requires true ownership (isOwnAvatarOf()) on top of the
+ * generic gallery-hijack guard, deliberately excluding the users.update
+ * admin override that isManageableBy() alone would otherwise honor (see
+ * UpdateMyAvatarRequest).
  */
 class UpdateMyAvatarTest extends TestCase
 {
@@ -188,6 +190,49 @@ class UpdateMyAvatarTest extends TestCase
             'media_gallery_id' => $this->galleryNumericId($victimGallery['gallery_id']),
             'attachable_type' => User::class,
             'attachable_id' => $victim->id,
+        ]);
+    }
+
+    #[Test]
+    public function a_user_with_users_update_cannot_claim_another_users_already_attached_avatar(): void
+    {
+        // isManageableBy() would allow this via User::userCanManageMedia()'s
+        // users.update admin override (meant to let an admin manage an
+        // *employee's* avatar through the employee form, #401) — this
+        // strictly self-service endpoint must require true ownership
+        // (isOwnAvatarOf()), not just "may manage", or a caller holding
+        // users.update could silently claim another employee's already-
+        // attached avatar gallery as their own via this endpoint instead of
+        // the employee form.
+        Permission::firstOrCreate(['name' => 'users.update', 'guard_name' => 'api']);
+        $role = Role::firstOrCreate(['name' => 'users-update-only', 'guard_name' => 'api']);
+        $role->givePermissionTo('users.update');
+        $attacker = User::factory()->create();
+        $attacker->assignRole('users-update-only');
+
+        $victim = User::factory()->create();
+        Passport::actingAs($victim);
+        $victimGallery = $this->uploadGallery();
+        $this->patchJson('/api/v1/auth/me/avatar', [
+            'media_gallery_id' => $victimGallery['gallery_id'],
+            'owner_token' => $victimGallery['owner_token'],
+        ])->assertOk();
+
+        Passport::actingAs($attacker);
+
+        $this->patchJson('/api/v1/auth/me/avatar', [
+            'media_gallery_id' => $victimGallery['gallery_id'],
+            'owner_token' => $victimGallery['owner_token'],
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('media_attachments', [
+            'media_gallery_id' => $this->galleryNumericId($victimGallery['gallery_id']),
+            'attachable_type' => User::class,
+            'attachable_id' => $victim->id,
+        ]);
+        $this->assertDatabaseMissing('media_attachments', [
+            'media_gallery_id' => $this->galleryNumericId($victimGallery['gallery_id']),
+            'attachable_id' => $attacker->id,
         ]);
     }
 
