@@ -1,5 +1,6 @@
 import { Loader2, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { Input } from '@/components/ui/input'
@@ -46,14 +47,17 @@ export function ManualOvertimeMovementDialog({
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 border-b border-border px-6 py-4">
-        <div>
-          <h3
-            id="manual-overtime-movement-title"
-            className="text-base font-semibold text-foreground"
-          >
-            Movimiento manual
-          </h3>
-          <p className="mt-0.5 text-sm text-muted-foreground">{employeeName}</p>
+        <div className="flex items-center gap-2">
+          {employee && <Avatar name={employeeName} imageUrl={employee.user.avatar_url} size="sm" />}
+          <div>
+            <h3
+              id="manual-overtime-movement-title"
+              className="text-base font-semibold text-foreground"
+            >
+              Movimiento manual
+            </h3>
+            <p className="mt-0.5 text-sm text-muted-foreground">{employeeName}</p>
+          </div>
         </div>
         <button
           type="button"

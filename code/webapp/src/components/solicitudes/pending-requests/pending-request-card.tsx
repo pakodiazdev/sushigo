@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { XCircle, Loader2 } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatCurrency, formatDatesLabel } from '@/lib/format'
@@ -98,11 +99,14 @@ export function PendingRequestCard({ request, onReview, onCancel, isCancelling }
     <>
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1 min-w-0">
-            <CardBody request={request} />
-            {request.notes && (
-              <p className="text-xs text-muted-foreground italic truncate">"{request.notes}"</p>
-            )}
+          <div className="flex items-start gap-2 min-w-0">
+            <Avatar name={request.employee_name} imageUrl={request.avatar_url} size="sm" className="mt-0.5 shrink-0" />
+            <div className="space-y-1 min-w-0">
+              <CardBody request={request} />
+              {request.notes && (
+                <p className="text-xs text-muted-foreground italic truncate">"{request.notes}"</p>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <button

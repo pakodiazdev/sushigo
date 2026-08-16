@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/form-fields'
@@ -49,6 +50,11 @@ export function LeaveReviewContent({ request, onClose }: LeaveReviewContentProps
   return (
     <>
       <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Avatar name={request.employee_name} imageUrl={request.avatar_url} size="sm" />
+          <p className="text-sm font-medium text-foreground">{request.employee_name}</p>
+        </div>
+
         <div className="rounded-md border border-border bg-muted/30 p-3 space-y-1">
           <p className="text-sm font-semibold text-foreground">{leaveType?.name ?? 'Permiso'}</p>
           {payload && (

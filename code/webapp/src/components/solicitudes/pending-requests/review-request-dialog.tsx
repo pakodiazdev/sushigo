@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/form-fields'
@@ -50,6 +51,11 @@ function InnerDialog({ request, onClose }: { readonly request: EmployeeRequest; 
   return (
     <>
       <form onSubmit={handleSubmit(handleApprove)} className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Avatar name={request.employee_name} imageUrl={request.avatar_url} size="sm" />
+          <p className="text-sm font-medium text-foreground">{request.employee_name}</p>
+        </div>
+
         {/* Header info */}
         <div className="space-y-1">
           <p className="text-sm font-semibold text-foreground capitalize">{date ? formatDate(date) : '—'}</p>

@@ -1,4 +1,4 @@
-import { Menu, Moon, Sun, Bell, Search, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Menu, Moon, Sun, Bell, Search, LogOut, Settings, ChevronDown, User as UserIcon } from 'lucide-react';
 import { useTheme } from '@/contexts/theme-context';
 import { useSidebar } from '@/contexts/sidebar-context';
 import { useAuthStore } from '@/stores/auth.store';
@@ -139,6 +139,16 @@ export default function Header() {
                                     <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
                                 </div>
 
+                                <DropdownMenuItem
+                                    icon={<UserIcon className="h-4 w-4" />}
+                                    onClick={() => {
+                                        setIsUserMenuOpen(false);
+                                        router.navigate({ to: '/perfil' });
+                                    }}
+                                >
+                                    Mi perfil
+                                </DropdownMenuItem>
+
                                 {canAccessConfig && (
                                     <DropdownMenuItem
                                         icon={<Settings className="h-4 w-4" />}
@@ -177,6 +187,16 @@ export default function Header() {
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent open={isUserMenuOpen} align="right">
+                                <DropdownMenuItem
+                                    icon={<UserIcon className="h-4 w-4" />}
+                                    onClick={() => {
+                                        setIsUserMenuOpen(false);
+                                        router.navigate({ to: '/perfil' });
+                                    }}
+                                >
+                                    Mi perfil
+                                </DropdownMenuItem>
+
                                 {canAccessConfig && (
                                     <DropdownMenuItem
                                         icon={<Settings className="h-4 w-4" />}

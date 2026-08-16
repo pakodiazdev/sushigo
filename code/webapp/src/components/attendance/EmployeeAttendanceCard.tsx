@@ -16,6 +16,7 @@ import {
     Pencil,
     Loader2,
 } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -443,11 +444,14 @@ export function EmployeeAttendanceCard({
         >
             {/* Header: Name + Phase Badge + Weekly Summary */}
             <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate text-foreground">
-                        {formatLastFirst(row.employee.user)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{row.employee.code}</p>
+                <div className="flex min-w-0 items-center gap-2">
+                    <Avatar name={formatLastFirst(row.employee.user)} imageUrl={row.employee.user.avatar_url} size="sm" />
+                    <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate text-foreground">
+                            {formatLastFirst(row.employee.user)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{row.employee.code}</p>
+                    </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                     {onWeeklySummary && (

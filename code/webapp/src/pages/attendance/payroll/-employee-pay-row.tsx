@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Avatar } from '@/components/ui/avatar'
 import type { PayPeriodEmployeePreview, PayPeriodLine } from '@/types/attendance-payroll'
 
 // Shared between the close-preview page and the closed-period detail page —
@@ -25,7 +26,10 @@ export function EmployeePayRow({ row, testId }: Readonly<EmployeePayRowProps>) {
         className="flex w-full items-center justify-between px-4 py-3 text-left"
         onClick={() => setExpanded(prev => !prev)}
       >
-        <span className="font-medium text-foreground">{name}</span>
+        <span className="flex items-center gap-2 font-medium text-foreground">
+          <Avatar name={name} imageUrl={row.employee.avatar_url} size="sm" />
+          {name}
+        </span>
         <div className="flex items-center gap-6 text-sm">
           <span className="text-muted-foreground">
             Base: <span className="font-mono">${row.base_pay.toFixed(2)}</span>

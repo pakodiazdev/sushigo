@@ -1,6 +1,7 @@
 import { Loader2, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { Controller } from 'react-hook-form'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { FormField, Textarea } from '@/components/ui/form-fields'
 import { MultiDateCalendar } from '@/components/ui/multi-date-calendar'
@@ -59,19 +60,22 @@ export function RegisterVacationRequestDialog({
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 border-b border-border px-6 py-4">
-        <div>
-          <h3
-            id="register-vacation-request-title"
-            className="text-base font-semibold text-foreground"
-          >
-            Programar vacaciones
-          </h3>
-          <p className="mt-0.5 text-sm text-muted-foreground">{employeeName}</p>
-          {willAutoApprove ? (
-            <p className="mt-0.5 text-xs text-emerald-600">Se registrará como aprobada de inmediato</p>
-          ) : (
-            <p className="mt-0.5 text-xs text-amber-600">Solicitud — requiere aprobación</p>
-          )}
+        <div className="flex items-center gap-2">
+          {employee && <Avatar name={employeeName} imageUrl={employee.user.avatar_url} size="sm" />}
+          <div>
+            <h3
+              id="register-vacation-request-title"
+              className="text-base font-semibold text-foreground"
+            >
+              Programar vacaciones
+            </h3>
+            <p className="mt-0.5 text-sm text-muted-foreground">{employeeName}</p>
+            {willAutoApprove ? (
+              <p className="mt-0.5 text-xs text-emerald-600">Se registrará como aprobada de inmediato</p>
+            ) : (
+              <p className="mt-0.5 text-xs text-amber-600">Solicitud — requiere aprobación</p>
+            )}
+          </div>
         </div>
         <button
           type="button"
