@@ -463,9 +463,39 @@ class MediaUploadTest extends TestCase
     {
         Passport::actingAs(User::factory()->create());
 
+        // A concrete, known non-avatar context — the permission check only
+        // fires once context is unambiguous (see the next two tests for the
+        // missing/unrecognized-context cases, which must 422 instead).
         $this->postJson('/api/v1/media/upload', [
             'file' => UploadedFile::fake()->image('photo.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'item',
         ])->assertForbidden();
+    }
+
+    #[Test]
+    public function it_returns_a_clean_422_instead_of_403_for_a_missing_context_regardless_of_permission(): void
+    {
+        Passport::actingAs(User::factory()->create());
+
+        // No media.upload permission AND no context — must not mask the real
+        // validation error (missing context) behind an unrelated 403.
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('photo.jpg'),
+            'owner_token' => 'token-1',
+        ])->assertUnprocessable()->assertJsonValidationErrors('context');
+    }
+
+    #[Test]
+    public function it_returns_a_clean_422_instead_of_403_for_an_unknown_context_regardless_of_permission(): void
+    {
+        Passport::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('photo.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'not-a-real-context',
+        ])->assertUnprocessable()->assertJsonValidationErrors('context');
     }
 
     #[Test]
