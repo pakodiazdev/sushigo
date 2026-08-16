@@ -35,7 +35,17 @@ class UpdateMyAvatarRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'media_gallery_id' => ['required', 'string', Rule::exists('media_galleries', 'public_id')->whereNull('deleted_at')],
+            // ->where('context', 'avatar'): without it, a caller who can manage an
+            // item/dish gallery (item/dish contexts allow MP4/MOV) could attach it as
+            // their avatar — User::avatarUrl() would then return a video URL that
+            // every avatar surface renders through a plain <img>, breaking silently.
+            'media_gallery_id' => [
+                'required',
+                'string',
+                Rule::exists('media_galleries', 'public_id')
+                    ->whereNull('deleted_at')
+                    ->where('context', 'avatar'),
+            ],
             'owner_token' => ['sometimes', 'string'],
         ];
     }

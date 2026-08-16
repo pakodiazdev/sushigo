@@ -11,6 +11,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -192,6 +194,35 @@ class UpdateMyAvatarTest extends TestCase
             'media_gallery_id' => $gallery['gallery_id'],
             'owner_token' => $gallery['owner_token'],
         ])->assertStatus(422)->assertJsonValidationErrors('media_gallery_id');
+    }
+
+    #[Test]
+    public function it_rejects_attaching_a_non_avatar_context_gallery(): void
+    {
+        // item/dish contexts allow MP4/MOV; avatarUrl() would return a video URL that
+        // every avatar surface renders through a plain <img>, so only an avatar-context
+        // gallery may ever be attached here — regardless of who owns it.
+        Permission::firstOrCreate(['name' => 'media.upload', 'guard_name' => 'api']);
+        $role = Role::firstOrCreate(['name' => 'media-uploader', 'guard_name' => 'api']);
+        $role->givePermissionTo('media.upload');
+        $user = User::factory()->create();
+        $user->assignRole('media-uploader');
+        Passport::actingAs($user);
+
+        $ownerToken = uniqid('token-', true);
+        $galleryId = $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('item.jpg'),
+            'owner_token' => $ownerToken,
+            'context' => 'item',
+        ])->json('data.gallery_id');
+
+        $response = $this->patchJson('/api/v1/auth/me/avatar', [
+            'media_gallery_id' => $galleryId,
+            'owner_token' => $ownerToken,
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('media_gallery_id');
+        $this->assertSame(0, MediaAttachment::count());
     }
 
     #[Test]

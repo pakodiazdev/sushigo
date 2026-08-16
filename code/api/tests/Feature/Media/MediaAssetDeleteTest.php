@@ -6,6 +6,7 @@ use App\Models\MediaAsset;
 use App\Models\MediaGallery;
 use App\Models\User;
 use App\Services\Media\DeleteMediaAssetService;
+use App\Services\Media\MediaAttachmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -240,6 +241,52 @@ class MediaAssetDeleteTest extends TestCase
             'position' => 0,
             'is_primary' => true,
         ]);
+
+        $this->deleteJson("/api/v1/media/assets/{$asset->public_id}")->assertForbidden();
+    }
+
+    #[Test]
+    public function a_user_without_media_delete_permission_can_delete_their_own_avatar_asset(): void
+    {
+        // #420 — the self-service avatar uploader's remove control calls this endpoint
+        // directly, so avatar-context assets must bypass media.delete for their own
+        // owner, same as the upload/reorder steps already do.
+        $user = User::factory()->create();
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery', 'context' => 'avatar']);
+        app(MediaAttachmentService::class)($user, $gallery->id);
+        $asset = MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/photo.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'photo.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+
+        Passport::actingAs($user);
+
+        $this->deleteJson("/api/v1/media/assets/{$asset->public_id}")->assertOk();
+        $this->assertDatabaseMissing('media_assets', ['id' => $asset->id]);
+    }
+
+    #[Test]
+    public function a_user_without_media_delete_permission_still_cannot_delete_a_non_avatar_asset_they_own(): void
+    {
+        $user = User::factory()->create();
+        $gallery = MediaGallery::create(['name' => 'Item gallery', 'context' => 'item']);
+        app(MediaAttachmentService::class)($user, $gallery->id);
+        $asset = MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/photo.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'photo.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+
+        Passport::actingAs($user);
 
         $this->deleteJson("/api/v1/media/assets/{$asset->public_id}")->assertForbidden();
     }
