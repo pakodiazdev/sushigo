@@ -118,7 +118,12 @@ export function useMediaGalleryUploader(
       context,
     })
     galleryIdRef.current = asset.gallery_id
-    setAssets((prev) => [...prev, asset])
+    // Mirrors setPrimaryAsset's local demotion below: an avatar-context upload into a
+    // gallery that already has an asset comes back primary (UploadMediaService demotes
+    // the sibling server-side, see its docblock), so the optimistic local state must
+    // demote it too, or the thumbnail grid would show two "Primary" badges until the
+    // next full reload.
+    setAssets((prev) => [...(asset.is_primary ? prev.map((a) => ({ ...a, is_primary: false })) : prev), asset])
   }, [context])
 
   const uploadFiles = useCallback(async (files: FileList | File[]) => {

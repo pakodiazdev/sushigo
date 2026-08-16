@@ -383,6 +383,33 @@ class MediaUploadTest extends TestCase
     }
 
     #[Test]
+    public function a_second_upload_into_an_avatar_gallery_becomes_primary_and_demotes_the_previous_one(): void
+    {
+        // Unlike item/dish galleries (where a newly added photo shouldn't reassign the
+        // representative image), an avatar gallery only ever shows its primary asset as
+        // "the" profile photo — a replacement upload must act like "change my photo"
+        // immediately, not silently add a second photo the user has to separately star.
+        Passport::actingAs($this->adminUser());
+
+        $first = $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('first.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'avatar',
+        ])->json('data');
+        $this->assertTrue($first['is_primary']);
+
+        $second = $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('second.jpg'),
+            'media_gallery_id' => $first['gallery_id'],
+            'owner_token' => 'token-1',
+        ]);
+
+        $second->assertCreated();
+        $this->assertTrue($second->json('data.is_primary'));
+        $this->assertFalse(MediaAsset::where('public_id', $first['asset_id'])->first()->is_primary);
+    }
+
+    #[Test]
     public function it_rejects_any_upload_into_a_gallery_with_no_stored_context(): void
     {
         Passport::actingAs($this->adminUser());

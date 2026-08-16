@@ -159,6 +159,23 @@ describe('useMediaGalleryUploader', () => {
       expect(mockUpload.mock.calls[1]?.[1]?.mediaGalleryId).toBe('gallery-1')
     })
 
+    it('demotes the sibling locally when a new upload comes back primary (avatar-context replacement upload)', async () => {
+      // UploadMediaService makes every avatar-context upload primary immediately (see its
+      // docblock) — the optimistic local state must mirror that demotion, or the
+      // thumbnail grid would show two "Primary" badges until the next full reload.
+      const first = makeAsset({ asset_id: 'asset-1', position: 0, is_primary: true })
+      const second = makeAsset({ asset_id: 'asset-2', position: 1, is_primary: true })
+      mockUpload.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
+
+      const { result } = renderHook(() => useMediaGalleryUploader('avatar'))
+
+      await act(async () => {
+        await result.current.uploadFiles([makeFile('a.jpg'), makeFile('b.jpg')])
+      })
+
+      expect(result.current.assets).toEqual([{ ...first, is_primary: false }, second])
+    })
+
     it('passes the hook context to every mediaApi.upload call', async () => {
       const first = makeAsset({ asset_id: 'asset-1', position: 0 })
       const second = makeAsset({ asset_id: 'asset-2', position: 1, is_primary: false })

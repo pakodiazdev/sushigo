@@ -61,5 +61,25 @@ describe('Perfil — Avatar self-service', () => {
     headerAvatarImg({ timeout: 10_000 })
       .should('have.attr', 'src')
       .and('not.be.empty')
+
+    // ── 5. Reemplazar la foto ya existente también actualiza el header ───────
+    // Regression coverage: a returning user's replacement upload must become the
+    // shown avatar immediately (UploadMediaService demotes the previous primary for
+    // an avatar-context gallery), not just add a second, non-primary photo that
+    // never surfaces anywhere until the star control is clicked by hand — the gap
+    // this spec's original first-time-upload-only flow didn't catch.
+    headerAvatarImg({ timeout: 10_000 })
+      .invoke('attr', 'src')
+      .then((firstSrc) => {
+        cy.get('[data-testid="media-uploader-input"]').selectFile('cypress/fixtures/media/sample-photo.jpg', {
+          force: true,
+        })
+        cy.get('[data-testid="media-uploader-asset"]', { timeout: 15_000 }).should('have.length', 2)
+
+        headerAvatarImg({ timeout: 10_000 })
+          .should('have.attr', 'src')
+          .and('not.be.empty')
+          .and('not.eq', firstSrc)
+      })
   })
 })
