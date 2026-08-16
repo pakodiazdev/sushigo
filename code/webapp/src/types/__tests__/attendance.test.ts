@@ -196,7 +196,7 @@ describe('isAbsentRow', () => {
             employee: {
                 id: 'emp-1',
                 code: 'EMP-001',
-                user: { first_name: 'Test', last_name: 'User' },
+                user: { first_name: 'Test', last_name: 'User', avatar_url: null },
                 roles: [],
                 daily_wage: null,
             },
@@ -375,7 +375,7 @@ describe('isHiddenFromGrid', () => {
             employee: {
                 id: 'emp-1',
                 code: 'EMP-001',
-                user: { first_name: 'Test', last_name: 'User' },
+                user: { first_name: 'Test', last_name: 'User', avatar_url: null },
                 roles: [],
                 daily_wage: null,
             },

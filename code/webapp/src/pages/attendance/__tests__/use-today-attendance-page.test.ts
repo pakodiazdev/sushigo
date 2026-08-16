@@ -99,11 +99,11 @@ function makeStrictWrapper() {
 }
 
 /** Creates a test employee with all required fields */
-function makeEmployee(overrides: Partial<{ id: string; code: string; user: { first_name: string; last_name: string }; roles: string[]; daily_wage: number | null }> = {}) {
+function makeEmployee(overrides: Partial<{ id: string; code: string; user: { first_name: string; last_name: string; avatar_url: string | null }; roles: string[]; daily_wage: number | null }> = {}) {
   return {
     id: 'emp-001',
     code: 'EMP-001',
-    user: { first_name: 'Test', last_name: 'User' },
+    user: { first_name: 'Test', last_name: 'User', avatar_url: null },
     roles: [] as string[],
     daily_wage: null as number | null,
     ...overrides,
@@ -116,7 +116,7 @@ function makeRow(overrides: Partial<TodayAttendanceRow> = {}): TodayAttendanceRo
     employee: {
       id: 'emp-001',
       code: 'EMP-001',
-      user: { first_name: 'Carlos', last_name: 'Mendoza' },
+      user: { first_name: 'Carlos', last_name: 'Mendoza', avatar_url: null },
       roles: [],
       daily_wage: null,
     },
@@ -147,7 +147,7 @@ describe('computeSummary', () => {
   })
 
   it('counts pending employees (no attendance)', () => {
-    const rows = [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'María', last_name: 'García' }, roles: [], daily_wage: null } })]
+    const rows = [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'María', last_name: 'García', avatar_url: null }, roles: [], daily_wage: null } })]
     const result = computeSummary(rows)
     expect(result.pending).toBe(2)
     expect(result.checkedIn).toBe(0)
@@ -192,7 +192,7 @@ describe('computeSummary', () => {
         } as TodayAttendanceRow['attendance'],
       }),
       makeRow({
-        employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null },
+        employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null },
         attendance: {
           id: 'att-2',
           check_in: '2026-04-01T13:00:00Z',
@@ -239,11 +239,11 @@ describe('computeSummary', () => {
     const rows = [
       makeRow({ attendance: { id: 'att-1', day_status: 'ABSENCE' } as TodayAttendanceRow['attendance'] }),
       makeRow({
-        employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null },
+        employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null },
         attendance: { id: 'att-2', day_status: 'VACATION' } as TodayAttendanceRow['attendance'],
       }),
       makeRow({
-        employee: { id: 'emp-003', code: 'EMP-003', user: { first_name: 'Beto', last_name: 'Ruiz' }, roles: [], daily_wage: null },
+        employee: { id: 'emp-003', code: 'EMP-003', user: { first_name: 'Beto', last_name: 'Ruiz', avatar_url: null }, roles: [], daily_wage: null },
         attendance: { id: 'att-3', day_status: 'LEAVE' } as TodayAttendanceRow['attendance'],
       }),
     ]
@@ -367,37 +367,37 @@ describe('attendanceBucket', () => {
 describe('filterRowsForGrid', () => {
   function rowsFixture() {
     return [
-      makeRow({ employee: { id: 'e1', code: 'E1', user: { first_name: 'A', last_name: 'A' }, roles: [], daily_wage: null } }), // pending
+      makeRow({ employee: { id: 'e1', code: 'E1', user: { first_name: 'A', last_name: 'A', avatar_url: null }, roles: [], daily_wage: null } }), // pending
       makeRow({
-        employee: { id: 'e2', code: 'E2', user: { first_name: 'B', last_name: 'B' }, roles: [], daily_wage: null },
+        employee: { id: 'e2', code: 'E2', user: { first_name: 'B', last_name: 'B', avatar_url: null }, roles: [], daily_wage: null },
         attendance: { id: 'a2', check_in: '2026-04-01T13:00:00Z' } as TodayAttendanceRow['attendance'],
       }), // checkedIn
       makeRow({
-        employee: { id: 'e3', code: 'E3', user: { first_name: 'C', last_name: 'C' }, roles: [], daily_wage: null },
+        employee: { id: 'e3', code: 'E3', user: { first_name: 'C', last_name: 'C', avatar_url: null }, roles: [], daily_wage: null },
         attendance: { id: 'a3', check_in: '2026-04-01T13:00:00Z', check_out: '2026-04-01T22:00:00Z' } as TodayAttendanceRow['attendance'],
       }), // done
       makeRow({
-        employee: { id: 'e4', code: 'E4', user: { first_name: 'D', last_name: 'D' }, roles: [], daily_wage: null },
+        employee: { id: 'e4', code: 'E4', user: { first_name: 'D', last_name: 'D', avatar_url: null }, roles: [], daily_wage: null },
         attendance: { id: 'a4', day_status: 'ABSENCE' } as TodayAttendanceRow['attendance'],
       }), // absent — stays visible by default
       makeRow({
-        employee: { id: 'e5', code: 'E5', user: { first_name: 'E', last_name: 'E' }, roles: [], daily_wage: null },
+        employee: { id: 'e5', code: 'E5', user: { first_name: 'E', last_name: 'E', avatar_url: null }, roles: [], daily_wage: null },
         attendance: { id: 'a5', day_status: 'VACATION' } as TodayAttendanceRow['attendance'],
       }), // absent — hidden by default
       makeRow({
-        employee: { id: 'e6', code: 'E6', user: { first_name: 'F', last_name: 'F' }, roles: [], daily_wage: null },
+        employee: { id: 'e6', code: 'E6', user: { first_name: 'F', last_name: 'F', avatar_url: null }, roles: [], daily_wage: null },
         attendance: { id: 'a6', day_status: 'DAY_OFF' } as TodayAttendanceRow['attendance'],
       }), // absent — hidden by default
       makeRow({
-        employee: { id: 'e7', code: 'E7', user: { first_name: 'G', last_name: 'G' }, roles: [], daily_wage: null },
+        employee: { id: 'e7', code: 'E7', user: { first_name: 'G', last_name: 'G', avatar_url: null }, roles: [], daily_wage: null },
         attendance: { id: 'a7', check_in: '2026-04-01T13:00:00Z', lunch_start: '2026-04-01T14:00:00Z' } as TodayAttendanceRow['attendance'],
       }), // atLunch
       makeRow({
-        employee: { id: 'e8', code: 'E8', user: { first_name: 'H', last_name: 'H' }, roles: [], daily_wage: null },
+        employee: { id: 'e8', code: 'E8', user: { first_name: 'H', last_name: 'H', avatar_url: null }, roles: [], daily_wage: null },
         today_vacation: true,
       }), // absent (today_vacation, no attendance record yet) — hidden by default
       makeRow({
-        employee: { id: 'e9', code: 'E9', user: { first_name: 'I', last_name: 'I' }, roles: [], daily_wage: null },
+        employee: { id: 'e9', code: 'E9', user: { first_name: 'I', last_name: 'I', avatar_url: null }, roles: [], daily_wage: null },
         schedule: {
           day_of_week: 7,
           is_day_off: true,
@@ -1119,7 +1119,7 @@ describe('useTodayAttendancePage', () => {
           data: [
             makeRow(), // emp-001, pending — resolves the default filter to "pending"
             makeRow({
-              employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null },
+              employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null },
             }),
           ],
         },
@@ -1160,12 +1160,12 @@ describe('useTodayAttendancePage', () => {
       // otherwise this test would be asserting against its own stale fixture,
       // not the app's behavior.
       vi.mocked(attendanceApi.daily)
-        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null } })] } } as never)
+        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null } })] } } as never)
         .mockResolvedValue({
           data: {
             data: [
               makeRow({ attendance: { id: 'att-x', check_in: '2026-04-01T13:00:00-06:00', day_status: 'WORKED' } as TodayAttendanceRow['attendance'] }),
-              makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null } }),
+              makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null } }),
             ],
           },
         } as never)
@@ -1241,13 +1241,13 @@ describe('useTodayAttendancePage', () => {
       // test elsewhere in this file, so that refetch doesn't silently
       // revert the confirmed absence back to its stale pre-mutation fixture.
       vi.mocked(attendanceApi.daily)
-        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null } })] } } as never)
-        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null } })] } } as never)
+        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null } })] } } as never)
+        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null } })] } } as never)
         .mockResolvedValue({
           data: {
             data: [
               makeRow({ attendance: { id: 'att-2', day_status: 'ABSENCE' } as TodayAttendanceRow['attendance'] }),
-              makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null } }),
+              makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null } }),
             ],
           },
         } as never)
@@ -1347,12 +1347,12 @@ describe('useTodayAttendancePage', () => {
       // mutation's own invalidateQueries doesn't silently revert `data`
       // back to its stale pre-mutation fixture out from under this test.
       vi.mocked(attendanceApi.daily)
-        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null } })] } } as never)
+        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null } })] } } as never)
         .mockResolvedValue({
           data: {
             data: [
               makeRow({ attendance: { id: 'att-x', check_in: '2026-04-01T13:00:00-06:00', day_status: 'WORKED' } as TodayAttendanceRow['attendance'] }),
-              makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null } }),
+              makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null } }),
             ],
           },
         } as never)
@@ -1434,13 +1434,13 @@ describe('useTodayAttendancePage', () => {
       // absence — otherwise this test would be asserting against its own
       // stale fixture, not the app's behavior.
       vi.mocked(attendanceApi.daily)
-        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null } })] } } as never)
+        .mockResolvedValueOnce({ data: { data: [makeRow(), makeRow({ employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null } })] } } as never)
         .mockResolvedValue({
           data: {
             data: [
               makeRow(),
               makeRow({
-                employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null },
+                employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null },
                 attendance: { id: 'att-2', day_status: 'ABSENCE' } as TodayAttendanceRow['attendance'],
               }),
             ],
@@ -1523,7 +1523,7 @@ describe('useTodayAttendancePage', () => {
             data: [
               makeRow(),
               makeRow({
-                employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null },
+                employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null },
                 attendance: { id: 'att-2', day_status: 'ABSENCE' } as TodayAttendanceRow['attendance'],
               }),
             ],
@@ -1649,11 +1649,11 @@ describe('useTodayAttendancePage', () => {
           data: [
             makeRow(), // emp-001, pending
             makeRow({
-              employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López' }, roles: [], daily_wage: null },
+              employee: { id: 'emp-002', code: 'EMP-002', user: { first_name: 'Ana', last_name: 'López', avatar_url: null }, roles: [], daily_wage: null },
               attendance: { id: 'att-2', day_status: 'ABSENCE' } as TodayAttendanceRow['attendance'],
             }), // emp-002, absent — sits BETWEEN two pending rows, doesn't match "pending"
             makeRow({
-              employee: { id: 'emp-003', code: 'EMP-003', user: { first_name: 'Beto', last_name: 'Ruiz' }, roles: [], daily_wage: null },
+              employee: { id: 'emp-003', code: 'EMP-003', user: { first_name: 'Beto', last_name: 'Ruiz', avatar_url: null }, roles: [], daily_wage: null },
             }), // emp-003, pending
           ],
         },

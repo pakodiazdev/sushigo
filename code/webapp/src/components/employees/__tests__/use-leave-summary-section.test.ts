@@ -30,7 +30,7 @@ function createWrapper() {
         React.createElement(QueryClientProvider, { client: queryClient }, children)
 }
 
-const employee = { id: 'emp-1', code: 'E001', user: { first_name: 'Ana', last_name: 'López' } }
+const employee = { id: 'emp-1', code: 'E001', user: { first_name: 'Ana', last_name: 'López', avatar_url: null } }
 
 function makeLeave(overrides: Record<string, unknown> = {}) {
     return {
@@ -190,6 +190,7 @@ describe('useLeaveSummarySection', () => {
             user: {
                 first_name: 'Ana',
                 last_name: 'López',
+                avatar_url: null,
             },
             roles: [],
             daily_wage: null,
