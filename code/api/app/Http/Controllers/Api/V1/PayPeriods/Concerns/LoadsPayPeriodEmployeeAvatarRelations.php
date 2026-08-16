@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\PayPeriods\Concerns;
 
+use Closure;
+
 /**
  * The eager-load set every PayPeriod endpoint that returns a PayPeriodResource
  * needs to serve payPeriodEmployees.*.employee.avatar_url without an N+1 (#420)
@@ -17,7 +19,7 @@ namespace App\Http\Controllers\Api\V1\PayPeriods\Concerns;
 trait LoadsPayPeriodEmployeeAvatarRelations
 {
     /**
-     * @return array<string, \Closure>
+     * @return array<string, Closure>
      */
     private function payPeriodEmployeeAvatarRelations(): array
     {
