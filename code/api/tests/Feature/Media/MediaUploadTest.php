@@ -467,4 +467,72 @@ class MediaUploadTest extends TestCase
             'file' => UploadedFile::fake()->image('photo.jpg'),
         ])->assertForbidden();
     }
+
+    #[Test]
+    public function a_user_without_media_upload_permission_can_start_a_new_avatar_gallery(): void
+    {
+        // #420 — self-service avatar uploads must not require media.upload,
+        // unlike every other context (see the next test).
+        Passport::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('avatar.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'avatar',
+        ])->assertCreated();
+    }
+
+    #[Test]
+    public function a_user_without_media_upload_permission_cannot_start_a_new_item_gallery(): void
+    {
+        Passport::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('photo.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'item',
+        ])->assertForbidden();
+    }
+
+    #[Test]
+    public function a_user_without_media_upload_permission_can_continue_uploading_into_their_own_avatar_gallery(): void
+    {
+        $user = User::factory()->create();
+        Passport::actingAs($user);
+
+        $gallery = $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('first.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'avatar',
+        ])->json('data.gallery_id');
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('second.jpg'),
+            'media_gallery_id' => $gallery,
+            'owner_token' => 'token-1',
+        ])->assertCreated();
+    }
+
+    #[Test]
+    public function a_user_without_media_upload_permission_cannot_continue_uploading_into_an_item_gallery_even_when_owned(): void
+    {
+        $admin = $this->adminUser();
+        Passport::actingAs($admin);
+
+        $gallery = $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('first.jpg'),
+            'owner_token' => 'token-1',
+            'context' => 'item',
+        ])->json('data.gallery_id');
+
+        // The gallery's own stored context (item) governs, not the caller's role —
+        // only avatar-context galleries bypass the media.upload requirement.
+        Passport::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/media/upload', [
+            'file' => UploadedFile::fake()->image('second.jpg'),
+            'media_gallery_id' => $gallery,
+            'owner_token' => 'token-1',
+        ])->assertForbidden();
+    }
 }

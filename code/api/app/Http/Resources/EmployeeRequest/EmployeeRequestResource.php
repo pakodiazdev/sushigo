@@ -15,6 +15,7 @@ use App\Models\EmployeeRequest;
  *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
  *     @OA\Property(property="employee_id", type="string", example="01JKABC0987654321ZYXWVUTS", description="Employee public_id (ULID)"),
  *     @OA\Property(property="employee_name", type="string", example="Ana García", description="Employee full name"),
+ *     @OA\Property(property="avatar_url", type="string", nullable=true, example="https://api.sushigo.local/storage/media/avatar.jpg", description="Employee's user avatar URL, null when no avatar is attached"),
  *     @OA\Property(property="type", type="string", enum={"EXTRA_DAY", "LEAVE", "VACATION", "SCHEDULE_CHANGE"}, example="EXTRA_DAY"),
  *     @OA\Property(property="status", type="string", enum={"PENDING", "APPROVED", "REJECTED", "CANCELLED"}, example="PENDING"),
  *     @OA\Property(property="payload", type="object"),
@@ -38,6 +39,10 @@ class EmployeeRequestResource extends BaseResource
             'id' => $this->public_id,
             'employee_id' => $this->employee->public_id,
             'employee_name' => $this->employee->user?->name ?? '',
+            // #420 — lets approval/solicitudes surfaces render <Avatar> instead of
+            // plain text. Reads the same eager-loaded chain as EmployeeResource
+            // (see ListEmployeeRequestsController) to avoid an N+1 on list responses.
+            'avatar_url' => $this->employee->user?->avatarUrl(),
             'type' => $this->type->value,
             'status' => $this->status->value,
             'payload' => $this->payload,

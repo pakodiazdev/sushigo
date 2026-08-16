@@ -11,9 +11,12 @@ use App\Models\Employee;
 use App\Models\EmploymentPeriod;
 use App\Models\Leave;
 use App\Models\LeaveType;
+use App\Models\MediaAsset;
+use App\Models\MediaGallery;
 use App\Models\User;
 use App\Models\VacationEntitlement;
 use App\Models\VacationRequest;
+use App\Services\Media\MediaAttachmentService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -72,6 +75,32 @@ class TodayAttendanceApiTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
+    }
+
+    #[Test]
+    public function exposes_the_employees_avatar_url(): void
+    {
+        $withAvatar = $this->makeEmployeeForBranch($this->branch);
+        $withoutAvatar = $this->makeEmployeeForBranch($this->branch);
+
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery']);
+        MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/'.uniqid().'.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'avatar.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+        app(MediaAttachmentService::class)($withAvatar->user, $gallery->id);
+
+        $response = $this->getJson("/api/v1/attendances/today?branch_id={$this->branch->id}");
+
+        $response->assertStatus(200);
+        $rows = collect($response->json('data'));
+        $this->assertNotNull($rows->firstWhere('employee.id', $withAvatar->public_id)['employee']['user']['avatar_url']);
+        $this->assertNull($rows->firstWhere('employee.id', $withoutAvatar->public_id)['employee']['user']['avatar_url']);
     }
 
     #[Test]

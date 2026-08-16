@@ -95,6 +95,11 @@ class TodayAttendanceController extends Controller
             ->leftJoin('users', 'users.id', '=', 'employees.user_id')
             ->with([
                 'user.roles',
+                // Avatar chain EmployeeSummaryResource::avatar_url reads via
+                // User::avatarUrl() — same relation-string pattern as
+                // LoadsEmployeeUserAvatarRelations, avoids an N+1 across this list.
+                'user.mediaAttachments' => fn ($q) => $q->where('is_primary', true),
+                'user.mediaAttachments.mediaGallery.mediaAssets' => fn ($q) => $q->where('is_primary', true),
                 'attendances' => fn ($q) => $q->whereDate('date', $today),
                 // Pick only the first approved leave covering today.
                 // reorder() clears the default orderBy('start_date', 'desc') inherited from

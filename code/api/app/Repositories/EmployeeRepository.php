@@ -74,7 +74,15 @@ class EmployeeRepository extends BaseRepository
         return $this->newQuery()
             ->select(self::SELECT_EMPLOYEE_COLUMNS)
             ->leftJoin('users', 'users.id', '=', 'employees.user_id')
-            ->with(['employmentPeriods', 'user'])
+            ->with([
+                'employmentPeriods',
+                'user',
+                // #420 — PayPeriodPreviewService::buildEmployeePreview reads
+                // User::avatarUrl() from this same chain; without it every row
+                // would lazy-load its own mediaAttachments query.
+                'user.mediaAttachments' => fn ($q) => $q->where('is_primary', true),
+                'user.mediaAttachments.mediaGallery.mediaAssets' => fn ($q) => $q->where('is_primary', true),
+            ])
             ->whereHas('employmentPeriods', fn ($q) => $q
                 ->where('branch_id', $branchId)
                 ->where('is_active', true)
