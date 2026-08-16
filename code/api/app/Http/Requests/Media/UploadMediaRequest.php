@@ -43,7 +43,17 @@ class UploadMediaRequest extends FormRequest
         $publicId = $this->rawStringInput('media_gallery_id');
 
         if (! $publicId) {
-            return $this->rawStringInput('context') === 'avatar' || $this->user()->can('media.upload');
+            $context = $this->rawStringInput('context');
+
+            // A missing/unrecognized context can never actually create anything —
+            // rules() rejects it with a clean 422 regardless of this outcome — so
+            // deferring to validation here is safe, and avoids masking that 422
+            // behind an unrelated 403 for a caller who also lacks media.upload.
+            if ($context === null || ! in_array($context, array_keys(config('media.contexts')), true)) {
+                return true;
+            }
+
+            return $context === 'avatar' || $this->user()->can('media.upload');
         }
 
         $gallery = MediaGallery::where('public_id', $publicId)->first();
