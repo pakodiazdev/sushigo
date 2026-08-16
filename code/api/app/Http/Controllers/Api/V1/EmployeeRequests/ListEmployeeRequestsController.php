@@ -41,7 +41,17 @@ class ListEmployeeRequestsController extends Controller
 {
     public function __invoke(ListEmployeeRequestsRequest $request): ResponsePaginated
     {
-        $query = EmployeeRequest::query()->with(['employee', 'requestable', 'requestedBy', 'approvedBy']);
+        $query = EmployeeRequest::query()->with([
+            'employee.user',
+            // Same avatar chain as LoadsEmployeeUserAvatarRelations (Employees\Concerns),
+            // rooted at employee.user instead of user — avoids an N+1 on
+            // EmployeeRequestResource::avatar_url across a paginated list.
+            'employee.user.mediaAttachments' => fn ($q) => $q->where('is_primary', true),
+            'employee.user.mediaAttachments.mediaGallery.mediaAssets' => fn ($q) => $q->where('is_primary', true),
+            'requestable',
+            'requestedBy',
+            'approvedBy',
+        ]);
 
         $restrictedEmployeeId = $request->restrictedEmployeeId();
 

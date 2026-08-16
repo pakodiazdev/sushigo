@@ -4,10 +4,13 @@ namespace Tests\Feature\AttendancePayroll;
 
 use App\Models\Branch;
 use App\Models\Employee;
+use App\Models\MediaAsset;
+use App\Models\MediaGallery;
 use App\Models\PayPeriod;
 use App\Models\PayPeriodEmployee;
 use App\Models\PayPeriodLine;
 use App\Models\User;
+use App\Services\Media\MediaAttachmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Permission;
@@ -120,6 +123,52 @@ class ShowPayPeriodApiTest extends TestCase
         $this->assertEquals(420.0, (float) $response->json('data.employees.0.total_pay'));
         $this->assertCount(1, $response->json('data.employees.0.pay_period_lines'));
         $this->assertEquals('BASE_PAY', $response->json('data.employees.0.pay_period_lines.0.concept'));
+    }
+
+    public function test_show_exposes_the_employees_avatar_url(): void
+    {
+        $payPeriod = PayPeriod::create([
+            'branch_id' => $this->branch->id,
+            'period_start' => '2026-06-22',
+            'period_end' => '2026-06-28',
+            'status' => PayPeriod::STATUS_CLOSED,
+            'closed_by' => $this->user->id,
+            'closed_at' => now(),
+        ]);
+
+        $employee = Employee::factory()->create(['is_active' => true]);
+
+        PayPeriodEmployee::create([
+            'pay_period_id' => $payPeriod->id,
+            'employee_id' => $employee->id,
+            'base_pay' => 350,
+            'late_deductions' => 10,
+            'unpaid_leave_deductions' => 0,
+            'overtime_pay' => 60,
+            'extra_day_pay' => 0,
+            'punctuality_bonus' => 20,
+            'holiday_pay' => 0,
+            'other_adjustments' => 0,
+            'total_pay' => 420,
+            'free_hours_earned' => 0,
+        ]);
+
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery']);
+        MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/'.uniqid().'.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'avatar.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+        app(MediaAttachmentService::class)($employee->user, $gallery->id);
+
+        $response = $this->getJson('/api/v1/pay-periods/'.$payPeriod->public_id);
+
+        $response->assertStatus(200);
+        $this->assertNotNull($response->json('data.employees.0.employee.avatar_url'));
     }
 
     public function test_show_returns_null_date_for_lines_without_a_date(): void

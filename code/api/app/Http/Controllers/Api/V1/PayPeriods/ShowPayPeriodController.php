@@ -39,7 +39,15 @@ class ShowPayPeriodController extends Controller
 {
     public function __invoke(ShowPayPeriodRequest $request, PayPeriod $payPeriod): PayPeriodResource
     {
-        $payPeriod->load(['closedBy', 'reopenedBy', 'payPeriodEmployees.employee.user', 'payPeriodEmployees.lines']);
+        $payPeriod->load([
+            'closedBy',
+            'reopenedBy',
+            'payPeriodEmployees.employee.user',
+            // #420 — matches PayPeriodEmployeeResource::avatar_url's read chain.
+            'payPeriodEmployees.employee.user.mediaAttachments' => fn ($q) => $q->where('is_primary', true),
+            'payPeriodEmployees.employee.user.mediaAttachments.mediaGallery.mediaAssets' => fn ($q) => $q->where('is_primary', true),
+            'payPeriodEmployees.lines',
+        ]);
 
         return new PayPeriodResource($payPeriod);
     }

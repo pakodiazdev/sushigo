@@ -16,7 +16,8 @@ use App\Models\PayPeriodEmployee;
  *         @OA\Property(property="id", type="string"),
  *         @OA\Property(property="first_name", type="string"),
  *         @OA\Property(property="last_name", type="string"),
- *         @OA\Property(property="code", type="string", nullable=true)
+ *         @OA\Property(property="code", type="string", nullable=true),
+ *         @OA\Property(property="avatar_url", type="string", nullable=true)
  *     ),
  *     @OA\Property(property="base_pay", type="number", format="float"),
  *     @OA\Property(property="late_deductions", type="number", format="float"),
@@ -41,6 +42,8 @@ class PayPeriodEmployeeResource extends BaseResource
                 'first_name' => $this->employee->user?->first_name,
                 'last_name' => $this->employee->user?->last_name,
                 'code' => $this->employee->code,
+                // #420 — see ShowPayPeriodController for the matching eager load.
+                'avatar_url' => $this->employee->user?->avatarUrl(),
             ],
             'base_pay' => (float) $this->base_pay,
             'late_deductions' => (float) $this->late_deductions,

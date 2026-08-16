@@ -109,12 +109,21 @@ instead of a recurring schedule.
 
 ## 5) Ownership authorization
 
-The three media endpoints (`POST /media/upload`, `PATCH /media/assets/{id}`,
-`DELETE /media/assets/{id}`) are gated by route-level `media.upload`/`media.update`/`media.delete`
-permissions, but that alone only proves the caller can touch *some* gallery — not that they're
-allowed to touch *this* one. `MediaGallery::isManageableBy(User $user, ?string $ownerToken)`
-(`app/Models/MediaGallery.php`) closes that gap, and every media `FormRequest::authorize()` calls
-it:
+`PATCH /media/assets/{id}` and `DELETE /media/assets/{id}` are gated by route-level
+`media.update`/`media.delete` permissions, but that alone only proves the caller can touch *some*
+gallery — not that they're allowed to touch *this* one. `MediaGallery::isManageableBy(User $user,
+?string $ownerToken)` (`app/Models/MediaGallery.php`) closes that gap, and every media
+`FormRequest::authorize()` calls it:
+
+`POST /media/upload` carries **no** route-level `media.upload` middleware — that check moved into
+`UploadMediaRequest::authorize()` instead, gated per **context** rather than per route: an
+`avatar`-context upload (new gallery, or continuing an existing gallery whose *stored* context is
+`avatar`) is open to any authenticated user, since [#420](https://github.com/pakodiazdev/sushigo/issues/420)
+requires self-service avatar uploads to work for every role, not just `admin`/`manager`. Every other
+context still requires `$user->can('media.upload')`. This is safe because uploading only ever
+creates or extends an *unattached* gallery — it grants no capability by itself; the real security
+boundary stays at the entity-specific attach step below (`UpdateMyAvatarRequest`,
+`UpdateEmployeeRequest`, ...), which is unaffected by this bypass.
 
 - **Attached to an entity** (has one or more `MediaAttachment` rows) — delegates to each attached
   model's `App\Contracts\AuthorizesMediaOwnership::userCanManageMedia(User $user)`. `Item`

@@ -24,6 +24,16 @@ class UploadMediaRequest extends FormRequest
 {
     use ReadsRawStringInput, ResolvesPublicIdReferences;
 
+    /**
+     * The route carries no `permission:media.upload` middleware (see
+     * routes/api/media.php) — that check now lives here, gated per context,
+     * because #420 requires self-service avatar uploads to be open to any
+     * authenticated user while item/dish uploads stay permission-gated.
+     * Uploading only ever creates/extends an *unattached* gallery; the real
+     * security boundary is still the entity-specific attach step (e.g.
+     * UpdateMyAvatarRequest, UpdateEmployeeRequest), so opening this step up
+     * for avatar context grants no elevated capability by itself.
+     */
     public function authorize(): bool
     {
         // Raw input, not validated('media_gallery_id'): authorize() runs
@@ -33,16 +43,23 @@ class UploadMediaRequest extends FormRequest
         $publicId = $this->rawStringInput('media_gallery_id');
 
         if (! $publicId) {
-            return true;
+            return $this->rawStringInput('context') === 'avatar' || $this->user()->can('media.upload');
         }
 
         $gallery = MediaGallery::where('public_id', $publicId)->first();
 
         if (! $gallery) {
-            return true;
+            return true; // let the `exists` rule produce a clean 422
         }
 
-        return $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'));
+        if (! $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
+            return false;
+        }
+
+        // The gallery's own stored context governs here, not this request's
+        // (possibly absent/spoofed) `context` input — same reasoning as
+        // allowedExtensionsForFile() below.
+        return $gallery->context === 'avatar' || $this->user()->can('media.upload');
     }
 
     public function rules(): array

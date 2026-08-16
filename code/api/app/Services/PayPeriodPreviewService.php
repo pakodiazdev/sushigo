@@ -133,6 +133,9 @@ class PayPeriodPreviewService
                 'first_name' => $employee->user?->first_name ?? '',
                 'last_name' => $employee->user?->last_name ?? '',
                 'code' => $employee->code,
+                // #420 — see EmployeeRepository::getActiveForPayPeriod for the matching
+                // eager load that keeps this from N+1ing across the preview list.
+                'avatar_url' => $employee->user?->avatarUrl(),
             ],
             'base_pay' => $basePay,
             'late_deductions' => $lateDeductions,

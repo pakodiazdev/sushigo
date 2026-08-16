@@ -7,8 +7,11 @@ use App\Enums\EmployeeRequestType;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
+use App\Models\MediaAsset;
+use App\Models\MediaGallery;
 use App\Models\NegotiatedExtraDay;
 use App\Models\User;
+use App\Services\Media\MediaAttachmentService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -239,6 +242,53 @@ class EmployeeRequestApiTest extends TestCase
 
         $employeeName = $employee->user->name;
         $createResponse->assertJsonPath('data.employee_name', $employeeName);
+    }
+
+    #[Test]
+    public function it_returns_null_avatar_url_when_the_employee_has_no_avatar(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+
+        $createResponse->assertStatus(201)
+            ->assertJsonStructure(['data' => ['avatar_url']]);
+        $this->assertNull($createResponse->json('data.avatar_url'));
+    }
+
+    #[Test]
+    public function it_returns_the_employees_avatar_url_when_attached(): void
+    {
+        $employee = $this->makeEmployeeWithActivePeriod();
+
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery']);
+        MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/'.uniqid().'.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'avatar.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+        app(MediaAttachmentService::class)($employee->user, $gallery->id);
+
+        $createResponse = $this->postJson('/api/v1/employee-requests', [
+            'employee_id' => $employee->public_id,
+            'type' => EmployeeRequestType::EXTRA_DAY->value,
+            'payload' => $this->extraDayPayload(),
+        ]);
+
+        $createResponse->assertStatus(201);
+        $this->assertNotNull($createResponse->json('data.avatar_url'));
+
+        $listResponse = $this->getJson("/api/v1/employee-requests?employee_id={$employee->public_id}");
+        $listResponse->assertOk();
+        $this->assertNotNull($listResponse->json('data.0.avatar_url'));
     }
 
     #[Test]

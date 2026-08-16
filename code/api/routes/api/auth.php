@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\ResetPasswordController;
+use App\Http\Controllers\Api\V1\Auth\UpdateMyAvatarController;
 use App\Http\Controllers\Api\V1\Auth\VerifyResetTokenController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,4 +23,5 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:api')->prefix('auth')->group(function () {
     Route::post('logout', LogoutController::class)->name('auth.logout');
     Route::get('me', MeController::class)->name('auth.me');
+    Route::patch('me/avatar', UpdateMyAvatarController::class)->name('auth.me.avatar');
 });

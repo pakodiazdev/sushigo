@@ -6,10 +6,13 @@ use App\Models\Attendance;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\EmploymentPeriod;
+use App\Models\MediaAsset;
+use App\Models\MediaGallery;
 use App\Models\OvertimeBankMovement;
 use App\Models\PartialLeave;
 use App\Models\User;
 use App\Models\WageHistory;
+use App\Services\Media\MediaAttachmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Permission;
@@ -98,6 +101,36 @@ class PreviewPayPeriodApiTest extends TestCase
         $employeeData = $response->json('data.0');
         $this->assertGreaterThanOrEqual(0, $employeeData['base_pay']);
         $this->assertEquals(0.0, (float) $employeeData['late_deductions']);
+    }
+
+    public function test_preview_exposes_the_employees_avatar_url(): void
+    {
+        $employee = Employee::factory()->create(['is_active' => true]);
+        EmploymentPeriod::factory()->create([
+            'employee_id' => $employee->id,
+            'branch_id' => $this->branch->id,
+            'is_active' => true,
+        ]);
+        WageHistory::factory()->effectiveBetween('2026-06-01')->create([
+            'employee_id' => $employee->id,
+        ]);
+
+        $gallery = MediaGallery::create(['name' => 'Avatar gallery']);
+        MediaAsset::create([
+            'media_gallery_id' => $gallery->id,
+            'path' => 'media/'.uniqid().'.jpg',
+            'mime_type' => 'image/jpeg',
+            'filename' => 'avatar.jpg',
+            'size' => 1024,
+            'position' => 0,
+            'is_primary' => true,
+        ]);
+        app(MediaAttachmentService::class)($employee->user, $gallery->id);
+
+        $response = $this->getJson('/api/v1/pay-periods/preview?branch_id='.$this->branch->id.'&period_start=2026-06-22&period_end=2026-06-28');
+
+        $response->assertStatus(200);
+        $this->assertNotNull($response->json('data.0.employee.avatar_url'));
     }
 
     public function test_preview_does_not_persist_any_data(): void
