@@ -119,4 +119,39 @@ describe('usePerfilPage', () => {
     await waitFor(() => expect(mockShowError).toHaveBeenCalled())
     expect(mockRefreshUser).not.toHaveBeenCalled()
   })
+
+  it('ignores an in-gallery asset change before the first attach has succeeded', () => {
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    act(() => {
+      result.current.onAssetsChange()
+    })
+
+    expect(mockRefreshUser).not.toHaveBeenCalled()
+  })
+
+  it('refreshes the auth store on a later in-gallery asset change (set-primary/remove/reorder)', async () => {
+    // These don't change galleryId/ownerToken, so onAvatarChange's own effect never
+    // re-fires for them — MediaGalleryUploader's onAssetsChange is what must trigger
+    // the refresh instead, once the initial attach has actually succeeded.
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    mockUpdateMyAvatar.mockResolvedValueOnce({ ...mockUser, avatar_url: 'https://example.com/new.jpg' })
+    mockRefreshUser.mockResolvedValue(undefined)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    act(() => {
+      result.current.onAvatarChange('01JKGALLERY0000000000000', 'token-1')
+    })
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalled())
+    mockRefreshUser.mockClear()
+
+    act(() => {
+      result.current.onAssetsChange()
+    })
+
+    await waitFor(() => expect(mockRefreshUser).toHaveBeenCalled())
+  })
 })

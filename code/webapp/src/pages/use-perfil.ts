@@ -15,6 +15,7 @@ export interface UsePerfilResult {
   isUploaderBusy: boolean
   setIsUploaderBusy: (busy: boolean) => void
   onAvatarChange: (galleryId: string | undefined, ownerToken: string | undefined) => void
+  onAssetsChange: () => void
   isSaving: boolean
 }
 
@@ -46,6 +47,18 @@ export function usePerfilPage(): UsePerfilResult {
     updateAvatarMutation.mutate({ mediaGalleryId: galleryId, ownerToken })
   }
 
+  // Covers every in-gallery mutation after the first attach (set-primary, remove,
+  // reorder) — none of those change galleryId/ownerToken, so onAvatarChange's effect
+  // never re-fires for them, yet the resolved primary photo (and therefore
+  // avatarUrl()) can still change. Gated on isSuccess so this doesn't also fire a
+  // premature refresh for the very first upload, before the initial attach mutation
+  // above has actually completed.
+  const onAssetsChange = () => {
+    if (updateAvatarMutation.isSuccess) {
+      void refreshUser()
+    }
+  }
+
   return {
     displayName: formatFirstLast(employee?.user) || user?.name || '',
     email: user?.email ?? '',
@@ -54,6 +67,7 @@ export function usePerfilPage(): UsePerfilResult {
     isUploaderBusy,
     setIsUploaderBusy,
     onAvatarChange,
+    onAssetsChange,
     isSaving: updateAvatarMutation.isPending,
   }
 }
