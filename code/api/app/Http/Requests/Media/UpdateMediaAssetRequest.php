@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Media;
 
+use App\Http\Requests\Concerns\AuthorizesMediaGalleryContextAccess;
 use App\Http\Requests\Concerns\ReadsRawStringInput;
 use App\Models\MediaAsset;
 use Illuminate\Foundation\Http\FormRequest;
@@ -18,23 +19,16 @@ use Illuminate\Validation\Validator;
  */
 class UpdateMediaAssetRequest extends FormRequest
 {
-    use ReadsRawStringInput;
+    use AuthorizesMediaGalleryContextAccess, ReadsRawStringInput;
 
     /**
      * The route carries no `permission:media.update` middleware (see
-     * routes/api/media.php) — that check now lives here, gated per the
-     * asset's stored gallery context, mirroring UploadMediaRequest: avatar
-     * assets are open to their owner (self-service replace/reorder/set-
-     * primary, #420) once ownership is established below, while every
-     * other context still requires media.update on top of ownership.
-     *
-     * The avatar bypass deliberately checks isOwnAvatarOf(), not just
-     * isManageableBy(): the latter also passes for anyone holding
-     * users.update via User::userCanManageMedia()'s admin override (meant to
-     * let an admin manage an *employee's* avatar through the employee form,
-     * #401), which must still require media.update here like any other
-     * admin-managed mutation — the self-service bypass is only for a caller
-     * managing their own avatar.
+     * routes/api/media.php) — that check now lives in
+     * AuthorizesMediaGalleryContextAccess, gated per the asset's stored
+     * gallery context, mirroring UploadMediaRequest: avatar assets are open
+     * to their owner (self-service replace/reorder/set-primary, #420) once
+     * ownership is established, while every other context still requires
+     * media.update on top of ownership.
      */
     public function authorize(): bool
     {
@@ -44,17 +38,7 @@ class UpdateMediaAssetRequest extends FormRequest
             return true;
         }
 
-        $gallery = $asset->mediaGallery;
-
-        if (! $gallery->isManageableBy($this->user(), $this->rawStringInput('owner_token'))) {
-            return false;
-        }
-
-        if ($gallery->context === 'avatar' && $gallery->isOwnAvatarOf($this->user())) {
-            return true;
-        }
-
-        return $this->user()->can('media.update');
+        return $this->authorizeMediaGalleryContextAccess($asset->mediaGallery, 'media.update');
     }
 
     public function rules(): array
