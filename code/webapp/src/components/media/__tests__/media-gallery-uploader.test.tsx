@@ -329,22 +329,42 @@ describe('MediaGalleryUploader', () => {
   })
 
   describe('onChange callback', () => {
-    it('fires with the current galleryId and ownerToken', async () => {
+    it('does not fire on mount, even when the hook already reports a gallery (hydrated initial state)', async () => {
+      // A returning user's hydrated gallery must not be silently re-submitted for saving
+      // as soon as the page opens — see MediaGalleryUploaderProps.onChange.
       mockHookState.galleryId = 'gallery-1'
       mockHookState.ownerToken = 'token-1'
       const onChange = vi.fn()
 
       render(<MediaGalleryUploader context="item" onChange={onChange} />)
 
-      await waitFor(() => expect(onChange).toHaveBeenCalledWith('gallery-1', 'token-1'))
+      // Nothing else triggers a re-render here, so give any (incorrect) async
+      // mount-effect call a chance to land before asserting it never did.
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onChange).not.toHaveBeenCalled()
     })
 
-    it('fires with undefined when nothing has been uploaded', async () => {
+    it('does not fire on mount when nothing has been uploaded either', async () => {
       const onChange = vi.fn()
 
       render(<MediaGalleryUploader context="item" onChange={onChange} />)
 
-      await waitFor(() => expect(onChange).toHaveBeenCalledWith(undefined, undefined))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('fires with the new galleryId and ownerToken once they change after mount', async () => {
+      const onChange = vi.fn()
+
+      const { rerender } = render(<MediaGalleryUploader context="item" onChange={onChange} />)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onChange).not.toHaveBeenCalled()
+
+      mockHookState.galleryId = 'gallery-1'
+      mockHookState.ownerToken = 'token-1'
+      rerender(<MediaGalleryUploader context="item" onChange={onChange} />)
+
+      await waitFor(() => expect(onChange).toHaveBeenCalledWith('gallery-1', 'token-1'))
     })
   })
 
@@ -386,7 +406,7 @@ describe('MediaGalleryUploader', () => {
   })
 
   describe('onAssetsChange callback', () => {
-    it('fires with the current assets on mount', async () => {
+    it('does not fire on mount, even when the hook already reports assets (hydrated initial state)', async () => {
       const asset = {
         gallery_id: 'gallery-1',
         asset_id: 'asset-1',
@@ -402,7 +422,8 @@ describe('MediaGalleryUploader', () => {
 
       render(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
 
-      await waitFor(() => expect(onAssetsChange).toHaveBeenCalledWith([asset]))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onAssetsChange).not.toHaveBeenCalled()
     })
 
     it('fires again when the assets array reference changes without galleryId changing', async () => {
@@ -424,13 +445,15 @@ describe('MediaGalleryUploader', () => {
       const onAssetsChange = vi.fn()
 
       const { rerender } = render(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
-      await waitFor(() => expect(onAssetsChange).toHaveBeenCalledTimes(1))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onAssetsChange).not.toHaveBeenCalled()
 
       const updatedAsset = { ...asset, is_primary: false }
       mockHookState.assets = [updatedAsset]
       rerender(<MediaGalleryUploader context="item" onAssetsChange={onAssetsChange} />)
 
       await waitFor(() => expect(onAssetsChange).toHaveBeenCalledWith([updatedAsset]))
+      expect(onAssetsChange).toHaveBeenCalledTimes(1)
     })
   })
 })

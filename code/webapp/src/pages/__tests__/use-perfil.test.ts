@@ -226,6 +226,25 @@ describe('usePerfilPage', () => {
     await waitFor(() => expect(result.current.attachFailed).toBe(false))
   })
 
+  it('refreshes the auth store on an in-gallery asset change for a returning user, even though their hydrated gallery never ran the attach mutation', async () => {
+    // MediaGalleryUploader intentionally does not fire onAvatarChange for its own
+    // hydrated initial state (see media-gallery-uploader.tsx), so
+    // updateAvatarMutation never becomes isSuccess for a returning user unless they
+    // upload again — onAssetsChange must still refresh the header for their
+    // reorder/set-primary/remove actions on the already-attached gallery.
+    mockUser.avatar_gallery = { id: 'gallery-99', assets: [{ asset_id: 'asset-1', is_primary: true }] }
+    mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePerfilPage(), { wrapper })
+
+    act(() => {
+      result.current.onAssetsChange()
+    })
+
+    await waitFor(() => expect(mockRefreshUser).toHaveBeenCalled())
+    expect(mockUpdateMyAvatar).not.toHaveBeenCalled()
+  })
+
   it('does nothing when retryAttach is called with no prior failed attempt', () => {
     mockUseMyEmployee.mockReturnValue({ data: employee, isLoading: false })
     const { wrapper } = makeWrapper()
