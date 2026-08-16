@@ -185,6 +185,11 @@ describe('ReviewRequestDialog — open state', () => {
     expect(screen.getByTestId('panel-title').textContent).toContain('Ana García')
   })
 
+  it('renders an Avatar next to the employee name', () => {
+    render(<ReviewRequestDialog request={makeRequest()} onClose={vi.fn()} />)
+    expect(screen.getByRole('img', { name: 'Ana García' })).toBeDefined()
+  })
+
   it('renders approve button', () => {
     render(<ReviewRequestDialog request={makeRequest()} onClose={vi.fn()} />)
     expect(screen.getByText('Aprobar acuerdo')).toBeDefined()

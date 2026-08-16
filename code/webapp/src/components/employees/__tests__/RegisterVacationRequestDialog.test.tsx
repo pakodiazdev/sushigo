@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { RegisterVacationRequestDialog } from '../RegisterVacationRequestDialog'
 import type { UseRegisterVacationRequestDialogResult, RegisterVacationRequestEmployee } from '../use-register-vacation-request-dialog'
 
@@ -100,6 +100,13 @@ describe('RegisterVacationRequestDialog', () => {
             <RegisterVacationRequestDialog isOpen={true} employee={mockEmployee} onClose={vi.fn()} />
         )
         expect(document.body.textContent).toContain('Mendoza, Carlos')
+    })
+
+    it('renders an Avatar next to the employee name', () => {
+        render(
+            <RegisterVacationRequestDialog isOpen={true} employee={mockEmployee} onClose={vi.fn()} />
+        )
+        expect(screen.getByRole('img', { name: 'Mendoza, Carlos' })).toBeDefined()
     })
 
     it('shows the auto-approve notice when the actor can approve', () => {
