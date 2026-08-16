@@ -13,7 +13,14 @@ use Throwable;
 /**
  * Store an uploaded file, creating a new gallery when none is given or
  * adding to the existing one otherwise. The first asset in a gallery is
- * always the primary one until a later PATCH says otherwise.
+ * always the primary one until a later PATCH says otherwise — except for
+ * an avatar-context gallery, where *every* fresh upload becomes primary
+ * immediately (demoting whichever asset held it before). Item/dish
+ * galleries show every asset, so a newly added photo shouldn't reassign
+ * which one represents the product; an avatar gallery only ever shows its
+ * primary asset as "the" profile photo (User::avatarUrl()), so uploading a
+ * replacement must act like "change my photo", not silently add a second
+ * photo the user has to separately star to actually see used anywhere.
  *
  * Storage I/O happens before the transaction (not DB work); the gallery
  * row is locked for the rest so concurrent uploads to the same gallery
@@ -54,6 +61,12 @@ class UploadMediaService
                 // (e.g. positions 0,2 remain), count() would recompute 2 and
                 // collide with the existing asset already at position 2.
                 $maxPosition = $gallery->mediaAssets()->max('position');
+                $isFirstAsset = is_null($maxPosition);
+                $isPrimary = $isFirstAsset || $gallery->context === 'avatar';
+
+                if ($isPrimary && ! $isFirstAsset) {
+                    $gallery->mediaAssets()->update(['is_primary' => false]);
+                }
 
                 return MediaAsset::create([
                     'media_gallery_id' => $gallery->id,
@@ -65,8 +78,8 @@ class UploadMediaService
                     // reach the DB as an uncaught insert error.
                     'filename' => mb_substr($file->getClientOriginalName(), 0, 255),
                     'size' => $file->getSize(),
-                    'position' => is_null($maxPosition) ? 0 : $maxPosition + 1,
-                    'is_primary' => is_null($maxPosition),
+                    'position' => $isFirstAsset ? 0 : $maxPosition + 1,
+                    'is_primary' => $isPrimary,
                 ]);
             });
         } catch (Throwable $e) {
