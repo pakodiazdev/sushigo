@@ -87,15 +87,23 @@ export function MediaGalleryUploader({
   const onAssetsChangeRef = useRef(onAssetsChange)
   onAssetsChangeRef.current = onAssetsChange
 
-  // Skipped on mount for both effects below: galleryId/assets on the first render are
-  // exactly the hydrated `initial` values (see useMediaGalleryUploader), not a change the
+  // Skipped for both effects below whenever the current value still matches the hydrated
+  // `initial` mount-time snapshot (see useMediaGalleryUploader) — that's not a change the
   // parent needs to react to. Without this, a returning user with an existing gallery
   // (e.g. the self-service avatar page) had their current photo silently re-submitted for
   // saving on every page load, popping a misleading "photo updated" confirmation.
-  const hasReportedChangeRef = useRef(false)
+  //
+  // A one-shot "have we run yet" ref (flip a flag, skip once) is NOT StrictMode-safe: React
+  // dev mode mounts, tears down, and re-mounts effects to surface hidden side effects, and
+  // refs — unlike a fresh flag — survive that simulated remount, so the flag reads as
+  // already-spent on the second (real) invocation and the hydrated state fires anyway.
+  // Comparing against a frozen mount-time snapshot instead is idempotent: every extra
+  // invocation with the same still-initial values keeps comparing equal and skipping, no
+  // matter how many times StrictMode re-runs it.
+  const initialGalleryIdentityRef = useRef({ galleryId, ownerToken })
   useEffect(() => {
-    if (!hasReportedChangeRef.current) {
-      hasReportedChangeRef.current = true
+    const initial = initialGalleryIdentityRef.current
+    if (galleryId === initial.galleryId && ownerToken === initial.ownerToken) {
       return
     }
     onChangeRef.current?.(galleryId, ownerToken)
@@ -105,10 +113,9 @@ export function MediaGalleryUploader({
     onBusyChangeRef.current?.(isUploading || isMutating || error !== null)
   }, [isUploading, isMutating, error])
 
-  const hasReportedAssetsRef = useRef(false)
+  const initialAssetsRef = useRef(assets)
   useEffect(() => {
-    if (!hasReportedAssetsRef.current) {
-      hasReportedAssetsRef.current = true
+    if (assets === initialAssetsRef.current) {
       return
     }
     onAssetsChangeRef.current?.(assets)
