@@ -144,6 +144,25 @@ class UpdateMyAvatarTest extends TestCase
     }
 
     #[Test]
+    public function a_user_cannot_claim_an_orphaned_avatar_gallery_with_no_owner_token(): void
+    {
+        // A legacy row from before the owner_token column existed, or a previous
+        // avatar detached by MediaAttachmentService on replace — now unattached and
+        // token-less. isManageableBy()'s "no token -> anyone" fallback only stayed
+        // safe while a base media.* permission still gated every caller; since this
+        // endpoint has none, nobody may claim it as their own avatar.
+        $gallery = MediaGallery::create(['name' => 'Orphaned avatar gallery', 'context' => 'avatar']);
+
+        Passport::actingAs(User::factory()->create());
+
+        $this->patchJson('/api/v1/auth/me/avatar', [
+            'media_gallery_id' => $gallery->public_id,
+        ])->assertForbidden();
+
+        $this->assertSame(0, MediaAttachment::count());
+    }
+
+    #[Test]
     public function a_user_cannot_replace_another_users_already_attached_avatar(): void
     {
         $victim = User::factory()->create();

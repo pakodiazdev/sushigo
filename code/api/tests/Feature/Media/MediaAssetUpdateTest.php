@@ -261,4 +261,23 @@ class MediaAssetUpdateTest extends TestCase
         $this->patchJson("/api/v1/media/assets/{$asset->public_id}", ['position' => 1])
             ->assertForbidden();
     }
+
+    #[Test]
+    public function a_stranger_cannot_update_an_orphaned_avatar_gallery_with_no_owner_token(): void
+    {
+        // A legacy row from before the owner_token column existed (or a previous avatar
+        // detached by MediaAttachmentService on replace), now unattached and token-less.
+        // MediaGallery::isManageableBy()'s "no token -> anyone" fallback only stayed safe
+        // while the route's base media.update permission still gated every caller; since
+        // avatar context bypasses that permission entirely (#420), this must be denied to
+        // everyone rather than silently falling back to "anyone" — nobody can prove
+        // ownership of it anymore.
+        $gallery = MediaGallery::create(['name' => 'Orphaned avatar gallery', 'context' => 'avatar']);
+        $asset = $this->createAsset(['media_gallery_id' => $gallery->id, 'is_primary' => true]);
+
+        Passport::actingAs(User::factory()->create());
+
+        $this->patchJson("/api/v1/media/assets/{$asset->public_id}", ['position' => 1])
+            ->assertForbidden();
+    }
 }
