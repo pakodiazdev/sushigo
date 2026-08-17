@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { mediaApi } from '@/services/media-api'
 import { getApiErrorMessage } from '@/lib/api-error'
-import { MEDIA_CONTEXT_EXTENSIONS, generateOwnerToken, mediaContextAccept, validateFile } from '@/lib/media-validation'
+import { MEDIA_CONTEXT_EXTENSIONS, generateOwnerToken, validateFile } from '@/lib/media-validation'
 import type { MediaContext, MediaGalleryAsset } from '@/types/media'
 
 // Re-exported for existing consumers (e.g. item-form.tsx's accept attribute) — the
-// definitions themselves live in lib/media-validation.ts, shared with the avatar
-// crop dialog's own upload flow, which doesn't otherwise depend on this hook.
-export { mediaContextAccept }
+// definition itself lives in lib/media-validation.ts, shared with the avatar crop
+// dialog's own upload flow, which doesn't otherwise depend on this hook.
+export { mediaContextAccept } from '@/lib/media-validation'
 
 export interface UseMediaGalleryUploaderInitial {
   /** An already-attached gallery's public_id (e.g. the caller's own current
