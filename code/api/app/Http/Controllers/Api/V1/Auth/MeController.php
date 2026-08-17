@@ -45,17 +45,8 @@ class MeController extends Controller
         $user->load([
             'roles',
             'mediaAttachments' => fn ($query) => $query->where('is_primary', true),
-            // Full asset list, not filtered to is_primary like before #420 — the
-            // self-service avatar page hydrates its uploader from avatar_gallery
-            // below so a returning user can manage (reorder/set-primary/remove/add
-            // to) their existing avatar gallery, not only ever replace it wholesale
-            // with a fresh upload. User::avatarUrl() still resolves correctly from
-            // this wider set — it filters with firstWhere('is_primary', true)
-            // itself rather than relying on the query to pre-constrain it.
-            'mediaAttachments.mediaGallery.mediaAssets',
+            'mediaAttachments.mediaGallery.mediaAssets' => fn ($query) => $query->where('is_primary', true),
         ]);
-
-        $avatarGallery = $user->mediaAttachments->firstWhere('is_primary', true)?->mediaGallery;
 
         return new ResponseEntity(
             data: [
@@ -64,19 +55,6 @@ class MeController extends Controller
                 'email' => $user->email,
                 // See User::avatarUrl() — reads the eager-loaded chain above.
                 'avatar_url' => $user->avatarUrl(),
-                'avatar_gallery' => $avatarGallery ? [
-                    'id' => $avatarGallery->public_id,
-                    'assets' => $avatarGallery->mediaAssets->map(fn ($asset) => [
-                        'gallery_id' => $avatarGallery->public_id,
-                        'asset_id' => $asset->public_id,
-                        'url' => $asset->url,
-                        'filename' => $asset->filename,
-                        'mime_type' => $asset->mime_type,
-                        'size' => $asset->size,
-                        'position' => $asset->position,
-                        'is_primary' => $asset->is_primary,
-                    ]),
-                ] : null,
                 'roles' => $user->roles->map(fn ($role) => [
                     'id' => $role->id,
                     'name' => $role->name,

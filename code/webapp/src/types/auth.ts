@@ -1,17 +1,11 @@
 // Authentication and User Management Types
 
-import type { MediaGalleryAsset } from '@/types/media'
-
 export interface User {
   id: number
   name: string
   email: string
   /** URL of the user's primary avatar photo, or null/undefined when none is attached. */
   avatar_url?: string | null
-  /** The user's avatar gallery (id + every asset in it), null/undefined when none is
-   *  attached — lets the self-service avatar uploader hydrate and manage an existing
-   *  gallery instead of only ever replacing it wholesale (#420). */
-  avatar_gallery?: { id: string; assets: MediaGalleryAsset[] } | null
   email_verified_at: string | null
   is_active: boolean
   meta: Record<string, unknown> | null

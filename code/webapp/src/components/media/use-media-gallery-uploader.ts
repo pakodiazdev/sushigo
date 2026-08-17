@@ -1,60 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { mediaApi } from '@/services/media-api'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { MEDIA_CONTEXT_EXTENSIONS, generateOwnerToken, mediaContextAccept, validateFile } from '@/lib/media-validation'
 import type { MediaContext, MediaGalleryAsset } from '@/types/media'
 
-// Mirrors config('media.contexts') and UploadMediaRequest's 8000 KB cap
-// (code/api/config/media.php, code/api/app/Http/Requests/Media/UploadMediaRequest.php)
-// for immediate client-side feedback — the backend remains the source of truth, and
-// re-validates every upload against the context declared here (or, for a gallery this
-// hook is reusing, the context that gallery was actually created with).
-const MEDIA_CONTEXT_EXTENSIONS: Record<MediaContext, readonly string[]> = {
-  item: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'],
-  dish: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'],
-  avatar: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-}
-
-const EXTENSION_MIME_TYPES: Record<string, string> = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  gif: 'image/gif',
-  webp: 'image/webp',
-  mp4: 'video/mp4',
-  mov: 'video/quicktime',
-}
-
-/** Value for the file input's `accept` attribute — restricts the OS file picker per context. */
-export function mediaContextAccept(context: MediaContext): string {
-  return MEDIA_CONTEXT_EXTENSIONS[context].map((extension) => EXTENSION_MIME_TYPES[extension]).join(',')
-}
-
-const MAX_FILE_SIZE_BYTES = 8000 * 1024
-
-// owner_token is a bearer-style credential (see doc/architecture/media/media-architecture.en.md
-// §5.1): a predictable fallback would let anyone guess it and claim someone else's in-progress
-// gallery, so unlike generateToastId() in components/ui/toast-provider.tsx (a harmless UI id,
-// which degrades to a counter), this fails loudly instead of degrading to a weaker token.
-function generateOwnerToken(): string {
-  if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
-    throw new TypeError('A secure random number generator is required to upload media (crypto.randomUUID unavailable).')
-  }
-  return crypto.randomUUID()
-}
-
-function fileExtension(file: File): string {
-  return file.name.split('.').pop()?.toLowerCase() ?? ''
-}
-
-function validateFile(file: File, allowedExtensions: readonly string[]): string | null {
-  if (!allowedExtensions.includes(fileExtension(file))) {
-    return `"${file.name}" is not a supported file type.`
-  }
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    return `"${file.name}" exceeds the 8000 KB upload limit.`
-  }
-  return null
-}
+// Re-exported for existing consumers (e.g. item-form.tsx's accept attribute) — the
+// definitions themselves live in lib/media-validation.ts, shared with the avatar
+// crop dialog's own upload flow, which doesn't otherwise depend on this hook.
+export { mediaContextAccept }
 
 export interface UseMediaGalleryUploaderInitial {
   /** An already-attached gallery's public_id (e.g. the caller's own current

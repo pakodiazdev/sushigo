@@ -1,10 +1,13 @@
+import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { Camera } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { MediaGalleryUploader } from '@/components/media/media-gallery-uploader'
+import { useToast } from '@/components/ui/toast-context'
+import { AvatarCropDialog } from '@/components/media/avatar-crop-dialog'
+import { MEDIA_CONTEXT_EXTENSIONS, mediaContextAccept, validateFile } from '@/lib/media-validation'
 import { usePerfilPage } from './use-perfil'
 
 // No beforeLoad guard: Layout already redirects unauthenticated users to
@@ -15,20 +18,24 @@ export const Route = createFileRoute('/perfil')({
 })
 
 export function PerfilPage() {
-  const {
-    displayName,
-    email,
-    avatarUrl,
-    initialGalleryId,
-    initialAssets,
-    isUploaderBusy,
-    setIsUploaderBusy,
-    onAvatarChange,
-    onAssetsChange,
-    attachFailed,
-    retryAttach,
-    isSaving,
-  } = usePerfilPage()
+  const { displayName, email, avatarUrl, isLoadingEmployee } = usePerfilPage()
+  const { showError } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) {
+      return
+    }
+    const validationError = validateFile(file, MEDIA_CONTEXT_EXTENSIONS.avatar)
+    if (validationError) {
+      showError(validationError, 'Error')
+      return
+    }
+    setSelectedFile(file)
+  }
 
   return (
     <PageContainer>
@@ -37,38 +44,36 @@ export function PerfilPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
-            <Avatar name={displayName} imageUrl={avatarUrl} size="lg" />
+            <button
+              type="button"
+              data-testid="avatar-edit-trigger"
+              aria-label="Cambiar foto de perfil"
+              className="group relative shrink-0 rounded-full"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoadingEmployee}
+            >
+              <Avatar name={displayName} imageUrl={avatarUrl} size="lg" />
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground">
+                <Camera className="h-2.5 w-2.5" />
+              </span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={mediaContextAccept('avatar')}
+              className="hidden"
+              data-testid="avatar-file-input"
+              onChange={handleFileSelected}
+            />
             <div className="flex-1 space-y-1">
               <p className="font-medium text-foreground">{displayName}</p>
               <p className="text-sm text-muted-foreground">{email}</p>
             </div>
           </div>
-
-          <div className="mt-6">
-            <MediaGalleryUploader
-              context="avatar"
-              label="Foto de perfil"
-              disabled={isSaving}
-              initialGalleryId={initialGalleryId}
-              initialAssets={initialAssets}
-              onChange={onAvatarChange}
-              onBusyChange={setIsUploaderBusy}
-              onAssetsChange={onAssetsChange}
-            />
-            {(isSaving || isUploaderBusy) && (
-              <p className="mt-2 text-sm text-muted-foreground">Guardando...</p>
-            )}
-            {attachFailed && (
-              <div className="mt-2 flex items-center justify-between rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300">
-                <span>No se pudo guardar tu nueva foto de perfil.</span>
-                <Button type="button" variant="outline" size="sm" onClick={retryAttach} disabled={isSaving}>
-                  Reintentar
-                </Button>
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
+
+      <AvatarCropDialog isOpen={selectedFile !== null} file={selectedFile} onClose={() => setSelectedFile(null)} />
     </PageContainer>
   )
 }
