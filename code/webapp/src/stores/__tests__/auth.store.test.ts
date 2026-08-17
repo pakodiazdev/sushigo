@@ -7,6 +7,7 @@ import {
     useAuthStore,
 } from '@/stores/auth.store'
 import { authService } from '@/services/auth.service'
+import { apiClient } from '@/lib/api-client'
 import type { User, Branch, Role, Permission, OperatingUnitAssignment, OperatingUnit } from '@/types/auth'
 
 // ─── Test Fixtures ─────────────────────────────────────────────────────────────
@@ -424,5 +425,44 @@ describe('refreshUser', () => {
         await useAuthStore.getState().refreshUser()
 
         expect(useAuthStore.getState().currentBranch?.id).toBe(branch.id)
+    })
+
+    it('preserves the existing branch context when /auth/me omits operating_units and the branches fallback fails, e.g. a transient network hiccup during a routine avatar save (#420)', async () => {
+        // MeController never returns operating_units (see extractBranchesFromUser
+        // returning [] for it), so refreshUser() always falls back to
+        // fetchBranchesFromApi() — if that fallback request itself fails, it
+        // swallows the error into [], which used to read as "user now has zero
+        // branches" and wipe an already-populated currentBranch/availableBranches
+        // out from under the user on every single refreshUser() call.
+        const branch = createBranch(1, 'Sucursal Centro')
+        const refreshedUser = createUser({ avatar_url: 'https://example.com/new-avatar.jpg', operating_units: [] })
+        vi.spyOn(authService, 'getMe').mockResolvedValueOnce({ status: 200, data: refreshedUser })
+        vi.spyOn(apiClient, 'get').mockRejectedValueOnce(new Error('Network error'))
+
+        useAuthStore.setState({
+            user: createUser({ avatar_url: null }),
+            currentBranch: branch,
+            availableBranches: [branch],
+        })
+
+        await useAuthStore.getState().refreshUser()
+
+        expect(useAuthStore.getState().currentBranch?.id).toBe(branch.id)
+        expect(useAuthStore.getState().availableBranches).toEqual([branch])
+        // The user/avatar data itself must still refresh even though branches didn't.
+        expect(useAuthStore.getState().user?.avatar_url).toBe('https://example.com/new-avatar.jpg')
+    })
+
+    it('clears the branch when the user genuinely has none yet (first refresh, nothing to preserve)', async () => {
+        const refreshedUser = createUser({ operating_units: [] })
+        vi.spyOn(authService, 'getMe').mockResolvedValueOnce({ status: 200, data: refreshedUser })
+        vi.spyOn(apiClient, 'get').mockRejectedValueOnce(new Error('Network error'))
+
+        useAuthStore.setState({ user: createUser(), currentBranch: null, availableBranches: [] })
+
+        await useAuthStore.getState().refreshUser()
+
+        expect(useAuthStore.getState().currentBranch).toBeNull()
+        expect(useAuthStore.getState().availableBranches).toEqual([])
     })
 })
