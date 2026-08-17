@@ -1,9 +1,9 @@
 /**
  * Self-Service Avatar — E2E happy path (#420)
  *
- * A non-admin user (no users.update) replaces their own avatar from the
- * /perfil page, and immediately sees the uploaded photo (not the initials
- * fallback) in the application header — without signing out and back in.
+ * A non-admin user (no users.update) picks a new avatar photo from the /perfil
+ * page, crops it in the circular preview, saves it, and immediately sees it in
+ * the application header — without signing out and back in.
  *
  * Para correr solo este archivo:
  *   make cypress-spec SPEC=profile-avatar-self-service
@@ -24,7 +24,7 @@ describe('Perfil — Avatar self-service', () => {
     cy.closeDevDebugger()
   })
 
-  it('a non-admin user replaces their own avatar and sees it in the header without re-login', () => {
+  it('a non-admin user crops and saves their own avatar and sees it in the header without re-login', () => {
     // Header.tsx renders two Avatar instances for the same user (mobile + desktop
     // menus, toggled by CSS media query, not conditional rendering) — at the
     // 1280px default Cypress viewport only the desktop one (`.lg:flex`) is
@@ -36,45 +36,53 @@ describe('Perfil — Avatar self-service', () => {
     // ── 1. Only the initials fallback renders before any avatar is attached ──
     headerAvatarImg().should('not.exist')
 
-    // ── 2. Ir a Mi perfil y subir foto ────────────────────────────────────────
+    // ── 2. Ir a Mi perfil y elegir foto ───────────────────────────────────────
     cy.visit('/perfil')
     cy.url().should('include', '/perfil', { timeout: 10_000 })
 
-    cy.get('[data-testid="media-uploader-input"]').selectFile('cypress/fixtures/media/sample-photo.jpg', {
+    cy.get('[data-testid="avatar-edit-trigger"]').click()
+    cy.get('[data-testid="avatar-file-input"]').selectFile('cypress/fixtures/media/sample-photo.jpg', {
       force: true,
     })
-    cy.get('[data-testid="media-uploader-asset"]', { timeout: 15_000 }).should('have.length', 1)
 
-    // ── 3. El header refleja la nueva foto de inmediato, sin recargar ────────
+    // ── 3. Se abre el diálogo de recorte con el círculo de vista previa ──────
+    cy.get('[data-testid="avatar-crop-dialog"]', { timeout: 10_000 }).should('be.visible')
+
+    // ── 4. Guardar sube el recorte y adjunta el nuevo avatar ─────────────────
+    cy.get('[data-testid="avatar-crop-save"]').click()
+    cy.get('[data-testid="avatar-crop-dialog"]', { timeout: 10_000 }).should('not.exist')
+
+    // ── 5. El header refleja la nueva foto de inmediato, sin recargar ────────
     // Same accessible-avatar assertion pattern as employee-avatar-upload.cy.ts:
     // an <img> inside the role="img" wrapper means the uploaded photo rendered,
     // not the initials fallback (a <span> instead) — proving the self-service
-    // PATCH succeeded AND the auth store's refreshUser() updated the header
-    // without a page reload or a new login.
+    // upload+attach succeeded AND the auth store's refreshUser() updated the
+    // header without a page reload or a new login.
     headerAvatarImg({ timeout: 10_000 })
       .should('be.visible')
       .and('have.attr', 'src')
       .and('not.be.empty')
 
-    // ── 4. La foto persiste tras recargar (confirma que quedó adjunta) ───────
+    // ── 6. La foto persiste tras recargar (confirma que quedó adjunta) ───────
     cy.reload()
     headerAvatarImg({ timeout: 10_000 })
       .should('have.attr', 'src')
       .and('not.be.empty')
 
-    // ── 5. Reemplazar la foto ya existente también actualiza el header ───────
+    // ── 7. Reemplazar la foto ya existente también actualiza el header ───────
     // Regression coverage: a returning user's replacement upload must become the
-    // shown avatar immediately (UploadMediaService demotes the previous primary for
-    // an avatar-context gallery), not just add a second, non-primary photo that
-    // never surfaces anywhere until the star control is clicked by hand — the gap
-    // this spec's original first-time-upload-only flow didn't catch.
+    // shown avatar immediately (UploadMediaService demotes the previous primary
+    // for an avatar-context gallery), not leave the old photo showing.
     headerAvatarImg({ timeout: 10_000 })
       .invoke('attr', 'src')
       .then((firstSrc) => {
-        cy.get('[data-testid="media-uploader-input"]').selectFile('cypress/fixtures/media/sample-photo.jpg', {
+        cy.get('[data-testid="avatar-edit-trigger"]').click()
+        cy.get('[data-testid="avatar-file-input"]').selectFile('cypress/fixtures/media/sample-photo.jpg', {
           force: true,
         })
-        cy.get('[data-testid="media-uploader-asset"]', { timeout: 15_000 }).should('have.length', 2)
+        cy.get('[data-testid="avatar-crop-dialog"]', { timeout: 10_000 }).should('be.visible')
+        cy.get('[data-testid="avatar-crop-save"]').click()
+        cy.get('[data-testid="avatar-crop-dialog"]', { timeout: 10_000 }).should('not.exist')
 
         headerAvatarImg({ timeout: 10_000 })
           .should('have.attr', 'src')

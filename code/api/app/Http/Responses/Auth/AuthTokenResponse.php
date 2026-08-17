@@ -27,18 +27,14 @@ class AuthTokenResponse implements Responsable
 
     public function toResponse($request): JsonResponse
     {
-        // Same eager-loaded chain as MeController — without it, the header avatar (and,
-        // for avatar_gallery below, the self-service profile page's uploader) would only
-        // reflect the photo after a later /auth/me call (e.g. on refresh), not immediately
-        // after login. Unfiltered mediaAssets, not is_primary-only: avatar_gallery below
-        // needs the full asset list to hydrate the uploader (see MeController).
+        // Same eager-loaded chain as MeController::avatar_url — without it, the header
+        // avatar would only show the photo after a later /auth/me call (e.g. on refresh),
+        // not immediately after login.
         $this->user->load([
             'roles',
             'mediaAttachments' => fn ($query) => $query->where('is_primary', true),
-            'mediaAttachments.mediaGallery.mediaAssets',
+            'mediaAttachments.mediaGallery.mediaAssets' => fn ($query) => $query->where('is_primary', true),
         ]);
-
-        $avatarGallery = $this->user->mediaAttachments->firstWhere('is_primary', true)?->mediaGallery;
 
         return response()->json([
             'status' => $this->status,
@@ -50,19 +46,6 @@ class AuthTokenResponse implements Responsable
                     'name' => $this->user->name,
                     'email' => $this->user->email,
                     'avatar_url' => $this->user->avatarUrl(),
-                    'avatar_gallery' => $avatarGallery ? [
-                        'id' => $avatarGallery->public_id,
-                        'assets' => $avatarGallery->mediaAssets->map(fn ($asset) => [
-                            'gallery_id' => $avatarGallery->public_id,
-                            'asset_id' => $asset->public_id,
-                            'url' => $asset->url,
-                            'filename' => $asset->filename,
-                            'mime_type' => $asset->mime_type,
-                            'size' => $asset->size,
-                            'position' => $asset->position,
-                            'is_primary' => $asset->is_primary,
-                        ]),
-                    ] : null,
                     'roles' => $this->user->roles->map(fn ($role) => [
                         'id' => $role->id,
                         'name' => $role->name,
