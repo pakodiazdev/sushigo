@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Camera } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
@@ -23,7 +24,7 @@ export function PerfilPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
-  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) {
