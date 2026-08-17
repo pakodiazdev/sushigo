@@ -278,8 +278,27 @@ export const useAuthStore = create<AuthState>()(
           branches = await fetchBranchesFromApi();
         }
 
+        const { currentBranch, availableBranches: previousBranches } = get();
+
+        // fetchBranchesFromApi() swallows its own request failures into an empty
+        // array — an empty result here can mean either "this user genuinely has no
+        // branches" or "the fallback request itself failed" (network hiccup,
+        // transient 5xx), and refreshUser() (unlike login()) runs after routine
+        // actions on top of an already-populated session, e.g. saving an avatar.
+        // Since those two cases aren't distinguishable from here, treat a *newly*
+        // empty result as the latter when branches were already populated —
+        // preserve them instead of silently discarding the user's active branch
+        // out from under them.
+        if (branches.length === 0 && previousBranches.length > 0) {
+          set({
+            user: userData,
+            isAdmin: checkIsAdmin(userData),
+            isSuperAdmin: checkIsSuperAdmin(userData),
+          });
+          return;
+        }
+
         // Keep current branch if still valid, otherwise auto-select single branch
-        const { currentBranch } = get();
         let validatedBranch = currentBranch
           ? (branches.find((b) => b.id === currentBranch.id) ?? null)
           : null;
