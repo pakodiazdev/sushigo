@@ -38,17 +38,28 @@ jobs:
           PROJECTS_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
         run: node .github/scripts/iteration-progress/generate.js
 
-      - name: Commit and push if the badge changed
+      - name: Amend and force-push the badge to the badges branch
         run: |
-          if git diff --quiet -- .github/badges/iteration-progress.svg; then
+          # The badge lives on a dedicated orphan `badges` branch (see #462), never on `main` —
+          # `main` is branch-protected (PR + required status checks) and a bot pushing directly
+          # to it would be rejected outright. `badges` holds nothing but the generated SVG and
+          # nothing else ever branches off it, so amending its single commit in place on every run
+          # is safe here in a way it would not be on a branch other people build work on top of.
+          cp .github/badges/iteration-progress.svg /tmp/iteration-progress.svg
+
+          git fetch origin badges
+          git checkout -B badges origin/badges
+          cp /tmp/iteration-progress.svg iteration-progress.svg
+
+          git add iteration-progress.svg
+
+          if git diff --cached --quiet; then
             echo "Badge unchanged — nothing to commit"
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/badges/iteration-progress.svg
-          git commit \
-            -m "🔧 [#453] - Regenerate iteration progress badge 📊" \
-            -m "- 📊 Updated .github/badges/iteration-progress.svg from live GitHub Projects data"
-          git push
+          git commit --amend --reset-author -m "🔧 [#462] - Regenerate iteration progress badge 📊" \
+            -m "- 📊 Updated iteration-progress.svg from live GitHub Projects data"
+          git push --force origin badges
