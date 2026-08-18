@@ -490,9 +490,10 @@ outline, migration plan) gating the next catalog sprint.
   with usable session data.
 - Sprint 004 remained under `doc/sprints/planned/` at the time this closure pass (`#457`) was
   written — promoting it was intentionally left as separate follow-up work (§17), and was carried
-  out the next day via `#460`, which also corrected the GitHub Project `Iteration` field's date
-  windows (the badge showed `Sprint 2` as current well after this sprint's own confirmed scope had
-  shipped, since GH's fixed 14-day cadence had drifted behind actual delivery pace).
+  out later that same day (2026-08-18) via `#460`, which also corrected the GitHub Project
+  `Iteration` field's date windows (the badge showed `Sprint 2` as current well after this sprint's
+  own confirmed scope had shipped, since GH's fixed 14-day cadence had drifted behind actual
+  delivery pace).
 
 ## 16. Lessons Learned
 
@@ -537,9 +538,9 @@ correctly included in scope.
 ## 18. Sprint Closure Checklist
 
 > Per `doc/conventions/sprints.md` §4, this sprint is now **formally closed**: `#457` (the row
-> below tracking this very checklist pass) merged via PR #458, and Sprint 004 was promoted from
-> `doc/sprints/planned/` via `#460` the following day. Every item below reflects the state of the
-> *confirmed, planned* scope (10 Issues + `dev-lab#72`), which is fully delivered.
+> below tracking this very checklist pass) merged via PR #458 on 2026-08-18, and Sprint 004 was
+> promoted from `doc/sprints/planned/` via `#460` later that same day. Every item below reflects
+> the state of the *confirmed, planned* scope (10 Issues + `dev-lab#72`), which is fully delivered.
 
 - [x] SushiGo application Issues were selected before sprint promotion.
 - [x] Every included Issue is linked to SushiGo Admin, labeled `sprint-3`, and assigned to the
