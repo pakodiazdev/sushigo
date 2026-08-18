@@ -1,15 +1,15 @@
 ---
 sprint: "004"
 title: Product Catalog Reconstruction
-status: Planned
+status: In Progress
 
 created: 2026-08-12
-started:
+started: 2026-08-18
 completed:
-last_updated: 2026-08-12
+last_updated: 2026-08-18
 
 base_branch: main
-base_commit: ace93c8
+base_commit: e11cb139
 scope_issues: 8
 
 github_project: SushiGo Admin (#7)
@@ -76,7 +76,7 @@ seed data, and leaves financial and Stock operations in their correct later doma
 | Created | 2026-08-12 |
 | Planned start | 2026-09-06 |
 | Planned end | 2026-09-19 |
-| Started | — |
+| Started | 2026-08-18 (promoted early — see `#460`; Sprint 003 delivered its confirmed scope 6 days ahead of its own planned window) |
 | Completed | — |
 | Target calendar duration | 14 days |
 | Active workdays | — |
@@ -111,13 +111,13 @@ seed data, and leaves financial and Stock operations in their correct later doma
 
 | Date | Status | Item | Change | Reason |
 |---|---|---|---|---|
-| — | — | — | None yet | Sprint not started |
+| — | — | — | None yet | — |
 
 ### 5.4 Opportunistic Work
 
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
-| — | — | — | None yet | — |
+| 2026-08-18 | #460 | Promote Sprint 004, close Sprint 003, and add /close-sprint automation | Sprint 003's confirmed scope was fully delivered and its closure documentation (`#457`) merged, but formal closure needed Sprint 004 promoted; the GitHub Project's `Iteration` field dates had also drifted behind actual delivery pace, showing a stale sprint on the committed badge | Sprint 003 marked `Completed`; this document promoted to `doc/sprints/` and marked `In Progress`; both sprint indexes synchronized; GH Project `Iteration` dates corrected; `.claude/commands/close-sprint.md` added |
 
 ## 6. Value Ranking
 

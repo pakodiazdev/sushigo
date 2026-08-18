@@ -1,12 +1,12 @@
 ---
 sprint: "003"
 title: Development Platform & Product Reliability
-status: In Progress
+status: Completed
 
 created: 2026-08-12
 started: 2026-08-12
-completed:
-last_updated: 2026-08-17
+completed: 2026-08-18
+last_updated: 2026-08-18
 
 base_branch: main
 base_commit: cfd6cfb
@@ -33,9 +33,9 @@ addition (`dev-lab#72`) and one completed opportunistic Issue (`#443`). A second
 Issue, `#448`, merged its code (PR #451) but its own archived record still has every acceptance
 criterion open by design, pending a live validation run — see §13. Per `doc/conventions/sprints.md`
 §4, a sprint is only *formally* completed once its closure checklist is done **and** the next sprint
-is promoted to current — Sprint 004 is still under `doc/sprints/planned/`, so this document's
-`status` remains `In Progress` even though the confirmed scope is finished. This closure pass is
-itself tracked under `#457`, still open at the time of writing (PR #458). The dev-lab increment
+is promoted to current — both conditions are now met: this closure pass (`#457`, PR #458) merged
+2026-08-18, and Sprint 004 was promoted the same day via `#460`, so this document's `status` is now
+`Completed`. The dev-lab increment
 added
 automated Bats coverage for the shared workspace-bootstrap helpers with a required macOS CI gate, a
 reliable `make status` workspace-runtime command, an opt-in pgAdmin database browser, a normalized
@@ -102,7 +102,7 @@ Product Inventory target design with conflict-aware execution and complete time/
 | Planned iteration start | 2026-08-23 |
 | Planned iteration end | 2026-09-05 |
 | Started | 2026-08-12 |
-| Completed | — (confirmed scope delivered 2026-08-17; formal closure pending Sprint 004 promotion, see §18) |
+| Completed | 2026-08-18 (confirmed scope delivered 2026-08-17; Sprint 004 promoted the next day, `#460`) |
 | Calendar span so far | 6 days (2026-08-12 → 2026-08-17) |
 | Active workdays with session evidence | 4 (2026-08-12 → 2026-08-15, from real `Sessions[]` data — see §11's wall-clock blocks). dev-lab Issue/PR activity additionally lands on 2026-08-13 and 2026-08-17, but with no session data at all (see §12) |
 
@@ -162,7 +162,7 @@ Confirmed `pakodiazdev/sushigo` scope:
 |---|---:|---|---|---|
 | 2026-08-12 | #443 | Formally close Sprint 002, promote Sprint 003, and record Sprint 004 planning | Sprint lifecycle transition and planning documents were ready for permanent review | Sprint 002 closed; Sprint 003 promoted; Sprint 004 and roadmap alias convention submitted together; PR #444; 16m tracked |
 | 2026-08-13 | #448 | Move `/issue` automated-review loops to isolated subagents | Review-loop context growth and `finish-pr` approval interruptions required an unplanned reliability pass | Copilot/Devin loops isolated, CI/session safeguards hardened, and file-list captures stabilized; PR #451; 9h20m tracked; **validation still pending** — all 5 Acceptance Criteria and one Technical Task remain open by design until a real `/issue` run exercises them (§13, §17) |
-| 2026-08-17 | #457 | Close out Sprint 003 documentation — resync progress and record data-quality gaps | Sprint 003's confirmed scope was 100% closed on GitHub, but this document and 8 of its 13 Issues' own Sessions/Tracked/Retrospective data had never been resynced after the last 6 Issues closed | 8 Issues (`dev-lab#64`, `#65`, `#66`, `#67`, `#68`, `#72`, `sushigo#420`, `#443`) resynced directly on GitHub with real or explicitly gap-marked time data; this document rewritten to reflect actual status, evidence, wall-clock time, and the dev-lab Sessions-tracking gap as a named lesson — tracked via PR #458, still open (see §13) |
+| 2026-08-17 | #457 | Close out Sprint 003 documentation — resync progress and record data-quality gaps | Sprint 003's confirmed scope was 100% closed on GitHub, but this document and 8 of its 13 Issues' own Sessions/Tracked/Retrospective data had never been resynced after the last 6 Issues closed | 8 Issues (`dev-lab#64`, `#65`, `#66`, `#67`, `#68`, `#72`, `sushigo#420`, `#443`) resynced directly on GitHub with real or explicitly gap-marked time data; this document rewritten to reflect actual status, evidence, wall-clock time, and the dev-lab Sessions-tracking gap as a named lesson — merged via PR #458 (`e11cb139`), 2026-08-18 (see §13) |
 
 ## 6. Value Ranking
 
@@ -419,7 +419,7 @@ corrected by backfilling a plausible-looking number.
 | ✅ | #72 | `sushigo-dev-lab` | Branch protection rule on `main` requiring the `Bats (macOS)` check and an up-to-date branch before merge | PR dev-lab#76 | — | not tracked (gap) | Scope addition, not part of the original 10-Issue confirmed scope — see §5.3 |
 | ✅ | #443 | `sushigo` | Sprint 002 marked Completed; Sprint 003 promoted and marked In Progress; Sprint 004 kept planned; Sprints 005–006 documented; DES/CAT/OPS/STK roadmap alias convention published | PR #444 | — | 16m | Opportunistic; tracked time covers only the final review/publish pass — see its own Retrospective |
 | 🚧 | #448 | `sushigo` | Isolated Copilot and Devin review loops into foreground workers and hardened unattended close-out safeguards | PR #451 | — | 9h20m | Docs/command-file change, no test suite: `git diff --check`, frontmatter/allow-list, and compact-contract/safe-capture structural assertions all passing; 6 Copilot review threads resolved (SHA-anchored re-checks, idempotent session cleanup, squash-verification stabilization, allow-list completion, canonical-body dispute sourcing). **Not `✅`:** `doc/tasks/2026-08/448-isolate-review-loops-in-subagents.md` still has all 5 Acceptance Criteria unchecked and one Technical Task left undone — its own Retrospective says they "remain open by design" pending a real `/issue` run to validate against, and were never subsequently closed out |
-| 🚧 | #457 | `sushigo` | Resynced 8 Issues' Sessions/Tracked/Retrospective data (`dev-lab#64`, `#65`, `#66`, `#67`, `#68`, `#72`, `sushigo#420`, `#443`) and rewrote this sprint document | PR #458 | — | not tracked (this closure pass has no `/start-issue` session of its own — see §12) | Open, pending merge at the time of writing; this row (and this document's `status`) update once `#457` closes |
+| ✅ | #457 | `sushigo` | Resynced 8 Issues' Sessions/Tracked/Retrospective data (`dev-lab#64`, `#65`, `#66`, `#67`, `#68`, `#72`, `sushigo#420`, `#443`) and rewrote this sprint document | PR #458 | `e11cb139` | not tracked (this closure pass has no `/start-issue` session of its own — see §12) | Merged 2026-08-18 |
 
 ## 14. Quality Results
 
@@ -456,13 +456,13 @@ outline, migration plan) gating the next catalog sprint.
 
 - **Confirmed planned Issues:** 5 dev-lab Issues and 5 SushiGo Issues — **10/10 completed (100%)**.
 - **Scope additions:** 1 (`dev-lab#72`) — completed.
-- **Opportunistic Issues:** 3 (`#443`, `#448`, `#457`) — 1/3 completed (`#443`). `#448`'s code
-  merged (PR #451) but its own Acceptance Criteria remain open by design pending a live validation
-  run, so it is not counted as completed (§13, §17). `#457` (this closure pass) is still open,
-  tracked via PR #458 (see §13).
+- **Opportunistic Issues:** 3 (`#443`, `#448`, `#457`) — 2/3 completed (`#443`, `#457`). `#448`'s
+  code merged (PR #451) but its own Acceptance Criteria remain open by design pending a live
+  validation run, so it is not counted as completed (§13, §17). `#457` merged via PR #458
+  (`e11cb139`), 2026-08-18 (see §13).
 - **Confirmed estimate:** 27h optimistic / 53h pessimistic (original 10-Issue scope).
-- **Completed:** 12/14 (10 planned + 1 scope addition + 1 of 3 opportunistic); `#448` and `#457`
-  remain open.
+- **Completed:** 13/14 (10 planned + 1 scope addition + 2 of 3 opportunistic); `#448` remains open
+  by design (validation pending).
 - **Deprecated or cancelled:** 0.
 - **Tracked:** 35h15m across the 5 confirmed `sushigo` Issues; not tracked (gap, not a zero — see
   §12) across the 5 confirmed `dev-lab` Issues and `dev-lab#72`; 9h36m across `#443`+`#448`; `#457`
@@ -488,8 +488,11 @@ outline, migration plan) gating the next catalog sprint.
 - The 27h–53h range assumed conflict-aware parallel execution; it was engineering effort, not
   elapsed calendar time. The real Wall-Clock/Parallelization figures in §11 cover only the Issues
   with usable session data.
-- Sprint 004 remains under `doc/sprints/planned/` — promoting it to current is intentionally left
-  as separate follow-up work (§17), not bundled into this closure pass.
+- Sprint 004 remained under `doc/sprints/planned/` at the time this closure pass (`#457`) was
+  written — promoting it was intentionally left as separate follow-up work (§17), and was carried
+  out the next day via `#460`, which also corrected the GitHub Project `Iteration` field's date
+  windows (the badge showed `Sprint 2` as current well after this sprint's own confirmed scope had
+  shipped, since GH's fixed 14-day cadence had drifted behind actual delivery pace).
 
 ## 16. Lessons Learned
 
@@ -528,21 +531,21 @@ correctly included in scope.
 | ⏳ | #438–#442 | Complete Stock integrity, access, navigation, and legacy cleanup | Requires the replacement operational domains before final cleanup | Sprint 006 |
 | ⏳ | TBD | Reassess dev-lab portability only if Linux support becomes a product need | Explicitly excluded from #64's macOS-focused CI scope | Future |
 | ⏳ | TBD | Require every dev-lab Issue to open a `/start-issue` session before work begins, matching the sushigo convention | Closes the Sessions-tracking gap named in §16, found across 6 dev-lab Issues this sprint | Sprint 004 |
-| ⏳ | TBD | Promote `sprint-004-product-catalog-reconstruction.md` from `doc/sprints/planned/` to `doc/sprints/` and mark it current | Sprint 003's confirmed scope is 100% delivered, but per `doc/conventions/sprints.md` §4 it cannot be formally `Completed` until Sprint 004 is promoted; that promotion is a deliberate follow-up decision, not bundled into this closure pass | Sprint 004 kickoff |
+| ✅ | #460 | Promote `sprint-004-product-catalog-reconstruction.md` from `doc/sprints/planned/` to `doc/sprints/` and mark it current | Sprint 003's confirmed scope is 100% delivered, but per `doc/conventions/sprints.md` §4 it cannot be formally `Completed` until Sprint 004 is promoted; that promotion is a deliberate follow-up decision, not bundled into this closure pass | Sprint 004 kickoff — done 2026-08-18 |
 | ⏳ | TBD | Run a real `/issue` execution to validate `#448`'s isolated-subagent review loops and close its remaining Acceptance Criteria | `doc/tasks/2026-08/448-isolate-review-loops-in-subagents.md`'s own Retrospective says all 5 ACs and one Technical Task (a live token/wall-clock comparison run) remain open by design pending exactly this — it was never followed up on | Sprint 004 |
 
 ## 18. Sprint Closure Checklist
 
-> Per `doc/conventions/sprints.md` §4, this sprint is **not yet formally closed**: `#457` (the row
-> below tracking this very checklist pass) is still open, and Sprint 004 has not been promoted from
-> `doc/sprints/planned/`. Every item below reflects the state of the *confirmed, planned* scope
-> (10 Issues + `dev-lab#72`), which is fully delivered.
+> Per `doc/conventions/sprints.md` §4, this sprint is now **formally closed**: `#457` (the row
+> below tracking this very checklist pass) merged via PR #458, and Sprint 004 was promoted from
+> `doc/sprints/planned/` via `#460` the following day. Every item below reflects the state of the
+> *confirmed, planned* scope (10 Issues + `dev-lab#72`), which is fully delivered.
 
 - [x] SushiGo application Issues were selected before sprint promotion.
 - [x] Every included Issue is linked to SushiGo Admin, labeled `sprint-3`, and assigned to the
       `Sprint 3` iteration.
 - [x] All included work items have a final status marker — all ✅ except `#448` (validation
-      pending) and `#457` (PR #458 still open), both marked 🚧 (§13).
+      pending), marked 🚧 (§13).
 - [x] Completed items include Pull Request or commit evidence.
 - [x] Deprecated items identify their replacement. — not applicable, no deprecated items this sprint.
 - [x] Cancelled items include a reason. — not applicable, no cancelled items this sprint.
@@ -561,6 +564,5 @@ correctly included in scope.
 - [x] Follow-up work was created or recorded (§17).
 - [x] Lessons learned were captured (§16).
 - [x] Metadata dates and status were updated.
-- [ ] The next sprint was promoted or created when applicable. — Sprint 004 remains under
-      `doc/sprints/planned/`; promoting it is recorded as separate follow-up work (§17), not
-      bundled into this closure pass.
+- [x] The next sprint was promoted or created when applicable. — Sprint 004 promoted from
+      `doc/sprints/planned/` to `doc/sprints/` and marked `In Progress` via `#460`, 2026-08-18.
