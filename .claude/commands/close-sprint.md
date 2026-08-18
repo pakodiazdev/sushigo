@@ -29,10 +29,12 @@ ls doc/sprints/planned/*.md 2>/dev/null | sort                # candidate next s
   possibly the last one (`The next sprint was promoted...`) — that's the one this command exists to
   tick. If any *other* box is unticked, **stop** and tell the user the closure checklist itself
   isn't done yet; this command does not do that work.
-- **Next sprint candidate**: exactly one file must exist under `doc/sprints/planned/` with the next
-  sequential number. If zero exist, stop and ask the user to create/plan one first — do not
-  fabricate a sprint document. If more than one exists, stop and ask which one to promote — do not
-  guess by filename order alone.
+- **Next sprint candidate**: `doc/sprints/planned/` may legitimately hold several sprints planned
+  ahead of time (e.g. `sprint-005-...md` and `sprint-006-...md` coexisting) — that's normal, not an
+  error. Select the one file whose sprint number is exactly the current sprint's number **+1**; the
+  rest stay untouched in `planned/`. If no file has that exact next number, stop and ask the user to
+  create/plan it first — do not fabricate a sprint document, and do not promote a later-numbered
+  sprint out of order even if it's the only one that happens to exist.
 - Confirm the working tree is clean (`git status --short`) before branching.
 
 ---

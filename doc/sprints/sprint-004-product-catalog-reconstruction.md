@@ -61,8 +61,11 @@ its decisions did not require any changes to the assumptions in `#422`–`#429`.
 
 Sprint 004 was promoted from `doc/sprints/planned/` to `doc/sprints/` on 2026-08-18 via `#460`,
 which also corrected the GitHub Project's `Iteration` field dates — Sprint 004's iteration now
-starts 2026-08-19, not the originally scheduled **2026-09-06 through 2026-09-19** window, since
-Sprint 003 finished its confirmed scope well ahead of that fixed 14-day cadence.
+starts 2026-08-18, matching this document's own `started` date exactly (an earlier pass set it to
+2026-08-19, one day late, which would have left the badge still showing Sprint 003 as current on
+promotion day; corrected live in the same `#460` pass), not the originally scheduled
+**2026-09-06 through 2026-09-19** window, since Sprint 003 finished its confirmed scope well ahead
+of that fixed 14-day cadence.
 
 ## 3. Sprint Goal
 
