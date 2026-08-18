@@ -103,7 +103,7 @@ Product Inventory target design with conflict-aware execution and complete time/
 | Planned iteration end | 2026-09-05 |
 | Started | 2026-08-12 |
 | Completed | 2026-08-18 (confirmed scope delivered 2026-08-17; Sprint 004 promoted the next day, `#460`) |
-| Calendar span so far | 6 days (2026-08-12 → 2026-08-17) |
+| Calendar span | 7 days (2026-08-12 → 2026-08-18); confirmed scope was delivered within the first 6 (→ 2026-08-17), the 7th covers this closure pass |
 | Active workdays with session evidence | 4 (2026-08-12 → 2026-08-15, from real `Sessions[]` data — see §11's wall-clock blocks). dev-lab Issue/PR activity additionally lands on 2026-08-13 and 2026-08-17, but with no session data at all (see §12) |
 
 ## 5. Scope
