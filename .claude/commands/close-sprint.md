@@ -319,11 +319,17 @@ RUN_ID=$(gh run list --repo pakodiazdev/sushigo --workflow=update-iteration-prog
 
 If `RUN_ID` is empty, the run hasn't registered yet — wait a few more seconds and re-query rather
 than falling back to `--limit 1`. Poll `gh run view "$RUN_ID" --repo pakodiazdev/sushigo` until
-`status` is `completed`, then confirm `.github/badges/iteration-progress.svg` on `main` now shows
-the iteration title matching the sprint promoted in Phase 2. This workflow commits directly to
-`main` on success (it has no `on: push`
-trigger, so it can't loop on its own commit) — nothing here needs to fetch/merge that commit into
-this branch, since it touches a file this branch doesn't otherwise change.
+`status` is `completed`, then confirm the badge on the dedicated `badges` branch (see `#462` — it
+no longer lives on `main`) now shows the iteration title matching the sprint promoted in Phase 2:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pakodiazdev/sushigo/badges/iteration-progress.svg | grep -o 'Sprint [0-9]*'
+# or: git show origin/badges:iteration-progress.svg | grep -o 'Sprint [0-9]*'
+```
+
+This workflow amends a single commit on `badges` and force-pushes it (it has no `on: push` trigger,
+so it can't loop on its own commit) — nothing here needs to fetch/merge that commit into this
+branch, since `badges` holds nothing this branch otherwise touches.
 
 ---
 
@@ -369,7 +375,7 @@ gh pr edit "$N" --body-file <path-with-Devin-Review-line-inserted>
 - Item associations verified intact: <yes / NO — see rollback note below>
 
 ### Badge
-.github/badges/iteration-progress.svg now shows: "<title>" at <percent>%
+`badges` branch now shows: "<title>" at <percent>%
 
 ### PR
 <PR URL> — not merged, awaiting your review

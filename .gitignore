@@ -54,3 +54,6 @@ plan/
 
 # Session memory — multi-agent work tracking
 .memory/
+
+# Generated iteration-progress badge — lives on the dedicated `badges` branch, never on `main` (#462)
+.github/badges/

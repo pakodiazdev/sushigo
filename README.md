@@ -60,13 +60,15 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
 
 ## 📊 Development Progress
 
-![Iteration Progress](.github/badges/iteration-progress.svg)
+![Iteration Progress](https://raw.githubusercontent.com/pakodiazdev/sushigo/badges/iteration-progress.svg)
 
 Sourced live from the `SushiGo Admin` GitHub Project's current iteration — no sprint name, date
 range, or task count is hand-maintained here. Regenerated daily (and on demand) by
 [`update-iteration-progress.yml`](.github/workflows/update-iteration-progress.yml); see
 [`.github/scripts/iteration-progress/`](.github/scripts/iteration-progress/) for the
-fetch → normalize → calculate → render pipeline.
+fetch → normalize → calculate → render pipeline. The badge itself lives on a dedicated,
+deletion-protected `badges` branch (never `main`) so its daily regeneration commit never touches
+the branch every contributor works from — see `#462`.
 
 ---
 
