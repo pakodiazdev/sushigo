@@ -252,8 +252,15 @@ payload = {'query': mutation, 'variables': {
 }}
 out = subprocess.run(['gh', 'api', 'graphql', '--input', '-'], input=json.dumps(payload), capture_output=True, text=True)
 print(out.stdout, out.stderr)
+if out.returncode != 0 or '\"errors\"' in out.stdout:
+    raise SystemExit(f'Iteration mutation failed (exit {out.returncode}) — stopping before Step 3. Nothing was reassigned yet, but the field\'s date/iteration-list state may already be partially changed; re-run Step 1\'s read query to check before retrying.')
 "
 ```
+
+`subprocess.run()` does not raise on a nonzero exit by itself — the explicit `returncode`/`\"errors\"`
+check above (and the `SystemExit` it raises) is what actually stops this phase on failure. Without
+it, a failed mutation only prints to stderr and Step 3 proceeds to reassign items against
+whatever the field's state actually ended up being, which may not match what was intended.
 
 ### Step 3 — Reassign every item, then verify (mandatory, expect to need it)
 
@@ -265,28 +272,56 @@ raw IDs. What matters:
 2. For every item in Step 1's snapshot, call `updateProjectV2ItemFieldValue` to set its `iterationId`
    to the new ID matching its recorded title (match by the item's real `content.number`+`repo`
    against a freshly-fetched current item list, not by the now-invalid old `itemId`/`iterationId`
-   alone — item IDs can also change across saves).
-3. Re-run Step 1's query a second time and confirm per-title item counts match the original
+   alone — item IDs can also change across saves). Track which calls fail (nonzero exit or an
+   `"errors"` key in the response) instead of assuming every call succeeds.
+3. **Retry every failed call once** before re-verifying — a single transient API error should not
+   escalate to a stop.
+4. Re-run Step 1's query a second time and confirm per-title item counts match the original
    snapshot's counts exactly.
 
-If any count doesn't match: report it explicitly in the final report (which sprint, expected vs.
-actual count) rather than silently accepting a partial result — `#460`'s own run ended up short one
-item each on two historical sprints and documented that gap openly instead of guessing further.
+Step 2 clears every item's Iteration value project-wide (see the risk note above), so a Step 3
+failure does not just skip a badge update — it leaves the live project board in a genuinely
+incomplete state until every item is reassigned. Because of that:
+
+- **If every count matches after the retry: continue to Phase 4.**
+- **If any count still doesn't match for the outgoing or incoming sprint specifically** (the two
+  this run is actively correcting, and the ones the badge and Phase 4's verification depend on):
+  **stop here.** Do not proceed to Phase 4 (badge refresh) or Phase 5 (PR) with the board in this
+  state. Report the exact mismatch (sprint title, expected vs. actual count, which items are
+  unaccounted for) and ask the user how to proceed — retry manually, or accept the gap and continue
+  explicitly on their say-so — the same way `#460`'s own run stopped and asked before continuing
+  through a blocked classifier action.
+- **If a mismatch is confined to an older, already-closed sprint** unrelated to today's promotion
+  (as happened during `#460` — two historical sprints came back one item short each, from a snapshot
+  reconstruction issue, not a live board corruption): report it clearly in the final report and
+  it's fine to continue, since it doesn't affect the badge or any active work — but state this
+  explicitly rather than silently treating "no match" the same way regardless of which sprint it's
+  on.
 
 ---
 
 ## PHASE 4 — Refresh the badge
 
-Don't wait for the next scheduled run:
+Don't wait for the next scheduled run. `gh workflow run` doesn't reliably hand back the run it just
+created, and a plain `gh run list --limit 1` right after dispatching can instead return an unrelated
+run — the daily `schedule` trigger firing at the same moment, or a run from a completely different
+workflow if timing is unlucky. Record a timestamp before dispatching, then filter by trigger type
+and creation time instead of trusting "most recent":
 
 ```bash
+DISPATCH_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 gh workflow run update-iteration-progress.yml --repo pakodiazdev/sushigo
-gh run list --repo pakodiazdev/sushigo --workflow=update-iteration-progress.yml --limit 1
+sleep 5   # give the dispatch a moment to register as a queued/in-progress run
+RUN_ID=$(gh run list --repo pakodiazdev/sushigo --workflow=update-iteration-progress.yml \
+  --json databaseId,event,createdAt --jq \
+  "[.[] | select(.event == \"workflow_dispatch\" and .createdAt >= \"$DISPATCH_TIME\")] | first | .databaseId")
 ```
 
-Poll `gh run view <run-id> --repo pakodiazdev/sushigo` until `status` is `completed`, then confirm
-`.github/badges/iteration-progress.svg` on `main` now shows the iteration title matching the sprint
-promoted in Phase 2. This workflow commits directly to `main` on success (it has no `on: push`
+If `RUN_ID` is empty, the run hasn't registered yet — wait a few more seconds and re-query rather
+than falling back to `--limit 1`. Poll `gh run view "$RUN_ID" --repo pakodiazdev/sushigo` until
+`status` is `completed`, then confirm `.github/badges/iteration-progress.svg` on `main` now shows
+the iteration title matching the sprint promoted in Phase 2. This workflow commits directly to
+`main` on success (it has no `on: push`
 trigger, so it can't loop on its own commit) — nothing here needs to fetch/merge that commit into
 this branch, since it touches a file this branch doesn't otherwise change.
 
