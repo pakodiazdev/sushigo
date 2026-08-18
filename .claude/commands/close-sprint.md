@@ -47,9 +47,14 @@ the badge. Reason cites the outgoing sprint's real delivery date vs. its still-o
 §4) and the badge drift this causes. Objective: both sprint docs correct, both indexes
 synchronized, Iteration dates corrected, badge refreshed.
 
+`<next>`/`<prev>` below are the sprint numbers (e.g. `004`/`003`) — the issue number (`<NNN>`,
+referenced by every later phase) isn't known until `gh issue create` returns it, so capture it
+before linking the project item:
+
 ```bash
-gh issue create --repo pakodiazdev/sushigo --title "📚 Promote Sprint <NNN>, close Sprint <MMM>" --body-file <path>
-gh project item-add 7 --owner pakodiazdev --url "https://github.com/pakodiazdev/sushigo/issues/<NNN>"
+ISSUE_URL=$(gh issue create --repo pakodiazdev/sushigo --title "📚 Promote Sprint <next>, close Sprint <prev>" --body-file <path>)
+NNN=$(basename "$ISSUE_URL")
+gh project item-add 7 --owner pakodiazdev --url "$ISSUE_URL"
 ```
 
 Link Status only — never set Iteration on this issue itself as a side effect of filing it (same
@@ -112,15 +117,28 @@ the default (usually 14-day) duration — that drift is exactly what makes the c
 stale sprint. This phase re-tiles the affected iterations' date windows to match the real sprint
 boundaries just recorded in Phase 2's frontmatter.
 
-**Known risk (verified working as of `#460`, but re-verify every run — don't skip Step 3):** the
-`updateProjectV2Field` mutation's `iterationConfiguration.iterations` input
-(`ProjectV2Iteration { startDate, duration, title }`) has **no `id` field** — it replaces the whole
-iterations list. It is not publicly documented whether GitHub preserves existing iteration IDs (and
-therefore every issue's existing `Iteration` field assignment) when the list is resent, or
-regenerates them. Step 1's snapshot and Step 3's verification are **mandatory**, not optional
-hygiene — they are what makes this mutation safe to run unattended.
+**Known risk (empirically confirmed destructive during `#460` — do not soften this on a future
+edit):** the `updateProjectV2Field` mutation's `iterationConfiguration.iterations` input
+(`ProjectV2Iteration { startDate, duration, title }`) has **no `id` field** — it replaces the
+**entire** iteration history, not just the entries you send. Observed behavior, not a theoretical
+risk:
+- Every iteration's internal ID is regenerated on **every** call, including ones you didn't touch.
+  This immediately drops every issue's existing `Iteration` field assignment project-wide, not only
+  for the sprints being corrected.
+- `completedIterations` is **not** part of the input and is **not** preserved automatically — if a
+  historical (already-completed) iteration isn't included in the `iterations` array you send, it is
+  deleted from the field's history entirely, with no way to recreate it as the same entity again.
+  During `#460`'s first call, sending only the current/future iterations silently erased `Sprint 1`
+  from the project's history.
 
-### Step 1 — Snapshot before touching anything
+Because of this, **Step 3's reassignment is the expected normal outcome of every run, not a rare
+failure path** — plan for it, don't treat it as an exception. Step 1's snapshot is the only way to
+recover, so treat the file it writes as read-only for the rest of this phase: **never write a later
+query's output to the same path** (this happened for real during `#460`'s recovery and destroyed
+the original mapping, forcing a slower, less certain reconstruction from the sprint documents
+instead — see that PR's `## ⚠️ Needs Human Judgment` section for what that cost).
+
+### Step 1 — Snapshot before touching anything (read-only afterward)
 
 ```bash
 gh api graphql -f query='
@@ -130,13 +148,17 @@ gh api graphql -f query='
         iterationField: field(name: "Iteration") {
           ... on ProjectV2IterationField {
             id
-            configuration { iterations { id title startDate duration } }
+            configuration {
+              iterations { id title startDate duration }
+              completedIterations { id title startDate duration }
+            }
           }
         }
         items(first: 100, after: $itemsCursor) {
           pageInfo { hasNextPage endCursor }
           nodes {
             id
+            content { ... on Issue { number title repository { nameWithOwner } } }
             iteration: fieldValueByName(name: "Iteration") {
               ... on ProjectV2ItemFieldIterationValue { iterationId title }
             }
@@ -148,9 +170,14 @@ gh api graphql -f query='
 ' -f owner=pakodiazdev -F number=7
 ```
 
-Page through with `itemsCursor` until `hasNextPage` is false. Save the full `{itemId ->
-iterationId}` map and the pre-mutation `{iterationId -> title, startDate, duration}` list to a
-scratch file — this is the rollback source of truth if Step 3 finds anything broken.
+Page through with `itemsCursor` until `hasNextPage` is false. Save to a **uniquely named** file —
+e.g. `snapshot-before-<issue-number>.json`, never a fixed/reusable name like `snapshot-before.json`
+that a later verification pass in this same phase might overwrite:
+- The full `{itemId -> issueNumber, repo, iterationTitle}` map (issue number + repo, not just the
+  raw `iterationId`, since every ID becomes invalid after Step 2's mutation anyway — the title is
+  what you'll re-resolve against after the mutation).
+- Both `iterations` **and** `completedIterations` — you need every historical iteration's
+  `title`/`startDate`/`duration` to resend the full history in Step 2.
 
 ### Step 2 — Compute and apply corrected dates
 
@@ -172,35 +199,66 @@ Using the just-completed and just-promoted sprints' real frontmatter dates from 
   whichever iteration is currently active by date — never leave a date gap between two iterations,
   since `pickActiveIteration()` renders the "no active iteration" empty-state badge for any
   uncovered day.
-- The mutation resends the **entire** `iterations` list — every iteration not being corrected must
-  still be included with its title/startDate/duration unchanged, or it is dropped from the field
-  entirely.
+- **The mutation resends the entire iteration history — past, current, and future.** Include every
+  iteration from both Step 1's `iterations` and `completedIterations` lists, title/startDate/duration
+  unchanged for anything not being corrected. Omitting a completed iteration deletes it permanently
+  (see the risk note above) — this is not optional cleanup, it is required every single call.
+
+`gh api graphql -f`/`-F` cannot carry an array-of-objects variable (`-F iterations=<json>` fails
+with "Expected ... to be a key-value object") — build the full request body and pipe it through
+`--input -` instead:
 
 ```bash
-gh api graphql -f query='
-  mutation($fieldId: ID!, $iterations: [ProjectV2Iteration!]!) {
-    updateProjectV2Field(input: {
-      fieldId: $fieldId
-      iterationConfiguration: { startDate: "<earliest-startDate-in-list>", duration: 14, iterations: $iterations }
-    }) {
-      clientMutationId
+python3 -c "
+import json, subprocess
+iterations = [
+    # one entry per iteration in the FULL history (completed + current + future),
+    # corrected dates only for the outgoing/incoming pair per the rules above
+    {'startDate': '<YYYY-MM-DD>', 'duration': <int>, 'title': '<title>'},
+    # ...
+]
+mutation = '''
+mutation(\$fieldId: ID!, \$startDate: Date!, \$duration: Int!, \$iterations: [ProjectV2Iteration!]!) {
+  updateProjectV2Field(input: {
+    fieldId: \$fieldId
+    iterationConfiguration: { startDate: \$startDate, duration: \$duration, iterations: \$iterations }
+  }) {
+    projectV2Field {
+      ... on ProjectV2IterationField {
+        configuration { iterations { id title startDate duration } completedIterations { id title startDate duration } }
+      }
     }
   }
-' -f fieldId=<iteration-field-id> -F iterations='<json array of {startDate,duration,title} for every iteration>'
+}
+'''
+payload = {'query': mutation, 'variables': {
+    'fieldId': '<iteration-field-id>',
+    'startDate': iterations[0]['startDate'],
+    'duration': iterations[0]['duration'],
+    'iterations': iterations,
+}}
+out = subprocess.run(['gh', 'api', 'graphql', '--input', '-'], input=json.dumps(payload), capture_output=True, text=True)
+print(out.stdout, out.stderr)
+"
 ```
 
-### Step 3 — Verify immediately (mandatory)
+### Step 3 — Reassign every item, then verify (mandatory, expect to need it)
 
-Re-run Step 1's query. Compare against the pre-mutation snapshot:
-- Same iteration titles present, corrected dates in place.
-- Same per-title item counts.
-- Ideally, same `iterationId` values per item (if the field lets you compare item `id` → `iteration:
-  { iterationId }` before/after).
+Re-run Step 1's query. The response's `iterations`/`completedIterations` IDs will differ from the
+snapshot — that alone is not a problem, since Step 1 recorded issue number/repo/title rather than
+raw IDs. What matters:
 
-If IDs changed and item associations were dropped: reassign every affected item back to the correct
-iteration via `updateProjectV2ItemFieldValue`, using the Step 1 snapshot as ground truth, then
-re-verify. **Report this loudly in the final report if it happens** — do not silently patch and
-move on; the user needs to know the mutation's ID-preservation behavior turned out to be unsafe.
+1. Build `{title -> new iterationId}` from this fresh query.
+2. For every item in Step 1's snapshot, call `updateProjectV2ItemFieldValue` to set its `iterationId`
+   to the new ID matching its recorded title (match by the item's real `content.number`+`repo`
+   against a freshly-fetched current item list, not by the now-invalid old `itemId`/`iterationId`
+   alone — item IDs can also change across saves).
+3. Re-run Step 1's query a second time and confirm per-title item counts match the original
+   snapshot's counts exactly.
+
+If any count doesn't match: report it explicitly in the final report (which sprint, expected vs.
+actual count) rather than silently accepting a partial result — `#460`'s own run ended up short one
+item each on two historical sprints and documented that gap openly instead of guessing further.
 
 ---
 

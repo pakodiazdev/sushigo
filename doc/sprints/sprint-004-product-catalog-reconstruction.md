@@ -54,14 +54,15 @@ inventory identity and can be assigned reusable commercial Purchase Presentation
 Pack x6, Box x12, or Box x24. Those presentations normalize packages to the Variant's base
 inventory unit without pretending that every box has a universal physical-UOM conversion.
 
-Sprint 003 Issue `#421` is the mandatory design gate for this implementation. Sprint 004 may start
-only after that Issue produces an approved target architecture, UI/API contract, and incremental
-migration plan. If its decision changes the assumptions in `#422`–`#429`, the affected Issue bodies,
-estimates, dependencies, and this document must be updated before Sprint 004 is promoted.
+Sprint 003 Issue `#421` was the mandatory design gate for this implementation — Sprint 004 could
+not start until that Issue produced an approved target architecture, UI/API contract, and
+incremental migration plan. `#421` closed with that approved design, so the gate is satisfied and
+its decisions did not require any changes to the assumptions in `#422`–`#429`.
 
-Sprint 004 is configured in SushiGo Admin for **2026-09-06 through 2026-09-19**. This document
-remains under `doc/sprints/planned/` until Sprint 003 is closed and Sprint 004 is promoted according
-to `doc/conventions/sprints.md`.
+Sprint 004 was promoted from `doc/sprints/planned/` to `doc/sprints/` on 2026-08-18 via `#460`,
+which also corrected the GitHub Project's `Iteration` field dates — Sprint 004's iteration now
+starts 2026-08-19, not the originally scheduled **2026-09-06 through 2026-09-19** window, since
+Sprint 003 finished its confirmed scope well ahead of that fixed 14-day cadence.
 
 ## 3. Sprint Goal
 
