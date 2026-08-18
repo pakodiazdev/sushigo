@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh issue create:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh project item-add:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh api:*), Bash(gh workflow run:*), Bash(gh run list:*), Bash(gh run view:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git mv:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(basename:*), Bash(ls:*), Bash(grep:*), Bash(find:*), Bash(sort:*), Bash(tail:*), Bash(date:*), Read, Edit, Write
+allowed-tools: Bash(gh issue create:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh project item-add:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh api:*), Bash(gh workflow run:*), Bash(gh run list:*), Bash(gh run view:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git mv:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(basename:*), Bash(ls:*), Bash(grep:*), Bash(find:*), Bash(sort:*), Bash(tail:*), Bash(date:*), Bash(python3:*), Read, Edit, Write
 description: Formally close the current sprint and promote the next one — sprint docs, both README indexes, the GitHub Project Iteration field's date windows, and the committed progress badge, all in one pass
 ---
 
@@ -67,8 +67,13 @@ rule `/start-issue` follows).
 ```bash
 git fetch origin main
 git checkout -b docs/<NNN>-promote-sprint-<next> origin/main
-git mv doc/sprints/planned/sprint-<next>-*.md doc/sprints/sprint-<next>-*.md
+SPRINT_FILE=$(basename doc/sprints/planned/sprint-<next>-*.md)
+git mv "doc/sprints/planned/$SPRINT_FILE" "doc/sprints/$SPRINT_FILE"
 ```
+
+The destination side of a `git mv` does not glob-expand — only the source does. Resolving the real
+filename first and reusing it as the destination's basename avoids literally renaming the file to
+`sprint-<next>-*.md`.
 
 **Incoming sprint's frontmatter**: `status: In Progress`, `started: <today>`,
 `last_updated: <today>`, `base_commit:` current `origin/main` short SHA. Leave `previous`/`next` as
@@ -186,12 +191,18 @@ Using the just-completed and just-promoted sprints' real frontmatter dates from 
 - The iteration whose **title matches the outgoing sprint** (`"Sprint " + parseInt(outgoing sprint
   number)` — e.g. doc `sprint-003` ↔ GH iteration titled `Sprint 3`; this direct numeric mapping is
   the established convention, confirmed against `sprint-003...md` §18's own text): `startDate` =
-  outgoing's `started` frontmatter value, `duration` = (`completed` − `started` in days) + 1, so its
-  window ends inclusive of the real completion date.
-- The iteration whose **title matches the incoming sprint**: `startDate` = the day immediately
-  after the outgoing iteration's new end (= the incoming sprint's `started` date). Leave its
-  `duration` unchanged — it's a placeholder that gets corrected at *its own* future closure, by this
-  same command. Do not touch any iteration beyond this one.
+  outgoing's `started` frontmatter value, `duration` = `completed` − `started` **in days, with no
+  +1**. `pickActiveIteration()`'s window is `[startDate, startDate+duration)` — exclusive at the
+  end — so this makes the outgoing iteration's boundary land exactly on `completed`, i.e. it covers
+  up through the day *before* `completed`, not `completed` itself. Getting this +1 wrong is exactly
+  what made `#460`'s own promotion still show the outgoing sprint as current on promotion day —
+  don't reintroduce it.
+- The iteration whose **title matches the incoming sprint**: `startDate` = the outgoing iteration's
+  new (exclusive) boundary, which by construction now equals `completed`, which equals the incoming
+  sprint's `started` date — all three are the same day, and Phase 4's verification depends on that:
+  the badge must show the incoming sprint starting the same day this command runs, not the day
+  after. Leave `duration` unchanged — it's a placeholder that gets corrected at *its own* future
+  closure, by this same command. Do not touch any iteration beyond this one.
 - If today's date was matched by an *earlier* iteration than the outgoing sprint's own (drift
   accumulated across more than one promotion without correction — check by re-running Step 1's
   query's date ranges against today), shrink that earlier iteration too, so its window ends the day
