@@ -191,7 +191,10 @@ so they're not a stop point either. From here on, every remaining stop point mus
 Sessions entry with the current time before reporting — the same way Phase 9's own success path
 would — rather than leaving `"end": "?"` to silently accumulate wall-clock time nobody is tracking.
 That covers:
-- The **safety caps** (Phase 5's CI-failure cap, Phase 8's Codex-cycle cap).
+- **Phase 5's CI-failure cap** (its only automated safety cap that stops the run — Phase 8's own
+  3-cycle limit, by contrast, is not a stop condition: hitting it still returns `status: completed`
+  and the run proceeds to Phase 9 normally, since every finding it surfaced was already fixed and
+  pushed; only the confirmation re-poll is capped, not the run itself).
 - **Any stop reached during Phase 9's delegation to `finish-pr.md`'s Phases 0–2** — everything
   between opening this entry (Phase 2 here) and `finish-pr.md`'s own Phase 3, which is the only
   later point that fills `end` on the success path. This is deliberately **not** an exhaustive list
@@ -442,9 +445,11 @@ parent report; retain only the contract counts, commit SHAs, CI state, and compa
 
 Dispatch one foreground, general-purpose subagent for the **entire** Codex loop, including any
 Copilot re-poll caused by Codex-driven pushes. Pass it the repository, issue, PR, and branch
-identifiers and a **3-cycle safety cap** (lower than a Devin-based sibling's, since this variant is
-deliberately the cheap default — see #468). The worker owns the following workflow without returning
-any intermediate poll response, diff, test, or CI output to the parent:
+identifiers and a **3-cycle confirmation limit** (lower than a Devin-based sibling's, since this
+variant is deliberately the cheap default — see #468). Unlike the CI-failure safety cap below, this
+limit is not a failure condition — see step 6 for exactly what it bounds and what status it returns.
+The worker owns the following workflow without returning any intermediate poll response, diff, test,
+or CI output to the parent:
 
 1. Post the review trigger as a plain PR comment:
    ```bash
@@ -483,7 +488,11 @@ any intermediate poll response, diff, test, or CI output to the parent:
 6. If real findings were addressed and a push happened, post a fresh `@codex review` trigger and
    repeat from step 2 for one more cycle, to confirm the fix actually resolved what Codex flagged.
    Stop after the findings are confirmed resolved (or Codex has nothing further to say), or after
-   3 cycles total, whichever comes first — do not keep re-triggering indefinitely.
+   3 cycles total, whichever comes first — do not keep re-triggering indefinitely. **Hitting the
+   3-cycle cap is not a failure and still returns `status: completed`** — every finding surfaced so
+   far was already addressed, committed, and pushed in step 5; the cap only bounds the *confirmation*
+   re-poll, not the fixing work itself. Note in `notes:` that the cap was hit and confirmation
+   couldn't fully complete, so a human can double-check the merge-ready commit if they want to.
 
 Require the subagent to return only:
 
@@ -683,9 +692,10 @@ I have not merged it and will not.
 
 Business-rule disputes from Copilot or Codex no longer pause the run (see "The zero-interruption
 rule") — they're overridden in place, logged under `## ⚠️ Needs Human Judgment`, and the pipeline
-continues straight through Phase 9/10 in the same pass. What can still end a run before Phase 10
-reaches this report: the safety caps (Phase 5's CI-failure cap, Phase 8's Codex-cycle cap), and any
-stop reached during Phase 9's delegation to `finish-pr.md`'s Phases 0–2 (see Phase 2's
+continues straight through Phase 9/10 in the same pass. Phase 8's 3-cycle cap is not a stop condition
+either — reaching it still returns `status: completed` and the run proceeds normally. What can still
+end a run before Phase 10 reaches this report: Phase 5's CI-failure cap, and any stop reached during
+Phase 9's delegation to `finish-pr.md`'s Phases 0–2 (see Phase 2's
 Session-closing rule and Phase 9's own notes above for the non-exhaustive list of which conditions
 that covers). Every one of those closes the Sessions entry (Phase 2's rule) and reports what
 happened before ending the run, since none of them are judgment calls to resolve — they're either a
