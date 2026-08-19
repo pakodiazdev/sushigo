@@ -1,9 +1,11 @@
 name: Update Iteration Progress Badge
 
-# Deliberately no `on: push` — this workflow's own commit must never re-trigger
-# itself. `workflow_dispatch` covers manual runs, `schedule` keeps the badge
-# fresh daily.
+# `push: branches: [main]` is safe here (see #464): this workflow's own commit lands on the
+# dedicated `badges` branch (#462), never on `main`, so a trigger scoped to `main` can never
+# fire on its own commit. `workflow_dispatch` covers manual runs, `schedule` is the daily fallback.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '17 6 * * *'
