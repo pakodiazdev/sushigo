@@ -156,7 +156,7 @@ erDiagram
 | Relationship | Cardinality | Rule |
 |---|---|---|
 | Brand → Item | 1‑to‑many, optional | `Item.brand_id` nullable. Deactivating a Brand does not cascade; it only blocks new assignments (validated in the FormRequest, not a DB trigger). |
-| InventoryCategory → Item | 1‑to‑many, required | `Item.inventory_category_id` NOT NULL for `type = PRODUCTO`. A category cannot be deactivated while active Products reference it — enforced in the deactivate endpoint, not a DB constraint (soft-delete already allows historical FK integrity). |
+| InventoryCategory → Item | 1‑to‑many, required | `Item.inventory_category_id` NOT NULL for `type = PRODUCTO`. **As-built decision (#422, resolving this doc's own §3.3 asymmetry note):** unlike Brand, assigning an *inactive* category to a Product is allowed, not blocked — but the Product is not considered effectively active while its category is inactive (`ListProductsController`'s `is_active` filter excludes it from the active bucket regardless of the Product's own `is_active` flag), and `ProductResource` surfaces a `warnings` note explaining why. A category still cannot be deactivated *or deleted* while active Products reference it, regardless of whether the category is itself already inactive — enforced in the deactivate/delete endpoints, not a DB constraint (soft-delete already allows historical FK integrity); the blocked-response message names exactly how many active Products are blocking it. |
 | Item → ItemVariant | 1‑to‑many | No DB-level minimum. Business rule (app layer, not schema): a Product needs at least one **active** Variant to be considered sellable/orderable by downstream domains (purchasing, pricing) — the catalog itself allows a Product with zero Variants mid-authoring. |
 | ItemVariant → VariantPurchasePresentation | 1‑to‑many | A Variant may have zero presentations initially (falls back to "no packaging configured" in purchasing UIs, which is a valid state during CAT-04/CAT-05 rollout). |
 | PurchasePresentationTemplate → VariantPurchasePresentation | 1‑to‑many, reusable | The same template (e.g. `BOX_24`) is assigned to many Variants across many Products. Templates used by any assignment (past or present) are deactivated, never deleted. |
@@ -334,6 +334,10 @@ public_id (ULID) for Item/ItemVariant...") is still open. This design's endpoint
 lands as a prerequisite, not a parallel option: every path below (`{product}`, `{variant}`, etc.)
 is written as a `public_id`, so `#422`/`#424` need `#399`'s migration and trait adoption in place
 (or bundled into the same PR) before these routes can bind on anything but the internal numeric ID.
+**As-built note (`#422`):** `#399` was still open and unreferenced by `#422`'s own Technical Tasks
+when this vertical shipped, so `/inventory/products` binds on `Item`'s existing numeric `id` for now
+— `Brand`/`InventoryCategory` do use `public_id` as designed, since `#422`'s own text calls for it
+directly. Switch `/inventory/products` over once `#399` lands.
 Permissions follow the existing granular `resource.action` convention rather than the coarser
 per-domain style used by Dishes, to stay consistent with the current `items.*` mapping `#400`
 already codifies.
@@ -343,7 +347,7 @@ already codifies.
 | GET | `/inventory/products` | — (query: `search, brand_id, inventory_category_id, is_active, page`) | `items.view` | Filters to `type = PRODUCTO` server-side; returns variant count per row for the list. |
 | POST | `/inventory/products` | `name, brand_id?, inventory_category_id, description?, media_gallery_id?, owner_token?, is_active?` | `items.create` | No `sku` accepted from this contract (kept nullable/legacy). No cost/price/stock fields. |
 | GET | `/inventory/products/{product}` | — | `items.view` | Includes brand, category, media gallery, variant summary. |
-| PATCH | `/inventory/products/{product}` | Same shape as create, partial | `items.update` | |
+| PUT | `/inventory/products/{product}` | Same shape as create, partial | `items.update` | **As-built (`#422`):** `PUT`, not `PATCH` as originally drafted here — matches the `PUT`-for-update convention already used by every other domain in the codebase (`Dish`, `Item`, `CashAdjustment`, etc.); `PATCH` doesn't appear anywhere else in the route tree outside a handful of narrow exceptions. |
 | DELETE | `/inventory/products/{product}` | — | `items.delete` | Soft-delete / deactivate, existing pattern. |
 | GET | `/inventory/products/{product}/variants` | — | `items.view` | |
 | POST | `/inventory/products/{product}/variants` | `name, code, barcode?, uom_id, description?, track_lot?, track_serial?, is_active?` | `items.create` | `item_id` comes from the route, not the body — removes the global Item selector the plan doc flags. No `sale_price`/`min_stock`/`max_stock`/cost fields — this is the contract change from today's `CreateItemVariantRequest`. |
@@ -356,10 +360,10 @@ already codifies.
 | GET | `/inventory/products/{product}/variants/{variant}/purchase-presentations` | — | `items.view` | |
 | POST | `/inventory/products/{product}/variants/{variant}/purchase-presentations` | `template_id, package_barcode?, is_default?` | `items.update` | Assignment is scoped to a Variant the user can already edit — no new permission needed here, unlike template governance above. |
 | PATCH / DELETE | `.../purchase-presentations/{assignment}` | `package_barcode?, is_default?` | `items.update` | |
-| GET | `/inventory/brands` | — | `brands.view` | |
-| POST / PATCH / DELETE | `/inventory/brands[/{brand}]` | `name, is_active?` | `brands.create` / `brands.update` / `brands.delete` | |
-| GET | `/inventory/inventory-categories` | — | `inventory_categories.view` | |
-| POST / PATCH / DELETE | `/inventory/inventory-categories[/{category}]` | `name, position?, is_active?` | `inventory_categories.create` / `.update` / `.delete` | Distinct from `dish_categories.*` — see §3.1. |
+| GET | `/brands` | — | `brands.view` | **As-built (`#422`):** top-level, not `/inventory/brands` as originally drafted here — Brand is a standalone catalog, not nested under the Product/Item `inventory/` namespace like `/inventory/products` is. |
+| POST / PUT / DELETE | `/brands[/{brand}]` | `name, is_active?` | `brands.create` / `brands.update` / `brands.delete` | **As-built (`#422`):** `PUT`, not `PATCH` — same verb correction as `/inventory/products` above. |
+| GET | `/inventory-categories` | — | `inventory_categories.view` | **As-built (`#422`):** same top-level rationale as `/brands` above. |
+| POST / PUT / DELETE | `/inventory-categories[/{category}]` | `name, position?, is_active?` | `inventory_categories.create` / `.update` / `.delete` | Distinct from `dish_categories.*` — see §3.1. **As-built (`#422`):** `PUT`, not `PATCH` — same verb correction as `/inventory/products` above. |
 
 **New permissions to register** (Development/Production `PermissionSeeder`, per `#422`/`#426`):
 `brands.view/create/update/delete`, `inventory_categories.view/create/update/delete`,
@@ -384,7 +388,11 @@ order already reflects this design.
    (`brand_id` nullable FK, `inventory_category_id` FK). Additive only; no existing column removed.
    Item `sku` becomes nullable if it isn't already (it is currently `NOT NULL unique` — this is a
    real schema change to sequence carefully: existing rows keep their `sku`, new Product writes stop
-   populating it).
+   populating it). **As-built exception, not additive:** the one deliberately destructive step in
+   this issue is a follow-up migration that deletes any pre-existing `Item(type=PRODUCTO)` row that
+   still has a null `inventory_category_id` and no variants — confirmed safe because no seeder in
+   this codebase ever creates a `PRODUCTO` row (§9.5) and this repo carries no production data (see
+   PR #467's Needs Human Judgment). Rows with variants are left untouched.
 2. **`#423`** (`CAT-02`) — New `/inventory/products` SlidePanel UI, additive, does not touch
    `/inventory/items`.
 3. **`#424`** (`CAT-03`) — `ItemVariant` write contract stops accepting `sale_price, min_stock,
@@ -449,6 +457,16 @@ prerequisite issues landing first, plus a reconciliation pass — not a same-PR 
   doc's own §5 already excludes this from `#426`, framing reusable templates as the only Milestone A
   mechanism. No new decision needed here; revisit only if a real product needs an un-reusable
   one-off package.
+- **The legacy `POST /items` endpoint still accepts `type=PRODUCTO` with no `inventory_category_id`**
+  (`CreateItemRequest` was never updated to require or even accept the field), and `product-wizard.tsx`
+  — the only currently-working Product creation UI — defaults to that type and still calls this
+  endpoint. `#422`'s new `/inventory/products` list already treats a Product with no category the
+  same as one with an inactive category (excluded from `is_active=1`, flagged with a `warnings` note),
+  so an ongoing legacy write can no longer masquerade as a fully active Product — but the write path
+  itself is deliberately left open. Closing it now (reject `PRODUCTO` on `/items`, or require a
+  category there) would break the only live Product creation flow before its replacement ships.
+  **Owner: `#423`** (the progressive Product SlidePanel) — either that issue or `#429` (legacy wizard
+  removal) must close this gap once the wizard is no longer the only way to create a Product.
 
 ---
 

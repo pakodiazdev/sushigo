@@ -66,7 +66,8 @@ export function VariantDetails({ variant, onEdit, onDelete }: Readonly<VariantDe
             {variant.item && (
               <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
                 <Package className="h-3 w-3" />
-                {variant.item.name} ({variant.item.sku})
+                {variant.item.name}
+                {variant.item.sku && ` (${variant.item.sku})`}
               </p>
             )}
           </div>

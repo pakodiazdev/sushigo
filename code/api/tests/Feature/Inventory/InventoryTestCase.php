@@ -3,6 +3,8 @@
 namespace Tests\Feature\Inventory;
 
 use App\Models\Branch;
+use App\Models\Brand;
+use App\Models\InventoryCategory;
 use App\Models\InventoryLocation;
 use App\Models\Item;
 use App\Models\ItemVariant;
@@ -45,6 +47,8 @@ abstract class InventoryTestCase extends TestCase
             'items.view', 'items.create', 'items.update', 'items.delete', 'items.manage-media',
             'inventory_locations.view', 'inventory_locations.manage',
             'stock.view', 'stock.manage',
+            'brands.view', 'brands.create', 'brands.update', 'brands.delete',
+            'inventory_categories.view', 'inventory_categories.create', 'inventory_categories.update', 'inventory_categories.delete',
         ];
 
         foreach ($inventoryPermissions as $name) {
@@ -149,6 +153,36 @@ abstract class InventoryTestCase extends TestCase
             'max_stock' => 1000,
             'avg_unit_cost' => 0,
             'last_unit_cost' => 0,
+            'is_active' => true,
+        ], $attributes));
+    }
+
+    protected function createBrand(array $attributes = []): Brand
+    {
+        return Brand::create(array_merge([
+            'name' => 'Test Brand '.uniqid(),
+            'is_active' => true,
+        ], $attributes));
+    }
+
+    protected function createInventoryCategory(array $attributes = []): InventoryCategory
+    {
+        return InventoryCategory::create(array_merge([
+            'name' => 'Test Category '.uniqid(),
+            'position' => 0,
+            'is_active' => true,
+        ], $attributes));
+    }
+
+    protected function createProduct(array $attributes = []): Item
+    {
+        $attributes['inventory_category_id'] ??= $this->createInventoryCategory()->id;
+
+        return Item::create(array_merge([
+            'name' => 'Test Product',
+            'type' => Item::TYPE_PRODUCTO,
+            'is_stocked' => true,
+            'is_perishable' => false,
             'is_active' => true,
         ], $attributes));
     }

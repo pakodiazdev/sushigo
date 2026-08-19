@@ -135,6 +135,18 @@ class PermissionSeeder extends LockedSeeder
             // holder attach/reorder/delete an item's photos (Item::userCanManageMedia()).
             'items.manage-media',
 
+            // Inventario — Marcas
+            'brands.view',
+            'brands.create',
+            'brands.update',
+            'brands.delete',
+
+            // Inventario — Categorías de inventario
+            'inventory_categories.view',
+            'inventory_categories.create',
+            'inventory_categories.update',
+            'inventory_categories.delete',
+
             // Inventario — Ubicaciones
             'inventory_locations.view',
             'inventory_locations.manage',
@@ -202,7 +214,7 @@ class PermissionSeeder extends LockedSeeder
             $managerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
-                        $q->whereIn('name', ['users.show', 'users.index', 'items.view', 'items.manage-media'])
+                        $q->whereIn('name', ['users.show', 'users.index', 'items.view', 'items.manage-media', 'brands.view', 'inventory_categories.view'])
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
                             ->orWhere('name', 'like', 'employee-requests.%')
@@ -231,6 +243,8 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'attendances.%')
                             ->orWhere('name', 'like', 'reports.%')
                             ->orWhere('name', 'like', 'items.%')
+                            ->orWhere('name', 'like', 'brands.%')
+                            ->orWhere('name', 'like', 'inventory_categories.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'dishes.%')
@@ -254,6 +268,8 @@ class PermissionSeeder extends LockedSeeder
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
                         $q->where('name', 'like', 'items.%')
+                            ->orWhere('name', 'like', 'brands.%')
+                            ->orWhere('name', 'like', 'inventory_categories.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', self::MEDIA_WILDCARD)

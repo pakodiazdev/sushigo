@@ -15,6 +15,10 @@ class PermissionSeeder extends LockedSeeder
 
     private const ITEMS_PATTERN = 'items.%';
 
+    private const BRANDS_PATTERN = 'brands.%';
+
+    private const INVENTORY_CATEGORIES_PATTERN = 'inventory_categories.%';
+
     private const INVENTORY_LOCATIONS_PATTERN = 'inventory_locations.%';
 
     private const STOCK_PATTERN = 'stock.%';
@@ -154,6 +158,18 @@ class PermissionSeeder extends LockedSeeder
             // holder attach/reorder/delete an item's photos (Item::userCanManageMedia()).
             'items.manage-media' => ['label' => 'Gestionar fotos del ítem', 'group' => self::GROUP_INVENTARIO],
 
+            // Inventario — Marcas
+            'brands.view' => ['label' => 'Ver marcas', 'group' => self::GROUP_INVENTARIO],
+            'brands.create' => ['label' => 'Crear marca', 'group' => self::GROUP_INVENTARIO],
+            'brands.update' => ['label' => 'Editar marca', 'group' => self::GROUP_INVENTARIO],
+            'brands.delete' => ['label' => 'Eliminar marca', 'group' => self::GROUP_INVENTARIO],
+
+            // Inventario — Categorías de inventario
+            'inventory_categories.view' => ['label' => 'Ver categorías de inventario', 'group' => self::GROUP_INVENTARIO],
+            'inventory_categories.create' => ['label' => 'Crear categoría de inventario', 'group' => self::GROUP_INVENTARIO],
+            'inventory_categories.update' => ['label' => 'Editar categoría de inventario', 'group' => self::GROUP_INVENTARIO],
+            'inventory_categories.delete' => ['label' => 'Eliminar categoría de inventario', 'group' => self::GROUP_INVENTARIO],
+
             // Inventario — Ubicaciones
             'inventory_locations.view' => ['label' => 'Ver ubicaciones de inventario',    'group' => self::GROUP_INVENTARIO],
             'inventory_locations.manage' => ['label' => 'Gestionar ubicaciones de inventario', 'group' => self::GROUP_INVENTARIO],
@@ -246,6 +262,8 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::VACATION_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)
                             ->orWhere('name', 'like', self::ITEMS_PATTERN)
+                            ->orWhere('name', 'like', self::BRANDS_PATTERN)
+                            ->orWhere('name', 'like', self::INVENTORY_CATEGORIES_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::DISHES_PATTERN)
@@ -272,6 +290,8 @@ class PermissionSeeder extends LockedSeeder
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
                         $q->where('name', 'like', self::ITEMS_PATTERN)
+                            ->orWhere('name', 'like', self::BRANDS_PATTERN)
+                            ->orWhere('name', 'like', self::INVENTORY_CATEGORIES_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::MEDIA_PATTERN)
@@ -305,7 +325,7 @@ class PermissionSeeder extends LockedSeeder
             $managerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
-                        $q->whereIn('name', ['users.show', 'users.index', 'items.view', 'items.manage-media'])
+                        $q->whereIn('name', ['users.show', 'users.index', 'items.view', 'items.manage-media', 'brands.view', 'inventory_categories.view'])
                             ->orWhere('name', 'like', self::EMPLOYEES_PATTERN)
                             ->orWhere('name', 'like', self::LEAVES_PATTERN)
                             ->orWhere('name', 'like', self::EMPLOYEE_REQUESTS_PATTERN)

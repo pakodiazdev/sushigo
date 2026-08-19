@@ -144,7 +144,7 @@ seed data, and leaves financial and Stock operations in their correct later doma
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ⏳ | #422 | Build Product catalog contract with Brands and Inventory Categories | Critical | 5h | 9h | — | — | Starts only after #421 approval |
+| ✅ | #422 | Build Product catalog contract with Brands and Inventory Categories | Critical | 5h | 9h | 21.3h | PR #467 | Brand/InventoryCategory catalogs + Product CRUD shipped, scoped to type=PRODUCTO — PR ready, merge pending |
 |  |  | **Round total** |  | **5h** | **9h** | **—** |  |  |
 
 ### Round 2 — Expose Products and Define Variants
@@ -289,7 +289,7 @@ estimates and empty Sessions arrays ready for execution tracking.
 
 | Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
 |---|---:|---|---:|---|---:|---|
-| ⏳ | #422 | Pending | — | — | — | Product/Brand/Category contract after #421 |
+| ✅ | #422 | Brand/InventoryCategory catalogs (public_id, soft-deletable) and Product CRUD (Item scoped to type=PRODUCTO, catalog-identity-only write contract) shipped with lifecycle guards | PR #467 | — | 21.3h | 106 Feature tests, Pint clean, CI green, SonarCloud gate clean on api+webapp; Copilot + Devin/DeepWiki + Codex review cycles (0 bugs remaining); 3 business-rule disputes resolved with explicit human decisions |
 | ⏳ | #423 | Pending | — | — | — | Progressive Product SlidePanel |
 | ⏳ | #424 | Pending | — | — | — | Product-scoped Variant contract |
 | ⏳ | #425 | Pending | — | — | — | Embedded Variant workflow |

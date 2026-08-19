@@ -151,7 +151,7 @@ export function OpeningBalanceForm({
               {variants.map((variant: ItemVariant) => (
                 <option key={variant.id} value={variant.id}>
                   {variant.code} - {variant.name}
-                  {variant.item && ` (${variant.item.sku})`}
+                  {variant.item?.sku && ` (${variant.item.sku})`}
                 </option>
               ))}
             </Select>
