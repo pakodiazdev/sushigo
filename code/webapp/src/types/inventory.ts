@@ -20,7 +20,8 @@ export interface InventoryLocation {
 // Item Types
 export interface Item {
   id: number
-  sku: string
+  /** Nullable since #422: new Product-type Items (see `/inventory/products`) never populate it. */
+  sku: string | null
   name: string
   description?: string
   type: 'INSUMO' | 'PRODUCTO' | 'ACTIVO'

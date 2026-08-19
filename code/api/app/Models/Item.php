@@ -6,6 +6,7 @@ use App\Contracts\AuthorizesMediaOwnership;
 use App\Models\Concerns\HasMediaGallery;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -18,6 +19,8 @@ class Item extends Model implements AuthorizesMediaOwnership
         'name',
         'description',
         'type',
+        'brand_id',
+        'inventory_category_id',
         'is_stocked',
         'is_perishable',
         'is_active',
@@ -44,6 +47,21 @@ class Item extends Model implements AuthorizesMediaOwnership
     public function variants(): HasMany
     {
         return $this->hasMany(ItemVariant::class);
+    }
+
+    public function brand(): BelongsTo
+    {
+        // withTrashed(): a soft-deleted Brand still has historical FK
+        // integrity by design (see product-catalog-architecture.en.md §3.3)
+        // — a Product created while its brand was active must keep showing
+        // that brand's name after the brand is later deleted, not silently
+        // lose the relation.
+        return $this->belongsTo(Brand::class)->withTrashed();
+    }
+
+    public function inventoryCategory(): BelongsTo
+    {
+        return $this->belongsTo(InventoryCategory::class)->withTrashed();
     }
 
     /**
