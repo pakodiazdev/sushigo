@@ -13,7 +13,8 @@ picks up newly-assigned issues on its own.
 
 This is the **lightweight default** variant — automated review uses Codex, triggered by posting an
 `@codex review` comment on the PR (Phase 8), instead of a Devin/DeepWiki browser-automation subagent.
-No `mcp__claude-in-chrome__*` tool is ever invoked by this file. Two siblings exist for the same
+No Chrome-extension browser tool is ever invoked by this file — none appear in its `allowed-tools`
+frontmatter, and no phase below calls one. Two siblings exist for the same
 pipeline, differing only in that phase, both keeping Devin's deeper cross-file review at a higher
 cost: `/issue-full` (fully automated Devin via a Chrome subagent) and `/issue-devin-interactive`
 (Devin stays, but a human relays its findings instead of a subagent browsing the page). See #468 for
@@ -576,7 +577,7 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   **Override — skip 7.6b entirely:**
   `finish-pr.md`'s own Phase 7.6b checks Devin/DeepWiki via the Chrome extension (or falls back to
   asking whether to wait for it). This lightweight variant doesn't use Devin anywhere, so do not run
-  7.6b at all — do not open `app.devin.ai`, do not invoke any `mcp__claude-in-chrome__*` tool, and do
+  7.6b at all — do not open `app.devin.ai`, do not invoke any Chrome-extension browser tool, and do
   not ask the user whether to wait for the extension. If you want a final sanity check on the
   merge-ready commit, post one more `@codex review` trigger here using this file's own Phase 8
   contract (best-effort, short poll, never a hard gate — mirroring how `finish-pr.md` itself treats
