@@ -1,24 +1,22 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh run view:*), Bash(gh run watch:*), Bash(gh api:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(tail:*), Bash(wc:*), Bash(date:*), Bash(sleep:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(basename:*), Bash(docker exec:*), Bash(php artisan:*), Bash(./vendor/bin/pint:*), Bash(npm:*), Bash(npx:*), Bash(make:*), Bash(curl:*), Read, Edit, Write, WebFetch, Agent
-description: End-to-end autonomous delivery for a single GitHub issue — validate it exists, gather context, implement via TDD, open the PR, then loop through CI, Copilot review, and a Codex review (triggered by an `@codex review` PR comment) until everything is green. This is the lightweight default — no Devin/DeepWiki, no browser automation. See `/issue-full` (fully automated Devin) and `/issue-devin-interactive` (human-relayed Devin checkpoint) for siblings that keep Devin's deeper cross-file review at a higher cost. Runs fully unattended: never pauses for human input, even on a business-rule dispute — the issue's literal text wins and every override is logged on the PR for later review. Never merges.
+allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bash(gh run view:*), Bash(gh run watch:*), Bash(gh api:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(tail:*), Bash(wc:*), Bash(date:*), Bash(sleep:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(basename:*), Bash(docker exec:*), Bash(php artisan:*), Bash(./vendor/bin/pint:*), Bash(npm:*), Bash(npx:*), Bash(make:*), Bash(curl:*), Read, Edit, Write, WebFetch, Agent
+description: End-to-end autonomous delivery for a single GitHub issue — validate it exists, gather context, implement via TDD, open the PR, then loop through CI and Copilot review automatically. The one deliberate exception in this variant is Devin/DeepWiki review (Phase 8, and finish-pr.md's equivalent final check): instead of a subagent browsing the page, the operator opens the Devin review link themselves and relays back what it shows — this is the only phase in the `/issue*` family that pauses for a human reply. Every other phase, including business-rule disputes, stays zero-interruption exactly like `/issue-full`. See `/issue-full` (fully automated Devin) and `/issue` (Codex review, no Devin) for the other two siblings. Never merges.
 argument-hint: <issue-number>
 ---
 
-# /issue #$ARGUMENTS — Autonomous issue delivery pipeline (lightweight, Codex review)
+# /issue-devin-interactive #$ARGUMENTS — Autonomous issue delivery pipeline (human-relayed Devin)
 
 You are taking issue **#$ARGUMENTS** of the SushiGo monorepo from "just filed" to "PR ready for
-manual review," in a single, fully unattended run. This command never asks for input — it is
-designed to be safe to run with nobody watching, including as the target of a scheduled loop that
-picks up newly-assigned issues on its own.
+manual review." Every phase except Phase 8 (and its finish-pr.md equivalent in Phase 9) runs exactly
+as unattended as `/issue-full` — this command still never asks for input over TDD implementation,
+CI failures, or Copilot review, including business-rule disputes there.
 
-This is the **lightweight default** variant — automated review uses Codex, triggered by posting an
-`@codex review` comment on the PR (Phase 8), instead of a Devin/DeepWiki browser-automation subagent.
-No `mcp__claude-in-chrome__*` tool is ever invoked by this file. Two siblings exist for the same
-pipeline, differing only in that phase, both keeping Devin's deeper cross-file review at a higher
-cost: `/issue-full` (fully automated Devin via a Chrome subagent) and `/issue-devin-interactive`
-(Devin stays, but a human relays its findings instead of a subagent browsing the page). See #468 for
-why these variants exist — comparing review-automation cost and catch-rate — and each file's own
-frontmatter `description` for which one you're reading.
+This is the **Devin-interactive** variant — Devin/DeepWiki review keeps its full depth (unlike
+`/issue`, which drops it for Codex), but instead of a subagent browsing `app.devin.ai` in Chrome, the
+operator opens the review page themselves and relays back what it shows. This exists specifically to
+compare cost and findings quality against `/issue-full` (fully automated Devin) and `/issue` (Codex,
+no Devin) on equivalent work — see #468. **Only Phase 8 (and its Phase 9/finish-pr.md counterpart)
+pauses for a human reply; nowhere else in this file does.**
 
 This command **orchestrates existing commands by reference** instead of duplicating their logic.
 Where a phase below says "follow `.claude/commands/X.md`," **read that file** with the Read tool and
@@ -55,22 +53,33 @@ checklist. This has already happened for real on this project once for a differe
 workspaces independently starting the same issue) — check that no other workspace is already
 running `/issue-full`, `/issue`, `/issue-devin-interactive`, `/start-issue`, `/pr-comments`, or
 `/finish-pr` against the same issue number before starting. **This check is still manual (Phase 0/1's
-job) today.** A future scheduled loop that invokes `/issue` unattended (see the zero-interruption
-rule) must perform the equivalent check itself — e.g. an existing branch/open PR for that issue
-number, or a lock file — *before* dispatching a run; this command does not defend against a
-double-dispatch on its own.
+job) today.** A future scheduled loop that invokes `/issue-devin-interactive` unattended (see the
+zero-interruption rule) must perform the equivalent check itself — e.g. an existing branch/open PR
+for that issue number, or a lock file — *before* dispatching a run; this command does not defend
+against a double-dispatch on its own. Note that a fully unattended scheduled loop is a poor fit for
+this specific variant, since Phase 8 below deliberately pauses for a human reply — an unattended
+dispatcher would need its own separate mechanism to notice and answer that pause, which this
+command does not provide.
 
 ---
 
-## The zero-interruption rule
+## The zero-interruption rule (with one deliberate exception — Phase 8)
 
 Every decision in this pipeline — what to implement, how to fix a failing test, whether a review
-comment is valid, whether a Codex finding matters, how to resolve an ambiguity in the issue, and how
-to resolve a business-rule dispute raised by an automated reviewer — is made by you, alone, using the
+comment is valid, whether a Devin flag matters, how to resolve an ambiguity in the issue, and how to
+resolve a business-rule dispute raised by an automated reviewer — is made by you, alone, using the
 issue's Description/Reason/Objective/Acceptance Criteria as the source of truth. **This command never
-calls `AskUserQuestion` or otherwise pauses waiting for a human reply, at any phase.**
+calls `AskUserQuestion` or otherwise pauses waiting for a human reply, at any phase — except Phase 8
+below (and its Phase 9/`finish-pr.md` counterpart), which exists specifically to pause.**
 
-**When an automated reviewer (Copilot or Codex) is, in substance, disputing what the feature
+**This is the one deliberate exception in the entire `/issue*` family.** Everywhere else in this
+file — TDD implementation, CI failures, Copilot review and its business-rule disputes, ambiguity
+resolution — behaves identically to `/issue-full`: fully unattended, no pauses, no questions. Only
+when this file's own Phase 8 text says to wait for the operator does this command stop and wait; it
+does not extend that pattern to any other phase, and no other phase in this file should be read as
+implicitly interactive just because Phase 8 is.
+
+**When an automated reviewer (Copilot or Devin) is, in substance, disputing what the feature
 *should* do — not flagging a defect, a style problem, or a missing test — implement the issue
 exactly as written and do not adopt the reviewer's alternative interpretation.** The issue's own
 Description/Reason/Objective/Acceptance Criteria is the authoritative spec; a comment second-
@@ -80,7 +89,7 @@ issue's literal reading was kept — in the PR's `## ⚠️ Needs Human Judgment
 Phase 4). A comment that says "this validation is missing" or "this endpoint should return 403 here
 per your own Policy class" is still a defect — fix it normally, that's not a dispute.
 
-This exact bar governs Phase 6 (Copilot) and Phase 8 (Codex). Phase 1's own research-then-ask rule
+This exact bar governs Phase 6 (Copilot) and Phase 8 (Devin). Phase 1's own research-then-ask rule
 resolves the same way, but writes to a **different** PR section: if a genuine ambiguity survives
 researching the issue, its references, `doc/architecture/*`/`doc/conventions/*`, and existing
 similar code, resolve it with the most literal reading of the issue text — falling back to the most
@@ -88,27 +97,28 @@ conservative/restrictive interpretation only if the issue text itself is silent,
 under-specified — and record it under `## 🤔 Assumptions` (Phase 1), never under
 `## ⚠️ Needs Human Judgment` above. The two sections are not interchangeable: `## 🤔 Assumptions`
 is for gaps *you* filled because the issue itself didn't say — no reviewer was involved; `## ⚠️
-Needs Human Judgment` is only for disputes an automated reviewer actually raised (Phase 6/8) and
-this pipeline overrode. Phase 8 gracefully degrades to `no-review` (never blocking, never asking
-whether to wait) if Codex never responds to the trigger comment — see that phase for the exact
-fallback, which replaces `/issue-full`'s Chrome-extension-unavailable case entirely (this file never
-touches a browser). Phase 10 does not ask for `/usage` output — cost logging is skipped entirely in
-this mode, noted as such in the final report instead of blocking on it.
+Needs Human Judgment` is only for disputes an automated reviewer actually raised (Phase 6, or Phase 8
+via the operator's relay) and this pipeline overrode. Phase 8 doesn't use the Chrome extension at
+all in this variant — see that phase for its own human-relay mechanism, which replaces both the
+automated browsing *and* its Chrome-unavailable fallback used in `/issue-full`. Phase 10 does not ask
+for `/usage` output — cost logging is skipped entirely in this mode, noted as such in the final
+report instead of blocking on it.
 
-### Automated-review subagent boundary
+### Automated-review subagent boundary (Phases 6 and 7 only)
 
-Phases 6, 7, and 8 deliberately dispatch their automated-review work through the `Agent` tool.
-Use **one foreground, general-purpose subagent for each whole loop**, not one subagent per poll or
-per review cycle. A whole-loop dispatch keeps every poll response, diff/context read, test log, and
-CI-watch update in one disposable context and gives the parent a single summary. Dispatching per
+Phases 6 and 7 deliberately dispatch their Copilot review-and-response loop through the `Agent`
+tool. Use **one foreground, general-purpose subagent for each whole loop**, not one subagent per poll
+or per review cycle. A whole-loop dispatch keeps every poll response, diff/context read, test log,
+and CI-watch update in one disposable context and gives the parent a single summary. Dispatching per
 cycle would create repeated handoffs, force each worker to rebuild the same PR context, and make
-ownership of the shared checkout ambiguous. Foreground execution is required because every loop can
-edit, commit, and push the same branch; never run these review subagents concurrently with the
-parent or with each other.
+ownership of the shared checkout ambiguous. Foreground execution is required because the loop edits,
+commits, and pushes the same branch; never run it concurrently with the parent.
 
-Subagents cannot spawn other subagents. Therefore Phase 8's single Codex worker also performs the
-Copilot re-poll required after each Codex-driven push. That nested Copilot work is still isolated
-from the parent `/issue` session, which is the boundary this command requires.
+**Phase 8 is the one phase in this file that does *not* dispatch through `Agent`.** It runs directly
+in this foreground conversation, because a subagent has no way to literally pause and wait for the
+operator's next chat message — only the parent conversation can do that. Do not delegate Phase 8 to
+a subagent under any circumstance, even to "keep it consistent" with Phases 6/7; that would silently
+turn this variant back into `/issue-full`'s automated-browsing behavior, defeating its purpose.
 
 For every dispatch, give the subagent the repository, issue number, PR number, branch name, the
 applicable safety cap/window, and the exact command sections it must follow. Require it to do the
@@ -190,7 +200,8 @@ so they're not a stop point either. From here on, every remaining stop point mus
 Sessions entry with the current time before reporting — the same way Phase 9's own success path
 would — rather than leaving `"end": "?"` to silently accumulate wall-clock time nobody is tracking.
 That covers:
-- The **safety caps** (Phase 5's CI-failure cap, Phase 8's Codex-cycle cap).
+- **Phase 5's CI-failure cap** (its only automated safety cap — Phase 8 has none, since it's paced
+  by the operator, not a loop).
 - **Any stop reached during Phase 9's delegation to `finish-pr.md`'s Phases 0–2** — everything
   between opening this entry (Phase 2 here) and `finish-pr.md`'s own Phase 3, which is the only
   later point that fills `end` on the success path. This is deliberately **not** an exhaustive list
@@ -403,10 +414,8 @@ git commit -m "<synthesized message>"
 git push --force-with-lease origin HEAD
 ```
 
-This push restarts CI and Copilot's automated review (any push does, force or not) — it can post a
-fresh review with new threads on the squashed commit. It also restarts the Devin/DeepWiki scan on
-DeepWiki's side, purely as a byproduct of any GitHub push — this pipeline never reads that scan's
-result (see Phase 8 below and Phase 9's override of `finish-pr.md`'s own Devin check). **Invoke the
+This push restarts CI, the Devin/DeepWiki scan, **and** Copilot's automated review (any push does,
+force or not) — it can post a fresh review with new threads on the squashed commit. **Invoke the
 complete CI gate (Phase 5)** before entering Phase 8, including its normal diagnose/fix/retry loop
 until green or its safety cap.
 
@@ -437,87 +446,57 @@ parent report; retain only the contract counts, commit SHAs, CI state, and compa
 
 ---
 
-## PHASE 8 — Codex review loop
+## PHASE 8 — Devin / DeepWiki review (human-relayed checkpoint)
 
-Dispatch one foreground, general-purpose subagent for the **entire** Codex loop, including any
-Copilot re-poll caused by Codex-driven pushes. Pass it the repository, issue, PR, and branch
-identifiers and a **3-cycle safety cap** (lower than a Devin-based sibling's, since this variant is
-deliberately the cheap default — see #468). The worker owns the following workflow without returning
-any intermediate poll response, diff, test, or CI output to the parent:
+**This phase runs directly in this foreground conversation — never dispatch it to a subagent** (see
+"Automated-review subagent boundary" above). It is the one deliberate pause in this entire pipeline.
 
-1. Post the review trigger as a plain PR comment:
-   ```bash
-   gh pr comment <N> --repo pakodiazdev/sushigo --body "@codex review"
+1. Give the operator the review URL and ask them to open it and report back what it shows:
    ```
-2. Poll every ~30s for up to ~10 minutes for a response from an author whose login contains `codex`
-   (case-insensitive) posted **after** the trigger comment. Check both surfaces, since it is not
-   known in advance which one the Codex GitHub App uses in this repo:
-   - A formal PR review: `gh api repos/pakodiazdev/sushigo/pulls/<N>/reviews`.
-   - A plain issue/PR comment: `gh api repos/pakodiazdev/sushigo/issues/<N>/comments`.
-   If neither surface shows a qualifying response within the window, finish as `status: no-review`
-   with `mode: none` — do not block indefinitely, and do not treat this as an error. The Codex
-   GitHub App may not be connected to this repo yet; this pipeline must degrade gracefully either
-   way.
-3. If Codex posted a **formal review** (`mode: review`): read and follow
-   `.claude/commands/pr-comments.md` Steps 1–7 in full, exactly like Phase 6's Copilot loop,
-   including this third outcome alongside Address/Skip:
-   - **Business-rule dispute** — keep the issue's literal behavior, reply with the relevant
-     Description/Objective/Acceptance Criteria, resolve the thread, and append the verbatim comment
-     plus that reasoning to the PR's `## ⚠️ Needs Human Judgment` section.
-4. If Codex posted a **plain comment** (`mode: comment`): read its body and extract every concrete,
-   actionable point it raises (ignore pure acknowledgement/summary text with no findings). For each
-   point, apply the same three-way classification as step 3 above — Address (fix it), Skip (false
-   positive or already correct, with a one-line justification), or business-rule dispute (same
-   handling as step 3). Reply to that same comment (or post a new PR comment if the platform doesn't
-   thread plain comments) describing what was addressed, skipped, or disputed and why — mirroring
-   `pr-comments.md`'s reply format even though there's no thread to formally resolve.
-5. For every concrete finding addressed in step 3 or 4: run the locally relevant tests and linters,
-   commit, and push, following `doc/conventions/git/commits.md`. Then run the Phase 5 CI gate. If it
-   reaches its six-identical-failures safety cap, return `status: failed` with `ci: failed`
-   immediately — never pair `ci: failed` with `status: completed` or `status: no-review`. Once CI is
-   green, resolve the pushed SHA and perform Phase 7's exact-`commit_id` Copilot poll for that SHA
-   with a shorter few-minute window, processing any new threads through `pr-comments.md` Steps 1–7
-   plus the business-rule-dispute rule. If that pushes further commits, run the complete Phase 5 CI
-   gate again against the new head.
-6. If real findings were addressed and a push happened, post a fresh `@codex review` trigger and
-   repeat from step 2 for one more cycle, to confirm the fix actually resolved what Codex flagged.
-   Stop after the findings are confirmed resolved (or Codex has nothing further to say), or after
-   3 cycles total, whichever comes first — do not keep re-triggering indefinitely.
+   Devin/DeepWiki review is ready: https://app.devin.ai/review/pakodiazdev/sushigo/pull/<N>
+   Please open it and tell me the bug count and any flags it lists (or "0 bugs, clean" if there's
+   nothing to report).
+   ```
+2. **Wait for their reply.** Do not poll, do not guess Devin's state from anything else, and do not
+   proceed until they respond — their message is the only source of truth for this phase. This is
+   the literal pause the zero-interruption rule above carves out.
+3. For each concrete bug or flag they relay, verify it against the actual code with the same
+   discipline as every other review-finding phase in this pipeline:
+   - **Real defect** — fix it, run the locally relevant tests/linters.
+   - **False positive / not-applicable** — say so back to the operator with a one-line reason; no
+     code change.
+   - **Business-rule dispute** — same rule as Phase 6: keep the issue's literal behavior, append the
+     verbatim finding plus your reasoning to the PR's `## ⚠️ Needs Human Judgment` section, and tell
+     the operator why in your reply instead of adopting Devin's alternative reading.
+4. **Commit and push one commit per correction** — do not batch multiple relayed findings into a
+   single commit. The operator may relay findings incrementally as they read the page, so react to
+   each with its own commit, following `doc/conventions/git/commits.md` as usual. Run the Phase 5 CI
+   gate after each push; diagnose and fix on failure the same way Phase 5 always does.
+5. After each round of fixes, tell the operator what changed (files, one-line summary, commit SHA)
+   and ask them to refresh the Devin page and report back — Devin's scan restarts on every push and
+   needs a moment, so suggest they wait briefly before refreshing. Repeat steps 2–4 until they
+   confirm Devin shows 0 bugs and every flag has been discussed.
+6. Do not dispatch a Copilot re-poll subagent after each individual fix commit here — that would be
+   wasteful mid-conversation and this variant's whole point is staying lean. Any Copilot review that
+   lands on these pushes is still caught downstream: `finish-pr.md`'s own Phase 1a (run inside
+   Phase 9 below) checks for unresolved review threads and stops with a pointer to `/pr-comments` if
+   any exist, exactly as it would for a standalone `/finish-pr` run — nothing here needs to duplicate
+   that safety net.
 
-Require the subagent to return only:
-
-```text
-CODEX_LOOP
-status: completed | no-review | failed
-cycles: <N>/3
-mode: review | comment | none
-findings: found=<N> addressed=<N> skipped=<N> business_rule_disputes=<N>
-copilot: threads_addressed=<N> skipped=<N> business_rule_disputes=<N>
-commits: pushed=<yes|no> shas=<comma-separated short SHAs or none>
-ci: success | failed | not-rerun
-notes: <one compact line; no raw comments, diffs, polls, or CI log>
-```
-
-If `status: failed`, the parent must fetch the issue body and fill the current Sessions entry's
-`end` **only if it is still `"?"`**, then write it back and stop with the compact reason — same
-idempotent cleanup pattern as Phase 6. Also stop through this same path if the contract is malformed
-as `ci: failed` with any non-failed status; never restart a CI gate whose safety cap the worker
-already exhausted. If `status: no-review`, continue straight to Phase 9 — a Codex response never
-arriving (App not connected, or genuinely nothing to flag) is not a failure in this variant. If the
-summary says `pushed=yes` and `ci` is `success` or `not-rerun`, the parent must **invoke the complete
-CI gate (Phase 5) once** before Phase 9, following its normal diagnose/fix/retry loop until green or
-its safety cap; do not continue on a failed gate. The parent must never post a Codex trigger comment
-or poll Copilot itself during this phase — that is entirely the dispatched worker's job.
+Once the operator confirms Devin is clean, move to Phase 9. There is no automated safety-cap or
+return contract here (this isn't a subagent) — the natural bound is the operator's own patience, and
+if they stop responding mid-review, the conversation is simply paused, not failed; resume from here
+whenever they reply.
 
 ---
 
 ## PHASE 9 — Close out via finish-pr
 
 `.claude/commands/finish-pr.md` is normally something a human runs by hand, after their own manual
-test and approval. Here, it runs automatically as the last stage of this pipeline — CI and Copilot
-are already clean (and Codex too, unless it never responded), so there's nothing left for a human to
-gate before this housekeeping; their manual test happens *after* this phase, not before it, so what
-they review is the finished article — code, tests, docs, and a closed-out issue — not a bare diff.
+test and approval. Here, it runs automatically as the last stage of this pipeline — CI, Copilot,
+and Devin are already clean, so there's nothing left for a human to gate before this housekeeping;
+their manual test happens *after* this phase, not before it, so what they review is the finished
+article — code, tests, docs, and a closed-out issue — not a bare diff.
 
 Follow `.claude/commands/finish-pr.md`'s Phases 0 through 7.6 exactly as written, with these notes
 on how they interact with the phases already run above. Running its procedure here executes under
@@ -565,23 +544,22 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   itself lost content — but real; don't push a divergent diff if it fires.
 - **Phase 3** (finalize the issue) — this is also where the Sessions entry opened in Phase 2 above
   finally gets its `end` time filled and `Tracked` recomputed. Write the Retrospective's narrative
-  to actually reflect what happened in Phases 5, 6, and 8 (CI retries, Copilot threads, Codex
-  cycles) — not just "implemented the feature," since those cycles are real time and real cost.
+  to actually reflect what happened in Phases 5, 6, and 8 (CI retries, Copilot threads, and the
+  human-relayed Devin rounds) — not just "implemented the feature," since those rounds are real time
+  and real cost, including whatever wait time the operator's replies added.
 - **Phases 4–6** (local archive, project board → Done, sprint doc's per-issue row) — run exactly
   as documented in `finish-pr.md`, which no longer touches the sprint doc's aggregate percentage
   or README as a side effect of closing a single PR (see `/sync-sprint-progress` for that, run
   deliberately by a human).
-- **Phase 7.5** (final squash+push) and **7.6** (final CI, plus Devin re-validation in `finish-pr.md`'s
-  own text) — this is the true final gate before Phase 10 below presents anything to the human.
-  **Override — skip 7.6b entirely:**
-  `finish-pr.md`'s own Phase 7.6b checks Devin/DeepWiki via the Chrome extension (or falls back to
-  asking whether to wait for it). This lightweight variant doesn't use Devin anywhere, so do not run
-  7.6b at all — do not open `app.devin.ai`, do not invoke any `mcp__claude-in-chrome__*` tool, and do
-  not ask the user whether to wait for the extension. If you want a final sanity check on the
-  merge-ready commit, post one more `@codex review` trigger here using this file's own Phase 8
-  contract (best-effort, short poll, never a hard gate — mirroring how `finish-pr.md` itself treats
-  7.6b as supplementary to 7.6a's CI check). Note in Phase 10's report that Devin/DeepWiki was
-  skipped by design, not because anything was unavailable.
+- **Phase 7.5** (final squash+push) and **7.6** (final CI + Devin re-validation) — this is the true
+  final gate before Phase 10 below presents anything to the human. **Override:** `finish-pr.md`'s
+  own Phase 7.6b normally auto-checks Devin via the Chrome extension (or falls back to asking whether
+  to wait for it if the extension isn't connected). In this variant, run 7.6b the same interactive
+  way as this file's own Phase 8 instead: give the operator the Devin URL for the post-squash commit,
+  wait for their relay, and if they report any remaining bug or flag, fix it, commit, push, and let
+  `finish-pr.md`'s own Phase 7.5/7.6a repeat (squash+push, then CI) before checking Devin again — the
+  same one-fix-one-commit discipline from Phase 8 applies here too. Only once the operator confirms
+  Devin is clean on the final commit does Phase 10 below present anything as ready.
 
 **This changes when `finish-pr.md`'s stated precondition applies.** Its own text says "call this
 only after the human has manually tested the PR and approved it" — that line still describes
@@ -601,7 +579,7 @@ gap in Claude Code itself, not something to paper over with a brittle "most rece
 file" heuristic, which breaks under parallel sessions — and this repo routinely runs up to 8 in
 parallel via dev-lab). Per the zero-interruption rule, this pipeline does not stop to ask for
 `/usage`'s output — cost logging is skipped entirely rather than blocking the run on a reply that
-may never come (e.g. when `/issue` is invoked unattended by a scheduled loop).
+may never come (e.g. when `/issue-devin-interactive` is invoked unattended by a scheduled loop).
 
 ### 10a. Skip cost logging
 
@@ -643,14 +621,10 @@ subsection instead of leaving placeholder bullets.
 - Threads addressed: <N> · Skipped (justified): <N> · Business-rule disputes overridden: <N> (see
   `## ⚠️ Needs Human Judgment` above)
 
-### Codex review
-- Mode: <review / comment / none> · Findings addressed: <N> · Skipped (justified): <N> ·
-  Business-rule disputes overridden: <N> (see `## ⚠️ Needs Human Judgment` above)
-- Cycles: <N>/3
-
-### Devin / DeepWiki
-Skipped by design — this is the lightweight variant. See `/issue-full` or `/issue-devin-interactive`
-(#468) for a Devin-reviewed run of the same issue if you want that comparison.
+### Devin / DeepWiki (human-relayed)
+- Bugs: 0 (confirmed by operator) · Flags evaluated: <N> (<M> fixed, <K> marked not applicable, <J>
+  business-rule disputes overridden — see `## ⚠️ Needs Human Judgment` above)
+- Rounds relayed: <N>
 
 ### Coverage
 - New code: <X>% (≥80% required)
@@ -680,11 +654,12 @@ gh pr merge <N> --merge
 I have not merged it and will not.
 ````
 
-Business-rule disputes from Copilot or Codex no longer pause the run (see "The zero-interruption
-rule") — they're overridden in place, logged under `## ⚠️ Needs Human Judgment`, and the pipeline
-continues straight through Phase 9/10 in the same pass. What can still end a run before Phase 10
-reaches this report: the safety caps (Phase 5's CI-failure cap, Phase 8's Codex-cycle cap), and any
-stop reached during Phase 9's delegation to `finish-pr.md`'s Phases 0–2 (see Phase 2's
+Business-rule disputes from Copilot or Devin do not pause the run — they're overridden in place,
+logged under `## ⚠️ Needs Human Judgment`, and the pipeline continues straight through Phase 9/10 in
+the same pass; only the fact-gathering itself (what Devin found) is relayed by the operator in
+Phase 8, not the decision about how to resolve a dispute. What can still end a run before Phase 10
+reaches this report: Phase 5's CI-failure cap, and any stop reached during Phase 9's delegation to
+`finish-pr.md`'s Phases 0–2 (see Phase 2's
 Session-closing rule and Phase 9's own notes above for the non-exhaustive list of which conditions
 that covers). Every one of those closes the Sessions entry (Phase 2's rule) and reports what
 happened before ending the run, since none of them are judgment calls to resolve — they're either a
@@ -694,9 +669,10 @@ protective limit on a runaway loop or a precondition that genuinely isn't met ye
 
 ## See also
 
-- `.claude/commands/issue-full.md` (`/issue-full`) and `.claude/commands/issue-devin-interactive.md`
-  (`/issue-devin-interactive`) — siblings of this pipeline that keep Devin's deeper review, at a
-  higher cost, instead of Codex. See #468 for why they exist and what they're being compared against.
+- `.claude/commands/issue-full.md` (`/issue-full`) and `.claude/commands/issue.md` (`/issue`) —
+  siblings of this pipeline, differing only in Phase 8's review mechanism (fully automated Devin,
+  and Codex via PR comment, respectively). See #468 for why they exist and what they're being
+  compared against.
 - `.claude/commands/start-issue.md` — Phases 1–2, 4–6 reused above; run standalone for a single
   work session without the full pipeline.
 - `.claude/commands/pr-comments.md` — Steps 1–7 reused in Phase 6; run standalone to re-resolve
@@ -708,9 +684,8 @@ protective limit on a runaway loop or a precondition that genuinely isn't met ye
   itself if you want that file to name both entry points explicitly, e.g.: "Call this after a PR is
   ready to close out — either by hand once you've manually tested and approved it, or automatically
   as this file's (or a sibling variant's) own Phase 9." Its Devin/DeepWiki check (Phase 7.6b) is
-  deliberately **skipped** by Phase 9 above (see that phase's override) — this lightweight variant
-  relies on Phase 8's Codex loop instead, and optionally one best-effort Codex re-check in place of
-  7.6b, never on Devin.
+  replaced by this file's own interactive relay in Phase 9 above (see that phase's override) — the
+  human confirms 0 bugs on the final commit directly, the same as Phase 8 does earlier in the run.
 - `.claude/skills/fix-tests/SKILL.md` — a narrower, standalone tool for fixing failures in an
   *existing* test suite outside of an active issue; its confirmation gate exists because it may be
   touching behavior nobody currently intends to change, which doesn't apply to Phase 3 above (you
