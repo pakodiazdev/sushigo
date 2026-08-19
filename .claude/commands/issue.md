@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh run view:*), Bash(gh run watch:*), Bash(gh api:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(tail:*), Bash(wc:*), Bash(date:*), Bash(sleep:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(basename:*), Bash(docker exec:*), Bash(php artisan:*), Bash(./vendor/bin/pint:*), Bash(npm:*), Bash(npx:*), Bash(make:*), Bash(curl:*), Read, Edit, Write, WebFetch, Agent
+allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh run view:*), Bash(gh run watch:*), Bash(gh api:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(gh project:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git merge-base:*), Bash(git rev-parse:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(tail:*), Bash(wc:*), Bash(date:*), Bash(sleep:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(basename:*), Bash(docker exec:*), Bash(php artisan:*), Bash(./vendor/bin/pint:*), Bash(npm:*), Bash(npx:*), Bash(make:*), Bash(curl:*), Read, Edit, Write, WebFetch, Agent
 description: End-to-end autonomous delivery for a single GitHub issue — validate it exists, gather context, implement via TDD, open the PR, then loop through CI, Copilot review, and a Codex review (triggered by an `@codex review` PR comment) until everything is green. This is the lightweight default — no Devin/DeepWiki, no browser automation. See `/issue-full` (fully automated Devin) and `/issue-devin-interactive` (human-relayed Devin checkpoint) for siblings that keep Devin's deeper cross-file review at a higher cost. Runs fully unattended: never pauses for human input, even on a business-rule dispute — the issue's literal text wins and every override is logged on the PR for later review. Never merges.
 argument-hint: <issue-number>
 ---
@@ -29,7 +29,7 @@ post-merge housekeeping), use `/start-issue`, `/pr-comments`, or `/finish-pr` di
 unchanged and still work standalone.
 
 **Composition contract — this matters because these files get edited independently.** Phase
-references below (e.g. "Phase 1, 1a, and 2" from `start-issue.md`) point at that file's *current*
+references below (e.g. "Phase 1, 1a, 1b, and 2" from `start-issue.md`) point at that file's *current*
 structure at the time this command was written. If one of those files is later restructured —
 phases renumbered, split, merged, or renamed — its own standalone behavior (running `/start-issue`,
 `/pr-comments`, or `/finish-pr` directly) keeps working unchanged, since nothing about a file
@@ -138,8 +138,9 @@ gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json number,title,body,s
 
 ## PHASE 1 — Context, plan, and assumptions
 
-Follow `.claude/commands/start-issue.md` **Phases 1, 1a, and 2** exactly as written (mandatory
-issue sections check, link to the SushiGo Admin project, codebase exploration).
+Follow `.claude/commands/start-issue.md` **Phases 1, 1a, 1b, and 2** exactly as written (mandatory
+issue sections check, link to the SushiGo Admin project, Investment Type label validation, codebase
+exploration).
 
 Then, instead of `start-issue.md`'s Phase 3 (context report + stop-and-wait for open questions),
 do this:

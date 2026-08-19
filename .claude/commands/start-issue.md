@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git rev-parse:*), Bash(basename:*), Bash(tail:*), Bash(find:*), Bash(ls:*), Bash(date:*), Bash(docker exec:*), Read, Edit, Write
+allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh repo view:*), Bash(gh project item-list:*), Bash(gh project item-add:*), Bash(git checkout:*), Bash(git switch:*), Bash(git branch:*), Bash(git fetch:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git rebase:*), Bash(git reset:*), Bash(git rev-parse:*), Bash(basename:*), Bash(tail:*), Bash(find:*), Bash(ls:*), Bash(date:*), Bash(docker exec:*), Read, Edit, Write
 description: Start a work session on a GitHub issue — load context, create branch, open a session directly on the issue, then drive TDD implementation through to PR
 ---
 
@@ -44,6 +44,52 @@ that is a sprint-assignment decision the user makes explicitly):
 ```bash
 gh project item-add 7 --owner pakodiazdev --url "https://github.com/pakodiazdev/sushigo/issues/$ARGUMENTS"
 ```
+
+### 1b. Validate the Investment Type label
+
+Per `doc/conventions/tasks.md` → "Investment Type", every Issue must carry exactly one
+`investment:` label, and it must be one of the **three canonical values** — `investment: product`,
+`investment: product-engineering`, or `investment: dev-platform` — not merely anything starting with
+the `investment: ` prefix. A single label like `investment: infrastructure` (a typo, or a value
+outside the standard) must not be accepted as valid just because there's exactly one of it.
+
+The listing query below must **not** require an exact `"investment: "` (with the space) prefix
+match — a label typed without the space (`investment:product`) or in a different case
+(`Investment: product`) would otherwise never match at all, produce no output, and be silently
+skipped by the "no output → invalid" branch below instead of being caught and removed, leaving it on
+the Issue alongside the newly-applied canonical one. Match case-insensitively on `investment`
+followed by optional whitespace and a colon instead, so every spacing/case variant is still listed
+(and therefore still removable) even though only the exact three canonical strings count as valid:
+
+```bash
+gh issue view "$ARGUMENTS" --repo pakodiazdev/sushigo --json labels -q '.labels[].name | select(test("^investment\\s*:"; "i"))'
+```
+
+- **Exactly 1 line of output, and it exactly matches one of the three canonical values above** →
+  valid, continue.
+- **No output, more than one line, or the single line present is not one of the three canonical
+  values** → this is an invalid task state, not something to silently accept or work around.
+  Classify the Issue yourself using the rule of thumb in `doc/conventions/tasks.md` ("what is this
+  Issue investing in") against its title and body — this is the same research-before-ask pattern
+  used elsewhere in this command, not a guess. Remove every `investment:`-prefixed label the query
+  above actually printed (canonical or not — a non-canonical one must be removed too, not left
+  alongside the correction) — repeat `--remove-label "<label>"` for each one, using the **exact
+  label text the query printed, not a hardcoded example**: passing a label name that isn't actually
+  on the Issue is a silent no-op (`gh issue edit` does not error on a label that wasn't present), so
+  a single mis-typed label like `investment: infrastructure` must be removed with
+  `gh issue edit "$ARGUMENTS" --repo pakodiazdev/sushigo --remove-label "investment: infrastructure"`
+  — **not** by copying an unrelated multi-label example verbatim. For the multiple-canonical-labels
+  case, the same rule applies with one `--remove-label` per label actually found, e.g.
+  `gh issue edit "$ARGUMENTS" --repo pakodiazdev/sushigo --remove-label "investment: product" --remove-label "investment: dev-platform"`
+  if those two specific labels were the ones printed. Only after every printed label is confirmed
+  removed, apply the single correct canonical one with
+  `gh issue edit "$ARGUMENTS" --repo pakodiazdev/sushigo --add-label "investment: <type>"`. This
+  overrides whatever label state was on the Issue before — including a human's own choice — with no
+  confirmation, so the correction must leave a permanent trace on the Issue itself, not just this
+  session's transient context report: post it as an Issue comment via
+  `gh issue comment "$ARGUMENTS" --repo pakodiazdev/sushigo --body "..."` stating the removed
+  label(s), the applied label, and the one-line reason, in addition to noting it in the session's
+  context report the same way an inferred assumption would be recorded elsewhere in this flow.
 
 ---
 

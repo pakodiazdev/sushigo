@@ -122,6 +122,7 @@ seed data, and leaves financial and Stock operations in their correct later doma
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
 | 2026-08-18 | #460 | Promote Sprint 004, close Sprint 003, and add /close-sprint automation | Sprint 003's confirmed scope was fully delivered and its closure documentation (`#457`) merged, but formal closure needed Sprint 004 promoted; the GitHub Project's `Iteration` field dates had also drifted behind actual delivery pace, showing a stale sprint on the committed badge | Sprint 003 marked `Completed`; this document promoted to `doc/sprints/` and marked `In Progress`; both sprint indexes synchronized; GH Project `Iteration` dates corrected; `.claude/commands/close-sprint.md` added |
+| 2026-08-18 | #459 | Add Investment Type classification to the task standard | Recent sprint retrospectives could only estimate the product-vs-platform investment split retroactively from ad hoc titles/labels; making it measurable required the standard to exist and be applied before Sprint 004's own Issues could be classified, so it was picked up alongside Sprint 004's other work rather than deferred | Investment Type standard documented; three canonical labels created; Phase 1b validation wired into all three `/issue*` pipelines; Sprint 004's own scope (`#422`–`#429`) plus `#460` backfilled with exactly one label each; PR #466 ready, merge pending |
 
 ## 6. Value Ranking
 
@@ -244,6 +245,34 @@ Computed at sprint closure from finalized Issue session arrays, following
 |---|---:|---|
 | — | — | No sessions yet |
 
+### Investment Type Distribution
+
+Sprint 004 is the first sprint scoped entirely under the Investment Type standard
+(`doc/conventions/tasks.md` → "Investment Type", introduced by `#459`). Every Issue in this sprint's
+formal scope (`#422`–`#429`, per `scope_issues: 8` above) carries exactly one `investment:` label.
+Hours and percentage by Investment Type are computed at sprint closure directly from each Issue's
+real `## ⏱️ Time` → `Sessions[]` / `Tracked` data — not hand-maintained here before that data exists.
+The Issues column below is a snapshot of each Issue's `investment:` label as of this PR — per
+`doc/conventions/tasks.md`, the label itself is the canonical value, not this table. If an Issue is
+relabeled before closure, reconcile this column against live labels at the same closure step that
+fills in Tracked/%.
+
+Per `doc/conventions/sprints.md` §7's own Person-hours/Wall-clock convention, this table covers
+**formal scope only** (`scope_issues: 8`, `#422`–`#429`) — it deliberately excludes `#459` and `#460`,
+even though both are `dev-platform`, carry real tracked time, and landed inside this sprint's window.
+Both are correctly **opportunistic work** per §5.4's own definition (not in the original scope, both
+carry the `sprint-4` label, both worked during the sprint window) — see §5.4 and §13 for their own
+records, with `Tracked` values that are *not* folded into this table's formal-scope figures. The
+`dev-platform` row below reading `_(none)_` means *none within formal scope*, not that zero
+dev-platform effort occurred in Sprint 004 — reconcile the two sources if a future closure wants one
+combined dev-platform figure across formal scope plus opportunistic work.
+
+| Investment Type | Issues | Tracked | % of sprint |
+|---|---|---:|---:|
+| `investment: product` | `#422`, `#423`, `#424`, `#425`, `#426`, `#427` | — | — |
+| `investment: product-engineering` | `#428`, `#429` | — | — |
+| `investment: dev-platform` | _(none within formal scope — #459 and #460 are dev-platform opportunistic work, see §5.4/§13)_ | — | — |
+
 ## 12. Notes on Estimate Confidence
 
 Confidence is **medium**. Issue boundaries and dependencies are explicit, but `#421` can still
@@ -268,6 +297,7 @@ estimates and empty Sessions arrays ready for execution tracking.
 | ⏳ | #427 | Pending | — | — | — | Embedded Presentation management |
 | ⏳ | #428 | Pending | — | — | — | Testing/Fakes/Development catalog data |
 | ⏳ | #429 | Pending | — | — | — | Legacy wizard and stale catalog paths removed |
+| ✅ | #459 | Investment Type classification standard, canonical labels, Phase 1b validation, and Sprint 004/#460 backfill | #466 | — | 2.9h | 11/11 CI green; Copilot and Devin/DeepWiki review cycles resolved; opportunistic work per §5.4; PR ready, merge pending |
 
 ## 14. Quality Results
 

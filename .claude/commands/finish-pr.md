@@ -299,9 +299,17 @@ doc/tasks/<current yyyy-mm>/<NNN>-<slug>.md
 `<slug>` is a short kebab-case description derived from the issue title. `<current yyyy-mm>` is
 today's month, not when the issue was opened — this is a closing snapshot, not a backdated one.
 
+The body alone doesn't carry the issue's `investment:` label (labels are a separate GitHub field,
+not part of the body text) — without capturing it here, the archived snapshot loses the Investment
+Type classification the moment the issue closes, even though `doc/conventions/tasks.md` →
+"Investment Type" requires every issue to carry exactly one. Prepend it as a one-line **Labels**
+metadata line so the archive stays self-contained:
+
 ```bash
 mkdir -p doc/tasks/<yyyy-mm>
-gh issue view <NNN> --repo <owner>/<repo> --json title,body -q '"# " + .title + "\n\n" + .body' > doc/tasks/<yyyy-mm>/<NNN>-<slug>.md
+gh issue view <NNN> --repo <owner>/<repo> --json title,body,labels \
+  -q '"# " + .title + "\n\n**Labels:** " + ([.labels[].name] | join(", ")) + "\n\n" + .body' \
+  > doc/tasks/<yyyy-mm>/<NNN>-<slug>.md
 ```
 
 Commit this as its own commit. Local only — do not push; Phase 7.5 pushes everything once at the

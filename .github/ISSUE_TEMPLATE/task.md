@@ -6,6 +6,13 @@ labels: ''
 assignees: ''
 ---
 
+<!--
+🏷️ Investment Type (required): before filing, apply exactly one of these labels —
+`investment: product`, `investment: product-engineering`, or `investment: dev-platform`.
+See doc/conventions/tasks.md → "Investment Type" for the classification rule and examples.
+If the choice isn't obvious, add a short note explaining it in the Story section below.
+-->
+
 ## 📖 Story
 
 As a [role], I want [goal], so that [benefit].
