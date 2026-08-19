@@ -104,7 +104,7 @@ automated browsing *and* its Chrome-unavailable fallback used in `/issue-full`. 
 for `/usage` output — cost logging is skipped entirely in this mode, noted as such in the final
 report instead of blocking on it.
 
-### Automated-review subagent boundary (Phases 6 and 7 only)
+### Automated-review subagent boundary
 
 Phases 6 and 7 deliberately dispatch their Copilot review-and-response loop through the `Agent`
 tool. Use **one foreground, general-purpose subagent for each whole loop**, not one subagent per poll
@@ -114,11 +114,15 @@ cycle would create repeated handoffs, force each worker to rebuild the same PR c
 ownership of the shared checkout ambiguous. Foreground execution is required because the loop edits,
 commits, and pushes the same branch; never run it concurrently with the parent.
 
-**Phase 8 is the one phase in this file that does *not* dispatch through `Agent`.** It runs directly
-in this foreground conversation, because a subagent has no way to literally pause and wait for the
-operator's next chat message — only the parent conversation can do that. Do not delegate Phase 8 to
-a subagent under any circumstance, even to "keep it consistent" with Phases 6/7; that would silently
-turn this variant back into `/issue-full`'s automated-browsing behavior, defeating its purpose.
+**Phase 8's human-relay steps (1–6) never dispatch through `Agent`.** They run directly in this
+foreground conversation, because a subagent has no way to literally pause and wait for the operator's
+next chat message — only the parent conversation can do that. Do not delegate steps 1–6 to a subagent
+under any circumstance, even to "keep it consistent" with Phases 6/7; that would silently turn this
+variant back into `/issue-full`'s automated-browsing behavior, defeating its purpose. **Phase 8's
+step 7 is the one exception**, and it follows the Phases 6/7 pattern exactly: one foreground,
+general-purpose subagent dispatched a single time, after the human-relay loop is done, to catch up
+Copilot on whatever this phase's correction commits triggered — not one dispatch per correction, and
+never interleaved with the still-running human-relay conversation.
 
 For every dispatch, give the subagent the repository, issue number, PR number, branch name, the
 applicable safety cap/window, and the exact command sections it must follow. Require it to do the
@@ -200,8 +204,9 @@ so they're not a stop point either. From here on, every remaining stop point mus
 Sessions entry with the current time before reporting — the same way Phase 9's own success path
 would — rather than leaving `"end": "?"` to silently accumulate wall-clock time nobody is tracking.
 That covers:
-- **Phase 5's CI-failure cap** (its only automated safety cap — Phase 8 has none, since it's paced
-  by the operator, not a loop).
+- **Phase 5's CI-failure cap, and Phase 8 step 7's own CI-failure cap** (its consolidated Copilot
+  check's `status: failed` outcome — see Phase 8 step 7). Steps 1–6 of Phase 8 have no automated cap
+  of their own, since they're paced by the operator, not a loop.
 - **Any stop reached during Phase 9's delegation to `finish-pr.md`'s Phases 0–2** — everything
   between opening this entry (Phase 2 here) and `finish-pr.md`'s own Phase 3, which is the only
   later point that fills `end` on the success path. This is deliberately **not** an exhaustive list
@@ -448,8 +453,9 @@ parent report; retain only the contract counts, commit SHAs, CI state, and compa
 
 ## PHASE 8 — Devin / DeepWiki review (human-relayed checkpoint)
 
-**This phase runs directly in this foreground conversation — never dispatch it to a subagent** (see
-"Automated-review subagent boundary" above). It is the one deliberate pause in this entire pipeline.
+**Steps 1–6 run directly in this foreground conversation — never dispatch them to a subagent** (see
+"Automated-review subagent boundary" above); step 7 is the one exception, a single bounded subagent
+dispatch after steps 1–6 finish. Steps 1–6 are the one deliberate pause in this entire pipeline.
 
 1. Give the operator the review URL and ask them to open it and report back what it shows:
    ```
@@ -476,17 +482,32 @@ parent report; retain only the contract counts, commit SHAs, CI state, and compa
    and ask them to refresh the Devin page and report back — Devin's scan restarts on every push and
    needs a moment, so suggest they wait briefly before refreshing. Repeat steps 2–4 until they
    confirm Devin shows 0 bugs and every flag has been discussed.
-6. Do not dispatch a Copilot re-poll subagent after each individual fix commit here — that would be
-   wasteful mid-conversation and this variant's whole point is staying lean. Any Copilot review that
-   lands on these pushes is still caught downstream: `finish-pr.md`'s own Phase 1a (run inside
-   Phase 9 below) checks for unresolved review threads and stops with a pointer to `/pr-comments` if
-   any exist, exactly as it would for a standalone `/finish-pr` run — nothing here needs to duplicate
-   that safety net.
+6. **Do not dispatch a Copilot re-poll subagent after each individual fix commit** — that would be
+   wasteful mid-conversation and this variant's whole point is staying lean. But do not skip Copilot
+   entirely either: `finish-pr.md`'s own Phase 1a (run inside Phase 9 below) stops the run with a
+   pointer to `/pr-comments` if any unresolved review thread exists, and any of this phase's pushes
+   can attract a fresh Copilot review just like any other push — leaving that unhandled would turn
+   Phase 1a into a *second* undocumented pause, contradicting this file's own promise that nothing
+   but Phase 8 interrupts the run.
+7. Once the operator confirms Devin is clean, check whether this phase pushed any commits (step 4).
+   If it didn't — Devin was already clean on the first check — skip straight to Phase 9, there is
+   nothing for Copilot to have reviewed. If it did, dispatch **one** foreground, general-purpose
+   subagent for a single consolidated Copilot check, mirroring Phase 7's post-squash pattern exactly:
+   resolve the final pushed SHA with `git rev-parse HEAD`, poll PR reviews at the same ~30s/~10min
+   cadence for a Copilot review whose `commit_id` matches that exact SHA, and if one arrives, follow
+   `pr-comments.md` Steps 1–7 plus the business-rule-dispute rule, run relevant tests/linters, commit
+   and push fixes, and run the Phase 5 CI gate after any push. This is **one dispatch total**,
+   regardless of how many individual correction commits Phase 8 produced above — not one per
+   correction — keeping this phase lean while still guaranteeing Phase 9's Phase 1a finds a clean
+   slate. Require the same `COPILOT_LOOP` contract as Phase 6/7. If it returns `status: failed`, fetch
+   the issue body, fill the current Sessions entry's `end` if still `"?"`, write it back, and stop
+   with the compact reason. Otherwise, move to Phase 9.
 
-Once the operator confirms Devin is clean, move to Phase 9. There is no automated safety-cap or
-return contract here (this isn't a subagent) — the natural bound is the operator's own patience, and
-if they stop responding mid-review, the conversation is simply paused, not failed; resume from here
-whenever they reply.
+There is no automated safety-cap or return contract for the human-relay loop itself (steps 1–6 —
+this isn't a subagent) — its natural bound is the operator's own patience, and if they stop
+responding mid-review, the conversation is simply paused, not failed; resume from here whenever they
+reply. Step 7's Copilot dispatch, when it runs, does have the normal `COPILOT_LOOP` failure handling
+described above.
 
 ---
 
@@ -524,9 +545,12 @@ instruction at every one — assume it applies anywhere a phase says "stop."
 - **Phase 1** (pre-flight: review threads + mergeable state) — `finish-pr.md`'s own Phase 1
   deliberately doesn't check CI itself (that's 7.6a's job); the review-thread and mergeable-state
   checks it *does* run should already pass here, since Phase 6 resolved every thread from the
-  original diff and Phase 7's post-squash Copilot re-poll (above) catches any thread that push
-  itself triggered. CI on the commit Phase 9 inherits was already validated separately, by this
-  pipeline's own Phase 5/7/8 (whichever ran last before Phase 9 started) — not by anything inside
+  original diff, Phase 7's post-squash Copilot re-poll catches any thread that squash push itself
+  triggered, and Phase 8's own step 7 (its single consolidated post-round Copilot check) catches any
+  thread triggered by this variant's human-relayed correction commits — without that step 7 dispatch,
+  this Phase 1a check would routinely stop the run on threads nobody resolved, turning it into an
+  undocumented second pause. CI on the commit Phase 9 inherits was already validated separately, by
+  this pipeline's own Phase 5/7/8 (whichever ran last before Phase 9 started) — not by anything inside
   `finish-pr.md`'s Phase 1. Still run Phase 1 as written — it's cheap and catches drift if something
   changed between phases. Its stop conditions are broader than just `BLOCKED`: 1a's unresolved-
   review-threads check, 1b's dirty-working-tree guard before the `BEHIND` auto-rebase, 1b's
@@ -658,8 +682,8 @@ Business-rule disputes from Copilot or Devin do not pause the run — they're ov
 logged under `## ⚠️ Needs Human Judgment`, and the pipeline continues straight through Phase 9/10 in
 the same pass; only the fact-gathering itself (what Devin found) is relayed by the operator in
 Phase 8, not the decision about how to resolve a dispute. What can still end a run before Phase 10
-reaches this report: Phase 5's CI-failure cap, and any stop reached during Phase 9's delegation to
-`finish-pr.md`'s Phases 0–2 (see Phase 2's
+reaches this report: Phase 5's CI-failure cap, Phase 8 step 7's own CI-failure cap, and any stop
+reached during Phase 9's delegation to `finish-pr.md`'s Phases 0–2 (see Phase 2's
 Session-closing rule and Phase 9's own notes above for the non-exhaustive list of which conditions
 that covers). Every one of those closes the Sessions entry (Phase 2's rule) and reports what
 happened before ending the run, since none of them are judgment calls to resolve — they're either a
