@@ -107,6 +107,55 @@ Those remain explicit GitHub fields, labels, Issue references, and sprint eviden
 
 ---
 
+## Investment Type
+
+Every Issue must carry **exactly one** Investment Type label, in addition to the mandatory body
+sections below. This is a label-based classification, not a body section — do not add an
+`## Investment Type` heading to the issue body; the label is the canonical value used for reporting
+and automation. See [#459](https://github.com/pakodiazdev/sushigo/issues/459) for the decision
+record.
+
+Because it's a label and not body text, the classification would otherwise be lost the moment an
+Issue closes and its local snapshot is archived (labels aren't part of the issue body).
+`/finish-pr`'s Phase 4 archive step prepends a **Labels** metadata line to
+`doc/tasks/yyyy-mm/<issue-number>-slug.md` for exactly this reason — do not remove it if editing
+that phase.
+
+### The three canonical labels
+
+| Label | Meaning | Representative examples |
+|---|---|---|
+| `investment: product` | User-facing/business-domain functionality that directly expands SushiGo capabilities — whether the Issue itself is frontend, backend, or both. | A new Product catalog UI; a new Brand/Category API contract that a feature consumes; a new Variant or Purchase Presentation domain model. |
+| `investment: product-engineering` | Architecture, security, reliability, testing, data integrity, refactors, and technical work that directly strengthens the product without necessarily adding visible functionality. | Redesigning an existing contract for correctness; deterministic/Fakes test-data seeders for the product domain; removing superseded code once its replacement is live; a security hardening pass. |
+| `investment: dev-platform` | Tooling, AI-agent workflow, dev-lab, PR/review automation, sprint automation, developer productivity, and other work on the *system that develops the product* (as opposed to the product itself). | A `/issue` or `/finish-pr` command change; a dev-lab workspace script; a GitHub Actions CI workflow; this very classification standard. |
+
+### Classification rule of thumb
+
+Ask **what the Issue is investing in**, not what layer of the stack it touches:
+
+- Does it deliver or directly enable a new or changed **business capability** a restaurant operator
+  or diner would eventually use? → `product` — even if the Issue itself is a backend-only API
+  contract, as long as it's building the business domain (not just re-securing or re-testing it).
+- Does it make the **existing product** more correct, safe, reliable, or testable, without adding a
+  new capability? → `product-engineering`.
+- Does it improve the **tooling that builds SushiGo** itself — dev-lab, AI-agent commands, CI,
+  sprint process — rather than SushiGo's own domain? → `dev-platform`.
+
+When the classification is not obvious from the title alone, add a short note in the Issue's
+`## Description` or `## Reason` explaining the choice — do not mechanically restate the label text
+in the body; the label already carries that.
+
+### Zero, multiple, or non-canonical labels is an invalid task state
+
+An Issue with zero `investment:` labels, more than one, or a single label that isn't one of the
+three canonical values above (e.g. a typo like `investment: infrastructure`) is not silently
+accepted — it is an invalid task state that must be corrected before implementation starts.
+`/start-issue`'s Phase 1b validates this on every issue it opens a work session for, checking
+membership in the three canonical values rather than just the `investment: ` prefix (see that
+command for the exact check and its auto-classification fallback for pre-convention Issues).
+
+---
+
 ## Mandatory sections (structure otherwise flexible)
 
 Every issue body must contain, regardless of size or type:

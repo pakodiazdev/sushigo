@@ -54,13 +54,18 @@ referenced by every later phase) isn't known until `gh issue create` returns it,
 before linking the project item:
 
 ```bash
-ISSUE_URL=$(gh issue create --repo pakodiazdev/sushigo --title "📚 Promote Sprint <next>, close Sprint <prev>" --body-file <path>)
+ISSUE_URL=$(gh issue create --repo pakodiazdev/sushigo --title "📚 Promote Sprint <next>, close Sprint <prev>" --body-file <path> --label "investment: dev-platform")
 NNN=$(basename "$ISSUE_URL")
 gh project item-add 7 --owner pakodiazdev --url "$ISSUE_URL"
 ```
 
 Link Status only — never set Iteration on this issue itself as a side effect of filing it (same
 rule `/start-issue` follows).
+
+The `investment: dev-platform` label above is applied at creation, not left for `/start-issue`'s
+Phase 1b to backfill later — per `doc/conventions/tasks.md` → "Investment Type", sprint promotion
+is itself sprint automation on the *system that develops* SushiGo, the same category as this very
+command, so the classification isn't ambiguous and doesn't need Phase 1b's research step.
 
 ---
 

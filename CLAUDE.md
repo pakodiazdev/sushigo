@@ -637,6 +637,8 @@ doc/tasks/
 - Every issue body carries the mandatory sections from `doc/conventions/tasks.md` (Description/
   Reason/Objective, or for bugs Bug description/Hypothesis/Reproduction guide, plus `## ⏱️ Time`
   with Estimates and an empty `Sessions` array)
+- Every issue carries **exactly one** `investment:` label — see `doc/conventions/tasks.md` →
+  "Investment Type" for the three canonical values and the classification rule of thumb
 - While the issue is open, `/start-issue` opens/closes work sessions by editing the issue body
   directly — **no local `.md` exists or is touched during active work**
 - The local `.md` archive is written **exactly once**, by `/finish-pr`, as a verbatim snapshot of
