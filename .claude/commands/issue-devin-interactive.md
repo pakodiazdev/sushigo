@@ -489,26 +489,39 @@ dispatch after steps 1–6 finish. Steps 1–6 are the one deliberate pause in t
    can attract a fresh Copilot review just like any other push — leaving that unhandled would turn
    Phase 1a into a *second* undocumented pause, contradicting this file's own promise that nothing
    but Phase 8 interrupts the run.
-7. Once the operator confirms Devin is clean, check whether this phase pushed any commits (step 4).
-   If it didn't — Devin was already clean on the first check — skip straight to Phase 9, there is
-   nothing for Copilot to have reviewed. If it did, dispatch **one** foreground, general-purpose
-   subagent for a single consolidated Copilot check, mirroring Phase 7's post-squash pattern exactly:
-   resolve the final pushed SHA with `git rev-parse HEAD`, poll PR reviews at the same ~30s/~10min
-   cadence for a Copilot review whose `commit_id` matches that exact SHA, and if one arrives, follow
-   `pr-comments.md` Steps 1–7 plus the business-rule-dispute rule, run relevant tests/linters, commit
-   and push fixes, and run the Phase 5 CI gate after any push. This is **one dispatch total**,
-   regardless of how many individual correction commits Phase 8 produced above — not one per
-   correction — keeping this phase lean while still guaranteeing Phase 9's Phase 1a finds a clean
-   slate. Require the same `COPILOT_LOOP` contract as Phase 6/7. If it returns `status: failed`, fetch
-   the issue body, fill the current Sessions entry's `end` if still `"?"`, write it back, and stop
-   with the compact reason. Also stop through this same idempotent cleanup path if the contract is
-   malformed as `ci: failed` with any non-failed status; never restart a CI gate whose safety cap the
-   worker already exhausted. If it returns `pushed=yes` and `ci` is `success` or `not-rerun`, the
-   parent must **invoke the complete CI gate (Phase 5) once** before Phase 9, following its normal
-   diagnose/fix/retry loop until green or its safety cap; do not continue on a failed gate — this
-   final commit is exactly what Phase 9's `finish-pr.md` housekeeping is about to build on, so it
-   needs the same parent-owned validation Phases 6 and 7 already require for theirs. Only once that
-   passes (or immediately, if `pushed=no`) does the run move to Phase 9.
+7. Once the operator confirms Devin is clean, check whether this phase pushed any commits across
+   steps 1–6. If it didn't — Devin was already clean on the first check — skip straight to Phase 9,
+   there is nothing for Copilot to have reviewed. If it did, dispatch **one** foreground,
+   general-purpose subagent for a single consolidated Copilot check — but **do not** gate it behind
+   an exact-`commit_id` match the way Phase 7's post-squash poll does. That pattern exists because
+   squashing rewrites history, so a review of a pre-squash commit is genuinely stale; step 4 above
+   never squashes between corrections, it pushes one real, still-reachable commit per finding, and
+   each of those pushes can independently attract its own Copilot review. Gating on the *final* SHA
+   only would silently strand threads Copilot left on an *earlier* correction commit — `pr-comments.md`
+   itself doesn't filter by commit either, so those threads are exactly as real and addressable as any
+   other unresolved thread on the PR right now. Instead, the worker should:
+   - Wait briefly (~2–3 minutes) for Copilot's review of the most recent push to land, since it posts
+     asynchronously after each push.
+   - Follow `.claude/commands/pr-comments.md` Steps 1–7 in full — its own Step 2 already fetches
+     **every** currently-unresolved thread on the PR, regardless of which commit attracted it, so this
+     naturally catches threads left on any of this phase's correction commits, not just the last one —
+     plus the business-rule-dispute rule from Phase 6.
+   - Run relevant tests/linters for any fix, commit and push, and run the Phase 5 CI gate after any
+     push.
+
+   This is **one dispatch total**, regardless of how many individual correction commits Phase 8
+   produced above — not one per correction, and not gated on any single commit landing a review —
+   which is what actually guarantees Phase 9's Phase 1a finds a clean slate. Require the same
+   `COPILOT_LOOP` contract as Phase 6/7. If it returns `status: failed`, fetch the issue body, fill
+   the current Sessions entry's `end` if still `"?"`, write it back, and stop with the compact reason.
+   Also stop through this same idempotent cleanup path if the contract is malformed as `ci: failed`
+   with any non-failed status; never restart a CI gate whose safety cap the worker already exhausted.
+   If it returns `pushed=yes` and `ci` is `success` or `not-rerun`, the parent must **invoke the
+   complete CI gate (Phase 5) once** before Phase 9, following its normal diagnose/fix/retry loop
+   until green or its safety cap; do not continue on a failed gate — this final commit is exactly
+   what Phase 9's `finish-pr.md` housekeeping is about to build on, so it needs the same parent-owned
+   validation Phases 6 and 7 already require for theirs. Only once that passes (or immediately, if
+   `pushed=no`) does the run move to Phase 9.
 
 There is no automated safety-cap or return contract for the human-relay loop itself (steps 1–6 —
 this isn't a subagent) — its natural bound is the operator's own patience, and if they stop
@@ -590,13 +603,19 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   wait for their relay, and if they report any remaining bug or flag, fix it, commit, push, and let
   `finish-pr.md`'s own Phase 7.5/7.6a repeat (squash+push, then CI) before checking Devin again — the
   same one-fix-one-commit discipline from Phase 8 applies here too. **Any correction made here also
-  needs Phase 8 step 7's exact-SHA consolidated Copilot check repeated against the resulting commit**
-  before Phase 10 presents anything as ready — `finish-pr.md`'s own Phase 1a already ran earlier in
-  its flow (before 7.5), so it will never re-check threads a *this-round* fix push attracts; without
-  repeating step 7 here, a bug found this late could leave a fresh unresolved Copilot thread that
-  nothing downstream catches, and the run would still report ready. Only once the operator confirms
-  Devin is clean **and** that follow-up Copilot check comes back clean (or `no-review`) on the final
-  commit does Phase 10 below present anything as ready.
+  needs a consolidated Copilot check repeated against the resulting commit** before Phase 10 presents
+  anything as ready — `finish-pr.md`'s own Phase 1a already ran earlier in its flow (before 7.5), so
+  it will never re-check threads a *this-round* fix push attracts; without repeating a check here, a
+  bug found this late could leave a fresh unresolved Copilot thread that nothing downstream catches,
+  and the run would still report ready. Unlike Phase 8 step 7 (which deliberately does **not** gate
+  on an exact commit match, since its correction commits are never squashed away), **this** check
+  should mirror Phase 7's exact-`commit_id` pattern instead: `finish-pr.md`'s own Phase 7.5 re-squashes
+  on every round here, so a review of the pre-squash intermediate commit is genuinely stale, the same
+  reasoning that justifies Phase 7's pattern in the first place. Resolve the post-squash SHA with
+  `git rev-parse HEAD`, poll for a Copilot review whose `commit_id` matches it, and if one arrives,
+  follow `pr-comments.md` Steps 1–7 plus the business-rule-dispute rule. Only once the operator
+  confirms Devin is clean **and** that follow-up Copilot check comes back clean (or `no-review`) on
+  the final commit does Phase 10 below present anything as ready.
 
 **This changes when `finish-pr.md`'s stated precondition applies.** Its own text says "call this
 only after the human has manually tested the PR and approved it" — that line still describes
