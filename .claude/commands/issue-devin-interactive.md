@@ -589,8 +589,14 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   way as this file's own Phase 8 instead: give the operator the Devin URL for the post-squash commit,
   wait for their relay, and if they report any remaining bug or flag, fix it, commit, push, and let
   `finish-pr.md`'s own Phase 7.5/7.6a repeat (squash+push, then CI) before checking Devin again — the
-  same one-fix-one-commit discipline from Phase 8 applies here too. Only once the operator confirms
-  Devin is clean on the final commit does Phase 10 below present anything as ready.
+  same one-fix-one-commit discipline from Phase 8 applies here too. **Any correction made here also
+  needs Phase 8 step 7's exact-SHA consolidated Copilot check repeated against the resulting commit**
+  before Phase 10 presents anything as ready — `finish-pr.md`'s own Phase 1a already ran earlier in
+  its flow (before 7.5), so it will never re-check threads a *this-round* fix push attracts; without
+  repeating step 7 here, a bug found this late could leave a fresh unresolved Copilot thread that
+  nothing downstream catches, and the run would still report ready. Only once the operator confirms
+  Devin is clean **and** that follow-up Copilot check comes back clean (or `no-review`) on the final
+  commit does Phase 10 below present anything as ready.
 
 **This changes when `finish-pr.md`'s stated precondition applies.** Its own text says "call this
 only after the human has manually tested the PR and approved it" — that line still describes
