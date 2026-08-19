@@ -501,7 +501,14 @@ dispatch after steps 1–6 finish. Steps 1–6 are the one deliberate pause in t
    correction — keeping this phase lean while still guaranteeing Phase 9's Phase 1a finds a clean
    slate. Require the same `COPILOT_LOOP` contract as Phase 6/7. If it returns `status: failed`, fetch
    the issue body, fill the current Sessions entry's `end` if still `"?"`, write it back, and stop
-   with the compact reason. Otherwise, move to Phase 9.
+   with the compact reason. Also stop through this same idempotent cleanup path if the contract is
+   malformed as `ci: failed` with any non-failed status; never restart a CI gate whose safety cap the
+   worker already exhausted. If it returns `pushed=yes` and `ci` is `success` or `not-rerun`, the
+   parent must **invoke the complete CI gate (Phase 5) once** before Phase 9, following its normal
+   diagnose/fix/retry loop until green or its safety cap; do not continue on a failed gate — this
+   final commit is exactly what Phase 9's `finish-pr.md` housekeeping is about to build on, so it
+   needs the same parent-owned validation Phases 6 and 7 already require for theirs. Only once that
+   passes (or immediately, if `pushed=no`) does the run move to Phase 9.
 
 There is no automated safety-cap or return contract for the human-relay loop itself (steps 1–6 —
 this isn't a subagent) — its natural bound is the operator's own patience, and if they stop

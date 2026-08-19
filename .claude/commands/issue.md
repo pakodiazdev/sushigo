@@ -460,10 +460,12 @@ or CI output to the parent:
    known in advance which one the Codex GitHub App uses in this repo:
    - A formal PR review: `gh api repos/pakodiazdev/sushigo/pulls/<N>/reviews`.
    - A plain issue/PR comment: `gh api repos/pakodiazdev/sushigo/issues/<N>/comments`.
+   **This `no-review` rule applies only to this very first poll, before anything has been fixed.**
    If neither surface shows a qualifying response within the window, finish as `status: no-review`
    with `mode: none` — do not block indefinitely, and do not treat this as an error. The Codex
    GitHub App may not be connected to this repo yet; this pipeline must degrade gracefully either
-   way.
+   way. A later confirmation re-poll (entered via step 6, after real findings were already fixed)
+   does **not** follow this rule on timeout — see step 6 for its own distinct terminal handling.
 3. If Codex posted a **formal review** (`mode: review`): read and follow
    `.claude/commands/pr-comments.md` Steps 1–7 in full, exactly like Phase 6's Copilot loop,
    including this third outcome alongside Address/Skip:
@@ -485,14 +487,23 @@ or CI output to the parent:
    with a shorter few-minute window, processing any new threads through `pr-comments.md` Steps 1–7
    plus the business-rule-dispute rule. If that pushes further commits, run the complete Phase 5 CI
    gate again against the new head.
-6. If real findings were addressed and a push happened, post a fresh `@codex review` trigger and
-   repeat from step 2 for one more cycle, to confirm the fix actually resolved what Codex flagged.
-   Stop after the findings are confirmed resolved (or Codex has nothing further to say), or after
-   3 cycles total, whichever comes first — do not keep re-triggering indefinitely. **Hitting the
-   3-cycle cap is not a failure and still returns `status: completed`** — every finding surfaced so
-   far was already addressed, committed, and pushed in step 5; the cap only bounds the *confirmation*
-   re-poll, not the fixing work itself. Note in `notes:` that the cap was hit and confirmation
-   couldn't fully complete, so a human can double-check the merge-ready commit if they want to.
+6. If real findings were addressed and a push happened in step 5, post a fresh `@codex review`
+   trigger and poll again using the same ~30s/~10min cadence as step 2 — but this confirmation
+   re-poll has its **own terminal rule**, distinct from step 2's initial-poll rule, since silence here
+   means something different (nothing further to flag, not "no review happened"):
+   - **More findings arrive** — process them via steps 3–5 like any other cycle, then repeat this
+     step, up to the cycle cap below.
+   - **Codex explicitly signals nothing further to flag, or the ~10 minute window times out with
+     silence** — either way, this is a successful, complete run. Return `status: completed`,
+     preserving the `mode` and `findings` totals already accumulated from the cycle(s) that actually
+     found and fixed something — do **not** reset them to `none`/zero, and do **not** apply step 2's
+     `no-review` rule here; that rule is scoped to the very first poll only.
+   - **3 cycles total reached, regardless of outcome** — stop re-triggering. This is not a failure
+     either and still returns `status: completed`, for the same reason as above: every finding
+     surfaced so far was already addressed, committed, and pushed in step 5; the cap only bounds the
+     *confirmation* re-poll, not the fixing work itself. Note in `notes:` that the cap was hit before
+     confirmation could fully complete, so a human can double-check the merge-ready commit if they
+     want to.
 
 Require the subagent to return only:
 
@@ -512,12 +523,18 @@ If `status: failed`, the parent must fetch the issue body and fill the current S
 `end` **only if it is still `"?"`**, then write it back and stop with the compact reason — same
 idempotent cleanup pattern as Phase 6. Also stop through this same path if the contract is malformed
 as `ci: failed` with any non-failed status; never restart a CI gate whose safety cap the worker
-already exhausted. If `status: no-review`, continue straight to Phase 9 — a Codex response never
-arriving (App not connected, or genuinely nothing to flag) is not a failure in this variant. If the
-summary says `pushed=yes` and `ci` is `success` or `not-rerun`, the parent must **invoke the complete
-CI gate (Phase 5) once** before Phase 9, following its normal diagnose/fix/retry loop until green or
-its safety cap; do not continue on a failed gate. The parent must never post a Codex trigger comment
-or poll Copilot itself during this phase — that is entirely the dispatched worker's job.
+already exhausted.
+
+Otherwise (`status: completed` or `status: no-review`), check `pushed=yes` **first, independently of
+status** — per step 6, `completed` can still carry real pushed commits, so this check is not an
+either/or with the status branch below it: if `pushed=yes` and `ci` is `success` or `not-rerun`, the
+parent must **invoke the complete CI gate (Phase 5) once** before Phase 9, following its normal
+diagnose/fix/retry loop until green or its safety cap; do not continue on a failed gate. Only after
+that (or immediately, if `pushed=no`) does `status: no-review` mean there is nothing further to do —
+continue straight to Phase 9. A Codex response never arriving (App not connected, or genuinely
+nothing to flag on the very first poll) is not a failure in this variant. The parent must never post
+a Codex trigger comment or poll Copilot itself during this phase — that is entirely the dispatched
+worker's job.
 
 ---
 
