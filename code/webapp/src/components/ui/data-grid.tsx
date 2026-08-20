@@ -21,7 +21,7 @@ export interface Column<T> {
 interface DataGridProps<T> {
   data: T[]
   columns: Column<T>[]
-  onRowClick?: (item: T) => void
+  onRowClick?: (item: T, event: React.SyntheticEvent<HTMLTableRowElement>) => void
   loading?: boolean
   emptyMessage?: string
   className?: string
@@ -327,10 +327,18 @@ export function DataGrid<T extends { id: string | number }>({
                     return (
                       <tr
                         key={rowId}
-                        onClick={() => onRowClick?.(item)}
+                        onClick={(event) => onRowClick?.(item, event)}
+                        onKeyDown={(event) => {
+                          if (!onRowClick) return
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            onRowClick(item, event)
+                          }
+                        }}
+                        tabIndex={onRowClick ? 0 : undefined}
                         className={cn(
                           'transition-colors',
-                          onRowClick && 'cursor-pointer hover:bg-muted/50',
+                          onRowClick && 'cursor-pointer hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary',
                           isSelected && 'bg-primary/10'
                         )}
                       >

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { MapPin, Package, Grid3x3 } from 'lucide-react'
+import { MapPin, Package, Grid3x3, ShoppingBag } from 'lucide-react'
 
 export const Route = createFileRoute('/inventory/')({
   component: InventoryIndexPage,
@@ -28,6 +28,23 @@ function InventoryIndexPage() {
               <h3 className="font-semibold text-lg">Ubicaciones</h3>
               <p className="text-sm text-muted-foreground">
                 Gestionar ubicaciones de almacenamiento
+              </p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          to="/inventory/products"
+          className="group relative overflow-hidden rounded-lg border bg-card p-6 hover:shadow-lg transition-all hover:border-primary/50"
+        >
+          <div className="flex items-center gap-4">
+            <div className="rounded-lg bg-primary/10 p-3">
+              <ShoppingBag className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Productos</h3>
+              <p className="text-sm text-muted-foreground">
+                Catálogo de productos de reventa
               </p>
             </div>
           </div>
