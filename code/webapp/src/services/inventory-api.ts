@@ -1,9 +1,14 @@
 import { apiClient } from '@/lib/api-client'
 import type {
+  Brand,
+  CollectionResponse,
+  InventoryCategory,
   InventoryLocation,
   Item,
   ItemMediaAttachment,
   ItemVariant,
+  Product,
+  ProductMediaAttachment,
   Stock,
   StockMovement,
   PaginatedResponse,
@@ -65,6 +70,43 @@ export const itemVariantApi = {
 
   delete: (id: number) =>
     api.delete(`/item-variants/${id}`),
+}
+
+// Products — Item scoped to type=PRODUCTO, catalog-identity-only contract (#422).
+// See doc/architecture/product-catalog/product-catalog-architecture.en.md §6.
+export const productApi = {
+  list: (params?: {
+    search?: string
+    brand_id?: string
+    inventory_category_id?: string
+    is_active?: boolean
+    per_page?: number
+    page?: number
+  }) => api.get<PaginatedResponse<Product>>('/inventory/products', { params }),
+
+  get: (id: number) =>
+    api.get<EntityResponse<Product>>(`/inventory/products/${id}`),
+
+  create: (data: Partial<Product> & Partial<ProductMediaAttachment> & { inventory_category_id?: string; brand_id?: string | null }) =>
+    api.post<EntityResponse<Product>>('/inventory/products', data),
+
+  update: (id: number, data: Partial<Product> & Partial<ProductMediaAttachment> & { inventory_category_id?: string; brand_id?: string | null }) =>
+    api.put<EntityResponse<Product>>(`/inventory/products/${id}`, data),
+
+  delete: (id: number) =>
+    api.delete(`/inventory/products/${id}`),
+}
+
+// Brands — see doc/architecture/product-catalog/product-catalog-architecture.en.md §3.1.
+export const brandApi = {
+  list: (params?: { is_active?: boolean }) =>
+    api.get<CollectionResponse<Brand>>('/brands', { params }),
+}
+
+// Inventory Categories — distinct from the unrelated Menu/Dishes DishCategory.
+export const inventoryCategoryApi = {
+  list: (params?: { is_active?: boolean }) =>
+    api.get<CollectionResponse<InventoryCategory>>('/inventory-categories', { params }),
 }
 
 // Stock

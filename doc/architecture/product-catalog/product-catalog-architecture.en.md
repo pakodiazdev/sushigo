@@ -317,6 +317,18 @@ consumer of the create→detail transition; `CAT-04`/`CAT-06` (`#425`/`#427`) ex
 instance with nested Variant/Presentation levels rather than opening new top-level panels, so the
 user never loses the Product they were editing.
 
+**As-built (`#423`):** the transition needed no new `SlidePanel` capability — a single instance
+stays mounted (`isOpen` never toggles false across the flow) while a page-level
+`'create' | 'detail' | 'edit'` mode state (`use-products-list.ts`) swaps its children; `SlidePanel`
+itself is unchanged. "General information (edit-in-place)" is the same pattern one level in:
+clicking Edit swaps the detail view for the same create/edit form component, in place, and Save
+returns to the detail view — never a second top-level panel. Two scope boundaries, both deliberate:
+photo upload is create-only (`ProductResource` has no gallery-asset GET to hydrate an edit form —
+mirrors `ItemForm`/`DishForm`'s identical restriction), and the Variant section shows only a
+count/empty-state message — the `View Variants` nested-slide navigation this section describes is
+`#425`'s (`CAT-04`) own deliverable, not built here since there is no Variant-create endpoint yet
+for it to lead to.
+
 ### 5.3 States to design for (per CAT-02/CAT-04/CAT-06 acceptance criteria)
 
 Loading, empty (no Variants yet / no presentations yet), validation error (inline, per field),
@@ -473,6 +485,11 @@ prerequisite issues landing first, plus a reconciliation pass — not a same-PR 
   category there) would break the only live Product creation flow before its replacement ships.
   **Owner: `#423`** (the progressive Product SlidePanel) — either that issue or `#429` (legacy wizard
   removal) must close this gap once the wizard is no longer the only way to create a Product.
+  **As-built (`#423`):** left open here, per this document's own §7 point 2 ("`#423` ... does not
+  touch `/inventory/items`") — `#423` adds `/inventory/products` as a new, additive UI without
+  changing the legacy `/items` write path or removing `product-wizard.tsx`, so the wizard is still a
+  second live Product-creation route (not yet the *only* one being removed) until `#429` retires it.
+  Closing this gap remains `#429`'s job.
 
 ---
 

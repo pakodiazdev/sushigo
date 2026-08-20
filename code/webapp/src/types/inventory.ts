@@ -62,6 +62,68 @@ export interface ItemVariant {
   updated_at?: string
 }
 
+// Brand Types (see doc/architecture/product-catalog/product-catalog-architecture.en.md §3.1)
+export interface Brand {
+  /** ULID public identifier. */
+  id: string
+  name: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+// Inventory Category Types — distinct from the unrelated Menu/Dishes `DishCategory`.
+export interface InventoryCategory {
+  /** ULID public identifier. */
+  id: string
+  name: string
+  position: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/** Minimal Brand reference embedded in a Product response. */
+export interface ProductBrandRef {
+  id: string
+  name: string
+}
+
+/** Minimal InventoryCategory reference embedded in a Product response. */
+export interface ProductCategoryRef {
+  id: string
+  name: string
+}
+
+// Product Types — Item scoped to type=PRODUCTO, catalog-identity-only contract
+// from #422 (no cost, price, UOM, stock). See ProductResource on the backend.
+export interface Product {
+  id: number
+  name: string
+  description: string | null
+  is_active: boolean
+  brand: ProductBrandRef | null
+  inventory_category: ProductCategoryRef | null
+  /** Primary photo URL, or null when no gallery is attached. */
+  photo_url: string | null
+  variants_count: number
+  /** Backend-authored, human-readable notes about this Product's current state
+   *  (e.g. an assigned but inactive/deleted category). Empty when nothing to flag. */
+  warnings: string[]
+  created_at?: string
+  updated_at?: string
+}
+
+/**
+ * Request-only fields accepted by POST /inventory/products to attach a media gallery —
+ * never present on a GET response, and create-only (no GET-gallery-assets endpoint yet
+ * to hydrate an edit form — mirrors ItemMediaAttachment's own restriction above).
+ */
+export interface ProductMediaAttachment {
+  media_gallery_id?: string
+  owner_token?: string
+}
+
 // Unit of Measure Types
 export interface UnitOfMeasure {
   id: number
@@ -135,6 +197,12 @@ export interface PaginatedResponse<T> {
 export interface EntityResponse<T> {
   status: number
   data: T
+}
+
+/** Non-paginated collection envelope — used by /brands and /inventory-categories. */
+export interface CollectionResponse<T> {
+  status: number
+  data: T[]
 }
 
 export interface ErrorResponse {

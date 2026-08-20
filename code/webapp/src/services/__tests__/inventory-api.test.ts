@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
+    brandApi,
+    inventoryCategoryApi,
     inventoryLocationApi,
     itemApi,
     itemVariantApi,
+    productApi,
     stockApi,
     stockMovementApi,
 } from '../inventory-api'
@@ -322,6 +325,154 @@ describe('stockApi', () => {
             const result = await stockApi.byVariant(5)
 
             expect(apiClient.get).toHaveBeenCalledWith('/stock/by-variant/5')
+            expect(result).toEqual(mockResponse)
+        })
+    })
+})
+
+// ── productApi ───────────────────────────────────────────────────────────────
+
+describe('productApi', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    describe('list', () => {
+        it('calls GET /inventory/products without params', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: {} } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const result = await productApi.list()
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory/products', { params: undefined })
+            expect(result).toEqual(mockResponse)
+        })
+
+        it('calls GET /inventory/products with brand/category/status/search filters', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: {} } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const params = {
+                search: 'Coca-Cola',
+                brand_id: 'brand-ulid',
+                inventory_category_id: 'cat-ulid',
+                is_active: true,
+            }
+            const result = await productApi.list(params)
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory/products', { params })
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('get', () => {
+        it('calls GET /inventory/products/:id', async () => {
+            const mockResponse = { data: { status: 200, data: { id: 42 } } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const result = await productApi.get(42)
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory/products/42')
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('create', () => {
+        it('calls POST /inventory/products', async () => {
+            const mockResponse = { data: { status: 201, data: { id: 42 } } }
+            vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
+
+            const data = { name: 'Coca-Cola Original 600 ml', inventory_category_id: 'cat-ulid' }
+            const result = await productApi.create(data)
+
+            expect(apiClient.post).toHaveBeenCalledWith('/inventory/products', data)
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('update', () => {
+        it('calls PUT /inventory/products/:id', async () => {
+            const mockResponse = { data: { status: 200, data: { id: 42 } } }
+            vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
+
+            const data = { name: 'Coca-Cola Zero 600 ml' }
+            const result = await productApi.update(42, data)
+
+            expect(apiClient.put).toHaveBeenCalledWith('/inventory/products/42', data)
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('delete', () => {
+        it('calls DELETE /inventory/products/:id', async () => {
+            const mockResponse = { data: { status: 200 } }
+            vi.mocked(apiClient.delete).mockResolvedValue(mockResponse)
+
+            const result = await productApi.delete(42)
+
+            expect(apiClient.delete).toHaveBeenCalledWith('/inventory/products/42')
+            expect(result).toEqual(mockResponse)
+        })
+    })
+})
+
+// ── brandApi ─────────────────────────────────────────────────────────────────
+
+describe('brandApi', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    describe('list', () => {
+        it('calls GET /brands without params', async () => {
+            const mockResponse = { data: { status: 200, data: [] } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const result = await brandApi.list()
+
+            expect(apiClient.get).toHaveBeenCalledWith('/brands', { params: undefined })
+            expect(result).toEqual(mockResponse)
+        })
+
+        it('calls GET /brands with is_active filter', async () => {
+            const mockResponse = { data: { status: 200, data: [] } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const params = { is_active: true }
+            const result = await brandApi.list(params)
+
+            expect(apiClient.get).toHaveBeenCalledWith('/brands', { params })
+            expect(result).toEqual(mockResponse)
+        })
+    })
+})
+
+// ── inventoryCategoryApi ─────────────────────────────────────────────────────
+
+describe('inventoryCategoryApi', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    describe('list', () => {
+        it('calls GET /inventory-categories without params', async () => {
+            const mockResponse = { data: { status: 200, data: [] } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const result = await inventoryCategoryApi.list()
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory-categories', { params: undefined })
+            expect(result).toEqual(mockResponse)
+        })
+
+        it('calls GET /inventory-categories with is_active filter', async () => {
+            const mockResponse = { data: { status: 200, data: [] } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const params = { is_active: true }
+            const result = await inventoryCategoryApi.list(params)
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory-categories', { params })
             expect(result).toEqual(mockResponse)
         })
     })

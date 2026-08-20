@@ -75,8 +75,13 @@ describe('DataGrid', () => {
     })
 
     describe('row click', () => {
-        it('calls onRowClick when row is clicked', () => {
-            const onRowClick = vi.fn()
+        it('calls onRowClick with the item and the triggering event when row is clicked', () => {
+            let capturedTarget: EventTarget | null = null
+            const onRowClick = vi.fn((_item, event) => {
+                // currentTarget is only valid while the event is dispatching — read it
+                // synchronously inside the handler, same as production code does.
+                capturedTarget = event.currentTarget
+            })
             const { getByText } = render(
                 <DataGrid data={testData} columns={testColumns} onRowClick={onRowClick} />
             )
@@ -86,7 +91,9 @@ describe('DataGrid', () => {
                 fireEvent.click(row)
             }
 
-            expect(onRowClick).toHaveBeenCalledWith(testData[0])
+            expect(onRowClick).toHaveBeenCalledTimes(1)
+            expect(onRowClick.mock.calls[0]![0]).toEqual(testData[0])
+            expect(capturedTarget).toBe(row)
         })
 
         it('adds cursor-pointer class when onRowClick is provided', () => {
@@ -97,6 +104,68 @@ describe('DataGrid', () => {
 
             const row = getByText('Item 1').closest('tr')
             expect(row?.className).toContain('cursor-pointer')
+        })
+
+        it('makes rows focusable when onRowClick is provided', () => {
+            const onRowClick = vi.fn()
+            const { getByText } = render(
+                <DataGrid data={testData} columns={testColumns} onRowClick={onRowClick} />
+            )
+
+            const row = getByText('Item 1').closest('tr')
+            expect(row?.getAttribute('tabindex')).toBe('0')
+        })
+
+        it('does not make rows focusable when onRowClick is not provided', () => {
+            const { getByText } = render(
+                <DataGrid data={testData} columns={testColumns} />
+            )
+
+            const row = getByText('Item 1').closest('tr')
+            expect(row?.hasAttribute('tabindex')).toBe(false)
+        })
+
+        it('calls onRowClick when Enter is pressed on a focused row', () => {
+            const onRowClick = vi.fn()
+            const { getByText } = render(
+                <DataGrid data={testData} columns={testColumns} onRowClick={onRowClick} />
+            )
+
+            const row = getByText('Item 1').closest('tr')
+            if (row) {
+                fireEvent.keyDown(row, { key: 'Enter' })
+            }
+
+            expect(onRowClick).toHaveBeenCalledTimes(1)
+            expect(onRowClick.mock.calls[0]![0]).toEqual(testData[0])
+        })
+
+        it('calls onRowClick when Space is pressed on a focused row', () => {
+            const onRowClick = vi.fn()
+            const { getByText } = render(
+                <DataGrid data={testData} columns={testColumns} onRowClick={onRowClick} />
+            )
+
+            const row = getByText('Item 1').closest('tr')
+            if (row) {
+                fireEvent.keyDown(row, { key: ' ' })
+            }
+
+            expect(onRowClick).toHaveBeenCalledTimes(1)
+        })
+
+        it('ignores other keys on a focused row', () => {
+            const onRowClick = vi.fn()
+            const { getByText } = render(
+                <DataGrid data={testData} columns={testColumns} onRowClick={onRowClick} />
+            )
+
+            const row = getByText('Item 1').closest('tr')
+            if (row) {
+                fireEvent.keyDown(row, { key: 'Tab' })
+            }
+
+            expect(onRowClick).not.toHaveBeenCalled()
         })
     })
 
