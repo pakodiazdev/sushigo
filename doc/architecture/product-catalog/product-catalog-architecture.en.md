@@ -173,7 +173,8 @@ erDiagram
   §6's PATCH endpoint (which accepts "same shape as create, partial") will need its own
   `unique:item_variants,code,{id}` rule once it does — without it, a duplicate `code` on PATCH would
   surface as a raw, unhandled DB constraint violation instead of a clean `422`. Same owner as the
-  barcode gap below: `#424` (`CAT-03`).
+  barcode gap below: `#424` (`CAT-03`). **As-built (`#424`):** `UpdateVariantRequest` now accepts
+  `code` with `Rule::unique('item_variants', 'code')->ignore($variantId)`.
 - **`Item.sku`** becomes nullable and deprecated for `type = PRODUCTO`. It is not read or written by
   the new Product create/edit contract. It is not dropped in this vertical — schema deletion is a
   Milestone C concern (`#442`, "Remove legacy Inventory fields...") once no consumer reads it.
@@ -188,7 +189,9 @@ erDiagram
   validation stops being sufficient, and both a DB-level unique constraint *and* an update-path
   `unique:item_variants,barcode,{id}` rule (excluding the row itself) are needed — flagged here for
   `#424` (`CAT-03`) to add both together, rather than shipping the new PATCH capability with only
-  half of yesterday's protection.
+  half of yesterday's protection. **As-built (`#424`):** both landed together —
+  `add_unique_constraint_to_item_variants_barcode_table` migration adds the DB-level `unique()`, and
+  `UpdateVariantRequest` validates `Rule::unique('item_variants', 'barcode')->ignore($variantId)`.
 - **`VariantPurchasePresentation.package_barcode`** is a **separate** namespace from unit barcode —
   the barcode printed on a box/pack. Being a new table, it should get a real DB-level unique
   constraint from the start (unlike the legacy gap above). A package barcode and a unit barcode are
@@ -349,11 +352,11 @@ already codifies.
 | GET | `/inventory/products/{product}` | — | `items.view` | Includes brand, category, media gallery, variant summary. |
 | PUT | `/inventory/products/{product}` | Same shape as create, partial | `items.update` | **As-built (`#422`):** `PUT`, not `PATCH` as originally drafted here — matches the `PUT`-for-update convention already used by every other domain in the codebase (`Dish`, `Item`, `CashAdjustment`, etc.); `PATCH` doesn't appear anywhere else in the route tree outside a handful of narrow exceptions. |
 | DELETE | `/inventory/products/{product}` | — | `items.delete` | Soft-delete / deactivate, existing pattern. |
-| GET | `/inventory/products/{product}/variants` | — | `items.view` | |
+| GET | `/inventory/products/{product}/variants` | — (query: `per_page`) | `items.view` | **As-built (`#424`):** no `search`/`is_active` filters — always scoped to the parent Product's own variants. |
 | POST | `/inventory/products/{product}/variants` | `name, code, barcode?, uom_id, description?, track_lot?, track_serial?, is_active?` | `items.create` | `item_id` comes from the route, not the body — removes the global Item selector the plan doc flags. No `sale_price`/`min_stock`/`max_stock`/cost fields — this is the contract change from today's `CreateItemVariantRequest`. |
 | GET | `/inventory/products/{product}/variants/{variant}` | — | `items.view` | |
-| PATCH | `/inventory/products/{product}/variants/{variant}` | Same shape as create, partial | `items.update` | |
-| DELETE | `/inventory/products/{product}/variants/{variant}` | — | `items.delete` | |
+| PUT | `/inventory/products/{product}/variants/{variant}` | Same shape as create, partial | `items.update` | **As-built (`#424`):** `PUT`, not `PATCH` as originally drafted here — same verb correction already made for `/inventory/products` (`#422`) and `/brands`/`/inventory-categories`; `PATCH` doesn't appear anywhere else in the route tree. |
+| DELETE | `/inventory/products/{product}/variants/{variant}` | — | `items.delete` | Soft-delete, existing pattern — blocked (409) while the Variant has stock on hand, mirroring the legacy `/item-variants` endpoint's existing safety check. |
 | GET | `/inventory/purchase-presentation-templates` | — (query: `is_active, package_type`) | `purchase_presentation_templates.view` | Global, not Product-scoped. |
 | POST | `/inventory/purchase-presentation-templates` | `code, name, package_type, base_unit_quantity, compatible_dimension_uom_id, is_active?` | `purchase_presentation_templates.manage` | Admin-managed; deliberately a coarser single `manage` permission (create+update+deactivate) since this is low-frequency catalog governance, not daily product editing. |
 | PATCH / DELETE | `/inventory/purchase-presentation-templates/{template}` | — | `purchase_presentation_templates.manage` | Deactivate, not delete, once referenced by any assignment. |
@@ -399,7 +402,10 @@ order already reflects this design.
    max_stock` from the Product/Variant path. **Compatibility:** keep the columns in the database
    (existing rows, existing read paths in stock/reporting keep working); only the *write* surface
    used by the new UI changes. The legacy `item-variants` global page and old `variant-form.tsx`
-   keep working against the old contract until `#429` removes them.
+   keep working against the old contract until `#429` removes them. **As-built (`#424`):** delivered
+   as a net-new, additive `inventory/products/{id}/variants` route group (see §6) — the legacy
+   `/item-variants` flat endpoints, their controllers, requests, and tests are untouched by this
+   issue, exactly as this compatibility note anticipated.
 4. **`#425`/`#426`/`#427`** (`CAT-04`/`CAT-05`/`CAT-06`) — Additive: new tables
    (`purchase_presentation_templates`, `variant_purchase_presentations`), new nested UI. No
    compatibility concern — nothing existing depends on these tables.

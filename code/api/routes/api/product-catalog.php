@@ -15,6 +15,11 @@ use App\Http\Controllers\Api\V1\Inventory\Product\DeleteProductController;
 use App\Http\Controllers\Api\V1\Inventory\Product\ListProductsController;
 use App\Http\Controllers\Api\V1\Inventory\Product\ShowProductController;
 use App\Http\Controllers\Api\V1\Inventory\Product\UpdateProductController;
+use App\Http\Controllers\Api\V1\Inventory\Variant\CreateVariantController;
+use App\Http\Controllers\Api\V1\Inventory\Variant\DeleteVariantController;
+use App\Http\Controllers\Api\V1\Inventory\Variant\ListVariantsController;
+use App\Http\Controllers\Api\V1\Inventory\Variant\ShowVariantController;
+use App\Http\Controllers\Api\V1\Inventory\Variant\UpdateVariantController;
 use App\Support\RouteParams;
 use Illuminate\Support\Facades\Route;
 
@@ -50,4 +55,18 @@ Route::middleware('auth:api')->prefix('inventory/products')->group(function () {
     Route::post('/', CreateProductController::class)->name('products.create')->middleware('permission:items.create');
     Route::put(RouteParams::ID, UpdateProductController::class)->name('products.update')->middleware('permission:items.update');
     Route::delete(RouteParams::ID, DeleteProductController::class)->name('products.delete')->middleware('permission:items.delete');
+});
+
+// Product Variants — ItemVariant scoped to a Product-type Item (Protected read + write — reuses
+// items.* permissions, see doc/architecture/product-catalog/product-catalog-architecture.en.md §6).
+// Catalog identity only — never accepts acquisition cost, sale price, or stock thresholds/balances
+// (see CreateVariantRequest/UpdateVariantRequest). Keeps the numeric {id}/{variantId} route params
+// (not public_id) matching Item's/ItemVariant's current convention — #399 (public_id rollout for
+// the Inventory domain) hasn't landed yet.
+Route::middleware('auth:api')->prefix('inventory/products/{id}/variants')->group(function () {
+    Route::get('/', ListVariantsController::class)->name('products.variants.list')->middleware('permission:items.view');
+    Route::get(RouteParams::VARIANT_ID, ShowVariantController::class)->name('products.variants.show')->middleware('permission:items.view');
+    Route::post('/', CreateVariantController::class)->name('products.variants.create')->middleware('permission:items.create');
+    Route::put(RouteParams::VARIANT_ID, UpdateVariantController::class)->name('products.variants.update')->middleware('permission:items.update');
+    Route::delete(RouteParams::VARIANT_ID, DeleteVariantController::class)->name('products.variants.delete')->middleware('permission:items.delete');
 });

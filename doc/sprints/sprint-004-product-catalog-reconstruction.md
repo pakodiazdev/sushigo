@@ -152,7 +152,7 @@ seed data, and leaves financial and Stock operations in their correct later doma
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
 | ⏳ | #423 | Replace Product wizard with progressive create-and-detail SlidePanel | High | 5h | 9h | — | — | Frontend lane; consumes #422 |
-| ⏳ | #424 | Redesign Product Variants around inventory identity | Critical | 3h | 6h | — | — | Backend lane; consumes #422 and coordinates with #399 |
+| ✅ | #424 | Redesign Product Variants around inventory identity | Critical | 3h | 6h | 6.6h | PR #470 | PR ready, merge pending |
 |  |  | **Round total** |  | **8h** | **15h** | **—** |  |  |
 
 ### Round 3 — Embed Variants and Model Purchase Presentations
@@ -291,7 +291,7 @@ estimates and empty Sessions arrays ready for execution tracking.
 |---|---:|---|---:|---|---:|---|
 | ✅ | #422 | Brand/InventoryCategory catalogs (public_id, soft-deletable) and Product CRUD (Item scoped to type=PRODUCTO, catalog-identity-only write contract) shipped with lifecycle guards | PR #467 | — | 21.3h | 106 Feature tests, Pint clean, CI green, SonarCloud gate clean on api+webapp; Copilot + Devin/DeepWiki + Codex review cycles (0 bugs remaining); 3 business-rule disputes resolved with explicit human decisions |
 | ⏳ | #423 | Pending | — | — | — | Progressive Product SlidePanel |
-| ⏳ | #424 | Pending | — | — | — | Product-scoped Variant contract |
+| ✅ | #424 | Product-scoped Variant CRUD (`inventory/products/{id}/variants`) shipped with a catalog-identity-only write contract — no cost, price, or stock fields; DB-level barcode uniqueness added | PR #470 | — | 6.6h | 41 Feature tests, Pint clean, CI green, SonarCloud gate clean on api (0 new code smells); Copilot review (3 threads addressed) + Codex review (2 real bugs found and fixed: unvalidated `per_page` causing a 500 on paginate, and base-UOM changes allowed after stock/history existed); follow-up review round fixed a `strict_types` crash on numeric `code`/`barcode` input, an inline-FQCN violation, and a SonarCloud duplicated-literal smell (`RouteParams::VARIANT_ID` extracted) |
 | ⏳ | #425 | Pending | — | — | — | Embedded Variant workflow |
 | ⏳ | #426 | Pending | — | — | — | Reusable Purchase Presentation contract |
 | ⏳ | #427 | Pending | — | — | — | Embedded Presentation management |
