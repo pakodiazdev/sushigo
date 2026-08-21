@@ -160,7 +160,7 @@ seed data, and leaves financial and Stock operations in their correct later doma
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
 | ⏳ | #425 | Add embedded Variant catalog and CRUD to Product detail | High | 4h | 8h | — | — | Requires #423 and #424 |
-| ⏳ | #426 | Model reusable Purchase Presentations and Variant assignments | Critical | 5h | 9h | — | — | Backend lane after #424 |
+| ✅ | #426 | Model reusable Purchase Presentations and Variant assignments | Critical | 5h | 9h | 4.5h | PR #472 | PR ready, merge pending |
 |  |  | **Round total** |  | **9h** | **17h** | **—** |  |  |
 
 ### Round 4 — Complete the Usable Catalog and Its Data
@@ -293,7 +293,7 @@ estimates and empty Sessions arrays ready for execution tracking.
 | ✅ | #423 | New `/inventory/products` page: list/search/filters, a react-hook-form + zod create form (catalog identity + media only), and a single SlidePanel instance transitioning create → detail → edit in place | PR #471 | — | 6.6h | 269 Vitest files / ~4000 tests green, ESLint/TypeScript clean, CI green (12/12); Copilot review (1 thread) + Codex review (3 cycles, 6 findings) all addressed — inactive-assignment pickers, stale pagination, effective-activity badge, delete-page-stranding, unfiltered filter catalogs, missing permission gates; a second review-response session then fixed a hook-placement/blank-form-flash finding, cleaned up 6 SonarCloud code smells (gate now 0 new smells), and closed 2 further Codex threads (inactive-category picker, silent list-fetch failures); 0 business-rule disputes; Cypress E2E spec written but not executed (isolated worktree sandbox has no live server on this branch) — needs a human run per the PR's Manual Testing section |
 | ✅ | #424 | Product-scoped Variant CRUD (`inventory/products/{id}/variants`) shipped with a catalog-identity-only write contract — no cost, price, or stock fields; DB-level barcode uniqueness added | PR #470 | — | 6.6h | 41 Feature tests, Pint clean, CI green, SonarCloud gate clean on api (0 new code smells); Copilot review (3 threads addressed) + Codex review (2 real bugs found and fixed: unvalidated `per_page` causing a 500 on paginate, and base-UOM changes allowed after stock/history existed); follow-up review round fixed a `strict_types` crash on numeric `code`/`barcode` input, an inline-FQCN violation, and a SonarCloud duplicated-literal smell (`RouteParams::VARIANT_ID` extracted) |
 | ⏳ | #425 | Pending | — | — | — | Embedded Variant workflow |
-| ⏳ | #426 | Pending | — | — | — | Reusable Purchase Presentation contract |
+| ✅ | #426 | Global `PurchasePresentationTemplate` catalog (Unit/Pack/Box/Tray) and per-Variant `VariantPurchasePresentation` assignment, with compatible-UOM validation preventing the ambiguous Box<->Unit global conversion | PR #472 | — | 4.5h | 29 Feature tests, Pint clean, CI green, SonarCloud gate clean on api; Copilot review (4 threads) + Codex review (3 cycles, 7 findings) all addressed — template_id now accepts public_id like every other endpoint, a default-assignment locking race, a decimal-scale false-positive on template immutability checks, and a post-lock duplicate-assignment recheck; 0 business-rule disputes |
 | ⏳ | #427 | Pending | — | — | — | Embedded Presentation management |
 | ⏳ | #428 | Pending | — | — | — | Testing/Fakes/Development catalog data |
 | ⏳ | #429 | Pending | — | — | — | Legacy wizard and stale catalog paths removed |

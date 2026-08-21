@@ -18,4 +18,6 @@ final class RouteParams
     public const ID_POST = '/{id}/post';
 
     public const VARIANT_ID = '/{variantId}';
+
+    public const PRESENTATION_ID = '/{presentationId}';
 }

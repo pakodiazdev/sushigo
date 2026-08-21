@@ -76,6 +76,14 @@ class ItemVariant extends Model
     }
 
     /**
+     * Get the commercial packaging presentations assigned to this variant
+     */
+    public function purchasePresentations(): HasMany
+    {
+        return $this->hasMany(VariantPurchasePresentation::class);
+    }
+
+    /**
      * Scope to filter active variants
      */
     public function scopeActive($query)
