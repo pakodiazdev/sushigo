@@ -1,18 +1,32 @@
-import { AlertTriangle, Edit, ImageOff, Package, Tag, Trash2 } from 'lucide-react'
+import { AlertTriangle, Edit, ImageOff, Tag, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { CanAccess } from '@/components/auth'
-import type { Product } from '@/types/inventory'
+import type { Product, ProductVariant } from '@/types/inventory'
 import { isEffectivelyActive } from './product-status'
+import { ProductVariants } from './product-variants'
 
 interface ProductDetailsProps {
   product: Product
   onEdit: () => void
   onDelete: () => void
+  variants: ProductVariant[]
+  variantsLoading: boolean
+  variantsError: boolean
+  onNewVariant: () => void
+  onVariantClick: (variant: ProductVariant) => void
 }
 
-export function ProductDetails({ product, onEdit, onDelete }: Readonly<ProductDetailsProps>) {
+export function ProductDetails({
+  product,
+  onEdit,
+  onDelete,
+  variants,
+  variantsLoading,
+  variantsError,
+  onNewVariant,
+  onVariantClick,
+}: Readonly<ProductDetailsProps>) {
   const effectivelyActive = isEffectivelyActive(product)
 
   return (
@@ -75,22 +89,13 @@ export function ProductDetails({ product, onEdit, onDelete }: Readonly<ProductDe
           <p className="text-sm text-muted-foreground">{product.description}</p>
         )}
 
-        <Card className="p-4">
-          <div className="flex items-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-              <Package className="h-6 w-6 text-primary" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-muted-foreground">Variants</p>
-              <p className="text-2xl font-semibold text-foreground">{product.variants_count}</p>
-            </div>
-          </div>
-          {product.variants_count === 0 && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              No variants yet. Variant creation is coming in a future update.
-            </p>
-          )}
-        </Card>
+        <ProductVariants
+          variants={variants}
+          isLoading={variantsLoading}
+          isError={variantsError}
+          onNewVariant={onNewVariant}
+          onVariantClick={onVariantClick}
+        />
       </SlidePanel.Body>
 
       <SlidePanel.Footer>

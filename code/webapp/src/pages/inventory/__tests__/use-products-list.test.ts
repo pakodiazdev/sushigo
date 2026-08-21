@@ -2,8 +2,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { useProductsList } from '../use-products-list'
+import { useProductVariants } from '@/components/products/use-product-variants'
 import type { Brand, InventoryCategory, Product } from '@/types/inventory'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -26,9 +27,12 @@ vi.mock('@/services/inventory-api', () => ({
   inventoryCategoryApi: {
     list: vi.fn(),
   },
+  productVariantApi: {
+    list: vi.fn(),
+  },
 }))
 
-import { brandApi, inventoryCategoryApi, productApi } from '@/services/inventory-api'
+import { brandApi, inventoryCategoryApi, productApi, productVariantApi } from '@/services/inventory-api'
 
 // ── Test data ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +61,7 @@ function makeWrapper() {
     },
   })
   return {
+    queryClient,
     wrapper: ({ children }: { children: React.ReactNode }) =>
       React.createElement(QueryClientProvider, { client: queryClient }, children),
   }
@@ -234,6 +239,95 @@ describe('useProductsList', () => {
 
     expect(productApi.delete).toHaveBeenCalledWith(42)
     await waitFor(() => expect(result.current.isPanelOpen).toBe(false))
+    confirmSpy.mockRestore()
+  })
+
+  it('excludes the deleted product\'s own Variant query from the post-delete invalidation', async () => {
+    // Regression for a real race: closePanel() (called right after invalidateQueries in
+    // deleteMutation.onSuccess) only flips isPanelOpen, and that state update hasn't
+    // rendered yet at invalidation time — so useProductVariants' own `enabled` gate is
+    // still true at this exact point. A plain ['products'] prefix invalidation would
+    // therefore still refetch the just-deleted product's Variant query, 404, and surface
+    // a spurious error toast right after the delete success toast. Mounts a real, still-
+    // enabled observer for that Variant query (mirroring useProductVariants) alongside
+    // useProductsList, so this exercises TanStack Query's actual active-refetch behavior
+    // rather than just inspecting invalidation flags.
+    const variantsFetch = vi.fn().mockResolvedValue({ data: { data: [] } })
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { wrapper } = makeWrapper()
+
+    function useProductsListWithVariantObserver() {
+      const productsList = useProductsList()
+      useQuery({ queryKey: ['products', 42, 'variants'], queryFn: variantsFetch, enabled: true })
+      return productsList
+    }
+
+    const { result } = renderHook(() => useProductsListWithVariantObserver(), { wrapper })
+
+    await waitFor(() => expect(result.current.products).toHaveLength(1))
+    await waitFor(() => expect(variantsFetch).toHaveBeenCalledTimes(1))
+
+    act(() => result.current.handleRowClick(cocaColaProduct))
+
+    await act(async () => {
+      result.current.handleDelete()
+    })
+
+    await waitFor(() => expect(result.current.isPanelOpen).toBe(false))
+    // Let any (incorrectly) triggered refetch settle before asserting it never happened.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(variantsFetch).toHaveBeenCalledTimes(1)
+    // The top-level products list query, which does have its own live observer, must still
+    // be targeted by the same invalidation and therefore refetch.
+    await waitFor(() => expect(vi.mocked(productApi.list).mock.calls.length).toBeGreaterThan(1))
+    confirmSpy.mockRestore()
+  })
+
+  it('does not surface an error toast when an already in-flight Variant fetch resolves 404 after a delete', async () => {
+    // Regression for a narrower version of the same race: if the user opens a Product and
+    // deletes it before its *initial* Variant GET has resolved, the predicate-based
+    // invalidation above only stops a *new* refetch — it can't stop one already underway.
+    // That in-flight request can still resolve (here, reject, mimicking the 404 the now-
+    // deleted product's endpoint would return) after the delete succeeds, and
+    // useProductVariants' own isError effect would surface a spurious toast. handleDelete
+    // must cancel that query before deleting so TanStack Query discards the late result.
+    let rejectVariantsFetch: (error: unknown) => void = () => {}
+    vi.mocked(productVariantApi.list).mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectVariantsFetch = reject
+      }) as never
+    )
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { wrapper } = makeWrapper()
+
+    function useProductsListWithVariants() {
+      const productsList = useProductsList()
+      useProductVariants(productsList.selectedProduct?.id ?? null, productsList.isPanelOpen)
+      return productsList
+    }
+
+    const { result } = renderHook(() => useProductsListWithVariants(), { wrapper })
+
+    await waitFor(() => expect(result.current.products).toHaveLength(1))
+
+    act(() => result.current.handleRowClick(cocaColaProduct))
+    await waitFor(() => expect(productVariantApi.list).toHaveBeenCalled())
+
+    await act(async () => {
+      result.current.handleDelete()
+    })
+
+    await waitFor(() => expect(result.current.isPanelOpen).toBe(false))
+
+    // The in-flight GET, still pending this whole time, finally settles well after the
+    // delete already succeeded and the panel closed.
+    await act(async () => {
+      rejectVariantsFetch(new Error('Not Found'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(mockShowError).not.toHaveBeenCalled()
     confirmSpy.mockRestore()
   })
 
