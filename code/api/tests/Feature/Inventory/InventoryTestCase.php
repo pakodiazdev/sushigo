@@ -9,9 +9,11 @@ use App\Models\InventoryLocation;
 use App\Models\Item;
 use App\Models\ItemVariant;
 use App\Models\OperatingUnit;
+use App\Models\PurchasePresentationTemplate;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use App\Models\User;
+use App\Models\VariantPurchasePresentation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Permission;
@@ -49,6 +51,7 @@ abstract class InventoryTestCase extends TestCase
             'stock.view', 'stock.manage',
             'brands.view', 'brands.create', 'brands.update', 'brands.delete',
             'inventory_categories.view', 'inventory_categories.create', 'inventory_categories.update', 'inventory_categories.delete',
+            'purchase_presentation_templates.view', 'purchase_presentation_templates.manage',
         ];
 
         foreach ($inventoryPermissions as $name) {
@@ -184,6 +187,29 @@ abstract class InventoryTestCase extends TestCase
             'is_stocked' => true,
             'is_perishable' => false,
             'is_active' => true,
+        ], $attributes));
+    }
+
+    protected function createPurchasePresentationTemplate(array $attributes = []): PurchasePresentationTemplate
+    {
+        return PurchasePresentationTemplate::create(array_merge([
+            'code' => 'TPL-'.uniqid(),
+            'name' => 'Test Template '.uniqid(),
+            'package_type' => PurchasePresentationTemplate::PACKAGE_TYPE_BOX,
+            'base_unit_quantity' => 24,
+            'compatible_dimension_uom_id' => $this->uomKg->id,
+            'is_active' => true,
+        ], $attributes));
+    }
+
+    protected function createVariantPurchasePresentation(ItemVariant $variant, PurchasePresentationTemplate $template, array $attributes = []): VariantPurchasePresentation
+    {
+        return VariantPurchasePresentation::create(array_merge([
+            'item_variant_id' => $variant->id,
+            'template_id' => $template->id,
+            'is_default' => false,
+            'is_active' => true,
+            'meta' => [],
         ], $attributes));
     }
 }

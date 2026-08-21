@@ -77,7 +77,11 @@ class UpdateVariantRequest extends FormRequest
      * operations derive conversions from ItemVariant::uom_id — changing it
      * once stock or movement history exists would silently reinterpret
      * existing quantities in the new unit. A no-op resend of the current
-     * uom_id is always allowed.
+     * uom_id is always allowed. A Variant with a purchase presentation is
+     * guarded the same way — the assignment's compatible_dimension_uom_id
+     * was checked against this uom_id when it was created, and changing the
+     * base UOM afterward would silently break that invariant even without
+     * any stock or movement history yet.
      */
     private function validateBaseUomChange(Validator $validator): void
     {
@@ -93,6 +97,12 @@ class UpdateVariantRequest extends FormRequest
 
         if ($variant->stock()->exists() || $variant->stockMovements()->exists()) {
             $validator->errors()->add('uom_id', 'The base unit of measure cannot be changed once the variant has stock or movement history.');
+
+            return;
+        }
+
+        if ($variant->purchasePresentations()->exists()) {
+            $validator->errors()->add('uom_id', 'The base unit of measure cannot be changed once the variant has a purchase presentation assigned.');
         }
     }
 

@@ -428,6 +428,21 @@ class ProductVariantCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_changing_the_base_uom_once_the_variant_has_a_purchase_presentation()
+    {
+        $product = $this->createProduct();
+        $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
+        $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
+        $this->createVariantPurchasePresentation($variant, $template);
+
+        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+            'uom_id' => $this->uomGr->id,
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['uom_id']);
+    }
+
+    #[Test]
     public function it_returns_not_found_updating_a_variant_that_does_not_belong_to_the_product()
     {
         $product = $this->createProduct();

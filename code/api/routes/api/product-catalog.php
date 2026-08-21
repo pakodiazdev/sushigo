@@ -15,11 +15,21 @@ use App\Http\Controllers\Api\V1\Inventory\Product\DeleteProductController;
 use App\Http\Controllers\Api\V1\Inventory\Product\ListProductsController;
 use App\Http\Controllers\Api\V1\Inventory\Product\ShowProductController;
 use App\Http\Controllers\Api\V1\Inventory\Product\UpdateProductController;
+use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\CreatePurchasePresentationTemplateController;
+use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\DeletePurchasePresentationTemplateController;
+use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\ListPurchasePresentationTemplatesController;
+use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\ShowPurchasePresentationTemplateController;
+use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\UpdatePurchasePresentationTemplateController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\CreateVariantController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\DeleteVariantController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\ListVariantsController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\ShowVariantController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\UpdateVariantController;
+use App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation\CreateVariantPurchasePresentationController;
+use App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation\DeleteVariantPurchasePresentationController;
+use App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation\ListVariantPurchasePresentationsController;
+use App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation\ShowVariantPurchasePresentationController;
+use App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation\UpdateVariantPurchasePresentationController;
 use App\Support\RouteParams;
 use Illuminate\Support\Facades\Route;
 
@@ -69,4 +79,32 @@ Route::middleware('auth:api')->prefix('inventory/products/{id}/variants')->group
     Route::post('/', CreateVariantController::class)->name('products.variants.create')->middleware('permission:items.create');
     Route::put(RouteParams::VARIANT_ID, UpdateVariantController::class)->name('products.variants.update')->middleware('permission:items.update');
     Route::delete(RouteParams::VARIANT_ID, DeleteVariantController::class)->name('products.variants.delete')->middleware('permission:items.delete');
+});
+
+// Purchase Presentation Templates — global, reusable commercial packaging
+// definitions (Unit/Pack/Box/Tray), not Product/Variant-scoped (Protected
+// read + write — requires purchase_presentation_templates.view / .manage,
+// see doc/architecture/product-catalog/product-catalog-architecture.en.md
+// §6). A coarser single `.manage` permission covers create/update/delete —
+// this is low-frequency catalog governance, not daily product editing.
+Route::middleware('auth:api')->prefix('inventory/purchase-presentation-templates')->group(function () {
+    $templateParam = '/{template}';
+
+    Route::get('/', ListPurchasePresentationTemplatesController::class)->name('purchase-presentation-templates.list')->middleware('permission:purchase_presentation_templates.view');
+    Route::get($templateParam, ShowPurchasePresentationTemplateController::class)->name('purchase-presentation-templates.show')->middleware('permission:purchase_presentation_templates.view');
+    Route::post('/', CreatePurchasePresentationTemplateController::class)->name('purchase-presentation-templates.create')->middleware('permission:purchase_presentation_templates.manage');
+    Route::put($templateParam, UpdatePurchasePresentationTemplateController::class)->name('purchase-presentation-templates.update')->middleware('permission:purchase_presentation_templates.manage');
+    Route::delete($templateParam, DeletePurchasePresentationTemplateController::class)->name('purchase-presentation-templates.delete')->middleware('permission:purchase_presentation_templates.manage');
+});
+
+// Variant Purchase Presentations — assignment of a reusable template to a
+// specific Product Variant (Protected read + write — reuses items.*
+// permissions, same reasoning as Product Variants above: assignment is
+// scoped to a Variant the user can already edit, no new permission needed).
+Route::middleware('auth:api')->prefix('inventory/products/{id}/variants/{variantId}/purchase-presentations')->group(function () {
+    Route::get('/', ListVariantPurchasePresentationsController::class)->name('products.variants.purchase-presentations.list')->middleware('permission:items.view');
+    Route::get(RouteParams::PRESENTATION_ID, ShowVariantPurchasePresentationController::class)->name('products.variants.purchase-presentations.show')->middleware('permission:items.view');
+    Route::post('/', CreateVariantPurchasePresentationController::class)->name('products.variants.purchase-presentations.create')->middleware('permission:items.update');
+    Route::put(RouteParams::PRESENTATION_ID, UpdateVariantPurchasePresentationController::class)->name('products.variants.purchase-presentations.update')->middleware('permission:items.update');
+    Route::delete(RouteParams::PRESENTATION_ID, DeleteVariantPurchasePresentationController::class)->name('products.variants.purchase-presentations.delete')->middleware('permission:items.update');
 });
