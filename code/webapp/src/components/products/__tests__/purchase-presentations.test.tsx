@@ -125,4 +125,23 @@ describe('PurchasePresentations', () => {
     expect(onPresentationClick).not.toHaveBeenCalled()
     expect(queryByRole('button', { name: /Box x24/ })).toBeNull()
   })
+
+  // The assign/edit form always fetches the global template catalog (to populate the picker,
+  // or to resolve the selected template's display data even in read-only edit mode), so
+  // items.update alone isn't enough — a user missing purchase_presentation_templates.view would
+  // open a form whose template request 403s. Both entry points require both permissions.
+  it('hides Assign template when the user has items.update but lacks purchase_presentation_templates.view', () => {
+    mockAuthState.can.mockImplementation((permission: string) => permission !== 'purchase_presentation_templates.view')
+    const { queryByText } = renderComponent()
+    expect(queryByText('Assign template')).toBeNull()
+  })
+
+  it('renders a non-interactive row when the user has items.update but lacks purchase_presentation_templates.view', () => {
+    mockAuthState.can.mockImplementation((permission: string) => permission !== 'purchase_presentation_templates.view')
+    const onPresentationClick = vi.fn()
+    const { getByText, queryByRole } = renderComponent({ presentations: [boxPresentation], onPresentationClick })
+    fireEvent.click(getByText('Box x24'))
+    expect(onPresentationClick).not.toHaveBeenCalled()
+    expect(queryByRole('button', { name: /Box x24/ })).toBeNull()
+  })
 })

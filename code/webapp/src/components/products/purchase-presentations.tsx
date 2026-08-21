@@ -30,11 +30,17 @@ export function PurchasePresentations({
   onPresentationClick,
   onManageTemplates,
 }: Readonly<PurchasePresentationsProps>) {
-  // The edit form's PUT route requires items.update — a viewer-only role (e.g. manager, which
-  // only has items.view) would otherwise get a clickable row that always ends in a 403 on
-  // submit. Render the row as a non-interactive summary instead of gating the click itself, so
-  // the same fields stay visible without implying they're editable.
-  const canEditPresentation = useCanAccess({ permission: 'items.update' })
+  // The assign/edit form always fetches the global template catalog via
+  // usePurchasePresentationTemplatesSelect() — to populate the picker when assigning, and to
+  // resolve the selected template's display data even in edit mode, where the picker itself is
+  // read-only. That GET requires purchase_presentation_templates.view independently of
+  // items.update (see PermissionSeeder's own comment on why the two are kept separate), so a
+  // user with items.update but not template-view access would open a form whose template
+  // request 403s and leaves it broken. Both permissions are required before offering either
+  // entry point — same "hide the control it can't complete" principle already used for
+  // manager (items.view + items.manage-media only), which never sees a clickable row at all.
+  const canViewTemplates = useCanAccess({ permission: 'purchase_presentation_templates.view' })
+  const canEditPresentation = useCanAccess({ permission: 'items.update' }) && canViewTemplates
 
   return (
     <Card className="p-4">
@@ -59,14 +65,14 @@ export function PurchasePresentations({
               Manage templates
             </Button>
           </CanAccess>
-          {/* manager (items.view + items.manage-media only) can reach this panel but its
-              POST would only ever return 403 — hide the control it can't complete. */}
-          <CanAccess permission="items.update">
+          {/* Requires items.update AND purchase_presentation_templates.view — see
+              canEditPresentation's own docblock above for why the assign form needs both. */}
+          {canEditPresentation && (
             <Button type="button" variant="outline" size="sm" onClick={onAssignPresentation} className="gap-1">
               <Plus className="h-4 w-4" />
               Assign template
             </Button>
-          </CanAccess>
+          )}
         </div>
       </div>
 

@@ -100,6 +100,39 @@ describe('usePurchasePresentationTemplateForm', () => {
     expect(result.current.isEditing).toBe(true)
   })
 
+  it("keeps the template's current compatible UOM selectable even after it was deactivated", () => {
+    // useUnitsOfMeasureSelect only returns active UOMs (correct for the create form, where
+    // offering an inactive unit as a new choice would be wrong). But editing a template whose
+    // compatible UOM has since been deactivated must still show it as the selected option;
+    // otherwise the required select renders empty, and updating any other field on that
+    // template fails client-side with "Compatible unit is required".
+    vi.mocked(useUnitsOfMeasureSelect).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as never)
+    const templateWithDeactivatedUom: PurchasePresentationTemplate = {
+      ...existingTemplate,
+      compatible_dimension_uom: { id: 9, code: 'LB', name: 'Pound', symbol: 'lb' },
+    }
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: templateWithDeactivatedUom, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    expect(result.current.uoms).toEqual([{ id: 9, code: 'LB', name: 'Pound', symbol: 'lb' }])
+  })
+
+  it('does not duplicate the current UOM when it is still active', () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: existingTemplate, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    expect(result.current.uoms).toEqual([kilogram])
+  })
+
   it('creates the template on submit, coercing quantity/uom to numbers', async () => {
     const created = { ...existingTemplate, id: '01JTPL00000000000000000BB', code: 'PACK_6' }
     vi.mocked(purchasePresentationTemplateApi.create).mockResolvedValue({
