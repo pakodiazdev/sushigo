@@ -124,6 +124,36 @@ database and `RefreshDatabase` wipes it.
 
 ---
 
+## CI Test Timing Diagnostics
+
+`API Tests (PHPUnit + Coverage)` (`.github/workflows/api-tests.yml`) publishes a **Top 20 slowest
+tests** table plus aggregate timing to the GitHub Actions Job Summary whenever PHPUnit actually
+runs — on `pull_request`/`push` this means `code/api/**` changed (per the job's path filter); a
+manual `workflow_dispatch` run always runs it regardless of what changed. The summary is generated
+from a `--log-junit=test-results.xml` report by `.github/scripts/test-timing/generate.js`, with
+`if: always()` so a failed suite still surfaces timing data. The raw JUnit report is uploaded as the
+`phpunit-junit-report` artifact (7-day retention) for deeper inspection.
+
+**Reproducing a with-coverage vs without-coverage comparison** — to check how much of the runtime
+is coverage/setup overhead rather than PHPUnit itself, dispatch the workflow manually with the
+`skip_coverage` input:
+
+```bash
+gh workflow run api-tests.yml --repo pakodiazdev/sushigo --ref <branch> -f skip_coverage=true
+```
+
+This only changes behavior on a manual `workflow_dispatch` run — the normal `pull_request`/`push`
+triggers always collect coverage exactly as before, so the PR validation contract (and the
+SonarCloud Quality Gate that depends on it) is unaffected. A `skip_coverage=true` run also skips
+the `api-sonar` job, since there is no coverage artifact for it to consume.
+
+See [#477](https://github.com/pakodiazdev/sushigo/issues/477) — once closed it will be archived to
+`doc/tasks/` per [`tasks.md`](../tasks.md) — for the measured bottleneck data this instrumentation
+produced, and [#481](https://github.com/pakodiazdev/sushigo/issues/481) for the resulting
+suite-parallelization proposal.
+
+---
+
 ## Test Data Management
 
 Full convention: [`test-data-seeders.md`](./test-data-seeders.md)
