@@ -149,11 +149,19 @@ export function SlidePanel({
   // Prevent body scroll while any SlidePanel is open. Registration/
   // deregistration goes through the shared stack so closing one of several
   // stacked panels doesn't re-enable scrolling while another remains open.
+  // Keyed on `visible`, not `isOpen`: `visible` stays true for the full
+  // exit-animation duration after `isOpen` flips false, so a closing panel
+  // stays registered as topmost until it actually finishes disappearing.
+  // Popping on `isOpen` instead would let the panel underneath become
+  // "topmost" the instant Escape/close fires, while the closing panel is
+  // still visually covering it mid-animation — a second Escape press in
+  // that window would then close the still-covered panel too, discarding
+  // its nested Product/Variant state.
   useEffect(() => {
-    if (!isOpen) return undefined
+    if (!visible) return undefined
     pushOpenPanel(panelId)
     return () => popOpenPanel(panelId)
-  }, [isOpen, panelId])
+  }, [visible, panelId])
 
   // ── Focus management for the topmost panel ──
   // Only the topmost panel in the shared stack moves focus into itself and

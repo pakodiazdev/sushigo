@@ -136,6 +136,72 @@ describe('SlidePanel', () => {
       expect(onCloseBottom).not.toHaveBeenCalled()
     })
 
+    it('does not let the bottom panel react to Escape while the top panel is still mid-exit-animation', () => {
+      const onCloseBottom = vi.fn()
+      const onCloseTop = vi.fn()
+      const { rerender } = render(
+        <>
+          <SlidePanel isOpen={true} onClose={onCloseBottom} animationDuration={50}>
+            <p>Bottom panel</p>
+          </SlidePanel>
+          <SlidePanel isOpen={true} onClose={onCloseTop} animationDuration={50}>
+            <p>Top panel</p>
+          </SlidePanel>
+        </>
+      )
+
+      // Close the top panel — it starts its exit animation but stays mounted/visible for
+      // `animationDuration` (it must not immediately hand "topmost" to the bottom panel).
+      rerender(
+        <>
+          <SlidePanel isOpen={true} onClose={onCloseBottom} animationDuration={50}>
+            <p>Bottom panel</p>
+          </SlidePanel>
+          <SlidePanel isOpen={false} onClose={onCloseTop} animationDuration={50}>
+            <p>Top panel</p>
+          </SlidePanel>
+        </>
+      )
+
+      // A second Escape press during the exit animation must not fall through to the
+      // still-covered bottom panel and discard its own nested state.
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(onCloseBottom).not.toHaveBeenCalled()
+    })
+
+    it('lets the bottom panel react to Escape again once the top panel has fully finished exiting', async () => {
+      const onCloseBottom = vi.fn()
+      const { rerender } = render(
+        <>
+          <SlidePanel isOpen={true} onClose={onCloseBottom} animationDuration={10}>
+            <p>Bottom panel</p>
+          </SlidePanel>
+          <SlidePanel isOpen={true} onClose={vi.fn()} animationDuration={10}>
+            <p>Top panel</p>
+          </SlidePanel>
+        </>
+      )
+
+      rerender(
+        <>
+          <SlidePanel isOpen={true} onClose={onCloseBottom} animationDuration={10}>
+            <p>Bottom panel</p>
+          </SlidePanel>
+          <SlidePanel isOpen={false} onClose={vi.fn()} animationDuration={10}>
+            <p>Top panel</p>
+          </SlidePanel>
+        </>
+      )
+
+      // Let the exit animation's timer elapse so the top panel actually unregisters.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 30))
+      })
+
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(onCloseBottom).toHaveBeenCalledTimes(1)
+    })
+
     it('keeps body scroll locked while a stacked panel remains open after the top one closes', () => {
       const { rerender } = render(
         <>

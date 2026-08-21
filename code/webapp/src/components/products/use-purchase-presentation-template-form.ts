@@ -1,10 +1,13 @@
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
 import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
 import { purchasePresentationTemplateApi } from '@/services/inventory-api'
-import type { PurchasePresentationPackageType, PurchasePresentationTemplate } from '@/types/inventory'
+import type { PurchasePresentationPackageType, PurchasePresentationTemplate, UnitOfMeasure } from '@/types/inventory'
+
+type UomOption = Pick<UnitOfMeasure, 'id' | 'name' | 'symbol'>
 
 export const PACKAGE_TYPE_OPTIONS: { value: PurchasePresentationPackageType; label: string }[] = [
   { value: 'UNIT', label: 'Unit' },
@@ -42,6 +45,20 @@ export function usePurchasePresentationTemplateForm({
   const isEditing = !!template
 
   const { data: uoms = [], isLoading: isUomsLoading } = useUnitsOfMeasureSelect()
+
+  // useUnitsOfMeasureSelect only returns active UOMs. Editing a template whose compatible UOM
+  // has since been deactivated must still show it as the selected option — otherwise the
+  // required select renders with no matching value, and any update to the template (rename,
+  // deactivate, ...) fails client-side with "Compatible unit is required" even though that
+  // field isn't actually changing. Mirrors use-variant-form.ts's identical fix for a Variant's
+  // own inactive current UOM. Only ever appends the template's current UOM — never widens the
+  // list of *selectable new* units.
+  const uomOptions: UomOption[] = useMemo(() => {
+    if (!template?.compatible_dimension_uom || uoms.some((uom) => uom.id === template.compatible_dimension_uom!.id)) {
+      return uoms
+    }
+    return [...uoms, template.compatible_dimension_uom]
+  }, [uoms, template])
 
   const {
     register,
@@ -107,7 +124,7 @@ export function usePurchasePresentationTemplateForm({
 
   return {
     isEditing,
-    uoms,
+    uoms: uomOptions,
     isUomsLoading,
     register,
     handleSubmit,
