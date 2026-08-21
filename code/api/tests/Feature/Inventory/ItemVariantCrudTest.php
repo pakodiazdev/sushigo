@@ -108,6 +108,47 @@ class ItemVariantCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_creating_a_variant_for_a_producto_item()
+    {
+        // Arrange — Product variants must go through POST /inventory/products/{id}/variants
+        // (#425) instead, which never accepts sale_price/min_stock/max_stock (#424).
+        $product = $this->createProduct();
+
+        // Act
+        $response = $this->postJson('/api/v1/item-variants', [
+            'item_id' => $product->id,
+            'code' => 'PROD-VAR',
+            'name' => 'Product Variant',
+            'uom_id' => $this->uomKg->id,
+        ]);
+
+        // Assert
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['item_id']);
+
+        $this->assertDatabaseMissing('item_variants', ['code' => 'PROD-VAR']);
+    }
+
+    #[Test]
+    public function it_rejects_updating_a_variant_that_belongs_to_a_producto_item()
+    {
+        // Arrange — a pre-existing Product variant from before this legacy path was closed
+        $product = $this->createProduct();
+        $variant = $this->createItemVariant($product, ['name' => 'Old Name']);
+
+        // Act
+        $response = $this->putJson("/api/v1/item-variants/{$variant->id}", [
+            'name' => 'Updated Name',
+        ]);
+
+        // Assert
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['item_id']);
+
+        $this->assertDatabaseHas('item_variants', ['id' => $variant->id, 'name' => 'Old Name']);
+    }
+
+    #[Test]
     public function it_validates_min_max_stock()
     {
         // Arrange

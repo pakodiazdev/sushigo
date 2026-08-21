@@ -140,6 +140,29 @@ describe('Inventory Query Hooks', () => {
 
       expect(result.current.data).toEqual([])
     })
+
+    it('excludes PRODUCTO-type items — this picker only feeds the legacy global Variant page, and Product variants must be created via /inventory/products/{id}/variants instead (#429)', async () => {
+      const mockItems = [
+        { id: 1, name: 'Salmon', type: 'INSUMO' },
+        { id: 2, name: 'Sushi Roll', type: 'PRODUCTO' },
+        { id: 3, name: 'Rice Cooker', type: 'ACTIVO' },
+      ]
+
+      vi.mocked(inventoryApi.itemApi.list).mockResolvedValue({
+        data: { data: mockItems },
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.itemApi.list>>)
+
+      const { result } = renderHook(() => useItemsSelect(), { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(result.current.data).toEqual([
+        { id: 1, name: 'Salmon', type: 'INSUMO' },
+        { id: 3, name: 'Rice Cooker', type: 'ACTIVO' },
+      ])
+    })
   })
 
   describe('useItemVariantsSelect', () => {

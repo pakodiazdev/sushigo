@@ -137,7 +137,6 @@ describe('ItemForm', () => {
                 is_stocked: true,
                 is_perishable: false,
                 is_active: true,
-                is_manufactured: false,
                 created_at: '',
                 updated_at: '',
             }
@@ -220,7 +219,6 @@ describe('ItemForm', () => {
                 is_stocked: true,
                 is_perishable: false,
                 is_active: true,
-                is_manufactured: false,
                 created_at: '',
                 updated_at: '',
             }
@@ -240,7 +238,6 @@ describe('ItemForm', () => {
                 is_stocked: true,
                 is_perishable: false,
                 is_active: true,
-                is_manufactured: false,
                 created_at: '',
                 updated_at: '',
             }
@@ -259,7 +256,6 @@ describe('ItemForm', () => {
                 is_stocked: true,
                 is_perishable: false,
                 is_active: true,
-                is_manufactured: false,
                 created_at: '',
                 updated_at: '',
             }
@@ -293,7 +289,7 @@ describe('ItemForm', () => {
             await waitFor(() => expect(mockExecute).toHaveBeenCalled())
         })
 
-        it('submits new items with type PRODUCTO without asking the user', async () => {
+        it('submits new items with type INSUMO by default — Products are created via /inventory/products only', async () => {
             const { getByPlaceholderText, container } = render(<ItemForm {...defaultProps} />)
 
             fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
@@ -303,7 +299,7 @@ describe('ItemForm', () => {
 
             await waitFor(() =>
                 expect(mockExecute).toHaveBeenCalledWith(
-                    expect.objectContaining({ type: 'PRODUCTO' })
+                    expect.objectContaining({ type: 'INSUMO' })
                 )
             )
         })
@@ -318,7 +314,6 @@ describe('ItemForm', () => {
                 is_stocked: true,
                 is_perishable: false,
                 is_active: true,
-                is_manufactured: false,
                 created_at: '',
                 updated_at: '',
             }
@@ -340,7 +335,6 @@ describe('ItemForm', () => {
                 is_stocked: true,
                 is_perishable: false,
                 is_active: true,
-                is_manufactured: false,
                 created_at: '',
                 updated_at: '',
             }

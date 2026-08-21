@@ -18,7 +18,7 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="sku", type="string", maxLength=100, example="INS-001", description="Unique SKU code"),
  *   @OA\Property(property="name", type="string", maxLength=255, example="Arroz Sushi Premium", description="Item name"),
  *   @OA\Property(property="description", type="string", example="Arroz japonés premium para sushi", description="Item description"),
- *   @OA\Property(property="type", type="string", enum={"INSUMO", "PRODUCTO", "ACTIVO"}, example="INSUMO", description="Item type"),
+ *   @OA\Property(property="type", type="string", enum={"INSUMO", "ACTIVO"}, example="INSUMO", description="Item type — PRODUCTO is created exclusively via POST /inventory/products"),
  *   @OA\Property(property="is_stocked", type="boolean", example=true, description="Track in inventory (default: true)"),
  *   @OA\Property(property="is_perishable", type="boolean", example=false, description="Has expiration date (default: false)"),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Active status (default: true)"),
@@ -45,7 +45,9 @@ class CreateItemRequest extends FormRequest
             'sku' => ['required', 'string', 'max:100', 'unique:items,sku'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'type' => ['required', 'string', Rule::in([Item::TYPE_INSUMO, Item::TYPE_PRODUCTO, Item::TYPE_ACTIVO])],
+            // PRODUCTO is deliberately excluded here — Products are created exclusively via
+            // POST /inventory/products (#423) since this legacy wizard-only path was retired (#429).
+            'type' => ['required', 'string', Rule::in([Item::TYPE_INSUMO, Item::TYPE_ACTIVO])],
             'is_stocked' => ['nullable', 'boolean'],
             'is_perishable' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],

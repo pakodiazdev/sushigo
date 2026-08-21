@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Items;
 
+use App\Models\Item;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * @OA\Schema(
@@ -33,7 +35,14 @@ class CreateItemVariantRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'item_id' => ['required', 'integer', 'exists:items,id'],
+            // Rejects a PRODUCTO-type item_id too, not just a nonexistent one — Product variants
+            // must go through POST /inventory/products/{id}/variants (#425) instead, which never
+            // accepts sale_price/min_stock/max_stock (#424); this legacy path was closed by #429.
+            'item_id' => [
+                'required',
+                'integer',
+                Rule::exists('items', 'id')->where(fn ($query) => $query->whereNot('type', Item::TYPE_PRODUCTO)),
+            ],
             'uom_id' => ['required', 'integer', 'exists:units_of_measure,id'],
             'code' => ['required', 'string', 'max:100', 'unique:item_variants,code'],
             'barcode' => ['nullable', 'string', 'max:50', 'unique:item_variants,barcode'],

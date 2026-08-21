@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Items;
 
+use App\Models\Item;
 use App\Models\ItemVariant;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -47,6 +48,14 @@ class UpdateItemVariantRequest extends FormRequest
         $validator->after(function ($validator) {
             if ($this->filled('min_stock') && $this->filled('max_stock') && $this->max_stock < $this->min_stock) {
                 $validator->errors()->add('max_stock', 'Maximum stock must be greater than or equal to minimum stock');
+            }
+
+            // A pre-existing Product variant (created before #429 closed this legacy path) must
+            // not keep receiving writes here — it can only be managed via
+            // PUT /inventory/products/{id}/variants/{variantId} (#425) from now on.
+            $variant = ItemVariant::with('item')->find($this->route('id'));
+            if ($variant?->item?->type === Item::TYPE_PRODUCTO) {
+                $validator->errors()->add('item_id', 'This variant belongs to a Product and must be managed from the Product catalog.');
             }
         });
     }

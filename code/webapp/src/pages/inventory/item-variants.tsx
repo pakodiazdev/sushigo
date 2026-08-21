@@ -165,7 +165,7 @@ export function ItemVariantsPage() {
     <PageContainer>
       <PageHeader
         title="Variantes de Items"
-        description="Gestiona las variantes de productos e insumos"
+        description="Gestiona las variantes de insumos y activos"
         action={
           <Button onClick={handleNewVariant} className="gap-2">
             <Plus className="h-4 w-4" />

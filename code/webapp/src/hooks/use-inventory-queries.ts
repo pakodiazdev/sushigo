@@ -51,13 +51,17 @@ export function useInventoryLocationsSelect(enabled = true) {
 
 /**
  * Hook to fetch items for use in select dropdowns.
+ *
+ * Only feeds the legacy global Variant page (`/inventory/item-variants`) — excludes PRODUCTO-type
+ * items since Product variants must be created via `/inventory/products/{id}/variants` instead
+ * (#425), never through this page (#429).
  */
 export function useItemsSelect(enabled = true) {
   return useQuery({
     queryKey: inventoryQueryKeys.itemsList({ is_active: true, for_select: true }),
     queryFn: () => itemApi.list({ is_active: true, per_page: 100 }),
     enabled,
-    select: (response) => response.data.data || [],
+    select: (response) => (response.data.data || []).filter((item) => item.type !== 'PRODUCTO'),
   })
 }
 

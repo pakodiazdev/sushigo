@@ -50,7 +50,6 @@ describe('VariantDetails', () => {
             type: 'PRODUCTO',
             is_stocked: true,
             is_perishable: false,
-            is_manufactured: false,
             is_active: true,
         },
         uom: {

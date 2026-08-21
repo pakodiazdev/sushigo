@@ -88,7 +88,7 @@ const menuItems: MenuItem[] = [
         requiredPermission: 'items.view',
         accessMode: 'hidden',
         subItems: [
-            { label: '+ Nuevo Producto', path: '/inventory/items?wizard=true' },
+            { label: 'Productos', path: '/inventory/products' },
             { label: 'Ubicaciones', path: '/inventory/locations' },
             { label: 'Items', path: '/inventory/items' },
             { label: 'Variantes', path: '/inventory/item-variants' },

@@ -61,7 +61,6 @@ describe('Inventory Types', () => {
                 type: 'INSUMO',
                 is_stocked: true,
                 is_perishable: false,
-                is_manufactured: false,
                 is_active: true,
             }
             expect(item.type).toBe('INSUMO')
@@ -76,11 +75,9 @@ describe('Inventory Types', () => {
                 type: 'PRODUCTO',
                 is_stocked: true,
                 is_perishable: true,
-                is_manufactured: true,
                 is_active: true,
             }
             expect(item.type).toBe('PRODUCTO')
-            expect(item.is_manufactured).toBe(true)
         })
 
         it('can create an ACTIVO item', () => {
@@ -91,7 +88,6 @@ describe('Inventory Types', () => {
                 type: 'ACTIVO',
                 is_stocked: false,
                 is_perishable: false,
-                is_manufactured: false,
                 is_active: true,
             }
             expect(item.type).toBe('ACTIVO')

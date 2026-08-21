@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import { createFileRoute, useSearch } from '@tanstack/react-router'
+import { useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Package, Box, AlertCircle, Wand2 } from 'lucide-react'
+import { Plus, Package, Box, AlertCircle } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
@@ -13,36 +13,22 @@ import { useToast } from '@/components/ui/toast-context'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
-import { ItemForm, ItemDetails, ProductWizard } from '@/components/inventory'
+import { ItemForm, ItemDetails } from '@/components/inventory'
 
 export const Route = createFileRoute('/inventory/items')({
   component: InventoryItemsPage,
-  validateSearch: (search: Record<string, unknown>) => {
-    return {
-      wizard: search?.wizard === 'true' || search?.wizard === true,
-    }
-  },
 })
 
 export function InventoryItemsPage() {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
-  const search = useSearch({ from: '/inventory/items' })
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
-  const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-
-  // Auto-open wizard if URL param is set
-  useEffect(() => {
-    if (search.wizard) {
-      setIsWizardOpen(true)
-    }
-  }, [search.wizard])
 
   // Fetch items with filters
   const { data, isLoading } = useQuery({
@@ -174,33 +160,16 @@ export function InventoryItemsPage() {
     setSelectedItem(null)
   }
 
-  const handleWizardSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['items'] })
-    queryClient.invalidateQueries({ queryKey: ['item-variants'] })
-    queryClient.invalidateQueries({ queryKey: ['stock-all'] })
-    setIsWizardOpen(false)
-  }
-
   return (
     <PageContainer>
       <PageHeader
         title="Items de Inventario"
-        description="Gestiona productos, insumos y activos"
+        description="Gestiona insumos y activos"
         action={
-          <div className="flex gap-2">
-            <Button onClick={() => setIsWizardOpen(true)} className="gap-2">
-              <Wand2 className="h-4 w-4" />
-              Wizard Completo
-            </Button>
-            <Button
-              onClick={handleNewItem}
-              variant="outline"
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Item Rápido
-            </Button>
-          </div>
+          <Button onClick={handleNewItem} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Item Rápido
+          </Button>
         }
       />
 
@@ -285,21 +254,6 @@ export function InventoryItemsPage() {
             setIsFormPanelOpen(false)
             setSelectedItem(null)
           }}
-        />
-      </SlidePanel>
-
-      {/* Wizard Panel */}
-      <SlidePanel
-        isOpen={isWizardOpen}
-        onClose={() => setIsWizardOpen(false)}
-        title="Wizard de Producto Completo"
-        description="Crea un producto con variantes y existencias iniciales en 4 pasos"
-        size="lg"
-        noPadding
-      >
-        <ProductWizard
-          onSuccess={handleWizardSuccess}
-          onCancel={() => setIsWizardOpen(false)}
         />
       </SlidePanel>
     </PageContainer>
