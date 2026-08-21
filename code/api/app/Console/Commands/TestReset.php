@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Contracts\PasswordResetTokenRecorder;
 use Database\Seeders\Fakes\FakeDishesSeeder;
 use Database\Seeders\Fakes\FakeEmployeesSeeder;
+use Database\Seeders\Fakes\FakeProductCatalogSeeder;
 use Database\Seeders\OvertimeLftTierSeeder;
 use Database\Seeders\PunctualityBonusGroupSeeder;
 use Database\Seeders\PunctualityRangeSeeder;
@@ -23,6 +24,7 @@ use Database\Seeders\Testing\OvertimeBankTestSeeder;
 use Database\Seeders\Testing\PayrollClosedPeriodSeeder;
 use Database\Seeders\Testing\PayrollPeriodHistorySeeder;
 use Database\Seeders\Testing\PayrollPreviewSeeder;
+use Database\Seeders\Testing\ProductCatalogTestSeeder;
 use Database\Seeders\Testing\ScheduleSummaryOverrideSeeder;
 use Database\Seeders\Testing\TodayReportStatusSeeder;
 use Database\Seeders\Testing\WeeklySummarySeeder;
@@ -106,6 +108,13 @@ class TestReset extends Command
         'fakes-dishes' => [
             DishesTestSeeder::class,
             FakeDishesSeeder::class,
+        ],
+        'products' => [
+            ProductCatalogTestSeeder::class,
+        ],
+        'fakes-products' => [
+            ProductCatalogTestSeeder::class,
+            FakeProductCatalogSeeder::class,
         ],
         'payroll-preview' => [
             PayrollPreviewSeeder::class,

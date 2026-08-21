@@ -186,6 +186,8 @@ return [
         'employees' => 5,
         'dish_categories' => 5,
         'dishes_per_category' => 8,
+        'fake_products' => 20,
+        'fake_variants_per_product' => 2,
     ],
 
     /*
@@ -277,6 +279,202 @@ return [
             ['Paquete Pareja', '40 piezas variadas de rollos, ideal para compartir entre dos.', 340.00],
             ['Paquete Familiar', '70 piezas variadas de rollos, ideal para compartir en familia.', 620.00],
             ['Paquete Fiesta', '100 piezas variadas de rollos, ramen y alitas, ideal para eventos.', 850.00],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Development Product Catalog (Brands, Categories, Products, Variants,
+    | Purchase Presentation Templates)
+    |--------------------------------------------------------------------------
+    |
+    | Believable retail catalog for the restaurant's small resale shelf
+    | (Development/BrandSeeder, InventoryCategorySeeder,
+    | PurchasePresentationTemplateSeeder, ProductCatalogSeeder). Real-world
+    | brand/flavor/size facts (Coca-Cola, Buldak/Samyang, Peelez/Peelerz,
+    | Ramune, Mochi) confirmed via web research per #428 — see the PR's
+    | "Assumptions" section for sources. No cost, supplier, purchase, stock
+    | or branch price data is seeded here — see
+    | doc/architecture/product-catalog/product-catalog-architecture.en.md.
+    |
+    | All Variants below share the 'UN' (Unidad) base unit of measure — each
+    | is counted as one sellable retail unit (can, bottle, bag, box), never
+    | by weight/volume — so every Purchase Presentation Template's
+    | compatible_dimension_uom_id also resolves to 'UN'.
+    |
+    */
+
+    'development_brands' => [
+        'Coca-Cola',
+        'Buldak',
+        'Peelez',
+        'Ramune',
+        'Mochis',
+    ],
+
+    'development_inventory_categories' => [
+        'Bebidas',
+        'Ramen Instantáneo',
+        'Dulces y Botanas',
+        'Postres Congelados',
+    ],
+
+    'development_purchase_presentation_templates' => [
+        ['code' => 'UNIT_1', 'name' => 'Unidad Individual', 'package_type' => 'UNIT', 'base_unit_quantity' => 1, 'is_active' => true],
+        ['code' => 'PACK_5', 'name' => 'Paquete x5', 'package_type' => 'PACK', 'base_unit_quantity' => 5, 'is_active' => true],
+        ['code' => 'PACK_6', 'name' => 'Paquete x6', 'package_type' => 'PACK', 'base_unit_quantity' => 6, 'is_active' => true],
+        ['code' => 'BOX_24', 'name' => 'Caja x24', 'package_type' => 'BOX', 'base_unit_quantity' => 24, 'is_active' => true],
+        ['code' => 'TRAY_12', 'name' => 'Charola x12', 'package_type' => 'TRAY', 'base_unit_quantity' => 12, 'is_active' => false],
+    ],
+
+    'development_products' => [
+        [
+            'name' => 'Coca-Cola',
+            'description' => 'Refresco de cola clásico, disponible en lata y botella.',
+            'brand' => 'Coca-Cola',
+            'category' => 'Bebidas',
+            'is_active' => true,
+            'is_perishable' => false,
+            'variants' => [
+                ['name' => 'Lata 355ml', 'code' => 'COKE-ORIG-CAN355', 'barcode' => '7501055300013', 'is_active' => true, 'presentations' => [
+                    ['template' => 'BOX_24', 'is_default' => true, 'is_active' => true, 'package_barcode' => '17501055300010'],
+                    ['template' => 'UNIT_1', 'is_default' => false, 'is_active' => true, 'package_barcode' => null],
+                ]],
+                ['name' => 'Botella 600ml', 'code' => 'COKE-ORIG-BOT600', 'barcode' => '7501055300020', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+                ['name' => 'Botella 2L', 'code' => 'COKE-ORIG-BOT2000', 'barcode' => '7501055300037', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+            ],
+        ],
+        [
+            'name' => 'Coca-Cola Sin Azúcar',
+            'description' => 'Refresco de cola sin azúcar, mismo sabor clásico sin calorías.',
+            'brand' => 'Coca-Cola',
+            'category' => 'Bebidas',
+            'is_active' => true,
+            'is_perishable' => false,
+            'variants' => [
+                ['name' => 'Lata 355ml', 'code' => 'COKE-ZERO-CAN355', 'barcode' => '7501055301010', 'is_active' => true, 'presentations' => [
+                    ['template' => 'BOX_24', 'is_default' => true, 'is_active' => true, 'package_barcode' => '17501055301017'],
+                ]],
+            ],
+        ],
+        [
+            'name' => 'Coca-Cola Vainilla',
+            'description' => 'Refresco de cola con esencia de vainilla. Edición descontinuada.',
+            'brand' => 'Coca-Cola',
+            'category' => 'Bebidas',
+            'is_active' => false,
+            'is_perishable' => false,
+            'variants' => [
+                ['name' => 'Lata 355ml', 'code' => 'COKE-VAINILLA-CAN355', 'barcode' => '7501055302017', 'is_active' => false, 'presentations' => []],
+            ],
+        ],
+        [
+            'name' => 'Buldak Ramen',
+            'description' => 'Ramen instantáneo coreano extra picante de Samyang, sabor pollo picante (Buldak).',
+            'brand' => 'Buldak',
+            'category' => 'Ramen Instantáneo',
+            'is_active' => true,
+            'is_perishable' => false,
+            'variants' => [
+                ['name' => 'Original 140g', 'code' => 'BULDAK-ORIGINAL-140', 'barcode' => '8801073114517', 'is_active' => true, 'presentations' => [
+                    ['template' => 'BOX_24', 'is_default' => true, 'is_active' => true, 'package_barcode' => '28801073114511'],
+                ]],
+                ['name' => '2x Spicy 140g', 'code' => 'BULDAK-2XSPICY-140', 'barcode' => '8801073121195', 'is_active' => true, 'presentations' => [
+                    ['template' => 'PACK_5', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+                ['name' => 'Carbonara 140g', 'code' => 'BULDAK-CARBONARA-140', 'barcode' => '8801073131149', 'is_active' => false, 'presentations' => []],
+                ['name' => 'Cheese 140g', 'code' => 'BULDAK-CHEESE-140', 'barcode' => '8801073136045', 'is_active' => true, 'presentations' => [
+                    ['template' => 'PACK_5', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+            ],
+        ],
+        [
+            'name' => 'Peelez Gomitas Pelables',
+            'description' => 'Gomitas de fruta pelables, hechas con jugo real.',
+            'brand' => 'Peelez',
+            'category' => 'Dulces y Botanas',
+            'is_active' => true,
+            'is_perishable' => false,
+            'variants' => [
+                ['name' => 'Mango 85g', 'code' => 'PEELEZ-MANGO-85', 'barcode' => '8801234567800', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+                ['name' => 'Piña 85g', 'code' => 'PEELEZ-PINA-85', 'barcode' => '8801234567817', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+                ['name' => 'Variedad Tropical 240g', 'code' => 'PEELEZ-TROPICAL-240', 'barcode' => '8801234567824', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+            ],
+        ],
+        [
+            'name' => 'Peelez Gomitas Pelables Sandía',
+            'description' => 'Gomitas pelables sabor sandía, hechas con jugo real.',
+            'brand' => 'Peelez',
+            'category' => 'Dulces y Botanas',
+            'is_active' => true,
+            'is_perishable' => false,
+            'variants' => [
+                ['name' => 'Sandía 85g', 'code' => 'PEELEZ-SANDIA-85', 'barcode' => '8801234567831', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+            ],
+        ],
+        [
+            'name' => 'Ramune',
+            'description' => 'Refresco japonés carbonatado en botella Codd tradicional, sellada con canica de vidrio.',
+            'brand' => 'Ramune',
+            'category' => 'Bebidas',
+            'is_active' => true,
+            'is_perishable' => false,
+            'variants' => [
+                ['name' => 'Original 200ml', 'code' => 'RAMUNE-ORIGINAL-200', 'barcode' => '4902580220105', 'is_active' => true, 'presentations' => [
+                    ['template' => 'PACK_6', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                    ['template' => 'TRAY_12', 'is_default' => false, 'is_active' => false, 'package_barcode' => null],
+                ]],
+                ['name' => 'Fresa 200ml', 'code' => 'RAMUNE-FRESA-200', 'barcode' => '4902580220112', 'is_active' => true, 'presentations' => [
+                    ['template' => 'PACK_6', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+                ['name' => 'Melón 200ml', 'code' => 'RAMUNE-MELON-200', 'barcode' => '4902580220129', 'is_active' => true, 'presentations' => [
+                    ['template' => 'PACK_6', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+            ],
+        ],
+        [
+            'name' => 'Mochi Helado',
+            'description' => 'Mochi relleno de helado, postre congelado japonés en caja.',
+            'brand' => 'Mochis',
+            'category' => 'Postres Congelados',
+            'is_active' => true,
+            'is_perishable' => true,
+            'variants' => [
+                ['name' => 'Caja 6pz Mango', 'code' => 'MOCHI-MANGO-CAJA6', 'barcode' => '4902102072410', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+                ['name' => 'Caja 6pz Fresa', 'code' => 'MOCHI-FRESA-CAJA6', 'barcode' => '4902102072427', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+                ['name' => 'Caja 9pz Surtido', 'code' => 'MOCHI-SURTIDO-CAJA9', 'barcode' => '4902102072434', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+            ],
+        ],
+        [
+            'name' => 'Mochi Helado Matcha',
+            'description' => 'Mochi relleno de helado sabor matcha, postre congelado japonés.',
+            'brand' => 'Mochis',
+            'category' => 'Postres Congelados',
+            'is_active' => true,
+            'is_perishable' => true,
+            'variants' => [
+                ['name' => 'Caja 6pz Matcha', 'code' => 'MOCHI-MATCHA-CAJA6', 'barcode' => '4902102072441', 'is_active' => true, 'presentations' => [
+                    ['template' => 'UNIT_1', 'is_default' => true, 'is_active' => true, 'package_barcode' => null],
+                ]],
+            ],
         ],
     ],
 

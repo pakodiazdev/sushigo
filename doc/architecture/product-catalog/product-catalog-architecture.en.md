@@ -486,6 +486,15 @@ prerequisite issues landing first, plus a reconciliation pass — not a same-PR 
   are real-world catalog facts, not something derivable from the repository. **Blocker owner:**
   `#428` (`CAT-07` — seed data) must confirm exact names before writing seeders; this does not block
   any other issue in Milestone A, since `#422`–`#427` build the contract and UI generically.
+  **As-built (`#428`):** resolved via web research (no way to ask a human in this issue's unattended
+  delivery flow) — Buldak is Samyang's "Buldak Bokkeummyun" hot-chicken-flavor instant ramen line
+  (flavors seeded: Original, 2x Spicy, Carbonara, Cheese; 140g individual packs); "Peelez" is the
+  peelable-gummy fruit-candy line more commonly spelled "Peelerz" (Amos Peelerz) — seeded under the
+  issue's own spelling per its literal text, flavors Mango/Piña/Sandía plus a "Variedad Tropical"
+  multi-flavor box, 85g bags. Ramune seeded as Original/Fresa/Melón, 200ml Codd-neck bottles (the
+  standard retail size). Mochi seeded as a private-label "Mochis" brand (no single dominant global
+  brand exists for this category) — Mango/Fresa/Matcha flavors, 6pz boxes. See
+  `config/seeders.php` → `development_products` for the full seeded catalog.
 
 ### 8.3 Explicitly deferred, not a blocker
 
@@ -572,6 +581,14 @@ one at a time, since most are outside the wizard component itself and easy to mi
 No seeder currently creates `Item`/`ItemVariant` rows. `doc/conventions/testing/test-data-seeders.md`
 already reserves `InventoryTestSeeder.php` as a documented "future" slot in its Testing tier — `#428`
 fills an already-anticipated gap, not a new convention.
+
+**As-built (`#428`):** filled across all three tiers — `Development/BrandSeeder`,
+`InventoryCategorySeeder`, `PurchasePresentationTemplateSeeder` and `ProductCatalogSeeder` (believable
+catalog, registered in `DevelopmentSeeder`); `Testing/ProductCatalogTestSeeder` (minimal deterministic
+fixtures, registered as the `products` group in `TestReset`, named `ProductCatalogTestSeeder` rather
+than the doc's placeholder `InventoryTestSeeder` name since it seeds the catalog specifically, not
+stock/location data); `Fakes/FakeProductCatalogSeeder` (volume generation for pagination, `fakes-products`
+group). No cost, supplier, purchase, stock or branch price fields are populated by any tier.
 
 ---
 
