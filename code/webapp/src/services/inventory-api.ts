@@ -9,6 +9,7 @@ import type {
   ItemVariant,
   Product,
   ProductMediaAttachment,
+  ProductVariant,
   Stock,
   StockMovement,
   PaginatedResponse,
@@ -95,6 +96,35 @@ export const productApi = {
 
   delete: (id: number) =>
     api.delete(`/inventory/products/${id}`),
+}
+
+// Product Variants — ItemVariant scoped to a Product-type Item, catalog-identity-only
+// contract (#424). See doc/architecture/product-catalog/product-catalog-architecture.en.md §6.
+// Distinct from the legacy, unscoped itemVariantApi above — item_id always comes from the
+// route (productId), never from the request body.
+export interface ProductVariantPayload {
+  name: string
+  code: string
+  barcode?: string | null
+  uom_id: number
+  description?: string | null
+  track_lot?: boolean
+  track_serial?: boolean
+  is_active?: boolean
+}
+
+export const productVariantApi = {
+  list: (productId: number, params?: { per_page?: number; page?: number }) =>
+    api.get<PaginatedResponse<ProductVariant>>(`/inventory/products/${productId}/variants`, { params }),
+
+  get: (productId: number, variantId: number) =>
+    api.get<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants/${variantId}`),
+
+  create: (productId: number, data: ProductVariantPayload) =>
+    api.post<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants`, data),
+
+  update: (productId: number, variantId: number, data: Partial<ProductVariantPayload>) =>
+    api.put<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants/${variantId}`, data),
 }
 
 // Brands — see doc/architecture/product-catalog/product-catalog-architecture.en.md §3.1.

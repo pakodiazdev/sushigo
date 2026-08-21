@@ -9,7 +9,15 @@ import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
-import { ProductForm, ProductDetails, isEffectivelyActive } from '@/components/products'
+import {
+  ProductForm,
+  ProductDetails,
+  VariantForm,
+  VariantDetails,
+  isEffectivelyActive,
+  useProductVariants,
+  type VariantPanelMode,
+} from '@/components/products'
 import type { Product } from '@/types/inventory'
 import { useProductsList, type ProductPanelMode } from './use-products-list'
 
@@ -21,6 +29,12 @@ const PANEL_TITLE_BY_MODE: Record<ProductPanelMode, string> = {
   create: 'New Product',
   edit: 'Edit Product',
   detail: 'Product Detail',
+}
+
+const VARIANT_PANEL_TITLE_BY_MODE: Record<Exclude<VariantPanelMode, 'list'>, string> = {
+  create: 'New Variant',
+  edit: 'Edit Variant',
+  detail: 'Variant Detail',
 }
 
 export function ProductsPage() {
@@ -65,6 +79,21 @@ export function ProductsPage() {
     // handleClosePanel would land on if delete had been a no-op cancel instead.
     onDeleted: () => newProductButtonRef.current?.focus(),
   })
+
+  const {
+    variants,
+    isLoading: variantsLoading,
+    isError: variantsError,
+    variantMode,
+    selectedVariant,
+    handleNewVariant,
+    handleVariantClick,
+    handleEditVariant,
+    cancelEditVariant,
+    handleBackToList,
+    handleVariantCreated,
+    handleVariantUpdated,
+  } = useProductVariants(selectedProduct?.id ?? null, isPanelOpen)
 
   const handleNewProductClick = () => {
     lastOpenerRef.current = newProductButtonRef.current
@@ -138,7 +167,13 @@ export function ProductsPage() {
     },
   ]
 
-  const panelTitle = PANEL_TITLE_BY_MODE[panelMode]
+  // A nested Variant screen takes over the whole panel (title included) while active — see
+  // use-product-variants.ts's VariantPanelMode docblock for why this extends the same panel
+  // instance instead of opening a second one.
+  const panelTitle =
+    panelMode === 'detail' && variantMode !== 'list'
+      ? VARIANT_PANEL_TITLE_BY_MODE[variantMode]
+      : PANEL_TITLE_BY_MODE[panelMode]
 
   return (
     <PageContainer>
@@ -217,8 +252,35 @@ export function ProductsPage() {
         {panelMode === 'edit' && selectedProduct && (
           <ProductForm product={selectedProduct} onSuccess={handleUpdated} onCancel={cancelEdit} />
         )}
-        {panelMode === 'detail' && selectedProduct && (
-          <ProductDetails product={selectedProduct} onEdit={handleEdit} onDelete={handleDelete} />
+        {panelMode === 'detail' && selectedProduct && variantMode === 'list' && (
+          <ProductDetails
+            product={selectedProduct}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            variants={variants}
+            variantsLoading={variantsLoading}
+            variantsError={variantsError}
+            onNewVariant={handleNewVariant}
+            onVariantClick={handleVariantClick}
+          />
+        )}
+        {panelMode === 'detail' && selectedProduct && variantMode === 'create' && (
+          <VariantForm
+            productId={selectedProduct.id}
+            onSuccess={handleVariantCreated}
+            onCancel={handleBackToList}
+          />
+        )}
+        {panelMode === 'detail' && selectedProduct && variantMode === 'edit' && selectedVariant && (
+          <VariantForm
+            productId={selectedProduct.id}
+            variant={selectedVariant}
+            onSuccess={handleVariantUpdated}
+            onCancel={cancelEditVariant}
+          />
+        )}
+        {panelMode === 'detail' && selectedProduct && variantMode === 'detail' && selectedVariant && (
+          <VariantDetails variant={selectedVariant} onEdit={handleEditVariant} onBack={handleBackToList} />
         )}
       </SlidePanel>
     </PageContainer>
