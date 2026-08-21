@@ -329,6 +329,19 @@ count/empty-state message — the `View Variants` nested-slide navigation this s
 `#425`'s (`CAT-04`) own deliverable, not built here since there is no Variant-create endpoint yet
 for it to lead to.
 
+**As-built (`#425`):** the "nested slide" is the same content-swap pattern one level deeper, not a
+second `SlidePanel` instance — `use-product-variants.ts` adds its own `'list' | 'create' | 'detail'
+| 'edit'` mode state, and `products.tsx` swaps the whole panel body (and title) to `VariantForm`/
+`VariantDetails` whenever that mode leaves `'list'`, exactly like the top-level panel already swaps
+between `ProductForm`/`ProductDetails`. The Variant catalog itself (`ProductVariants`) stays inline
+inside `ProductDetails`'s `'list'` state, as §5.1's tree shows it — no extra click needed to see it.
+Purchase presentations are out of scope here, per `#425`'s own Technical Tasks/Acceptance Criteria —
+`VariantDetails` renders no presentations section; that's `#427`'s (`CAT-06`) deliverable. Acceptance
+Criterion "deactivate Variants without leaving Product detail" is satisfied through Edit's existing
+Active checkbox, not a separate Delete action — matching this design's own "deactivate, don't
+delete" principle (§2); `DeleteVariantController` exists on the backend (`#424`) but has no frontend
+entry point from this issue on purpose.
+
 ### 5.3 States to design for (per CAT-02/CAT-04/CAT-06 acceptance criteria)
 
 Loading, empty (no Variants yet / no presentations yet), validation error (inline, per field),

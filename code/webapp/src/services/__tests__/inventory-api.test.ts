@@ -6,6 +6,7 @@ import {
     itemApi,
     itemVariantApi,
     productApi,
+    productVariantApi,
     stockApi,
     stockMovementApi,
 } from '../inventory-api'
@@ -411,6 +412,75 @@ describe('productApi', () => {
             const result = await productApi.delete(42)
 
             expect(apiClient.delete).toHaveBeenCalledWith('/inventory/products/42')
+            expect(result).toEqual(mockResponse)
+        })
+    })
+})
+
+// ── productVariantApi ────────────────────────────────────────────────────────
+
+describe('productVariantApi', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    describe('list', () => {
+        it('calls GET /inventory/products/:productId/variants without params', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: {} } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const result = await productVariantApi.list(42)
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory/products/42/variants', { params: undefined })
+            expect(result).toEqual(mockResponse)
+        })
+
+        it('calls GET /inventory/products/:productId/variants with pagination params', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: {} } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const params = { per_page: 10, page: 2 }
+            const result = await productVariantApi.list(42, params)
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory/products/42/variants', { params })
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('get', () => {
+        it('calls GET /inventory/products/:productId/variants/:variantId', async () => {
+            const mockResponse = { data: { status: 200, data: { id: 7 } } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const result = await productVariantApi.get(42, 7)
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory/products/42/variants/7')
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('create', () => {
+        it('calls POST /inventory/products/:productId/variants', async () => {
+            const mockResponse = { data: { status: 201, data: { id: 7 } } }
+            vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
+
+            const data = { name: 'Arroz Premium 1kg', code: 'ARR-KG', uom_id: 1 }
+            const result = await productVariantApi.create(42, data)
+
+            expect(apiClient.post).toHaveBeenCalledWith('/inventory/products/42/variants', data)
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
+    describe('update', () => {
+        it('calls PUT /inventory/products/:productId/variants/:variantId', async () => {
+            const mockResponse = { data: { status: 200, data: { id: 7 } } }
+            vi.mocked(apiClient.put).mockResolvedValue(mockResponse)
+
+            const data = { name: 'Arroz Premium 2kg', is_active: false }
+            const result = await productVariantApi.update(42, 7, data)
+
+            expect(apiClient.put).toHaveBeenCalledWith('/inventory/products/42/variants/7', data)
             expect(result).toEqual(mockResponse)
         })
     })

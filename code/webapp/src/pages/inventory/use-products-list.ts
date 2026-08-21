@@ -116,7 +116,7 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => productApi.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedProductId) => {
       // Deleting the only row on a page past page 1 leaves currentPage pointing past
       // the new last_page once the list refetches — DataGrid renders its empty state
       // before pagination controls in that case, so the user would have no way back
@@ -125,12 +125,28 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
       if (products.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1)
       }
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      // closePanel() below only flips isPanelOpen; that state update hasn't rendered yet at
+      // this point in the callback, so useProductVariants' own `enabled` gate (see
+      // use-product-variants.ts) is still true right now. A plain ['products'] prefix
+      // invalidation would therefore still refetch the just-deleted product's own Variant
+      // query synchronously, 404, and surface a spurious "Failed to load variants" toast
+      // right after this success toast. Exclude that one query from the invalidation instead
+      // of relying on render timing to disable it in time.
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === 'products' &&
+          !(query.queryKey[1] === deletedProductId && query.queryKey[2] === 'variants'),
+      })
       closePanel()
       onDeleted?.()
       showSuccess('Product deleted successfully', 'Product Deleted')
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, deletedProductId: number) => {
+      // handleDelete cancels this same query before the delete request goes out (see below) so a
+      // slow in-flight fetch can't resolve into a spurious toast after a *successful* delete. If
+      // the delete then fails instead, that cancellation would otherwise leave the query stuck
+      // with no data and no pending fetch — refetch it so the still-open panel recovers.
+      queryClient.invalidateQueries({ queryKey: ['products', deletedProductId, 'variants'] })
       showError(
         getApiErrorMessage(error, 'Failed to delete product. It may have existing variants.'),
         'Delete Error'
@@ -163,6 +179,14 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
   const handleDelete = () => {
     if (!selectedProduct) return
     if (confirm('¿Estás seguro de eliminar este producto?')) {
+      // If the panel's initial Variant fetch is still in flight (e.g. the user opens a
+      // Product and immediately deletes it before that GET resolves), the predicate-based
+      // invalidation in deleteMutation.onSuccess only stops a *new* refetch — it can't stop
+      // one already underway. That in-flight GET can still resolve with a 404 after the
+      // delete succeeds and surface a spurious "Failed to load variants" toast. Cancel it
+      // before the delete goes out so TanStack Query discards whatever it eventually
+      // resolves with.
+      queryClient.cancelQueries({ queryKey: ['products', selectedProduct.id, 'variants'] })
       deleteMutation.mutate(selectedProduct.id)
     }
   }

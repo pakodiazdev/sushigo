@@ -124,6 +124,33 @@ export interface ProductMediaAttachment {
   owner_token?: string
 }
 
+/** Minimal UnitOfMeasure reference embedded in a ProductVariant response. */
+export interface ProductVariantUomRef {
+  id: number
+  code: string
+  name: string
+  symbol: string
+}
+
+// Product Variant Types — ItemVariant scoped to a Product-type Item, catalog-identity-only
+// contract from #424 (no cost, sale price, or stock thresholds). See VariantResource on the
+// backend and doc/architecture/product-catalog/product-catalog-architecture.en.md §6. Distinct
+// from the legacy `ItemVariant` type above, which still carries the old commercial fields.
+export interface ProductVariant {
+  id: number
+  item_id: number
+  code: string
+  barcode: string | null
+  name: string
+  description: string | null
+  uom: ProductVariantUomRef | null
+  track_lot: boolean
+  track_serial: boolean
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 // Unit of Measure Types
 export interface UnitOfMeasure {
   id: number
