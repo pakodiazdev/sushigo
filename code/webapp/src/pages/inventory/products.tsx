@@ -46,6 +46,24 @@ const PRESENTATION_PANEL_TITLE_BY_MODE: Record<Exclude<PresentationPanelMode, 'l
   edit: 'Edit Purchase Presentation',
 }
 
+// A nested Variant (or, one level deeper, Presentation) screen takes over the whole panel
+// (title included) while active — see use-product-variants.ts's VariantPanelMode docblock
+// and use-variant-purchase-presentations.ts's PresentationPanelMode docblock for why this
+// extends the same panel instance instead of opening a second one.
+export function resolvePanelTitle(
+  panelMode: ProductPanelMode,
+  variantMode: VariantPanelMode,
+  presentationMode: PresentationPanelMode
+): string {
+  if (panelMode === 'detail' && variantMode === 'detail' && presentationMode !== 'list') {
+    return PRESENTATION_PANEL_TITLE_BY_MODE[presentationMode]
+  }
+  if (panelMode === 'detail' && variantMode !== 'list') {
+    return VARIANT_PANEL_TITLE_BY_MODE[variantMode]
+  }
+  return PANEL_TITLE_BY_MODE[panelMode]
+}
+
 export function ProductsPage() {
   // Focus returns to whichever control actually opened the panel — the New Product
   // button or the clicked table row — once it closes. `lastOpenerRef` is set at the
@@ -194,16 +212,7 @@ export function ProductsPage() {
     },
   ]
 
-  // A nested Variant (or, one level deeper, Presentation) screen takes over the whole panel
-  // (title included) while active — see use-product-variants.ts's VariantPanelMode docblock
-  // and use-variant-purchase-presentations.ts's PresentationPanelMode docblock for why this
-  // extends the same panel instance instead of opening a second one.
-  const panelTitle =
-    panelMode === 'detail' && variantMode === 'detail' && presentationMode !== 'list'
-      ? PRESENTATION_PANEL_TITLE_BY_MODE[presentationMode]
-      : panelMode === 'detail' && variantMode !== 'list'
-        ? VARIANT_PANEL_TITLE_BY_MODE[variantMode]
-        : PANEL_TITLE_BY_MODE[panelMode]
+  const panelTitle = resolvePanelTitle(panelMode, variantMode, presentationMode)
 
   return (
     <PageContainer>
