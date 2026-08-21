@@ -151,6 +151,59 @@ export interface ProductVariant {
   updated_at?: string
 }
 
+// Purchase Presentation Template Types — reusable, admin-managed commercial package
+// definitions (Unit/Pack/Box/Tray). See PurchasePresentationTemplateResource on the backend and
+// doc/architecture/product-catalog/product-catalog-architecture.en.md §3/§6.
+export type PurchasePresentationPackageType = 'UNIT' | 'PACK' | 'BOX' | 'TRAY'
+
+/** Minimal UnitOfMeasure reference embedded in a PurchasePresentationTemplate response. */
+export interface PurchasePresentationTemplateUomRef {
+  id: number
+  code: string
+  name: string
+  symbol: string
+}
+
+export interface PurchasePresentationTemplate {
+  /** ULID public identifier. */
+  id: string
+  code: string
+  name: string
+  package_type: PurchasePresentationPackageType
+  /** How many of the Variant's base UOM units one of this package contains. */
+  base_unit_quantity: number
+  compatible_dimension_uom: PurchasePresentationTemplateUomRef | null
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+/** Lean template summary embedded in a VariantPurchasePresentation response — see
+ *  VariantPurchasePresentationResource on the backend. Fetch the full template resource
+ *  (by id) if compatible_dimension_uom or timestamps are needed. */
+export interface VariantPurchasePresentationTemplateRef {
+  id: string
+  code: string
+  name: string
+  package_type: PurchasePresentationPackageType
+  base_unit_quantity: number
+}
+
+// Variant Purchase Presentation Types — the assignment of a reusable template to a specific
+// Product Variant. See VariantPurchasePresentationResource on the backend.
+export interface VariantPurchasePresentation {
+  /** ULID public identifier. */
+  id: string
+  item_variant_id: number
+  template: VariantPurchasePresentationTemplateRef | null
+  /** Barcode printed on the package — separate namespace from the Variant's own unit barcode. */
+  package_barcode: string | null
+  is_default: boolean
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 // Unit of Measure Types
 export interface UnitOfMeasure {
   id: number

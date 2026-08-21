@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { ImageOff, Plus } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
@@ -17,6 +17,10 @@ import {
   isEffectivelyActive,
   useProductVariants,
   type VariantPanelMode,
+  PurchasePresentationForm,
+  useVariantPurchasePresentations,
+  type PresentationPanelMode,
+  PurchasePresentationTemplateManager,
 } from '@/components/products'
 import type { Product } from '@/types/inventory'
 import { useProductsList, type ProductPanelMode } from './use-products-list'
@@ -35,6 +39,11 @@ const VARIANT_PANEL_TITLE_BY_MODE: Record<Exclude<VariantPanelMode, 'list'>, str
   create: 'New Variant',
   edit: 'Edit Variant',
   detail: 'Variant Detail',
+}
+
+const PRESENTATION_PANEL_TITLE_BY_MODE: Record<Exclude<PresentationPanelMode, 'list'>, string> = {
+  assign: 'Assign Purchase Presentation',
+  edit: 'Edit Purchase Presentation',
 }
 
 export function ProductsPage() {
@@ -94,6 +103,24 @@ export function ProductsPage() {
     handleVariantCreated,
     handleVariantUpdated,
   } = useProductVariants(selectedProduct?.id ?? null, isPanelOpen)
+
+  const {
+    presentations,
+    isLoading: presentationsLoading,
+    isError: presentationsError,
+    presentationMode,
+    selectedPresentation,
+    handleAssignPresentation,
+    handlePresentationClick,
+    handleBackToList: handleBackToPresentationList,
+    handlePresentationSaved,
+  } = useVariantPurchasePresentations(
+    selectedProduct?.id ?? null,
+    selectedVariant?.id ?? null,
+    isPanelOpen && panelMode === 'detail' && variantMode === 'detail'
+  )
+
+  const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false)
 
   const handleNewProductClick = () => {
     lastOpenerRef.current = newProductButtonRef.current
@@ -167,13 +194,16 @@ export function ProductsPage() {
     },
   ]
 
-  // A nested Variant screen takes over the whole panel (title included) while active — see
-  // use-product-variants.ts's VariantPanelMode docblock for why this extends the same panel
-  // instance instead of opening a second one.
+  // A nested Variant (or, one level deeper, Presentation) screen takes over the whole panel
+  // (title included) while active — see use-product-variants.ts's VariantPanelMode docblock
+  // and use-variant-purchase-presentations.ts's PresentationPanelMode docblock for why this
+  // extends the same panel instance instead of opening a second one.
   const panelTitle =
-    panelMode === 'detail' && variantMode !== 'list'
-      ? VARIANT_PANEL_TITLE_BY_MODE[variantMode]
-      : PANEL_TITLE_BY_MODE[panelMode]
+    panelMode === 'detail' && variantMode === 'detail' && presentationMode !== 'list'
+      ? PRESENTATION_PANEL_TITLE_BY_MODE[presentationMode]
+      : panelMode === 'detail' && variantMode !== 'list'
+        ? VARIANT_PANEL_TITLE_BY_MODE[variantMode]
+        : PANEL_TITLE_BY_MODE[panelMode]
 
   return (
     <PageContainer>
@@ -279,10 +309,46 @@ export function ProductsPage() {
             onCancel={cancelEditVariant}
           />
         )}
-        {panelMode === 'detail' && selectedProduct && variantMode === 'detail' && selectedVariant && (
-          <VariantDetails variant={selectedVariant} onEdit={handleEditVariant} onBack={handleBackToList} />
+        {panelMode === 'detail' && selectedProduct && variantMode === 'detail' && selectedVariant && presentationMode === 'list' && (
+          <VariantDetails
+            variant={selectedVariant}
+            onEdit={handleEditVariant}
+            onBack={handleBackToList}
+            presentations={presentations}
+            presentationsLoading={presentationsLoading}
+            presentationsError={presentationsError}
+            onAssignPresentation={handleAssignPresentation}
+            onPresentationClick={handlePresentationClick}
+            onManageTemplates={() => setIsTemplateManagerOpen(true)}
+          />
+        )}
+        {panelMode === 'detail' && selectedProduct && variantMode === 'detail' && selectedVariant && presentationMode === 'assign' && (
+          <PurchasePresentationForm
+            productId={selectedProduct.id}
+            variantId={selectedVariant.id}
+            variantUom={selectedVariant.uom}
+            assignedTemplateIds={presentations.map((p) => p.template?.id).filter((id): id is string => !!id)}
+            onSuccess={handlePresentationSaved}
+            onCancel={handleBackToPresentationList}
+          />
+        )}
+        {panelMode === 'detail' && selectedProduct && variantMode === 'detail' && selectedVariant && presentationMode === 'edit' && selectedPresentation && (
+          <PurchasePresentationForm
+            productId={selectedProduct.id}
+            variantId={selectedVariant.id}
+            variantUom={selectedVariant.uom}
+            presentation={selectedPresentation}
+            assignedTemplateIds={presentations.map((p) => p.template?.id).filter((id): id is string => !!id)}
+            onSuccess={handlePresentationSaved}
+            onCancel={handleBackToPresentationList}
+          />
         )}
       </SlidePanel>
+
+      <PurchasePresentationTemplateManager
+        isOpen={isTemplateManagerOpen}
+        onClose={() => setIsTemplateManagerOpen(false)}
+      />
     </PageContainer>
   )
 }

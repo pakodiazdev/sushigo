@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, fireEvent, cleanup } from '@testing-library/react'
+import { render, fireEvent, cleanup, act } from '@testing-library/react'
 import { SlidePanel } from '@/components/ui/slide-panel'
+
+/** Flushes the panel's `setTimeout(..., 0)` focus-move microtask. */
+async function flushFocusTimer() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+}
 
 describe('SlidePanel', () => {
   afterEach(() => { cleanup() })
@@ -110,6 +117,50 @@ describe('SlidePanel', () => {
       fireEvent.keyDown(document, { key: 'Enter' })
       expect(onClose).not.toHaveBeenCalled()
     })
+
+    it('only closes the topmost panel on Escape when two independent panels are stacked', () => {
+      const onCloseBottom = vi.fn()
+      const onCloseTop = vi.fn()
+      render(
+        <>
+          <SlidePanel isOpen={true} onClose={onCloseBottom}>
+            <p>Bottom panel</p>
+          </SlidePanel>
+          <SlidePanel isOpen={true} onClose={onCloseTop}>
+            <p>Top panel</p>
+          </SlidePanel>
+        </>
+      )
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(onCloseTop).toHaveBeenCalledTimes(1)
+      expect(onCloseBottom).not.toHaveBeenCalled()
+    })
+
+    it('keeps body scroll locked while a stacked panel remains open after the top one closes', () => {
+      const { rerender } = render(
+        <>
+          <SlidePanel isOpen={true} onClose={vi.fn()}>
+            <p>Bottom panel</p>
+          </SlidePanel>
+          <SlidePanel isOpen={true} onClose={vi.fn()}>
+            <p>Top panel</p>
+          </SlidePanel>
+        </>
+      )
+      expect(document.body.style.overflow).toBe('hidden')
+
+      rerender(
+        <>
+          <SlidePanel isOpen={true} onClose={vi.fn()}>
+            <p>Bottom panel</p>
+          </SlidePanel>
+          <SlidePanel isOpen={false} onClose={vi.fn()}>
+            <p>Top panel</p>
+          </SlidePanel>
+        </>
+      )
+      expect(document.body.style.overflow).toBe('hidden')
+    })
   })
 
   describe('size variants', () => {
@@ -155,6 +206,83 @@ describe('SlidePanel', () => {
       )
       const withClass = container.querySelector('.my-custom-class')
       expect(withClass).not.toBeNull()
+    })
+  })
+
+  describe('focus management', () => {
+    // No `title` in these panels so there's no header/close button — the
+    // child button is then the panel's only focusable element, making
+    // "focus moved into this panel" unambiguous to assert on.
+    it('moves focus into the panel when it opens', async () => {
+      const { getByText } = render(
+        <SlidePanel isOpen={true} onClose={vi.fn()}>
+          <button type="button">First field</button>
+        </SlidePanel>
+      )
+      await flushFocusTimer()
+      expect(document.activeElement).toBe(getByText('First field'))
+    })
+
+    it('moves focus into the topmost panel, not the bottom one, when two panels are stacked', async () => {
+      const { getByText } = render(
+        <>
+          <SlidePanel isOpen={true} onClose={vi.fn()}>
+            <button type="button">Bottom field</button>
+          </SlidePanel>
+          <SlidePanel isOpen={true} onClose={vi.fn()}>
+            <button type="button">Top field</button>
+          </SlidePanel>
+        </>
+      )
+      await flushFocusTimer()
+      expect(document.activeElement).toBe(getByText('Top field'))
+      expect(document.activeElement).not.toBe(getByText('Bottom field'))
+    })
+
+    it('restores focus to the previously focused element when the panel closes', async () => {
+      const opener = document.createElement('button')
+      opener.textContent = 'Open manager'
+      document.body.appendChild(opener)
+      opener.focus()
+
+      const { rerender } = render(
+        <SlidePanel isOpen={true} onClose={vi.fn()}>
+          <button type="button">First field</button>
+        </SlidePanel>
+      )
+      await flushFocusTimer()
+
+      rerender(
+        <SlidePanel isOpen={false} onClose={vi.fn()}>
+          <button type="button">First field</button>
+        </SlidePanel>
+      )
+
+      expect(document.activeElement).toBe(opener)
+      document.body.removeChild(opener)
+    })
+
+    it('recovers focus into the new content when the panel swaps children in place without closing', async () => {
+      const { getByText, getByPlaceholderText, rerender } = render(
+        <SlidePanel isOpen={true} onClose={vi.fn()}>
+          <button type="button">List row</button>
+        </SlidePanel>
+      )
+      await flushFocusTimer()
+      getByText('List row').focus()
+      expect(document.activeElement).toBe(getByText('List row'))
+
+      // Simulate the create→detail→edit content-swap pattern: the same
+      // SlidePanel instance stays open (isOpen never changes) but renders a
+      // different child, unmounting the focused control.
+      rerender(
+        <SlidePanel isOpen={true} onClose={vi.fn()}>
+          <input placeholder="Edit form field" />
+        </SlidePanel>
+      )
+      await flushFocusTimer()
+
+      expect(document.activeElement).toBe(getByPlaceholderText('Edit form field'))
     })
   })
 

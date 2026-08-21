@@ -342,6 +342,20 @@ Active checkbox, not a separate Delete action — matching this design's own "de
 delete" principle (§2); `DeleteVariantController` exists on the backend (`#424`) but has no frontend
 entry point from this issue on purpose.
 
+**As-built (`#427`):** the `PresentationList`/`PresentationAssign` states are the same content-swap
+pattern one level deeper still — `use-variant-purchase-presentations.ts` adds its own `'list' |
+'assign' | 'edit'` mode state, and `products.tsx` swaps the whole panel body/title again whenever
+that mode leaves `'list'`. Two deliberate deviations from this section's original sketch: there is
+no separate `PresentationDetail` read state — a row click opens directly into `'edit'` (template
+read-only, `package_barcode`/`is_default`/`is_active` editable), since the list already surfaces
+every field this section calls for (template name, package type, factor, package barcode, default,
+status); and the template manager ("admin can also open template manager") is a **standalone**
+`SlidePanel` instance reachable from the Presentation list's "Manage templates" button, not a fourth
+level nested inside this same panel — it manages a global, Product/Variant-independent resource, so
+nesting it under one specific Product's panel would be a false hierarchy. Deactivate/reactivate reuse
+the existing `is_active` PUT toggle (never the `DELETE` endpoint), matching `#425`'s own
+Variant-level precedent above.
+
 ### 5.3 States to design for (per CAT-02/CAT-04/CAT-06 acceptance criteria)
 
 Loading, empty (no Variants yet / no presentations yet), validation error (inline, per field),

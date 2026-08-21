@@ -10,8 +10,11 @@ import type {
   Product,
   ProductMediaAttachment,
   ProductVariant,
+  PurchasePresentationPackageType,
+  PurchasePresentationTemplate,
   Stock,
   StockMovement,
+  VariantPurchasePresentation,
   PaginatedResponse,
   EntityResponse,
 } from '@/types/inventory'
@@ -125,6 +128,74 @@ export const productVariantApi = {
 
   update: (productId: number, variantId: number, data: Partial<ProductVariantPayload>) =>
     api.put<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants/${variantId}`, data),
+}
+
+// Purchase Presentation Templates — global, reusable commercial package definitions
+// (Unit/Pack/Box/Tray), not Product/Variant-scoped (#426/#427). See
+// doc/architecture/product-catalog/product-catalog-architecture.en.md §6.
+export interface PurchasePresentationTemplatePayload {
+  code: string
+  name: string
+  package_type: PurchasePresentationPackageType
+  base_unit_quantity: number
+  compatible_dimension_uom_id: number
+  is_active?: boolean
+}
+
+export const purchasePresentationTemplateApi = {
+  list: (params?: { is_active?: boolean; package_type?: PurchasePresentationPackageType }) =>
+    api.get<CollectionResponse<PurchasePresentationTemplate>>('/inventory/purchase-presentation-templates', { params }),
+
+  get: (templateId: string) =>
+    api.get<EntityResponse<PurchasePresentationTemplate>>(`/inventory/purchase-presentation-templates/${templateId}`),
+
+  create: (data: PurchasePresentationTemplatePayload) =>
+    api.post<EntityResponse<PurchasePresentationTemplate>>('/inventory/purchase-presentation-templates', data),
+
+  update: (templateId: string, data: Partial<PurchasePresentationTemplatePayload>) =>
+    api.put<EntityResponse<PurchasePresentationTemplate>>(`/inventory/purchase-presentation-templates/${templateId}`, data),
+
+  delete: (templateId: string) =>
+    api.delete(`/inventory/purchase-presentation-templates/${templateId}`),
+}
+
+// Variant Purchase Presentations — assignment of a reusable template to a specific Product
+// Variant (#426/#427). Distinct from the global template catalog above — item_id/variant_id
+// always come from the route, never from the request body.
+export interface VariantPurchasePresentationPayload {
+  template_id: string
+  package_barcode?: string | null
+  is_default?: boolean
+}
+
+export interface VariantPurchasePresentationUpdatePayload {
+  package_barcode?: string | null
+  is_default?: boolean
+  is_active?: boolean
+}
+
+export const variantPurchasePresentationApi = {
+  list: (productId: number, variantId: number) =>
+    api.get<CollectionResponse<VariantPurchasePresentation>>(
+      `/inventory/products/${productId}/variants/${variantId}/purchase-presentations`
+    ),
+
+  create: (productId: number, variantId: number, data: VariantPurchasePresentationPayload) =>
+    api.post<EntityResponse<VariantPurchasePresentation>>(
+      `/inventory/products/${productId}/variants/${variantId}/purchase-presentations`,
+      data
+    ),
+
+  update: (
+    productId: number,
+    variantId: number,
+    presentationId: string,
+    data: VariantPurchasePresentationUpdatePayload
+  ) =>
+    api.put<EntityResponse<VariantPurchasePresentation>>(
+      `/inventory/products/${productId}/variants/${variantId}/purchase-presentations/${presentationId}`,
+      data
+    ),
 }
 
 // Brands — see doc/architecture/product-catalog/product-catalog-architecture.en.md §3.1.

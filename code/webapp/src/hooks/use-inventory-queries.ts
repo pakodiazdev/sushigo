@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
-import { inventoryLocationApi, itemVariantApi, itemApi } from '@/services/inventory-api'
-import type { InventoryLocation, UnitOfMeasure } from '@/types/inventory'
+import { inventoryLocationApi, itemVariantApi, itemApi, purchasePresentationTemplateApi } from '@/services/inventory-api'
+import type { InventoryLocation, PurchasePresentationTemplate, UnitOfMeasure } from '@/types/inventory'
 import type { OperatingUnit } from '@/types/auth'
 
 /**
@@ -18,6 +18,7 @@ export const inventoryQueryKeys = {
   variantsList: (params?: Record<string, unknown>) => [...inventoryQueryKeys.variants(), 'list', params] as const,
   unitsOfMeasure: () => [...inventoryQueryKeys.all, 'units-of-measure'] as const,
   operatingUnits: () => ['operating-units'] as const,
+  purchasePresentationTemplates: () => [...inventoryQueryKeys.all, 'purchase-presentation-templates'] as const,
 }
 
 export interface SelectOption {
@@ -101,6 +102,20 @@ export function useOperatingUnitsSelect(enabled = true) {
     },
     enabled,
     select: (response) => (response.data.data || []) as OperatingUnit[],
+  })
+}
+
+/**
+ * Hook to fetch active Purchase Presentation Templates for use in the "Assign template" select
+ * (#427). Only active templates can be assigned to new Variant associations — see
+ * StoreVariantPurchasePresentationRequest on the backend.
+ */
+export function usePurchasePresentationTemplatesSelect(enabled = true) {
+  return useQuery({
+    queryKey: inventoryQueryKeys.purchasePresentationTemplates(),
+    queryFn: () => purchasePresentationTemplateApi.list({ is_active: true }),
+    enabled,
+    select: (response) => (response.data.data || []) as PurchasePresentationTemplate[],
   })
 }
 
