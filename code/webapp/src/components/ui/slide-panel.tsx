@@ -16,6 +16,34 @@ export const SLIDE_PANEL_DEFAULT_DURATION_MS = 350
 /** Default top-margin (px) applied when auto-scrolling a focused input into view. */
 export const SLIDE_PANEL_DEFAULT_SCROLL_MARGIN = 20
 
+/**
+ * Module-level stack of currently-open SlidePanel instances, ordered by open
+ * time (last entry = topmost/active panel). Two independent SlidePanel
+ * instances can be mounted as siblings rather than nested (e.g. the Product
+ * detail panel + the standalone Purchase Presentation Template Manager
+ * panel, see #427), so a plain module-level stack — rather than React
+ * context, which only coordinates panels that share an ancestor — is what
+ * lets unrelated instances agree on which one is "on top" for Escape
+ * handling and body-scroll locking.
+ */
+let openPanelStack: symbol[] = []
+
+function pushOpenPanel(id: symbol) {
+  if (!openPanelStack.includes(id)) {
+    openPanelStack = [...openPanelStack, id]
+  }
+  syncBodyOverflow()
+}
+
+function popOpenPanel(id: symbol) {
+  openPanelStack = openPanelStack.filter((existing) => existing !== id)
+  syncBodyOverflow()
+}
+
+function syncBodyOverflow() {
+  document.body.style.overflow = openPanelStack.length > 0 ? 'hidden' : 'unset'
+}
+
 interface SlidePanelProps {
   isOpen: boolean
   onClose: () => void
@@ -70,6 +98,8 @@ export function SlidePanel({
   const panelRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
+  // Stable identity for this SlidePanel instance in the shared open-panel stack.
+  const panelId = useRef(Symbol('slide-panel')).current
 
   // ── Visibility state (keeps DOM alive during exit animation) ──
   const [visible, setVisible] = useState(false)
@@ -100,30 +130,124 @@ export function SlidePanel({
     }
   }, [isOpen, visible])
 
-  // Close on Escape key
+  // Close on Escape key — only the topmost panel in the shared open-panel
+  // stack reacts, so when two independent SlidePanel instances are stacked
+  // (e.g. a standalone manager opened on top of a detail panel) Escape only
+  // closes the one the user is actually looking at.
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      const isTopmost = openPanelStack[openPanelStack.length - 1] === panelId
+      if (e.key === 'Escape' && isOpen && isTopmost) {
         onClose()
       }
     }
 
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, panelId])
 
-  // Prevent body scroll when open
+  // Prevent body scroll while any SlidePanel is open. Registration/
+  // deregistration goes through the shared stack so closing one of several
+  // stacked panels doesn't re-enable scrolling while another remains open.
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-    }
+    if (!isOpen) return undefined
+    pushOpenPanel(panelId)
+    return () => popOpenPanel(panelId)
+  }, [isOpen, panelId])
+
+  // ── Focus management for the topmost panel ──
+  // Only the topmost panel in the shared stack moves focus into itself and
+  // restores it on close — otherwise, when two independent SlidePanel
+  // instances are stacked (e.g. the standalone Template Manager opened on
+  // top of the Product/Variant panel, see #427), focus stays on whatever
+  // was focused in the covered panel and a keyboard user has to tab through
+  // it before ever reaching the panel that's actually visible.
+  const getFocusableElements = useCallback((): HTMLElement[] => {
+    const container = overlayRef.current
+    if (!container) return []
+    return Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    )
+  }, [])
+
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+
+  // Captures the element that had focus right before this panel became the
+  // topmost open one, and restores it once the panel closes — deliberately
+  // scoped to isOpen/visible only, so an internal content swap (below)
+  // never overwrites what "closing" should restore focus to.
+  useEffect(() => {
+    if (!isOpen || !visible) return undefined
+    if (openPanelStack[openPanelStack.length - 1] !== panelId) return undefined
+
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null
 
     return () => {
-      document.body.style.overflow = 'unset'
+      const previouslyFocused = previouslyFocusedRef.current
+      if (previouslyFocused && document.body.contains(previouslyFocused)) {
+        previouslyFocused.focus()
+      }
     }
-  }, [isOpen])
+  }, [isOpen, visible, panelId])
+
+  // Moves focus into the topmost panel's first focusable element — both when
+  // it first opens, and whenever its rendered content changes while it stays
+  // open. The latter matters because several panels in this app swap their
+  // `children` in place instead of closing/reopening the SlidePanel (e.g.
+  // clicking "Assign template" or a list row swaps in a different form
+  // within the same instance, per the create→detail→edit content-swap
+  // pattern — see #423/#427): the control that triggered the swap unmounts
+  // along with the old content, and without this the browser drops focus to
+  // <body>, letting the next Tab wander into the page behind the panel
+  // instead of into the newly rendered form.
+  useEffect(() => {
+    if (!isOpen || !visible) return undefined
+    if (openPanelStack[openPanelStack.length - 1] !== panelId) return undefined
+
+    const container = overlayRef.current
+    if (!container) return undefined
+
+    // Defer so newly rendered content (initial mount or a content swap) is
+    // committed to the DOM before we look for something focusable inside it.
+    const timer = setTimeout(() => {
+      if (container.contains(document.activeElement)) return
+      const [first] = getFocusableElements()
+      ;(first ?? container).focus()
+    }, 0)
+
+    return () => clearTimeout(timer)
+    // `children` is intentionally a dependency: it's how this effect learns
+    // the panel swapped its rendered content in place.
+  }, [isOpen, visible, panelId, getFocusableElements, children])
+
+  // Trap Tab/Shift+Tab within the topmost panel's own focusable elements so
+  // keyboard focus can't wander into a panel underneath it.
+  useEffect(() => {
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !isOpen) return
+      if (openPanelStack[openPanelStack.length - 1] !== panelId) return
+
+      const focusable = getFocusableElements()
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (!first || !last) return
+
+      const active = document.activeElement
+
+      if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleTab)
+    return () => document.removeEventListener('keydown', handleTab)
+  }, [isOpen, panelId, getFocusableElements])
 
   // ── Auto-scroll focused input into view ──
   // When a form field receives focus, scroll the content container so the
@@ -216,7 +340,11 @@ export function SlidePanel({
           }}
         >
           <SlidePanelOverlayContext.Provider value={overlayRef}>
-          <div ref={overlayRef} className="relative flex h-full flex-col bg-background shadow-xl">
+          <div
+            ref={overlayRef}
+            tabIndex={-1}
+            className="relative flex h-full flex-col bg-background shadow-xl outline-none"
+          >
             {/* Header */}
             {(title || description) && (
               <div className="border-b border-border px-6 py-4">
