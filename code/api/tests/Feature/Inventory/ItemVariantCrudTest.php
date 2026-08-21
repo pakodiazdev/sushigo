@@ -276,6 +276,32 @@ class ItemVariantCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_can_filter_variants_by_a_comma_separated_parent_item_type_list()
+    {
+        // Arrange — the legacy Variants grid (/inventory/item-variants) always requests
+        // item_type=INSUMO,ACTIVO, since Product variants are managed via
+        // /inventory/products/{id}/variants only.
+        $insumo = $this->createItem(['type' => 'INSUMO']);
+        $activo = $this->createItem(['type' => 'ACTIVO']);
+        $product = $this->createProduct();
+
+        $this->createItemVariant($insumo, ['code' => 'INS-VAR']);
+        $this->createItemVariant($activo, ['code' => 'ACT-VAR']);
+        $this->createItemVariant($product, ['code' => 'PROD-VAR']);
+
+        // Act
+        $response = $this->getJson('/api/v1/item-variants?item_type=INSUMO,ACTIVO');
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertCount(2, $response->json('data'));
+        $this->assertEqualsCanonicalizing(
+            ['INS-VAR', 'ACT-VAR'],
+            array_column($response->json('data'), 'code')
+        );
+    }
+
+    #[Test]
     public function it_can_filter_active_variants()
     {
         // Arrange

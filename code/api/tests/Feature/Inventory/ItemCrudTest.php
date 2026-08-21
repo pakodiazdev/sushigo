@@ -53,6 +53,27 @@ class ItemCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_can_filter_items_by_a_comma_separated_type_list()
+    {
+        // Arrange — the legacy Items grid (/inventory/items) always excludes PRODUCTO by
+        // requesting type=INSUMO,ACTIVO, since Products are managed via /inventory/products only.
+        $this->createItem(['type' => 'INSUMO']);
+        $this->createItem(['type' => 'ACTIVO']);
+        $this->createProduct();
+
+        // Act
+        $response = $this->getJson('/api/v1/items?type=INSUMO,ACTIVO');
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertCount(2, $response->json('data'));
+        $this->assertEqualsCanonicalizing(
+            ['INSUMO', 'ACTIVO'],
+            array_column($response->json('data'), 'type')
+        );
+    }
+
+    #[Test]
     public function it_can_search_items_by_name()
     {
         // Arrange
