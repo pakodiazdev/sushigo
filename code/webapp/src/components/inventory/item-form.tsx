@@ -12,11 +12,13 @@ import { itemApi } from '@/services/inventory-api'
 import { MediaGalleryUploader } from '@/components/media'
 import type { Item } from '@/types/inventory'
 
+// PRODUCTO is deliberately excluded — Products are created exclusively via the
+// /inventory/products SlidePanel (#423); this quick-item form is INSUMO/ACTIVO only (#429).
 const itemSchema = z.object({
   sku: z.string().min(2, 'SKU must be at least 2 characters'),
   name: z.string().min(3, 'Name must be at least 3 characters'),
   description: z.string(),
-  type: z.enum(['INSUMO', 'PRODUCTO', 'ACTIVO']),
+  type: z.enum(['INSUMO', 'ACTIVO']),
   is_stocked: z.boolean(),
   is_perishable: z.boolean(),
   is_active: z.boolean(),
@@ -53,7 +55,10 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
       sku: item?.sku || '',
       name: item?.name || '',
       description: item?.description || '',
-      type: item?.type || 'PRODUCTO',
+      // PUT /items/{id} ignores `type` entirely (it's not in UpdateItemRequest's rules), so this
+      // only needs to satisfy the narrower create-only union — a legacy PRODUCTO item being
+      // edited here simply falls back to INSUMO, which has no effect on the update request sent.
+      type: item?.type === 'ACTIVO' ? 'ACTIVO' : 'INSUMO',
       is_stocked: item?.is_stocked ?? true,
       is_perishable: item?.is_perishable ?? false,
       is_active: item?.is_active ?? true,

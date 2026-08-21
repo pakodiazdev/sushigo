@@ -39,7 +39,6 @@ describe('ItemDetails', () => {
         type: 'PRODUCTO',
         is_stocked: true,
         is_perishable: false,
-        is_manufactured: false,
         is_active: true,
         created_at: '2025-01-15T00:00:00+00:00',
         updated_at: '2025-01-15T00:00:00+00:00',

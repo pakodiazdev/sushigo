@@ -52,7 +52,6 @@ function InventoryIndexPage() {
 
         <Link
           to="/inventory/items"
-          search={{ wizard: false }}
           className="group relative overflow-hidden rounded-lg border bg-card p-6 hover:shadow-lg transition-all hover:border-primary/50"
         >
           <div className="flex items-center gap-4">
@@ -62,7 +61,7 @@ function InventoryIndexPage() {
             <div>
               <h3 className="font-semibold text-lg">Items</h3>
               <p className="text-sm text-muted-foreground">
-                Gestionar productos e insumos
+                Gestionar insumos y activos
               </p>
             </div>
           </div>
@@ -79,7 +78,7 @@ function InventoryIndexPage() {
             <div>
               <h3 className="font-semibold text-lg">Variantes</h3>
               <p className="text-sm text-muted-foreground">
-                Gestionar variantes de productos
+                Gestionar variantes de insumos y activos
               </p>
             </div>
           </div>

@@ -151,6 +151,24 @@ class ItemCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_creating_a_producto_item_through_the_legacy_items_endpoint()
+    {
+        // Act — Products must be created via POST /inventory/products (#423) only, since
+        // #429 retires the ProductWizard that was the last caller of this legacy write path.
+        $response = $this->postJson('/api/v1/items', [
+            'sku' => 'TEST-001',
+            'name' => 'Test Item',
+            'type' => 'PRODUCTO',
+        ]);
+
+        // Assert
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['type']);
+
+        $this->assertDatabaseMissing('items', ['sku' => 'TEST-001']);
+    }
+
+    #[Test]
     public function it_can_show_item()
     {
         // Arrange

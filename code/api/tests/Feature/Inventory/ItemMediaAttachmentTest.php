@@ -58,7 +58,7 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $response = $this->postJson('/api/v1/items', [
             'sku' => 'SKU-MEDIA-1',
             'name' => 'Sushi Roll',
-            'type' => 'PRODUCTO',
+            'type' => 'INSUMO',
             'media_gallery_id' => $gallery['gallery_id'],
             'owner_token' => $gallery['owner_token'],
         ]);
@@ -85,7 +85,7 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $this->postJson('/api/v1/items', [
             'sku' => 'SKU-MEDIA-HIJACK-1',
             'name' => 'Hijacked Roll',
-            'type' => 'PRODUCTO',
+            'type' => 'INSUMO',
             'media_gallery_id' => $gallery['gallery_id'],
         ])->assertForbidden();
 
@@ -111,7 +111,7 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $response = $this->postJson('/api/v1/items', [
             'sku' => 'SKU-MEDIA-2',
             'name' => 'Sushi Roll No Media',
-            'type' => 'PRODUCTO',
+            'type' => 'INSUMO',
         ]);
 
         $response->assertCreated();

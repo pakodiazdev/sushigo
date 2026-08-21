@@ -90,6 +90,7 @@ function generateBreadcrumbs(path: string): BreadcrumbItem[] {
 
     // Inventory routes
     '/inventory': 'Inventario',
+    '/inventory/products': 'Productos',
     '/inventory/locations': 'Ubicaciones',
     '/inventory/items': 'Items',
     '/inventory/item-variants': 'Variantes',

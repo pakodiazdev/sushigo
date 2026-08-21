@@ -27,7 +27,6 @@ export interface Item {
   type: 'INSUMO' | 'PRODUCTO' | 'ACTIVO'
   is_stocked: boolean
   is_perishable: boolean
-  is_manufactured: boolean
   is_active: boolean
   created_at?: string
   updated_at?: string
