@@ -726,6 +726,11 @@ protective limit on a runaway loop or a precondition that genuinely isn't met ye
 - `.claude/commands/issue-full.md` (`/issue-full`) and `.claude/commands/issue-devin-interactive.md`
   (`/issue-devin-interactive`) — siblings of this pipeline that keep Devin's deeper review, at a
   higher cost, instead of Codex. See #468 for why they exist and what they're being compared against.
+- `.claude/commands/issue-no-review.md` (`/issue-no-review`) — a lighter sibling that forks this file
+  from Phase 5 onward: it still implements, opens the PR, triggers Codex with `@codex review`, waits
+  for CI, and squashes/closes out via `finish-pr.md`, but never polls or resolves Copilot/Codex/Devin
+  review itself — that iteration is left for a human to drive manually afterward (e.g. via
+  `/pr-comments`). See #478 for why it exists.
 - `.claude/commands/start-issue.md` — Phases 1–2, 4–6 reused above; run standalone for a single
   work session without the full pipeline.
 - `.claude/commands/pr-comments.md` — Steps 1–7 reused in Phase 6; run standalone to re-resolve
