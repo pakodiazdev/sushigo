@@ -6,7 +6,16 @@ const fs = require('node:fs');
 const { parseJunitXml } = require('./parse.js');
 const { buildSummaryMarkdown } = require('./report.js');
 
-const TOP_N = Number(process.env.TEST_TIMING_TOP_N || 20);
+function parsePositiveInt(value, fallback) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+const TOP_N = parsePositiveInt(process.env.TEST_TIMING_TOP_N, 20);
 
 function main() {
   const junitPath = process.argv[2];
@@ -36,5 +45,5 @@ function main() {
 try {
   main();
 } catch (error) {
-  console.error(`::warning::Failed to generate test timing summary: ${error.message}`);
+  console.error(`::warning::Failed to generate test timing summary: ${errorMessage(error)}`);
 }
