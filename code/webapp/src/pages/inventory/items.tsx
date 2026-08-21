@@ -30,14 +30,15 @@ export function InventoryItemsPage() {
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
-  // Fetch items with filters
+  // Fetch items with filters — always excludes PRODUCTO (comma-separated `type`), since this
+  // page manages only Insumos/Activos; Products are managed exclusively via /inventory/products.
   const { data, isLoading } = useQuery({
     queryKey: ['items', currentPage, searchQuery, typeFilter, statusFilter],
     queryFn: () =>
       itemApi.list({
         per_page: 15,
         search: searchQuery || undefined,
-        type: typeFilter || undefined,
+        type: typeFilter || 'INSUMO,ACTIVO',
         is_active: statusFilter ? statusFilter === 'active' : undefined,
       }),
   })
@@ -188,7 +189,6 @@ export function InventoryItemsPage() {
           onChange={setTypeFilter}
           options={[
             { value: 'INSUMO', label: 'Insumo' },
-            { value: 'PRODUCTO', label: 'Producto' },
             { value: 'ACTIVO', label: 'Activo' },
           ]}
         />

@@ -14,7 +14,7 @@ use App\Models\Item;
  *   summary="List Items",
  *   tags={"Items"},
  *
- *   @OA\Parameter(name="type", in="query", @OA\Schema(type="string", enum={"INSUMO", "PRODUCTO", "ACTIVO"})),
+ *   @OA\Parameter(name="type", in="query", @OA\Schema(type="string", example="INSUMO,ACTIVO"), description="One type, or a comma-separated list (e.g. the legacy Items grid always passes INSUMO,ACTIVO to exclude Products)"),
  *   @OA\Parameter(name="is_stocked", in="query", @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="is_perishable", in="query", @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean")),
@@ -44,7 +44,11 @@ class ListItemsController extends Controller
         $query = Item::query();
 
         if ($request->filled('type')) {
-            $query->where('type', strtoupper($request->type));
+            $types = collect(explode(',', $request->type))
+                ->map(fn ($type) => strtoupper(trim($type)))
+                ->filter()
+                ->all();
+            $query->whereIn('type', $types);
         }
 
         if ($request->filled('is_stocked')) {

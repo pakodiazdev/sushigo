@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
  *   tags={"Item Variants"},
  *
  *   @OA\Parameter(name="item_id", in="query", @OA\Schema(type="integer"), description="Filter by item ID"),
+ *   @OA\Parameter(name="item_type", in="query", @OA\Schema(type="string", example="INSUMO,ACTIVO"), description="Filter by parent item type — one type, or a comma-separated list (e.g. the legacy Variants grid always passes INSUMO,ACTIVO to exclude Product variants)"),
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean"), description="Filter by active status"),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string"), description="Search in code and name"),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15)),
@@ -43,6 +44,14 @@ class ListItemVariantsController extends Controller
 
         if ($request->filled('item_id')) {
             $query->where('item_id', $request->item_id);
+        }
+
+        if ($request->filled('item_type')) {
+            $types = collect(explode(',', $request->item_type))
+                ->map(fn ($type) => strtoupper(trim($type)))
+                ->filter()
+                ->all();
+            $query->whereHas('item', fn ($itemQuery) => $itemQuery->whereIn('type', $types));
         }
 
         $this->applyIsActiveFilter($query, $request);

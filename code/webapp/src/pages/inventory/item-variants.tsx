@@ -29,11 +29,15 @@ export function ItemVariantsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
+  // Always excludes Product-linked variants (comma-separated `item_type`), since this page
+  // manages only Insumo/Activo variants; Product variants are managed exclusively via
+  // /inventory/products/{id}/variants.
   const { data, isLoading } = useQuery({
     queryKey: ['item-variants', currentPage, searchQuery, statusFilter],
     queryFn: () =>
       itemVariantApi.list({
         per_page: 15,
+        item_type: 'INSUMO,ACTIVO',
         search: searchQuery || undefined,
         is_active: statusFilter ? statusFilter === 'active' : undefined,
       }),
