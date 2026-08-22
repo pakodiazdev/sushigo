@@ -259,7 +259,7 @@ merge conflict; every shared area above was resolved by the sequential/parallel 
 | Round 2 | 2 | 8h | 15h | 13.2h | +5.2h | -1.8h |
 | Round 3 | 2 | 9h | 17h | 8.2h | -0.8h | -8.8h |
 | Round 4 | 2 | 7h | 13h | 13.2h | +6.2h | +0.2h |
-| Round 5 | 1 | 3h | 6h | 0.5h | -2.5h | -5.5h |
+| Round 5 | 1 | 3h | 6h | 0.5h | -2.6h | -5.6h |
 | **Sprint total** | **8** | **32h** | **60h** | **56.3h** | **+24.3h** | **-3.7h** |
 
 Sprint total is computed directly from the sum of raw session minutes across all 8 Issues (3,376
