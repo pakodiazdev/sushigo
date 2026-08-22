@@ -212,7 +212,7 @@ jobs:
   api-tests-gate:
     name: api-tests
     runs-on: ubuntu-latest
-    needs: [changes, api-tests]
+    needs: [changes, api-tests, api-timing-script-tests]
     if: always()
 
     steps:
@@ -223,11 +223,17 @@ jobs:
       # api-tests's result alone can't tell these apart, so a PR that genuinely changed
       # code/api/** could merge with the real suite never having run, silently, if path
       # detection itself broke. Requiring changes to have actually succeeded closes that gap.
-      - name: Check change detection and api-tests matrix result
+      #
+      # api-timing-script-tests is checked too (Codex review finding): branch protection only
+      # requires this gate's literal `api-tests` name, not `api-timing-script-tests` directly, so
+      # without this a PR touching only .github/scripts/test-timing/** could merge with a broken
+      # timing-script unit test — api-tests itself would legitimately skip (no code/api change),
+      # and this gate would report success without ever looking at the job that actually ran.
+      - name: Check change detection, api-tests, and api-timing-script-tests results
         run: |
           changes_result="${{ needs.changes.result }}"
           if [ "$changes_result" != "success" ]; then
-            echo "changes job result was '$changes_result' — can't trust api-tests's skip decision, failing the gate" >&2
+            echo "changes job result was '$changes_result' — can't trust the other jobs' skip decisions, failing the gate" >&2
             exit 1
           fi
           result="${{ needs.api-tests.result }}"
@@ -235,7 +241,12 @@ jobs:
             echo "api-tests matrix result was '$result' — failing the required-check gate" >&2
             exit 1
           fi
-          echo "changes: $changes_result, api-tests: $result — gate passes"
+          timing_result="${{ needs.api-timing-script-tests.result }}"
+          if [ "$timing_result" != "success" ] && [ "$timing_result" != "skipped" ]; then
+            echo "api-timing-script-tests result was '$timing_result' — failing the required-check gate" >&2
+            exit 1
+          fi
+          echo "changes: $changes_result, api-tests: $result, api-timing-script-tests: $timing_result — gate passes"
 
   # Merges the whole-suite JUnit timing data back together (#481) so the #477 slow-test summary
   # still reports across all ~1900 tests, not one shard's partial ~475. Runs with if: always() —
