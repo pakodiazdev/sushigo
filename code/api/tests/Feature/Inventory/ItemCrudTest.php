@@ -245,6 +245,26 @@ class ItemCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_updating_a_producto_item_through_the_legacy_items_endpoint()
+    {
+        // Arrange — a pre-existing Product must only be managed via
+        // PUT /inventory/products/{id} (#423); this legacy endpoint accepts is_stocked/
+        // is_perishable, which the new Product contract deliberately never exposes.
+        $product = $this->createProduct(['is_stocked' => true]);
+
+        // Act
+        $response = $this->putJson("/api/v1/items/{$product->id}", [
+            'is_stocked' => false,
+        ]);
+
+        // Assert
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['type']);
+
+        $this->assertDatabaseHas('items', ['id' => $product->id, 'is_stocked' => true]);
+    }
+
+    #[Test]
     public function it_can_delete_item_without_variants()
     {
         // Arrange

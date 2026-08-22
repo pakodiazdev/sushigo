@@ -59,9 +59,9 @@ export function useInventoryLocationsSelect(enabled = true) {
 export function useItemsSelect(enabled = true) {
   return useQuery({
     queryKey: inventoryQueryKeys.itemsList({ is_active: true, for_select: true }),
-    queryFn: () => itemApi.list({ is_active: true, per_page: 100 }),
+    queryFn: () => itemApi.list({ is_active: true, type: 'INSUMO,ACTIVO', per_page: 100 }),
     enabled,
-    select: (response) => (response.data.data || []).filter((item) => item.type !== 'PRODUCTO'),
+    select: (response) => response.data.data || [],
   })
 }
 

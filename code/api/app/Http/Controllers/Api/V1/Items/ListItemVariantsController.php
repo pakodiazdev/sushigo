@@ -47,7 +47,10 @@ class ListItemVariantsController extends Controller
         }
 
         if ($request->filled('item_type')) {
-            $types = collect(explode(',', $request->item_type))
+            // Guards against e.g. item_type[]=INSUMO resolving to an array — explode() on a
+            // non-string throws a TypeError (500) instead of the intended 422.
+            $validated = $request->validate(['item_type' => ['string']]);
+            $types = collect(explode(',', $validated['item_type']))
                 ->map(fn ($type) => strtoupper(trim($type)))
                 ->filter()
                 ->all();
