@@ -195,6 +195,33 @@ jobs:
           path: code/api/coverage-shard-${{ matrix.shard }}.cov
           retention-days: 1
 
+  # Required-status-check shim (#486): `main`'s branch protection needs a check literally named
+  # `api-tests` that reports on *every* PR, not just ones touching `code/api/**`. Requiring the
+  # 4 individual shard names directly doesn't work: when the matrix job's own `if:` (added in #481
+  # for the same reason this job exists — avoiding 4 wasted Postgres containers on unrelated PRs)
+  # evaluates false, GitHub Actions skips the whole job *before* expanding `matrix.shard`, so it
+  # reports one single check literally named `api-tests (shard ${{ matrix.shard }}/${{
+  # strategy.job-total }})` — the raw unexpanded template string — never the 4 real per-shard
+  # names branch protection was waiting on. This job has no matrix, always runs, and simply
+  # mirrors the real job's result — `skipped` (nothing to test on this PR) is treated as pass,
+  # matching the semantics `needs.api-tests.result == 'success'` checks elsewhere in this file
+  # already use for a skipped-but-fine matrix job.
+  api-tests-gate:
+    name: api-tests
+    runs-on: ubuntu-latest
+    needs: [changes, api-tests]
+    if: always()
+
+    steps:
+      - name: Check api-tests matrix result
+        run: |
+          result="${{ needs.api-tests.result }}"
+          if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+            echo "api-tests matrix result was '$result' — failing the required-check gate" >&2
+            exit 1
+          fi
+          echo "api-tests matrix result: $result — gate passes"
+
   # Merges the whole-suite JUnit timing data back together (#481) so the #477 slow-test summary
   # still reports across all ~1900 tests, not one shard's partial ~475. Runs with if: always() —
   # same as the pre-sharding single job — so a failing shard still surfaces timing data instead of
