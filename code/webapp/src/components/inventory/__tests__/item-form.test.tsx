@@ -349,6 +349,31 @@ describe('ItemForm', () => {
                 )
             )
         })
+
+        it('preserves an existing ACTIVO item type unchanged on update', async () => {
+            const item = {
+                id: 1,
+                sku: 'ACT-001',
+                name: 'Rice Cooker',
+                description: '',
+                type: 'ACTIVO' as const,
+                is_stocked: false,
+                is_perishable: false,
+                is_active: true,
+                created_at: '',
+                updated_at: '',
+            }
+
+            const { container } = render(<ItemForm {...defaultProps} item={item} />)
+
+            fireEvent.submit(container.querySelector('form')!)
+
+            await waitFor(() =>
+                expect(mockExecute).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'ACTIVO' })
+                )
+            )
+        })
     })
 
     describe('media gallery wiring', () => {
