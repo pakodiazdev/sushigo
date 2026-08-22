@@ -216,14 +216,26 @@ jobs:
     if: always()
 
     steps:
-      - name: Check api-tests matrix result
+      # A skipped api-tests can mean two very different things: (a) changes legitimately
+      # determined this PR never touched code/api — fine, nothing to fail on — or (b) the
+      # changes job itself failed, leaving needs.changes.outputs.api empty, which also makes
+      # api-tests's own `if:` evaluate false and skip it — but for the wrong reason. Checking
+      # api-tests's result alone can't tell these apart, so a PR that genuinely changed
+      # code/api/** could merge with the real suite never having run, silently, if path
+      # detection itself broke. Requiring changes to have actually succeeded closes that gap.
+      - name: Check change detection and api-tests matrix result
         run: |
+          changes_result="${{ needs.changes.result }}"
+          if [ "$changes_result" != "success" ]; then
+            echo "changes job result was '$changes_result' — can't trust api-tests's skip decision, failing the gate" >&2
+            exit 1
+          fi
           result="${{ needs.api-tests.result }}"
           if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
             echo "api-tests matrix result was '$result' — failing the required-check gate" >&2
             exit 1
           fi
-          echo "api-tests matrix result: $result — gate passes"
+          echo "changes: $changes_result, api-tests: $result — gate passes"
 
   # Merges the whole-suite JUnit timing data back together (#481) so the #477 slow-test summary
   # still reports across all ~1900 tests, not one shard's partial ~475. Runs with if: always() —
