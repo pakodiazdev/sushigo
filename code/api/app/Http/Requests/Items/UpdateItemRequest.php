@@ -50,6 +50,20 @@ class UpdateItemRequest extends FormRequest
         ];
     }
 
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            // A Product must only be managed via PUT /inventory/products/{id} (#423) — this
+            // legacy endpoint accepts is_stocked/is_perishable, which the new Product contract
+            // deliberately never exposes, so leaving this open would let Products keep silently
+            // mutating state through the supposedly retired API (#429).
+            $item = Item::find($this->route('id'));
+            if ($item && $item->type === Item::TYPE_PRODUCTO) {
+                $validator->errors()->add('type', 'This item is a Product and must be managed from the Product catalog.');
+            }
+        });
+    }
+
     /**
      * Validated fields that are actual Item columns — media_gallery_id and
      * owner_token are not fillable on Item (they drive

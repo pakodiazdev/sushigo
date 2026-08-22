@@ -141,10 +141,12 @@ describe('Inventory Query Hooks', () => {
       expect(result.current.data).toEqual([])
     })
 
-    it('excludes PRODUCTO-type items — this picker only feeds the legacy global Variant page, and Product variants must be created via /inventory/products/{id}/variants instead (#429)', async () => {
+    it('excludes PRODUCTO-type items server-side (before pagination) — this picker only feeds the legacy global Variant page, and Product variants must be created via /inventory/products/{id}/variants instead (#429)', async () => {
+      // Filtering must happen server-side, not client-side after the fact: a client-side filter
+      // on a single paginated page would silently drop eligible INSUMO/ACTIVO rows that land on
+      // a later page once an installation has more than 100 active items.
       const mockItems = [
         { id: 1, name: 'Salmon', type: 'INSUMO' },
-        { id: 2, name: 'Sushi Roll', type: 'PRODUCTO' },
         { id: 3, name: 'Rice Cooker', type: 'ACTIVO' },
       ]
 
@@ -158,10 +160,10 @@ describe('Inventory Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      expect(result.current.data).toEqual([
-        { id: 1, name: 'Salmon', type: 'INSUMO' },
-        { id: 3, name: 'Rice Cooker', type: 'ACTIVO' },
-      ])
+      expect(inventoryApi.itemApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'INSUMO,ACTIVO' })
+      )
+      expect(result.current.data).toEqual(mockItems)
     })
   })
 

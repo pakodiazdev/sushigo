@@ -302,6 +302,22 @@ class ItemVariantCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_an_array_shaped_item_type_query_instead_of_erroring()
+    {
+        // Arrange — a caller sending item_type[]=INSUMO makes Laravel resolve $request->item_type
+        // as an array; explode() on a non-string must not reach a TypeError/500.
+        $item = $this->createItem();
+        $this->createItemVariant($item);
+
+        // Act
+        $response = $this->getJson('/api/v1/item-variants?item_type[]=INSUMO');
+
+        // Assert
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['item_type']);
+    }
+
+    #[Test]
     public function it_can_filter_active_variants()
     {
         // Arrange
