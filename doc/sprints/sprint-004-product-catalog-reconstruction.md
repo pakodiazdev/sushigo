@@ -1,11 +1,11 @@
 ---
 sprint: "004"
 title: Product Catalog Reconstruction
-status: Completed
+status: In Progress
 
 created: 2026-08-12
 started: 2026-08-18
-completed: 2026-08-21
+completed:
 last_updated: 2026-08-21
 
 base_branch: main
@@ -44,12 +44,11 @@ of the sprint, giving a real **1.34× parallelization factor** on formal scope a
 opportunistic work — see §11).
 
 Per `doc/conventions/sprints.md` §4, a sprint is formally completed once its closure checklist is
-done **and** the next sprint becomes current. This closure pass (`#488`) marks every other item on
-§18's checklist complete, but **deliberately leaves Sprint 005's promotion out of `planned/` as a
-separate follow-up** for `/close-sprint` to run — the same explicit split `#457`/`#460` used for
-Sprint 003's own closure. `status: Completed` and `completed: 2026-08-21` above reflect that all
-Sprint 004 work itself is done; the sprint's *lifecycle* position (highest-numbered sprint directly
-under `doc/sprints/`) does not change until that follow-up promotion runs.
+done **and** the next sprint becomes current. This closeout pass (`#488`) records that all Sprint
+004 work is delivered and every other item in §18 is complete, but **deliberately leaves Sprint
+005's promotion out of `planned/` as a separate follow-up** for `/close-sprint` to run — the same
+explicit split `#457`/`#460` used for Sprint 003's own closure. Accordingly, the frontmatter remains
+`status: In Progress` and leaves `completed` empty until that promotion formally closes Sprint 004.
 
 Two real data gaps surfaced while resyncing this document (see §12): Issue `#429` had merged code
 and a real logged session but had never been finalized (`Tracked`/Retrospective missing — fixed as
@@ -107,9 +106,9 @@ seed data, and leaves financial and Stock operations in their correct later doma
 | Planned start | 2026-09-06 |
 | Planned end | 2026-09-19 |
 | Started | 2026-08-18 (promoted early — see `#460`; Sprint 003 delivered its confirmed scope 6 days ahead of its own planned window) |
-| Completed | 2026-08-21 (confirmed scope; this document's own closure pass, `#488`, is dated the same day) |
+| Completed | — (formal closure pending Sprint 005 promotion) |
 | Target calendar duration | 14 days |
-| Actual calendar duration | 4 days (2026-08-18 → 2026-08-21) — 16 days ahead of the originally scheduled window |
+| Confirmed-scope delivery duration | 4 days (2026-08-18 → 2026-08-21) — 16 days ahead of the originally scheduled window |
 | Active workdays | 4 (2026-08-18, 08-19, 08-20, 08-21 — every day has real `## 📅 Sessions` evidence from at least one Issue, see §11) |
 
 ## 5. Scope
@@ -554,9 +553,8 @@ rediscover each time.
 
 > Every item below is complete except the very last one, which `#488` deliberately leaves for
 > `/close-sprint` to run as a separate follow-up — the same explicit split Sprint 003's own closure
-> (`#457`/`#460`) used. Per `doc/conventions/sprints.md` §4, this sprint's own document status is
-> `Completed` (frontmatter above), but its formal lifecycle position doesn't change until that
-> promotion runs.
+> (`#457`/`#460`) used. Per `doc/conventions/sprints.md` §4, this sprint remains `In Progress` and
+> its `completed` date remains empty until that promotion formally closes it.
 
 - [x] Eight Issues selected as one end-to-end catalog vertical.
 - [x] Every included Issue is linked to SushiGo Admin, labeled `sprint-4`, and assigned to the
@@ -582,8 +580,8 @@ rediscover each time.
 - [x] Delivered value and known limitations were documented (§15).
 - [x] Follow-up work was created or recorded (§17).
 - [x] Lessons learned were captured (§16).
-- [x] Metadata dates and status were updated (frontmatter — `status: Completed`,
-      `completed: 2026-08-21`, `last_updated: 2026-08-21`).
+- [x] Metadata dates and status were updated (frontmatter — `status: In Progress`, empty
+      `completed` pending formal closure, `last_updated: 2026-08-21`).
 - [ ] The next sprint was promoted or created when applicable. — **Deliberately deferred to
       `/close-sprint`**, per this Issue's own explicit scope carve-out (§1) — Sprint 005 remains
       under `doc/sprints/planned/` until that separate run promotes it.
