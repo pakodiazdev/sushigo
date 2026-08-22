@@ -203,9 +203,12 @@ jobs:
   # reports one single check literally named `api-tests (shard ${{ matrix.shard }}/${{
   # strategy.job-total }})` — the raw unexpanded template string — never the 4 real per-shard
   # names branch protection was waiting on. This job has no matrix, always runs, and simply
-  # mirrors the real job's result — `skipped` (nothing to test on this PR) is treated as pass,
-  # matching the semantics `needs.api-tests.result == 'success'` checks elsewhere in this file
-  # already use for a skipped-but-fine matrix job.
+  # mirrors the real job's result — `skipped` (this PR never touched code/api, nothing to fail
+  # on) is treated as pass. This is intentionally *looser* than `api-coverage-merge`'s own
+  # `needs.api-tests.result == 'success'` check further down: that job only makes sense after a
+  # real PHPUnit run, so it correctly stays strict and skips itself when api-tests did too. This
+  # gate's job is different — it exists purely so branch protection sees *something* report on
+  # every PR, so "nothing ran because nothing needed to" must count as passing here.
   api-tests-gate:
     name: api-tests
     runs-on: ubuntu-latest
