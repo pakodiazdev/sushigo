@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseJunitXml } = require('../parse.js');
+const { parseJunitXml, mergeParsed } = require('../parse.js');
 
 const NESTED_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
@@ -72,4 +72,34 @@ test('parseJunitXml falls back to summing testcase times when the root has no ti
   const { suiteTime } = parseJunitXml(xml);
 
   assert.equal(suiteTime, 1.75);
+});
+
+test('mergeParsed concatenates testcases and sums suiteTime/totalTests across shards', () => {
+  const shard1 = { testcases: [{ name: 'a', class: 'C1', time: 1 }], suiteTime: 1.5, totalTests: 1 };
+  const shard2 = { testcases: [{ name: 'b', class: 'C2', time: 2 }], suiteTime: 2.5, totalTests: 1 };
+
+  const merged = mergeParsed([shard1, shard2]);
+
+  assert.deepEqual(
+    merged.testcases.map((testcase) => testcase.name),
+    ['a', 'b'],
+  );
+  assert.equal(merged.suiteTime, 4);
+  assert.equal(merged.totalTests, 2);
+});
+
+test('mergeParsed returns an empty report for an empty list of shards', () => {
+  const merged = mergeParsed([]);
+
+  assert.deepEqual(merged.testcases, []);
+  assert.equal(merged.suiteTime, 0);
+  assert.equal(merged.totalTests, 0);
+});
+
+test('mergeParsed is a no-op wrapper around a single shard', () => {
+  const shard = { testcases: [{ name: 'a', class: 'C1', time: 1 }], suiteTime: 1, totalTests: 1 };
+
+  const merged = mergeParsed([shard]);
+
+  assert.deepEqual(merged, shard);
 });

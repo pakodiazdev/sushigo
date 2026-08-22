@@ -15,9 +15,65 @@ on:
         default: false
 
 jobs:
-  api-tests:
-    name: api-tests
+  # Single source of truth for path detection (#481 Copilot review) — every downstream job reads
+  # these outputs instead of re-running its own dorny/paths-filter step. This matters more than it
+  # did pre-sharding: a step-level `if:` inside a matrix job can skip PHPUnit itself, but it can't
+  # stop the job's own `services.pgsql` container from starting, so without a job-level gate a
+  # webapp-only PR would still pay for 4 Postgres containers across 4 shards for no reason.
+  changes:
+    name: changes
     runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      timing_script: ${{ steps.filter.outputs.timing_script }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'code/api/**'
+            timing_script:
+              - '.github/scripts/test-timing/**'
+
+  # Standalone, non-matrix job for the timing-script's own unit tests (#481 Copilot review) — a PR
+  # touching only .github/scripts/test-timing/** never changes code/api/**, so before this job
+  # existed the only way to still run these tests was gating a step inside the api-tests matrix on
+  # `matrix.shard == 1`, which still spun up 3 unused shards (and their Postgres containers) on
+  # every such PR. This job runs once, with no matrix and no services block, regardless of which of
+  # the two paths changed.
+  api-timing-script-tests:
+    name: api-timing-script-tests
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.timing_script == 'true' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run test-timing script unit tests
+        run: node --test .github/scripts/test-timing/tests/*.test.js
+
+  api-tests:
+    name: api-tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     services:
       pgsql:
@@ -42,34 +98,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect changes in code/api
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            api:
-              - 'code/api/**'
-            timing_script:
-              - '.github/scripts/test-timing/**'
-
-      # A PR touching only .github/scripts/test-timing/** (like the PR that introduced it) never
-      # changes code/api/**, so it must also trip this step on its own — otherwise the parser's
-      # own tests could regress without ever running (caught by Codex review on #477/#480).
-      # workflow_dispatch is always an explicit, human-requested diagnostic run — never gated by
-      # the path filter, which only makes sense for the automatic pull_request/push events.
-      - name: Setup Node 24
-        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.timing_script == 'true' || github.event_name == 'workflow_dispatch'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Run test-timing script unit tests
-        if: steps.changes.outputs.api == 'true' || steps.changes.outputs.timing_script == 'true' || github.event_name == 'workflow_dispatch'
-        working-directory: .
-        run: node --test .github/scripts/test-timing/tests/*.test.js
-
       - name: Setup PHP 8.5 with PCOV
-        if: steps.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
@@ -77,49 +106,173 @@ jobs:
           extensions: pdo_pgsql
 
       - name: Install Composer dependencies
-        if: steps.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
         run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
 
       - name: Copy .env and generate app key
-        if: steps.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cp .env.example .env
           php artisan key:generate --ansi
           php artisan passport:keys --ansi
 
+      # File-level sharding (#481): each matrix job gets its own runner and its own `pgsql`
+      # service container above, so shards never share a database — the SQLSTATE[40P01]
+      # concurrent-database class of bug the Issue calls out can't occur by construction, without
+      # needing per-worker DB provisioning the way in-process parallelism (e.g. Paratest) would.
+      # Splitting by whole test *file* (not by individual test method) keeps every file's
+      # RefreshDatabase lifecycle self-contained within one shard's process, matching how the
+      # suite already runs today. Round-robin (index % shard-count) distributes files evenly by
+      # count; per #477's own finding that cost is broadly distributed across ~1900 tests rather
+      # than concentrated in a few files, that's sufficient to balance wall-clock cost too,
+      # without needing per-file timing weights.
+      - name: List PHPUnit test files for this shard
+        id: shard-files
+        run: |
+          mapfile -t all_files < <(find tests/Unit tests/Feature -name '*Test.php' | sort)
+          total=${#all_files[@]}
+          shard_count=${{ strategy.job-total }}
+          shard_index=$(( ${{ matrix.shard }} - 1 ))
+          shard_files=()
+          for ((i = 0; i < total; i++)); do
+            if (( i % shard_count == shard_index )); then
+              shard_files+=("${all_files[$i]}")
+            fi
+          done
+          printf '%s\n' "${shard_files[@]}" > /tmp/shard-files.txt
+          echo "Shard ${{ matrix.shard }}/${shard_count}: ${#shard_files[@]} of ${total} test files"
+          # Guards the PHPUnit steps below: with zero positional file args, `vendor/bin/phpunit`
+          # falls back to phpunit.xml's full <testsuites> config and silently runs the *entire*
+          # suite instead of doing nothing — a shard with no assigned files must skip PHPUnit
+          # entirely, not accidentally run everyone else's tests too (Devin review flag).
+          if [ "${#shard_files[@]}" -eq 0 ]; then
+            echo "has-files=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-files=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Raw --coverage-php output (not --coverage-clover) on purpose: a per-shard Clover report
+      # only reflects the ~1/4 of `app/` this shard's tests happened to exercise, so merging
+      # Clover XML directly would misrepresent line coverage. `phpcov merge` (api-coverage-merge
+      # job) combines the raw per-shard coverage objects into one accurate Clover report instead —
+      # the extension must be `.cov`, which is the only extension `phpcov merge` scans for.
+      #
+      # Invokes vendor/bin/phpunit directly instead of `php artisan test` here: Laravel's
+      # TestCommand auto-injects its own internal `--coverage-php` when given `--coverage`, which
+      # collides with an explicit `--coverage-php` ("Option --coverage-php cannot be used more
+      # than once", confirmed live on this PR's own first CI run) and silently drops coverage
+      # collection instead of failing loudly. `vendor/bin/phpunit` is the same PHPUnit process
+      # `artisan test` shells out to — phpunit.xml's <env> block bootstraps Laravel identically
+      # either way (confirmed locally: same test count/assertions via both entry points) — so
+      # this bypasses only the wrapper's own flag-injection quirk, not the test environment.
       - name: Run PHPUnit with coverage
-        if: (steps.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch') && inputs.skip_coverage != true
+        if: steps.shard-files.outputs.has-files == 'true' && inputs.skip_coverage != true
         env:
           DB_HOST: 127.0.0.1
           DB_DATABASE: mydb_test
-        run: php artisan test --coverage --coverage-clover=coverage.xml --log-junit=test-results.xml
+        run: vendor/bin/phpunit --coverage-php=coverage-shard-${{ matrix.shard }}.cov --log-junit=test-results-shard-${{ matrix.shard }}.xml $(cat /tmp/shard-files.txt)
 
       # Diagnostic-only counterpart of the step above (#477): `skip_coverage` can only be true via
       # workflow_dispatch, so this never runs on the normal pull_request/push PR-validation path.
       - name: Run PHPUnit without coverage (diagnostic timing run)
-        if: github.event_name == 'workflow_dispatch' && inputs.skip_coverage == true
+        if: steps.shard-files.outputs.has-files == 'true' && github.event_name == 'workflow_dispatch' && inputs.skip_coverage == true
         env:
           DB_HOST: 127.0.0.1
           DB_DATABASE: mydb_test
-        run: php artisan test --log-junit=test-results.xml
-
-      # Runs with if: always() so a failing/erroring suite still surfaces timing data for
-      # diagnosis instead of only the pass/fail signal already visible in the job's own log.
-      - name: Publish PHPUnit slow-test summary
-        if: always() && (steps.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch')
-        working-directory: .
-        run: node .github/scripts/test-timing/generate.js code/api/test-results.xml
+        run: vendor/bin/phpunit --log-junit=test-results-shard-${{ matrix.shard }}.xml $(cat /tmp/shard-files.txt)
 
       - name: Upload JUnit test report
-        if: always() && (steps.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch')
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phpunit-junit-report
-          path: code/api/test-results.xml
+          name: phpunit-junit-report-shard-${{ matrix.shard }}
+          path: code/api/test-results-shard-${{ matrix.shard }}.xml
           retention-days: 7
 
+      - name: Upload raw coverage report
+        if: inputs.skip_coverage != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-coverage-raw-shard-${{ matrix.shard }}
+          path: code/api/coverage-shard-${{ matrix.shard }}.cov
+          retention-days: 1
+
+  # Merges the whole-suite JUnit timing data back together (#481) so the #477 slow-test summary
+  # still reports across all ~1900 tests, not one shard's partial ~475. Runs with if: always() —
+  # same as the pre-sharding single job — so a failing shard still surfaces timing data instead of
+  # only the pass/fail signal already visible in that shard's own job log. Also gated on
+  # needs.changes.outputs so it doesn't run at all (nothing to download) on an unrelated PR.
+  api-junit-merge:
+    name: api-junit-merge
+    runs-on: ubuntu-latest
+    needs: [changes, api-tests]
+    # Must include timing_script (not just api) — dropped during the #481 Copilot-review job-level
+    # gating refactor, which meant a PR touching only .github/scripts/test-timing/** silently
+    # skipped this job entirely, running `download-artifact` against zero matching artifacts on
+    # any workflow_dispatch/api PR but never validating the timing-script path at all otherwise
+    # (Devin review flag).
+    if: always() && (needs.changes.outputs.api == 'true' || needs.changes.outputs.timing_script == 'true' || github.event_name == 'workflow_dispatch')
+
+    defaults:
+      run:
+        working-directory: code/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download per-shard JUnit reports
+        uses: actions/download-artifact@v4
+        with:
+          path: code/api
+          pattern: phpunit-junit-report-shard-*
+          merge-multiple: true
+
+      - name: Publish PHPUnit slow-test summary (whole suite, merged across shards)
+        working-directory: .
+        run: node .github/scripts/test-timing/generate.js code/api/test-results-shard-*.xml
+
+  # Merges the raw per-shard coverage objects (`--coverage-php`, `.cov`) into the single Clover
+  # report `api-sonar` already expects, via `phpcov merge` (phpunit/phpcov, a require-dev
+  # dependency added by #481 specifically for this). A skip_coverage diagnostic run never produces
+  # any `.cov` artifacts, so it must not run in that case — mirrors the pre-sharding api-sonar
+  # guard.
+  api-coverage-merge:
+    name: api-coverage-merge
+    runs-on: ubuntu-latest
+    needs: [changes, api-tests]
+    if: (needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch') && needs.api-tests.result == 'success' && inputs.skip_coverage != true
+
+    defaults:
+      run:
+        working-directory: code/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Download per-shard raw coverage
+        uses: actions/download-artifact@v4
+        with:
+          path: code/api/coverage-shards
+          pattern: php-coverage-raw-shard-*
+          merge-multiple: true
+
+      - name: Merge shard coverage into a single Clover report
+        run: vendor/bin/phpcov merge --clover=coverage.xml coverage-shards
+
       - name: Upload coverage report
-        if: (steps.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch') && inputs.skip_coverage != true
         uses: actions/upload-artifact@v4
         with:
           name: php-coverage
@@ -129,10 +282,8 @@ jobs:
   api-sonar:
     name: api-sonar
     runs-on: ubuntu-latest
-    needs: api-tests
-    # A skip_coverage diagnostic run (#477) never produces the php-coverage artifact this job
-    # downloads below, so it must not run in that case.
-    if: needs.api-tests.result == 'success' && inputs.skip_coverage != true
+    needs: [changes, api-coverage-merge]
+    if: needs.changes.outputs.api == 'true' && needs.api-coverage-merge.result == 'success'
 
     steps:
       - name: Checkout
@@ -140,23 +291,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect changes in code/api
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            api:
-              - 'code/api/**'
-
       - name: Download coverage report
-        if: steps.changes.outputs.api == 'true'
         uses: actions/download-artifact@v4
         with:
           name: php-coverage
           path: code/api
 
       - name: SonarCloud Scan (API)
-        if: steps.changes.outputs.api == 'true'
         uses: SonarSource/sonarcloud-github-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

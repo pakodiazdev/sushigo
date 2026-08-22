@@ -3,7 +3,7 @@
 
 const fs = require('node:fs');
 
-const { parseJunitXml } = require('./parse.js');
+const { parseJunitXml, mergeParsed } = require('./parse.js');
 const { buildSummaryMarkdown } = require('./report.js');
 
 function parsePositiveInt(value, fallback) {
@@ -18,18 +18,22 @@ function errorMessage(error) {
 const TOP_N = parsePositiveInt(process.env.TEST_TIMING_TOP_N, 20);
 
 function main() {
-  const junitPath = process.argv[2];
-  if (!junitPath) {
-    throw new Error('Usage: node generate.js <path-to-junit-xml>');
+  // One path per shard (api-tests.yml's `matrix.shard` strategy, #481) — the shell expands the
+  // workflow's `test-results-shard-*.xml` glob before this process ever starts, so argv already
+  // holds the real file list; a single path (the pre-#481 invocation) still works unchanged.
+  const junitPaths = process.argv.slice(2);
+  if (junitPaths.length === 0) {
+    throw new Error('Usage: node generate.js <path-to-junit-xml> [more-junit-xml...]');
   }
 
-  if (!fs.existsSync(junitPath)) {
-    console.log(`No JUnit report found at ${junitPath} — skipping test timing summary.`);
+  const existingPaths = junitPaths.filter((junitPath) => fs.existsSync(junitPath));
+  if (existingPaths.length === 0) {
+    console.log(`No JUnit report found at ${junitPaths.join(', ')} — skipping test timing summary.`);
     return;
   }
 
-  const xml = fs.readFileSync(junitPath, 'utf8');
-  const parsed = parseJunitXml(xml);
+  const parsedReports = existingPaths.map((junitPath) => parseJunitXml(fs.readFileSync(junitPath, 'utf8')));
+  const parsed = mergeParsed(parsedReports);
   const summary = buildSummaryMarkdown(parsed, TOP_N);
 
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;

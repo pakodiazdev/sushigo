@@ -48,4 +48,15 @@ function parseJunitXml(xml) {
   };
 }
 
-module.exports = { parseJunitXml };
+// Combines the per-shard reports produced by api-tests.yml's `matrix.shard` strategy (#481) into
+// a single whole-suite view — same shape `parseJunitXml` returns for one file — so the Top-N
+// summary reflects the entire test run instead of just one shard's partial data.
+function mergeParsed(parsedReports) {
+  return {
+    testcases: parsedReports.flatMap((report) => report.testcases),
+    suiteTime: parsedReports.reduce((sum, report) => sum + report.suiteTime, 0),
+    totalTests: parsedReports.reduce((sum, report) => sum + report.totalTests, 0),
+  };
+}
+
+module.exports = { parseJunitXml, mergeParsed };
