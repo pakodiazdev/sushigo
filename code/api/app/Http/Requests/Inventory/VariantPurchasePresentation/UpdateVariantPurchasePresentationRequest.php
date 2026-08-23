@@ -28,8 +28,8 @@ class UpdateVariantPurchasePresentationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($this->route('id'));
-        $variant = ItemVariant::where('item_id', $product->id)->findOrFail($this->route('variantId'));
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $this->route('id'))->firstOrFail();
+        $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $this->route('variantId'))->firstOrFail();
 
         VariantPurchasePresentation::where('item_variant_id', $variant->id)
             ->where('public_id', $this->route('presentationId'))
@@ -40,7 +40,8 @@ class UpdateVariantPurchasePresentationRequest extends FormRequest
 
     public function rules(): array
     {
-        $presentation = VariantPurchasePresentation::where('item_variant_id', $this->route('variantId'))
+        $variantId = ItemVariant::where('public_id', $this->route('variantId'))->value('id');
+        $presentation = VariantPurchasePresentation::where('item_variant_id', $variantId)
             ->where('public_id', $this->route('presentationId'))
             ->first();
 

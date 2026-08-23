@@ -40,9 +40,9 @@ class UpdateItemVariantController extends Controller
 {
     use FormatsItemVariant;
 
-    public function __invoke(UpdateItemVariantRequest $request, int $id)
+    public function __invoke(UpdateItemVariantRequest $request, string $id)
     {
-        $variant = ItemVariant::findOrFail($id);
+        $variant = ItemVariant::findByPublicIdOrFail($id);
         $variant->update($request->validated());
         $variant->load(['item', 'unitOfMeasure']);
 

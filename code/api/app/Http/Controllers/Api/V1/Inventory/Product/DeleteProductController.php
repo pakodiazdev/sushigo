@@ -32,9 +32,9 @@ use App\Models\Item;
  */
 class DeleteProductController extends Controller
 {
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($id);
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
 
         if ($product->variants()->exists()) {
             return response()->json([

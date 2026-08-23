@@ -13,9 +13,9 @@ const mockHandleSubmit = vi.fn((fn: (data: unknown) => void) => (e: React.FormEv
     fn({})
 })
 let watchValues: Record<string, number | string> = {
-    location_id: 0,
-    variant_id: 0,
-    uom_id: 0,
+    location_id: '',
+    variant_id: '',
+    uom_id: '',
     qty: 0,
     reason: 'SALE',
     sale_price: 0,
@@ -62,14 +62,14 @@ vi.mock('@/hooks/use-form-mutation', () => ({
 // Stable references — real react-query memoizes `data` between renders when unchanged;
 // returning fresh array/object literals on every call (as before) breaks that assumption and
 // causes the variant-lookup useEffect to loop forever once a test actually selects a variant.
-const MOCK_LOCATIONS = [{ id: 1, name: 'Main Warehouse', type: 'WAREHOUSE', priority: 10 }]
+const MOCK_LOCATIONS = [{ id: 'location-01', name: 'Main Warehouse', type: 'WAREHOUSE', priority: 10 }]
 const MOCK_VARIANTS = [{
-    id: 1, code: 'VAR-001', name: 'Salt 500g', uom_id: 1,
-    uom: { name: 'Kilogram', symbol: 'kg' },
+    id: 'variant-01', code: 'VAR-001', name: 'Salt 500g', uom_id: 1,
+    uom: { id: 'uom-01', name: 'Kilogram', symbol: 'kg' },
     item: { sku: 'SAL-001', name: 'Salt' },
     last_unit_cost: 5.0, min_stock: 10,
 }]
-const MOCK_UNITS = [{ id: 1, name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' }]
+const MOCK_UNITS = [{ id: 'uom-01', name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' }]
 
 // Mock inventory queries
 vi.mock('@/hooks/use-inventory-queries', () => ({
@@ -116,9 +116,9 @@ describe('StockOutForm', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         watchValues = {
-            location_id: 0,
-            variant_id: 0,
-            uom_id: 0,
+            location_id: '',
+            variant_id: '',
+            uom_id: '',
             qty: 0,
             reason: 'SALE',
             sale_price: 0,
@@ -189,12 +189,12 @@ describe('StockOutForm', () => {
     })
 
     it('accepts preselectedLocationId prop', () => {
-        const { container } = render(<StockOutForm {...defaultProps} preselectedLocationId={1} />)
+        const { container } = render(<StockOutForm {...defaultProps} preselectedLocationId="location-01" />)
         expect(container.querySelector('form')).toBeDefined()
     })
 
     it('accepts preselectedVariantId prop', () => {
-        const { container } = render(<StockOutForm {...defaultProps} preselectedVariantId={1} />)
+        const { container } = render(<StockOutForm {...defaultProps} preselectedVariantId="variant-01" />)
         expect(container.querySelector('form')).toBeDefined()
     })
 
@@ -301,22 +301,22 @@ describe('StockOutForm', () => {
     it('calls setValue when location select changes', () => {
         const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
         const selects = getAllByRole('combobox')
-        fireEvent.change(selects[0]!, { target: { value: '1' } })
-        expect(mockSetValue).toHaveBeenCalledWith('location_id', 1)
+        fireEvent.change(selects[0]!, { target: { value: 'location-01' } })
+        expect(mockSetValue).toHaveBeenCalledWith('location_id', 'location-01')
     })
 
     it('calls setValue when variant select changes', () => {
         const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
         const selects = getAllByRole('combobox')
-        fireEvent.change(selects[1]!, { target: { value: '1' } })
-        expect(mockSetValue).toHaveBeenCalledWith('variant_id', 1)
+        fireEvent.change(selects[1]!, { target: { value: 'variant-01' } })
+        expect(mockSetValue).toHaveBeenCalledWith('variant_id', 'variant-01')
     })
 
     it('calls setValue when uom select changes', () => {
         const { getAllByRole } = render(<StockOutForm {...defaultProps} />)
         const selects = getAllByRole('combobox')
-        fireEvent.change(selects[2]!, { target: { value: '1' } })
-        expect(mockSetValue).toHaveBeenCalledWith('uom_id', 1)
+        fireEvent.change(selects[2]!, { target: { value: 'uom-01' } })
+        expect(mockSetValue).toHaveBeenCalledWith('uom_id', 'uom-01')
     })
 
     it('calls setValue when reason select changes', () => {
@@ -353,10 +353,10 @@ describe('StockOutForm', () => {
     })
 
     it('shows the current stock info panel with normal stock levels', async () => {
-        watchValues.variant_id = 1
-        watchValues.location_id = 1
+        watchValues.variant_id = 'variant-01'
+        watchValues.location_id = 'location-01'
         mockQueryResult.data = {
-            data: { data: [{ inventory_location_id: 1, on_hand: 50, reserved: 5, available: 45 }] },
+            data: { data: [{ inventory_location_id: 'location-01', on_hand: 50, reserved: 5, available: 45 }] },
         }
 
         const { findByText, queryByText } = render(<StockOutForm {...defaultProps} />)
@@ -367,10 +367,10 @@ describe('StockOutForm', () => {
     })
 
     it('shows a low-stock warning when available stock is below the variant minimum', async () => {
-        watchValues.variant_id = 1
-        watchValues.location_id = 1
+        watchValues.variant_id = 'variant-01'
+        watchValues.location_id = 'location-01'
         mockQueryResult.data = {
-            data: { data: [{ inventory_location_id: 1, on_hand: 8, reserved: 3, available: 5 }] },
+            data: { data: [{ inventory_location_id: 'location-01', on_hand: 8, reserved: 3, available: 5 }] },
         }
 
         const { findByText } = render(<StockOutForm {...defaultProps} />)
@@ -379,11 +379,11 @@ describe('StockOutForm', () => {
     })
 
     it('shows an insufficient-stock error when quantity exceeds available stock', async () => {
-        watchValues.variant_id = 1
-        watchValues.location_id = 1
+        watchValues.variant_id = 'variant-01'
+        watchValues.location_id = 'location-01'
         watchValues.qty = 10
         mockQueryResult.data = {
-            data: { data: [{ inventory_location_id: 1, on_hand: 8, reserved: 3, available: 5 }] },
+            data: { data: [{ inventory_location_id: 'location-01', on_hand: 8, reserved: 3, available: 5 }] },
         }
 
         const { findByText } = render(<StockOutForm {...defaultProps} />)
@@ -393,7 +393,7 @@ describe('StockOutForm', () => {
     })
 
     it('shows the profit analysis panel with revenue, cost and profit for a sale', async () => {
-        watchValues.variant_id = 1
+        watchValues.variant_id = 'variant-01'
         watchValues.qty = 10
         watchValues.sale_price = 20
         watchValues.reason = 'SALE'

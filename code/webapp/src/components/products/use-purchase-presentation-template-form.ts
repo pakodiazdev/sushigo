@@ -87,7 +87,7 @@ export function usePurchasePresentationTemplateForm({
         name: data.name,
         package_type: data.package_type as PurchasePresentationPackageType,
         base_unit_quantity: Number(data.base_unit_quantity),
-        compatible_dimension_uom_id: Number(data.compatible_dimension_uom_id),
+        compatible_dimension_uom_id: data.compatible_dimension_uom_id,
         is_active: data.is_active,
       }),
     updateFn: (data: PurchasePresentationTemplateFormValues) =>
@@ -96,7 +96,7 @@ export function usePurchasePresentationTemplateForm({
         name: data.name,
         package_type: data.package_type as PurchasePresentationPackageType,
         base_unit_quantity: Number(data.base_unit_quantity),
-        compatible_dimension_uom_id: Number(data.compatible_dimension_uom_id),
+        compatible_dimension_uom_id: data.compatible_dimension_uom_id,
         is_active: data.is_active,
       }),
     entityName: 'Template',

@@ -113,7 +113,7 @@ class UnitOfMeasurePermissionsTest extends TestCase
             'symbol' => 'pz',
         ]);
 
-        $this->putJson("/api/v1/units-of-measure/{$uom->id}", [
+        $this->putJson("/api/v1/units-of-measure/{$uom->public_id}", [
             'name' => 'Pieza actualizada',
         ])->assertStatus(200);
     }
@@ -129,7 +129,7 @@ class UnitOfMeasurePermissionsTest extends TestCase
             'symbol' => 'cj',
         ]);
 
-        $this->deleteJson("/api/v1/units-of-measure/{$uom->id}")->assertStatus(200);
+        $this->deleteJson("/api/v1/units-of-measure/{$uom->public_id}")->assertStatus(200);
     }
 
     // -------------------------------------------------------------------------
@@ -159,7 +159,7 @@ class UnitOfMeasurePermissionsTest extends TestCase
             'symbol' => 'kg',
         ]);
 
-        $this->putJson("/api/v1/units-of-measure/{$uom->id}", [
+        $this->putJson("/api/v1/units-of-measure/{$uom->public_id}", [
             'name' => 'Should not update',
         ])->assertStatus(403);
     }
@@ -175,7 +175,7 @@ class UnitOfMeasurePermissionsTest extends TestCase
             'symbol' => 'g',
         ]);
 
-        $this->deleteJson("/api/v1/units-of-measure/{$uom->id}")->assertStatus(403);
+        $this->deleteJson("/api/v1/units-of-measure/{$uom->public_id}")->assertStatus(403);
     }
 
     // -------------------------------------------------------------------------

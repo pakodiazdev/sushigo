@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Inventory\PurchasePresentationTemplate;
 
+use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Models\PurchasePresentationTemplate;
+use App\Models\UnitOfMeasure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,12 +19,14 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="name", type="string", maxLength=255),
  *   @OA\Property(property="package_type", type="string", enum={"UNIT", "PACK", "BOX", "TRAY"}),
  *   @OA\Property(property="base_unit_quantity", type="number", format="float"),
- *   @OA\Property(property="compatible_dimension_uom_id", type="integer"),
+ *   @OA\Property(property="compatible_dimension_uom_id", type="string"),
  *   @OA\Property(property="is_active", type="boolean")
  * )
  */
 class UpdatePurchasePresentationTemplateRequest extends FormRequest
 {
+    use ResolvesPublicIdReferences;
+
     public function authorize(): bool
     {
         return true;
@@ -43,7 +47,7 @@ class UpdatePurchasePresentationTemplateRequest extends FormRequest
                 PurchasePresentationTemplate::PACKAGE_TYPE_TRAY,
             ])],
             'base_unit_quantity' => ['sometimes', 'numeric', 'min:0.0001'],
-            'compatible_dimension_uom_id' => ['sometimes', 'integer', 'exists:units_of_measure,id'],
+            'compatible_dimension_uom_id' => ['sometimes', 'string', 'exists:units_of_measure,public_id'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
@@ -90,9 +94,13 @@ class UpdatePurchasePresentationTemplateRequest extends FormRequest
             // report that as a change on every no-op resend of a resource
             // round-trip, so this field is normalized to the same 4-decimal
             // scale on both sides before comparing.
+            $submittedValue = $field === 'compatible_dimension_uom_id'
+                ? $this->resolvePublicId(UnitOfMeasure::class, $field)
+                : $this->input($field);
+
             $changed = $field === 'base_unit_quantity'
                 ? number_format((float) $this->input($field), 4, '.', '') !== number_format((float) $template->{$field}, 4, '.', '')
-                : (string) $this->input($field) !== (string) $template->{$field};
+                : (string) $submittedValue !== (string) $template->{$field};
 
             if ($changed) {
                 $validator->errors()->add($field, 'This field cannot be changed once the template has been assigned to a Variant.');
@@ -105,6 +113,12 @@ class UpdatePurchasePresentationTemplateRequest extends FormRequest
      */
     public function templateData(): array
     {
-        return $this->validated();
+        $data = $this->validated();
+
+        if (array_key_exists('compatible_dimension_uom_id', $data)) {
+            $data['compatible_dimension_uom_id'] = $this->resolvePublicId(UnitOfMeasure::class, 'compatible_dimension_uom_id');
+        }
+
+        return $data;
     }
 }

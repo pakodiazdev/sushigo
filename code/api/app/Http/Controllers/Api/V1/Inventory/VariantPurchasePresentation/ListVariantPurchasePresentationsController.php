@@ -41,10 +41,10 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class ListVariantPurchasePresentationsController extends Controller
 {
-    public function __invoke(int $id, int $variantId): AnonymousResourceCollection
+    public function __invoke(string $id, string $variantId): AnonymousResourceCollection
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($id);
-        $variant = ItemVariant::where('item_id', $product->id)->findOrFail($variantId);
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
+        $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $variantId)->firstOrFail();
 
         $presentations = $variant->purchasePresentations()
             ->with('template')

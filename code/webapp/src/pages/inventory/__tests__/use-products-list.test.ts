@@ -40,7 +40,7 @@ const beverages: InventoryCategory = { id: 'cat-beverages', name: 'Beverages', p
 const cocaCola: Brand = { id: 'brand-coca-cola', name: 'Coca-Cola', is_active: true }
 
 const cocaColaProduct: Product = {
-  id: 42,
+  id: '42',
   name: 'Coca-Cola Original 600 ml',
   description: null,
   is_active: true,
@@ -155,7 +155,7 @@ describe('useProductsList', () => {
     expect(result.current.panelMode).toBe('create')
     expect(result.current.isPanelOpen).toBe(true)
 
-    const created: Product = { ...cocaColaProduct, id: 99, name: 'New Soda' }
+    const created: Product = { ...cocaColaProduct, id: '99', name: 'New Soda' }
     act(() => result.current.handleCreated(created))
 
     // Same panel instance stays open — this is the whole point of the issue.
@@ -237,7 +237,7 @@ describe('useProductsList', () => {
       result.current.handleDelete()
     })
 
-    expect(productApi.delete).toHaveBeenCalledWith(42)
+    expect(productApi.delete).toHaveBeenCalledWith('42')
     await waitFor(() => expect(result.current.isPanelOpen).toBe(false))
     confirmSpy.mockRestore()
   })
@@ -258,7 +258,7 @@ describe('useProductsList', () => {
 
     function useProductsListWithVariantObserver() {
       const productsList = useProductsList()
-      useQuery({ queryKey: ['products', 42, 'variants'], queryFn: variantsFetch, enabled: true })
+      useQuery({ queryKey: ['products', '42', 'variants'], queryFn: variantsFetch, enabled: true })
       return productsList
     }
 

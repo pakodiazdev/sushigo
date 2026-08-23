@@ -15,9 +15,9 @@ vi.mock('react-hook-form', () => ({
         },
         watch: (field: string) => {
             const values: Record<string, unknown> = {
-                location_id: 1,
-                variant_id: 1,
-                uom_id: 1,
+                inventory_location_id: 'location-01',
+                item_variant_id: 'variant-01',
+                uom_id: 'uom-01',
                 qty: 10,
                 unit_cost: 5,
                 notes: '',
@@ -38,45 +38,49 @@ vi.mock('@/hooks/use-form-mutation', () => ({
     }),
 }))
 
+const MOCK_LOCATIONS = [
+    { id: 'location-01', name: 'Main Warehouse', type: 'WAREHOUSE', priority: 10 },
+    { id: 'location-02', name: 'Store Front', type: 'STORE', priority: 5 },
+]
+const MOCK_VARIANTS = [
+    {
+        id: 'variant-01',
+        code: 'VAR-001',
+        name: 'Salt 500g',
+        uom_id: 1,
+        uom: { id: 'uom-01', name: 'Kilogram', symbol: 'kg' },
+        item: { sku: 'SAL-001', name: 'Salt' },
+        last_unit_cost: 5.0,
+        min_stock: 10,
+    },
+    {
+        id: 'variant-02',
+        code: 'VAR-002',
+        name: 'Sugar 1kg',
+        uom_id: 2,
+        uom: { id: 'uom-02', name: 'Kilogram', symbol: 'kg' },
+        item: { sku: 'SUG-001', name: 'Sugar' },
+        last_unit_cost: 3.5,
+        min_stock: 5,
+    },
+]
+const MOCK_UNITS = [
+    { id: 'uom-01', name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' },
+    { id: 'uom-02', name: 'Piece', symbol: 'pc', type: 'COUNT' },
+]
+
 // Mock inventory queries
 vi.mock('@/hooks/use-inventory-queries', () => ({
     useInventoryLocationsSelect: () => ({
-        data: [
-            { id: 1, name: 'Main Warehouse', type: 'WAREHOUSE', priority: 10 },
-            { id: 2, name: 'Store Front', type: 'STORE', priority: 5 },
-        ],
+        data: MOCK_LOCATIONS,
         isLoading: false,
     }),
     useItemVariantsSelect: () => ({
-        data: [
-            {
-                id: 1,
-                code: 'VAR-001',
-                name: 'Salt 500g',
-                uom_id: 1,
-                uom: { name: 'Kilogram', symbol: 'kg' },
-                item: { sku: 'SAL-001', name: 'Salt' },
-                last_unit_cost: 5.0,
-                min_stock: 10,
-            },
-            {
-                id: 2,
-                code: 'VAR-002',
-                name: 'Sugar 1kg',
-                uom_id: 2,
-                uom: { name: 'Kilogram', symbol: 'kg' },
-                item: { sku: 'SUG-001', name: 'Sugar' },
-                last_unit_cost: 3.5,
-                min_stock: 5,
-            },
-        ],
+        data: MOCK_VARIANTS,
         isLoading: false,
     }),
     useUnitsOfMeasureSelect: () => ({
-        data: [
-            { id: 1, name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' },
-            { id: 2, name: 'Piece', symbol: 'pc', type: 'COUNT' },
-        ],
+        data: MOCK_UNITS,
         isLoading: false,
     }),
 }))
@@ -194,14 +198,14 @@ describe('OpeningBalanceForm', () => {
     describe('preselection props', () => {
         it('accepts preselectedLocationId prop', () => {
             const { container } = render(
-                <OpeningBalanceForm {...defaultProps} preselectedLocationId={1} />
+                <OpeningBalanceForm {...defaultProps} preselectedLocationId="location-01" />
             )
             expect(container.querySelector('form')).toBeDefined()
         })
 
         it('accepts preselectedVariantId prop', () => {
             const { container } = render(
-                <OpeningBalanceForm {...defaultProps} preselectedVariantId={1} />
+                <OpeningBalanceForm {...defaultProps} preselectedVariantId="variant-01" />
             )
             expect(container.querySelector('form')).toBeDefined()
         })

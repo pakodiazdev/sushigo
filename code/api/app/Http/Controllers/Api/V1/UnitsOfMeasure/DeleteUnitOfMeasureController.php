@@ -46,9 +46,9 @@ use App\Models\UnitOfMeasure;
  */
 class DeleteUnitOfMeasureController extends Controller
 {
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
-        $uom = UnitOfMeasure::findOrFail($id);
+        $uom = UnitOfMeasure::findByPublicIdOrFail($id);
 
         // Check if UOM is in use
         if ($uom->itemVariants()->exists()) {

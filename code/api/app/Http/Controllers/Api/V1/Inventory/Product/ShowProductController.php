@@ -38,13 +38,14 @@ use App\Models\Item;
  */
 class ShowProductController extends Controller
 {
-    public function __invoke(int $id): ProductResource
+    public function __invoke(string $id): ProductResource
     {
         $product = Item::query()
             ->where('type', Item::TYPE_PRODUCTO)
             ->with(['brand', 'inventoryCategory', 'mediaAttachments.mediaGallery.mediaAssets'])
             ->withCount('variants')
-            ->findOrFail($id);
+            ->where('public_id', $id)
+            ->firstOrFail();
 
         return new ProductResource($product);
     }

@@ -39,9 +39,9 @@ use Illuminate\Support\Facades\DB;
  */
 class UpdateItemController extends Controller
 {
-    public function __invoke(UpdateItemRequest $request, int $id, MediaAttachmentService $mediaAttachmentService)
+    public function __invoke(UpdateItemRequest $request, string $id, MediaAttachmentService $mediaAttachmentService)
     {
-        $item = Item::findOrFail($id);
+        $item = Item::findByPublicIdOrFail($id);
 
         DB::transaction(function () use ($request, $item, $mediaAttachmentService) {
             $item->update($request->itemData());
@@ -53,7 +53,7 @@ class UpdateItemController extends Controller
 
         return new ResponseEntity(
             data: [
-                'id' => $item->id,
+                'id' => $item->public_id,
                 'sku' => $item->sku,
                 'name' => $item->name,
                 'description' => $item->description,

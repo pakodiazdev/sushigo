@@ -98,7 +98,7 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $item = $this->createItem();
         $gallery = $this->uploadGallery();
 
-        $this->putJson("/api/v1/items/{$item->id}", [
+        $this->putJson("/api/v1/items/{$item->public_id}", [
             'media_gallery_id' => $gallery['gallery_id'],
         ])->assertForbidden();
 
@@ -125,7 +125,7 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $item = $this->createItem();
         $gallery = $this->uploadGallery();
 
-        $response = $this->putJson("/api/v1/items/{$item->id}", [
+        $response = $this->putJson("/api/v1/items/{$item->public_id}", [
             'media_gallery_id' => $gallery['gallery_id'],
             'owner_token' => $gallery['owner_token'],
         ]);
@@ -146,14 +146,14 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $item = $this->createItem();
         $firstGallery = $this->uploadGallery();
 
-        $this->putJson("/api/v1/items/{$item->id}", [
+        $this->putJson("/api/v1/items/{$item->public_id}", [
             'media_gallery_id' => $firstGallery['gallery_id'],
             'owner_token' => $firstGallery['owner_token'],
         ])->assertOk();
 
         $secondGallery = $this->uploadGallery();
 
-        $this->putJson("/api/v1/items/{$item->id}", [
+        $this->putJson("/api/v1/items/{$item->public_id}", [
             'media_gallery_id' => $secondGallery['gallery_id'],
             'owner_token' => $secondGallery['owner_token'],
         ])->assertOk();
@@ -183,12 +183,12 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         $secondItem = $this->createItem();
         $gallery = $this->uploadGallery();
 
-        $this->putJson("/api/v1/items/{$firstItem->id}", [
+        $this->putJson("/api/v1/items/{$firstItem->public_id}", [
             'media_gallery_id' => $gallery['gallery_id'],
             'owner_token' => $gallery['owner_token'],
         ])->assertOk();
 
-        $this->putJson("/api/v1/items/{$secondItem->id}", [
+        $this->putJson("/api/v1/items/{$secondItem->public_id}", [
             'media_gallery_id' => $gallery['gallery_id'],
         ])->assertOk();
 

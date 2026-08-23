@@ -7,7 +7,7 @@ import type { ProductVariant } from '@/types/inventory'
 import { useVariantForm } from './use-variant-form'
 
 interface VariantFormProps {
-  productId: number
+  productId: string
   variant?: ProductVariant | null
   onSuccess: (variant: ProductVariant) => void
   onCancel: () => void

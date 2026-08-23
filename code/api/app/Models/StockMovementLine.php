@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Support\Traits\HasPublicId;
+use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockMovementLine extends Model
 {
+    use HasPublicId, SerializesPublicIdAsId;
+
     protected $fillable = [
         'stock_movement_id',
         'item_variant_id',

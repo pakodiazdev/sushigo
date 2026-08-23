@@ -20,7 +20,7 @@ use App\Models\PurchasePresentationTemplate;
  *     @OA\Property(property="package_type", type="string", example="BOX"),
  *     @OA\Property(property="base_unit_quantity", type="number", format="float", example=24),
  *     @OA\Property(property="compatible_dimension_uom", type="object",
- *         @OA\Property(property="id", type="integer"),
+ *         @OA\Property(property="id", type="string"),
  *         @OA\Property(property="code", type="string"),
  *         @OA\Property(property="name", type="string"),
  *         @OA\Property(property="symbol", type="string")
@@ -41,7 +41,7 @@ class PurchasePresentationTemplateResource extends BaseResource
             'package_type' => $this->package_type,
             'base_unit_quantity' => (float) $this->base_unit_quantity,
             'compatible_dimension_uom' => $this->whenLoaded('compatibleUom', fn () => $this->compatibleUom ? [
-                'id' => $this->compatibleUom->id,
+                'id' => $this->compatibleUom->public_id,
                 'code' => $this->compatibleUom->code,
                 'name' => $this->compatibleUom->name,
                 'symbol' => $this->compatibleUom->symbol,

@@ -51,7 +51,7 @@ class ProductCatalogApiIntegrationTest extends InventoryTestCase
     {
         $item = Item::where('name', 'Coca-Cola')->firstOrFail();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$item->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$item->public_id}");
 
         $response->assertStatus(200)
             ->assertJsonPath('data.name', 'Coca-Cola')
@@ -64,7 +64,7 @@ class ProductCatalogApiIntegrationTest extends InventoryTestCase
     {
         $item = Item::where('name', 'Coca-Cola')->firstOrFail();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$item->id}/variants");
+        $response = $this->getJson("/api/v1/inventory/products/{$item->public_id}/variants");
 
         $response->assertStatus(200);
 

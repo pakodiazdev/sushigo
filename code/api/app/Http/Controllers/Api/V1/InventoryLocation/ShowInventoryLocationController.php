@@ -23,12 +23,12 @@ class ShowInventoryLocationController extends Controller
 {
     use FormatsInventoryLocation;
 
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
         $location = InventoryLocation::with([
             'operatingUnit.branch',
             'stock.itemVariant.item',
-        ])->findOrFail($id);
+        ])->where('public_id', $id)->firstOrFail();
 
         // Calculate stock totals
         $stockTotals = $location->stock()

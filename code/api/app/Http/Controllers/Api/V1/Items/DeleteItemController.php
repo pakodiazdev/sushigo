@@ -28,9 +28,9 @@ use App\Models\Item;
  */
 class DeleteItemController extends Controller
 {
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
-        $item = Item::findOrFail($id);
+        $item = Item::findByPublicIdOrFail($id);
 
         // Check if item has variants
         if ($item->variants()->exists()) {

@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\VariantPurchasePresentation\UpdateVariantPurchasePresentationRequest;
 use App\Http\Resources\Inventory\VariantPurchasePresentation\VariantPurchasePresentationResource;
+use App\Models\Item;
+use App\Models\ItemVariant;
 use App\Models\VariantPurchasePresentation;
 use App\Services\Inventory\VariantPurchasePresentationService;
 
@@ -45,9 +47,12 @@ use App\Services\Inventory\VariantPurchasePresentationService;
  */
 class UpdateVariantPurchasePresentationController extends Controller
 {
-    public function __invoke(UpdateVariantPurchasePresentationRequest $request, int $id, int $variantId, string $presentationId, VariantPurchasePresentationService $service): VariantPurchasePresentationResource
+    public function __invoke(UpdateVariantPurchasePresentationRequest $request, string $id, string $variantId, string $presentationId, VariantPurchasePresentationService $service): VariantPurchasePresentationResource
     {
-        $presentation = VariantPurchasePresentation::where('item_variant_id', $variantId)
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
+        $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $variantId)->firstOrFail();
+
+        $presentation = VariantPurchasePresentation::where('item_variant_id', $variant->id)
             ->where('public_id', $presentationId)
             ->firstOrFail();
 

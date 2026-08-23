@@ -33,7 +33,7 @@ import { useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
 // ── Test data ──────────────────────────────────────────────────────────────────
 
 const kilogram: UnitOfMeasure = {
-  id: 1,
+  id: '1',
   code: 'KG',
   name: 'Kilogram',
   symbol: 'kg',
@@ -44,13 +44,13 @@ const kilogram: UnitOfMeasure = {
 }
 
 const existingVariant: ProductVariant = {
-  id: 7,
-  item_id: 42,
+  id: '7',
+  item_id: '42',
   code: 'ARR-KG',
   barcode: '7501234567890',
   name: 'Arroz Premium 1kg',
   description: 'Grano largo',
-  uom: { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' },
+  uom: { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' },
   track_lot: false,
   track_serial: false,
   is_active: true,
@@ -86,7 +86,7 @@ describe('useVariantForm', () => {
   it('defaults to create mode with no variant', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: null, onSuccess: vi.fn() }),
+      () => useVariantForm({ productId: '42', variant: null, onSuccess: vi.fn() }),
       { wrapper }
     )
 
@@ -97,7 +97,7 @@ describe('useVariantForm', () => {
   it('is in editing mode with an existing variant', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: existingVariant, onSuccess: vi.fn() }),
+      () => useVariantForm({ productId: '42', variant: existingVariant, onSuccess: vi.fn() }),
       { wrapper }
     )
 
@@ -116,21 +116,21 @@ describe('useVariantForm', () => {
     } as never)
     const variantWithDeactivatedUom: ProductVariant = {
       ...existingVariant,
-      uom: { id: 9, code: 'LB', name: 'Pound', symbol: 'lb' },
+      uom: { id: '9', code: 'LB', name: 'Pound', symbol: 'lb' },
     }
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: variantWithDeactivatedUom, onSuccess: vi.fn() }),
+      () => useVariantForm({ productId: '42', variant: variantWithDeactivatedUom, onSuccess: vi.fn() }),
       { wrapper }
     )
 
-    expect(result.current.uoms).toEqual([{ id: 9, code: 'LB', name: 'Pound', symbol: 'lb' }])
+    expect(result.current.uoms).toEqual([{ id: '9', code: 'LB', name: 'Pound', symbol: 'lb' }])
   })
 
   it('does not duplicate the current UOM when it is still active', () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: existingVariant, onSuccess: vi.fn() }),
+      () => useVariantForm({ productId: '42', variant: existingVariant, onSuccess: vi.fn() }),
       { wrapper }
     )
 
@@ -138,12 +138,12 @@ describe('useVariantForm', () => {
   })
 
   it('creates the variant on submit, scoping item_id to the given productId (no Item selector)', async () => {
-    const created: ProductVariant = { ...existingVariant, id: 99, name: 'Arroz Integral 1kg' }
+    const created: ProductVariant = { ...existingVariant, id: '99', name: 'Arroz Integral 1kg' }
     vi.mocked(productVariantApi.create).mockResolvedValue({ data: { status: 201, data: created } } as never)
     const onSuccess = vi.fn()
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: null, onSuccess }),
+      () => useVariantForm({ productId: '42', variant: null, onSuccess }),
       { wrapper }
     )
 
@@ -160,11 +160,11 @@ describe('useVariantForm', () => {
       })
     })
 
-    expect(productVariantApi.create).toHaveBeenCalledWith(42, {
+    expect(productVariantApi.create).toHaveBeenCalledWith('42', {
       name: 'Arroz Integral 1kg',
       code: 'arr-int-kg',
       barcode: null,
-      uom_id: 1,
+      uom_id: '1',
       description: null,
       track_lot: false,
       track_serial: false,
@@ -180,7 +180,7 @@ describe('useVariantForm', () => {
     const onSuccess = vi.fn()
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: existingVariant, onSuccess }),
+      () => useVariantForm({ productId: '42', variant: existingVariant, onSuccess }),
       { wrapper }
     )
 
@@ -197,14 +197,14 @@ describe('useVariantForm', () => {
       })
     })
 
-    expect(productVariantApi.update).toHaveBeenCalledWith(42, 7, expect.objectContaining({ is_active: false }))
+    expect(productVariantApi.update).toHaveBeenCalledWith('42', '7', expect.objectContaining({ is_active: false }))
     await waitFor(() => expect(onSuccess).toHaveBeenCalled())
   })
 
   it('rejects a blank name', async () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: null, onSuccess: vi.fn() }),
+      () => useVariantForm({ productId: '42', variant: null, onSuccess: vi.fn() }),
       { wrapper }
     )
 
@@ -224,7 +224,7 @@ describe('useVariantForm', () => {
   it('requires a base unit', async () => {
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: null, onSuccess: vi.fn() }),
+      () => useVariantForm({ productId: '42', variant: null, onSuccess: vi.fn() }),
       { wrapper }
     )
 
@@ -258,7 +258,7 @@ describe('useVariantForm', () => {
     vi.mocked(productVariantApi.create).mockRejectedValue(error)
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
-      () => useVariantForm({ productId: 42, variant: null, onSuccess: vi.fn() }),
+      () => useVariantForm({ productId: '42', variant: null, onSuccess: vi.fn() }),
       { wrapper }
     )
 

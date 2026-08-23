@@ -98,13 +98,13 @@ class StockQueryTest extends InventoryTestCase
     {
         $location = InventoryLocation::first();
 
-        $response = $this->getJson("/api/v1/stock?inventory_location_id={$location->id}");
+        $response = $this->getJson("/api/v1/stock?inventory_location_id={$location->public_id}");
 
         $response->assertOk();
 
         $stocks = $response->json('data');
         foreach ($stocks as $stock) {
-            $this->assertEquals($location->id, $stock['inventory_location_id']);
+            $this->assertEquals($location->public_id, $stock['inventory_location']['id']);
         }
     }
 
@@ -112,13 +112,13 @@ class StockQueryTest extends InventoryTestCase
     {
         $variant = ItemVariant::where('code', 'VAR-001')->first();
 
-        $response = $this->getJson("/api/v1/stock?item_variant_id={$variant->id}");
+        $response = $this->getJson("/api/v1/stock?item_variant_id={$variant->public_id}");
 
         $response->assertOk();
 
         $stocks = $response->json('data');
         foreach ($stocks as $stock) {
-            $this->assertEquals($variant->id, $stock['item_variant_id']);
+            $this->assertEquals($variant->public_id, $stock['item_variant']['id']);
         }
 
         // Should have 1 location for VAR-001
@@ -141,7 +141,7 @@ class StockQueryTest extends InventoryTestCase
     {
         $location = InventoryLocation::first();
 
-        $response = $this->getJson("/api/v1/stock/by-location/{$location->id}");
+        $response = $this->getJson("/api/v1/stock/by-location/{$location->public_id}");
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -186,7 +186,7 @@ class StockQueryTest extends InventoryTestCase
     {
         $variant = ItemVariant::where('code', 'VAR-001')->first();
 
-        $response = $this->getJson("/api/v1/stock/by-variant/{$variant->id}");
+        $response = $this->getJson("/api/v1/stock/by-variant/{$variant->public_id}");
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -254,7 +254,7 @@ class StockQueryTest extends InventoryTestCase
             'is_active' => true,
         ]);
 
-        $response = $this->getJson("/api/v1/stock/by-location/{$location->id}");
+        $response = $this->getJson("/api/v1/stock/by-location/{$location->public_id}");
 
         $response->assertOk();
 
@@ -269,7 +269,7 @@ class StockQueryTest extends InventoryTestCase
         $stock = Stock::with('inventoryLocation')->first();
         $location = $stock->inventoryLocation;
 
-        $response = $this->getJson("/api/v1/stock/by-location/{$location->id}");
+        $response = $this->getJson("/api/v1/stock/by-location/{$location->public_id}");
 
         $response->assertOk();
 

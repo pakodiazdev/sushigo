@@ -137,7 +137,7 @@ class ItemVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product, ['name' => 'Old Name']);
 
         // Act
-        $response = $this->putJson("/api/v1/item-variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/item-variants/{$variant->public_id}", [
             'name' => 'Updated Name',
         ]);
 
@@ -185,7 +185,7 @@ class ItemVariantCrudTest extends InventoryTestCase
         ]);
 
         // Act
-        $response = $this->getJson("/api/v1/item-variants/{$variant->id}");
+        $response = $this->getJson("/api/v1/item-variants/{$variant->public_id}");
 
         // Assert
         $response->assertStatus(200)
@@ -217,7 +217,7 @@ class ItemVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($item, ['name' => 'Old Name']);
 
         // Act
-        $response = $this->putJson("/api/v1/item-variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/item-variants/{$variant->public_id}", [
             'name' => 'Updated Name',
             'min_stock' => 10,
             'max_stock' => 200,
@@ -245,7 +245,7 @@ class ItemVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($item);
 
         // Act
-        $response = $this->deleteJson("/api/v1/item-variants/{$variant->id}");
+        $response = $this->deleteJson("/api/v1/item-variants/{$variant->public_id}");
 
         // Assert
         $response->assertStatus(200);
@@ -268,7 +268,7 @@ class ItemVariantCrudTest extends InventoryTestCase
         ]);
 
         // Act
-        $response = $this->deleteJson("/api/v1/item-variants/{$variant->id}");
+        $response = $this->deleteJson("/api/v1/item-variants/{$variant->public_id}");
 
         // Assert
         $response->assertStatus(409);

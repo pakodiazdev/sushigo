@@ -32,6 +32,8 @@ class InventoryLocationCrudTest extends InventoryTestCase
 
         // Should have at least 1 location from test setup
         $this->assertGreaterThanOrEqual(1, $response->json('meta.total'));
+        $this->assertContains($this->location->public_id, collect($response->json('data'))->pluck('id'));
+        $this->assertNotContains($this->location->id, collect($response->json('data'))->pluck('id'));
     }
 
     #[Test]
@@ -188,7 +190,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
     {
         $location = InventoryLocation::first();
 
-        $response = $this->getJson("/api/v1/inventory-locations/{$location->id}");
+        $response = $this->getJson("/api/v1/inventory-locations/{$location->public_id}");
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -215,7 +217,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
     {
         $location = InventoryLocation::first();
 
-        $response = $this->actingAs($this->user)->putJson("/api/v1/inventory-locations/{$location->id}", [
+        $response = $this->actingAs($this->user)->putJson("/api/v1/inventory-locations/{$location->public_id}", [
             'name' => 'Updated Location Name',
             'priority' => 75,
             'is_active' => false,
@@ -246,7 +248,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
         $location = InventoryLocation::first();
         $originalName = $location->name;
 
-        $response = $this->actingAs($this->user)->putJson("/api/v1/inventory-locations/{$location->id}", [
+        $response = $this->actingAs($this->user)->putJson("/api/v1/inventory-locations/{$location->public_id}", [
             'priority' => 80,
         ]);
 
@@ -266,7 +268,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
             'operating_unit_id' => OperatingUnit::first()->id,
         ]);
 
-        $response = $this->actingAs($this->user)->deleteJson("/api/v1/inventory-locations/{$location->id}");
+        $response = $this->actingAs($this->user)->deleteJson("/api/v1/inventory-locations/{$location->public_id}");
 
         $response->assertOk()
             ->assertJson([
@@ -303,7 +305,7 @@ class InventoryLocationCrudTest extends InventoryTestCase
             'weighted_avg_cost' => 50.0,
         ]);
 
-        $response = $this->actingAs($this->user)->deleteJson("/api/v1/inventory-locations/{$location->id}");
+        $response = $this->actingAs($this->user)->deleteJson("/api/v1/inventory-locations/{$location->public_id}");
 
         $response->assertStatus(409)
             ->assertJson([

@@ -25,9 +25,9 @@ use App\Models\InventoryLocation;
  */
 class UpdateInventoryLocationController extends Controller
 {
-    public function __invoke(UpdateInventoryLocationRequest $request, int $id)
+    public function __invoke(UpdateInventoryLocationRequest $request, string $id)
     {
-        $location = InventoryLocation::findOrFail($id);
+        $location = InventoryLocation::findByPublicIdOrFail($id);
 
         $location->update($request->only([
             'name',
@@ -42,7 +42,7 @@ class UpdateInventoryLocationController extends Controller
 
         return new ResponseEntity(
             data: [
-                'id' => $location->id,
+                'id' => $location->public_id,
                 'operating_unit_id' => $location->operating_unit_id,
                 'name' => $location->name,
                 'type' => $location->type,

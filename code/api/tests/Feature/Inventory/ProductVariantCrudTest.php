@@ -19,7 +19,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $this->createItemVariant($product, ['code' => 'VAR-B']);
         $this->createItemVariant($otherProduct, ['code' => 'VAR-C']);
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants");
 
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
@@ -41,7 +41,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $this->createItemVariant($product);
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants?per_page=0");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?per_page=0");
 
         $response->assertStatus(422)->assertJsonValidationErrors(['per_page']);
     }
@@ -51,7 +51,7 @@ class ProductVariantCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants?per_page=abc");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?per_page=abc");
 
         $response->assertStatus(422)->assertJsonValidationErrors(['per_page']);
     }
@@ -61,7 +61,7 @@ class ProductVariantCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants?per_page=101");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?per_page=101");
 
         $response->assertStatus(422)->assertJsonValidationErrors(['per_page']);
     }
@@ -71,14 +71,15 @@ class ProductVariantCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
             'name' => 'Arroz Premium 1kg',
             'code' => 'arr-kg',
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonFragment(['name' => 'Arroz Premium 1kg', 'code' => 'ARR-KG', 'is_active' => true]);
+            ->assertJsonFragment(['name' => 'Arroz Premium 1kg', 'code' => 'ARR-KG', 'is_active' => true])
+            ->assertJsonPath('data.uom.id', $this->uomKg->public_id);
 
         $this->assertDatabaseHas('item_variants', [
             'item_id' => $product->id,
@@ -93,10 +94,10 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $otherProduct = $this->createProduct();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
             'name' => 'Arroz Premium 1kg',
             'code' => 'ARR-KG',
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'item_id' => $otherProduct->id,
         ]);
 
@@ -112,11 +113,11 @@ class ProductVariantCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
             'name' => 'Arroz Premium 1kg',
             'code' => 'ARR-KG',
             'barcode' => '750 1234-567890',
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'description' => 'Presentacion de 1 kilogramo',
             'track_lot' => true,
             'track_serial' => true,
@@ -138,11 +139,11 @@ class ProductVariantCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
             'name' => 'Arroz Premium 1kg',
             'code' => 12345,
             'barcode' => 7501234567890,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(201)
@@ -154,7 +155,7 @@ class ProductVariantCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", []);
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", []);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['name', 'code', 'uom_id']);
     }
@@ -164,7 +165,7 @@ class ProductVariantCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
             'name' => 'Arroz Premium 1kg',
             'code' => 'ARR-KG',
             'uom_id' => 999999,
@@ -179,10 +180,10 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $this->createItemVariant($product, ['code' => 'ARR-KG']);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
             'name' => 'Another',
             'code' => 'ARR-KG',
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['code']);
@@ -194,11 +195,11 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $this->createItemVariant($product, ['code' => 'EXISTING', 'barcode' => '7501234567890']);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
             'name' => 'Another',
             'code' => 'NEW-CODE',
             'barcode' => '7501234567890',
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['barcode']);
@@ -209,10 +210,10 @@ class ProductVariantCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
             'name' => 'Arroz Premium 1kg',
             'code' => 'ARR-KG',
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'sale_price' => 25.50,
             'min_stock' => 10,
             'max_stock' => 100,
@@ -236,7 +237,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $response = $this->postJson("/api/v1/inventory/products/{$insumo->id}/variants", [
             'name' => 'Arroz Premium 1kg',
             'code' => 'ARR-KG',
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(404);
@@ -248,7 +249,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $variant = $this->createItemVariant($product, ['code' => 'ARR-KG', 'name' => 'Arroz']);
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(200)->assertJsonFragment(['code' => 'ARR-KG', 'name' => 'Arroz']);
     }
@@ -260,7 +261,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $otherProduct = $this->createProduct();
         $variant = $this->createItemVariant($otherProduct);
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(404);
     }
@@ -271,7 +272,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $variant = $this->createItemVariant($product, ['name' => 'Old Name', 'code' => 'OLD-CODE']);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'name' => 'New Name',
         ]);
 
@@ -285,7 +286,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $variant = $this->createItemVariant($product, ['code' => 'ARR-KG', 'barcode' => '7501234567890']);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'code' => 'ARR-KG',
             'barcode' => '7501234567890',
             'name' => 'Renamed',
@@ -300,7 +301,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $variant = $this->createItemVariant($product, ['code' => 'OLD-CODE']);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'code' => 12345,
             'barcode' => 7501234567890,
         ]);
@@ -316,7 +317,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $this->createItemVariant($product, ['code' => 'TAKEN']);
         $variant = $this->createItemVariant($product, ['code' => 'MINE']);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'code' => 'TAKEN',
         ]);
 
@@ -330,7 +331,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $this->createItemVariant($product, ['code' => 'A', 'barcode' => '7501234567890']);
         $variant = $this->createItemVariant($product, ['code' => 'B', 'barcode' => '7509999999999']);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'barcode' => '7501234567890',
         ]);
 
@@ -343,7 +344,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $variant = $this->createItemVariant($product);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'sale_price' => 99,
             'min_stock' => 50,
             'max_stock' => 500,
@@ -366,8 +367,8 @@ class ProductVariantCrudTest extends InventoryTestCase
             'reserved' => 0,
         ]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
-            'uom_id' => $this->uomGr->id,
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
+            'uom_id' => $this->uomGr->public_id,
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['uom_id']);
@@ -385,8 +386,8 @@ class ProductVariantCrudTest extends InventoryTestCase
             'reason' => 'OPENING_BALANCE',
         ]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
-            'uom_id' => $this->uomGr->id,
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
+            'uom_id' => $this->uomGr->public_id,
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['uom_id']);
@@ -404,8 +405,8 @@ class ProductVariantCrudTest extends InventoryTestCase
             'reserved' => 0,
         ]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
-            'uom_id' => $this->uomKg->id,
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
+            'uom_id' => $this->uomKg->public_id,
             'name' => 'Renamed',
         ]);
 
@@ -418,8 +419,8 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
-            'uom_id' => $this->uomGr->id,
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
+            'uom_id' => $this->uomGr->public_id,
         ]);
 
         $response->assertStatus(200);
@@ -435,8 +436,8 @@ class ProductVariantCrudTest extends InventoryTestCase
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
         $this->createVariantPurchasePresentation($variant, $template);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
-            'uom_id' => $this->uomGr->id,
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
+            'uom_id' => $this->uomGr->public_id,
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['uom_id']);
@@ -449,7 +450,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $otherProduct = $this->createProduct();
         $variant = $this->createItemVariant($otherProduct);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'name' => 'New Name',
         ]);
 
@@ -462,7 +463,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $variant = $this->createItemVariant($product);
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(200);
         $this->assertSoftDeleted('item_variants', ['id' => $variant->id]);
@@ -481,7 +482,7 @@ class ProductVariantCrudTest extends InventoryTestCase
             'reserved' => 0,
         ]);
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(409);
         $this->assertDatabaseHas('item_variants', ['id' => $variant->id]);
@@ -494,7 +495,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $otherProduct = $this->createProduct();
         $variant = $this->createItemVariant($otherProduct);
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(404);
     }
@@ -505,7 +506,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants");
 
         $response->assertStatus(403);
     }
@@ -517,7 +518,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product);
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(403);
     }
@@ -528,8 +529,8 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
-            'name' => 'Arroz', 'code' => 'ARR', 'uom_id' => $this->uomKg->id,
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
+            'name' => 'Arroz', 'code' => 'ARR', 'uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(403);
@@ -542,7 +543,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product);
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'name' => 'New',
         ]);
 
@@ -556,7 +557,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product);
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(403);
     }
@@ -567,7 +568,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         auth()->forgetGuards();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants");
 
         $response->assertStatus(401);
     }
@@ -578,8 +579,8 @@ class ProductVariantCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         auth()->forgetGuards();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants", [
-            'name' => 'Arroz', 'code' => 'ARR', 'uom_id' => $this->uomKg->id,
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants", [
+            'name' => 'Arroz', 'code' => 'ARR', 'uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(401);
@@ -592,7 +593,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product);
         auth()->forgetGuards();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(401);
     }
@@ -604,7 +605,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product);
         auth()->forgetGuards();
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
             'name' => 'New',
         ]);
 
@@ -618,7 +619,7 @@ class ProductVariantCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product);
         auth()->forgetGuards();
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}");
 
         $response->assertStatus(401);
     }

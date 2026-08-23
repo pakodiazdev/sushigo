@@ -34,10 +34,10 @@ use App\Models\ItemVariant;
  */
 class DeleteVariantController extends Controller
 {
-    public function __invoke(int $id, int $variantId)
+    public function __invoke(string $id, string $variantId)
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($id);
-        $variant = ItemVariant::where('item_id', $product->id)->findOrFail($variantId);
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
+        $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $variantId)->firstOrFail();
 
         if ($variant->stock()->where('on_hand', '>', 0)->exists()) {
             return response()->json([

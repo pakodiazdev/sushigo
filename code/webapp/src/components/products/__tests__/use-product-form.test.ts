@@ -40,7 +40,7 @@ const cocaCola: Brand = { id: 'brand-coca-cola', name: 'Coca-Cola', is_active: t
 const discontinuedBrand: Brand = { id: 'brand-old', name: 'Old Brand', is_active: false }
 
 const existingProduct: Product = {
-  id: 42,
+  id: '42',
   name: 'Coca-Cola Original 600 ml',
   description: null,
   is_active: true,
@@ -197,7 +197,7 @@ describe('useProductForm', () => {
   })
 
   it('creates the product on submit and calls onSuccess with the saved Product', async () => {
-    const created: Product = { ...existingProduct, id: 99, name: 'New Soda' }
+    const created: Product = { ...existingProduct, id: '99', name: 'New Soda' }
     vi.mocked(productApi.create).mockResolvedValue({ data: { status: 201, data: created } } as never)
     const onSuccess = vi.fn()
     const { wrapper } = makeWrapper()
@@ -270,7 +270,7 @@ describe('useProductForm', () => {
     })
 
     expect(productApi.update).toHaveBeenCalledWith(
-      42,
+      '42',
       expect.objectContaining({ brand_id: null })
     )
     await waitFor(() => expect(onSuccess).toHaveBeenCalled())

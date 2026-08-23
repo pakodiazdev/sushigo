@@ -24,8 +24,8 @@ const presentationSchema = z.object({
 export type PurchasePresentationFormValues = z.infer<typeof presentationSchema>
 
 export interface UsePurchasePresentationFormOptions {
-  productId: number
-  variantId: number
+  productId: string
+  variantId: string
   /** The Variant's own base UOM — a template can only be assigned if its
    *  compatible_dimension_uom matches this (see §3.3 of the product-catalog architecture doc). */
   variantUom: ProductVariantUomRef | null

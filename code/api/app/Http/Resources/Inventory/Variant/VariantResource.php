@@ -42,14 +42,14 @@ class VariantResource extends BaseResource
     public function toArray($request): array
     {
         return [
-            'id' => $this->id,
-            'item_id' => $this->item_id,
+            'id' => $this->public_id,
+            'item_id' => $this->whenLoaded('item', fn () => $this->item?->public_id),
             'code' => $this->code,
             'barcode' => $this->barcode,
             'name' => $this->name,
             'description' => $this->description,
             'uom' => $this->whenLoaded('unitOfMeasure', fn () => $this->unitOfMeasure ? [
-                'id' => $this->unitOfMeasure->id,
+                'id' => $this->unitOfMeasure->public_id,
                 'code' => $this->unitOfMeasure->code,
                 'name' => $this->unitOfMeasure->name,
                 'symbol' => $this->unitOfMeasure->symbol,

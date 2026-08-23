@@ -15,7 +15,7 @@ const mockSetValue = vi.fn()
 const mockRegister = vi.fn((name: string) => ({ name }))
 
 const kilogram: UnitOfMeasure = {
-  id: 1,
+  id: '1',
   code: 'KG',
   name: 'Kilogram',
   symbol: 'kg',
@@ -67,13 +67,13 @@ function defaultState() {
 }
 
 const existingVariant: ProductVariant = {
-  id: 7,
-  item_id: 42,
+  id: '7',
+  item_id: '42',
   code: 'ARR-KG',
   barcode: '7501234567890',
   name: 'Arroz Premium 1kg',
   description: null,
-  uom: { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' },
+  uom: { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' },
   track_lot: false,
   track_serial: false,
   is_active: true,
@@ -88,79 +88,79 @@ describe('VariantForm', () => {
   describe('create mode', () => {
     it('renders the base unit options', () => {
       setHookState()
-      const { getByText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       expect(getByText('Kilogram (kg)')).toBeDefined()
     })
 
     it('does not render any Product/Item selector — the parent Product is fixed', () => {
       setHookState()
-      const { queryByText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { queryByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       expect(queryByText(/Product/)).toBeNull()
       expect(queryByText(/Item/)).toBeNull()
     })
 
     it('renders "Create Variant" as the submit label', () => {
       setHookState()
-      const { getByText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       expect(getByText('Create Variant')).toBeDefined()
     })
 
     it('calls onCancel when Cancel is clicked', () => {
       setHookState()
       const onCancel = vi.fn()
-      const { getByText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={onCancel} />)
+      const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={onCancel} />)
       fireEvent.click(getByText('Cancel'))
       expect(onCancel).toHaveBeenCalledTimes(1)
     })
 
     it('calls handleSubmit/onSubmit when the form is submitted', () => {
       setHookState()
-      const { container } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { container } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       fireEvent.submit(container.querySelector('form')!)
       expect(mockOnSubmit).toHaveBeenCalled()
     })
 
     it('disables the submit button while submitting', () => {
       setHookState({ isSubmitting: true })
-      const { getByText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       expect((getByText('Create Variant').closest('button') as HTMLButtonElement).disabled).toBe(true)
     })
 
     it('shows a spinner while submitting', () => {
       setHookState({ isSubmitting: true })
-      const { container } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { container } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       expect(container.querySelector('.animate-spin')).toBeDefined()
     })
 
     it('surfaces field errors', () => {
       setHookState({ allErrors: { name: 'Name is required' } })
-      const { getByText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       expect(getByText('Name is required')).toBeDefined()
     })
 
     it('disables the base unit select while units of measure are loading', () => {
       setHookState({ isUomsLoading: true, uoms: [] })
-      const { container } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { container } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       expect((container.querySelector('select[name="uom_id"]') as HTMLSelectElement).disabled).toBe(true)
     })
 
     it('wires the Track lot numbers checkbox into setValue', () => {
       setHookState()
-      const { getByLabelText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { getByLabelText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       fireEvent.click(getByLabelText('Track lot numbers'))
       expect(mockSetValue).toHaveBeenCalledWith('track_lot', true)
     })
 
     it('wires the Track serial numbers checkbox into setValue', () => {
       setHookState()
-      const { getByLabelText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { getByLabelText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       fireEvent.click(getByLabelText('Track serial numbers'))
       expect(mockSetValue).toHaveBeenCalledWith('track_serial', true)
     })
 
     it('wires the Active checkbox into setValue', () => {
       setHookState({ isActive: true })
-      const { getByLabelText } = render(<VariantForm productId={42} onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      const { getByLabelText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
       fireEvent.click(getByLabelText('Active'))
       expect(mockSetValue).toHaveBeenCalledWith('is_active', false)
     })
@@ -170,7 +170,7 @@ describe('VariantForm', () => {
     it('shows "Update Variant" as the submit label', () => {
       setHookState()
       const { getByText } = render(
-        <VariantForm productId={42} variant={existingVariant} onSuccess={vi.fn()} onCancel={vi.fn()} />
+        <VariantForm productId={'42'} variant={existingVariant} onSuccess={vi.fn()} onCancel={vi.fn()} />
       )
       expect(getByText('Update Variant')).toBeDefined()
     })

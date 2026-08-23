@@ -108,7 +108,7 @@ describe('VariantForm', () => {
 
     it('renders header with edit variant title when editing', () => {
       const variant = {
-        id: 1,
+        id: 'variant-01',
         item_id: 1,
         code: 'VAR-001',
         name: 'Salt 1kg',
@@ -157,7 +157,7 @@ describe('VariantForm', () => {
 
     it('renders update button when editing', () => {
       const variant = {
-        id: 1,
+        id: 'variant-01',
         item_id: 1,
         code: 'VAR-001',
         name: 'Salt 1kg',
@@ -279,7 +279,7 @@ describe('VariantForm', () => {
 
     it('calls execute on valid submission (update)', async () => {
       const variant = {
-        id: 1,
+        id: 'variant-01',
         item_id: 1,
         code: 'PR-001',
         name: 'Salt 1kg',

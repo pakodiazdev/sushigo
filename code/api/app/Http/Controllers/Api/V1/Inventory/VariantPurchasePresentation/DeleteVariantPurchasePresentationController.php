@@ -30,10 +30,10 @@ use Illuminate\Http\Response;
  */
 class DeleteVariantPurchasePresentationController extends Controller
 {
-    public function __invoke(int $id, int $variantId, string $presentationId): Response
+    public function __invoke(string $id, string $variantId, string $presentationId): Response
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($id);
-        $variant = ItemVariant::where('item_id', $product->id)->findOrFail($variantId);
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
+        $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $variantId)->firstOrFail();
 
         $presentation = VariantPurchasePresentation::where('item_variant_id', $variant->id)
             ->where('public_id', $presentationId)

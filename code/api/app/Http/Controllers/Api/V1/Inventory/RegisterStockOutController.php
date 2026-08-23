@@ -155,10 +155,10 @@ class RegisterStockOutController extends Controller
     {
         try {
             $movement = $this->stockOutService->registerStockOut(new RegisterStockOutData(
-                inventoryLocationId: $request->input('inventory_location_id'),
-                itemVariantId: $request->input('item_variant_id'),
+                inventoryLocationId: $request->inventoryLocationId(),
+                itemVariantId: $request->itemVariantId(),
                 quantity: $request->input('qty'),
-                transactionUomId: $request->input('uom_id'),
+                transactionUomId: $request->uomId(),
                 reason: $request->input('reason'),
                 salePrice: $request->input('sale_price'),
                 userId: $request->user()?->id,

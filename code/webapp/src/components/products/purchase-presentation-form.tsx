@@ -7,8 +7,8 @@ import type { ProductVariantUomRef, VariantPurchasePresentation } from '@/types/
 import { usePurchasePresentationForm } from './use-purchase-presentation-form'
 
 interface PurchasePresentationFormProps {
-  productId: number
-  variantId: number
+  productId: string
+  variantId: string
   variantUom: ProductVariantUomRef | null
   presentation?: VariantPurchasePresentation | null
   assignedTemplateIds: string[]

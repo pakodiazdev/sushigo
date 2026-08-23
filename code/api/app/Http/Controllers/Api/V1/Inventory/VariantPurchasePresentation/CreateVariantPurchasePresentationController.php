@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\VariantPurchasePresentation\StoreVariantPurchasePresentationRequest;
 use App\Http\Resources\Inventory\VariantPurchasePresentation\VariantPurchasePresentationResource;
+use App\Models\Item;
+use App\Models\ItemVariant;
 use App\Services\Inventory\VariantPurchasePresentationService;
 
 /**
@@ -43,9 +45,11 @@ use App\Services\Inventory\VariantPurchasePresentationService;
  */
 class CreateVariantPurchasePresentationController extends Controller
 {
-    public function __invoke(StoreVariantPurchasePresentationRequest $request, int $id, int $variantId, VariantPurchasePresentationService $service): VariantPurchasePresentationResource
+    public function __invoke(StoreVariantPurchasePresentationRequest $request, string $id, string $variantId, VariantPurchasePresentationService $service): VariantPurchasePresentationResource
     {
-        $presentation = $service->create($variantId, $request->presentationData());
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
+        $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $variantId)->firstOrFail();
+        $presentation = $service->create($variant->id, $request->presentationData());
         $presentation->load('template');
 
         return (new VariantPurchasePresentationResource($presentation))->setStatusCode(201);

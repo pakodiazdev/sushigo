@@ -27,16 +27,16 @@ export const inventoryLocationApi = {
   list: (params?: { type?: string; is_active?: boolean; per_page?: number; search?: string }) =>
     api.get<PaginatedResponse<InventoryLocation>>('/inventory-locations', { params }),
 
-  get: (id: number) =>
+  get: (id: string | number) =>
     api.get<EntityResponse<InventoryLocation>>(`/inventory-locations/${id}`),
 
   create: (data: Partial<InventoryLocation>) =>
     api.post<EntityResponse<InventoryLocation>>('/inventory-locations', data),
 
-  update: (id: number, data: Partial<InventoryLocation>) =>
+  update: (id: string | number, data: Partial<InventoryLocation>) =>
     api.put<EntityResponse<InventoryLocation>>(`/inventory-locations/${id}`, data),
 
-  delete: (id: number) =>
+  delete: (id: string | number) =>
     api.delete(`/inventory-locations/${id}`),
 }
 
@@ -45,16 +45,16 @@ export const itemApi = {
   list: (params?: { type?: string; is_active?: boolean; per_page?: number; search?: string }) =>
     api.get<PaginatedResponse<Item>>('/items', { params }),
 
-  get: (id: number) =>
+  get: (id: string | number) =>
     api.get<EntityResponse<Item>>(`/items/${id}`),
 
   create: (data: Partial<Item> & Partial<ItemMediaAttachment>) =>
     api.post<EntityResponse<Item>>('/items', data),
 
-  update: (id: number, data: Partial<Item> & Partial<ItemMediaAttachment>) =>
+  update: (id: string | number, data: Partial<Item> & Partial<ItemMediaAttachment>) =>
     api.put<EntityResponse<Item>>(`/items/${id}`, data),
 
-  delete: (id: number) =>
+  delete: (id: string | number) =>
     api.delete(`/items/${id}`),
 }
 
@@ -63,16 +63,16 @@ export const itemVariantApi = {
   list: (params?: { item_id?: number; item_type?: string; is_active?: boolean; per_page?: number; search?: string }) =>
     api.get<PaginatedResponse<ItemVariant>>('/item-variants', { params }),
 
-  get: (id: number) =>
+  get: (id: string | number) =>
     api.get<EntityResponse<ItemVariant>>(`/item-variants/${id}`),
 
   create: (data: Partial<ItemVariant>) =>
     api.post<EntityResponse<ItemVariant>>('/item-variants', data),
 
-  update: (id: number, data: Partial<ItemVariant>) =>
+  update: (id: string | number, data: Partial<ItemVariant>) =>
     api.put<EntityResponse<ItemVariant>>(`/item-variants/${id}`, data),
 
-  delete: (id: number) =>
+  delete: (id: string | number) =>
     api.delete(`/item-variants/${id}`),
 }
 
@@ -88,16 +88,16 @@ export const productApi = {
     page?: number
   }) => api.get<PaginatedResponse<Product>>('/inventory/products', { params }),
 
-  get: (id: number) =>
+  get: (id: string | number) =>
     api.get<EntityResponse<Product>>(`/inventory/products/${id}`),
 
   create: (data: Partial<Product> & Partial<ProductMediaAttachment> & { inventory_category_id?: string; brand_id?: string | null }) =>
     api.post<EntityResponse<Product>>('/inventory/products', data),
 
-  update: (id: number, data: Partial<Product> & Partial<ProductMediaAttachment> & { inventory_category_id?: string; brand_id?: string | null }) =>
+  update: (id: string | number, data: Partial<Product> & Partial<ProductMediaAttachment> & { inventory_category_id?: string; brand_id?: string | null }) =>
     api.put<EntityResponse<Product>>(`/inventory/products/${id}`, data),
 
-  delete: (id: number) =>
+  delete: (id: string | number) =>
     api.delete(`/inventory/products/${id}`),
 }
 
@@ -109,7 +109,7 @@ export interface ProductVariantPayload {
   name: string
   code: string
   barcode?: string | null
-  uom_id: number
+  uom_id: string
   description?: string | null
   track_lot?: boolean
   track_serial?: boolean
@@ -117,16 +117,16 @@ export interface ProductVariantPayload {
 }
 
 export const productVariantApi = {
-  list: (productId: number, params?: { per_page?: number; page?: number }) =>
+  list: (productId: string | number, params?: { per_page?: number; page?: number }) =>
     api.get<PaginatedResponse<ProductVariant>>(`/inventory/products/${productId}/variants`, { params }),
 
-  get: (productId: number, variantId: number) =>
+  get: (productId: string | number, variantId: string | number) =>
     api.get<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants/${variantId}`),
 
-  create: (productId: number, data: ProductVariantPayload) =>
+  create: (productId: string | number, data: ProductVariantPayload) =>
     api.post<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants`, data),
 
-  update: (productId: number, variantId: number, data: Partial<ProductVariantPayload>) =>
+  update: (productId: string | number, variantId: string | number, data: Partial<ProductVariantPayload>) =>
     api.put<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants/${variantId}`, data),
 }
 
@@ -138,7 +138,7 @@ export interface PurchasePresentationTemplatePayload {
   name: string
   package_type: PurchasePresentationPackageType
   base_unit_quantity: number
-  compatible_dimension_uom_id: number
+  compatible_dimension_uom_id: string
   is_active?: boolean
 }
 
@@ -175,20 +175,20 @@ export interface VariantPurchasePresentationUpdatePayload {
 }
 
 export const variantPurchasePresentationApi = {
-  list: (productId: number, variantId: number) =>
+  list: (productId: string, variantId: string) =>
     api.get<CollectionResponse<VariantPurchasePresentation>>(
       `/inventory/products/${productId}/variants/${variantId}/purchase-presentations`
     ),
 
-  create: (productId: number, variantId: number, data: VariantPurchasePresentationPayload) =>
+  create: (productId: string, variantId: string, data: VariantPurchasePresentationPayload) =>
     api.post<EntityResponse<VariantPurchasePresentation>>(
       `/inventory/products/${productId}/variants/${variantId}/purchase-presentations`,
       data
     ),
 
   update: (
-    productId: number,
-    variantId: number,
+    productId: string,
+    variantId: string,
     presentationId: string,
     data: VariantPurchasePresentationUpdatePayload
   ) =>
@@ -215,7 +215,7 @@ export const stockApi = {
   list: (params?: { location_id?: number; per_page?: number }) =>
     api.get<PaginatedResponse<Stock>>('/stock', { params }),
 
-  byLocation: (locationId: number) =>
+  byLocation: (locationId: string | number) =>
     api.get<EntityResponse<{
       inventory_location: InventoryLocation
       summary: {
@@ -239,27 +239,27 @@ export const stockApi = {
       }>
     }>>(`/stock/by-location/${locationId}`),
 
-  byVariant: (variantId: number) =>
+  byVariant: (variantId: string | number) =>
     api.get(`/stock/by-variant/${variantId}`),
 }
 
 // Stock Movements
 export const stockMovementApi = {
   openingBalance: (data: {
-    inventory_location_id: number
-    item_variant_id: number
+    inventory_location_id: string
+    item_variant_id: string
     quantity: number
-    uom_id: number
+    uom_id: string
     unit_cost?: number
     notes?: string
   }) =>
     api.post<EntityResponse<StockMovement>>('/inventory/opening-balance', data),
 
   stockOut: (data: {
-    location_id: number
-    variant_id: number
+    inventory_location_id: string
+    item_variant_id: string
     qty: number
-    uom_id: number
+    uom_id: string
     reason: 'SALE' | 'CONSUMPTION'
     sale_price?: number
     notes?: string

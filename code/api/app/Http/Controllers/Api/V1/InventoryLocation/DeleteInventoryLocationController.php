@@ -22,9 +22,9 @@ use App\Models\InventoryLocation;
  */
 class DeleteInventoryLocationController extends Controller
 {
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
-        $location = InventoryLocation::findOrFail($id);
+        $location = InventoryLocation::findByPublicIdOrFail($id);
 
         // Check if location has stock
         $hasStock = $location->stock()->where('on_hand', '>', 0)->exists();

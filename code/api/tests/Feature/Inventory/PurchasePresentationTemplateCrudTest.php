@@ -69,11 +69,12 @@ class PurchasePresentationTemplateCrudTest extends InventoryTestCase
             'name' => 'Box x24',
             'package_type' => 'BOX',
             'base_unit_quantity' => 24,
-            'compatible_dimension_uom_id' => $this->uomKg->id,
+            'compatible_dimension_uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonFragment(['code' => 'BOX_24', 'name' => 'Box x24', 'is_active' => true]);
+            ->assertJsonFragment(['code' => 'BOX_24', 'name' => 'Box x24', 'is_active' => true])
+            ->assertJsonPath('data.compatible_dimension_uom.id', $this->uomKg->public_id);
 
         $this->assertDatabaseHas('purchase_presentation_templates', ['code' => 'BOX_24']);
     }
@@ -94,7 +95,7 @@ class PurchasePresentationTemplateCrudTest extends InventoryTestCase
             'name' => 'Box x24',
             'package_type' => 'CRATE',
             'base_unit_quantity' => 24,
-            'compatible_dimension_uom_id' => $this->uomKg->id,
+            'compatible_dimension_uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['package_type']);
@@ -110,7 +111,7 @@ class PurchasePresentationTemplateCrudTest extends InventoryTestCase
             'name' => 'Box x24 duplicate',
             'package_type' => 'BOX',
             'base_unit_quantity' => 24,
-            'compatible_dimension_uom_id' => $this->uomKg->id,
+            'compatible_dimension_uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['code']);
@@ -180,6 +181,22 @@ class PurchasePresentationTemplateCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_allows_resending_the_same_public_uom_once_a_template_has_an_assignment()
+    {
+        $product = $this->createProduct();
+        $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
+        $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
+        $this->createVariantPurchasePresentation($variant, $template);
+
+        $response = $this->putJson("/api/v1/inventory/purchase-presentation-templates/{$template->public_id}", [
+            'compatible_dimension_uom_id' => $this->uomKg->public_id,
+            'name' => 'Renamed',
+        ]);
+
+        $response->assertStatus(200)->assertJsonFragment(['name' => 'Renamed']);
+    }
+
+    #[Test]
     public function it_blocks_changing_base_unit_quantity_once_a_template_has_an_assignment()
     {
         $product = $this->createProduct();
@@ -230,7 +247,7 @@ class PurchasePresentationTemplateCrudTest extends InventoryTestCase
             'name' => 'Box x24',
             'package_type' => 'BOX',
             'base_unit_quantity' => 24,
-            'compatible_dimension_uom_id' => $this->uomKg->id,
+            'compatible_dimension_uom_id' => $this->uomKg->public_id,
         ]);
 
         $response->assertStatus(201);

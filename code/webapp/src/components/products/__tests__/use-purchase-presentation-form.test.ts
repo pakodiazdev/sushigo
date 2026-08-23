@@ -32,8 +32,8 @@ import { usePurchasePresentationTemplatesSelect } from '@/hooks/use-inventory-qu
 
 // ── Test data ──────────────────────────────────────────────────────────────────
 
-const kgUom = { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' }
-const lbUom = { id: 2, code: 'LB', name: 'Pound', symbol: 'lb' }
+const kgUom = { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' }
+const lbUom = { id: '2', code: 'LB', name: 'Pound', symbol: 'lb' }
 
 const boxTemplate: PurchasePresentationTemplate = {
   id: '01JTPL00000000000000000AA',
@@ -96,8 +96,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: kgUom,
           presentation: null,
           assignedTemplateIds: [],
@@ -114,8 +114,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: kgUom,
           presentation: null,
           assignedTemplateIds: [boxTemplate.id],
@@ -132,8 +132,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: kgUom,
           presentation: existingPresentation,
           assignedTemplateIds: [boxTemplate.id],
@@ -151,8 +151,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: lbUom,
           presentation: null,
           assignedTemplateIds: [],
@@ -176,8 +176,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: kgUom,
           presentation: null,
           assignedTemplateIds: [],
@@ -201,8 +201,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: kgUom,
           presentation: null,
           assignedTemplateIds: [],
@@ -220,7 +220,7 @@ describe('usePurchasePresentationForm', () => {
       })
     })
 
-    expect(variantPurchasePresentationApi.create).toHaveBeenCalledWith(42, 7, {
+    expect(variantPurchasePresentationApi.create).toHaveBeenCalledWith('42', '7', {
       template_id: boxTemplate.id,
       package_barcode: '7501234567913',
       is_default: true,
@@ -237,8 +237,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: kgUom,
           presentation: existingPresentation,
           assignedTemplateIds: [boxTemplate.id],
@@ -256,7 +256,7 @@ describe('usePurchasePresentationForm', () => {
       })
     })
 
-    expect(variantPurchasePresentationApi.update).toHaveBeenCalledWith(42, 7, existingPresentation.id, {
+    expect(variantPurchasePresentationApi.update).toHaveBeenCalledWith('42', '7', existingPresentation.id, {
       package_barcode: '7501234567913',
       is_default: true,
       is_active: false,
@@ -269,8 +269,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: kgUom,
           presentation: null,
           assignedTemplateIds: [],
@@ -306,8 +306,8 @@ describe('usePurchasePresentationForm', () => {
     const { result } = renderHook(
       () =>
         usePurchasePresentationForm({
-          productId: 42,
-          variantId: 7,
+          productId: '42',
+          variantId: '7',
           variantUom: kgUom,
           presentation: null,
           assignedTemplateIds: [],

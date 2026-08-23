@@ -38,7 +38,7 @@ const createWrapper = () => {
 
 describe('LocationDetails', () => {
     const mockLocation: InventoryLocation = {
-        id: 1,
+        id: 'location-01',
         operating_unit_id: 1,
         name: 'Main Warehouse',
         type: 'MAIN',

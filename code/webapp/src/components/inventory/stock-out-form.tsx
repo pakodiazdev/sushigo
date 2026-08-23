@@ -16,13 +16,14 @@ import {
   useUnitsOfMeasureSelect,
 } from '@/hooks/use-inventory-queries'
 import { stockMovementApi, stockApi } from '@/services/inventory-api'
-import type { InventoryLocation, ItemVariant, Stock, UnitOfMeasure } from '@/types/inventory'
+import type { InventoryLocation, ItemVariant, Stock } from '@/types/inventory'
+import { UnitOfMeasureSelectField, VariantSelectField } from './stock-reference-fields'
 
 const stockOutSchema = z.object({
-  location_id: z.number().min(1, 'This field is required'),
-  variant_id: z.number().min(1, 'This field is required'),
+  location_id: z.string().min(1, 'This field is required'),
+  variant_id: z.string().min(1, 'This field is required'),
   qty: z.number().gt(0, 'Quantity must be greater than 0'),
-  uom_id: z.number().min(1, 'This field is required'),
+  uom_id: z.string().min(1, 'This field is required'),
   reason: z.enum(['SALE', 'CONSUMPTION']),
   sale_price: z.number().min(0, 'Sale price cannot be negative'),
   notes: z.string(),
@@ -41,8 +42,8 @@ type StockOutFormValues = z.infer<typeof stockOutSchema>
 interface StockOutFormProps {
   onSuccess: () => void
   onCancel: () => void
-  preselectedLocationId?: number
-  preselectedVariantId?: number
+  preselectedLocationId?: string
+  preselectedVariantId?: string
 }
 
 export function StockOutForm({
@@ -69,10 +70,10 @@ export function StockOutForm({
   } = useForm<StockOutFormValues>({
     resolver: zodResolver(stockOutSchema),
     defaultValues: {
-      location_id: preselectedLocationId || 0,
-      variant_id: preselectedVariantId || 0,
+      location_id: preselectedLocationId || '',
+      variant_id: preselectedVariantId || '',
       qty: 0,
-      uom_id: 0,
+      uom_id: '',
       reason: 'SALE',
       sale_price: 0,
       notes: '',
@@ -91,7 +92,7 @@ export function StockOutForm({
   const { data: stockData } = useQuery({
     queryKey: ['stock-by-variant', variantId],
     queryFn: () => stockApi.byVariant(variantId),
-    enabled: variantId > 0,
+    enabled: variantId.length > 0,
   })
 
   // Sort locations by priority (descending) and name
@@ -108,7 +109,7 @@ export function StockOutForm({
       const variant = variants.find((v: ItemVariant) => v.id === variantId)
       if (variant) {
         setSelectedVariant(variant)
-        setValue('uom_id', variant.uom_id)
+        setValue('uom_id', variant.uom?.id ?? '')
       }
     }
   }, [variantId, variants, setValue])
@@ -136,7 +137,15 @@ export function StockOutForm({
   const hasInsufficientStock = !!(locationStock && qty > locationStock.available)
 
   const { execute, validationErrors, isPending } = useFormMutation({
-    mutationFn: (data: StockOutFormValues) => stockMovementApi.stockOut(data),
+    mutationFn: (data: StockOutFormValues) => stockMovementApi.stockOut({
+      inventory_location_id: data.location_id,
+      item_variant_id: data.variant_id,
+      qty: data.qty,
+      uom_id: data.uom_id,
+      reason: data.reason,
+      sale_price: data.sale_price,
+      notes: data.notes,
+    }),
     // No successMessage — toast logic is conditional and handled in onSuccess
     errorMessageFallback: 'Failed to register stock out',
     onSuccess: () => {
@@ -193,10 +202,10 @@ export function StockOutForm({
           {/* Location Select */}
           <FormField label="Location" required error={allErrors.location_id}>
             <Select
-              value={(locationId ?? 0).toString()}
-              onChange={(e) => setValue('location_id', Number.parseInt(e.target.value))}
+              value={locationId}
+              onChange={(e) => setValue('location_id', e.target.value)}
             >
-              <option value="0">Select location...</option>
+              <option value="">Select location...</option>
               {sortedLocations.map((location: InventoryLocation) => (
                 <option key={location.id} value={location.id}>
                   {location.name} ({location.type})
@@ -206,25 +215,13 @@ export function StockOutForm({
           </FormField>
 
           {/* Item Variant Select */}
-          <FormField
-            label="Item Variant"
-            required
+          <VariantSelectField
+            value={variantId}
             error={allErrors.variant_id}
             hint="Select the product variant to remove"
-          >
-            <Select
-              value={(variantId ?? 0).toString()}
-              onChange={(e) => setValue('variant_id', Number.parseInt(e.target.value))}
-            >
-              <option value="0">Select variant...</option>
-              {variants.map((variant: ItemVariant) => (
-                <option key={variant.id} value={variant.id}>
-                  {variant.code} - {variant.name}
-                  {variant.item?.sku && ` (${variant.item.sku})`}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            variants={variants}
+            onChange={(value) => setValue('variant_id', value)}
+          />
 
           {/* Current Stock Info */}
           {locationStock && selectedVariant && (
@@ -254,24 +251,12 @@ export function StockOutForm({
           </FormField>
 
           {/* Unit of Measure */}
-          <FormField
-            label="Unit of Measure"
-            required
+          <UnitOfMeasureSelectField
+            value={uomId}
             error={allErrors.uom_id}
-            hint="Auto-filled from variant's default UoM"
-          >
-            <Select
-              value={(uomId ?? 0).toString()}
-              onChange={(e) => setValue('uom_id', Number.parseInt(e.target.value))}
-            >
-              <option value="0">Select unit...</option>
-              {units.map((uom: UnitOfMeasure) => (
-                <option key={uom.id} value={uom.id}>
-                  {uom.name} ({uom.symbol}) - {uom.type}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            units={units}
+            onChange={(value) => setValue('uom_id', value)}
+          />
 
           {/* Reason */}
           <FormField label="Reason" required error={allErrors.reason}>

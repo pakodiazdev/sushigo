@@ -19,8 +19,8 @@ import type { VariantPurchasePresentation } from '@/types/inventory'
 export type PresentationPanelMode = 'list' | 'assign' | 'edit'
 
 export function useVariantPurchasePresentations(
-  productId: number | null,
-  variantId: number | null,
+  productId: string | null,
+  variantId: string | null,
   isReachable: boolean
 ) {
   const queryClient = useQueryClient()
@@ -35,7 +35,7 @@ export function useVariantPurchasePresentations(
   // Variant must never surface against a newly-selected one. useLayoutEffect for the same
   // reason use-product-variants.ts uses it: SlidePanel keeps content mounted through its
   // exit animation, so a passive effect would let a stale screen flash for one frame.
-  const prevVariantIdRef = useRef<number | null>(null)
+  const prevVariantIdRef = useRef<string | null>(null)
   useLayoutEffect(() => {
     if (variantId !== prevVariantIdRef.current) {
       setPresentationMode('list')

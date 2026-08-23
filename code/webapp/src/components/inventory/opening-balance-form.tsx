@@ -14,13 +14,14 @@ import {
   useUnitsOfMeasureSelect,
 } from '@/hooks/use-inventory-queries'
 import { stockMovementApi } from '@/services/inventory-api'
-import type { InventoryLocation, ItemVariant, UnitOfMeasure } from '@/types/inventory'
+import type { InventoryLocation, ItemVariant } from '@/types/inventory'
+import { UnitOfMeasureSelectField, VariantSelectField } from './stock-reference-fields'
 
 const openingBalanceSchema = z.object({
-  inventory_location_id: z.number().min(1, 'This field is required'),
-  item_variant_id: z.number().min(1, 'This field is required'),
+  inventory_location_id: z.string().min(1, 'This field is required'),
+  item_variant_id: z.string().min(1, 'This field is required'),
   quantity: z.number().gt(0, 'Quantity must be greater than 0'),
-  uom_id: z.number().min(1, 'This field is required'),
+  uom_id: z.string().min(1, 'This field is required'),
   unit_cost: z.number().min(0, 'Cost cannot be negative'),
   notes: z.string(),
 })
@@ -30,8 +31,8 @@ type OpeningBalanceFormValues = z.infer<typeof openingBalanceSchema>
 interface OpeningBalanceFormProps {
   onSuccess: () => void
   onCancel: () => void
-  preselectedLocationId?: number
-  preselectedVariantId?: number
+  preselectedLocationId?: string
+  preselectedVariantId?: string
 }
 
 export function OpeningBalanceForm({
@@ -56,10 +57,10 @@ export function OpeningBalanceForm({
   } = useForm<OpeningBalanceFormValues>({
     resolver: zodResolver(openingBalanceSchema),
     defaultValues: {
-      inventory_location_id: preselectedLocationId || 0,
-      item_variant_id: preselectedVariantId || 0,
+      inventory_location_id: preselectedLocationId || '',
+      item_variant_id: preselectedVariantId || '',
       quantity: 0,
-      uom_id: 0,
+      uom_id: '',
       unit_cost: 0,
       notes: '',
     },
@@ -96,7 +97,7 @@ export function OpeningBalanceForm({
       const variant = variants.find((v: ItemVariant) => v.id === itemVariantId)
       if (variant) {
         setSelectedVariant(variant)
-        setValue('uom_id', variant.uom_id)
+        setValue('uom_id', variant.uom?.id ?? '')
       }
     }
   }, [itemVariantId, variants, setValue])
@@ -124,10 +125,10 @@ export function OpeningBalanceForm({
           {/* Location Select */}
           <FormField label="Location" required error={allErrors.inventory_location_id}>
             <Select
-              value={(inventoryLocationId ?? 0).toString()}
-              onChange={(e) => setValue('inventory_location_id', Number.parseInt(e.target.value))}
+              value={inventoryLocationId}
+              onChange={(e) => setValue('inventory_location_id', e.target.value)}
             >
-              <option value="0">Select location...</option>
+              <option value="">Select location...</option>
               {locations.map((location: InventoryLocation) => (
                 <option key={location.id} value={location.id}>
                   {location.name} ({location.type})
@@ -137,25 +138,13 @@ export function OpeningBalanceForm({
           </FormField>
 
           {/* Item Variant Select */}
-          <FormField
-            label="Item Variant"
-            required
+          <VariantSelectField
+            value={itemVariantId}
             error={allErrors.item_variant_id}
             hint="Select the product variant to add"
-          >
-            <Select
-              value={(itemVariantId ?? 0).toString()}
-              onChange={(e) => setValue('item_variant_id', Number.parseInt(e.target.value))}
-            >
-              <option value="0">Select variant...</option>
-              {variants.map((variant: ItemVariant) => (
-                <option key={variant.id} value={variant.id}>
-                  {variant.code} - {variant.name}
-                  {variant.item?.sku && ` (${variant.item.sku})`}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            variants={variants}
+            onChange={(value) => setValue('item_variant_id', value)}
+          />
 
           {/* Selected Variant Info */}
           {selectedVariant && (
@@ -205,24 +194,12 @@ export function OpeningBalanceForm({
           </FormField>
 
           {/* Unit of Measure */}
-          <FormField
-            label="Unit of Measure"
-            required
+          <UnitOfMeasureSelectField
+            value={uomId}
             error={allErrors.uom_id}
-            hint="Auto-filled from variant's default UoM"
-          >
-            <Select
-              value={(uomId ?? 0).toString()}
-              onChange={(e) => setValue('uom_id', Number.parseInt(e.target.value))}
-            >
-              <option value="0">Select unit...</option>
-              {units.map((uom: UnitOfMeasure) => (
-                <option key={uom.id} value={uom.id}>
-                  {uom.name} ({uom.symbol}) - {uom.type}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            units={units}
+            onChange={(value) => setValue('uom_id', value)}
+          />
 
           {/* Unit Cost */}
           <FormField

@@ -14,7 +14,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
         $this->createVariantPurchasePresentation($variant, $template);
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations");
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -34,7 +34,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
         $presentation = $this->createVariantPurchasePresentation($variant, $template);
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations/{$presentation->public_id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations/{$presentation->public_id}");
 
         $response->assertStatus(200)->assertJsonFragment(['id' => $presentation->public_id]);
     }
@@ -46,7 +46,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations", [
             'template_id' => $template->public_id,
             'package_barcode' => '7501234567913',
         ]);
@@ -66,7 +66,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations", [
             'template_id' => '01JUNKNOWNPUBLICIDXXXXXXX',
         ]);
 
@@ -82,7 +82,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $templatePublicId = $template->public_id;
         $template->delete();
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations", [
             'template_id' => $templatePublicId,
         ]);
 
@@ -96,7 +96,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomGr->id]);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations", [
             'template_id' => $template->public_id,
         ]);
 
@@ -110,7 +110,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id, 'is_active' => false]);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations", [
             'template_id' => $template->public_id,
         ]);
 
@@ -125,7 +125,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
         $this->createVariantPurchasePresentation($variant, $template);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations", [
             'template_id' => $template->public_id,
         ]);
 
@@ -142,7 +142,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
 
         $otherTemplate = $this->createPurchasePresentationTemplate(['code' => 'OTHER', 'compatible_dimension_uom_id' => $this->uomKg->id]);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations", [
             'template_id' => $otherTemplate->public_id,
             'package_barcode' => 'DUPLICATE',
         ]);
@@ -159,7 +159,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $templateB = $this->createPurchasePresentationTemplate(['code' => 'B', 'compatible_dimension_uom_id' => $this->uomKg->id]);
         $first = $this->createVariantPurchasePresentation($variant, $templateA, ['is_default' => true]);
 
-        $response = $this->postJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations", [
+        $response = $this->postJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations", [
             'template_id' => $templateB->public_id,
             'is_default' => true,
         ]);
@@ -182,7 +182,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         // The request validation's `boolean` rule accepts 1 without casting
         // it to a real PHP bool, so this exercises the service's normalized
         // comparison rather than a strict `=== true` check.
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations/{$second->public_id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations/{$second->public_id}", [
             'is_default' => 1,
         ]);
 
@@ -204,7 +204,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         // because is_active=false keeps it out of scope.
         $reactivating = $this->createVariantPurchasePresentation($variant, $templateB, ['is_default' => true, 'is_active' => false]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations/{$reactivating->public_id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations/{$reactivating->public_id}", [
             'is_active' => true,
         ]);
 
@@ -221,7 +221,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
         $presentation = $this->createVariantPurchasePresentation($variant, $template);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations/{$presentation->public_id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations/{$presentation->public_id}", [
             'package_barcode' => 'NEWCODE',
         ]);
 
@@ -236,7 +236,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
         $presentation = $this->createVariantPurchasePresentation($variant, $template);
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations/{$presentation->public_id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations/{$presentation->public_id}");
 
         $response->assertStatus(204);
         $this->assertSoftDeleted('variant_purchase_presentations', ['id' => $presentation->id]);
@@ -249,7 +249,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations");
 
         $response->assertStatus(403);
     }
@@ -261,7 +261,7 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
         $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
         auth()->forgetGuards();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}/variants/{$variant->id}/purchase-presentations");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations");
 
         $response->assertStatus(401);
     }

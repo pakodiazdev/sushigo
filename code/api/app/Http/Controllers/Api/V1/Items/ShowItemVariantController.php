@@ -35,10 +35,10 @@ class ShowItemVariantController extends Controller
 {
     use FormatsItemVariant;
 
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
         $variant = ItemVariant::with(['item', 'unitOfMeasure', 'stock.inventoryLocation', 'mediaAttachments.mediaGallery'])
-            ->findOrFail($id);
+            ->where('public_id', $id)->firstOrFail();
 
         $totalOnHand = $variant->stock->sum('on_hand');
         $totalReserved = $variant->stock->sum('reserved');

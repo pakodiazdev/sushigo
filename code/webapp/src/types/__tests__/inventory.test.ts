@@ -10,7 +10,7 @@ describe('Inventory Types', () => {
     describe('InventoryLocation type', () => {
         it('can create a valid MAIN location', () => {
             const location: InventoryLocation = {
-                id: 1,
+                id: 'location-01',
                 operating_unit_id: 1,
                 name: 'Main Storage',
                 type: 'MAIN',
@@ -24,7 +24,7 @@ describe('Inventory Types', () => {
 
         it('can create a TEMP location', () => {
             const location: InventoryLocation = {
-                id: 2,
+                id: 'location-02',
                 operating_unit_id: 1,
                 name: 'Event Storage',
                 type: 'TEMP',
@@ -39,7 +39,7 @@ describe('Inventory Types', () => {
             const types = ['MAIN', 'TEMP', 'KITCHEN', 'BAR', 'RETURN'] as const
             types.forEach((type) => {
                 const location: InventoryLocation = {
-                    id: 1,
+                    id: 'location-01',
                     operating_unit_id: 1,
                     name: `${type} Location`,
                     type,
@@ -97,7 +97,7 @@ describe('Inventory Types', () => {
     describe('ItemVariant type', () => {
         it('can create a valid variant', () => {
             const variant: ItemVariant = {
-                id: 1,
+                id: 'variant-01',
                 item_id: 1,
                 code: 'VAR-001',
                 name: '1kg Bag',
@@ -117,8 +117,8 @@ describe('Inventory Types', () => {
         it('can create a valid stock record', () => {
             const stock: Stock = {
                 id: 1,
-                inventory_location_id: 1,
-                item_variant_id: 1,
+                inventory_location_id: 'location-01',
+                item_variant_id: 'variant-01',
                 on_hand: 50,
                 reserved: 10,
                 available: 40,
@@ -131,8 +131,8 @@ describe('Inventory Types', () => {
         it('calculates available from on_hand minus reserved', () => {
             const stock: Stock = {
                 id: 1,
-                inventory_location_id: 1,
-                item_variant_id: 1,
+                inventory_location_id: 'location-01',
+                item_variant_id: 'variant-01',
                 on_hand: 100,
                 reserved: 25,
                 available: 75,
