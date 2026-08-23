@@ -12,7 +12,7 @@ trait FormatsInventoryLocation
     protected function baseLocationData(InventoryLocation $location): array
     {
         return [
-            'id' => $location->id,
+            'id' => $location->public_id,
             'operating_unit_id' => $location->operating_unit_id,
             'name' => $location->name,
             'type' => $location->type,

@@ -24,7 +24,7 @@ class UpdateItemVariantRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $variant = ItemVariant::findOrFail($this->route('id'));
+        $variant = ItemVariant::findByPublicIdOrFail($this->route('id'));
 
         return $this->user()->can('update', $variant);
     }
@@ -53,7 +53,7 @@ class UpdateItemVariantRequest extends FormRequest
             // A pre-existing Product variant (created before #429 closed this legacy path) must
             // not keep receiving writes here — it can only be managed via
             // PUT /inventory/products/{id}/variants/{variantId} (#425) from now on.
-            $variant = ItemVariant::with('item')->find($this->route('id'));
+            $variant = ItemVariant::with('item')->where('public_id', $this->route('id'))->first();
             if ($variant?->item?->type === Item::TYPE_PRODUCTO) {
                 $validator->errors()->add('item_id', 'This variant belongs to a Product and must be managed from the Product catalog.');
             }

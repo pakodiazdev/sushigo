@@ -28,9 +28,9 @@ use App\Models\ItemVariant;
  */
 class DeleteItemVariantController extends Controller
 {
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
-        $variant = ItemVariant::findOrFail($id);
+        $variant = ItemVariant::findByPublicIdOrFail($id);
 
         // Check if variant has stock
         if ($variant->stock()->where('on_hand', '>', 0)->exists()) {

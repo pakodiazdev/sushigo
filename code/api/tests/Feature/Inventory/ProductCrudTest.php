@@ -234,7 +234,7 @@ class ProductCrudTest extends InventoryTestCase
         $this->createItemVariant($product);
         $this->createItemVariant($product);
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}");
 
         $response->assertStatus(200)
             ->assertJsonFragment(['variants_count' => 2])
@@ -276,7 +276,7 @@ class ProductCrudTest extends InventoryTestCase
         $newCategory = $this->createInventoryCategory(['name' => 'Discontinued', 'is_active' => false]);
         $product = $this->createProduct(['inventory_category_id' => $oldCategory->id]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'inventory_category_id' => $newCategory->public_id,
         ]);
 
@@ -367,7 +367,7 @@ class ProductCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'inventory_category_id' => ['not', 'a', 'string'],
         ]);
 
@@ -379,7 +379,7 @@ class ProductCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'brand_id' => ['not', 'a', 'string'],
         ]);
 
@@ -395,7 +395,7 @@ class ProductCrudTest extends InventoryTestCase
 
         $this->deleteJson("/api/v1/brands/{$brand->public_id}")->assertStatus(204);
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}");
 
         $response->assertStatus(200)->assertJsonPath('data.brand.name', 'Coca-Cola');
     }
@@ -412,7 +412,7 @@ class ProductCrudTest extends InventoryTestCase
         // already-trashed state that historical Products must still render.
         $category->delete();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}");
 
         $response->assertStatus(200)->assertJsonPath('data.inventory_category.name', 'Beverages');
     }
@@ -449,12 +449,12 @@ class ProductCrudTest extends InventoryTestCase
         ]);
         app(MediaAttachmentService::class)($product, $gallery->id);
 
-        $before = $this->getJson("/api/v1/inventory/products/{$product->id}");
+        $before = $this->getJson("/api/v1/inventory/products/{$product->public_id}");
         $before->assertOk()->assertJsonPath('data.photo_url', $assetA->url);
 
         $this->patchJson("/api/v1/media/assets/{$assetB->public_id}", ['is_primary' => true])->assertOk();
 
-        $after = $this->getJson("/api/v1/inventory/products/{$product->id}");
+        $after = $this->getJson("/api/v1/inventory/products/{$product->public_id}");
         $after->assertOk()->assertJsonPath('data.photo_url', $assetB->url);
     }
 
@@ -463,7 +463,7 @@ class ProductCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct(['name' => 'Old Name']);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'name' => 'New Name',
         ]);
 
@@ -478,7 +478,7 @@ class ProductCrudTest extends InventoryTestCase
         $category = $this->createInventoryCategory();
         $category->delete();
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'inventory_category_id' => $category->public_id,
         ]);
 
@@ -492,7 +492,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct(['brand_id' => $brand->id]);
         $brand->update(['is_active' => false]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'name' => 'Updated Name',
             'brand_id' => $brand->public_id,
         ]);
@@ -507,7 +507,7 @@ class ProductCrudTest extends InventoryTestCase
         $newBrand = $this->createBrand(['is_active' => false]);
         $product = $this->createProduct(['brand_id' => $oldBrand->id]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'brand_id' => $newBrand->public_id,
         ]);
 
@@ -521,7 +521,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct(['brand_id' => $brand->id]);
         $brand->delete();
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'name' => 'Updated Name',
             'brand_id' => $brand->public_id,
         ]);
@@ -537,7 +537,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct(['inventory_category_id' => $category->id]);
         $category->delete();
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'name' => 'Updated Name',
             'inventory_category_id' => $category->public_id,
         ]);
@@ -554,7 +554,7 @@ class ProductCrudTest extends InventoryTestCase
         $newCategory->delete();
         $product = $this->createProduct(['inventory_category_id' => $oldCategory->id]);
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", [
             'inventory_category_id' => $newCategory->public_id,
         ]);
 
@@ -566,7 +566,7 @@ class ProductCrudTest extends InventoryTestCase
     {
         $product = $this->createProduct();
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}");
 
         $response->assertStatus(200);
         $this->assertSoftDeleted('items', ['id' => $product->id]);
@@ -588,7 +588,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}");
 
         $response->assertStatus(403);
     }
@@ -613,7 +613,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", ['name' => 'Nuevo']);
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", ['name' => 'Nuevo']);
 
         $response->assertStatus(403);
     }
@@ -624,7 +624,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         $this->user->removeRole('inventory-manager');
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}");
 
         $response->assertStatus(403);
     }
@@ -645,7 +645,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         auth()->forgetGuards();
 
-        $response = $this->getJson("/api/v1/inventory/products/{$product->id}");
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}");
 
         $response->assertStatus(401);
     }
@@ -670,7 +670,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         auth()->forgetGuards();
 
-        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", ['name' => 'Nuevo']);
+        $response = $this->putJson("/api/v1/inventory/products/{$product->public_id}", ['name' => 'Nuevo']);
 
         $response->assertStatus(401);
     }
@@ -681,7 +681,7 @@ class ProductCrudTest extends InventoryTestCase
         $product = $this->createProduct();
         auth()->forgetGuards();
 
-        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->public_id}");
 
         $response->assertStatus(401);
     }

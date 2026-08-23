@@ -74,7 +74,7 @@ const boxTemplate: PurchasePresentationTemplate = {
   name: 'Box x24',
   package_type: 'BOX',
   base_unit_quantity: 24,
-  compatible_dimension_uom: { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' },
+  compatible_dimension_uom: { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' },
   is_active: true,
 }
 

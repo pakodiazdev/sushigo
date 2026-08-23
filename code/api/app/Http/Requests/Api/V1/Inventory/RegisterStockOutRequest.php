@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\Inventory;
 
+use App\Http\Requests\Concerns\ResolvesStockReferenceIds;
 use App\Models\StockMovement;
 use Illuminate\Foundation\Http\FormRequest;
 use OpenApi\Attributes as OA;
@@ -10,10 +11,10 @@ use OpenApi\Attributes as OA;
     schema: 'RegisterStockOutRequest',
     required: ['inventory_location_id', 'item_variant_id', 'qty', 'uom_id', 'reason'],
     properties: [
-        new OA\Property(property: 'inventory_location_id', type: 'integer', example: 1),
-        new OA\Property(property: 'item_variant_id', type: 'integer', example: 1),
+        new OA\Property(property: 'inventory_location_id', type: 'string', example: self::PUBLIC_ID_EXAMPLE),
+        new OA\Property(property: 'item_variant_id', type: 'string', example: self::PUBLIC_ID_EXAMPLE),
         new OA\Property(property: 'qty', type: 'number', format: 'decimal', example: 10.5),
-        new OA\Property(property: 'uom_id', type: 'integer', example: 1),
+        new OA\Property(property: 'uom_id', type: 'string', example: self::PUBLIC_ID_EXAMPLE),
         new OA\Property(
             property: 'reason',
             type: 'string',
@@ -27,6 +28,10 @@ use OpenApi\Attributes as OA;
 )]
 class RegisterStockOutRequest extends FormRequest
 {
+    use ResolvesStockReferenceIds;
+
+    private const PUBLIC_ID_EXAMPLE = '01J...';
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -43,10 +48,10 @@ class RegisterStockOutRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'inventory_location_id' => ['required', 'integer', 'exists:inventory_locations,id'],
-            'item_variant_id' => ['required', 'integer', 'exists:item_variants,id'],
+            'inventory_location_id' => ['required', 'string', 'exists:inventory_locations,public_id'],
+            'item_variant_id' => ['required', 'string', 'exists:item_variants,public_id'],
             'qty' => ['required', 'numeric', 'min:0.0001'],
-            'uom_id' => ['required', 'integer', 'exists:units_of_measure,id'],
+            'uom_id' => ['required', 'string', 'exists:units_of_measure,public_id'],
             'reason' => ['required', 'string', 'in:'.StockMovement::REASON_SALE.','.StockMovement::REASON_CONSUMPTION],
             'sale_price' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:100'],

@@ -15,7 +15,7 @@ import type { ProductVariant } from '@/types/inventory'
  */
 export type VariantPanelMode = 'list' | 'create' | 'detail' | 'edit'
 
-export function useProductVariants(productId: number | null, isPanelOpen: boolean) {
+export function useProductVariants(productId: string | null, isPanelOpen: boolean) {
   const queryClient = useQueryClient()
   const { showError } = useToast()
 

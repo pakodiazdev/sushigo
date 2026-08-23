@@ -44,9 +44,9 @@ use Illuminate\Support\Facades\DB;
  */
 class UpdateProductController extends Controller
 {
-    public function __invoke(UpdateProductRequest $request, int $id, MediaAttachmentService $mediaAttachmentService): ProductResource
+    public function __invoke(UpdateProductRequest $request, string $id, MediaAttachmentService $mediaAttachmentService): ProductResource
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($id);
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
 
         DB::transaction(function () use ($request, $product, $mediaAttachmentService) {
             $product->update($request->productData());

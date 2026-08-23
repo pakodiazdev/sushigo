@@ -40,13 +40,14 @@ use App\Models\ItemVariant;
  */
 class ShowVariantController extends Controller
 {
-    public function __invoke(int $id, int $variantId): VariantResource
+    public function __invoke(string $id, string $variantId): VariantResource
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($id);
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
 
         $variant = ItemVariant::where('item_id', $product->id)
             ->with('unitOfMeasure')
-            ->findOrFail($variantId);
+            ->where('public_id', $variantId)
+            ->firstOrFail();
 
         return new VariantResource($variant);
     }

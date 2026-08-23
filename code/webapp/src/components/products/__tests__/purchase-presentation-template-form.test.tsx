@@ -15,7 +15,7 @@ const mockSetValue = vi.fn()
 const mockRegister = vi.fn((name: string) => ({ name }))
 
 const kilogram: UnitOfMeasure = {
-  id: 1,
+  id: '1',
   code: 'KG',
   name: 'Kilogram',
   symbol: 'kg',
@@ -31,7 +31,7 @@ const existingTemplate: PurchasePresentationTemplate = {
   name: 'Box x24',
   package_type: 'BOX',
   base_unit_quantity: 24,
-  compatible_dimension_uom: { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' },
+  compatible_dimension_uom: { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' },
   is_active: true,
 }
 

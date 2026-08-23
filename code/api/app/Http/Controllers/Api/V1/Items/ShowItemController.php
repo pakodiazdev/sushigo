@@ -32,13 +32,13 @@ use App\Models\Item;
  */
 class ShowItemController extends Controller
 {
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
-        $item = Item::with(['variants', 'mediaAttachments.mediaGallery'])->findOrFail($id);
+        $item = Item::with(['variants', 'mediaAttachments.mediaGallery'])->where('public_id', $id)->firstOrFail();
 
         return new ResponseEntity(
             data: [
-                'id' => $item->id,
+                'id' => $item->public_id,
                 'sku' => $item->sku,
                 'name' => $item->name,
                 'description' => $item->description,

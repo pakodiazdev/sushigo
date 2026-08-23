@@ -16,4 +16,13 @@ trait HasPublicId
     {
         return 'public_id';
     }
+
+    /**
+     * Resolve an API identifier while retaining the numeric key exclusively
+     * for internal relations and database queries.
+     */
+    public static function findByPublicIdOrFail(string $publicId): static
+    {
+        return static::where('public_id', $publicId)->firstOrFail();
+    }
 }

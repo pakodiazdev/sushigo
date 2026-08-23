@@ -45,7 +45,7 @@ class ProductResource extends BaseResource
     public function toArray($request): array
     {
         return [
-            'id' => $this->id,
+            'id' => $this->public_id,
             'name' => $this->name,
             'description' => $this->description,
             'is_active' => $this->is_active,

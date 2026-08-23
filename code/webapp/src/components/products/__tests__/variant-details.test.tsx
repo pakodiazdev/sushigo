@@ -32,13 +32,13 @@ vi.mock('@/stores/auth.store', () => ({
 }))
 
 const riceVariant: ProductVariant = {
-  id: 7,
-  item_id: 42,
+  id: '7',
+  item_id: '42',
   code: 'ARR-KG',
   barcode: '7501234567890',
   name: 'Arroz Premium 1kg',
   description: 'Grano largo',
-  uom: { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' },
+  uom: { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' },
   track_lot: true,
   track_serial: false,
   is_active: true,

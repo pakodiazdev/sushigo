@@ -3,11 +3,15 @@
 namespace App\Models;
 
 use App\Exceptions\InvalidStockBalanceException;
+use App\Support\Traits\HasPublicId;
+use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Stock extends Model
 {
+    use HasPublicId, SerializesPublicIdAsId;
+
     protected $table = 'stock';
 
     protected $fillable = [

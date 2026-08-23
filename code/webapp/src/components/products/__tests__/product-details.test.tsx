@@ -35,7 +35,7 @@ vi.mock('@/stores/auth.store', () => ({
 }))
 
 const baseProduct: Product = {
-  id: 42,
+  id: '42',
   name: 'Coca-Cola Original 600 ml',
   description: 'Refresco de cola',
   is_active: true,
@@ -47,13 +47,13 @@ const baseProduct: Product = {
 }
 
 const cocaColaVariant: ProductVariant = {
-  id: 1,
-  item_id: 42,
+  id: '1',
+  item_id: '42',
   code: 'COCA-600',
   barcode: null,
   name: 'Coca-Cola 600 ml Single',
   description: null,
-  uom: { id: 1, code: 'UNIT', name: 'Unit', symbol: 'u' },
+  uom: { id: '1', code: 'UNIT', name: 'Unit', symbol: 'u' },
   track_lot: false,
   track_serial: false,
   is_active: true,

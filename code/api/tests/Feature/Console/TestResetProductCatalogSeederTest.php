@@ -37,6 +37,10 @@ class TestResetProductCatalogSeederTest extends TestCase
         $this->assertDatabaseHas('brands', ['name' => 'Buldak']);
         $this->assertDatabaseHas('inventory_categories', ['name' => 'Bebidas']);
         $this->assertDatabaseHas('inventory_categories', ['name' => 'Ramen Instantáneo']);
+
+        foreach (['units_of_measure', 'items', 'item_variants'] as $table) {
+            $this->assertSame(0, DB::table($table)->whereNull('public_id')->count());
+        }
     }
 
     #[Test]

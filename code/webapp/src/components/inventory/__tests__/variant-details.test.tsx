@@ -33,7 +33,7 @@ const createWrapper = () => {
 
 describe('VariantDetails', () => {
     const mockVariant: ItemVariant = {
-        id: 1,
+        id: 'variant-01',
         item_id: 1,
         code: 'VAR-001',
         name: 'Test Variant',
@@ -53,7 +53,7 @@ describe('VariantDetails', () => {
             is_active: true,
         },
         uom: {
-            id: 1,
+            id: '01UOM',
             code: 'KG',
             name: 'Kilogramo',
             symbol: 'kg',

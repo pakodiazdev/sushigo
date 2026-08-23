@@ -44,7 +44,7 @@ export function ItemVariantsPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => itemVariantApi.delete(id),
+    mutationFn: (id: string) => itemVariantApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['item-variants'] })
       setIsDetailsPanelOpen(false)
@@ -153,7 +153,7 @@ export function ItemVariantsPage() {
     setIsFormPanelOpen(true)
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     if (confirm('¿Estás seguro de eliminar esta variante?')) {
       deleteMutation.mutate(id)
     }

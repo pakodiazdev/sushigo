@@ -62,14 +62,14 @@ use App\Models\UnitOfMeasure;
  */
 class UpdateUnitOfMeasureController extends Controller
 {
-    public function __invoke(UpdateUnitOfMeasureRequest $request, int $id)
+    public function __invoke(UpdateUnitOfMeasureRequest $request, string $id)
     {
-        $uom = UnitOfMeasure::findOrFail($id);
+        $uom = UnitOfMeasure::findByPublicIdOrFail($id);
         $uom->update($request->validated());
 
         return new ResponseEntity(
             data: [
-                'id' => $uom->id,
+                'id' => $uom->public_id,
                 'code' => $uom->code,
                 'name' => $uom->name,
                 'symbol' => $uom->symbol,

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Inventory\Variant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\Variant\CreateVariantRequest;
 use App\Http\Resources\Inventory\Variant\VariantResource;
+use App\Models\Item;
 use App\Models\ItemVariant;
 
 /**
@@ -42,9 +43,10 @@ use App\Models\ItemVariant;
  */
 class CreateVariantController extends Controller
 {
-    public function __invoke(CreateVariantRequest $request, int $id): VariantResource
+    public function __invoke(CreateVariantRequest $request, string $id): VariantResource
     {
-        $variant = ItemVariant::create($request->variantData($id));
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
+        $variant = ItemVariant::create($request->variantData($product->id));
 
         $variant->load('unitOfMeasure');
 

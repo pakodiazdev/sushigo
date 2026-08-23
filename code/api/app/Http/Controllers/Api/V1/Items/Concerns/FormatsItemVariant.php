@@ -12,9 +12,9 @@ trait FormatsItemVariant
     protected function baseVariantData(ItemVariant $variant): array
     {
         return [
-            'id' => $variant->id,
-            'item_id' => $variant->item_id,
-            'uom_id' => $variant->uom_id,
+            'id' => $variant->public_id,
+            'item_id' => $variant->item?->public_id,
+            'uom_id' => $variant->unitOfMeasure?->public_id,
             'code' => $variant->code,
             'name' => $variant->name,
             'description' => $variant->description,
@@ -36,13 +36,13 @@ trait FormatsItemVariant
     {
         return [
             'uom' => [
-                'id' => $variant->unitOfMeasure->id,
+                'id' => $variant->unitOfMeasure->public_id,
                 'code' => $variant->unitOfMeasure->code,
                 'name' => $variant->unitOfMeasure->name,
                 'symbol' => $variant->unitOfMeasure->symbol,
             ],
             'item' => [
-                'id' => $variant->item->id,
+                'id' => $variant->item->public_id,
                 'sku' => $variant->item->sku,
                 'name' => $variant->item->name,
                 'type' => $variant->item->type,

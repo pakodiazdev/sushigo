@@ -24,11 +24,11 @@ class StockByLocationController extends Controller
 {
     use SummarizesStock;
 
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
-        $location = InventoryLocation::findOrFail($id);
+        $location = InventoryLocation::findByPublicIdOrFail($id);
 
-        $stockRecords = Stock::where('inventory_location_id', $id)
+        $stockRecords = Stock::where('inventory_location_id', $location->id)
             ->with([
                 'itemVariant.item',
             ])
@@ -36,7 +36,7 @@ class StockByLocationController extends Controller
 
         $items = $stockRecords->map(function ($stock) {
             return [
-                'item_variant_id' => $stock->item_variant_id,
+                'item_variant_id' => $stock->itemVariant->public_id,
                 'item_variant_code' => $stock->itemVariant->code,
                 'item_variant_name' => $stock->itemVariant->name,
                 'item_name' => $stock->itemVariant->item->name,
@@ -54,7 +54,7 @@ class StockByLocationController extends Controller
         return new ResponseEntity(
             data: [
                 'inventory_location' => [
-                    'id' => $location->id,
+                    'id' => $location->public_id,
                     'name' => $location->name,
                     'type' => $location->type,
                     'operating_unit' => $location->operatingUnit->name,

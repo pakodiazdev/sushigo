@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Inventory\Variant;
 
+use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Models\Item;
 use App\Models\ItemVariant;
+use App\Models\UnitOfMeasure;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -20,7 +22,7 @@ use Illuminate\Foundation\Http\FormRequest;
  *   @OA\Property(property="name", type="string", maxLength=255, example="Arroz Premium 1kg"),
  *   @OA\Property(property="code", type="string", maxLength=100, example="ARR-KG", description="Variant SKU — unique across all variants"),
  *   @OA\Property(property="barcode", type="string", nullable=true, maxLength=50, example="7501234567890", description="Optional unit barcode — unique across all variants"),
- *   @OA\Property(property="uom_id", type="integer", example=1, description="Base unit of measure ID"),
+ *   @OA\Property(property="uom_id", type="string", example="01K4M6QY8E2B7N9Z3T5V1W0XCD", description="Base unit of measure public ID"),
  *   @OA\Property(property="description", type="string", nullable=true),
  *   @OA\Property(property="track_lot", type="boolean", example=false, description="Track lot numbers (default: false)"),
  *   @OA\Property(property="track_serial", type="boolean", example=false, description="Track serial numbers (default: false)"),
@@ -29,9 +31,11 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class CreateVariantRequest extends FormRequest
 {
+    use ResolvesPublicIdReferences;
+
     public function authorize(): bool
     {
-        Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($this->route('id'));
+        Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $this->route('id'))->firstOrFail();
 
         return $this->user()->can('create', ItemVariant::class);
     }
@@ -42,7 +46,7 @@ class CreateVariantRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:100', 'unique:item_variants,code'],
             'barcode' => ['nullable', 'string', 'max:50', 'unique:item_variants,barcode'],
-            'uom_id' => ['required', 'integer', 'exists:units_of_measure,id'],
+            'uom_id' => ['required', 'string', 'exists:units_of_measure,public_id'],
             'description' => ['nullable', 'string'],
             'track_lot' => ['nullable', 'boolean'],
             'track_serial' => ['nullable', 'boolean'],
@@ -73,6 +77,7 @@ class CreateVariantRequest extends FormRequest
     {
         $data = $this->validated();
         $data['item_id'] = $productId;
+        $data['uom_id'] = $this->resolvePublicId(UnitOfMeasure::class, 'uom_id');
         $data['track_lot'] ??= false;
         $data['track_serial'] ??= false;
         $data['is_active'] ??= true;

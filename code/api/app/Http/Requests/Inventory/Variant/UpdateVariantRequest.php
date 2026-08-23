@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Inventory\Variant;
 
+use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Models\Item;
 use App\Models\ItemVariant;
+use App\Models\UnitOfMeasure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,7 +19,7 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="name", type="string", maxLength=255),
  *   @OA\Property(property="code", type="string", maxLength=100, description="Variant SKU — unique across all variants"),
  *   @OA\Property(property="barcode", type="string", nullable=true, maxLength=50, description="Optional unit barcode — unique across all variants"),
- *   @OA\Property(property="uom_id", type="integer"),
+ *   @OA\Property(property="uom_id", type="string"),
  *   @OA\Property(property="description", type="string", nullable=true),
  *   @OA\Property(property="track_lot", type="boolean"),
  *   @OA\Property(property="track_serial", type="boolean"),
@@ -26,23 +28,25 @@ use Illuminate\Validation\Rule;
  */
 class UpdateVariantRequest extends FormRequest
 {
+    use ResolvesPublicIdReferences;
+
     public function authorize(): bool
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($this->route('id'));
-        $variant = ItemVariant::where('item_id', $product->id)->findOrFail($this->route('variantId'));
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $this->route('id'))->firstOrFail();
+        $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $this->route('variantId'))->firstOrFail();
 
         return $this->user()->can('update', $variant);
     }
 
     public function rules(): array
     {
-        $variantId = $this->route('variantId');
+        $variantId = ItemVariant::where('public_id', $this->route('variantId'))->value('id');
 
         return [
             'name' => ['sometimes', 'string', 'max:255'],
             'code' => ['sometimes', 'string', 'max:100', Rule::unique('item_variants', 'code')->ignore($variantId)],
             'barcode' => ['sometimes', 'nullable', 'string', 'max:50', Rule::unique('item_variants', 'barcode')->ignore($variantId)],
-            'uom_id' => ['sometimes', 'integer', 'exists:units_of_measure,id'],
+            'uom_id' => ['sometimes', 'string', 'exists:units_of_measure,public_id'],
             'description' => ['sometimes', 'nullable', 'string'],
             'track_lot' => ['sometimes', 'boolean'],
             'track_serial' => ['sometimes', 'boolean'],
@@ -89,9 +93,11 @@ class UpdateVariantRequest extends FormRequest
             return;
         }
 
-        $variant = ItemVariant::find($this->route('variantId'));
+        $variant = ItemVariant::where('public_id', $this->route('variantId'))->first();
 
-        if (! $variant || (int) $this->input('uom_id') === $variant->uom_id) {
+        $submittedUomId = $this->resolvePublicId(UnitOfMeasure::class, 'uom_id');
+
+        if (! $variant || $submittedUomId === $variant->uom_id) {
             return;
         }
 
@@ -111,6 +117,12 @@ class UpdateVariantRequest extends FormRequest
      */
     public function variantData(): array
     {
-        return $this->validated();
+        $data = $this->validated();
+
+        if (array_key_exists('uom_id', $data)) {
+            $data['uom_id'] = $this->resolvePublicId(UnitOfMeasure::class, 'uom_id');
+        }
+
+        return $data;
     }
 }

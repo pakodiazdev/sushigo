@@ -47,13 +47,13 @@ use App\Models\UnitOfMeasure;
  */
 class ShowUnitOfMeasureController extends Controller
 {
-    public function __invoke(int $id)
+    public function __invoke(string $id)
     {
-        $uom = UnitOfMeasure::findOrFail($id);
+        $uom = UnitOfMeasure::findByPublicIdOrFail($id);
 
         return new ResponseEntity(
             data: [
-                'id' => $uom->id,
+                'id' => $uom->public_id,
                 'code' => $uom->code,
                 'name' => $uom->name,
                 'symbol' => $uom->symbol,

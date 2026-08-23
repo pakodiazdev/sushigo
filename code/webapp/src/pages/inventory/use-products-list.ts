@@ -115,7 +115,7 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
   }, [productsQuery.isError])
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => productApi.delete(id),
+    mutationFn: (id: string) => productApi.delete(id),
     onSuccess: (_data, deletedProductId) => {
       // Deleting the only row on a page past page 1 leaves currentPage pointing past
       // the new last_page once the list refetches — DataGrid renders its empty state
@@ -141,7 +141,7 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
       onDeleted?.()
       showSuccess('Product deleted successfully', 'Product Deleted')
     },
-    onError: (error: unknown, deletedProductId: number) => {
+    onError: (error: unknown, deletedProductId: string) => {
       // handleDelete cancels this same query before the delete request goes out (see below) so a
       // slow in-flight fetch can't resolve into a spurious toast after a *successful* delete. If
       // the delete then fails instead, that cancellation would otherwise leave the query stuck

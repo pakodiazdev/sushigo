@@ -32,7 +32,7 @@ class UpdateProductRequest extends FormRequest
 
     public function authorize(): bool
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($this->route('id'));
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $this->route('id'))->firstOrFail();
 
         if (! $this->user()->can('update', $product)) {
             return false;
@@ -74,7 +74,7 @@ class UpdateProductRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            $product = Item::where('type', Item::TYPE_PRODUCTO)->find($this->route('id'));
+            $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $this->route('id'))->first();
 
             $this->validateCategoryAssignment($validator, $product);
             $this->validateBrandAssignment($validator, $product);

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Contracts\AuthorizesMediaOwnership;
 use App\Models\Concerns\HasMediaGallery;
+use App\Support\Traits\HasPublicId;
+use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Item extends Model implements AuthorizesMediaOwnership
 {
-    use HasFactory, HasMediaGallery, SoftDeletes;
+    use HasFactory, HasMediaGallery, HasPublicId, SerializesPublicIdAsId, SoftDeletes;
 
     protected $fillable = [
         'sku',

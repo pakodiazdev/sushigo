@@ -29,10 +29,10 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // Act: Register opening balance with base unit
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 50,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'unit_cost' => 125.50,
             'reference' => 'INV-2024-001',
             'notes' => 'Initial inventory count',
@@ -104,10 +104,10 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // Act: Register opening balance in grams (should convert to KG)
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 25000, // 25,000 grams
-            'uom_id' => $this->uomGr->id,
+            'uom_id' => $this->uomGr->public_id,
             'unit_cost' => 0.15, // Cost per gram
             'reference' => 'INV-2024-002',
         ]);
@@ -149,19 +149,19 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // Act: First opening balance - 10 KG at $100/KG
         $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'unit_cost' => 100,
         ])->assertStatus(201);
 
         // Act: Second opening balance - 20 KG at $150/KG
         $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 20,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'unit_cost' => 150,
         ])->assertStatus(201);
 
@@ -186,10 +186,10 @@ class OpeningBalanceTest extends InventoryTestCase
         $variant = $this->createItemVariant($item);
 
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         // Should succeed with Passport::actingAs in setUp
@@ -220,10 +220,10 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // Act
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 0, // Invalid: must be > 0
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         // Assert
@@ -239,10 +239,10 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // Act
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => 99999, // Non-existent
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => 'missing-public-id', // Non-existent
+            'item_variant_id' => $variant->public_id,
             'quantity' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         // Assert
@@ -255,10 +255,10 @@ class OpeningBalanceTest extends InventoryTestCase
     {
         // Act
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => 99999, // Non-existent
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => 'missing-public-id', // Non-existent
             'quantity' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
         ]);
 
         // Assert
@@ -274,10 +274,10 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // Act
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 10,
-            'uom_id' => 99999, // Non-existent
+            'uom_id' => 'missing-public-id', // Non-existent
         ]);
 
         // Assert
@@ -306,10 +306,10 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // Act: Try to register with Liter (no conversion KG <-> L)
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 10,
-            'uom_id' => $uomLiter->id, // No conversion available
+            'uom_id' => $uomLiter->public_id, // No conversion available
             'unit_cost' => 50,
         ]);
 
@@ -341,10 +341,10 @@ class OpeningBalanceTest extends InventoryTestCase
         ]);
 
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 5,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'unit_cost' => 100,
         ]);
 
@@ -370,10 +370,10 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // Act: Register with grams
         $response = $this->postJson('/api/v1/inventory/opening-balance', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
             'quantity' => 5000, // 5000 grams
-            'uom_id' => $this->uomGr->id,
+            'uom_id' => $this->uomGr->public_id,
             'unit_cost' => 0.50, // $0.50 per gram
             'reference' => 'COFFEE-001',
             'notes' => 'Premium arabica beans',

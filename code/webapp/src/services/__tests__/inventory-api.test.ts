@@ -464,8 +464,8 @@ describe('productVariantApi', () => {
             const mockResponse = { data: { status: 201, data: { id: 7 } } }
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
-            const data = { name: 'Arroz Premium 1kg', code: 'ARR-KG', uom_id: 1 }
-            const result = await productVariantApi.create(42, data)
+            const data = { name: 'Arroz Premium 1kg', code: 'ARR-KG', uom_id: '01UOM' }
+            const result = await productVariantApi.create('42', data)
 
             expect(apiClient.post).toHaveBeenCalledWith('/inventory/products/42/variants', data)
             expect(result).toEqual(mockResponse)
@@ -561,10 +561,10 @@ describe('stockMovementApi', () => {
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data = {
-                inventory_location_id: 1,
-                item_variant_id: 10,
+                inventory_location_id: 'location-01',
+                item_variant_id: 'variant-10',
                 quantity: 100,
-                uom_id: 1,
+                uom_id: 'uom-01',
                 unit_cost: 25.5,
                 notes: 'Balance inicial',
             }
@@ -580,10 +580,10 @@ describe('stockMovementApi', () => {
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data = {
-                inventory_location_id: 1,
-                item_variant_id: 10,
+                inventory_location_id: 'location-01',
+                item_variant_id: 'variant-10',
                 quantity: 50,
-                uom_id: 1,
+                uom_id: 'uom-01',
             }
 
             const result = await stockMovementApi.openingBalance(data)
@@ -599,10 +599,10 @@ describe('stockMovementApi', () => {
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data = {
-                location_id: 1,
-                variant_id: 10,
+                inventory_location_id: 'location-01',
+                item_variant_id: 'variant-10',
                 qty: 5,
-                uom_id: 1,
+                uom_id: 'uom-01',
                 reason: 'SALE' as const,
                 sale_price: 150.0,
                 notes: 'Venta mostrador',
@@ -619,10 +619,10 @@ describe('stockMovementApi', () => {
             vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
 
             const data = {
-                location_id: 1,
-                variant_id: 10,
+                inventory_location_id: 'location-01',
+                item_variant_id: 'variant-10',
                 qty: 2,
-                uom_id: 1,
+                uom_id: 'uom-01',
                 reason: 'CONSUMPTION' as const,
             }
 

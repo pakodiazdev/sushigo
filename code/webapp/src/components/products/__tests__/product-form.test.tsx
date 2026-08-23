@@ -83,7 +83,7 @@ function defaultState() {
 }
 
 const existingProduct: Product = {
-  id: 42,
+  id: '42',
   name: 'Coca-Cola Original 600 ml',
   description: null,
   is_active: true,

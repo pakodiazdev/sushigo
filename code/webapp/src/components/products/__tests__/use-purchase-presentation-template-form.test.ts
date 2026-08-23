@@ -33,7 +33,7 @@ import { useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
 // ── Test data ──────────────────────────────────────────────────────────────────
 
 const kilogram: UnitOfMeasure = {
-  id: 1,
+  id: '1',
   code: 'KG',
   name: 'Kilogram',
   symbol: 'kg',
@@ -49,7 +49,7 @@ const existingTemplate: PurchasePresentationTemplate = {
   name: 'Box x24',
   package_type: 'BOX',
   base_unit_quantity: 24,
-  compatible_dimension_uom: { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' },
+  compatible_dimension_uom: { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' },
   is_active: true,
 }
 
@@ -112,7 +112,7 @@ describe('usePurchasePresentationTemplateForm', () => {
     } as never)
     const templateWithDeactivatedUom: PurchasePresentationTemplate = {
       ...existingTemplate,
-      compatible_dimension_uom: { id: 9, code: 'LB', name: 'Pound', symbol: 'lb' },
+      compatible_dimension_uom: { id: '9', code: 'LB', name: 'Pound', symbol: 'lb' },
     }
     const { wrapper } = makeWrapper()
     const { result } = renderHook(
@@ -120,7 +120,7 @@ describe('usePurchasePresentationTemplateForm', () => {
       { wrapper }
     )
 
-    expect(result.current.uoms).toEqual([{ id: 9, code: 'LB', name: 'Pound', symbol: 'lb' }])
+    expect(result.current.uoms).toEqual([{ id: '9', code: 'LB', name: 'Pound', symbol: 'lb' }])
   })
 
   it('does not duplicate the current UOM when it is still active', () => {
@@ -133,7 +133,7 @@ describe('usePurchasePresentationTemplateForm', () => {
     expect(result.current.uoms).toEqual([kilogram])
   })
 
-  it('creates the template on submit, coercing quantity/uom to numbers', async () => {
+  it('creates the template on submit, preserving the public UOM while coercing quantity to a number', async () => {
     const created = { ...existingTemplate, id: '01JTPL00000000000000000BB', code: 'PACK_6' }
     vi.mocked(purchasePresentationTemplateApi.create).mockResolvedValue({
       data: { status: 201, data: created },
@@ -161,7 +161,7 @@ describe('usePurchasePresentationTemplateForm', () => {
       name: 'Pack x6',
       package_type: 'PACK',
       base_unit_quantity: 6,
-      compatible_dimension_uom_id: 1,
+      compatible_dimension_uom_id: '1',
       is_active: true,
     })
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(created))

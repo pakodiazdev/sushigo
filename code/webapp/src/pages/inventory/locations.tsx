@@ -44,7 +44,7 @@ export function InventoryLocationsPage() {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => inventoryLocationApi.delete(id),
+    mutationFn: (id: string) => inventoryLocationApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-locations'] })
       setIsDetailsPanelOpen(false)
@@ -134,7 +134,7 @@ export function InventoryLocationsPage() {
     setIsFormPanelOpen(true)
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     if (confirm('¿Estás seguro de eliminar esta ubicación?')) {
       deleteMutation.mutate(id)
     }

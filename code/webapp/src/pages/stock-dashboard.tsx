@@ -34,7 +34,7 @@ interface StockSummary {
 }
 
 export function StockDashboardPage() {
-  const [selectedLocationId, setSelectedLocationId] = useState<number>(0)
+  const [selectedLocationId, setSelectedLocationId] = useState('')
 
   // Fetch all stock
   const { data: stockData, isLoading: stockLoading, refetch: refetchStock } = useQuery({
@@ -52,7 +52,7 @@ export function StockDashboardPage() {
   const { data: locationStockData, isLoading: locationLoading } = useQuery({
     queryKey: ['stock-by-location', selectedLocationId],
     queryFn: () => stockApi.byLocation(selectedLocationId),
-    enabled: selectedLocationId > 0,
+    enabled: selectedLocationId.length > 0,
   })
 
   const locations = locationsData?.data.data || []
@@ -153,7 +153,7 @@ export function StockDashboardPage() {
     },
   ]
 
-  const isLoading = stockLoading || (selectedLocationId > 0 && locationLoading)
+  const isLoading = stockLoading || (selectedLocationId.length > 0 && locationLoading)
 
   return (
     <PageContainer>
@@ -212,7 +212,7 @@ export function StockDashboardPage() {
         <FilterSelect
           label="Filter by Location"
           value={selectedLocationId.toString()}
-          onChange={(value) => setSelectedLocationId(Number(value))}
+          onChange={setSelectedLocationId}
           options={locations.map((loc: InventoryLocation) => ({
             value: loc.id.toString(),
             label: `${loc.name} (${loc.type})`,
@@ -222,7 +222,7 @@ export function StockDashboardPage() {
       </div>
 
       {/* Location Detail View */}
-      {selectedLocationId > 0 && locationStockData?.data.data && (
+      {selectedLocationId.length > 0 && locationStockData?.data.data && (
         <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
           <div className="flex items-start justify-between mb-6">
             <div>
@@ -238,7 +238,7 @@ export function StockDashboardPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedLocationId(0)}
+              onClick={() => setSelectedLocationId('')}
             >
               Clear Filter
             </Button>
@@ -319,7 +319,7 @@ export function StockDashboardPage() {
       )}
 
       {/* Location Summary Cards (when no filter selected) */}
-      {selectedLocationId === 0 && locationSummaryCards.length > 0 && (
+      {selectedLocationId.length === 0 && locationSummaryCards.length > 0 && (
         <div className="mb-8">
           <h3 className="text-lg font-semibold mb-4">Stock by Location</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

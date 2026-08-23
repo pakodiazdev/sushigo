@@ -60,10 +60,10 @@ class StockOutTest extends InventoryTestCase
     public function it_registers_a_sale_with_profit_calculation()
     {
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'SALE',
             'sale_price' => 75.00,
             'reference' => 'SALE-001',
@@ -111,10 +111,10 @@ class StockOutTest extends InventoryTestCase
     public function it_registers_consumption_without_sale_price()
     {
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 5,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'CONSUMPTION',
             'reference' => 'CONS-001',
             'notes' => 'Test consumption',
@@ -141,10 +141,10 @@ class StockOutTest extends InventoryTestCase
     public function it_validates_insufficient_stock()
     {
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 150, // More than available (100)
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'SALE',
             'sale_price' => 75.00,
         ]);
@@ -171,10 +171,10 @@ class StockOutTest extends InventoryTestCase
         ]);
 
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 5000, // 5000 GR = 5 KG
-            'uom_id' => $this->uomGr->id,
+            'uom_id' => $this->uomGr->public_id,
             'reason' => 'SALE',
             'sale_price' => 0.075, // Price per gram
             'reference' => 'SALE-002',
@@ -220,10 +220,10 @@ class StockOutTest extends InventoryTestCase
     public function it_validates_reason_must_be_sale_or_consumption()
     {
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'INVALID_REASON',
         ]);
 
@@ -235,10 +235,10 @@ class StockOutTest extends InventoryTestCase
     public function it_validates_quantity_must_be_positive()
     {
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 0,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'SALE',
         ]);
 
@@ -250,10 +250,10 @@ class StockOutTest extends InventoryTestCase
     public function it_returns_404_for_nonexistent_location()
     {
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => 99999,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => 'missing-public-id',
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'SALE',
         ]);
 
@@ -265,10 +265,10 @@ class StockOutTest extends InventoryTestCase
     public function it_calculates_zero_profit_when_cost_equals_price()
     {
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'SALE',
             'sale_price' => 50.00, // Same as avg_unit_cost
         ]);
@@ -293,10 +293,10 @@ class StockOutTest extends InventoryTestCase
         ]);
 
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $variantNoStock->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variantNoStock->public_id,
             'qty' => 1,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'CONSUMPTION',
         ]);
 
@@ -321,10 +321,10 @@ class StockOutTest extends InventoryTestCase
         ]);
 
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 1,
-            'uom_id' => $uomLiter->id,
+            'uom_id' => $uomLiter->public_id,
             'reason' => 'CONSUMPTION',
         ]);
 
@@ -356,10 +356,10 @@ class StockOutTest extends InventoryTestCase
     public function it_records_negative_profit_for_loss_sales()
     {
         $response = $this->postJson('/api/v1/inventory/stock-out', [
-            'inventory_location_id' => $this->location->id,
-            'item_variant_id' => $this->variant->id,
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
             'qty' => 10,
-            'uom_id' => $this->uomKg->id,
+            'uom_id' => $this->uomKg->public_id,
             'reason' => 'SALE',
             'sale_price' => 30.00, // Less than avg_unit_cost (50)
         ]);

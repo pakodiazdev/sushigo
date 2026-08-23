@@ -61,32 +61,32 @@ describe('useVariantPurchasePresentations', () => {
 
   it('does not fetch when variantId is null', () => {
     const { wrapper } = makeWrapper()
-    renderHook(() => useVariantPurchasePresentations(42, null, true), { wrapper })
+    renderHook(() => useVariantPurchasePresentations('42', null, true), { wrapper })
 
     expect(variantPurchasePresentationApi.list).not.toHaveBeenCalled()
   })
 
   it('does not fetch while unreachable, even with ids set', () => {
     const { wrapper } = makeWrapper()
-    renderHook(() => useVariantPurchasePresentations(42, 7, false), { wrapper })
+    renderHook(() => useVariantPurchasePresentations('42', '7', false), { wrapper })
 
     expect(variantPurchasePresentationApi.list).not.toHaveBeenCalled()
   })
 
   it('loads presentations for the given variant', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useVariantPurchasePresentations(42, 7, true), { wrapper })
+    const { result } = renderHook(() => useVariantPurchasePresentations('42', '7', true), { wrapper })
 
     await waitFor(() => expect(result.current.presentations).toHaveLength(1))
 
-    expect(variantPurchasePresentationApi.list).toHaveBeenCalledWith(42, 7)
+    expect(variantPurchasePresentationApi.list).toHaveBeenCalledWith('42', '7')
     expect(result.current.presentations[0]!.template?.name).toBe('Box x24')
   })
 
   it('surfaces a toast when the presentation list fails to load, instead of silently rendering empty', async () => {
     vi.mocked(variantPurchasePresentationApi.list).mockRejectedValue(new Error('Network Error'))
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useVariantPurchasePresentations(42, 7, true), { wrapper })
+    const { result } = renderHook(() => useVariantPurchasePresentations('42', '7', true), { wrapper })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
 
@@ -96,7 +96,7 @@ describe('useVariantPurchasePresentations', () => {
 
   it('starts in list mode', () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useVariantPurchasePresentations(42, 7, true), { wrapper })
+    const { result } = renderHook(() => useVariantPurchasePresentations('42', '7', true), { wrapper })
 
     expect(result.current.presentationMode).toBe('list')
     expect(result.current.selectedPresentation).toBeNull()
@@ -104,7 +104,7 @@ describe('useVariantPurchasePresentations', () => {
 
   it('opens assign mode on + Assign template', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useVariantPurchasePresentations(42, 7, true), { wrapper })
+    const { result } = renderHook(() => useVariantPurchasePresentations('42', '7', true), { wrapper })
 
     act(() => result.current.handleAssignPresentation())
 
@@ -114,7 +114,7 @@ describe('useVariantPurchasePresentations', () => {
 
   it('opens edit mode on a presentation click', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useVariantPurchasePresentations(42, 7, true), { wrapper })
+    const { result } = renderHook(() => useVariantPurchasePresentations('42', '7', true), { wrapper })
 
     act(() => result.current.handlePresentationClick(boxPresentation))
 
@@ -124,7 +124,7 @@ describe('useVariantPurchasePresentations', () => {
 
   it('goes back to the list and clears the selected presentation', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useVariantPurchasePresentations(42, 7, true), { wrapper })
+    const { result } = renderHook(() => useVariantPurchasePresentations('42', '7', true), { wrapper })
 
     act(() => result.current.handlePresentationClick(boxPresentation))
     act(() => result.current.handleBackToList())
@@ -135,7 +135,7 @@ describe('useVariantPurchasePresentations', () => {
 
   it('returns to the list after a successful assign or update', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useVariantPurchasePresentations(42, 7, true), { wrapper })
+    const { result } = renderHook(() => useVariantPurchasePresentations('42', '7', true), { wrapper })
 
     act(() => result.current.handleAssignPresentation())
     act(() => result.current.handlePresentationSaved())
@@ -147,14 +147,14 @@ describe('useVariantPurchasePresentations', () => {
   it('resets to the list when switching to a different Variant', async () => {
     const { wrapper } = makeWrapper()
     const { result, rerender } = renderHook(
-      ({ variantId }: { variantId: number | null }) => useVariantPurchasePresentations(42, variantId, true),
-      { wrapper, initialProps: { variantId: 7 } }
+      ({ variantId }: { variantId: string | null }) => useVariantPurchasePresentations('42', variantId, true),
+      { wrapper, initialProps: { variantId: '7' } }
     )
 
     act(() => result.current.handlePresentationClick(boxPresentation))
     expect(result.current.presentationMode).toBe('edit')
 
-    rerender({ variantId: 9 })
+    rerender({ variantId: '9' })
 
     expect(result.current.presentationMode).toBe('list')
     expect(result.current.selectedPresentation).toBeNull()

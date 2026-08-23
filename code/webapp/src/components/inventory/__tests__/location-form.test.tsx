@@ -110,7 +110,7 @@ describe('LocationForm', () => {
 
     it('renders update button when editing', () => {
       const location = {
-        id: 1,
+        id: 'location-01',
         operating_unit_id: 1,
         name: 'Main Storage',
         type: 'MAIN' as const,

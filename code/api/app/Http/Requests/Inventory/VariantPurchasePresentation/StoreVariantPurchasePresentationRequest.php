@@ -28,8 +28,8 @@ class StoreVariantPurchasePresentationRequest extends FormRequest
 
     public function authorize(): bool
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($this->route('id'));
-        ItemVariant::where('item_id', $product->id)->findOrFail($this->route('variantId'));
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $this->route('id'))->firstOrFail();
+        ItemVariant::where('item_id', $product->id)->where('public_id', $this->route('variantId'))->firstOrFail();
 
         return true;
     }
@@ -115,7 +115,7 @@ class StoreVariantPurchasePresentationRequest extends FormRequest
      */
     private function validateAgainstVariant(Validator $validator, PurchasePresentationTemplate $template): void
     {
-        $variant = ItemVariant::find($this->route('variantId'));
+        $variant = ItemVariant::where('public_id', $this->route('variantId'))->first();
 
         if (! $variant) {
             return;

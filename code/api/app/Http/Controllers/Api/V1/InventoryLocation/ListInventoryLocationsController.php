@@ -53,7 +53,7 @@ class ListInventoryLocationsController extends Controller
         // Transform the data to include all required fields
         $locations->getCollection()->transform(function ($location) {
             return [
-                'id' => $location->id,
+                'id' => $location->public_id,
                 'operating_unit_id' => $location->operating_unit_id,
                 'name' => $location->name,
                 'type' => $location->type,

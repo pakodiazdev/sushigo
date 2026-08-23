@@ -26,13 +26,13 @@ import { productVariantApi } from '@/services/inventory-api'
 // ── Test data ──────────────────────────────────────────────────────────────────
 
 const riceVariant: ProductVariant = {
-  id: 7,
-  item_id: 42,
+  id: '7',
+  item_id: '42',
   code: 'ARR-KG',
   barcode: null,
   name: 'Arroz Premium 1kg',
   description: null,
-  uom: { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' },
+  uom: { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' },
   track_lot: false,
   track_serial: false,
   is_active: true,
@@ -77,23 +77,23 @@ describe('useProductVariants', () => {
     // follows the delete would refetch the now-deleted product's Variants and surface a
     // spurious error toast right after the delete success toast.
     const { wrapper } = makeWrapper()
-    renderHook(() => useProductVariants(42, false), { wrapper })
+    renderHook(() => useProductVariants('42', false), { wrapper })
 
     expect(productVariantApi.list).not.toHaveBeenCalled()
   })
 
   it('loads variants for the given product', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     await waitFor(() => expect(result.current.variants).toHaveLength(1))
 
-    expect(productVariantApi.list).toHaveBeenCalledWith(42, { per_page: 100, page: 1 })
+    expect(productVariantApi.list).toHaveBeenCalledWith('42', { per_page: 100, page: 1 })
     expect(result.current.variants[0]!.name).toBe('Arroz Premium 1kg')
   })
 
   it('fetches every page instead of silently truncating past the first 100 variants', async () => {
-    const pageTwoVariant = { ...riceVariant, id: 8, code: 'ARR-KG-2' }
+    const pageTwoVariant = { ...riceVariant, id: '8', code: 'ARR-KG-2' }
     vi.mocked(productVariantApi.list).mockImplementation((_, params) => {
       const page = params?.page ?? 1
       return Promise.resolve({
@@ -106,19 +106,19 @@ describe('useProductVariants', () => {
     })
 
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     await waitFor(() => expect(result.current.variants).toHaveLength(2))
 
-    expect(productVariantApi.list).toHaveBeenCalledWith(42, { per_page: 100, page: 1 })
-    expect(productVariantApi.list).toHaveBeenCalledWith(42, { per_page: 100, page: 2 })
-    expect(result.current.variants.map((v) => v.id)).toEqual([7, 8])
+    expect(productVariantApi.list).toHaveBeenCalledWith('42', { per_page: 100, page: 1 })
+    expect(productVariantApi.list).toHaveBeenCalledWith('42', { per_page: 100, page: 2 })
+    expect(result.current.variants.map((v) => v.id)).toEqual(['7', '8'])
   })
 
   it('surfaces a toast when the variant list fails to load, instead of silently rendering empty', async () => {
     vi.mocked(productVariantApi.list).mockRejectedValue(new Error('Network Error'))
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
 
@@ -128,7 +128,7 @@ describe('useProductVariants', () => {
 
   it('starts in list mode', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     expect(result.current.variantMode).toBe('list')
     expect(result.current.selectedVariant).toBeNull()
@@ -136,7 +136,7 @@ describe('useProductVariants', () => {
 
   it('opens a Variant in detail mode on click', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     act(() => result.current.handleVariantClick(riceVariant))
 
@@ -146,7 +146,7 @@ describe('useProductVariants', () => {
 
   it('opens create mode on New Variant', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     act(() => result.current.handleVariantClick(riceVariant))
     act(() => result.current.handleNewVariant())
@@ -157,7 +157,7 @@ describe('useProductVariants', () => {
 
   it('moves to edit mode, and cancelling edit returns to detail (not the list)', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     act(() => result.current.handleVariantClick(riceVariant))
     act(() => result.current.handleEditVariant())
@@ -170,7 +170,7 @@ describe('useProductVariants', () => {
 
   it('goes back to the list and clears the selected variant', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     act(() => result.current.handleVariantClick(riceVariant))
     act(() => result.current.handleBackToList())
@@ -181,9 +181,9 @@ describe('useProductVariants', () => {
 
   it('shows the saved variant in detail mode after a successful create', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
-    const created: ProductVariant = { ...riceVariant, id: 99, name: 'Arroz Integral 1kg' }
+    const created: ProductVariant = { ...riceVariant, id: '99', name: 'Arroz Integral 1kg' }
     act(() => result.current.handleVariantCreated(created))
 
     expect(result.current.variantMode).toBe('detail')
@@ -192,7 +192,7 @@ describe('useProductVariants', () => {
 
   it('shows the saved variant in detail mode after a successful update', async () => {
     const { wrapper } = makeWrapper()
-    const { result } = renderHook(() => useProductVariants(42, true), { wrapper })
+    const { result } = renderHook(() => useProductVariants('42', true), { wrapper })
 
     const updated: ProductVariant = { ...riceVariant, name: 'Arroz Premium 2kg' }
     act(() => result.current.handleVariantUpdated(updated))
@@ -204,7 +204,7 @@ describe('useProductVariants', () => {
   it('resets to the list on a fresh open (panel closed then reopened for the same product)', async () => {
     const { wrapper } = makeWrapper()
     const { result, rerender } = renderHook(
-      ({ isPanelOpen }: { isPanelOpen: boolean }) => useProductVariants(42, isPanelOpen),
+      ({ isPanelOpen }: { isPanelOpen: boolean }) => useProductVariants('42', isPanelOpen),
       { wrapper, initialProps: { isPanelOpen: true } }
     )
 

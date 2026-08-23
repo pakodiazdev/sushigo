@@ -41,7 +41,7 @@ class ProductCatalogTestSeeder extends Seeder
 
     private function seedUnitOfMeasure($now): int
     {
-        return DB::table('units_of_measure')->insertGetId([
+        return DB::table('units_of_measure')->insertGetId($this->publicIdRow([
             'code' => 'UN',
             'name' => 'Unidad',
             'symbol' => 'un',
@@ -51,7 +51,7 @@ class ProductCatalogTestSeeder extends Seeder
             'meta' => json_encode([]),
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ]));
     }
 
     /**
@@ -150,7 +150,7 @@ class ProductCatalogTestSeeder extends Seeder
 
     private function itemRow(string $name, string $description, int $brandId, int $categoryId, bool $isActive, $now): array
     {
-        return [
+        return $this->publicIdRow([
             'name' => $name,
             'description' => $description,
             'type' => Item::TYPE_PRODUCTO,
@@ -161,12 +161,12 @@ class ProductCatalogTestSeeder extends Seeder
             'is_active' => $isActive,
             'created_at' => $now,
             'updated_at' => $now,
-        ];
+        ]);
     }
 
     private function variantRow(int $itemId, int $uomId, string $code, string $name, string $barcode, bool $isActive, $now): array
     {
-        return [
+        return $this->publicIdRow([
             'item_id' => $itemId,
             'uom_id' => $uomId,
             'code' => $code,
@@ -179,7 +179,7 @@ class ProductCatalogTestSeeder extends Seeder
             'is_active' => $isActive,
             'created_at' => $now,
             'updated_at' => $now,
-        ];
+        ]);
     }
 
     private function presentationRow(int $variantId, int $templateId, bool $isDefault, $now): array

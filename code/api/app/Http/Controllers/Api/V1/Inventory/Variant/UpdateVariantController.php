@@ -44,10 +44,10 @@ use App\Models\ItemVariant;
  */
 class UpdateVariantController extends Controller
 {
-    public function __invoke(UpdateVariantRequest $request, int $id, int $variantId): VariantResource
+    public function __invoke(UpdateVariantRequest $request, string $id, string $variantId): VariantResource
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($id);
-        $variant = ItemVariant::where('item_id', $product->id)->findOrFail($variantId);
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
+        $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $variantId)->firstOrFail();
 
         $variant->update($request->variantData());
         $variant->load('unitOfMeasure');

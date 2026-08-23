@@ -20,7 +20,7 @@ const boxTemplate: PurchasePresentationTemplate = {
   name: 'Box x24',
   package_type: 'BOX',
   base_unit_quantity: 24,
-  compatible_dimension_uom: { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' },
+  compatible_dimension_uom: { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' },
   is_active: true,
 }
 
@@ -77,7 +77,7 @@ function defaultState() {
   }
 }
 
-const kgUom = { id: 1, code: 'KG', name: 'Kilogram', symbol: 'kg' }
+const kgUom = { id: '1', code: 'KG', name: 'Kilogram', symbol: 'kg' }
 
 describe('PurchasePresentationForm', () => {
   afterEach(() => {
@@ -90,8 +90,8 @@ describe('PurchasePresentationForm', () => {
       setHookState()
       const { getByText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -105,8 +105,8 @@ describe('PurchasePresentationForm', () => {
       setHookState()
       const { getByText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -121,8 +121,8 @@ describe('PurchasePresentationForm', () => {
       const onCancel = vi.fn()
       const { getByText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -137,8 +137,8 @@ describe('PurchasePresentationForm', () => {
       setHookState()
       const { container } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -153,8 +153,8 @@ describe('PurchasePresentationForm', () => {
       setHookState({ allErrors: { template_id: 'This template is already assigned to this Variant.' } })
       const { getByText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -168,8 +168,8 @@ describe('PurchasePresentationForm', () => {
       setHookState({ selectedTemplate: boxTemplate, normalizationHint: '1 Box x24 = 24 kg' })
       const { getByText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -181,13 +181,13 @@ describe('PurchasePresentationForm', () => {
 
     it('shows a UOM mismatch warning and disables submit', () => {
       setHookState({
-        selectedTemplate: { ...boxTemplate, compatible_dimension_uom: { id: 2, code: 'LB', name: 'Pound', symbol: 'lb' } },
+        selectedTemplate: { ...boxTemplate, compatible_dimension_uom: { id: '2', code: 'LB', name: 'Pound', symbol: 'lb' } },
         isUomMismatch: true,
       })
       const { getByText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -202,8 +202,8 @@ describe('PurchasePresentationForm', () => {
       setHookState()
       const { getByLabelText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -218,8 +218,8 @@ describe('PurchasePresentationForm', () => {
       setHookState()
       const { queryByLabelText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           assignedTemplateIds={[]}
           onSuccess={vi.fn()}
@@ -235,8 +235,8 @@ describe('PurchasePresentationForm', () => {
       setHookState({ isEditing: true })
       const { getByText, queryByRole } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           presentation={existingPresentation}
           assignedTemplateIds={[boxTemplate.id]}
@@ -253,8 +253,8 @@ describe('PurchasePresentationForm', () => {
       setHookState({ isEditing: true, isActive: true })
       const { getByLabelText } = render(
         <PurchasePresentationForm
-          productId={42}
-          variantId={7}
+          productId={'42'}
+          variantId={'7'}
           variantUom={kgUom}
           presentation={existingPresentation}
           assignedTemplateIds={[boxTemplate.id]}

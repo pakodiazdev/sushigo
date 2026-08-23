@@ -26,7 +26,7 @@ const variantSchema = z.object({
 export type VariantFormValues = z.infer<typeof variantSchema>
 
 export interface UseVariantFormOptions {
-  productId: number
+  productId: string
   variant?: ProductVariant | null
   onSuccess: (variant: ProductVariant) => void
 }
@@ -76,7 +76,7 @@ export function useVariantForm({ productId, variant, onSuccess }: Readonly<UseVa
         name: data.name,
         code: data.code,
         barcode: data.barcode || null,
-        uom_id: Number(data.uom_id),
+        uom_id: data.uom_id,
         description: data.description || null,
         track_lot: data.track_lot,
         track_serial: data.track_serial,
@@ -87,7 +87,7 @@ export function useVariantForm({ productId, variant, onSuccess }: Readonly<UseVa
         name: data.name,
         code: data.code,
         barcode: data.barcode || null,
-        uom_id: Number(data.uom_id),
+        uom_id: data.uom_id,
         description: data.description || null,
         track_lot: data.track_lot,
         track_serial: data.track_serial,

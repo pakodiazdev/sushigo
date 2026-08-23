@@ -50,10 +50,10 @@ class RegisterOpeningBalanceController extends Controller
     {
         try {
             $movement = $this->service->registerOpeningBalance(new RegisterOpeningBalanceData(
-                inventoryLocationId: $request->inventory_location_id,
-                itemVariantId: $request->item_variant_id,
+                inventoryLocationId: $request->inventoryLocationId(),
+                itemVariantId: $request->itemVariantId(),
                 quantity: $request->quantity,
-                entryUomId: $request->uom_id,
+                entryUomId: $request->uomId(),
                 unitCost: $request->unit_cost,
                 userId: $request->user()->id,
                 reference: $request->reference,

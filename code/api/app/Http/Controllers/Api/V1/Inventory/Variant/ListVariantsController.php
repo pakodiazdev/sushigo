@@ -42,9 +42,9 @@ use Illuminate\Http\Request;
  */
 class ListVariantsController extends Controller
 {
-    public function __invoke(Request $request, int $id): ResponsePaginated
+    public function __invoke(Request $request, string $id): ResponsePaginated
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->findOrFail($id);
+        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
 
         $perPage = $request->validate([
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],

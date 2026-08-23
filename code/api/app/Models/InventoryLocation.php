@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\Traits\HasPublicId;
+use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InventoryLocation extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasPublicId, SerializesPublicIdAsId, SoftDeletes;
 
     protected $fillable = [
         'operating_unit_id',

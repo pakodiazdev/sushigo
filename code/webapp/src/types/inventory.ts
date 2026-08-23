@@ -1,6 +1,6 @@
 // Inventory Location Types
 export interface InventoryLocation {
-  id: number
+  id: string
   operating_unit_id: number
   name: string
   type: 'MAIN' | 'TEMP' | 'KITCHEN' | 'BAR' | 'RETURN'
@@ -45,7 +45,7 @@ export interface ItemMediaAttachment {
 
 // Item Variant Types
 export interface ItemVariant {
-  id: number
+  id: string
   item_id: number
   code: string
   name: string
@@ -97,7 +97,7 @@ export interface ProductCategoryRef {
 // Product Types — Item scoped to type=PRODUCTO, catalog-identity-only contract
 // from #422 (no cost, price, UOM, stock). See ProductResource on the backend.
 export interface Product {
-  id: number
+  id: string
   name: string
   description: string | null
   is_active: boolean
@@ -125,7 +125,7 @@ export interface ProductMediaAttachment {
 
 /** Minimal UnitOfMeasure reference embedded in a ProductVariant response. */
 export interface ProductVariantUomRef {
-  id: number
+  id: string
   code: string
   name: string
   symbol: string
@@ -136,8 +136,8 @@ export interface ProductVariantUomRef {
 // backend and doc/architecture/product-catalog/product-catalog-architecture.en.md §6. Distinct
 // from the legacy `ItemVariant` type above, which still carries the old commercial fields.
 export interface ProductVariant {
-  id: number
-  item_id: number
+  id: string
+  item_id: string
   code: string
   barcode: string | null
   name: string
@@ -157,7 +157,7 @@ export type PurchasePresentationPackageType = 'UNIT' | 'PACK' | 'BOX' | 'TRAY'
 
 /** Minimal UnitOfMeasure reference embedded in a PurchasePresentationTemplate response. */
 export interface PurchasePresentationTemplateUomRef {
-  id: number
+  id: string
   code: string
   name: string
   symbol: string
@@ -205,7 +205,7 @@ export interface VariantPurchasePresentation {
 
 // Unit of Measure Types
 export interface UnitOfMeasure {
-  id: number
+  id: string
   code: string
   name: string
   symbol: string
@@ -218,8 +218,8 @@ export interface UnitOfMeasure {
 // Stock Types
 export interface Stock {
   id: number
-  inventory_location_id: number
-  item_variant_id: number
+  inventory_location_id: string
+  item_variant_id: string
   on_hand: number
   reserved: number
   available: number
