@@ -1,12 +1,12 @@
 ---
 sprint: "004"
 title: Product Catalog Reconstruction
-status: In Progress
+status: Completed
 
 created: 2026-08-12
 started: 2026-08-18
-completed:
-last_updated: 2026-08-21
+completed: 2026-08-22
+last_updated: 2026-08-22
 
 base_branch: main
 base_commit: e11cb139
@@ -44,11 +44,9 @@ of the sprint, giving a real **1.34× parallelization factor** on formal scope a
 opportunistic work — see §11).
 
 Per `doc/conventions/sprints.md` §4, a sprint is formally completed once its closure checklist is
-done **and** the next sprint becomes current. This closeout pass (`#488`) records that all Sprint
-004 work is delivered and every other item in §18 is complete, but **deliberately leaves Sprint
-005's promotion out of `planned/` as a separate follow-up** for `/close-sprint` to run — the same
-explicit split `#457`/`#460` used for Sprint 003's own closure. Accordingly, the frontmatter remains
-`status: In Progress` and leaves `completed` empty until that promotion formally closes Sprint 004.
+done **and** the next sprint becomes current. Promotion issue `#493` moved Sprint 005 out of
+`planned/` on 2026-08-22, formally closing Sprint 004 after every other closure item had already
+been completed by `#488`.
 
 Two real data gaps surfaced while resyncing this document (see §12): Issue `#429` had merged code
 and a real logged session but had never been finalized (`Tracked`/Retrospective missing — fixed as
@@ -106,7 +104,7 @@ seed data, and leaves financial and Stock operations in their correct later doma
 | Planned start | 2026-09-06 |
 | Planned end | 2026-09-19 |
 | Started | 2026-08-18 (promoted early — see `#460`; Sprint 003 delivered its confirmed scope 6 days ahead of its own planned window) |
-| Completed | — (formal closure pending Sprint 005 promotion) |
+| Completed | 2026-08-22 (formally closed when `#493` promoted Sprint 005) |
 | Target calendar duration | 14 days |
 | Confirmed-scope delivery duration | 4 days (2026-08-18 → 2026-08-21) — 16 days ahead of the originally scheduled window |
 | Active workdays | 4 (2026-08-18, 08-19, 08-20, 08-21 — every day has real `## 📅 Sessions` evidence from at least one Issue, see §11) |
@@ -547,14 +545,14 @@ rediscover each time.
 | ⏳ | TBD | Have a repo admin recreate the `PROJECTS_TOKEN` secret so `update-iteration-progress.yml` can regenerate the committed badge | `#460`'s own badge-regeneration Technical Task is blocked on this; not resolvable by an agent without repo admin access | Sprint 005 |
 | ⏳ | TBD | Reconcile `#468` into Sprint 004's opportunistic-work record (§5.4/§13) in a follow-up documentation pass | Real, merged, `sprint-4`-labeled dev-platform work that landed inside this sprint's window but was never named in `#488`'s own reconciliation list, and has its own unclosed Sessions entry to fix first | Sprint 005 |
 | ⏳ | TBD | Extend `/start-issue` Phase 1a's label validation to also check for a `sprint-N` label on opportunistic work, the same way it already validates `investment:` | Closes the labeling gap named in §16, found across 4 of 6 opportunistic Issues this sprint | Sprint 005 |
-| ⏳ | TBD | Promote `sprint-005-purchasing-cost-and-pricing.md` from `doc/sprints/planned/` to `doc/sprints/` and mark it current | Deliberately deferred to `/close-sprint`, run separately once this checklist is otherwise complete — see §18 | Sprint 005 kickoff |
+| ✅ | #493 | Promote `sprint-005-purchasing-cost-and-pricing.md` from `doc/sprints/planned/` to `doc/sprints/` and mark it current | Completed by `/close-sprint` on 2026-08-22 | Sprint 005 kickoff |
 
 ## 18. Sprint Closure Checklist
 
-> Every item below is complete except the very last one, which `#488` deliberately leaves for
-> `/close-sprint` to run as a separate follow-up — the same explicit split Sprint 003's own closure
-> (`#457`/`#460`) used. Per `doc/conventions/sprints.md` §4, this sprint remains `In Progress` and
-> its `completed` date remains empty until that promotion formally closes it.
+> Every item below is complete. Issue `#488` deliberately left the final promotion step to
+> `/close-sprint` as a separate follow-up — the same explicit split Sprint 003's own closure
+> (`#457`/`#460`) used. Promotion issue `#493` completed that step on 2026-08-22; per
+> `doc/conventions/sprints.md` §4, Sprint 004 is now formally `Completed`.
 
 - [x] Eight Issues selected as one end-to-end catalog vertical.
 - [x] Every included Issue is linked to SushiGo Admin, labeled `sprint-4`, and assigned to the
@@ -580,8 +578,7 @@ rediscover each time.
 - [x] Delivered value and known limitations were documented (§15).
 - [x] Follow-up work was created or recorded (§17).
 - [x] Lessons learned were captured (§16).
-- [x] Metadata dates and status were updated (frontmatter — `status: In Progress`, empty
-      `completed` pending formal closure, `last_updated: 2026-08-21`).
-- [ ] The next sprint was promoted or created when applicable. — **Deliberately deferred to
-      `/close-sprint`**, per this Issue's own explicit scope carve-out (§1) — Sprint 005 remains
-      under `doc/sprints/planned/` until that separate run promotes it.
+- [x] Metadata dates and status were updated (frontmatter — `status: Completed`,
+      `completed: 2026-08-22`, `last_updated: 2026-08-22`).
+- [x] The next sprint was promoted or created when applicable. — Sprint 005 was promoted by `#493`
+      on 2026-08-22.
