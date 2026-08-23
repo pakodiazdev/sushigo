@@ -1,15 +1,15 @@
 ---
 sprint: "005"
 title: Purchasing, Cost & Pricing
-status: Planned
+status: In Progress
 
 created: 2026-08-12
-started:
+started: 2026-08-22
 completed:
-last_updated: 2026-08-12
+last_updated: 2026-08-22
 
 base_branch: main
-base_commit: 68ee117
+base_commit: a6f153bc
 scope_issues: 7
 
 github_project: SushiGo Admin (#7)
@@ -61,7 +61,7 @@ authoritative acquisition-cost source and deterministic operational data.
 | Created | 2026-08-12 |
 | Planned start | 2026-09-20 |
 | Planned end | 2026-10-03 |
-| Started | — |
+| Started | 2026-08-22 (promoted early from planned by `#493`) |
 | Completed | — |
 | Target calendar duration | 14 days |
 | Active workdays | — |
@@ -97,7 +97,7 @@ authoritative acquisition-cost source and deterministic operational data.
 
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
-| — | — | — | None yet | — |
+| 2026-08-22 | #493 | Promote Sprint 005 and formally close Sprint 004 | Sprint 004 closure checklist was complete | Sprint 005 activated and both sprint indexes synchronized |
 
 ## 6. Value Ranking
 
