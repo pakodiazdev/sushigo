@@ -57,6 +57,7 @@ Route::prefix('v1')->group(function () {
     require __DIR__.'/api/media.php';
     require __DIR__.'/api/inventory.php';
     require __DIR__.'/api/product-catalog.php';
+    require __DIR__.'/api/suppliers.php';
     require __DIR__.'/api/employees.php';
     require __DIR__.'/api/attendance.php';
     require __DIR__.'/api/vacation-holidays.php';

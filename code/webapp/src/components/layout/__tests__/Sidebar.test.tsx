@@ -49,8 +49,10 @@ vi.mock('@/components/ui/logo', () => ({
   Logo: () => <div data-testid="logo" />,
 }))
 
+const mockCan = vi.fn((_permission: string) => false)
+
 vi.mock('@/stores/auth.store', () => ({
-  useAuthStore: () => ({ can: () => false }),
+  useAuthStore: () => ({ can: mockCan }),
 }))
 
 vi.mock('@/services/employee-request-hooks', () => ({
@@ -92,6 +94,7 @@ import Sidebar from '../Sidebar'
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  mockCan.mockReturnValue(false)
   mockSidebar.isCollapsed = false
   mockSidebar.isMobileOpen = false
 })
@@ -312,6 +315,30 @@ describe('Sidebar — inventory-manager sees inventory sections', () => {
     render(<Sidebar />)
     expect(screen.queryByText('Empleados')).toBeNull()
     expect(screen.queryByText('Configuración')).toBeNull()
+  })
+})
+
+describe('Sidebar — user has suppliers.view without items.view', () => {
+  beforeEach(() => {
+    // Inventario's own access is gated by items.view, which this user lacks.
+    mockResolveAccess.mockImplementation((item: { label?: string }) =>
+      item.label === 'Inventario' ? 'hidden' : 'show',
+    )
+    mockCan.mockImplementation((permission: string) => permission === 'suppliers.view')
+  })
+
+  it('keeps Inventario visible so Proveedores stays reachable', () => {
+    render(<Sidebar />)
+    expect(screen.getByText('Inventario')).toBeDefined()
+  })
+
+  it('shows Proveedores but hides items.view-only sub-items', () => {
+    render(<Sidebar />)
+    const inventarioBtn = screen.getByText('Inventario').closest('button')!
+    fireEvent.click(inventarioBtn)
+    expect(screen.getByText('Proveedores')).toBeDefined()
+    expect(screen.queryByText('Items')).toBeNull()
+    expect(screen.queryByText('Ubicaciones')).toBeNull()
   })
 })
 

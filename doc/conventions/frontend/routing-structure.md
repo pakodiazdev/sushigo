@@ -1,90 +1,104 @@
-# Routing and Pages Structure
+# Frontend Routing Structure Convention
 
-## 📁 Architecture
+The application uses TanStack Router with file-based route discovery. This convention defines the
+routing boundary; feature ownership is governed by the mandatory
+[Frontend Domain-Oriented Structure Convention](domain-oriented-structure.md).
 
-The project follows an architecture where **each page exports its own route**, eliminating the need for separate configuration files.
+## Route files are adapters
 
-### Pages (`src/pages/`)
-Contains both logic/UI and route configuration. They are self-contained React components.
-
-```
-pages/
-├── __root.tsx           # Application root layout
-├── index.tsx            # Route "/" - Dashboard entry point
-├── Dashboard.tsx        # Main page with statistics
-├── Productos.tsx        # Route "/productos" - Product management
-├── Ordenes.tsx          # Route "/ordenes" - Order management
-├── Clientes.tsx         # Route "/clientes" - Customer management
-├── Reportes.tsx         # Route "/reportes" - Reports and statistics
-└── Configuracion.tsx    # Route "/configuracion" - System configuration
-```
-
-### Reusable Components (`src/components/ui/`)
-
-- **PageContainer**: Wrapper with padding and max-width for all pages
-- **PageHeader**: Reusable header with title, description, and actions
-
-## 🔄 Workflow
-
-### 1. Create a new page (everything in one file):
+Every route is declared under `src/pages/` with `createFileRoute()`. Route files MUST be thin
+framework adapters, not self-contained business pages.
 
 ```tsx
-// src/pages/MyPage.tsx
-import { createFileRoute } from '@tanstack/react-router';
-import { PageContainer } from '@/components/ui/page-container';
-import { PageHeader } from '@/components/ui/page-header';
-import { Button } from '@/components/ui/button';
+// src/pages/inventario/proveedores.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { SuppliersPage } from '@/features/purchasing/suppliers'
 
-// Export route configuration
-export const Route = createFileRoute('/my-page')({
-    component: MyPagePage,
-});
-
-// Define page component
-export function MyPagePage() {
-    return (
-        <PageContainer>
-            <PageHeader
-                title="My Page"
-                description="Page description"
-            >
-                <Button>Action</Button>
-            </PageHeader>
-
-            {/* Page content */}
-        </PageContainer>
-    );
-}
+export const Route = createFileRoute('/inventario/proveedores')({
+  component: SuppliersPage,
+})
 ```
 
-### 2. TanStack Router automatically generates:
-- The `routeTree.gen.ts` file detecting all pages in `src/pages/`
-- Typed navigation with autocomplete
-- Types for all routes and parameters
+A route adapter may own:
 
-## ✨ Advantages of this structure:
+- Route declaration and metadata.
+- Route/search parameter validation.
+- Access guards.
+- Loaders required by the routing lifecycle.
+- Redirects and rendering of the feature page.
 
-1. **Single File**: Everything related to a page is in one place
-2. **Fewer Files**: No need to create separate route files
-3. **Colocation**: Route and component are together, easy to find and maintain
-4. **Reusable**: Components can be exported and used in other contexts
-5. **Type-Safe**: TanStack Router generates types automatically
-6. **DRY**: Components like `PageContainer` and `PageHeader` avoid duplication
-7. **Auto-Discovery**: TanStack Router automatically detects all pages
+It MUST NOT own business forms, API mutations, query orchestration, substantial page markup,
+table-column definitions, or feature state machines. Those responsibilities belong under
+`src/features/<domain>/<feature>/`.
 
-## 🎯 Conventions:
+## Frontend paths use Spanish
 
-- **Files**: PascalCase (e.g., `Productos.tsx`, `MyPage.tsx`)
-- **Routes**: Defined with `createFileRoute('/route')` inside the file
-- **Components**: `Page` suffix (e.g., `ProductosPage`)
-- **Exports**:
-  - `export const Route` for route configuration
-  - `export function NamePage()` for the component
-- **Imports**: Path aliases with `@/` for absolute imports
+Browser-visible routes are part of the user interface. While SushiGo targets Mexico and has no
+internationalization layer, route segments MUST be written in Spanish:
 
-## 📝 Important Notes:
+```text
+/inventario/proveedores
+/inventario/productos
+/inventario/ubicaciones
+/caja/cuentas-bancarias
+```
 
-- The `__root.tsx` file must be in `src/pages/` and contains the main layout
-- For the root route `/`, use `index.tsx` which imports and exports the Dashboard
-- TanStack Router generates `routeTree.gen.ts` automatically when starting the dev server
-- Routes are configured with the `createFileRoute()` function in each page
+Use lowercase, omit diacritics, and separate compound segments with hyphens. Visible search
+parameters SHOULD use Spanish vocabulary as well:
+
+```text
+/inventario/proveedores?estado=activo&pagina=2
+```
+
+This localization applies only to the browser-facing frontend contract. Code identifiers remain
+English, including dynamic parameter names:
+
+```text
+File/route: /inventario/proveedores/$supplierId
+Variable:   supplierId
+Component:  SupplierDetails
+Permission: suppliers.view
+API:        /api/v1/inventory/suppliers/{supplierId}
+```
+
+API routes, resource names, payload fields, query keys, permissions, models, functions, and types
+MUST remain English.
+
+## File naming
+
+Because TanStack Router derives the public route from the filesystem, directories and files that
+represent static URL segments use the Spanish URL vocabulary (`inventario/proveedores.tsx`). This
+is the routing contract, not a translation of programming identifiers. Non-route source files use
+English kebab-case according to project code conventions.
+
+Use TanStack Router's standard names:
+
+- `__root.tsx` for the application root layout.
+- `index.tsx` for an index route.
+- `$parameterName.tsx` for dynamic parameters; parameter names stay English.
+- A leading `-` for route-excluded colocated files only when the router convention requires it.
+
+## Navigation and redirects
+
+- Sidebar links, breadcrumbs, redirects, and programmatic navigation MUST use the canonical Spanish
+  path.
+- Do not duplicate route strings when typed TanStack navigation can be used.
+- When replacing a released English frontend URL, preserve a redirect to the canonical Spanish path
+  if bookmarks, messages, or external links may reference it.
+- Redirect-only legacy files are transitional and MUST NOT import or duplicate feature UI.
+
+## Generated route tree
+
+TanStack Router generates `src/routeTree.gen.ts`. Do not edit this file manually. It is updated by
+the router tooling after route changes and remains a generated integration artifact, not a domain
+module.
+
+## Review checklist
+
+- [ ] The route path is browser-facing Spanish.
+- [ ] Programming and API identifiers remain English.
+- [ ] The route file contains only routing concerns.
+- [ ] The rendered page comes from a feature public facade.
+- [ ] Navigation and breadcrumbs use the canonical path.
+- [ ] Existing released links have a redirect when required.
+- [ ] `routeTree.gen.ts` was not edited manually.

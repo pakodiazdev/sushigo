@@ -99,6 +99,8 @@ class CoreTestSeeder extends Seeder
         'inventory_categories.create',
         'inventory_categories.update',
         'inventory_categories.delete',
+        'purchase_presentation_templates.view',
+        'purchase_presentation_templates.manage',
         'dishes.view',
         'dishes.create',
         'dishes.update',
@@ -112,6 +114,8 @@ class CoreTestSeeder extends Seeder
         'units_of_measure.manage',
         'stock.view',
         'stock.manage',
+        'suppliers.view',
+        'suppliers.manage',
         'media.upload',
         'media.update',
         'media.delete',
@@ -150,8 +154,8 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'brands.', 'inventory_categories.', 'dishes.', 'inventory_locations.', 'stock.', 'media.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.', '=units_of_measure.manage'],
-        'inventory-manager' => ['items.', 'brands.', 'inventory_categories.', 'inventory_locations.', 'stock.', 'media.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
+        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'dishes.', 'inventory_locations.', 'stock.', 'suppliers.', 'media.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.', '=units_of_measure.manage'],
+        'inventory-manager' => ['items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'inventory_locations.', 'stock.', 'suppliers.', 'media.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
         // items.view + items.manage-media only (not items.update, and not the
         // 'items.' wildcard) — items.update also guards PUT /items/{id} and
         // PUT /item-variants/{id} (name, sale_price, min_stock, ...), so
@@ -160,7 +164,7 @@ class CoreTestSeeder extends Seeder
         // media. stays the full wildcard since managing an item's photos is the point.
         // brands.view/inventory_categories.view mirror items.view — a manager
         // who can view Products needs to view their brand/category labels too.
-        'manager' => [...self::BASIC_USER_VIEW, '=items.view', '=items.manage-media', '=brands.view', '=inventory_categories.view', 'media.', 'employees.', 'leaves.', 'employee-requests.', 'attendances.', 'reports.', '=payroll.preview', '=payroll.close'],
+        'manager' => [...self::BASIC_USER_VIEW, '=items.view', '=items.manage-media', '=brands.view', '=inventory_categories.view', '=purchase_presentation_templates.view', '=suppliers.view', 'media.', 'employees.', 'leaves.', 'employee-requests.', 'attendances.', 'reports.', '=payroll.preview', '=payroll.close'],
         'cook' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
         'kitchen-assistant' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],
         'delivery-driver' => [...self::BASIC_USER_VIEW, ...self::SELF_SERVICE_REQUESTS],

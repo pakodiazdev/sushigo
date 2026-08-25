@@ -89,6 +89,7 @@ const menuItems: MenuItem[] = [
         accessMode: 'hidden',
         subItems: [
             { label: 'Productos', path: '/inventory/products' },
+            { label: 'Proveedores', path: '/inventario/proveedores', requiredPermission: 'suppliers.view' },
             { label: 'Ubicaciones', path: '/inventory/locations' },
             { label: 'Items', path: '/inventory/items' },
             { label: 'Variantes', path: '/inventory/item-variants' },
@@ -156,6 +157,23 @@ export default function Sidebar() {
 
     const isSubmenuExpanded = (label: string) => expandedMenus.includes(label);
 
+    /** Sub-items with no `requiredPermission` inherit the parent's own access. */
+    const isSubItemAccessible = (subItem: SubMenuItem, parentOwnAccess: AccessResult) =>
+        subItem.requiredPermission ? can(subItem.requiredPermission) : parentOwnAccess === 'show';
+
+    /**
+     * A parent item stays visible when the user lacks its own permission but
+     * holds a permission scoped to one of its sub-items (e.g. `suppliers.view`
+     * without `items.view`), so that sub-item remains reachable.
+     */
+    const resolveItemAccess = (item: MenuItem, ownAccess: AccessResult): AccessResult => {
+        if (ownAccess === 'show') return ownAccess;
+        const hasAccessibleSubItem = item.subItems?.some((subItem) =>
+            isSubItemAccessible(subItem, ownAccess),
+        );
+        return hasAccessibleSubItem ? 'show' : ownAccess;
+    };
+
     const isMenuItemActive = (item: MenuItem) => {
         if (item.path) {
             return currentPath === item.path;
@@ -166,7 +184,7 @@ export default function Sidebar() {
         return false;
     };
 
-    const renderMenuItem = (item: MenuItem, access: AccessResult) => {
+    const renderMenuItem = (item: MenuItem, access: AccessResult, ownAccess: AccessResult) => {
         const Icon = item.icon;
         const hasSubItems = item.subItems && item.subItems.length > 0;
         const isExpanded = isSubmenuExpanded(item.label);
@@ -247,7 +265,7 @@ export default function Sidebar() {
                         {hasSubItems && !isCollapsed && isExpanded && (
                             <ul className="mt-1 ml-8 space-y-1">
                                 {item.subItems!.filter((subItem) =>
-                                    !subItem.requiredPermission || can(subItem.requiredPermission)
+                                    isSubItemAccessible(subItem, ownAccess)
                                 ).map((subItem) => {
                                     const isSubActive = currentPath === subItem.path;
                                     return (
@@ -343,9 +361,10 @@ export default function Sidebar() {
                     <nav className="flex-1 overflow-y-auto px-3">
                         <ul className="space-y-1">
                             {menuItemsToRender.map((item) => {
-                                const access = resolveAccess(item);
+                                const ownAccess = resolveAccess(item);
+                                const access = resolveItemAccess(item, ownAccess);
                                 if (access === 'hidden') return null;
-                                return renderMenuItem(item, access);
+                                return renderMenuItem(item, access, ownAccess);
                             })}
                         </ul>
                     </nav>

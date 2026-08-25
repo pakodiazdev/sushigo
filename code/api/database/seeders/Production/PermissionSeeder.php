@@ -151,6 +151,10 @@ class PermissionSeeder extends LockedSeeder
             'purchase_presentation_templates.view',
             'purchase_presentation_templates.manage',
 
+            // Inventario — Proveedores y ofertas de compra
+            'suppliers.view',
+            'suppliers.manage',
+
             // Inventario — Ubicaciones
             'inventory_locations.view',
             'inventory_locations.manage',
@@ -228,7 +232,7 @@ class PermissionSeeder extends LockedSeeder
             $managerRole->syncPermissions(
                 Permission::where('guard_name', 'api')
                     ->where(function ($q) {
-                        $q->whereIn('name', ['users.show', 'users.index', 'items.view', 'items.manage-media', 'brands.view', 'inventory_categories.view', 'purchase_presentation_templates.view'])
+                        $q->whereIn('name', ['users.show', 'users.index', 'items.view', 'items.manage-media', 'brands.view', 'inventory_categories.view', 'purchase_presentation_templates.view', 'suppliers.view'])
                             ->orWhere('name', 'like', 'employees.%')
                             ->orWhere('name', 'like', 'leaves.%')
                             ->orWhere('name', 'like', 'employee-requests.%')
@@ -260,6 +264,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'brands.%')
                             ->orWhere('name', 'like', 'inventory_categories.%')
                             ->orWhere('name', 'like', 'purchase_presentation_templates.%')
+                            ->orWhere('name', 'like', 'suppliers.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'dishes.%')
@@ -287,6 +292,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'brands.%')
                             ->orWhere('name', 'like', 'inventory_categories.%')
                             ->orWhere('name', 'like', 'purchase_presentation_templates.%')
+                            ->orWhere('name', 'like', 'suppliers.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'price_list%')
