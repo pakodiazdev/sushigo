@@ -230,7 +230,50 @@ describe('Inventory Query Hooks', () => {
       })
 
       expect(result.current.data).toEqual(mockUnits)
-      expect(apiClient.apiClient.get).toHaveBeenCalledWith('/operating-units')
+      expect(apiClient.apiClient.get).toHaveBeenCalledWith('/operating-units', {
+        params: { per_page: 100, page: 1 },
+      })
+    })
+
+    it('should fetch every page of operating units', async () => {
+      // ListOperatingUnitsController returns Laravel's paginator directly — last_page sits at
+      // the response root, not under a `meta` wrapper.
+      const firstPage = [{ id: 1, name: 'Main Branch', type: 'BRANCH' }]
+      const secondPage = [{ id: 2, name: 'Kitchen', type: 'KITCHEN' }]
+      vi.mocked(apiClient.apiClient.get)
+        .mockResolvedValueOnce({
+          data: { data: firstPage, current_page: 1, last_page: 2, total: 2 },
+        })
+        .mockResolvedValueOnce({
+          data: { data: secondPage, current_page: 2, last_page: 2, total: 2 },
+        })
+
+      const { result } = renderHook(() => useOperatingUnitsSelect(), { wrapper })
+
+      await waitFor(() => expect(result.current.data).toEqual([...firstPage, ...secondPage]))
+      expect(apiClient.apiClient.get).toHaveBeenNthCalledWith(1, '/operating-units', {
+        params: { per_page: 100, page: 1 },
+      })
+      expect(apiClient.apiClient.get).toHaveBeenNthCalledWith(2, '/operating-units', {
+        params: { per_page: 100, page: 2 },
+      })
+    })
+
+    it('does not filter out inactive units — LocationForm must keep showing an already-assigned unit even if it has since gone inactive', async () => {
+      const mockUnits = [
+        { id: 1, name: 'Main Branch', type: 'BRANCH', is_active: true },
+        { id: 2, name: 'Retired Kiosk', type: 'KITCHEN', is_active: false },
+      ]
+
+      vi.mocked(apiClient.apiClient.get).mockResolvedValue({
+        data: { data: mockUnits },
+      })
+
+      const { result } = renderHook(() => useOperatingUnitsSelect(), { wrapper })
+
+      await waitFor(() => expect(result.current.data).toEqual(mockUnits))
+      const params = vi.mocked(apiClient.apiClient.get).mock.calls[0]![1] as { params: Record<string, unknown> }
+      expect(params.params).not.toHaveProperty('is_active')
     })
   })
 })
