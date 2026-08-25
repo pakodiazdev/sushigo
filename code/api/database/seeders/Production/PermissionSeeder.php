@@ -170,6 +170,16 @@ class PermissionSeeder extends LockedSeeder
             // Distinct from dishes.update on purpose — see Dish::userCanManageMedia().
             'dishes.manage-media',
 
+            // Precios (Price Lists — #435). VariantPrice CRUD reuses price_lists.view/.update.
+            'price_lists.view',
+            'price_lists.create',
+            'price_lists.update',
+            'price_lists.delete',
+            'price_list_assignments.view',
+            'price_list_assignments.create',
+            'price_list_assignments.update',
+            'price_list_assignments.delete',
+
             // Media
             'media.upload',
             'media.update',
@@ -253,6 +263,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'dishes.%')
+                            ->orWhere('name', 'like', 'price_list%')
                             ->orWhere('name', 'like', self::MEDIA_WILDCARD)
                             ->orWhere('name', 'like', 'audit-logs.%')
                             ->orWhereIn('name', ['units_of_measure.manage', 'punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'payroll.reopen', 'payroll.reclose', 'overtime.manage', 'vacation-policy.manage']);
@@ -278,6 +289,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'purchase_presentation_templates.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
+                            ->orWhere('name', 'like', 'price_list%')
                             ->orWhere('name', 'like', self::MEDIA_WILDCARD)
                             ->orWhere('name', 'units_of_measure.manage')
                             ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
