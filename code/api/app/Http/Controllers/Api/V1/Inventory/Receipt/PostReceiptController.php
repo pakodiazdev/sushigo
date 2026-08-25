@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Inventory\Receipt;
 use App\Exceptions\ReceiptAlreadyPostedException;
 use App\Exceptions\ReceiptAlreadyReversedException;
 use App\Exceptions\ReceiptDestinationUnavailableException;
+use App\Exceptions\ReceiptVariantUnavailableException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\Receipt\ReceiptResource;
 use App\Models\Receipt;
@@ -27,7 +28,7 @@ use Illuminate\Http\JsonResponse;
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden — requires receipts.manage permission"),
  *   @OA\Response(response=404, description="Receipt not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
- *   @OA\Response(response=409, description="Receipt already posted or reversed, or its destination location is no longer available", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
+ *   @OA\Response(response=409, description="Receipt already posted or reversed, its destination location is no longer available, or a referenced Product Variant is no longer available", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */
 class PostReceiptController extends Controller
@@ -38,7 +39,7 @@ class PostReceiptController extends Controller
     {
         try {
             $posted = $this->service->postReceipt($receipt->id, request()->user()->id);
-        } catch (ReceiptAlreadyPostedException|ReceiptAlreadyReversedException|ReceiptDestinationUnavailableException $e) {
+        } catch (ReceiptAlreadyPostedException|ReceiptAlreadyReversedException|ReceiptDestinationUnavailableException|ReceiptVariantUnavailableException $e) {
             return response()->json([
                 'status' => 409,
                 'message' => $e->getMessage(),

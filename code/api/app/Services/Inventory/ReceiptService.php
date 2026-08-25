@@ -10,6 +10,7 @@ use App\Exceptions\ReceiptAlreadyReversedException;
 use App\Exceptions\ReceiptDestinationUnavailableException;
 use App\Exceptions\ReceiptNotPostedException;
 use App\Exceptions\ReceiptReversalBoundaryException;
+use App\Exceptions\ReceiptVariantUnavailableException;
 use App\Models\InventoryLocation;
 use App\Models\Receipt;
 use App\Models\ReceiptLine;
@@ -114,7 +115,7 @@ class ReceiptService
      * hold: a second concurrent call blocks on the same row lock and, once
      * it proceeds, finds status already POSTED.
      *
-     * @throws ReceiptAlreadyPostedException|ReceiptAlreadyReversedException|ReceiptDestinationUnavailableException
+     * @throws ReceiptAlreadyPostedException|ReceiptAlreadyReversedException|ReceiptDestinationUnavailableException|ReceiptVariantUnavailableException
      */
     public function postReceipt(int $receiptId, int $userId): Receipt
     {
@@ -143,6 +144,13 @@ class ReceiptService
 
             foreach ($lines as $line) {
                 $itemVariant = $line->presentation->itemVariant;
+
+                if (! $itemVariant) {
+                    throw new ReceiptVariantUnavailableException(
+                        "Receipt #{$receipt->id} references a Product Variant that is no longer available."
+                    );
+                }
+
                 $baseUnits = (float) $line->base_units_received;
 
                 $this->stockMutation->receiveInto($receipt->destination_location_id, $itemVariant->id, $baseUnits);
@@ -208,7 +216,7 @@ class ReceiptService
      * this codebase doesn't have yet (see #434), so adjusting it here would
      * just trade one approximation for another.
      *
-     * @throws ReceiptNotPostedException|ReceiptAlreadyReversedException|ReceiptReversalBoundaryException
+     * @throws ReceiptNotPostedException|ReceiptAlreadyReversedException|ReceiptReversalBoundaryException|ReceiptVariantUnavailableException
      */
     public function reverseReceipt(int $receiptId, int $userId, ?string $reason): Receipt
     {
@@ -227,6 +235,13 @@ class ReceiptService
 
             foreach ($lines as $line) {
                 $itemVariant = $line->presentation->itemVariant;
+
+                if (! $itemVariant) {
+                    throw new ReceiptVariantUnavailableException(
+                        "Receipt #{$receipt->id} references a Product Variant that is no longer available."
+                    );
+                }
+
                 $baseUnits = (float) $line->base_units_received;
 
                 $stock = Stock::where('inventory_location_id', $receipt->destination_location_id)
