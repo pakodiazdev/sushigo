@@ -86,6 +86,16 @@ class ItemVariant extends Model
     }
 
     /**
+     * Get the effective-dated price-list entries for this variant (#435).
+     * Resolution against these — never this model's own sale_price — is the
+     * authoritative source of a Variant's price. See PriceResolutionService.
+     */
+    public function prices(): HasMany
+    {
+        return $this->hasMany(VariantPrice::class);
+    }
+
+    /**
      * Scope to filter active variants
      */
     public function scopeActive($query)

@@ -20,4 +20,8 @@ final class RouteParams
     public const VARIANT_ID = '/{variantId}';
 
     public const PRESENTATION_ID = '/{presentationId}';
+
+    public const PRICE_LIST_ID = '/{priceList}';
+
+    public const PRICE_LIST_ASSIGNMENT_ID = '/{priceListAssignment}';
 }

@@ -120,7 +120,7 @@ authoritative acquisition-cost source and deterministic operational data.
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
 | ⏳ | #431 | Build Suppliers and purchasable Variant Presentations | High | 5h | 9h | — | — | Requires Sprint 4 presentation contract |
-| ⏳ | #435 | Build effective Product price lists by branch/context | High | 6h | 11h | — | — | Independent pricing lane after Variant contract |
+| ✅ | #435 | Build effective Product price lists by branch/context | High | 6h | 11h | 4.75h | PR #502 | Deterministic price resolution + overlap validation shipped; PR ready, merge pending |
 |  |  | **Round total** |  | **11h** | **20h** | **—** |  |  |
 
 ### Round 2 — Post Purchases and Manage Prices
@@ -215,7 +215,7 @@ introduced.
 | ⏳ | #432 | Pending | — | — | Receipt posting and effective cost |
 | ⏳ | #433 | Pending | — | — | Receiving UI |
 | ⏳ | #434 | Pending | — | — | Cost reconciliation |
-| ⏳ | #435 | Pending | — | — | Price-list backend |
+| ✅ | #435 | Effective-dated PriceList/PriceListAssignment/VariantPrice schema, deterministic resolution API, branch-scoped authorization and permissions shipped, with no ItemVariant.sale_price fallback | PR #502 | 4.75h | 56 PHPUnit tests, Pint clean, SonarCloud quality gate passed (0 new smells/bugs/hotspots, 93.8% new coverage); 3 rounds of Copilot/Codex review addressed (18 threads resolved) |
 | ⏳ | #436 | Pending | — | — | Price-list UI |
 | ⏳ | #437 | Pending | — | — | Operational seeds |
 

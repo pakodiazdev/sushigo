@@ -41,9 +41,16 @@ class PermissionSeeder extends LockedSeeder
 
     private const ATTENDANCES_PATTERN = 'attendances.%';
 
+    // Matches both price_lists.% and price_list_assignments.% (#435) —
+    // VariantPrice CRUD reuses price_lists.* rather than a permission of its
+    // own, see PriceListPolicy/PriceListAssignmentPolicy.
+    private const PRICING_PATTERN = 'price_list%';
+
     private const GROUP_INVENTARIO = 'Inventario';
 
     private const GROUP_PLATILLOS = 'Platillos';
+
+    private const GROUP_PRECIOS = 'Precios';
 
     private const GROUP_CUENTAS_BANCARIAS = 'Cuentas bancarias';
 
@@ -198,6 +205,18 @@ class PermissionSeeder extends LockedSeeder
             // its name/price/category. See Dish::userCanManageMedia().
             'dishes.manage-media' => ['label' => 'Gestionar fotos del platillo', 'group' => self::GROUP_PLATILLOS],
 
+            // Precios (Price Lists — #435). VariantPrice CRUD is a sub-resource of a
+            // Price List and reuses price_lists.view/.update, it has no permission of
+            // its own — see PriceListPolicy/PriceListAssignmentPolicy.
+            'price_lists.view' => ['label' => 'Ver listas de precios', 'group' => self::GROUP_PRECIOS],
+            'price_lists.create' => ['label' => 'Crear lista de precios', 'group' => self::GROUP_PRECIOS],
+            'price_lists.update' => ['label' => 'Editar lista de precios / precios de variante', 'group' => self::GROUP_PRECIOS],
+            'price_lists.delete' => ['label' => 'Eliminar lista de precios', 'group' => self::GROUP_PRECIOS],
+            'price_list_assignments.view' => ['label' => 'Ver asignaciones de lista de precios', 'group' => self::GROUP_PRECIOS],
+            'price_list_assignments.create' => ['label' => 'Asignar lista de precios a un contexto', 'group' => self::GROUP_PRECIOS],
+            'price_list_assignments.update' => ['label' => 'Editar asignación de lista de precios', 'group' => self::GROUP_PRECIOS],
+            'price_list_assignments.delete' => ['label' => 'Eliminar asignación de lista de precios', 'group' => self::GROUP_PRECIOS],
+
             // Media
             'media.upload' => ['label' => 'Subir archivos multimedia', 'group' => 'Media'],
             'media.update' => ['label' => 'Reordenar / marcar imagen principal', 'group' => 'Media'],
@@ -274,6 +293,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
                             ->orWhere('name', 'like', self::DISHES_PATTERN)
+                            ->orWhere('name', 'like', self::PRICING_PATTERN)
                             ->orWhere('name', 'like', self::MEDIA_PATTERN)
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN)
@@ -302,6 +322,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::PURCHASE_PRESENTATION_TEMPLATES_PATTERN)
                             ->orWhere('name', 'like', self::INVENTORY_LOCATIONS_PATTERN)
                             ->orWhere('name', 'like', self::STOCK_PATTERN)
+                            ->orWhere('name', 'like', self::PRICING_PATTERN)
                             ->orWhere('name', 'like', self::MEDIA_PATTERN)
                             ->orWhere('name', 'units_of_measure.manage')
                             ->orWhereIn('name', self::SELF_SERVICE_REQUESTS_PERMISSIONS);
