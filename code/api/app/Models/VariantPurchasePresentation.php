@@ -6,6 +6,7 @@ use App\Support\Traits\HasPublicId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class VariantPurchasePresentation extends Model
@@ -42,5 +43,10 @@ class VariantPurchasePresentation extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function supplierOfferings(): HasMany
+    {
+        return $this->hasMany(SupplierOffering::class);
     }
 }

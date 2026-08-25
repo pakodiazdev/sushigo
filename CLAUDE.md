@@ -152,27 +152,44 @@ app/Http/Controllers/Api/V1/
 
 ### Webapp Structure (React)
 
-TanStack Router with file-based routing - each page exports its own route:
+TanStack Router with file-based routing and a domain-oriented, feature-first structure:
 
 ```
 src/
-├── pages/           # Route pages (export Route + component)
+├── pages/           # Thin route adapters (export Route)
 │   ├── __root.tsx   # Root layout
-│   ├── inventory/   # Nested inventory routes
-│   └── cash/        # Cash management routes
+│   ├── inventario/  # Thin adapters for Spanish browser routes
+│   └── caja/        # Thin adapters for Spanish browser routes
+├── features/        # Business code grouped by domain and cohesive feature
+│   └── purchasing/
+│       └── suppliers/
 ├── components/
 │   ├── ui/          # Reusable UI components
 │   └── layout/      # Layout components
-├── services/        # API service functions with TanStack Query hooks
+├── services/        # Legacy API services, migrated into features incrementally
 ├── stores/          # Zustand stores (auth.store.ts)
 └── lib/api-client.ts  # Axios instance with auth interceptor
 ```
 
 **Key patterns:**
+- New business functionality lives under `src/features/<domain>/<feature>/`; existing code migrates
+  incrementally when its domain is deliberately refactored
+- Files under `src/pages/` are thin TanStack Router adapters and do not own substantial feature UI,
+  mutations, or orchestration
+- Browser-facing frontend routes use Spanish; code identifiers, permissions, libraries, models,
+  API resources, and API fields remain English
+- Cross-feature consumers import the owning feature's public `index.ts`, never its internal files
 - Auth state in Zustand store, persisted to localStorage
 - API calls via axios client with automatic token injection
 - TanStack Query for server state management
 - TanStack Router auto-generates `routeTree.gen.ts`
+
+The mandatory rules are in
+[`doc/conventions/frontend/domain-oriented-structure.md`](doc/conventions/frontend/domain-oriented-structure.md)
+and [`doc/conventions/frontend/routing-structure.md`](doc/conventions/frontend/routing-structure.md).
+The accepted decision and full reference architecture are recorded in
+[TD-04](doc/decisions/td-04-domain-oriented-frontend-structure.md) and
+[`doc/architecture/frontend/domain-oriented-frontend-architecture.en.md`](doc/architecture/frontend/domain-oriented-frontend-architecture.en.md).
 
 ### Domain Model
 

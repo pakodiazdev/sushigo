@@ -6,7 +6,7 @@ status: In Progress
 created: 2026-08-12
 started: 2026-08-22
 completed:
-last_updated: 2026-08-22
+last_updated: 2026-08-23
 
 base_branch: main
 base_commit: a6f153bc
@@ -85,19 +85,20 @@ authoritative acquisition-cost source and deterministic operational data.
   legacy cleanup (`#438`–`#442`), assigned to Sprint 6.
 - A Product or Variant form fallback for cost or sale price.
 - Redis-dependent price resolution or speculative promotion/channel engines.
-- Deferred technical debt `#85`, `#276`, `#399`, and `#415`.
+- Deferred technical debt `#85`, `#276`, and `#415`.
 
 ### 5.3 Scope Changes
 
 | Date | Status | Item | Change | Reason |
 |---|---|---|---|---|
-| — | — | — | None yet | Sprint not started |
+| 2026-08-23 | Added | #399 | Included opportunistically after the Inventory public-ID rollout was completed | The identifier migration landed before #431 and now supplies its Supplier/Presentation boundary |
 
 ### 5.4 Opportunistic Work
 
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
 | 2026-08-22 | #493 | Promote Sprint 005 and formally close Sprint 004 | Sprint 004 closure checklist was complete | Sprint 005 activated and both sprint indexes synchronized |
+| 2026-08-23 | #399 | Migrate Inventory external identifiers to public IDs | Required foundation was completed while preparing purchasing work | PR #495 merged with all 21 CI checks passing, review threads resolved, and clean Sonar quality gates |
 
 ## 6. Value Ranking
 
@@ -119,8 +120,9 @@ authoritative acquisition-cost source and deterministic operational data.
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ⏳ | #431 | Build Suppliers and purchasable Variant Presentations | High | 5h | 9h | — | — | Requires Sprint 4 presentation contract |
+| ✅ | #431 | Build Suppliers and purchasable Variant Presentations | High | 5h | 9h | 1.1h | PR #496 | Supplier/Offering catalog, permissions, Spanish UI at `/inventario/proveedores`, and review-hardening fixes — PR ready, merge pending |
 | ✅ | #435 | Build effective Product price lists by branch/context | High | 6h | 11h | 4.75h | PR #502 | Deterministic price resolution + overlap validation shipped; PR ready, merge pending |
+| ✅ | #399 | Migrate Inventory external identifiers to public IDs | Opportunistic | 0h | 0h | 0h | PR #495 / `563bfd4a` | Added during Sprint 005; no Issue session was recorded |
 |  |  | **Round total** |  | **11h** | **20h** | **—** |  |  |
 
 ### Round 2 — Post Purchases and Manage Prices
@@ -211,7 +213,8 @@ introduced.
 
 | Status | Issue | Result | PR / Commit | Tracked | Notes |
 |---|---:|---|---|---:|---|
-| ⏳ | #431 | Pending | — | — | Supplier offerings |
+| ✅ | #399 | Inventory public-ID rollout delivered | PR #495 / `563bfd4a` | 0h | 21/21 CI checks passed; review threads resolved; Sonar clean |
+| ✅ | #431 | Supplier and Supplier Offering catalog delivered — CRUD/list/filter APIs, permissions, and a Spanish management UI at `/inventario/proveedores`, migrated into the domain-oriented `src/features/purchasing/suppliers/` structure, with quotations kept reference-only | PR #496 | 1.1h | 26 review threads resolved across 6 rounds (TOCTOU races on Supplier/Offering create+update, decimal/integer column-boundary validation, inactive variant/product/presentation checks, empty-to-null normalization, null-safe UI fallbacks); PHPUnit + Vitest + Cypress green, ESLint/Pint clean |
 | ⏳ | #432 | Pending | — | — | Receipt posting and effective cost |
 | ⏳ | #433 | Pending | — | — | Receiving UI |
 | ⏳ | #434 | Pending | — | — | Cost reconciliation |
@@ -238,8 +241,8 @@ sale prices that operators can configure and inspect.
 ### 15.2 Planned vs. Actual
 
 - Planned: 7 Issues, 36h–67h.
-- Completed: 0.
-- Tracked: no sessions yet.
+- Completed: 0 planned Issues; 1 opportunistic Issue (`#399`).
+- Tracked: 0h for `#399`; no planned-Issue sessions completed yet.
 
 ### 15.3 Known Limitations
 

@@ -52,6 +52,7 @@ abstract class InventoryTestCase extends TestCase
             'brands.view', 'brands.create', 'brands.update', 'brands.delete',
             'inventory_categories.view', 'inventory_categories.create', 'inventory_categories.update', 'inventory_categories.delete',
             'purchase_presentation_templates.view', 'purchase_presentation_templates.manage',
+            'suppliers.view', 'suppliers.manage',
         ];
 
         foreach ($inventoryPermissions as $name) {

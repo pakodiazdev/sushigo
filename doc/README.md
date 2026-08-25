@@ -28,6 +28,7 @@ Available in **English and Spanish** (`.en.md` and `.es.md` suffixes):
 
 -   **Inventory Architecture**: Complete domain model, ER diagrams, and operational flows for the inventory system
 -   **Product Catalog Architecture** (`architecture/product-catalog/`): Target design for Product → Variant → Purchase Presentation, replacing the legacy `ProductWizard`
+-   **Domain-Oriented Frontend Architecture** (`architecture/frontend/`): Feature-first boundaries, dependency rules, Spanish frontend URLs, and incremental migration guidance
 -   **Security & User System**: Authentication, authorization, roles, and permissions design
 
 ### Decisions (`decisions.md` + `decisions/`)
@@ -78,6 +79,7 @@ For conventions and tasks:
 
 -   [Inventory Architecture](architecture/inventory-architecture.en.md) | [Arquitectura de Inventarios](architecture/inventory-architecture.es.md)
 -   [Product Catalog Architecture](architecture/product-catalog/product-catalog-architecture.en.md) | [Arquitectura del Catálogo de Producto](architecture/product-catalog/product-catalog-architecture.es.md)
+-   [Domain-Oriented Frontend Architecture](architecture/frontend/domain-oriented-frontend-architecture.en.md) | [Arquitectura del Frontend Orientada a Dominios](architecture/frontend/domain-oriented-frontend-architecture.es.md)
 -   [Security Architecture](architecture/security-and-user-system-architecture.en.md) | [Arquitectura de Seguridad](architecture/security-and-user-system-architecture.es.md)
 
 ### Conventions (English)
@@ -86,6 +88,7 @@ For conventions and tasks:
 -   [Git Commit Conventions](conventions/git/commits.md)
 -   [Backend Standards](conventions/backend/)
 -   [Frontend Standards](conventions/frontend/)
+-   [Frontend Domain-Oriented Structure](conventions/frontend/domain-oriented-structure.md)
 
 ### Recent Tasks (English)
 
@@ -95,5 +98,5 @@ For conventions and tasks:
 
 ---
 
-**Last Updated**: 2026-08-12
+**Last Updated**: 2026-08-24
 **Maintained by**: SushiGo / ComandaFlow Team

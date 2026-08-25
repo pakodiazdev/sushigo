@@ -57,8 +57,8 @@ Route::middleware('auth:api')->prefix('inventory-categories')->group(function ()
 
 // Products — Item scoped to type=PRODUCTO (Protected read + write — reuses items.* permissions,
 // see doc/architecture/product-catalog/product-catalog-architecture.en.md §6). Keeps the numeric
-// {id} route param (not public_id) matching Item's current convention — see this issue's PR
-// Assumptions note (#399, public_id rollout for Inventory, hasn't landed yet).
+// {id} route-param name is retained for compatibility; model binding resolves the public ULID
+// delivered by #399.
 Route::middleware('auth:api')->prefix('inventory/products')->group(function () {
     Route::get('/', ListProductsController::class)->name('products.list')->middleware('permission:items.view');
     Route::get(RouteParams::ID, ShowProductController::class)->name('products.show')->middleware('permission:items.view');
@@ -71,8 +71,7 @@ Route::middleware('auth:api')->prefix('inventory/products')->group(function () {
 // items.* permissions, see doc/architecture/product-catalog/product-catalog-architecture.en.md §6).
 // Catalog identity only — never accepts acquisition cost, sale price, or stock thresholds/balances
 // (see CreateVariantRequest/UpdateVariantRequest). Keeps the numeric {id}/{variantId} route params
-// (not public_id) matching Item's/ItemVariant's current convention — #399 (public_id rollout for
-// the Inventory domain) hasn't landed yet.
+// while model binding resolves the public ULIDs delivered by #399.
 Route::middleware('auth:api')->prefix('inventory/products/{id}/variants')->group(function () {
     Route::get('/', ListVariantsController::class)->name('products.variants.list')->middleware('permission:items.view');
     Route::get(RouteParams::VARIANT_ID, ShowVariantController::class)->name('products.variants.show')->middleware('permission:items.view');
