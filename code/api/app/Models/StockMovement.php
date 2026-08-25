@@ -50,6 +50,10 @@ class StockMovement extends Model
 
     public const REASON_COUNT_VARIANCE = 'COUNT_VARIANCE';
 
+    public const REASON_PURCHASE_RECEIPT = 'PURCHASE_RECEIPT';
+
+    public const REASON_PURCHASE_RECEIPT_REVERSAL = 'PURCHASE_RECEIPT_REVERSAL';
+
     // Status constants
     public const STATUS_DRAFT = 'DRAFT';
 

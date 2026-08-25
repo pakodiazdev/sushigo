@@ -116,6 +116,8 @@ class CoreTestSeeder extends Seeder
         'stock.manage',
         'suppliers.view',
         'suppliers.manage',
+        'receipts.view',
+        'receipts.manage',
         'media.upload',
         'media.update',
         'media.delete',
@@ -164,8 +166,8 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'dishes.', 'inventory_locations.', 'stock.', 'suppliers.', 'media.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.', 'price_lists.', 'price_list_assignments.', '=units_of_measure.manage'],
-        'inventory-manager' => ['items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'inventory_locations.', 'stock.', 'suppliers.', 'media.', 'price_lists.', 'price_list_assignments.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
+        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'dishes.', 'inventory_locations.', 'stock.', 'suppliers.', 'receipts.', 'media.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.', 'price_lists.', 'price_list_assignments.', '=units_of_measure.manage'],
+        'inventory-manager' => ['items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'inventory_locations.', 'stock.', 'suppliers.', 'receipts.', 'media.', 'price_lists.', 'price_list_assignments.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
         // items.view + items.manage-media only (not items.update, and not the
         // 'items.' wildcard) — items.update also guards PUT /items/{id} and
         // PUT /item-variants/{id} (name, sale_price, min_stock, ...), so

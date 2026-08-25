@@ -129,7 +129,7 @@ authoritative acquisition-cost source and deterministic operational data.
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ⏳ | #432 | Receive Product Presentations and calculate effective unit cost | Critical | 7h | 13h | — | — | Reuses #430 atomic Stock mutation |
+| ✅ | #432 | Receive Product Presentations and calculate effective unit cost | Critical | 7h | 13h | 8.77h | PR #512 | Purchase Receipts, atomic post/reverse reusing #430's Stock mutation, review-hardening fixes — PR ready, merge pending |
 | ✅ | #436 | Add branch-aware price-list management UI | High | 5h | 9h | 12.9h | PR #511 | Price List/Assignment/Variant Price management UI with resolved-price preview shipped; PR ready, merge pending |
 |  |  | **Round total** |  | **12h** | **22h** | **—** |  |  |
 
@@ -215,7 +215,7 @@ introduced.
 |---|---:|---|---|---:|---|
 | ✅ | #399 | Inventory public-ID rollout delivered | PR #495 / `563bfd4a` | 0h | 21/21 CI checks passed; review threads resolved; Sonar clean |
 | ✅ | #431 | Supplier and Supplier Offering catalog delivered — CRUD/list/filter APIs, permissions, and a Spanish management UI at `/inventario/proveedores`, migrated into the domain-oriented `src/features/purchasing/suppliers/` structure, with quotations kept reference-only | PR #496 | 1.1h | 26 review threads resolved across 6 rounds (TOCTOU races on Supplier/Offering create+update, decimal/integer column-boundary validation, inactive variant/product/presentation checks, empty-to-null normalization, null-safe UI fallbacks); PHPUnit + Vitest + Cypress green, ESLint/Pint clean |
-| ⏳ | #432 | Pending | — | — | Receipt posting and effective cost |
+| ✅ | #432 | Purchase Receipts (`receipts`/`receipt_lines`) with draft/posted/reversed lifecycle, atomic post/reverse reusing #430's `StockMutationService` lock/race pattern, and immutable cost-snapshot evidence (`presentation_factor`, `net_acquisition_amount`, `base_units_received`, `effective_unit_cost`) | PR #512 | 8.77h | 29 PHPUnit tests, Pint clean, SonarCloud quality gate passed (0 new smells/bugs/hotspots, 97.9% new coverage); 11 Copilot/Codex review threads resolved (soft-delete validation gaps, offering/supplier/presentation cross-check, negative-net-amount guard, destination-soft-delete races at post and on serialization, delete/post concurrency race, migration-rollback safety) |
 | ⏳ | #433 | Pending | — | — | Receiving UI |
 | ⏳ | #434 | Pending | — | — | Cost reconciliation |
 | ✅ | #435 | Effective-dated PriceList/PriceListAssignment/VariantPrice schema, deterministic resolution API, branch-scoped authorization and permissions shipped, with no ItemVariant.sale_price fallback | PR #502 | 4.75h | 56 PHPUnit tests, Pint clean, SonarCloud quality gate passed (0 new smells/bugs/hotspots, 93.8% new coverage); 3 rounds of Copilot/Codex review addressed (18 threads resolved) |
