@@ -155,6 +155,10 @@ class PermissionSeeder extends LockedSeeder
             'suppliers.view',
             'suppliers.manage',
 
+            // Inventario — Recepciones de compra (#432)
+            'receipts.view',
+            'receipts.manage',
+
             // Inventario — Ubicaciones
             'inventory_locations.view',
             'inventory_locations.manage',
@@ -265,6 +269,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'inventory_categories.%')
                             ->orWhere('name', 'like', 'purchase_presentation_templates.%')
                             ->orWhere('name', 'like', 'suppliers.%')
+                            ->orWhere('name', 'like', 'receipts.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'dishes.%')
@@ -293,6 +298,7 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'inventory_categories.%')
                             ->orWhere('name', 'like', 'purchase_presentation_templates.%')
                             ->orWhere('name', 'like', 'suppliers.%')
+                            ->orWhere('name', 'like', 'receipts.%')
                             ->orWhere('name', 'like', 'inventory_locations.%')
                             ->orWhere('name', 'like', 'stock.%')
                             ->orWhere('name', 'like', 'price_list%')

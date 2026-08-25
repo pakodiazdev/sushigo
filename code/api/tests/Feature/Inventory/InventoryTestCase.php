@@ -10,6 +10,7 @@ use App\Models\Item;
 use App\Models\ItemVariant;
 use App\Models\OperatingUnit;
 use App\Models\PurchasePresentationTemplate;
+use App\Models\Supplier;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use App\Models\User;
@@ -53,6 +54,7 @@ abstract class InventoryTestCase extends TestCase
             'inventory_categories.view', 'inventory_categories.create', 'inventory_categories.update', 'inventory_categories.delete',
             'purchase_presentation_templates.view', 'purchase_presentation_templates.manage',
             'suppliers.view', 'suppliers.manage',
+            'receipts.view', 'receipts.manage',
         ];
 
         foreach ($inventoryPermissions as $name) {
@@ -211,6 +213,15 @@ abstract class InventoryTestCase extends TestCase
             'is_default' => false,
             'is_active' => true,
             'meta' => [],
+        ], $attributes));
+    }
+
+    protected function createSupplier(array $attributes = []): Supplier
+    {
+        return Supplier::create(array_merge([
+            'code' => 'SUP-'.uniqid(),
+            'name' => 'Test Supplier '.uniqid(),
+            'is_active' => true,
         ], $attributes));
     }
 }
