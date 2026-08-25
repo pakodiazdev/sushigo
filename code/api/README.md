@@ -7,9 +7,12 @@ inventory, cash management, attendance/payroll, and multi-branch support. Part o
 ## About
 
 This API is a Single Action Controller (SAC) Laravel application built with Passport OAuth,
-Spatie Permissions, and L5 Swagger. See the repository root [`README.md`](../../README.md) and
-[`doc/architecture/`](../../doc/architecture/) for the full domain model and setup instructions —
-this subdirectory has no standalone setup separate from the monorepo.
+Spatie Permissions, and L5 Swagger. Composer/Artisan commands (`composer install`,
+`php artisan test`, etc.) run fine from this directory on their own — see the repository root
+[`README.md`](../../README.md) and [`doc/architecture/`](../../doc/architecture/) for the full
+domain model, and the root [`CLAUDE.md`](../../CLAUDE.md) for the full local environment setup
+(database, dev-lab orchestration), which is monorepo-level, not something this subdirectory
+configures independently.
 
 ## Development
 
