@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Inventory\Receipt;
 use App\Exceptions\ReceiptAlreadyReversedException;
 use App\Exceptions\ReceiptNotPostedException;
 use App\Exceptions\ReceiptReversalBoundaryException;
+use App\Exceptions\ReceiptVariantUnavailableException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\Receipt\ReverseReceiptRequest;
 use App\Http\Resources\Inventory\Receipt\ReceiptResource;
@@ -30,7 +31,7 @@ use Illuminate\Http\JsonResponse;
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden — requires receipts.manage permission"),
  *   @OA\Response(response=404, description="Receipt not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
- *   @OA\Response(response=409, description="Receipt not posted, already reversed, or the reversal boundary was hit", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
+ *   @OA\Response(response=409, description="Receipt not posted, already reversed, the reversal boundary was hit, or a referenced Product Variant is no longer available", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */
 class ReverseReceiptController extends Controller
@@ -41,7 +42,7 @@ class ReverseReceiptController extends Controller
     {
         try {
             $reversed = $this->service->reverseReceipt($receipt->id, $request->user()->id, $request->input('reason'));
-        } catch (ReceiptNotPostedException|ReceiptAlreadyReversedException|ReceiptReversalBoundaryException $e) {
+        } catch (ReceiptNotPostedException|ReceiptAlreadyReversedException|ReceiptReversalBoundaryException|ReceiptVariantUnavailableException $e) {
             return response()->json([
                 'status' => 409,
                 'message' => $e->getMessage(),

@@ -190,4 +190,14 @@ class ReceiptPostingTest extends InventoryTestCase
 
         $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertStatus(409);
     }
+
+    #[Test]
+    public function posting_is_rejected_when_the_variant_was_soft_deleted_after_the_draft_was_created(): void
+    {
+        ['id' => $id, 'variant' => $variant] = $this->createDraft();
+
+        $variant->delete();
+
+        $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertStatus(409);
+    }
 }

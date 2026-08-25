@@ -145,4 +145,14 @@ class ReceiptReversalTest extends InventoryTestCase
             ->assertOk()
             ->assertJsonPath('data.destination_location.name', 'Reversal Warehouse');
     }
+
+    #[Test]
+    public function it_rejects_reversal_when_the_variant_was_soft_deleted_after_posting(): void
+    {
+        ['id' => $id, 'variant' => $variant] = $this->createPostedReceipt();
+
+        $variant->delete();
+
+        $this->postJson("/api/v1/inventory/receipts/{$id}/reverse")->assertStatus(409);
+    }
 }
