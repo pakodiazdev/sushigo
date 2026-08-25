@@ -93,6 +93,7 @@ const menuItems: MenuItem[] = [
             { label: 'Ubicaciones', path: '/inventory/locations' },
             { label: 'Items', path: '/inventory/items' },
             { label: 'Variantes', path: '/inventory/item-variants' },
+            { label: 'Listas de Precios', path: '/inventario/listas-de-precios', requiredPermission: 'price_lists.view' },
         ]
     },
     {

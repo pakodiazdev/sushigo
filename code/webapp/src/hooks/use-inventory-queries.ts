@@ -95,14 +95,40 @@ export function useUnitsOfMeasureSelect(enabled = true) {
 }
 
 /**
- * Hook to fetch operating units for use in select dropdowns.
+ * Hook to fetch operating units for use in select dropdowns. Deliberately unfiltered by
+ * `is_active` — this hook is shared by LocationForm (which must keep showing a Location's
+ * already-assigned Operating Unit even if it's since gone inactive, or the edit form silently
+ * loses the selection) and by the Pricing Assignment name-lookup, which needs to resolve names
+ * for existing Assignments that may reference an Operating Unit no longer active.
  */
 export function useOperatingUnitsSelect(enabled = true) {
   return useQuery({
     queryKey: inventoryQueryKeys.operatingUnits(),
     queryFn: async () => {
-      const response = await apiClient.get('/operating-units')
-      return response
+      const first = await apiClient.get('/operating-units', {
+        params: { per_page: 100, page: 1 },
+      })
+      // ListOperatingUnitsController returns Laravel's paginator directly
+      // (response()->json($operatingUnits)), so last_page sits at the response root, not under
+      // a `meta` wrapper like the envelope-formatted endpoints.
+      const lastPage = first.data.last_page ?? 1
+      if (lastPage <= 1) return first
+
+      const rest = await Promise.all(
+        Array.from({ length: lastPage - 1 }, (_, index) =>
+          apiClient.get('/operating-units', {
+            params: { per_page: 100, page: index + 2 },
+          })
+        )
+      )
+
+      return {
+        ...first,
+        data: {
+          ...first.data,
+          data: [first.data.data, ...rest.map((response) => response.data.data)].flat(),
+        },
+      }
     },
     enabled,
     select: (response) => (response.data.data || []) as OperatingUnit[],

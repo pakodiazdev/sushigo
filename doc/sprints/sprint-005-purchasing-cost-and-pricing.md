@@ -130,7 +130,7 @@ authoritative acquisition-cost source and deterministic operational data.
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
 | ⏳ | #432 | Receive Product Presentations and calculate effective unit cost | Critical | 7h | 13h | — | — | Reuses #430 atomic Stock mutation |
-| ⏳ | #436 | Add branch-aware price-list management UI | High | 5h | 9h | — | — | Consumes #435 |
+| ✅ | #436 | Add branch-aware price-list management UI | High | 5h | 9h | 12.9h | PR #511 | Price List/Assignment/Variant Price management UI with resolved-price preview shipped; PR ready, merge pending |
 |  |  | **Round total** |  | **12h** | **22h** | **—** |  |  |
 
 ### Round 3 — Complete Receiving and Reconcile Cost
@@ -219,7 +219,7 @@ introduced.
 | ⏳ | #433 | Pending | — | — | Receiving UI |
 | ⏳ | #434 | Pending | — | — | Cost reconciliation |
 | ✅ | #435 | Effective-dated PriceList/PriceListAssignment/VariantPrice schema, deterministic resolution API, branch-scoped authorization and permissions shipped, with no ItemVariant.sale_price fallback | PR #502 | 4.75h | 56 PHPUnit tests, Pint clean, SonarCloud quality gate passed (0 new smells/bugs/hotspots, 93.8% new coverage); 3 rounds of Copilot/Codex review addressed (18 threads resolved) |
-| ⏳ | #436 | Pending | — | — | Price-list UI |
+| ✅ | #436 | Price List / Assignment / Variant Price management UI delivered at `/inventario/listas-de-precios` — paginated DataGrid, create/edit/detail SlidePanels, Assignment delete-and-recreate flow, and a resolved-price preview matching the backend | PR #511 | 12.9h | 145+ Vitest tests across API/hooks/forms/sections plus a Cypress happy path; 13 review threads resolved across 3 rounds (Copilot domain-structure relocation, Codex pagination/permission-alignment bugs, missing Assignment delete flow); SonarCloud quality gate passed (0 new smells/bugs/hotspots, 84.9% new coverage); ESLint/typecheck clean |
 | ⏳ | #437 | Pending | — | — | Operational seeds |
 
 ## 14. Quality Results

@@ -133,6 +133,16 @@ class CoreTestSeeder extends Seeder
         'overtime.manage',
         'vacation-policy.manage',
         'audit-logs.view',
+        // Pricing domain (#435) — VariantPrice CRUD reuses price_lists.view/.update rather
+        // than a permission of its own. Mirrors Development/Production PermissionSeeder.
+        'price_lists.view',
+        'price_lists.create',
+        'price_lists.update',
+        'price_lists.delete',
+        'price_list_assignments.view',
+        'price_list_assignments.create',
+        'price_list_assignments.update',
+        'price_list_assignments.delete',
     ];
 
     /** Basic view-only user permissions shared by most roles */
@@ -154,8 +164,8 @@ class CoreTestSeeder extends Seeder
     /** role name => permission name prefixes or exact names */
     private const ROLE_PERMISSIONS = [
         'super-admin' => '*',  // all permissions
-        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'dishes.', 'inventory_locations.', 'stock.', 'suppliers.', 'media.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.', '=units_of_measure.manage'],
-        'inventory-manager' => ['items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'inventory_locations.', 'stock.', 'suppliers.', 'media.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
+        'admin' => ['users.', 'employees.', 'leaves.', 'vacation-requests.', 'vacation-policy.', 'employee-requests.', 'items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'dishes.', 'inventory_locations.', 'stock.', 'suppliers.', 'media.', 'attendances.', 'punctuality.', 'reports.', 'holidays.', 'payroll.', 'overtime.', 'audit-logs.', 'price_lists.', 'price_list_assignments.', '=units_of_measure.manage'],
+        'inventory-manager' => ['items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'inventory_locations.', 'stock.', 'suppliers.', 'media.', 'price_lists.', 'price_list_assignments.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
         // items.view + items.manage-media only (not items.update, and not the
         // 'items.' wildcard) — items.update also guards PUT /items/{id} and
         // PUT /item-variants/{id} (name, sale_price, min_stock, ...), so
