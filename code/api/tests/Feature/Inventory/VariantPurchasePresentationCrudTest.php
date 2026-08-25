@@ -255,6 +255,22 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_allows_listing_with_suppliers_manage_permission_but_not_items_view()
+    {
+        $product = $this->createProduct();
+        $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
+        $template = $this->createPurchasePresentationTemplate(['compatible_dimension_uom_id' => $this->uomKg->id]);
+        $this->createVariantPurchasePresentation($variant, $template);
+        $this->user->removeRole('inventory-manager');
+        $this->user->givePermissionTo('suppliers.manage');
+
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}/purchase-presentations");
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('data'));
+    }
+
+    #[Test]
     public function it_rejects_unauthenticated_list_request()
     {
         $product = $this->createProduct();

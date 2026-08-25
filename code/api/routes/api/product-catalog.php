@@ -59,8 +59,11 @@ Route::middleware('auth:api')->prefix('inventory-categories')->group(function ()
 // see doc/architecture/product-catalog/product-catalog-architecture.en.md §6). Keeps the numeric
 // {id} route-param name is retained for compatibility; model binding resolves the public ULID
 // delivered by #399.
+// List also accepts suppliers.manage (#505) — the Suppliers offering-create cascade needs to
+// populate this selector for a user authorized to manage supplier offerings but not the general
+// catalog; show/create/update/delete stay items.*-only since the cascade never calls them.
 Route::middleware('auth:api')->prefix('inventory/products')->group(function () {
-    Route::get('/', ListProductsController::class)->name('products.list')->middleware('permission:items.view');
+    Route::get('/', ListProductsController::class)->name('products.list')->middleware('permission:items.view|suppliers.manage');
     Route::get(RouteParams::ID, ShowProductController::class)->name('products.show')->middleware('permission:items.view');
     Route::post('/', CreateProductController::class)->name('products.create')->middleware('permission:items.create');
     Route::put(RouteParams::ID, UpdateProductController::class)->name('products.update')->middleware('permission:items.update');
@@ -72,8 +75,9 @@ Route::middleware('auth:api')->prefix('inventory/products')->group(function () {
 // Catalog identity only — never accepts acquisition cost, sale price, or stock thresholds/balances
 // (see CreateVariantRequest/UpdateVariantRequest). Keeps the numeric {id}/{variantId} route params
 // while model binding resolves the public ULIDs delivered by #399.
+// List also accepts suppliers.manage (#505) — see the Products list note above; same reasoning.
 Route::middleware('auth:api')->prefix('inventory/products/{id}/variants')->group(function () {
-    Route::get('/', ListVariantsController::class)->name('products.variants.list')->middleware('permission:items.view');
+    Route::get('/', ListVariantsController::class)->name('products.variants.list')->middleware('permission:items.view|suppliers.manage');
     Route::get(RouteParams::VARIANT_ID, ShowVariantController::class)->name('products.variants.show')->middleware('permission:items.view');
     Route::post('/', CreateVariantController::class)->name('products.variants.create')->middleware('permission:items.create');
     Route::put(RouteParams::VARIANT_ID, UpdateVariantController::class)->name('products.variants.update')->middleware('permission:items.update');
@@ -100,8 +104,9 @@ Route::middleware('auth:api')->prefix('inventory/purchase-presentation-templates
 // specific Product Variant (Protected read + write — reuses items.*
 // permissions, same reasoning as Product Variants above: assignment is
 // scoped to a Variant the user can already edit, no new permission needed).
+// List also accepts suppliers.manage (#505) — see the Products list note above; same reasoning.
 Route::middleware('auth:api')->prefix('inventory/products/{id}/variants/{variantId}/purchase-presentations')->group(function () {
-    Route::get('/', ListVariantPurchasePresentationsController::class)->name('products.variants.purchase-presentations.list')->middleware('permission:items.view');
+    Route::get('/', ListVariantPurchasePresentationsController::class)->name('products.variants.purchase-presentations.list')->middleware('permission:items.view|suppliers.manage');
     Route::get(RouteParams::PRESENTATION_ID, ShowVariantPurchasePresentationController::class)->name('products.variants.purchase-presentations.show')->middleware('permission:items.view');
     Route::post('/', CreateVariantPurchasePresentationController::class)->name('products.variants.purchase-presentations.create')->middleware('permission:items.update');
     Route::put(RouteParams::PRESENTATION_ID, UpdateVariantPurchasePresentationController::class)->name('products.variants.purchase-presentations.update')->middleware('permission:items.update');
