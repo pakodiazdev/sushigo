@@ -186,6 +186,12 @@ The sprint location determines its lifecycle role:
 - Completed documents may be changed only to fix typos, broken links, missing evidence, or factual errors.
 - Historical work must not be removed merely to make the sprint appear cleaner.
 - A cancelled planned sprint must remain documented, must include its cancellation reason, and its number must not be reused.
+- Before applying a `sprint-N` label to any new Issue, source `N` from `doc/sprints/README.md`'s
+  current-sprint row **on `origin/main`** — never from memory, habit, or a previous session's
+  context. A sprint promotion can land between sessions without changing what a contributor
+  remembers as "current," and unlike the sprint documents themselves, a label is silent: nothing
+  flags a mismatch until someone happens to notice it (see #507, where two Issues were briefly
+  mislabeled `sprint-4` days after Sprint 5 had already been promoted).
 
 ---
 
