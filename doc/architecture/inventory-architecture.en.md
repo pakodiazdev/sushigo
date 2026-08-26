@@ -644,6 +644,38 @@ classDiagram
 
 > Note: the described "actions" will be modeled as methods in services/applications (e.g., `TransfersService` or domain actions). The diagram helps visualize responsibilities before moving them to service and job layers.
 
+### 3.9 Weighted-Average Cost (#434)
+
+Before `#434`, `OpeningBalanceService` wrote a *global*, cross-location weighted average onto
+`ItemVariant.avg_unit_cost`, while `#432`'s Receipts wrote a *per-location* weighted average onto
+`Stock.weighted_avg_cost` — the two could silently diverge, and stock-out costing/reporting each
+read whichever field happened to be nearby.
+
+**Source of truth: `Stock.weighted_avg_cost`, scoped per Inventory Location.** A catalog Variant
+received into two different locations at different prices has two different actual acquisition
+costs — blending them into one Variant-level number would misstate valuation at whichever location
+paid more (or less) than the blended average. `ItemVariant.avg_unit_cost`/`last_unit_cost` remain on
+the schema (existing values were reconciled by a one-time backfill migration, not dropped) but are
+now **read-only** — nothing in application code writes to them.
+
+**Every writer goes through one calculation.** `Stock::applyWeightedAverageCost(float $qtyAdded,
+float $unitCost)` is the only method that mutates `weighted_avg_cost`, and it delegates the blend
+formula itself to `App\Support\Money\WeightedAverageCostCalculator::blend()` — a small, pure,
+bcmath-backed helper (exact-decimal, not float, internally) shared by every cost-bearing inbound
+flow:
+
+-   `ReceiptService::postReceipt()` — one call per posted line, using the Receipt line's
+    `effective_unit_cost` (see `doc/architecture/purchasing/purchase-receipts.en.md`).
+-   `OpeningBalanceService::registerOpeningBalance()` — one call when a unit cost is supplied.
+
+**Every reader goes through the same field.** `StockOutService` costs an outbound movement using the
+*same location's* `Stock.weighted_avg_cost` (never the catalog Variant); `SummarizesStock`,
+`StockByLocationController`, and `StockByVariantController` already read it directly for valuation
+reports.
+
+Reversing a posted Receipt intentionally leaves `weighted_avg_cost` untouched — unwinding a blended
+average exactly would need lot-level cost tracking this codebase doesn't have.
+
 ---
 
 ## 4. Operational Flows

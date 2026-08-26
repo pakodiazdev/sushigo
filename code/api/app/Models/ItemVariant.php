@@ -128,28 +128,4 @@ class ItemVariant extends Model
     {
         return $this->stock()->sum('on_hand');
     }
-
-    /**
-     * Update the last unit cost (on new receipt)
-     */
-    public function updateLastUnitCost(float $cost): void
-    {
-        $this->update(['last_unit_cost' => $cost]);
-    }
-
-    /**
-     * Update the weighted average cost
-     */
-    public function updateAverageUnitCost(float $newQty, float $newCost): void
-    {
-        $currentQty = $this->total_on_hand;
-        $currentAvg = $this->avg_unit_cost;
-
-        if ($currentQty + $newQty == 0) {
-            return;
-        }
-
-        $newAvg = (($currentQty * $currentAvg) + ($newQty * $newCost)) / ($currentQty + $newQty);
-        $this->update(['avg_unit_cost' => $newAvg]);
-    }
 }

@@ -392,18 +392,52 @@ describe('StockOutForm', () => {
         expect(await findByText('Only 5 units available')).toBeTruthy()
     })
 
-    it('shows the profit analysis panel with revenue, cost and profit for a sale', async () => {
+    it('shows the profit analysis panel with revenue, cost and profit for a sale, costed at the location weighted-average', async () => {
+        // Regression (#434 Codex P2): cost basis must come from the selected
+        // location's Stock.weighted_avg_cost, not the catalog Variant's
+        // stale last_unit_cost (5.0 in MOCK_VARIANTS, which the backend no
+        // longer writes) — this location's weighted_avg_cost (7.0) is used
+        // instead, and must differ from last_unit_cost to prove it's not
+        // silently falling back to it.
         watchValues.variant_id = 'variant-01'
+        watchValues.location_id = 'location-01'
         watchValues.qty = 10
         watchValues.sale_price = 20
         watchValues.reason = 'SALE'
+        mockQueryResult.data = {
+            data: {
+                data: [{
+                    inventory_location_id: 'location-01',
+                    on_hand: 50,
+                    reserved: 5,
+                    available: 45,
+                    weighted_avg_cost: 7.0,
+                }],
+            },
+        }
 
         const { findByText } = render(<StockOutForm {...defaultProps} />)
 
         expect(await findByText('Profit Analysis')).toBeTruthy()
         expect(await findByText('$200.00')).toBeTruthy() // revenue: 10 * 20
-        expect(await findByText('$50.00')).toBeTruthy() // cost: 10 * 5 (last_unit_cost)
-        expect(await findByText('$150.00')).toBeTruthy() // profit: 200 - 50
-        expect(await findByText('75.0% margin')).toBeTruthy()
+        expect(await findByText('$70.00')).toBeTruthy() // cost: 10 * 7.0 (location weighted_avg_cost)
+        expect(await findByText('$130.00')).toBeTruthy() // profit: 200 - 70
+        expect(await findByText('65.0% margin')).toBeTruthy()
+    })
+
+    it('falls back to zero cost when no location stock is available yet', async () => {
+        watchValues.variant_id = 'variant-01'
+        watchValues.location_id = 'location-01'
+        watchValues.qty = 10
+        watchValues.sale_price = 20
+        watchValues.reason = 'SALE'
+        mockQueryResult.data = { data: { data: [] } }
+
+        const { findByText, getAllByText } = render(<StockOutForm {...defaultProps} />)
+
+        expect(await findByText('Profit Analysis')).toBeTruthy()
+        expect(await findByText('$0.00')).toBeTruthy() // cost: no location stock yet
+        // Revenue and profit both equal $200.00 (zero cost), rendered in two spans
+        expect(getAllByText('$200.00')).toHaveLength(2)
     })
 })

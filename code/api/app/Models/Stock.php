@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Exceptions\InvalidStockBalanceException;
+use App\Support\Money\WeightedAverageCostCalculator;
 use App\Support\Traits\HasPublicId;
 use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Model;
@@ -101,6 +102,34 @@ class Stock extends Model
         }
 
         $this->decrement('on_hand', $qty);
+    }
+
+    /**
+     * Blend a newly received quantity+cost into this location's
+     * weighted-average acquisition cost (#434) — the single writer every
+     * cost-bearing inbound flow (Receipts, Opening Balance) must call
+     * instead of re-deriving the formula itself. `on_hand` must already
+     * reflect $qtyAdded (i.e. call this after incrementing on_hand, not
+     * before) — the prior quantity is derived by subtracting it back out,
+     * so this doubles as an idempotent read of "on_hand as of the moment
+     * before this receipt" without a second locked query.
+     */
+    public function applyWeightedAverageCost(float $qtyAdded, float $unitCost): void
+    {
+        if ($qtyAdded <= 0) {
+            return;
+        }
+
+        $priorOnHand = max(0.0, (float) $this->on_hand - $qtyAdded);
+
+        $newAvg = WeightedAverageCostCalculator::blend(
+            priorQty: $priorOnHand,
+            priorAvgCost: (float) $this->weighted_avg_cost,
+            addedQty: $qtyAdded,
+            addedUnitCost: $unitCost,
+        );
+
+        $this->update(['weighted_avg_cost' => $newAvg]);
     }
 
     /**

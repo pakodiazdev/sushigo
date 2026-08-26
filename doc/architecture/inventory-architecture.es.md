@@ -659,6 +659,42 @@ classDiagram
 
 > Nota: las “acciones” descritas se modelarán como métodos en servicios/aplicaciones (ej. `TransfersService` o acciones de dominio). El diagrama ayuda a visualizar responsabilidades antes de trasladarlas a capas de servicios y jobs.
 
+### 3.9 Costo promedio ponderado (#434)
+
+Antes del `#434`, `OpeningBalanceService` escribía un promedio ponderado *global*, cruzando
+ubicaciones, en `ItemVariant.avg_unit_cost`, mientras las Recepciones del `#432` escribían un
+promedio ponderado *por ubicación* en `Stock.weighted_avg_cost` — ambos podían divergir en
+silencio, y tanto el costeo de salidas de stock como los reportes leían el campo que tuvieran más
+a la mano.
+
+**Fuente única de verdad: `Stock.weighted_avg_cost`, por Ubicación de Inventario.** Una Variante de
+catálogo recibida en dos ubicaciones distintas a precios distintos tiene dos costos de adquisición
+reales distintos — combinarlos en un único número a nivel Variante distorsionaría la valuación en
+cualquiera de las ubicaciones que pagó más (o menos) que el promedio combinado.
+`ItemVariant.avg_unit_cost`/`last_unit_cost` permanecen en el esquema (los valores existentes se
+reconciliaron con una migración de backfill de una sola vez, no se eliminaron) pero ahora son
+**de solo lectura** — ningún código de la aplicación escribe en ellos.
+
+**Toda escritura pasa por un único cálculo.** `Stock::applyWeightedAverageCost(float $qtyAdded,
+float $unitCost)` es el único método que modifica `weighted_avg_cost`, y delega la fórmula de
+combinación en sí a `App\Support\Money\WeightedAverageCostCalculator::blend()` — un helper pequeño,
+puro, respaldado por bcmath (decimal exacto, no float, internamente) y compartido por todo flujo
+de entrada que involucre costo:
+
+-   `ReceiptService::postReceipt()` — una llamada por línea registrada, usando el
+    `effective_unit_cost` de la línea (ver `doc/architecture/purchasing/purchase-receipts.es.md`).
+-   `OpeningBalanceService::registerOpeningBalance()` — una llamada cuando se provee un costo
+    unitario.
+
+**Toda lectura pasa por el mismo campo.** `StockOutService` costea un movimiento de salida usando el
+`Stock.weighted_avg_cost` de *esa misma ubicación* (nunca el de la Variante de catálogo);
+`SummarizesStock`, `StockByLocationController` y `StockByVariantController` ya lo leen
+directamente para los reportes de valuación.
+
+Revertir una Recepción registrada deja `weighted_avg_cost` intencionalmente sin tocar — deshacer un
+promedio combinado con exactitud requeriría rastreo de costo a nivel de lote, algo que este código
+todavía no tiene.
+
 ---
 
 ## 4. Flujos operativos
