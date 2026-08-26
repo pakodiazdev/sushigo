@@ -62,7 +62,7 @@ describe('Inventory Query Hooks', () => {
       ]
 
       vi.mocked(inventoryApi.inventoryLocationApi.list).mockResolvedValue({
-        data: { data: mockLocations },
+        data: { data: mockLocations, meta: { current_page: 1, last_page: 1 } },
       } as unknown as Awaited<ReturnType<typeof inventoryApi.inventoryLocationApi.list>>)
 
       const { result } = renderHook(() => useInventoryLocationsSelect(), { wrapper })
@@ -85,7 +85,7 @@ describe('Inventory Query Hooks', () => {
       ]
 
       vi.mocked(inventoryApi.inventoryLocationApi.list).mockResolvedValue({
-        data: { data: mockLocations },
+        data: { data: mockLocations, meta: { current_page: 1, last_page: 1 } },
       } as unknown as Awaited<ReturnType<typeof inventoryApi.inventoryLocationApi.list>>)
 
       const { result } = renderHook(() => useInventoryLocationsSelect(), { wrapper })

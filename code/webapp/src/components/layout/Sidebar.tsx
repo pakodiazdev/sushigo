@@ -32,8 +32,8 @@ import { usePendingRequestsCount } from '@/services/employee-request-hooks';
 interface SubMenuItem {
     label: string;
     path: string;
-    /** When set, the sub-item is hidden unless the user has this permission. */
-    requiredPermission?: string;
+    /** When set, the sub-item is hidden unless the user has this permission (or, given an array, any one of them). */
+    requiredPermission?: string | string[];
 }
 
 interface MenuItem {
@@ -94,6 +94,7 @@ const menuItems: MenuItem[] = [
             { label: 'Items', path: '/inventory/items' },
             { label: 'Variantes', path: '/inventory/item-variants' },
             { label: 'Listas de Precios', path: '/inventario/listas-de-precios', requiredPermission: 'price_lists.view' },
+            { label: 'Recepciones de Compra', path: '/inventario/recepciones-de-compra', requiredPermission: ['receipts.view', 'receipts.manage'] },
         ]
     },
     {
@@ -159,8 +160,12 @@ export default function Sidebar() {
     const isSubmenuExpanded = (label: string) => expandedMenus.includes(label);
 
     /** Sub-items with no `requiredPermission` inherit the parent's own access. */
-    const isSubItemAccessible = (subItem: SubMenuItem, parentOwnAccess: AccessResult) =>
-        subItem.requiredPermission ? can(subItem.requiredPermission) : parentOwnAccess === 'show';
+    const isSubItemAccessible = (subItem: SubMenuItem, parentOwnAccess: AccessResult) => {
+        if (!subItem.requiredPermission) return parentOwnAccess === 'show';
+        return Array.isArray(subItem.requiredPermission)
+            ? subItem.requiredPermission.some((permission) => can(permission))
+            : can(subItem.requiredPermission);
+    };
 
     /**
      * A parent item stays visible when the user lacks its own permission but

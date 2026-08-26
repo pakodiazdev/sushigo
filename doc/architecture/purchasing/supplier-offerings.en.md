@@ -34,5 +34,10 @@ another Supplier. Public ULIDs are the only external identifiers.
 - `suppliers.view`: list/show Suppliers and Offerings.
 - `suppliers.manage`: create, update, deactivate, and soft-delete Suppliers and Offerings.
 
+**As-built (`#433`):** `GET /inventory/suppliers` and `GET
+/inventory/suppliers/{supplier}/offerings` also accept `receipts.manage` — the Purchase Receipt
+form needs to list Suppliers and their Offerings for a user authorized to create Receipts but not
+the Supplier catalog itself; see `doc/architecture/purchasing/purchase-receipts.en.md`.
+
 The SushiGo Admin page `/inventario/proveedores` applies the same boundary and guides users through
 Product → Variant → Purchase Presentation when creating an Offering.

@@ -16,11 +16,17 @@ Route::middleware('auth:api')
     ->prefix('inventory/suppliers')
     ->scopeBindings()
     ->group(function () {
-        Route::get('/', ListSuppliersController::class)->name('suppliers.list')->middleware('permission:suppliers.view');
+        // List also accepts receipts.manage (#433) — the Purchase Receipt form needs to populate
+        // its Supplier selector for a user authorized to create Receipts but not the Supplier
+        // catalog itself; show/create/update/delete stay suppliers.*-only since the Receipt form
+        // never calls them.
+        Route::get('/', ListSuppliersController::class)->name('suppliers.list')->middleware('permission:suppliers.view|receipts.manage');
         Route::post('/', CreateSupplierController::class)->name('suppliers.create')->middleware('permission:suppliers.manage');
 
         Route::prefix('{supplier}/offerings')->group(function () {
-            Route::get('/', ListSupplierOfferingsController::class)->name('suppliers.offerings.list')->middleware('permission:suppliers.view');
+            // Same reasoning as the Suppliers list above — the Receipt form's per-line Supplier
+            // Offering selector needs this.
+            Route::get('/', ListSupplierOfferingsController::class)->name('suppliers.offerings.list')->middleware('permission:suppliers.view|receipts.manage');
             Route::post('/', CreateSupplierOfferingController::class)->name('suppliers.offerings.create')->middleware('permission:suppliers.manage');
 
             Route::prefix('{offering}')->group(function () {

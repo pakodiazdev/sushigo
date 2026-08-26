@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
+import { fetchAllPages } from '@/lib/fetch-all-pages'
 import { inventoryLocationApi, itemVariantApi, itemApi, purchasePresentationTemplateApi } from '@/services/inventory-api'
 import type { InventoryLocation, PurchasePresentationTemplate, UnitOfMeasure } from '@/types/inventory'
 import type { OperatingUnit } from '@/types/auth'
@@ -33,7 +34,10 @@ export interface SelectOption {
 export function useInventoryLocationsSelect(enabled = true) {
   return useQuery({
     queryKey: inventoryQueryKeys.locationsList({ is_active: true, for_select: true }),
-    queryFn: () => inventoryLocationApi.list({ is_active: true, per_page: 100 }),
+    // /inventory-locations paginates — fetch every page up front so a location ordered past the
+    // first 100 is still selectable (same fix already applied to the receipt line's product and
+    // variant selects).
+    queryFn: () => fetchAllPages((page) => inventoryLocationApi.list({ is_active: true, page, per_page: 100 })),
     enabled,
     select: (response) => {
       const locations = response.data.data || []

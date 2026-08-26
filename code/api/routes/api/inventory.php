@@ -22,8 +22,12 @@ use App\Support\RouteParams;
 use Illuminate\Support\Facades\Route;
 
 // Inventory Locations (Protected read + write)
+// List also accepts receipts.manage (#433) — the Purchase Receipt form needs to populate its
+// destination-location selector for a user authorized to create Receipts but not the Location
+// catalog itself; show/create/update/delete stay inventory_locations.*-only since the Receipt
+// form never calls them.
 Route::middleware('auth:api')->prefix('inventory-locations')->group(function () {
-    Route::get('/', ListInventoryLocationsController::class)->name('inventory-locations.list')->middleware('permission:inventory_locations.view');
+    Route::get('/', ListInventoryLocationsController::class)->name('inventory-locations.list')->middleware('permission:inventory_locations.view|receipts.manage');
     Route::get(RouteParams::ID, ShowInventoryLocationController::class)->name('inventory-locations.show')->middleware('permission:inventory_locations.view');
     Route::post('/', CreateInventoryLocationController::class)->name('inventory-locations.create')->middleware('permission:inventory_locations.manage');
     Route::put(RouteParams::ID, UpdateInventoryLocationController::class)->name('inventory-locations.update')->middleware('permission:inventory_locations.manage');

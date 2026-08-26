@@ -26,7 +26,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *
  *   @OA\Response(response=200, description="Supplier Offerings retrieved successfully", @OA\JsonContent(allOf={@OA\Schema(ref="#/components/schemas/ResponseEntity"), @OA\Schema(@OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/SupplierOfferingResponse")))})),
  *   @OA\Response(response=401, description="Unauthenticated"),
- *   @OA\Response(response=403, description="Forbidden — requires suppliers.view permission"),
+ *   @OA\Response(response=403, description="Forbidden — requires suppliers.view or receipts.manage permission"),
  *   @OA\Response(response=404, description="Supplier not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  *   @OA\Response(response=422, description="Validation Error", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )

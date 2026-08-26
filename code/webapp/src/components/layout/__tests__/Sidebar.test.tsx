@@ -342,6 +342,23 @@ describe('Sidebar — user has suppliers.view without items.view', () => {
   })
 })
 
+describe('Sidebar — user has receipts.manage without receipts.view', () => {
+  beforeEach(() => {
+    // Inventario's own access is gated by items.view, which this user lacks.
+    mockResolveAccess.mockImplementation((item: { label?: string }) =>
+      item.label === 'Inventario' ? 'hidden' : 'show',
+    )
+    mockCan.mockImplementation((permission: string) => permission === 'receipts.manage')
+  })
+
+  it('shows Recepciones de Compra via the receipts.manage half of its OR permission', () => {
+    render(<Sidebar />)
+    const inventarioBtn = screen.getByText('Inventario').closest('button')!
+    fireEvent.click(inventarioBtn)
+    expect(screen.getByText('Recepciones de Compra')).toBeDefined()
+  })
+})
+
 // ─── Footer & version ─────────────────────────────────────────────────────────
 
 // ─── Dev-only "Componentes" entry ─────────────────────────────────────────────

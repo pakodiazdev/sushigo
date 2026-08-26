@@ -2,7 +2,7 @@ import { redirect } from '@tanstack/react-router'
 import { useAuthStore, checkIsAdmin, checkIsSuperAdmin } from '@/stores/auth.store'
 
 /**
- * Factory that returns a `beforeLoad` function requiring a specific permission.
+ * Factory that returns a `beforeLoad` function requiring at least one of the given permissions.
  * Uses `getState()` (non-reactive) — safe to call synchronously in beforeLoad.
  * admin and super-admin bypass all permission checks (handled by `can()`).
  *
@@ -10,8 +10,13 @@ import { useAuthStore, checkIsAdmin, checkIsSuperAdmin } from '@/stores/auth.sto
  *   export const Route = createFileRoute('/employees')({
  *     beforeLoad: requirePermission('employees.view'),
  *   })
+ *
+ *   // A route reachable by either a view-only role or a manage-only role:
+ *   export const Route = createFileRoute('/inventario/recepciones-de-compra')({
+ *     beforeLoad: requirePermission('receipts.view', 'receipts.manage'),
+ *   })
  */
-export function requirePermission(permission: string) {
+export function requirePermission(...permissions: string[]) {
   return () => {
     const { isAuthenticated, can } = useAuthStore.getState()
 
@@ -19,7 +24,7 @@ export function requirePermission(permission: string) {
       throw redirect({ to: '/login' })
     }
 
-    if (!can(permission)) {
+    if (!permissions.some((permission) => can(permission))) {
       throw redirect({ to: '/unauthorized' })
     }
   }
