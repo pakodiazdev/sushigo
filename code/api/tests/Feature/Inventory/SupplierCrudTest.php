@@ -114,6 +114,18 @@ class SupplierCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_allows_listing_with_receipts_manage_permission_but_not_suppliers_view(): void
+    {
+        Supplier::create(['code' => 'RECEIPT-SUP', 'name' => 'Receipt Supplier', 'is_active' => true]);
+        $this->user->removeRole('inventory-manager');
+        $this->user->givePermissionTo('receipts.manage');
+
+        $this->getJson('/api/v1/inventory/suppliers')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    #[Test]
     public function it_soft_deletes_a_supplier_without_erasing_its_record(): void
     {
         $supplier = Supplier::create(['code' => 'ARCHIVE', 'name' => 'Archive Me', 'is_active' => false]);

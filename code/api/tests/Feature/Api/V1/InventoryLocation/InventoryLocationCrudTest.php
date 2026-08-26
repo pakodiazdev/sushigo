@@ -37,6 +37,26 @@ class InventoryLocationCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_allows_listing_with_receipts_manage_permission_but_not_inventory_locations_view()
+    {
+        $this->user->removeRole('inventory-manager');
+        $this->user->givePermissionTo('receipts.manage');
+
+        $response = $this->getJson('/api/v1/inventory-locations');
+
+        $response->assertOk();
+        $this->assertContains($this->location->public_id, collect($response->json('data'))->pluck('id'));
+    }
+
+    #[Test]
+    public function it_rejects_listing_without_inventory_locations_view_or_receipts_manage_permission()
+    {
+        $this->user->removeRole('inventory-manager');
+
+        $this->getJson('/api/v1/inventory-locations')->assertForbidden();
+    }
+
+    #[Test]
     public function it_filters_locations_by_operating_unit()
     {
         $branchMainUnit = OperatingUnit::where('type', 'BRANCH_MAIN')->first();

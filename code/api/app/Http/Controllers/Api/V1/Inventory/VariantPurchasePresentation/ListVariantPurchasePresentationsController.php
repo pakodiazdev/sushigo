@@ -35,7 +35,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *   ),
  *
  *   @OA\Response(response=401, description="Unauthenticated"),
- *   @OA\Response(response=403, description="Forbidden — requires items.view or suppliers.manage permission"),
+ *   @OA\Response(response=403, description="Forbidden — requires items.view, suppliers.manage, or receipts.manage permission"),
  *   @OA\Response(response=404, description="Product or Variant not found", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */

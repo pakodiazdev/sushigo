@@ -101,6 +101,16 @@ describe('requirePermission', () => {
     expect(() => requirePermission('stock.view')()).not.toThrow()
     expect(() => requirePermission('items.view')()).toThrow('redirect:/unauthorized')
   })
+
+  it('does not redirect when the user has any one of several accepted permissions', () => {
+    setupState({ permissions: ['receipts.manage'] })
+    expect(() => requirePermission('receipts.view', 'receipts.manage')()).not.toThrow()
+  })
+
+  it('redirects to /unauthorized when the user has none of several accepted permissions', () => {
+    setupState({ permissions: [] })
+    expect(() => requirePermission('receipts.view', 'receipts.manage')()).toThrow('redirect:/unauthorized')
+  })
 })
 
 // ─── requireRole ──────────────────────────────────────────────────────────────

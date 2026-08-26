@@ -62,5 +62,15 @@ Authenticated endpoints live below `/api/v1/inventory/receipts`, plus `{receipt}
 - `receipts.view`: list/show Receipts.
 - `receipts.manage`: create/update/delete a draft, post, and reverse.
 
+**As-built (`#433`):** the UI's own header/line lookups the Receipt form needs — `GET
+/inventory/suppliers`, `GET /inventory/suppliers/{supplier}/offerings`, `GET
+/inventory-locations`, `GET /inventory/products`, `GET /inventory/products/{product}/variants`,
+and `GET .../variants/{variant}/purchase-presentations` — now also accept `receipts.manage` as an
+alternative to their own view permission (`suppliers.view`, `inventory_locations.view`,
+`items.view`), the same way `suppliers.manage` was already widened onto the product/variant/
+presentation list endpoints for the Supplier Offering cascade (`#505`). Without this, a role
+holding only `receipts.manage` could open the Receipt create form but every one of its selects
+would fail authorization and come back empty.
+
 Editing or deleting is only allowed while a Receipt is still a draft; posting/reversing a Receipt
 that isn't in the expected state returns `409`, never a silent no-op.

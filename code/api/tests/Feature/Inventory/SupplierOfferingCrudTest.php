@@ -274,6 +274,19 @@ class SupplierOfferingCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_allows_listing_offerings_with_receipts_manage_permission_but_not_suppliers_view(): void
+    {
+        [$supplier, $presentation] = $this->supplierAndPresentation();
+        $this->createOffering($supplier, $presentation, ['is_active' => true]);
+        $this->user->removeRole('inventory-manager');
+        $this->user->givePermissionTo('receipts.manage');
+
+        $this->getJson("/api/v1/inventory/suppliers/{$supplier->public_id}/offerings")
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    #[Test]
     public function it_scopes_offerings_to_the_supplier_in_the_route(): void
     {
         [$supplier, $presentation] = $this->supplierAndPresentation();
