@@ -145,7 +145,7 @@ authoritative acquisition-cost source and deterministic operational data.
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ⏳ | #437 | Seed Suppliers, Receipts, costs, and branch prices | Medium | 3h | 6h | — | — | Requires #431–#436 |
+| ✅ | #437 | Seed Suppliers, Receipts, costs, and branch prices | Medium | 3h | 6h | 2.63h | PR #516 | Development/Testing/Fakes Supplier, Receipt (bonus packages + freight, weighted-avg cost) and Pricing (branch-context + promotion) seeders shipped, 7 review threads + 1 SonarCloud smell resolved — PR ready, merge pending |
 |  |  | **Round total** |  | **3h** | **6h** | **—** |  |  |
 
 ## 8. Route B — Sequential Dependencies
@@ -220,7 +220,7 @@ introduced.
 | ✅ | #434 | Unified weighted-average acquisition cost onto `Stock.weighted_avg_cost` per Inventory Location — `WeightedAverageCostCalculator` (bcmath exact-decimal) centralizes the blend for Receipts and Opening Balance, `StockOutService`/stock-out UI read the location-scoped cost, and a backfill migration reconciles stale `ItemVariant.avg_unit_cost` | PR #514 | 1.3h | 8 new/updated PHPUnit tests + 1 Vitest test, Pint clean; 6 Copilot/Codex review threads resolved across 2 rounds (undeclared ext-bcmath dependency, float division in reconciliation, flaky float assertion, a P1 pre-existing-stock zero-cost data-loss bug, explicit-zero-cost blend gap, stale frontend cost source) |
 | ✅ | #435 | Effective-dated PriceList/PriceListAssignment/VariantPrice schema, deterministic resolution API, branch-scoped authorization and permissions shipped, with no ItemVariant.sale_price fallback | PR #502 | 4.75h | 56 PHPUnit tests, Pint clean, SonarCloud quality gate passed (0 new smells/bugs/hotspots, 93.8% new coverage); 3 rounds of Copilot/Codex review addressed (18 threads resolved) |
 | ✅ | #436 | Price List / Assignment / Variant Price management UI delivered at `/inventario/listas-de-precios` — paginated DataGrid, create/edit/detail SlidePanels, Assignment delete-and-recreate flow, and a resolved-price preview matching the backend | PR #511 | 12.9h | 145+ Vitest tests across API/hooks/forms/sections plus a Cypress happy path; 13 review threads resolved across 3 rounds (Copilot domain-structure relocation, Codex pagination/permission-alignment bugs, missing Assignment delete flow); SonarCloud quality gate passed (0 new smells/bugs/hotspots, 84.9% new coverage); ESLint/typecheck clean |
-| ⏳ | #437 | Pending | — | — | Operational seeds |
+| ✅ | #437 | Development/Testing/Fakes purchasing story delivered — Suppliers quoting the same Purchase Presentation at different prices, a posted Receipt demonstrating package normalization + bonus packages + an allocated freight expense driving weighted-average Stock cost, and Standard vs. event-Operating-Unit vs. time-boxed-promotion `PriceList`s, all `ApplicationClock`-anchored for idempotent/time-stable re-seeding | PR #516 | 2.63h | 16 PHPUnit tests (52 assertions) across 4 new test files plus `TestReset` `purchasing`/`fakes-purchasing` groups; full `migrate:fresh --seed` run verified end-to-end; 7 Copilot/Codex review threads resolved (5 fixed: `ApplicationClock` vs. `Carbon::now()`, a `withTrashed()` idempotency gap, 3 unchecked `first()` lookups, an unused config key — 1 skipped as matching an existing `ItemVariantFactory` precedent); 1 SonarCloud code smell fixed (return-count refactor); Pint clean |
 
 ## 14. Quality Results
 
