@@ -100,39 +100,22 @@ class OpeningBalanceService
 
             // Update or create stock record — race-safe against a concurrent
             // first receipt for the same location+variant (see StockMutationService)
-            $this->stockMutation->receiveInto($inventoryLocationId, $itemVariantId, $baseQuantity);
+            $stock = $this->stockMutation->receiveInto($inventoryLocationId, $itemVariantId, $baseQuantity);
 
-            // Update variant costing if cost provided
-            if ($baseCost !== null && $baseCost > 0) {
-                $this->updateVariantCosting($variant, $baseQuantity, $baseCost);
+            // Blend into this location's weighted-average cost (#434) —
+            // never onto ItemVariant.avg_unit_cost/last_unit_cost, which
+            // this diverged from before #434 unified the two. The Product/
+            // Variant catalog stays read-only for acquisition cost; Stock
+            // (per Inventory Location) is the single source of truth.
+            // An explicit 0 must still blend (e.g. free stock) — only a
+            // missing (null) cost means "no cost supplied," matching
+            // ReceiptService's unconditional blend on every line.
+            if ($baseCost !== null) {
+                $stock->applyWeightedAverageCost($baseQuantity, $baseCost);
             }
 
             return $movement->fresh(['lines', 'toLocation', 'itemVariant.item']);
         });
-    }
-
-    /**
-     * Update variant costing with weighted average
-     */
-    protected function updateVariantCosting(ItemVariant $variant, float $newQty, float $newCost): void
-    {
-        $currentQty = $variant->stock()->sum('on_hand');
-        $currentAvg = $variant->avg_unit_cost;
-
-        // Calculate previous quantity (before this movement)
-        $previousQty = max(0, $currentQty - $newQty);
-
-        // Calculate new weighted average
-        if ($previousQty + $newQty > 0) {
-            $newAvg = (($previousQty * $currentAvg) + ($newQty * $newCost)) / ($previousQty + $newQty);
-        } else {
-            $newAvg = $newCost;
-        }
-
-        $variant->update([
-            'last_unit_cost' => $newCost,
-            'avg_unit_cost' => $newAvg,
-        ]);
     }
 
     /**

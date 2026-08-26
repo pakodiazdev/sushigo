@@ -42,17 +42,18 @@ class StockOutTest extends InventoryTestCase
         $this->variant = $this->createItemVariant($this->item, [
             'code' => 'VTEST-001',
             'name' => 'Test Variant',
-            'avg_unit_cost' => 50.0000,
-            'last_unit_cost' => 50.0000,
             'sale_price' => 75.0000,
         ]);
 
-        // Create initial stock (100 KG on hand)
+        // Create initial stock (100 KG on hand). Cost (#434) is sourced from
+        // this location's own weighted_avg_cost, never from the catalog
+        // Variant — see WeightedAverageCostCalculator/StockOutService.
         Stock::create([
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->variant->id,
             'on_hand' => 100.0000,
             'reserved' => 0,
+            'weighted_avg_cost' => 50.0000,
         ]);
     }
 
@@ -270,7 +271,7 @@ class StockOutTest extends InventoryTestCase
             'qty' => 10,
             'uom_id' => $this->uomKg->public_id,
             'reason' => 'SALE',
-            'sale_price' => 50.00, // Same as avg_unit_cost
+            'sale_price' => 50.00, // Same as the Stock's weighted_avg_cost
         ]);
 
         $response->assertStatus(201);
@@ -361,7 +362,7 @@ class StockOutTest extends InventoryTestCase
             'qty' => 10,
             'uom_id' => $this->uomKg->public_id,
             'reason' => 'SALE',
-            'sale_price' => 30.00, // Less than avg_unit_cost (50)
+            'sale_price' => 30.00, // Less than the Stock's weighted_avg_cost (50)
         ]);
 
         $response->assertStatus(201);

@@ -126,8 +126,11 @@ export function StockOutForm({
     (s) => s.inventory_location_id === locationId
   ) || null
 
-  // Calculate profit (only for sales)
-  const unitCost = selectedVariant?.last_unit_cost || 0
+  // Calculate profit (only for sales) — cost this location's outbound
+  // movement at that same location's weighted-average cost (#434), matching
+  // StockOutService server-side; never the catalog Variant's stale
+  // last_unit_cost, which the backend no longer writes.
+  const unitCost = locationStock?.weighted_avg_cost || 0
   const totalCost = qty * unitCost
   const totalRevenue = qty * salePrice
   const profitAmount = totalRevenue - totalCost

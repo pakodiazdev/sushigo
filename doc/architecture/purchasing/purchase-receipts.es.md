@@ -52,8 +52,11 @@ ya redujo el disponible por debajo de lo que aportó la recepción, la reversió
 (`ReceiptReversalBoundaryException`) en vez de dejar Stock en negativo.
 
 El costo de adquisición se registra en `Stock.weighted_avg_cost`, nunca en `ItemVariant` — el Issue
-es explícito en que el costo "no debe capturarse en Producto o Variante". Conciliar esto con la
-escritura divergente a nivel Variante de `OpeningBalanceService` es tarea del `#434`.
+es explícito en que el costo "no debe capturarse en Producto o Variante". El `#434` unificó esto:
+`OpeningBalanceService` ahora también combina el costo en el mismo `Stock.weighted_avg_cost` por
+ubicación (mediante `Stock::applyWeightedAverageCost()` y el `WeightedAverageCostCalculator`
+compartido) en vez de escribir `ItemVariant.avg_unit_cost` — ver `inventory-architecture.es.md`
+§ "Costo promedio ponderado" para la unificación completa.
 
 ## API y autorización
 

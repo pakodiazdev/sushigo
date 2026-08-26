@@ -49,8 +49,10 @@ on-hand below what the receipt added, reversal is rejected (`ReceiptReversalBoun
 rather than driving Stock negative.
 
 Acquisition cost lands on `Stock.weighted_avg_cost`, never on `ItemVariant` — the issue is explicit
-that cost "must not be entered on Product or Variant". Reconciling this against
-`OpeningBalanceService`'s divergent Variant-level write is `#434`'s job.
+that cost "must not be entered on Product or Variant". `#434` unified this: `OpeningBalanceService`
+now blends into the same per-location `Stock.weighted_avg_cost` (via `Stock::applyWeightedAverageCost()`
+and the shared `WeightedAverageCostCalculator`) instead of writing `ItemVariant.avg_unit_cost` —
+see `inventory-architecture.en.md` § "Weighted-average cost" for the full unification.
 
 ## API and authorization
 

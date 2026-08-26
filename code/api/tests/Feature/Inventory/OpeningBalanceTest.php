@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Models\InventoryLocation;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\UnitOfMeasure;
@@ -82,10 +83,13 @@ class OpeningBalanceTest extends InventoryTestCase
         $stock = Stock::where('item_variant_id', $variant->id)->first();
         $this->assertEquals(50, $stock->available);
 
-        // Assert: Variant costs updated
+        // Assert: weighted-average cost lands on Stock (#434), per location
+        $this->assertEquals(125.50, (float) $stock->weighted_avg_cost);
+
+        // Assert: the Product/Variant catalog stays read-only for acquisition cost
         $variant->refresh();
-        $this->assertEquals(125.50, $variant->avg_unit_cost);
-        $this->assertEquals(125.50, $variant->last_unit_cost);
+        $this->assertEquals(0, (float) $variant->avg_unit_cost);
+        $this->assertEquals(0, (float) $variant->last_unit_cost);
     }
 
     #[Test]
@@ -131,10 +135,13 @@ class OpeningBalanceTest extends InventoryTestCase
             'reserved' => 0,
         ]);
 
-        // Assert: Variant costs in base unit
+        // Assert: weighted-average cost in base unit (#434), on Stock
+        $stock = Stock::where('item_variant_id', $variant->id)->first();
+        $this->assertEquals(150, (float) $stock->weighted_avg_cost); // Cost per KG
+
+        // Assert: the catalog itself is untouched
         $variant->refresh();
-        $this->assertEquals(150, $variant->avg_unit_cost); // Cost per KG
-        $this->assertEquals(150, $variant->last_unit_cost);
+        $this->assertEquals(0, (float) $variant->avg_unit_cost);
     }
 
     #[Test]
@@ -169,10 +176,98 @@ class OpeningBalanceTest extends InventoryTestCase
         $stock = Stock::where('item_variant_id', $variant->id)->first();
         $this->assertEquals(30, $stock->on_hand);
 
-        // Assert: Weighted average = (10*100 + 20*150) / 30 = 4000/30 = 133.33
+        // Assert: Weighted average = (10*100 + 20*150) / 30 = 4000/30 = 133.33,
+        // on Stock (#434) — never on the read-only catalog Variant
+        $this->assertEquals(133.33, round((float) $stock->weighted_avg_cost, 2));
+
         $variant->refresh();
-        $this->assertEquals(133.33, round($variant->avg_unit_cost, 2));
-        $this->assertEquals(150, $variant->last_unit_cost); // Last cost = most recent
+        $this->assertEquals(0, (float) $variant->avg_unit_cost);
+    }
+
+    #[Test]
+    public function it_blends_an_explicit_zero_unit_cost_into_the_weighted_average()
+    {
+        // Regression (#434 Codex P2): an explicit unit_cost of 0 (e.g. free
+        // stock) must still blend into the weighted average — only a
+        // missing (null) unit_cost should skip the blend. Before this fix,
+        // `$baseCost > 0` treated an explicit 0 the same as "no cost
+        // supplied" and silently left the prior average unchanged.
+        $item = $this->createItem(['name' => 'Free Sample Item']);
+        $variant = $this->createItemVariant($item, [
+            'name' => 'Free Sample Variant',
+            'uom_id' => $this->uomKg->id,
+        ]);
+
+        // First opening balance - 10 units at $100/unit
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 100,
+        ])->assertStatus(201);
+
+        // Second opening balance - 10 free units at $0/unit
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 0,
+        ])->assertStatus(201);
+
+        // Weighted average = (10*100 + 10*0) / 20 = 50
+        $stock = Stock::where('item_variant_id', $variant->id)->first();
+        $this->assertEquals(20, $stock->on_hand);
+        $this->assertEquals(50, round((float) $stock->weighted_avg_cost, 2));
+    }
+
+    #[Test]
+    public function it_keeps_weighted_average_cost_independent_per_location()
+    {
+        // Multi-location regression (#434): the same Variant received into
+        // two different Inventory Locations at different unit costs must
+        // not blend across locations — each Stock row keeps its own
+        // weighted-average cost.
+        $item = $this->createItem(['name' => 'Wasabi']);
+        $variant = $this->createItemVariant($item, [
+            'name' => 'Wasabi Paste',
+            'uom_id' => $this->uomKg->id,
+        ]);
+
+        $secondLocation = InventoryLocation::create([
+            'operating_unit_id' => $this->operatingUnit->id,
+            'name' => 'Second Warehouse',
+            'type' => 'MAIN',
+            'priority' => 90,
+            'is_active' => true,
+        ]);
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 100,
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $secondLocation->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 300,
+        ])->assertStatus(201);
+
+        $firstStock = Stock::where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->first();
+        $secondStock = Stock::where('inventory_location_id', $secondLocation->id)
+            ->where('item_variant_id', $variant->id)
+            ->first();
+
+        $this->assertEquals(100, (float) $firstStock->weighted_avg_cost);
+        $this->assertEquals(300, (float) $secondStock->weighted_avg_cost);
     }
 
     #[Test]

@@ -153,8 +153,8 @@ class ReceiptService
 
                 $baseUnits = (float) $line->base_units_received;
 
-                $this->stockMutation->receiveInto($receipt->destination_location_id, $itemVariant->id, $baseUnits);
-                $this->applyWeightedAverageCostOnReceipt($receipt->destination_location_id, $itemVariant->id, $baseUnits, (float) $line->effective_unit_cost);
+                $stock = $this->stockMutation->receiveInto($receipt->destination_location_id, $itemVariant->id, $baseUnits);
+                $stock->applyWeightedAverageCost($baseUnits, (float) $line->effective_unit_cost);
 
                 $movement = StockMovement::create([
                     'from_location_id' => null,
@@ -333,39 +333,6 @@ class ReceiptService
             'effective_unit_cost' => $effectiveUnitCost,
             'meta' => [],
         ]);
-    }
-
-    /**
-     * Maintain Stock.weighted_avg_cost — deliberately not ItemVariant's own
-     * avg_unit_cost/last_unit_cost: #432's issue text is explicit that
-     * acquisition cost "must not be entered on Product or Variant".
-     * Reconciling this against OpeningBalanceService's divergent
-     * Variant-level write is #434's job, not this one's.
-     */
-    private function applyWeightedAverageCostOnReceipt(int $locationId, int $itemVariantId, float $qtyAdded, float $unitCost): void
-    {
-        if ($qtyAdded <= 0) {
-            return;
-        }
-
-        $stock = Stock::where('inventory_location_id', $locationId)
-            ->where('item_variant_id', $itemVariantId)
-            ->lockForUpdate()
-            ->first();
-
-        if (! $stock) {
-            return;
-        }
-
-        $priorOnHand = max(0.0, (float) $stock->on_hand - $qtyAdded);
-        $priorAvg = (float) $stock->weighted_avg_cost;
-        $totalOnHand = $priorOnHand + $qtyAdded;
-
-        $newAvg = $totalOnHand > 0
-            ? (($priorOnHand * $priorAvg) + ($qtyAdded * $unitCost)) / $totalOnHand
-            : $unitCost;
-
-        $stock->update(['weighted_avg_cost' => $newAvg]);
     }
 
     private function freshReceipt(Receipt $receipt): Receipt

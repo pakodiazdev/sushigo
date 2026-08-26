@@ -77,8 +77,11 @@ class StockOutService
             // Check stock availability
             $stock = $this->assertAvailableStock($inventoryLocationId, $itemVariantId, $baseQuantity, $variant, $location);
 
-            // Get current average unit cost from variant
-            $unitCost = $variant->avg_unit_cost ?? 0;
+            // Cost this location's outbound movement at that same location's
+            // weighted-average cost (#434) — never ItemVariant.avg_unit_cost,
+            // which the catalog no longer stores as an active source and
+            // which was never location-specific to begin with.
+            $unitCost = (float) ($stock->weighted_avg_cost ?? 0);
 
             // Calculate pricing and profit (only for SALE movements)
             [$saleTotal, $profitMargin, $profitTotal] = $this->calculateSaleFigures(

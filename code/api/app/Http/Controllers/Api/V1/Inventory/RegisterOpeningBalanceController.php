@@ -6,6 +6,7 @@ use App\DataTransferObjects\Inventory\RegisterOpeningBalanceData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\RegisterOpeningBalanceRequest;
 use App\Http\Responses\Common\ResponseEntity;
+use App\Models\Stock;
 use App\Services\Inventory\OpeningBalanceService;
 
 /**
@@ -60,6 +61,13 @@ class RegisterOpeningBalanceController extends Controller
                 notes: $request->notes
             ));
 
+            // Weighted-average cost (#434) lives on Stock, per Inventory
+            // Location — never on ItemVariant, which is read-only for
+            // acquisition cost.
+            $weightedAvgCost = Stock::where('inventory_location_id', $movement->to_location_id)
+                ->where('item_variant_id', $movement->item_variant_id)
+                ->value('weighted_avg_cost');
+
             return new ResponseEntity(
                 data: [
                     'id' => $movement->id,
@@ -85,7 +93,7 @@ class RegisterOpeningBalanceController extends Controller
                         'code' => $movement->itemVariant->code,
                         'name' => $movement->itemVariant->name,
                         'item_name' => $movement->itemVariant->item->name,
-                        'avg_unit_cost' => (float) $movement->itemVariant->avg_unit_cost,
+                        'weighted_avg_cost' => (float) ($weightedAvgCost ?? 0),
                     ],
                 ],
                 status: 201
