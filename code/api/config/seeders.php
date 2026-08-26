@@ -188,6 +188,8 @@ return [
         'dishes_per_category' => 8,
         'fake_products' => 20,
         'fake_variants_per_product' => 2,
+        'fake_suppliers' => 15,
+        'fake_offerings_per_supplier' => 3,
     ],
 
     /*
@@ -478,4 +480,91 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Development Suppliers, Purchase Receipt & Pricing (#437)
+    |--------------------------------------------------------------------------
+    |
+    | Believable purchasing/pricing story layered on top of the Development
+    | Product catalog above (Development/SupplierSeeder,
+    | Development/PurchaseReceiptSeeder, Development/PricingSeeder):
+    | Suppliers quoting the same Purchase Presentation at different prices,
+    | one Receipt demonstrating package normalization + bonus (promotional)
+    | packages + an allocated freight expense driving effective/weighted-
+    | average acquisition cost, and Price Lists showing a Branch-wide
+    | Standard price, an event-Operating-Unit price override for the same
+    | Variant, and a short time-boxed promotion — see
+    | doc/architecture/pricing/pricing-architecture.en.md §3, §7.
+    |
+    | `*_days_offset` values are resolved against
+    | App\Support\Clock\ApplicationClock::todayInBusinessTz() at seed time
+    | (not a fixed calendar date), so re-seeding stays time-stable no matter
+    | when it runs.
+    |
+    */
+
+    'development_suppliers' => [
+        ['code' => 'SUP-COCAFEMSA', 'name' => 'Coca-Cola FEMSA', 'contact_name' => 'Laura Núñez', 'email' => 'ventas@cocafemsa.mx', 'phone' => '+52 55 5000 1000', 'is_active' => true],
+        ['code' => 'SUP-VALLE', 'name' => 'Refresquera del Valle', 'contact_name' => 'Jorge Paredes', 'email' => 'pedidos@refrescosvalle.mx', 'phone' => '+52 55 5000 2000', 'is_active' => true],
+        ['code' => 'SUP-KFOOD', 'name' => 'Distribuidora K-Food', 'contact_name' => 'Grace Han', 'email' => 'contacto@kfooddist.mx', 'phone' => '+52 55 5000 3000', 'is_active' => true],
+    ],
+
+    'development_supplier_offerings' => [
+        // Two Suppliers quoting the exact same Presentation at different prices —
+        // the "different presentation quotations" Acceptance Criterion.
+        ['supplier' => 'SUP-COCAFEMSA', 'variant' => 'COKE-ORIG-CAN355', 'template' => 'BOX_24', 'supplier_code' => 'CF-CAN355-24', 'quoted_price' => 480.00, 'minimum_order_quantity' => 4, 'lead_time_days' => 3],
+        ['supplier' => 'SUP-VALLE', 'variant' => 'COKE-ORIG-CAN355', 'template' => 'BOX_24', 'supplier_code' => 'RV-CAN355-24', 'quoted_price' => 460.00, 'minimum_order_quantity' => 6, 'lead_time_days' => 5],
+        ['supplier' => 'SUP-COCAFEMSA', 'variant' => 'COKE-ORIG-BOT600', 'template' => 'UNIT_1', 'supplier_code' => 'CF-BOT600-1', 'quoted_price' => 22.50, 'minimum_order_quantity' => 12, 'lead_time_days' => 3],
+        ['supplier' => 'SUP-KFOOD', 'variant' => 'BULDAK-ORIGINAL-140', 'template' => 'BOX_24', 'supplier_code' => 'KF-ORIG140-24', 'quoted_price' => 456.00, 'minimum_order_quantity' => 4, 'lead_time_days' => 10],
+    ],
+
+    'development_purchase_receipt' => [
+        'supplier' => 'SUP-COCAFEMSA',
+        'reference' => 'FAC-COCAFEMSA-0091',
+        'location_type' => 'MAIN',
+        'notes' => 'Reabasto mensual Coca-Cola lata 355ml con 2 cajas de bonificación por volumen y flete asignado.',
+        'lines' => [
+            [
+                'variant' => 'COKE-ORIG-CAN355',
+                'template' => 'BOX_24',
+                'offering_supplier' => 'SUP-COCAFEMSA',
+                // 8 boxes paid + 2 bonus boxes = 10 boxes received (240 base units);
+                // gross_amount only covers the 8 paid boxes at 480/box.
+                'ordered_packages' => 8,
+                'received_packages' => 10,
+                'bonus_packages' => 2,
+                'gross_amount' => 3840.00,
+                'discounts' => 0,
+                'allocated_expenses' => 150.00,
+                'non_recoverable_taxes' => 0,
+            ],
+        ],
+    ],
+
+    'development_price_lists' => [
+        ['code' => 'STD', 'name' => 'Lista Estándar', 'description' => 'Precios de venta estándar para operación diaria en todas las sucursales.', 'priority' => 0, 'is_active' => true],
+        ['code' => 'EVENT-TEQUILA', 'name' => 'Lista Bazar Tequila', 'description' => 'Precios especiales para el evento temporal Bazar Tequila.', 'priority' => 0, 'is_active' => true],
+        ['code' => 'PROMO-BULDAK', 'name' => 'Promoción Buldak Fin de Semana', 'description' => 'Descuento temporal en Buldak Original 140g.', 'priority' => 10, 'is_active' => true],
+    ],
+
+    // All assignments below always seed against Branch MAIN, the only Branch
+    // this codebase has — PricingSeeder::seedAssignments() receives that
+    // Branch directly rather than reading it from these tuples, so no
+    // 'branch' key is listed here (see Development/PricingSeeder).
+    'development_price_list_assignments' => [
+        ['price_list' => 'STD', 'operating_unit_event' => null, 'from_days_offset' => -90, 'to_days_offset' => null],
+        ['price_list' => 'EVENT-TEQUILA', 'operating_unit_event' => 'Bazar Tequila', 'from_days_offset' => -1, 'to_days_offset' => 30],
+        ['price_list' => 'PROMO-BULDAK', 'operating_unit_event' => null, 'from_days_offset' => 0, 'to_days_offset' => 6],
+    ],
+
+    'development_variant_prices' => [
+        ['price_list' => 'STD', 'variant' => 'COKE-ORIG-CAN355', 'price' => 22.00, 'from_days_offset' => -90, 'to_days_offset' => null],
+        ['price_list' => 'STD', 'variant' => 'BULDAK-ORIGINAL-140', 'price' => 35.00, 'from_days_offset' => -90, 'to_days_offset' => null],
+        // Branch/context price difference — the event Operating Unit charges
+        // more for the same Variant than the Branch-wide Standard list.
+        ['price_list' => 'EVENT-TEQUILA', 'variant' => 'COKE-ORIG-CAN355', 'price' => 30.00, 'from_days_offset' => -1, 'to_days_offset' => 30],
+        // Promotion — a higher-priority, short-window list temporarily
+        // undercutting the Standard price (pricing-architecture.en.md §7).
+        ['price_list' => 'PROMO-BULDAK', 'variant' => 'BULDAK-ORIGINAL-140', 'price' => 28.00, 'from_days_offset' => 0, 'to_days_offset' => 6],
+    ],
 ];
