@@ -224,8 +224,10 @@ class ProductVariantCrudTest extends InventoryTestCase
         $response->assertStatus(201);
         $variant = ItemVariant::where('code', 'ARR-KG')->firstOrFail();
         $this->assertNull($variant->sale_price);
-        $this->assertSame('0.0000', (string) $variant->min_stock);
-        $this->assertSame('0.0000', (string) $variant->max_stock);
+        // min_stock/max_stock no longer exist on ItemVariant (#439) — they were
+        // never accepted here, and now the column is gone entirely.
+        $this->assertFalse(array_key_exists('min_stock', $variant->getAttributes()));
+        $this->assertFalse(array_key_exists('max_stock', $variant->getAttributes()));
         $this->assertSame('0.0000', (string) $variant->last_unit_cost);
     }
 
@@ -352,7 +354,8 @@ class ProductVariantCrudTest extends InventoryTestCase
 
         $response->assertStatus(200);
         $variant->refresh();
-        $this->assertSame('0.0000', (string) $variant->min_stock);
+        $this->assertFalse(array_key_exists('min_stock', $variant->getAttributes()));
+        $this->assertFalse(array_key_exists('max_stock', $variant->getAttributes()));
     }
 
     #[Test]

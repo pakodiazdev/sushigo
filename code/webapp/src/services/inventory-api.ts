@@ -223,10 +223,11 @@ export const stockApi = {
         total_on_hand: number
         total_reserved: number
         total_available: number
+        low_stock_variants: number
         total_inventory_value: number
       }
       items: Array<{
-        item_variant_id: number
+        item_variant_id: string
         item_variant_code: string
         item_variant_name: string
         item_name: string
@@ -236,6 +237,11 @@ export const stockApi = {
         available: number
         weighted_avg_cost: number
         total_value: number
+        /** Resolved per-location replenishment reorder point (#439); null when unset. */
+        min_stock: number | null
+        /** Resolved per-location replenishment ceiling (#439); null when unset. */
+        max_stock: number | null
+        is_low_stock: boolean
       }>
     }>>(`/stock/by-location/${locationId}`),
 

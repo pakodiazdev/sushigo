@@ -23,8 +23,6 @@ class ItemVariantFactory extends Factory
             'code' => 'VAR-'.fake()->unique()->numerify('######'),
             'name' => fake()->words(2, true),
             'uom_id' => UnitOfMeasure::inRandomOrder()->first()?->id,
-            'min_stock' => 0,
-            'max_stock' => fake()->numberBetween(100, 1000),
             'avg_unit_cost' => fake()->randomFloat(2, 10, 500),
             'last_unit_cost' => fake()->randomFloat(2, 10, 500),
             'is_active' => true,

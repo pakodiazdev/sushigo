@@ -15,8 +15,6 @@ use Illuminate\Foundation\Http\FormRequest;
  *   @OA\Property(property="track_lot", type="boolean", example=false, description="Track lot numbers"),
  *   @OA\Property(property="track_serial", type="boolean", example=false, description="Track serial numbers"),
  *   @OA\Property(property="sale_price", type="number", format="float", example=35.00, description="Default sale price"),
- *   @OA\Property(property="min_stock", type="number", format="float", example=10.00, description="Minimum stock level"),
- *   @OA\Property(property="max_stock", type="number", format="float", example=100.00, description="Maximum stock level"),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Active status"),
  * )
  */
@@ -37,8 +35,6 @@ class UpdateItemVariantRequest extends FormRequest
             'track_lot' => ['sometimes', 'boolean'],
             'track_serial' => ['sometimes', 'boolean'],
             'sale_price' => ['sometimes', 'nullable', 'numeric', 'min:0'],
-            'min_stock' => ['sometimes', 'numeric', 'min:0'],
-            'max_stock' => ['sometimes', 'numeric', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
@@ -46,10 +42,6 @@ class UpdateItemVariantRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if ($this->filled('min_stock') && $this->filled('max_stock') && $this->max_stock < $this->min_stock) {
-                $validator->errors()->add('max_stock', 'Maximum stock must be greater than or equal to minimum stock');
-            }
-
             // A pre-existing Product variant (created before #429 closed this legacy path) must
             // not keep receiving writes here — it can only be managed via
             // PUT /inventory/products/{id}/variants/{variantId} (#425) from now on.

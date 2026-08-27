@@ -43,8 +43,9 @@ The system must guarantee:
 ## 3. Domain Model
 
 > **Note (2026-08-12):** the `Item`/`ItemVariant` shapes below (§3.2 ER diagram, §3.7 class diagram)
-> still show today's flat schema, including `sale_price`/`min_stock`/`max_stock`-equivalent fields
-> that the Product vertical is removing from its catalog write path. See
+> still show today's flat schema, including `sale_price`-equivalent fields that the Product vertical
+> is removing from its catalog write path. `min_stock`/`max_stock` have already been removed from
+> `ItemVariant` — replenishment thresholds are now per Inventory Location, see §3.10 (#439). See
 > [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.en.md) and
 > [TD-03](../decisions/td-03-product-catalog-separation.md) for the target Product/Variant/Purchase
 > Presentation model and the migration sequence; this document is updated to match once that
@@ -675,6 +676,39 @@ reports.
 
 Reversing a posted Receipt intentionally leaves `weighted_avg_cost` untouched — unwinding a blended
 average exactly would need lot-level cost tracking this codebase doesn't have.
+
+### 3.10 Replenishment thresholds, per Inventory Location (#439)
+
+Before `#439`, `ItemVariant` carried a single global `min_stock` / `max_stock` pair. A Variant
+stocked in a branch main warehouse, a bar fridge, and a temporary event unit has three different
+demands and capacities, so one number could not represent any of them.
+
+**Source of truth: `VariantLocationReplenishmentPolicy`, one row per `(inventory_location_id,
+item_variant_id)` pair.** It holds `min_stock` (the reorder point), `max_stock` (the target
+ceiling, DB-enforced `>= min_stock`), and an optional `notes`. A partial unique index keeps one
+live policy per pair; the row soft-deletes. `ItemVariant.min_stock` / `max_stock` were dropped —
+a one-time migration moved each legacy pair onto a policy row **only** where the Variant had stock
+at exactly one location (an unambiguous target), and logged every pair it could not place, with a
+summary (`LegacyThresholdMigrator`).
+
+**Resolution goes through one service.** `App\Services\Inventory\ReplenishmentPolicyResolver`
+returns the effective policy for a `(location, variant)` pair — today a direct lookup of the
+location-level row; it is the single seam where Operating-Unit-level defaults/inheritance would be
+added later. A stock row with **no** resolved policy is never "low" — there is no configured
+reorder point to compare against.
+
+**Low-stock semantics.** A `Stock` row is low when a resolved policy exists and `on_hand <=
+policy.min_stock`. `Stock::scopeLowStock()` and `ItemVariant::scopeLowStock()` are defined in these
+terms; `SummarizesStock` / `StockByLocationController` / `StockByVariantController` expose the
+resolved `min_stock` / `max_stock` and an `is_low_stock` flag per row plus a low-count in the
+summary; `GET /stock` gains a `low_stock` filter and carries the resolved fields on every row.
+
+**API.** Location-scoped, under `inventory-locations/{id}/replenishment-policies`: `GET /` (list),
+`GET /{variantId}` (resolved policy, synthetic `is_configured:false` when unset), `PUT /{variantId}`
+(idempotent upsert — 201 new / 200 update), `DELETE /{variantId}`. Reads require `stock.view`,
+writes `stock.manage` — replenishment configuration is stock governance, not catalog identity, so
+it reuses the stock permissions rather than minting new ones. The management UI is a per-location
+panel in the Stock Dashboard's location detail.
 
 ---
 

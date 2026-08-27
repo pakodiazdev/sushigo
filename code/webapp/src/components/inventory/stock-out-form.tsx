@@ -136,7 +136,10 @@ export function StockOutForm({
   const profitAmount = totalRevenue - totalCost
   const profitMargin = totalRevenue > 0 ? (profitAmount / totalRevenue) * 100 : 0
 
-  const hasLowStock = !!(locationStock && locationStock.available < (selectedVariant?.min_stock || 0))
+  // Low-stock is the backend's resolved per-location verdict now (#439) — a
+  // policy exists for this (location, variant) and on_hand is at/below its
+  // reorder point.
+  const hasLowStock = !!(locationStock?.is_low_stock)
   const hasInsufficientStock = !!(locationStock && qty > locationStock.available)
 
   const { execute, validationErrors, isPending } = useFormMutation({
@@ -230,7 +233,6 @@ export function StockOutForm({
           {locationStock && selectedVariant && (
             <StockInfoPanel
               locationStock={locationStock}
-              selectedVariant={selectedVariant}
               hasLowStock={hasLowStock}
               hasInsufficientStock={hasInsufficientStock}
             />
@@ -338,7 +340,6 @@ export function StockOutForm({
 
 interface StockInfoPanelProps {
   readonly locationStock: Stock
-  readonly selectedVariant: ItemVariant
   readonly hasLowStock: boolean
   readonly hasInsufficientStock: boolean
 }
@@ -355,7 +356,7 @@ function getStockPanelTextToneClass(hasInsufficientStock: boolean, hasLowStock: 
   return 'text-blue-900'
 }
 
-function StockInfoPanel({ locationStock, selectedVariant, hasLowStock, hasInsufficientStock }: Readonly<StockInfoPanelProps>) {
+function StockInfoPanel({ locationStock, hasLowStock, hasInsufficientStock }: Readonly<StockInfoPanelProps>) {
   return (
     <div
       className={`border rounded-lg p-3 text-sm ${getStockPanelToneClass(hasInsufficientStock, hasLowStock)}`}
@@ -393,7 +394,7 @@ function StockInfoPanel({ locationStock, selectedVariant, hasLowStock, hasInsuff
       </div>
       {hasLowStock && !hasInsufficientStock && (
         <div className="text-xs text-yellow-700 mt-2">
-          ⚠️ Stock below minimum level ({selectedVariant.min_stock})
+          ⚠️ Stock at or below this location&apos;s reorder point ({locationStock.min_stock ?? 0})
         </div>
       )}
       {hasInsufficientStock && (

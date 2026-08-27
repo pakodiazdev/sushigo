@@ -67,7 +67,7 @@ const MOCK_VARIANTS = [{
     id: 'variant-01', code: 'VAR-001', name: 'Salt 500g', uom_id: 1,
     uom: { id: 'uom-01', name: 'Kilogram', symbol: 'kg' },
     item: { sku: 'SAL-001', name: 'Salt' },
-    last_unit_cost: 5.0, min_stock: 10,
+    last_unit_cost: 5.0,
 }]
 const MOCK_UNITS = [{ id: 'uom-01', name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' }]
 
@@ -356,26 +356,26 @@ describe('StockOutForm', () => {
         watchValues.variant_id = 'variant-01'
         watchValues.location_id = 'location-01'
         mockQueryResult.data = {
-            data: { data: [{ inventory_location_id: 'location-01', on_hand: 50, reserved: 5, available: 45 }] },
+            data: { data: [{ inventory_location_id: 'location-01', on_hand: 50, reserved: 5, available: 45, min_stock: 10, max_stock: 100, is_low_stock: false }] },
         }
 
         const { findByText, queryByText } = render(<StockOutForm {...defaultProps} />)
 
         expect(await findByText('Current Stock')).toBeTruthy()
-        expect(queryByText(/stock below minimum level/i)).toBeNull()
+        expect(queryByText(/reorder point/i)).toBeNull()
         expect(queryByText(/insufficient stock for this operation/i)).toBeNull()
     })
 
-    it('shows a low-stock warning when available stock is below the variant minimum', async () => {
+    it('shows a low-stock warning when the resolved policy marks the row low', async () => {
         watchValues.variant_id = 'variant-01'
         watchValues.location_id = 'location-01'
         mockQueryResult.data = {
-            data: { data: [{ inventory_location_id: 'location-01', on_hand: 8, reserved: 3, available: 5 }] },
+            data: { data: [{ inventory_location_id: 'location-01', on_hand: 8, reserved: 3, available: 5, min_stock: 10, max_stock: 100, is_low_stock: true }] },
         }
 
         const { findByText } = render(<StockOutForm {...defaultProps} />)
 
-        expect(await findByText(/stock below minimum level/i)).toBeTruthy()
+        expect(await findByText(/reorder point/i)).toBeTruthy()
     })
 
     it('shows an insufficient-stock error when quantity exceeds available stock', async () => {

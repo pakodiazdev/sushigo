@@ -119,8 +119,10 @@ class ProductCatalogSeederTest extends TestCase
             $this->assertNull($variant->sale_price, "Variant {$variant->code} must not have an invented sale_price");
             $this->assertSame('0.0000', (string) $variant->last_unit_cost, "Variant {$variant->code} must not have an invented last_unit_cost");
             $this->assertSame('0.0000', (string) $variant->avg_unit_cost, "Variant {$variant->code} must not have an invented avg_unit_cost");
-            $this->assertSame('0.0000', (string) $variant->min_stock, "Variant {$variant->code} must not have an invented min_stock");
-            $this->assertSame('0.0000', (string) $variant->max_stock, "Variant {$variant->code} must not have an invented max_stock");
+            // Replenishment thresholds are no longer an ItemVariant concern (#439) —
+            // the seeder can't invent what the column no longer holds.
+            $this->assertFalse(array_key_exists('min_stock', $variant->getAttributes()), "Variant {$variant->code} must not carry a min_stock attribute");
+            $this->assertFalse(array_key_exists('max_stock', $variant->getAttributes()), "Variant {$variant->code} must not carry a max_stock attribute");
         }
     }
 

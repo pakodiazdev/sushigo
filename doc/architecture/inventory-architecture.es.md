@@ -44,8 +44,9 @@ El sistema debe garantizar:
 
 > **Nota (2026-08-12):** las formas de `Item`/`ItemVariant` de abajo (diagrama ER §3.2, diagrama de
 > clases §3.7) todavía muestran el esquema plano actual, incluyendo campos equivalentes a
-> `sale_price`/`min_stock`/`max_stock` que la vertical de Producto está retirando de su ruta de
-> escritura de catálogo. Ver
+> `sale_price` que la vertical de Producto está retirando de su ruta de
+> escritura de catálogo. `min_stock`/`max_stock` ya se eliminaron de `ItemVariant` — los umbrales
+> de reabastecimiento ahora son por Ubicación de Inventario, ver §3.10 (#439). Ver
 > [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.es.md) y
 > [TD-03](../decisions/td-03-product-catalog-separation.md) para el modelo objetivo de
 > Producto/Variante/Presentación de Compra y la secuencia de migración; este documento se
@@ -694,6 +695,41 @@ directamente para los reportes de valuación.
 Revertir una Recepción registrada deja `weighted_avg_cost` intencionalmente sin tocar — deshacer un
 promedio combinado con exactitud requeriría rastreo de costo a nivel de lote, algo que este código
 todavía no tiene.
+
+### 3.10 Umbrales de reabastecimiento, por Ubicación de Inventario (#439)
+
+Antes del `#439`, `ItemVariant` cargaba un único par global `min_stock` / `max_stock`. Una Variante
+almacenada en la bodega principal de una sucursal, en un refrigerador de barra y en una unidad de
+evento temporal tiene tres demandas y capacidades distintas, así que un solo número no representaba
+ninguna.
+
+**Fuente de verdad: `VariantLocationReplenishmentPolicy`, una fila por par `(inventory_location_id,
+item_variant_id)`.** Guarda `min_stock` (punto de reorden), `max_stock` (techo objetivo, forzado en
+BD a `>= min_stock`) y `notes` opcional. Un índice único parcial mantiene una sola política viva por
+par; la fila usa borrado lógico. `ItemVariant.min_stock` / `max_stock` se eliminaron — una migración
+única movió cada par heredado a una fila de política **solo** cuando la Variante tenía stock en
+exactamente una ubicación (destino inequívoco), y registró cada par que no pudo colocar, con un
+resumen (`LegacyThresholdMigrator`).
+
+**La resolución pasa por un servicio.** `App\Services\Inventory\ReplenishmentPolicyResolver`
+devuelve la política efectiva de un par `(ubicación, variante)` — hoy una búsqueda directa de la
+fila a nivel de ubicación; es la única costura donde se agregarían más adelante valores por defecto
+o herencia a nivel de Unidad Operativa. Una fila de `Stock` **sin** política resuelta nunca está
+"baja" — no hay punto de reorden configurado con el cual comparar.
+
+**Semántica de stock bajo.** Una fila de `Stock` está baja cuando existe una política resuelta y
+`on_hand <= policy.min_stock`. `Stock::scopeLowStock()` e `ItemVariant::scopeLowStock()` se definen
+en esos términos; `SummarizesStock` / `StockByLocationController` / `StockByVariantController`
+exponen el `min_stock` / `max_stock` resuelto y una bandera `is_low_stock` por fila más un conteo en
+el resumen; `GET /stock` gana un filtro `low_stock` y lleva los campos resueltos en cada fila.
+
+**API.** Con alcance por ubicación, bajo `inventory-locations/{id}/replenishment-policies`:
+`GET /` (listar), `GET /{variantId}` (política resuelta, sintética `is_configured:false` si no está
+configurada), `PUT /{variantId}` (upsert idempotente — 201 nueva / 200 actualización),
+`DELETE /{variantId}`. Las lecturas requieren `stock.view`, las escrituras `stock.manage` — la
+configuración de reabastecimiento es gobernanza de stock, no identidad de catálogo, así que reutiliza
+los permisos de stock en lugar de crear nuevos. La UI de gestión es un panel por ubicación en el
+detalle de ubicación del Stock Dashboard.
 
 ---
 

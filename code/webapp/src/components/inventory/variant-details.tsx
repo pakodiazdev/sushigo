@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Package,
   Ruler,
-  TrendingUp,
-  TrendingDown,
   DollarSign,
   Calendar,
   BarChart3,
@@ -128,27 +126,8 @@ export function VariantDetails({ variant, onEdit, onDelete }: Readonly<VariantDe
             )}
           </div>
 
-          {/* Stock Levels */}
-          <div className="space-y-3">
-            <h4 className="font-semibold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Stock Levels
-            </h4>
-            <div className="grid grid-cols-2 gap-4">
-              <InfoItem
-                icon={TrendingDown}
-                label="Min Stock"
-                value={Number(variant.min_stock || 0).toString()}
-                iconColor="text-red-600"
-              />
-              <InfoItem
-                icon={TrendingUp}
-                label="Max Stock"
-                value={Number(variant.max_stock || 0).toString()}
-                iconColor="text-green-600"
-              />
-            </div>
-          </div>
+          {/* Replenishment thresholds are configured per Inventory Location (#439) —
+              see the Stock Dashboard's per-location "Replenishment thresholds" panel. */}
 
           {/* Cost Information */}
           <div className="space-y-3">
