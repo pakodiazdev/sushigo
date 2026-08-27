@@ -111,7 +111,7 @@ Operating Unit isolation, one coherent UI, and reconciled removal of superseded 
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
-| ⏳ | #438 | Normalize Stock Movements and immutable reversals | Critical | 6h | 12h | — | — | Depends on #430 |
+| ✅ | #438 | Normalize Stock Movements and immutable reversals | Critical | 6h | 12h | 2.8h | PR #525 | Single-line contract + immutable, causally-linked compensating reversals; app-layer guards, StockMovementReverser, linked receipt reversal. PR ready, merge pending |
 | ⏳ | #440 | Enforce Operating Unit access across Inventory | Critical | 5h | 10h | — | — | Cover every replacement domain |
 |  |  | **Round total** |  | **11h** | **22h** | **—** |  |  |
 
@@ -199,7 +199,7 @@ than being silently deleted.
 
 | Status | Issue | Result | PR / Commit | Tracked | Notes |
 |---|---:|---|---|---:|---|
-| ⏳ | #438 | Pending | — | — | Movement/reversal integrity |
+| ✅ | #438 | Normalized the Stock Movement contract to single-line (header owns Variant + qty), made POSTED movements immutable/non-deletable, and added `StockMovementReverser` — a causally-linked, direction-mirrored compensating movement that flips the original to REVERSED and restores the balance exactly once; `ReceiptService::reverseReceipt` now links + guards the same way. Single-line / single-reversal / positive-qty / status-transition / reason↔direction invariants are enforced at the app layer with DB constraints as backstop. | PR #525 | 2.8h | 25 new PHPUnit tests (StockMovementContractTest, StockMovementReverserTest, ReceiptReversalTest linkage); full inventory regression 429→green; Pint clean; SonarCloud `api` gate OK, 0 new smells, new coverage 89%. 5 automated-review threads (Codex P1/P2 + Copilot) all addressed with regression tests. Contract-column removal deferred to #442 per §9. Pre-existing flaky payroll test-isolation cascade surfaced during CI (non-deterministic, `main` green, passes on re-run) — mitigated defensively, root cause out of scope. |
 | ⏳ | #439 | Pending | — | — | Location replenishment |
 | ⏳ | #440 | Pending | — | — | Horizontal authorization |
 | ⏳ | #441 | Pending | — | — | Final navigation/workflows |
