@@ -30,6 +30,12 @@ class CreateItemRequest extends FormRequest
 {
     use AuthorizesMediaGalleryOwnership, ReadsRawStringInput, ResolvesPublicIdReferences;
 
+    /**
+     * Shared with CreateItemController, which surfaces the same message when the
+     * `unique:items,sku` pre-check below loses a TOCTOU race against the database's unique index.
+     */
+    public const DUPLICATE_SKU_MESSAGE = 'Ya existe un Item con este SKU.';
+
     public function authorize(): bool
     {
         if (! $this->user()->can('create', Item::class)) {

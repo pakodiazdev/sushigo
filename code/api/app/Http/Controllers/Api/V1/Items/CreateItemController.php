@@ -7,6 +7,9 @@ use App\Http\Requests\Items\CreateItemRequest;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\Item;
 use App\Services\Media\MediaAttachmentService;
+use App\Support\ItemSkuGenerator;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -31,22 +34,54 @@ use Illuminate\Support\Facades\DB;
  *       )
  *   ),
  *
- *   @OA\Response(response=422, description="Validation Error", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
+ *   @OA\Response(
+ *       response=422,
+ *       description="Validation Error. On a create-time unique-SKU race the body also carries `rejected_sku` (the SKU that was taken) and `suggested_sku` (a freshly calculated replacement for the same contextual prefix) alongside the standard `errors.sku` field error.",
+ *
+ *       @OA\JsonContent(
+ *           allOf={
+ *
+ *               @OA\Schema(ref="#/components/schemas/ResponseError"),
+ *               @OA\Schema(
+ *
+ *                   @OA\Property(property="rejected_sku", type="string", nullable=true, example="SAL-001"),
+ *                   @OA\Property(property="suggested_sku", type="string", nullable=true, example="SAL-002")
+ *               )
+ *           }
+ *       )
+ *   )
  * )
  */
 class CreateItemController extends Controller
 {
-    public function __invoke(CreateItemRequest $request, MediaAttachmentService $mediaAttachmentService)
+    public function __invoke(CreateItemRequest $request, MediaAttachmentService $mediaAttachmentService): ResponseEntity|JsonResponse
     {
-        $item = DB::transaction(function () use ($request, $mediaAttachmentService) {
-            $item = Item::create($request->itemData());
+        try {
+            // Wrapped so a lost unique-SKU race rolls back cleanly (savepoint under an outer
+            // transaction) and the connection stays usable for the fresh suggestion below.
+            $item = DB::transaction(function () use ($request, $mediaAttachmentService) {
+                $item = Item::create($request->itemData());
 
-            if ($mediaGalleryId = $request->mediaGalleryId()) {
-                $mediaAttachmentService($item, $mediaGalleryId);
-            }
+                if ($mediaGalleryId = $request->mediaGalleryId()) {
+                    $mediaAttachmentService($item, $mediaGalleryId);
+                }
 
-            return $item;
-        });
+                return $item;
+            });
+        } catch (UniqueConstraintViolationException) {
+            // The `unique:items,sku` rule in CreateItemRequest is a TOCTOU race: a concurrent
+            // request can pass it before either insert commits. The unique index on items.sku
+            // is the actual guarantee — surface it as a stable field-error contract that also
+            // hands the client a fresh suggestion for the same contextual prefix.
+            $suggestion = new ItemSkuGenerator($request->input('name'));
+
+            return response()->json([
+                'message' => CreateItemRequest::DUPLICATE_SKU_MESSAGE,
+                'errors' => ['sku' => [CreateItemRequest::DUPLICATE_SKU_MESSAGE]],
+                'rejected_sku' => $request->itemData()['sku'],
+                'suggested_sku' => $suggestion->next(),
+            ], 422);
+        }
 
         return new ResponseEntity(
             data: [
