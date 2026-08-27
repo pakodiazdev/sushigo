@@ -20,6 +20,14 @@ use Illuminate\Support\Str;
  * location assignment" (Acceptance Criterion), so the row is left unmigrated
  * and reported instead.
  *
+ * The old schema had no `max_stock >= min_stock` guard, so a legacy row can
+ * carry a reorder point with the ceiling left at its `0` default (or, rarely,
+ * an inverted pair). The new table's check constraint forbids that, so on
+ * migration the ceiling is clamped up to the reorder point — the minimal value
+ * that keeps the operationally meaningful `min_stock` intact without inventing a
+ * larger ceiling. Every clamp is flagged on the migrated record and counted in
+ * the summary.
+ *
  * Written against `DB::table` (not Eloquent) so it runs correctly from inside
  * the migration regardless of the ItemVariant model's current fillable/casts
  * or whether the columns have been dropped yet.
@@ -90,20 +98,31 @@ class LegacyThresholdMigrator
                 continue;
             }
 
+            // The new table enforces max_stock >= min_stock; legacy data does
+            // not. Clamp the ceiling up to the reorder point rather than abort
+            // (or invent a bigger number).
+            $minStock = (float) $variant->min_stock;
+            $effectiveMax = max($minStock, (float) $variant->max_stock);
+            $clamped = $effectiveMax !== (float) $variant->max_stock;
+
             $now = now();
             DB::table('variant_location_replenishment_policies')->insert([
                 'public_id' => (string) Str::ulid(),
                 'inventory_location_id' => $locationId,
                 'item_variant_id' => $variant->id,
-                'min_stock' => $variant->min_stock,
-                'max_stock' => $variant->max_stock,
+                'min_stock' => $minStock,
+                'max_stock' => $effectiveMax,
                 'notes' => null,
-                'meta' => json_encode(['migrated_from' => 'item_variants.min_stock/max_stock', 'issue' => 439]),
+                'meta' => json_encode([
+                    'migrated_from' => 'item_variants.min_stock/max_stock',
+                    'issue' => 439,
+                    'max_stock_clamped' => $clamped,
+                ]),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
 
-            $migrated[] = [...$record, 'inventory_location_id' => $locationId];
+            $migrated[] = [...$record, 'inventory_location_id' => $locationId, 'effective_max_stock' => $effectiveMax, 'max_stock_clamped' => $clamped];
         }
 
         $this->report($migrated, $unresolved);
@@ -127,8 +146,15 @@ class LegacyThresholdMigrator
             Log::warning('#439 replenishment migration: legacy threshold left unmigrated', $row);
         }
 
+        foreach ($migrated as $row) {
+            if ($row['max_stock_clamped'] ?? false) {
+                Log::info('#439 replenishment migration: ceiling clamped up to the reorder point', $row);
+            }
+        }
+
         Log::info('#439 replenishment migration summary', [
             'migrated_count' => count($migrated),
+            'clamped_count' => collect($migrated)->where('max_stock_clamped', true)->count(),
             'unresolved_count' => count($unresolved),
             'unresolved_by_reason' => collect($unresolved)->countBy('reason')->all(),
         ]);

@@ -689,7 +689,10 @@ ceiling, DB-enforced `>= min_stock`), and an optional `notes`. A partial unique 
 live policy per pair; the row soft-deletes. `ItemVariant.min_stock` / `max_stock` were dropped —
 a one-time migration moved each legacy pair onto a policy row **only** where the Variant had stock
 at exactly one location (an unambiguous target), and logged every pair it could not place, with a
-summary (`LegacyThresholdMigrator`).
+summary (`LegacyThresholdMigrator`). Because the old schema had no `max >= min` guard, a legacy
+ceiling below its reorder point (typically `0`, left unset) is clamped up to the reorder point on
+migration — flagged per row and counted in the summary — rather than aborting on the new
+constraint.
 
 **Resolution goes through one service.** `App\Services\Inventory\ReplenishmentPolicyResolver`
 returns the effective policy for a `(location, variant)` pair — today a direct lookup of the
