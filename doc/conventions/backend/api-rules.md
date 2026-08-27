@@ -98,7 +98,7 @@ $this->lock()->get();
 
 ### Typing
 
-**Always use strong typing in PHP 8.2:**
+**Always use strong typing in PHP 8.5:**
 
 ```php
 // ✅ Typed parameters and returns
@@ -831,4 +831,4 @@ Use plural, snake_case keys for lists:
 
 **Last updated:** November 4, 2025
 **Version:** 1.0
-**Project:** sushigo-api (Laravel 12.x + PHP 8.2)
+**Project:** sushigo-api (Laravel 12.x + PHP 8.5)

@@ -1,6 +1,6 @@
 # Media Upload Standard
 
-> **Scope:** ComandaFlow / SushiGo · Laravel 12 · PHP 8.3
+> **Scope:** ComandaFlow / SushiGo · Laravel 12 · PHP 8.5
 
 This document defines the upload-first / attach-on-save pattern every entity that needs image
 support (Item, Employee, User, Dish, ...) should follow, and the endpoints that implement it.

@@ -1,6 +1,6 @@
 # Route Organization Standard
 
-> **Scope:** ComandaFlow / SushiGo · Laravel 12 · PHP 8.3
+> **Scope:** ComandaFlow / SushiGo · Laravel 12 · PHP 8.5
 
 This document defines how API routes are organized across files. The
 goal is to keep `routes/api.php` small and stable, and to make adding

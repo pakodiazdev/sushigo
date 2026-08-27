@@ -91,6 +91,7 @@ Operating Unit isolation, one coherent UI, and reconciled removal of superseded 
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
 | 2026-08-26 | #519 | Promote Sprint 006 and formally close Sprint 005 | Sprint 005 closure checklist was complete | Sprint 006 activated and both sprint indexes synchronized |
+| 2026-08-27 | #530 | Align documentation PHP version references with the 8.5 runtime | Sprint 005 review flagged docs/standards still stating PHP 8.2/8.3 while the stack runs 8.5 | 10 live references (README, CLAUDE.md, RESUME_STATUS.md, 4 backend convention headers, api-rules.md) updated to 8.5; `doc/tasks/**` archives and `composer.json` left untouched by design |
 
 ## 6. Value Ranking
 
@@ -206,6 +207,7 @@ than being silently deleted.
 | ⏳ | #442 | Pending | — | — | Reconciled legacy removal |
 | ✅ | #519 | Sprint 005 marked `Completed`; Sprint 006 promoted from `planned/`; both sprint indexes synced; GitHub Project `Iteration` dates corrected (all 85 previously-linked items reassigned and verified); `iteration-progress.svg` badge refreshed to "Sprint 6" | PR #520 | 0.7h | opportunistic work per §5.4; 2 Copilot review threads addressed (stale `.gitignore` path reference, PR-description accuracy on the root README's `(current)` suffix convention) plus a user-reported §4 Timeline/frontmatter sync fix |
 | ✅ | #506 | Supplier-offering Producto/Variante selectors now search server-side (debounced free text → paginated `per_page: 20`) instead of reading a single `per_page: 100` page; added a `search` filter to `GET /inventory/products/{id}/variants` with `is_active` applied before pagination, and a selected-but-filtered-out option clears with its cascade | PR #523 | 0.5h | follow-up debt carried in from a stale `sprint-5` label (§17), not part of the Route A rounds; +5 PHPUnit cases (search by name/code, variant past page 1, `is_active` filter, array-search 422, failed-search preservation); Vitest suite rewritten against a real QueryClient; Pint/ESLint/TS clean; 6 review threads resolved; PR ready, merge pending |
+| ✅ | #530 | Aligned all live documentation to the PHP 8.5 runtime — updated the README PHP badge + stack table, `CLAUDE.md`, `RESUME_STATUS.md`, and 4 backend convention scope headers + `api-rules.md` (10 references) from 8.2/8.3 to 8.5; `doc/tasks/**` archives and `composer.json` (`^8.2`) intentionally untouched | PR #531 | 2.1h | opportunistic doc-only follow-up per §5.4 from the Sprint 005 review; no code, tests, or Swagger affected; verified with `grep -rniE "php[ _-]?8\.[0-3]" --include="*.md"` returning only archive hits; 0 review threads, CI green; PR ready, merge pending |
 
 ## 14. Quality Results
 
@@ -247,6 +249,7 @@ parity, reconciliation, and rollback evidence must exist before removing a legac
 |---|---:|---|---|
 | ⏳ | TBD | Any reconciliation gap discovered during #442 | Backlog / Sprint 007 only if evidence requires it |
 | ✅ | #506 | Replace the supplier-offering form's product/variant `<select>`s with a searchable/paginated combobox — deferred from `#431`'s PR #496 review; moved here from a stale `sprint-5` label after Sprint 005 closed with it still open. Delivered via PR #523 (server-side search, see §13) | Sprint 006 |
+| ✅ | #530 | Align documentation PHP version references with the 8.5 runtime — Sprint 005 review flagged docs still stating PHP 8.2/8.3 while `docker/app/Dockerfile` and CI already run 8.5. Opportunistic (§5.4), doc-only. Delivered via PR #531 (see §13) | Sprint 006 |
 
 ## 18. Sprint Closure Checklist
 

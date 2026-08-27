@@ -22,7 +22,7 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-api&metric=coverage)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-api)
 
 **Backend stack:**
-![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?logo=php&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white)
 ![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?logo=laravel&logoColor=white)
 ![Passport](https://img.shields.io/badge/Passport-OAuth2-3178C6?logo=oauth&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
@@ -108,7 +108,7 @@ the branch every contributor works from — see `#462`.
 
 | Layer | Stack |
 |-------|-------|
-| API | PHP 8.2, Laravel 12, Passport, Spatie Permissions, L5 Swagger |
+| API | PHP 8.5, Laravel 12, Passport, Spatie Permissions, L5 Swagger |
 | Webapp | React 19, Vite 7, TypeScript 5, TanStack Router/Query, Zustand, Tailwind |
 | Data | PostgreSQL 15, seeders tracked via `SeederLog` |
 | Tooling | Docker Compose, MailHog, PgAdmin, Supervisor, Devcontainer |

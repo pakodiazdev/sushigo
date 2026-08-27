@@ -440,7 +440,7 @@ $definition = HolidayDefinition::create($request->definitionData());
 
 ### API Code Style
 
-- Strong typing always (PHP 8.2) - avoid redundant PHPDoc
+- Strong typing always (PHP 8.5) - avoid redundant PHPDoc
 - Use `updateOrCreate()` in seeders to avoid duplicates
 - Seeders use base classes: `LockedSeeder` (critical), `OnceSeeder` (initial data), `RepeatableSeeder` (dynamic)
 - Seeder data configured in `config/seeders.php`, not hardcoded

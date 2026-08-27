@@ -1,6 +1,6 @@
 # Controllers, Requests, and Responses Standard
 
-> **Scope:** ComandaFlow / SushiGo · Laravel 12 · PHP 8.3 ·
+> **Scope:** ComandaFlow / SushiGo · Laravel 12 · PHP 8.5 ·
 > l5-swagger/OpenAPI 3
 
 This document defines how we structure **controllers**,

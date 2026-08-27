@@ -28,7 +28,7 @@
 
 | Capa | Tecnologia |
 |------|------------|
-| Backend | PHP 8.2, Laravel 12, Passport OAuth, Spatie Permissions |
+| Backend | PHP 8.5, Laravel 12, Passport OAuth, Spatie Permissions |
 | Frontend | React 19, TypeScript 5, Vite 7, TanStack Router/Query, Zustand |
 | Base de Datos | PostgreSQL 15 |
 | Infraestructura | Docker Compose, Nginx, Supervisor |

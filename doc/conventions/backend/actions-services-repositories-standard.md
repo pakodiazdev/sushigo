@@ -1,6 +1,6 @@
 # **Actions, Services, and Repositories Standard** (Laravel 12)
 
-> **Scope:** ComandaFlow / SushiGo · Laravel 12 · PHP 8.3 · l5-swagger/OpenAPI 3  
+> **Scope:** ComandaFlow / SushiGo · Laravel 12 · PHP 8.5 · l5-swagger/OpenAPI 3  
 > **Purpose:** Define consistent architectural patterns to keep code clean, testable, and scalable.  
 > Complements the standards for **Controllers (SAC)**, **FormRequests**, and **Responses**.
 
