@@ -245,6 +245,7 @@ parity, reconciliation, and rollback evidence must exist before removing a legac
 | Status | Issue | Work | Candidate Sprint |
 |---|---:|---|---|
 | ⏳ | TBD | Any reconciliation gap discovered during #442 | Backlog / Sprint 007 only if evidence requires it |
+| ⏳ | #506 | Replace the supplier-offering form's product/variant `<select>`s with a searchable/paginated combobox — deferred from `#431`'s PR #496 review, never developed; moved here from a stale `sprint-5` label after Sprint 005 closed with it still open | Sprint 006 |
 
 ## 18. Sprint Closure Checklist
 
