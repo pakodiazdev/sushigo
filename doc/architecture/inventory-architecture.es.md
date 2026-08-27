@@ -709,7 +709,10 @@ BD a `>= min_stock`) y `notes` opcional. Un índice único parcial mantiene una 
 par; la fila usa borrado lógico. `ItemVariant.min_stock` / `max_stock` se eliminaron — una migración
 única movió cada par heredado a una fila de política **solo** cuando la Variante tenía stock en
 exactamente una ubicación (destino inequívoco), y registró cada par que no pudo colocar, con un
-resumen (`LegacyThresholdMigrator`).
+resumen (`LegacyThresholdMigrator`). Como el esquema anterior no tenía guarda `max >= min`, un techo
+heredado por debajo de su punto de reorden (normalmente `0`, sin configurar) se eleva al punto de
+reorden durante la migración —marcado por fila y contado en el resumen— en lugar de abortar por la
+nueva restricción.
 
 **La resolución pasa por un servicio.** `App\Services\Inventory\ReplenishmentPolicyResolver`
 devuelve la política efectiva de un par `(ubicación, variante)` — hoy una búsqueda directa de la

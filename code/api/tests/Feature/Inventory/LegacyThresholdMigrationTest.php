@@ -65,6 +65,30 @@ class LegacyThresholdMigrationTest extends InventoryTestCase
             'min_stock' => 10,
             'max_stock' => 100,
         ]);
+        $this->assertFalse($result['migrated'][0]['max_stock_clamped']);
+    }
+
+    #[Test]
+    public function it_clamps_the_ceiling_up_to_the_reorder_point_when_the_legacy_max_is_lower(): void
+    {
+        // Legacy schema had no max >= min guard, so a reorder point with the
+        // ceiling left at its 0 default is possible — the new check constraint
+        // would otherwise abort the whole migration.
+        $variantId = $this->legacyVariant(15, 0);
+        $this->stockAt($this->location->id, $variantId);
+
+        $result = (new LegacyThresholdMigrator)->migrate();
+
+        $this->assertCount(1, $result['migrated']);
+        $this->assertCount(0, $result['unresolved']);
+        $this->assertTrue($result['migrated'][0]['max_stock_clamped']);
+        $this->assertEquals(15.0, $result['migrated'][0]['effective_max_stock']);
+        $this->assertDatabaseHas('variant_location_replenishment_policies', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variantId,
+            'min_stock' => 15,
+            'max_stock' => 15,
+        ]);
     }
 
     #[Test]
