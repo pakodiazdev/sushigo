@@ -117,7 +117,7 @@ export interface ProductVariantPayload {
 }
 
 export const productVariantApi = {
-  list: (productId: string | number, params?: { per_page?: number; page?: number }) =>
+  list: (productId: string | number, params?: { per_page?: number; page?: number; search?: string; is_active?: boolean }) =>
     api.get<PaginatedResponse<ProductVariant>>(`/inventory/products/${productId}/variants`, { params }),
 
   get: (productId: string | number, variantId: string | number) =>

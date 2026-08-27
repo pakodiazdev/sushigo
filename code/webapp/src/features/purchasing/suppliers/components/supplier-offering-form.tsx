@@ -2,6 +2,7 @@ import { Info, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox, FormField, Select } from '@/components/ui/form-fields'
 import { Input } from '@/components/ui/input'
+import { SearchInput } from '@/components/ui/search-input'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useSupplierOfferingForm } from '../hooks/use-supplier-offering-form'
 import type { SupplierOffering } from '../types'
@@ -21,6 +22,14 @@ export function SupplierOfferingForm({ supplierId, offering, onSuccess, onCancel
     products,
     variants,
     presentations,
+    productSearch,
+    setProductSearch,
+    variantSearch,
+    setVariantSearch,
+    isLoadingProducts,
+    isLoadingVariants,
+    hasProductSearchError,
+    hasVariantSearchError,
     register,
     handleSubmit,
     setValue,
@@ -47,17 +56,51 @@ export function SupplierOfferingForm({ supplierId, offering, onSuccess, onCancel
           </FormField>
         ) : (
           <>
-            <FormField label="Producto" required>
-              <Select aria-label="Producto" value={productId} onChange={(event) => onProductChange(event.target.value)}>
-                <option value="">Selecciona un producto</option>
-                {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
-              </Select>
+            <FormField
+              label="Producto"
+              required
+              error={hasProductSearchError ? 'No se pudo cargar la búsqueda de productos. Intenta de nuevo.' : undefined}
+            >
+              <div className="space-y-2">
+                <SearchInput
+                  aria-label="Buscar producto"
+                  value={productSearch}
+                  onChange={setProductSearch}
+                  placeholder="Busca un producto por nombre…"
+                />
+                <Select
+                  aria-label="Producto"
+                  value={productId}
+                  disabled={isLoadingProducts}
+                  onChange={(event) => onProductChange(event.target.value)}
+                >
+                  <option value="">{isLoadingProducts ? 'Buscando…' : 'Selecciona un producto'}</option>
+                  {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+                </Select>
+              </div>
             </FormField>
-            <FormField label="Variante" required>
-              <Select aria-label="Variante" value={variantId} disabled={!productId} onChange={(event) => onVariantChange(event.target.value)}>
-                <option value="">Selecciona una variante</option>
-                {variants.map((variant) => <option key={variant.id} value={variant.id}>{variant.name} ({variant.code})</option>)}
-              </Select>
+            <FormField
+              label="Variante"
+              required
+              error={hasVariantSearchError ? 'No se pudo cargar la búsqueda de variantes. Intenta de nuevo.' : undefined}
+            >
+              <div className="space-y-2">
+                <SearchInput
+                  aria-label="Buscar variante"
+                  value={variantSearch}
+                  onChange={setVariantSearch}
+                  placeholder="Busca una variante por nombre o código…"
+                />
+                <Select
+                  aria-label="Variante"
+                  value={variantId}
+                  disabled={!productId || isLoadingVariants}
+                  onChange={(event) => onVariantChange(event.target.value)}
+                >
+                  <option value="">{isLoadingVariants ? 'Buscando…' : 'Selecciona una variante'}</option>
+                  {variants.map((variant) => <option key={variant.id} value={variant.id}>{variant.name} ({variant.code})</option>)}
+                </Select>
+              </div>
             </FormField>
             <FormField label="Presentación de compra" required error={allErrors.variant_purchase_presentation_id}>
               <Select aria-label="Presentación de compra" {...register('variant_purchase_presentation_id')} disabled={!variantId} error={Boolean(allErrors.variant_purchase_presentation_id)}>

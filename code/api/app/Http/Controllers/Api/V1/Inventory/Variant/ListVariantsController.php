@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Inventory\Variant;
 
+use App\Http\Controllers\Api\V1\Items\Concerns\FiltersItemListing;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\Variant\VariantResource;
 use App\Http\Responses\Common\ResponsePaginated;
@@ -18,7 +19,9 @@ use Illuminate\Http\Request;
  *   tags={"Product Variants"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Product public_id (ULID)"),
+ *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string", maxLength=255), description="Case-insensitive match on variant name or code"),
+ *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean"), description="Restrict to active or inactive variants"),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", default=15, minimum=1, maximum=100)),
  *
  *   @OA\Response(
@@ -37,23 +40,29 @@ use Illuminate\Http\Request;
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden — requires items.view, suppliers.manage, or receipts.manage permission"),
  *   @OA\Response(response=404, description="Product not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
- *   @OA\Response(response=422, description="Validation Error — invalid per_page", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
+ *   @OA\Response(response=422, description="Validation Error — invalid per_page, search or is_active", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */
 class ListVariantsController extends Controller
 {
+    use FiltersItemListing;
+
     public function __invoke(Request $request, string $id): ResponsePaginated
     {
         $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
 
         $perPage = $request->validate([
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'search' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'is_active' => ['sometimes', 'boolean'],
         ])['per_page'] ?? 15;
 
-        $variants = $product->variants()
-            ->with('unitOfMeasure')
-            ->orderBy('code')
-            ->paginate($perPage);
+        $query = $product->variants()->with('unitOfMeasure')->getQuery();
+
+        $this->applyIsActiveFilter($query, $request);
+        $this->applySearchFilter($query, $request, ['name', 'code']);
+
+        $variants = $query->orderBy('code')->paginate($perPage);
 
         $variants->getCollection()->transform(
             fn ($variant) => (new VariantResource($variant))->resolve()

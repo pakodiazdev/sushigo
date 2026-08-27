@@ -18,11 +18,27 @@ vi.mock('@/hooks/use-form-mutation', () => ({
   }),
 }))
 
+const settled = <T,>(rows: T[]) => ({
+  data: { data: { data: rows } },
+  isLoading: false,
+  isSuccess: true,
+  isError: false,
+})
+
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: ({ queryKey }: { queryKey: string[] }) => {
-    if (queryKey[0] === 'supplier-form-products') return { data: { data: { data: [{ id: 'p1', name: 'Salmón' }] } } }
-    if (queryKey[0] === 'supplier-form-variants') return { data: { data: { data: [{ id: 'v1', name: 'Entero', code: 'SAL-1', is_active: true }] } } }
-    return { data: { data: { data: [{ id: 'pp1', is_active: true, template: { name: 'Caja', package_type: 'BOX', base_unit_quantity: 12 } }] } } }
+  useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
+    if (queryKey[0] === 'supplier-form-products') {
+      const search = String(queryKey[1] ?? '')
+      return settled(
+        search === 'atun'
+          ? [{ id: 'p999', name: 'Atún aleta amarilla' }]
+          : [{ id: 'p1', name: 'Salmón' }]
+      )
+    }
+    if (queryKey[0] === 'supplier-form-variants') {
+      return settled([{ id: 'v1', name: 'Entero', code: 'SAL-1', is_active: true }])
+    }
+    return settled([{ id: 'pp1', is_active: true, template: { name: 'Caja', package_type: 'BOX', base_unit_quantity: 12 } }])
   },
 }))
 
@@ -48,6 +64,12 @@ describe('SupplierOfferingForm', () => {
     expect(view.getByLabelText(/cantidad mínima/i)).toBeDefined()
   })
 
+  it('gives the product and variant search boxes accessible names', () => {
+    const view = render(<SupplierOfferingForm supplierId="s1" onSuccess={vi.fn()} onCancel={vi.fn()} />)
+    expect(view.getByLabelText('Buscar producto')).toBeDefined()
+    expect(view.getByLabelText('Buscar variante')).toBeDefined()
+  })
+
   it('creates an offering from the product presentation cascade', async () => {
     apiMocks.create.mockResolvedValue({})
     const onSuccess = vi.fn()
@@ -68,6 +90,19 @@ describe('SupplierOfferingForm', () => {
       lead_time_days: 3,
     })))
     expect(onSuccess).toHaveBeenCalledOnce()
+  })
+
+  it('surfaces a product from a later catalog page once it is typed into the search box', async () => {
+    const view = render(<SupplierOfferingForm supplierId="s1" onSuccess={vi.fn()} onCancel={vi.fn()} />)
+
+    const productSelect = view.getByLabelText(/^producto$/i)
+    expect(productSelect.textContent).toContain('Salmón')
+    expect(productSelect.textContent).not.toContain('Atún aleta amarilla')
+
+    fireEvent.change(view.getByPlaceholderText(/busca un producto/i), { target: { value: 'atun' } })
+
+    // SearchInput debounces (~300ms) before the query re-keys on the new term.
+    await waitFor(() => expect(productSelect.textContent).toContain('Atún aleta amarilla'))
   })
 
   it('updates an offering without allowing its presentation to change', async () => {

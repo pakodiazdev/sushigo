@@ -205,6 +205,7 @@ than being silently deleted.
 | ⏳ | #441 | Pending | — | — | Final navigation/workflows |
 | ⏳ | #442 | Pending | — | — | Reconciled legacy removal |
 | ✅ | #519 | Sprint 005 marked `Completed`; Sprint 006 promoted from `planned/`; both sprint indexes synced; GitHub Project `Iteration` dates corrected (all 85 previously-linked items reassigned and verified); `iteration-progress.svg` badge refreshed to "Sprint 6" | PR #520 | 0.7h | opportunistic work per §5.4; 2 Copilot review threads addressed (stale `.gitignore` path reference, PR-description accuracy on the root README's `(current)` suffix convention) plus a user-reported §4 Timeline/frontmatter sync fix |
+| ✅ | #506 | Supplier-offering Producto/Variante selectors now search server-side (debounced free text → paginated `per_page: 20`) instead of reading a single `per_page: 100` page; added a `search` filter to `GET /inventory/products/{id}/variants` with `is_active` applied before pagination, and a selected-but-filtered-out option clears with its cascade | PR #523 | 0.5h | follow-up debt carried in from a stale `sprint-5` label (§17), not part of the Route A rounds; +5 PHPUnit cases (search by name/code, variant past page 1, `is_active` filter, array-search 422, failed-search preservation); Vitest suite rewritten against a real QueryClient; Pint/ESLint/TS clean; 6 review threads resolved; PR ready, merge pending |
 
 ## 14. Quality Results
 
@@ -245,7 +246,7 @@ parity, reconciliation, and rollback evidence must exist before removing a legac
 | Status | Issue | Work | Candidate Sprint |
 |---|---:|---|---|
 | ⏳ | TBD | Any reconciliation gap discovered during #442 | Backlog / Sprint 007 only if evidence requires it |
-| ⏳ | #506 | Replace the supplier-offering form's product/variant `<select>`s with a searchable/paginated combobox — deferred from `#431`'s PR #496 review, never developed; moved here from a stale `sprint-5` label after Sprint 005 closed with it still open | Sprint 006 |
+| ✅ | #506 | Replace the supplier-offering form's product/variant `<select>`s with a searchable/paginated combobox — deferred from `#431`'s PR #496 review; moved here from a stale `sprint-5` label after Sprint 005 closed with it still open. Delivered via PR #523 (server-side search, see §13) | Sprint 006 |
 
 ## 18. Sprint Closure Checklist
 

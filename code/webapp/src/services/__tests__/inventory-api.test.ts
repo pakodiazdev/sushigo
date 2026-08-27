@@ -445,6 +445,16 @@ describe('productVariantApi', () => {
             expect(apiClient.get).toHaveBeenCalledWith('/inventory/products/42/variants', { params })
             expect(result).toEqual(mockResponse)
         })
+
+        it('forwards a free-text search param', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: {} } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const params = { search: 'salmon', per_page: 20 }
+            await productVariantApi.list('42', params)
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory/products/42/variants', { params })
+        })
     })
 
     describe('get', () => {
