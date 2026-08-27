@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Inventory\Supplier\CreateSupplierController;
 use App\Http\Controllers\Api\V1\Inventory\Supplier\DeleteSupplierController;
 use App\Http\Controllers\Api\V1\Inventory\Supplier\ListSuppliersController;
 use App\Http\Controllers\Api\V1\Inventory\Supplier\ShowSupplierController;
+use App\Http\Controllers\Api\V1\Inventory\Supplier\SuggestSupplierCodeController;
 use App\Http\Controllers\Api\V1\Inventory\Supplier\UpdateSupplierController;
 use App\Http\Controllers\Api\V1\Inventory\SupplierOffering\CreateSupplierOfferingController;
 use App\Http\Controllers\Api\V1\Inventory\SupplierOffering\DeleteSupplierOfferingController;
@@ -21,6 +22,8 @@ Route::middleware('auth:api')
         // catalog itself; show/create/update/delete stay suppliers.*-only since the Receipt form
         // never calls them.
         Route::get('/', ListSuppliersController::class)->name('suppliers.list')->middleware('permission:suppliers.view|receipts.manage');
+        // Declared before the {supplier} routes below so "next-code" is not captured as a binding.
+        Route::get('/next-code', SuggestSupplierCodeController::class)->name('suppliers.next-code')->middleware('permission:suppliers.manage');
         Route::post('/', CreateSupplierController::class)->name('suppliers.create')->middleware('permission:suppliers.manage');
 
         Route::prefix('{supplier}/offerings')->group(function () {

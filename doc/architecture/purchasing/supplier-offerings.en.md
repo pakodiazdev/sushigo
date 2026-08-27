@@ -41,3 +41,22 @@ the Supplier catalog itself; see `doc/architecture/purchasing/purchase-receipts.
 
 The SushiGo Admin page `/inventario/proveedores` applies the same boundary and guides users through
 Product → Variant → Purchase Presentation when creating an Offering.
+
+## Sequential code suggestion (`#497`)
+
+`GET /inventory/suppliers/next-code` (`suppliers.manage`) proposes the next unused
+`<prefix><zero-padded number>` Supplier code — `PROV-` / 3 digits by default, overridable via
+`config/suppliers.php` (`SUPPLIER_CODE_PREFIX`, `SUPPLIER_CODE_PADDING`). The maximum numeric
+suffix is computed in SQL (`App\Support\SequentialCodeGenerator`); soft-deleted Suppliers count as
+occupied, so a historical code is never re-proposed even though the partial unique index on
+`(code) where deleted_at is null` would technically permit its reuse.
+
+The suggestion is a convenience, not a reservation — no lease row, no lock held across requests.
+The partial unique index stays the sole authority. On a create-time race, `POST
+/inventory/suppliers` catches the unique violation and returns `422` with the standard
+`errors.code` field error plus `rejected_code` and a freshly recomputed `suggested_code`; it never
+silently retries. The `useSuggestedCode` hook + `/inventario/proveedores` create form prefill the
+suggestion in create mode only, offer an explicit refresh, and — on a collision — replace an
+untouched suggestion in place (requiring another submit) while leaving a manually typed code
+untouched behind an explicit "use this instead" action. This is the reusable pattern later
+sequential-code entities such as Cash Registers (`#498`) adopt.

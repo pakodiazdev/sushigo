@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FormField, Checkbox } from '@/components/ui/form-fields'
 import { Input } from '@/components/ui/input'
@@ -16,19 +16,78 @@ export function SupplierForm({ supplier, onSuccess, onCancel }: Readonly<Supplie
   const {
     isEditing,
     register,
+    codeField,
+    onCodeChange,
     handleSubmit,
     setValue,
     onSubmit,
     allErrors,
     isActive,
     isSubmitting,
+    isCodeSuggested,
+    isSuggestionLoading,
+    isRefreshingCode,
+    suggestionFailed,
+    handleRefreshCode,
+    collision,
+    canApplySuggestedCode,
+    applySuggestedCode,
   } = useSupplierForm({ supplier, onSuccess })
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-5">
         <FormField label="Código" required error={allErrors.code}>
-          <Input aria-label="Código" {...register('code')} error={Boolean(allErrors.code)} placeholder="PROV-001" />
+          <div className="flex gap-2">
+            <Input
+              aria-label="Código"
+              {...codeField}
+              onChange={onCodeChange}
+              error={Boolean(allErrors.code)}
+              placeholder="PROV-001"
+            />
+            {!isEditing && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Sugerir otro código"
+                onClick={handleRefreshCode}
+                disabled={isSuggestionLoading || isRefreshingCode}
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshingCode ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
+          </div>
+          {!isEditing && isCodeSuggested && !suggestionFailed && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Sugerido automáticamente; puedes modificarlo.
+            </p>
+          )}
+          {!isEditing && suggestionFailed && (
+            <p className="mt-1 text-xs text-amber-600">
+              No se pudo sugerir un código; escríbelo manualmente o vuelve a intentarlo.
+            </p>
+          )}
+          {collision && (
+            <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+              <p>
+                El código {collision.rejectedCode} acaba de ser utilizado. Te proponemos{' '}
+                {collision.suggestedCode}.
+              </p>
+              {canApplySuggestedCode && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={applySuggestedCode}
+                >
+                  Usar {collision.suggestedCode}
+                </Button>
+              )}
+            </div>
+          )}
         </FormField>
         <FormField label="Nombre del proveedor" required error={allErrors.name}>
           <Input aria-label="Nombre del proveedor" {...register('name')} error={Boolean(allErrors.name)} />
