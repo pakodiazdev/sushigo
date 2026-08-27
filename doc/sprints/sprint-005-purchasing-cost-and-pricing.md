@@ -1,11 +1,11 @@
 ---
 sprint: "005"
 title: Purchasing, Cost & Pricing
-status: In Progress
+status: Completed
 
 created: 2026-08-12
 started: 2026-08-22
-completed:
+completed: 2026-08-26
 last_updated: 2026-08-26
 
 base_branch: main
@@ -62,10 +62,10 @@ authoritative acquisition-cost source and deterministic operational data.
 | Planned start | 2026-09-20 |
 | Planned end | 2026-10-03 |
 | Started | 2026-08-22 (promoted early from planned by `#493`) |
-| Completed | — |
+| Completed | 2026-08-26 |
 | Progress (Issues completed) | 7 / 7 (100%) as of 2026-08-26 — `#431` (PR #496), `#432` (PR #512), `#433` (PR #515), `#434` (PR #514), `#435` (PR #502), `#436` (PR #511) and `#437` (PR #516) all merged to `main` |
 | Target calendar duration | 14 days |
-| Active workdays | — |
+| Active workdays | 3 (2026-08-23, 08-24, 08-25 — every day has real `## 📅 Sessions` evidence from at least one Issue, see §11) |
 
 ## 5. Scope
 
@@ -124,7 +124,7 @@ authoritative acquisition-cost source and deterministic operational data.
 | ✅ | #431 | Build Suppliers and purchasable Variant Presentations | High | 5h | 9h | 1.1h | PR #496 / `7b307c29` | Supplier/Offering catalog, permissions, Spanish UI at `/inventario/proveedores`, and review-hardening fixes — merged to `main` (`7b307c29`) |
 | ✅ | #435 | Build effective Product price lists by branch/context | High | 6h | 11h | 4.75h | PR #502 / `1be184da` | Deterministic price resolution + overlap validation shipped; merged to `main` (`1be184da`) |
 | ✅ | #399 | Migrate Inventory external identifiers to public IDs | Opportunistic | 0h | 0h | 0h | PR #495 / `563bfd4a` | Added during Sprint 005; no Issue session was recorded |
-|  |  | **Round total** |  | **11h** | **20h** | **—** |  |  |
+|  |  | **Round total** |  | **11h** | **20h** | **5.8h** |  |  |
 
 ### Round 2 — Post Purchases and Manage Prices
 
@@ -132,7 +132,7 @@ authoritative acquisition-cost source and deterministic operational data.
 |---|---:|---|---|---:|---:|---:|---|---|
 | ✅ | #432 | Receive Product Presentations and calculate effective unit cost | Critical | 7h | 13h | 8.77h | PR #512 / `bee8316c` | Purchase Receipts, atomic post/reverse reusing #430's Stock mutation, review-hardening fixes — merged to `main` (`bee8316c`) |
 | ✅ | #436 | Add branch-aware price-list management UI | High | 5h | 9h | 12.9h | PR #511 / `2e07c320` | Price List/Assignment/Variant Price management UI with resolved-price preview shipped; merged to `main` (`2e07c320`) |
-|  |  | **Round total** |  | **12h** | **22h** | **—** |  |  |
+|  |  | **Round total** |  | **12h** | **22h** | **21.7h** |  |  |
 
 ### Round 3 — Complete Receiving and Reconcile Cost
 
@@ -140,14 +140,14 @@ authoritative acquisition-cost source and deterministic operational data.
 |---|---:|---|---|---:|---:|---:|---|---|
 | ✅ | #433 | Add purchase receiving UI and cost preview | High | 6h | 11h | 2.92h | PR #515 / `e006d4bb` | Receipt list/create-edit-draft/immutable posted-reversed detail UI shipped, preview matches #432's formula exactly, 5 review threads + 3 manually-found bugs resolved, 2 SonarCloud smells cleaned up — merged to `main` (`e006d4bb`) |
 | ✅ | #434 | Unify weighted-average acquisition cost | Critical | 4h | 8h | 1.3h | PR #514 / `8c85d231` | Stock.weighted_avg_cost (per Inventory Location) is now the single source, exact-decimal via bcmath, legacy Variant fields frozen and reconciled — merged to `main` (`8c85d231`) |
-|  |  | **Round total** |  | **10h** | **19h** | **—** |  |  |
+|  |  | **Round total** |  | **10h** | **19h** | **4.2h** |  |  |
 
 ### Round 4 — Prove the Operational Story
 
 | Status | Issue | Title | Value | Opt. | Pess. | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---:|---|---|
 | ✅ | #437 | Seed Suppliers, Receipts, costs, and branch prices | Medium | 3h | 6h | 2.63h | PR #516 / `675ac99c` | Development/Testing/Fakes Supplier, Receipt (bonus packages + freight, weighted-avg cost) and Pricing (branch-context + promotion) seeders shipped, 7 review threads + 1 SonarCloud smell resolved — merged to `main` (`675ac99c`) |
-|  |  | **Round total** |  | **3h** | **6h** | **—** |  |  |
+|  |  | **Round total** |  | **3h** | **6h** | **2.6h** |  |  |
 
 ## 8. Route B — Sequential Dependencies
 
@@ -176,32 +176,47 @@ both visible workflows rather than inventing interim behavior.
 
 | Round | Issues | Opt. | Pess. | Tracked | vs Opt. | vs Pess. |
 |---|---:|---:|---:|---:|---:|---:|
-| 1 | 2 | 11h | 20h | — | — | — |
-| 2 | 2 | 12h | 22h | — | — | — |
-| 3 | 2 | 10h | 19h | — | — | — |
-| 4 | 1 | 3h | 6h | — | — | — |
-| **Total** | **7** | **36h** | **67h** | **—** | **—** | **—** |
+| 1 | 2 | 11h | 20h | 5.8h | -5.2h | -14.2h |
+| 2 | 2 | 12h | 22h | 21.7h | +9.7h | -0.3h |
+| 3 | 2 | 10h | 19h | 4.2h | -5.8h | -14.8h |
+| 4 | 1 | 3h | 6h | 2.6h | -0.4h | -3.4h |
+| **Total** | **7** | **36h** | **67h** | **34.3h** | **-1.7h** | **-32.7h** |
+
+Total is computed directly from the sum of raw session minutes across all 7 scoped Issues (2,059
+minutes = 34h19m = 34.3h), not from summing the already-rounded Round rows above.
 
 ## 11. Consolidated Time Tracking
 
 | Category | Estimated | Tracked | Variance |
 |---|---:|---:|---:|
-| Suppliers and purchasing (`#431`–`#433`) | 18h–33h | — | — |
-| Acquisition-cost reconciliation (`#434`) | 4h–8h | — | — |
-| Branch-aware pricing (`#435`, `#436`) | 11h–20h | — | — |
-| Operational seed data (`#437`) | 3h–6h | — | — |
-| **Total** | **36h–67h** | **—** | **—** |
+| Suppliers and purchasing (`#431`–`#433`) | 18h–33h | 12.7h | -20.3h to -5.3h |
+| Acquisition-cost reconciliation (`#434`) | 4h–8h | 1.3h | -6.7h to -2.7h |
+| Branch-aware pricing (`#435`, `#436`) | 11h–20h | 17.7h | -2.3h to +6.7h |
+| Operational seed data (`#437`) | 3h–6h | 2.6h | -3.4h to -0.4h |
+| **Total** | **36h–67h** | **34.3h** | **-32.7h to -1.7h** |
 
 ### Wall-Clock Time & Parallelism
 
-- **Person-hours:** —
-- **Wall-clock time:** —
-- **Parallelization factor:** —
-- **Peak concurrency:** —
+Computed at sprint closure directly from every scoped Issue's `## 📅 Sessions` array, following
+`doc/conventions/sprints.md` §7. `#399` (opportunistic, 0h tracked, empty `Sessions[]`) is excluded
+per §7's rule for Issues with no session data at all.
+
+- **Person-hours:** 34.3h (sum of every logged session across `#431`–`#437` — no merging; 2,059 raw
+  session-minutes, 12 sessions)
+- **Wall-clock time:** 24.4h (union of the same sessions, overlapping/back-to-back intervals merged;
+  1,461 merged-block-minutes)
+- **Parallelization factor:** 1.41× (Person-hours ÷ Wall-clock time)
+- **Peak concurrency:** 2 simultaneous sessions (e.g. 2026-08-25 02:06–10:52 — Issues #432, #436;
+  also 2026-08-25 17:58–19:11 — Issues #433, #434). No point in the data ever has 3 Issues open at
+  once.
 
 | Wall-clock block | Duration | Issues active in this block |
 |---|---:|---|
-| — | — | No sessions yet |
+| 2026-08-23 12:26 → 13:29 | 1h03m | #431 |
+| 2026-08-24 19:58 → 2026-08-25 00:44 | 4h46m | #435 |
+| 2026-08-25 01:39 → 14:33 | 12h54m | #432, #436 |
+| 2026-08-25 17:53 → 20:53 | 3h00m | #433, #434 |
+| 2026-08-25 21:00 → 23:38 | 2h38m | #437 |
 
 ## 12. Notes on Estimate Confidence
 
@@ -227,27 +242,35 @@ introduced.
 
 | Metric | Before | Target | After | Result |
 |---|---|---|---|---|
-| Purchase evidence | Manual conversions/no canonical receipt | Immutable posted receipt with exact calculations | — | ⏳ |
-| Acquisition cost | Competing Variant/Stock sources | One reconciled weighted-average source | — | ⏳ |
-| Sale price | Global Variant assumption | Effective deterministic branch/context resolution | — | ⏳ |
-| Operational data | Catalog-only examples | Suppliers, promotion, receipt, cost, and branch-price story | — | ⏳ |
+| Purchase evidence | Manual conversions/no canonical receipt | Immutable posted receipt with exact calculations | Immutable `Receipt`/`ReceiptLine` posted records with cost-snapshot evidence (`#432`), plus a receiving UI whose preview matches the backend contract exactly (`#433`) | ✅ |
+| Acquisition cost | Competing Variant/Stock sources | One reconciled weighted-average source | `Stock.weighted_avg_cost` per Inventory Location is the single source via bcmath exact-decimal `WeightedAverageCostCalculator`; legacy `ItemVariant.avg_unit_cost` frozen and backfilled (`#434`) | ✅ |
+| Sale price | Global Variant assumption | Effective deterministic branch/context resolution | PriceList/PriceListAssignment/VariantPrice resolve deterministically with no `ItemVariant.sale_price` fallback, plus a management UI with a resolved-price preview (`#435`, `#436`) | ✅ |
+| Operational data | Catalog-only examples | Suppliers, promotion, receipt, cost, and branch-price story | Development/Testing/Fakes seeders demonstrate package normalization, promotion, receipt cost, and branch-price differences end to end (`#437`) | ✅ |
 
 ## 15. Results
 
 ### 15.1 Delivered Value
 
-Not yet delivered. Expected value is an auditable purchase-to-Stock-cost flow plus locally resolved
-sale prices that operators can configure and inspect.
+Delivered a complete, auditable purchase-to-Stock-cost flow with branch-aware pricing on top of it:
+Suppliers and purchasable offerings (`#431`); immutable Purchase Receipts with atomic Stock
+posting/reversal and cost-snapshot evidence (`#432`); a receiving UI whose calculation preview
+matches that backend contract exactly (`#433`); one reconciled weighted-average acquisition-cost
+source across Variant, Stock, and reports (`#434`); effective-dated branch/context price lists with
+deterministic resolution (`#435`) and their management UI (`#436`); and deterministic operational
+seed data proving the full story — package normalization, promotions, receipt cost, branch prices —
+end to end (`#437`). Plus the opportunistic Inventory public-ID migration (`#399`).
 
 ### 15.2 Planned vs. Actual
 
 - Planned: 7 Issues, 36h–67h.
-- Completed: 0 planned Issues; 1 opportunistic Issue (`#399`).
-- Tracked: 0h for `#399`; no planned-Issue sessions completed yet.
+- Completed: 7/7 planned Issues; 1 opportunistic Issue (`#399`).
+- Tracked: 34.3h across the 7 planned Issues — under the optimistic estimate by 1.7h and the
+  pessimistic estimate by 32.7h; 0h for `#399`.
 
 ### 15.3 Known Limitations
 
-- Sprint 5 depends on Sprints 3–4 and cannot be safely promoted early.
+- Sprint 5's dependency on Sprints 3–4's contracts held through delivery — no incompatibility
+  surfaced.
 - Final Stock movement, replenishment, access, navigation, and schema cleanup remains in Sprint 6.
 - Promotion/discount engines beyond receipt evidence are out of scope.
 
@@ -255,6 +278,19 @@ sale prices that operators can configure and inspect.
 
 Planning lesson: cost must be derived from immutable purchase evidence, while price must resolve
 from operational context. Keeping them outside the Product catalog prevents competing defaults.
+
+Execution lesson: UI Issues built directly on top of very recently shipped sibling patterns
+(`#433` reusing `#431`/`#436`'s cascading selects, `SlidePanel` state machine, and
+`useFormMutation`/RHF+Zod conventions) landed at a fraction of their estimate, while an Issue with
+no immediately preceding sibling to compose from (`#436`) ran well past its pessimistic estimate.
+Sequencing Round order so a UI Issue follows its closest structural sibling, not just its backend
+dependency, compounds speed.
+
+Review-layer lesson: across every Issue this sprint, Copilot/Codex/Devin/SonarCloud review passes
+consistently surfaced real bugs, not nitpicks — permission-alignment gaps on new endpoints,
+pagination limited to the first 100 rows, and data-loss-shaped edge cases (`#434`'s pre-existing
+zero-cost bug) recurred independently across multiple Issues. Running the full review chain to
+completion instead of stopping at CI-green remains worth the added session time it costs.
 
 ## 17. Follow-up Work
 
@@ -265,8 +301,8 @@ from operational context. Keeping them outside the Product catalog prevents comp
 ## 18. Sprint Closure Checklist
 
 - [x] All seven Issues are linked, labeled `sprint-5`, and assigned to Sprint 5.
-- [ ] Every Issue has a final status and PR/commit evidence.
-- [ ] Scope changes and tracked Sessions are synchronized.
-- [ ] Estimates, wall-clock time, parallelism, and quality results are finalized.
-- [ ] Dependencies, conflicts, delivered value, limitations, and lessons reflect execution.
-- [ ] Sprint 6 is promoted when applicable.
+- [x] Every Issue has a final status and PR/commit evidence.
+- [x] Scope changes and tracked Sessions are synchronized.
+- [x] Estimates, wall-clock time, parallelism, and quality results are finalized.
+- [x] Dependencies, conflicts, delivered value, limitations, and lessons reflect execution.
+- [x] Sprint 6 is promoted when applicable — promoted by `#519` on 2026-08-26.

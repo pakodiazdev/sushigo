@@ -9,7 +9,8 @@ Index of every SushiGo sprint document. See `doc/conventions/sprints.md` for the
 | 002 | Platillos Catalog & Platform Hardening | Completed | [sprint-002-platillos-catalog-platform-hardening.md](sprint-002-platillos-catalog-platform-hardening.md) |
 | 003 | Development Platform & Product Reliability | Completed | [sprint-003-development-platform-and-product-reliability.md](sprint-003-development-platform-and-product-reliability.md) |
 | 004 | Product Catalog Reconstruction | Completed | [sprint-004-product-catalog-reconstruction.md](sprint-004-product-catalog-reconstruction.md) |
-| 005 | Purchasing, Cost & Pricing | In Progress (current) | [sprint-005-purchasing-cost-and-pricing.md](sprint-005-purchasing-cost-and-pricing.md) |
+| 005 | Purchasing, Cost & Pricing | Completed | [sprint-005-purchasing-cost-and-pricing.md](sprint-005-purchasing-cost-and-pricing.md) |
+| 006 | Stock Integrity & Inventory Completion | In Progress (current) | [sprint-006-stock-integrity-and-inventory-completion.md](sprint-006-stock-integrity-and-inventory-completion.md) |
 
 Planned sprints not yet started live under [`planned/`](planned/) and are not listed here until promoted.
 
