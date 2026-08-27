@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useFormMutation } from '@/hooks/use-form-mutation'
@@ -71,13 +72,23 @@ export function useSupplierOfferingForm({
   const productId = watch('product_id')
   const variantId = watch('variant_id')
 
+  // Producto and Variante are server-side searched (debounced free text → paginated query,
+  // `per_page` kept small) instead of a single page-1 fetch dumped into a native <select>.
+  // Without this, any product past the first page — or any variant of a product with more
+  // than one page of variants — could never be picked when creating an offering (#506).
+  const [productSearch, setProductSearch] = useState('')
+  const [variantSearch, setVariantSearch] = useState('')
+
   const productsQuery = useQuery({
-    queryKey: ['supplier-form-products'],
-    queryFn: () => productApi.list({ is_active: true, per_page: 100 }),
+    queryKey: ['supplier-form-products', productSearch],
+    queryFn: () => productApi.list({ is_active: true, search: productSearch || undefined, per_page: 20 }),
+    enabled: !isEditing,
   })
   const variantsQuery = useQuery({
-    queryKey: ['supplier-form-variants', productId],
-    queryFn: () => productVariantApi.list(productId, { per_page: 100 }),
+    queryKey: ['supplier-form-variants', productId, variantSearch],
+    // is_active is filtered server-side (before pagination) so an active match can't be pushed
+    // off page 1 by inactive rows that sort ahead of it.
+    queryFn: () => productVariantApi.list(productId, { search: variantSearch || undefined, is_active: true, per_page: 20 }),
     enabled: Boolean(productId) && !isEditing,
   })
   const presentationsQuery = useQuery({
@@ -128,12 +139,35 @@ export function useSupplierOfferingForm({
     setValue('product_id', nextProductId)
     setValue('variant_id', '')
     setValue('variant_purchase_presentation_id', '')
+    // Drop the previous product's variant search term — otherwise the new product's
+    // variant list stays filtered by it and can look empty.
+    setVariantSearch('')
   }
 
   const onVariantChange = (nextVariantId: string) => {
     setValue('variant_id', nextVariantId)
     setValue('variant_purchase_presentation_id', '')
   }
+
+  // A refined search can drop the currently selected product/variant from the latest page of
+  // results, leaving the <select> blank while the form still holds the stale id. Clear it (and
+  // its dependent cascade) once a fetch *succeeds* without the selection — never on a failed or
+  // still-pending request, so a transient network error doesn't wipe what the user already typed.
+  useEffect(() => {
+    if (isEditing || !productId || !productsQuery.isSuccess) return
+    if (!products.some((product) => product.id === productId)) {
+      onProductChange('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productsQuery.data, productsQuery.isSuccess])
+
+  useEffect(() => {
+    if (isEditing || !variantId || !variantsQuery.isSuccess) return
+    if (!variants.some((variant) => variant.id === variantId)) {
+      onVariantChange('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variantsQuery.data, variantsQuery.isSuccess])
 
   const onSubmit = async (values: SupplierOfferingFormValues) => {
     await execute(values)
@@ -146,6 +180,14 @@ export function useSupplierOfferingForm({
     products,
     variants,
     presentations,
+    productSearch,
+    setProductSearch,
+    variantSearch,
+    setVariantSearch,
+    isLoadingProducts: productsQuery.isLoading,
+    isLoadingVariants: variantsQuery.isLoading,
+    hasProductSearchError: productsQuery.isError,
+    hasVariantSearchError: variantsQuery.isError,
     register,
     handleSubmit,
     setValue,

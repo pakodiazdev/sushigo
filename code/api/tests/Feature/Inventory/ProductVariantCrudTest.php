@@ -67,6 +67,97 @@ class ProductVariantCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_filters_the_variant_list_by_a_search_term_on_name_and_code()
+    {
+        $product = $this->createProduct();
+        $this->createItemVariant($product, ['code' => 'SAL-ENTERO', 'name' => 'Salmón entero']);
+        $this->createItemVariant($product, ['code' => 'ATN-LOMO', 'name' => 'Atún lomo']);
+        $this->createItemVariant($product, ['code' => 'SAL-FILETE', 'name' => 'Filete de salmón']);
+
+        $byName = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?search=salm");
+        $byName->assertStatus(200);
+        $this->assertEqualsCanonicalizing(
+            ['SAL-ENTERO', 'SAL-FILETE'],
+            collect($byName->json('data'))->pluck('code')->all()
+        );
+
+        $byCode = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?search=ATN");
+        $byCode->assertStatus(200);
+        $this->assertSame(['ATN-LOMO'], collect($byCode->json('data'))->pluck('code')->all());
+    }
+
+    #[Test]
+    public function it_lets_a_variant_beyond_the_first_page_be_found_through_search()
+    {
+        $product = $this->createProduct();
+
+        for ($i = 1; $i <= 120; $i++) {
+            $this->createItemVariant($product, [
+                'code' => sprintf('BULK-%03d', $i),
+                'name' => "Bulk variant {$i}",
+            ]);
+        }
+        $this->createItemVariant($product, ['code' => 'ZZZ-NEEDLE', 'name' => 'Needle variant']);
+
+        $firstPage = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?per_page=100");
+        $this->assertNotContains(
+            'ZZZ-NEEDLE',
+            collect($firstPage->json('data'))->pluck('code')->all()
+        );
+
+        $searched = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?search=needle");
+        $searched->assertStatus(200);
+        $this->assertSame(['ZZZ-NEEDLE'], collect($searched->json('data'))->pluck('code')->all());
+    }
+
+    #[Test]
+    public function it_restricts_the_variant_list_to_active_records_when_asked()
+    {
+        $product = $this->createProduct();
+        $this->createItemVariant($product, ['code' => 'ACT-1', 'name' => 'Active one', 'is_active' => true]);
+        $this->createItemVariant($product, ['code' => 'INA-1', 'name' => 'Inactive one', 'is_active' => false]);
+
+        $active = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?is_active=1");
+
+        $active->assertStatus(200);
+        $this->assertSame(['ACT-1'], collect($active->json('data'))->pluck('code')->all());
+    }
+
+    #[Test]
+    public function it_keeps_an_active_search_match_reachable_behind_a_page_of_inactive_variants()
+    {
+        $product = $this->createProduct();
+
+        // 25 inactive variants whose codes sort before the active match — without a server-side
+        // is_active filter they would fill the whole first page and hide the active one (#506 PR review).
+        for ($i = 1; $i <= 25; $i++) {
+            $this->createItemVariant($product, [
+                'code' => sprintf('AAA-%03d', $i),
+                'name' => "Salmon inactive {$i}",
+                'is_active' => false,
+            ]);
+        }
+        $this->createItemVariant($product, ['code' => 'ZZZ-ACTIVE', 'name' => 'Salmon active', 'is_active' => true]);
+
+        $response = $this->getJson(
+            "/api/v1/inventory/products/{$product->public_id}/variants?search=salmon&is_active=1&per_page=20"
+        );
+
+        $response->assertStatus(200);
+        $this->assertSame(['ZZZ-ACTIVE'], collect($response->json('data'))->pluck('code')->all());
+    }
+
+    #[Test]
+    public function it_rejects_a_non_string_search_param_instead_of_crashing()
+    {
+        $product = $this->createProduct();
+
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?search[]=foo");
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['search']);
+    }
+
+    #[Test]
     public function it_can_create_a_variant_with_only_required_fields()
     {
         $product = $this->createProduct();

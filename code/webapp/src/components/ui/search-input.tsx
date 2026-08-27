@@ -9,6 +9,7 @@ interface SearchInputProps {
   placeholder?: string
   debounceMs?: number
   className?: string
+  'aria-label'?: string
 }
 
 export function SearchInput({
@@ -17,6 +18,7 @@ export function SearchInput({
   placeholder = 'Search...',
   debounceMs = 300,
   className,
+  'aria-label': ariaLabel,
 }: Readonly<SearchInputProps>) {
   const [localValue, setLocalValue] = useState(value)
 
@@ -61,6 +63,7 @@ export function SearchInput({
       {/* Input */}
       <Input
         type="text"
+        aria-label={ariaLabel}
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         placeholder={placeholder}

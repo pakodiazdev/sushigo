@@ -182,9 +182,17 @@ describe('Supplier catalog', () => {
     cy.contains('button', 'Oferta').click()
     cy.contains('h2', 'Nueva oferta').should('be.visible')
 
-    cy.get('select[aria-label="Producto"]').select(productName)
+    // Producto/Variante are server-side searched (#506) — narrow the option list by typing the
+    // name into the search box above each <select> before picking, so the target is on the page
+    // even once the catalog outgrows one page of results.
+    cy.get('input[placeholder="Busca un producto por nombre…"]').type(productName)
+    cy.get('select[aria-label="Producto"]', { timeout: 10_000 })
+      .should('contain.text', productName)
+      .select(productName)
+    cy.get('input[placeholder="Busca una variante por nombre o código…"]').type(variantName)
     cy.get('select[aria-label="Variante"]', { timeout: 10_000 })
       .should('not.be.disabled')
+      .should('contain.text', `${variantName} (${variantCode})`)
       .select(`${variantName} (${variantCode})`)
     cy.get('select[aria-label="Presentación de compra"]', { timeout: 10_000 })
       .should('not.be.disabled')
