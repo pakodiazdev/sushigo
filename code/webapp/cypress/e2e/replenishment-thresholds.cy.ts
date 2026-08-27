@@ -136,7 +136,7 @@ before(() => {
 describe('Replenishment thresholds (Stock Dashboard)', () => {
   beforeEach(() => {
     cy.loginByApi(adminEmail, adminPassword)
-    cy.visitWithAuth('/stock-dashboard')
+    cy.visitWithAuth('/inventario/existencias')
     cy.contains('h1', 'Stock Dashboard', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
   })

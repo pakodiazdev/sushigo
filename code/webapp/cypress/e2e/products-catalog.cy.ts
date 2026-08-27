@@ -1,7 +1,7 @@
 /**
  * Products Catalog — Progressive create → detail SlidePanel — E2E happy path (#423)
  *
- * Exercises the new /inventory/products page: creating a Product transitions the
+ * Exercises the /inventario/productos page: creating a Product transitions the
  * *same* SlidePanel instance in place from the create form directly into the saved
  * Product's detail view — no navigation, no second panel. See
  * doc/architecture/product-catalog/product-catalog-architecture.en.md §5.
@@ -49,8 +49,8 @@ describe('Products — Progressive create → detail SlidePanel', () => {
   beforeEach(() => {
     cy.login(adminEmail, adminPassword)
     cy.url().should('not.include', '/login', { timeout: 10_000 })
-    cy.visit('/inventory/products')
-    cy.url().should('include', '/inventory/products', { timeout: 10_000 })
+    cy.visit('/inventario/productos')
+    cy.url().should('include', '/inventario/productos', { timeout: 10_000 })
     // A fresh `test:reset` (core only) leaves the Products list empty, so the
     // DataGrid renders its empty state instead of a <table> — wait for the
     // create button instead, which is always present.

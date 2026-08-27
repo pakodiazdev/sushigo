@@ -10,7 +10,7 @@ import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
 
 // PRODUCTO is deliberately excluded — Products are created exclusively via the
-// /inventory/products SlidePanel (#423); this quick-item form is INSUMO/ACTIVO only (#429).
+// /inventario/productos SlidePanel (#423); this quick-item form is INSUMO/ACTIVO only (#429).
 export const itemSchema = z.object({
   sku: z.string().min(2, 'SKU must be at least 2 characters'),
   name: z.string().min(3, 'Name must be at least 3 characters'),

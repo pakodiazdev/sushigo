@@ -36,9 +36,9 @@ describe('Sidebar permission-aware — inventory-manager', () => {
     cy.closeDevDebugger()
   })
 
-  it('el sidebar muestra Inventario y Stock Dashboard para el inventory-manager', () => {
-    cy.contains('nav a, nav button', 'Inventario', { timeout: 10_000 }).should('be.visible')
-    cy.contains('nav a, nav button', 'Stock Dashboard', { timeout: 5_000 }).should('be.visible')
+  it('el sidebar muestra Inventario con Existencias como sub-item para el inventory-manager', () => {
+    cy.contains('nav a, nav button', 'Inventario', { timeout: 10_000 }).should('be.visible').click()
+    cy.contains('nav a', 'Existencias', { timeout: 5_000 }).should('be.visible')
   })
 
   it('el sidebar no muestra Empleados ni Configuración al inventory-manager', () => {
@@ -46,17 +46,23 @@ describe('Sidebar permission-aware — inventory-manager', () => {
     cy.contains('nav', 'Configuración').should('not.exist')
   })
 
-  it('el inventory-manager puede navegar a /inventory/items y la página carga', () => {
+  it('el inventory-manager puede navegar a /inventario/insumos y la página carga', () => {
     cy.contains('nav button', 'Inventario', { timeout: 10_000 }).click()
-    cy.contains('nav a', 'Items', { timeout: 5_000 }).click()
-    cy.url({ timeout: 10_000 }).should('include', '/inventory/items')
+    cy.contains('nav a', 'Insumos', { timeout: 5_000 }).click()
+    cy.url({ timeout: 10_000 }).should('include', '/inventario/insumos')
     cy.get('main, [data-testid="page-container"]', { timeout: 10_000 }).should('exist')
   })
 
-  it('el inventory-manager puede navegar a /stock-dashboard y la página carga', () => {
-    cy.contains('nav a', 'Stock Dashboard', { timeout: 10_000 }).click()
-    cy.url({ timeout: 10_000 }).should('include', '/stock-dashboard')
+  it('el inventory-manager puede navegar a /inventario/existencias y la página carga', () => {
+    cy.contains('nav button', 'Inventario', { timeout: 10_000 }).click()
+    cy.contains('nav a', 'Existencias', { timeout: 10_000 }).click()
+    cy.url({ timeout: 10_000 }).should('include', '/inventario/existencias')
     cy.get('main, [data-testid="page-container"]', { timeout: 10_000 }).should('exist')
+  })
+
+  it('la URL heredada /stock-dashboard redirige a /inventario/existencias', () => {
+    cy.visitWithAuth('/stock-dashboard')
+    cy.url({ timeout: 10_000 }).should('include', '/inventario/existencias')
   })
 
   it('acceso directo a /unauthorized muestra la página 403', () => {

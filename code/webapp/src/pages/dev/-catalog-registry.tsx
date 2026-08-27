@@ -268,8 +268,8 @@ function BreadcrumbsDemo() {
   return (
     <Breadcrumbs
       items={[
-        { label: 'Inventario', path: '/inventory' },
-        { label: 'Items', path: '/inventory/items' },
+        { label: 'Inventario', path: '/inventario' },
+        { label: 'Insumos', path: '/inventario/insumos' },
       ]}
     />
   )
@@ -579,7 +579,7 @@ export const catalogSections: CatalogSection[] = [
         name: 'Breadcrumbs',
         description: 'Ruta de navegación; se auto-genera desde la URL actual o acepta items explícitos.',
         importPath: '@/components/ui/breadcrumbs',
-        code: `<Breadcrumbs items={[{ label: 'Inventario', path: '/inventory' }]} />`,
+        code: `<Breadcrumbs items={[{ label: 'Inventario', path: '/inventario' }]} />`,
         Demo: BreadcrumbsDemo,
       },
       {

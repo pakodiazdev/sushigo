@@ -22,8 +22,8 @@ describe('Item Rápido — Media Gallery Uploader', () => {
   beforeEach(() => {
     cy.login(adminEmail, adminPassword)
     cy.url().should('not.include', '/login', { timeout: 10_000 })
-    cy.visit('/inventory/items')
-    cy.url().should('include', '/inventory/items', { timeout: 10_000 })
+    cy.visit('/inventario/insumos')
+    cy.url().should('include', '/inventario/insumos', { timeout: 10_000 })
     // A fresh `test:reset` (core only) leaves the items list empty, so the
     // DataGrid renders its "No data available" state instead of a <table> —
     // wait for the quick-create button instead, which is always present.

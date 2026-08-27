@@ -88,16 +88,16 @@ function generateBreadcrumbs(path: string): BreadcrumbItem[] {
     '/reportes': 'Reportes',
     '/configuracion': 'Configuración',
 
-    // Inventory routes
-    '/inventory': 'Inventario',
-    '/inventory/products': 'Productos',
-    '/inventory/locations': 'Ubicaciones',
-    '/inventory/items': 'Items',
-    '/inventory/item-variants': 'Variantes',
-    '/inventory/stock-movements': 'Movimientos de Stock',
-
-    // Units of Measure
-    '/inventory/units-of-measure': 'Unidades de Medida',
+    // Inventory routes (canonical Spanish tree — #441)
+    '/inventario': 'Inventario',
+    '/inventario/existencias': 'Existencias',
+    '/inventario/productos': 'Productos',
+    '/inventario/insumos': 'Insumos',
+    '/inventario/variantes': 'Variantes',
+    '/inventario/ubicaciones': 'Ubicaciones',
+    '/inventario/proveedores': 'Proveedores',
+    '/inventario/recepciones-de-compra': 'Recepciones de Compra',
+    '/inventario/listas-de-precios': 'Listas de Precios',
   };
 
   // Skip home page

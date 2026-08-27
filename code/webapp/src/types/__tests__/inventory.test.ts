@@ -4,6 +4,10 @@ import type {
     Item,
     ItemVariant,
     Stock,
+    StockMovement,
+    StockMovementLine,
+    StockMovementReason,
+    StockMovementStatus,
 } from '../inventory'
 
 describe('Inventory Types', () => {
@@ -143,6 +147,127 @@ describe('Inventory Types', () => {
                 is_low_stock: false,
             }
             expect(stock.on_hand - stock.reserved).toBe(stock.available)
+        })
+    })
+
+    describe('StockMovement type (aligned with backend App\\Models\\StockMovement, #438)', () => {
+        it('can create a posted purchase-receipt movement with reversal-linkage fields', () => {
+            const movement: StockMovement = {
+                id: 1,
+                from_location_id: null,
+                to_location_id: 5,
+                item_variant_id: 12,
+                user_id: 3,
+                qty: 100.5,
+                reason: 'PURCHASE_RECEIPT',
+                status: 'POSTED',
+                reference: 'PR-2026-001',
+                related_id: 44,
+                related_type: 'App\\Models\\PurchaseReceipt',
+                reverses_stock_movement_id: null,
+                reversed_by_user_id: null,
+                reversed_at: null,
+                reversal_reason: null,
+                notes: null,
+                meta: { original_qty: 100.5, original_uom: 'KG' },
+                posted_at: '2026-08-27T15:05:30+00:00',
+            }
+            expect(movement.reason).toBe('PURCHASE_RECEIPT')
+            expect(movement.status).toBe('POSTED')
+            expect(movement.reverses_stock_movement_id).toBeNull()
+        })
+
+        it('can create a compensating reversal movement', () => {
+            const reversal: StockMovement = {
+                id: 2,
+                from_location_id: 5,
+                to_location_id: null,
+                item_variant_id: 12,
+                user_id: 3,
+                qty: 100.5,
+                reason: 'PURCHASE_RECEIPT_REVERSAL',
+                status: 'POSTED',
+                reference: null,
+                related_id: null,
+                related_type: null,
+                reverses_stock_movement_id: 1,
+                reversed_by_user_id: null,
+                reversed_at: null,
+                reversal_reason: 'Supplier delivery rejected',
+                notes: null,
+                meta: null,
+                posted_at: '2026-08-27T16:00:00+00:00',
+            }
+            expect(reversal.reverses_stock_movement_id).toBe(1)
+            expect(reversal.reason).toBe('PURCHASE_RECEIPT_REVERSAL')
+        })
+
+        it('supports every backend reason constant', () => {
+            const reasons: StockMovementReason[] = [
+                'TRANSFER',
+                'RETURN',
+                'SALE',
+                'ADJUSTMENT',
+                'CONSUMPTION',
+                'OPENING_BALANCE',
+                'COUNT_VARIANCE',
+                'PURCHASE_RECEIPT',
+                'PURCHASE_RECEIPT_REVERSAL',
+            ]
+            reasons.forEach((reason) => {
+                const movement: StockMovement = {
+                    id: 1,
+                    from_location_id: 1,
+                    to_location_id: 2,
+                    item_variant_id: 1,
+                    user_id: 1,
+                    qty: 1,
+                    reason,
+                    status: 'POSTED',
+                    reference: null,
+                    related_id: null,
+                    related_type: null,
+                    reverses_stock_movement_id: null,
+                    reversed_by_user_id: null,
+                    reversed_at: null,
+                    reversal_reason: null,
+                    notes: null,
+                    meta: null,
+                    posted_at: null,
+                }
+                expect(movement.reason).toBe(reason)
+            })
+        })
+
+        it('supports every backend status constant', () => {
+            const statuses: StockMovementStatus[] = ['DRAFT', 'POSTED', 'REVERSED']
+            statuses.forEach((status) => {
+                const movement: Pick<StockMovement, 'status'> = { status }
+                expect(movement.status).toBe(status)
+            })
+        })
+    })
+
+    describe('StockMovementLine type (aligned with backend App\\Models\\StockMovementLine, #438)', () => {
+        it('carries qty/base_qty/conversion_factor/line_total, not the legacy quantity/total_cost', () => {
+            const line: StockMovementLine = {
+                id: 1,
+                stock_movement_id: 1,
+                item_variant_id: 12,
+                uom_id: 4,
+                qty: 10,
+                base_qty: 10,
+                conversion_factor: 1,
+                unit_cost: 50,
+                line_total: 500,
+                sale_price: null,
+                sale_total: null,
+                profit_margin: null,
+                profit_total: null,
+                meta: null,
+            }
+            expect(line.base_qty).toBe(10)
+            expect(line.line_total).toBe(500)
         })
     })
 })

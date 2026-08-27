@@ -61,8 +61,8 @@ describe('Product detail — embedded Variant catalog', () => {
   beforeEach(() => {
     cy.login(adminEmail, adminPassword)
     cy.url().should('not.include', '/login', { timeout: 10_000 })
-    cy.visit('/inventory/products')
-    cy.url().should('include', '/inventory/products', { timeout: 10_000 })
+    cy.visit('/inventario/productos')
+    cy.url().should('include', '/inventario/productos', { timeout: 10_000 })
     cy.contains('button', 'New Product', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
   })

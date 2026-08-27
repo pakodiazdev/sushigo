@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { resolvePanelTitle } from '../products'
+import { resolvePanelTitle } from '../productos'
 
 describe('resolvePanelTitle', () => {
   it('returns the top-level Product title outside detail mode', () => {
