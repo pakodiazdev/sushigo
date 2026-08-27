@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EnforcesStockMovementContract;
 use App\Support\Traits\HasPublicId;
 use App\Support\Traits\SerializesPublicIdAsId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class StockMovement extends Model
 {
-    use HasPublicId, SerializesPublicIdAsId;
+    use EnforcesStockMovementContract, HasPublicId, SerializesPublicIdAsId;
 
     protected $fillable = [
         'from_location_id',
@@ -24,6 +26,10 @@ class StockMovement extends Model
         'reference',
         'related_id',
         'related_type',
+        'reverses_stock_movement_id',
+        'reversed_by_user_id',
+        'reversed_at',
+        'reversal_reason',
         'notes',
         'meta',
         'posted_at',
@@ -33,6 +39,7 @@ class StockMovement extends Model
         'qty' => 'decimal:4',
         'meta' => 'array',
         'posted_at' => 'datetime',
+        'reversed_at' => 'datetime',
     ];
 
     // Reason constants
@@ -110,6 +117,30 @@ class StockMovement extends Model
     }
 
     /**
+     * The posted movement this row compensates (set only on a reversal movement).
+     */
+    public function reverses(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reverses_stock_movement_id');
+    }
+
+    /**
+     * The compensating movement that reversed this one, if any.
+     */
+    public function reversal(): HasOne
+    {
+        return $this->hasOne(self::class, 'reverses_stock_movement_id');
+    }
+
+    /**
+     * The user who reversed this movement.
+     */
+    public function reversedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reversed_by_user_id');
+    }
+
+    /**
      * Scope to filter posted movements
      */
     public function scopePosted($query)
@@ -158,26 +189,18 @@ class StockMovement extends Model
     }
 
     /**
-     * Check if movement is a transfer
+     * Check if movement has been reversed by a compensating movement.
      */
-    public function isTransfer(): bool
+    public function isReversed(): bool
     {
-        return $this->reason === self::REASON_TRANSFER;
+        return $this->status === self::STATUS_REVERSED;
     }
 
     /**
-     * Check if movement is an entry (to_location only)
+     * Check if movement is itself a compensating reversal of another movement.
      */
-    public function isEntry(): bool
+    public function isReversal(): bool
     {
-        return $this->to_location_id !== null && $this->from_location_id === null;
-    }
-
-    /**
-     * Check if movement is an exit (from_location only)
-     */
-    public function isExit(): bool
-    {
-        return $this->from_location_id !== null && $this->to_location_id === null;
+        return $this->reverses_stock_movement_id !== null;
     }
 }

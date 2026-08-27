@@ -6,6 +6,7 @@ use App\Models\InventoryLocation;
 use App\Models\Receipt;
 use App\Models\Stock;
 use App\Models\StockMovement;
+use App\Services\Inventory\StockMovementReverser;
 use PHPUnit\Framework\Attributes\Test;
 
 class ReceiptReversalTest extends InventoryTestCase
@@ -81,6 +82,66 @@ class ReceiptReversalTest extends InventoryTestCase
         $this->postJson("/api/v1/inventory/receipts/{$id}/reverse")->assertStatus(409);
 
         $this->assertEquals(5.0, (float) $stock->fresh()->on_hand);
+    }
+
+    #[Test]
+    public function it_links_the_reversal_movement_to_the_original_and_flips_it_to_reversed(): void
+    {
+        ['id' => $id, 'variant' => $variant] = $this->createPostedReceipt();
+
+        $original = StockMovement::where('related_type', Receipt::class)
+            ->where('reason', StockMovement::REASON_PURCHASE_RECEIPT)
+            ->where('item_variant_id', $variant->id)
+            ->firstOrFail();
+
+        $this->assertTrue($original->isPosted());
+
+        $this->postJson("/api/v1/inventory/receipts/{$id}/reverse", ['reason' => 'Wrong supplier'])
+            ->assertOk();
+
+        $original->refresh();
+        $this->assertTrue($original->isReversed());
+        $this->assertNotNull($original->reversed_at);
+        $this->assertSame($this->user->id, $original->reversed_by_user_id);
+        $this->assertSame('Wrong supplier', $original->reversal_reason);
+
+        $compensating = StockMovement::where('reason', StockMovement::REASON_PURCHASE_RECEIPT_REVERSAL)
+            ->where('item_variant_id', $variant->id)
+            ->firstOrFail();
+
+        $this->assertSame($original->id, $compensating->reverses_stock_movement_id);
+        $this->assertSame($compensating->id, $original->reversal->id);
+    }
+
+    #[Test]
+    public function it_rejects_reversing_a_receipt_whose_movement_was_already_reversed_elsewhere(): void
+    {
+        ['id' => $id, 'variant' => $variant] = $this->createPostedReceipt();
+
+        $original = StockMovement::where('related_type', Receipt::class)
+            ->where('reason', StockMovement::REASON_PURCHASE_RECEIPT)
+            ->where('item_variant_id', $variant->id)
+            ->firstOrFail();
+
+        // Reverse the receipt's stock movement through the shared reverser,
+        // leaving the Receipt row itself still POSTED.
+        app(StockMovementReverser::class)->reverse($original, $this->user->id, 'corrected via ledger');
+
+        $onHandAfterLedgerReversal = (float) Stock::where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->value('on_hand');
+
+        // The receipt endpoint must now refuse rather than subtract the
+        // quantity a second time from unrelated stock.
+        $this->postJson("/api/v1/inventory/receipts/{$id}/reverse")->assertStatus(409);
+
+        $this->assertEquals(
+            $onHandAfterLedgerReversal,
+            (float) Stock::where('inventory_location_id', $this->location->id)
+                ->where('item_variant_id', $variant->id)
+                ->value('on_hand')
+        );
+        $this->assertTrue(Receipt::where('public_id', $id)->firstOrFail()->isPosted());
     }
 
     #[Test]

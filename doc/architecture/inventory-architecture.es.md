@@ -194,10 +194,17 @@ erDiagram
     bigint from_location_id FK
     bigint to_location_id FK
     bigint item_variant_id FK
-    decimal qty
-    enum reason "TRANSFER|RETURN|SALE|ADJUSTMENT|CONSUMPTION"
+    decimal qty "CHECK > 0"
+    enum reason "TRANSFER|RETURN|SALE|ADJUSTMENT|CONSUMPTION|OPENING_BALANCE|COUNT_VARIANCE|PURCHASE_RECEIPT|PURCHASE_RECEIPT_REVERSAL"
+    enum status "DRAFT|POSTED|REVERSED"
+    bigint reverses_stock_movement_id FK "UNIQUE — compensado a lo sumo una vez"
+    bigint reversed_by_user_id FK
+    timestamp reversed_at
+    text reversal_reason
     json meta
     bigint related_id
+    string related_type
+    timestamp posted_at
     timestamp created_at
   }
 
@@ -631,12 +638,28 @@ classDiagram
 -   **Stock**
     -   Propiedades: `id`, `inventory_location_id`, `item_variant_id`, `on_hand`, `reserved`.
     -   Acciones: `adjust(delta)` para restar/sumar existencias (llamado desde servicios de movimientos).
--   **StockMovement**
-    -   Propiedades: `id`, `from_location_id`, `to_location_id`, `item_variant_id`, `qty`, `reason`, `meta`, `related_id`, `created_at`.
-    -   Acciones: `post()` confirma y aplica el movimiento; `reverse(reason)` genera reversos controlados.
--   **StockMovementLine**
-    -   Propiedades: `id`, `stock_movement_id`, `item_variant_id`, `uom_id`, `qty`, `base_qty`, `conversion_factor`, `meta`.
-    -   Actúa como detalle del movimiento para soportar múltiples líneas y conversiones.
+-   **StockMovement** — asiento del libro mayor de stock, solo-anexar (**contrato de línea única**, ver §4.3).
+    -   Propiedades: `id`, `from_location_id`, `to_location_id`, `item_variant_id`, `qty`, `reason`,
+        `status`, `meta`, `related_id`, `related_type`, `reverses_stock_movement_id`,
+        `reversed_by_user_id`, `reversed_at`, `reversal_reason`, `posted_at`, `created_at`.
+    -   El encabezado es la única fuente de verdad de la Variante y la cantidad base movida; un
+        movimiento `POSTED` es inmutable y no eliminable (`ImmutableStockMovementException` ante
+        cualquier edición/borrado), y su `qty` lleva un CHECK `> 0`.
+    -   Acciones: `assertContractInvariants()` valida cantidad positiva, la forma origen/destino según
+        `reason` y las transiciones de estado (`DRAFT → POSTED → REVERSED` únicamente).
+        `StockMovementReverser::reverse($movimiento, $userId, $motivo)` registra un movimiento
+        compensatorio inmutable y causalmente enlazado (dirección espejo, misma qty/Variante), marca
+        el original como `REVERSED` con `reversed_by/at/reason` y —mediante un
+        `reverses_stock_movement_id` **UNIQUE** más una revalidación de estado bajo bloqueo— garantiza
+        que el saldo se restaura **exactamente una vez**. Un reverso imposible (stock ya consumido por
+        debajo del monto movido) lanza `StockMovementReversalBoundaryException` y no persiste nada.
+-   **StockMovementLine** — el desglose opcional de UOM/costo/precio de ese único movimiento.
+    -   Propiedades: `id`, `stock_movement_id`, `item_variant_id`, `uom_id`, `qty`, `base_qty`,
+        `conversion_factor`, `unit_cost`, `line_total`, campos de precio, `meta`.
+    -   A lo sumo **una** línea por movimiento (UNIQUE `stock_movement_id`); no puede expresar una
+        Variante ni un `base_qty` distintos del encabezado. Eliminar las columnas
+        `item_variant_id`/cantidad ahora redundantes de esta tabla se difiere al issue de
+        reconciliación de legado (#442).
 -   **StockCount / StockCountLine**
     -   Propiedades principales: `inventory_location_id`, `counted_at`, `status` y líneas con `qty`, `uom_id`, `base_qty`.
     -   Acciones: `finalize()` procesa diferencias contra `Stock`.
@@ -794,27 +817,44 @@ sequenceDiagram
 
 ### 4.3 Máquina de estados de movimientos
 
+`DRAFT → POSTED → REVERSED` es la **única** ruta legal — validada en la capa de modelo
+(`StockMovement::assertContractInvariants()` + guarda en `saving`/`deleting`). Un movimiento `POSTED`
+es inmutable y no eliminable; el único cambio que aún acepta es la transición `POSTED → REVERSED` que
+escribe el flujo de reverso. Las correcciones se hacen **registrando un nuevo movimiento
+compensatorio**, nunca editando el historial.
+
 ```mermaid
 stateDiagram-v2
-  [*] --> Draft
-  Draft --> Posted
-  Posted --> Reversed
-
-  state Posted {
-    [*] --> TRANSFER
-    [*] --> RETURN
-    [*] --> SALE
-    [*] --> ADJUSTMENT
-    [*] --> CONSUMPTION
-  }
+  [*] --> DRAFT
+  DRAFT --> POSTED : post
+  DRAFT --> [*] : descartar (borrado permitido solo en DRAFT)
+  POSTED --> REVERSED : StockMovementReverser::reverse()\n(registra un movimiento compensatorio enlazado)
+  REVERSED --> [*] : congelado (solo-anexar)
 ```
 
-**Reglas clave**
+**Contrato de línea única.** Un `StockMovement` describe exactamente una `ItemVariant` moviendo una
+`qty` base. El encabezado es dueño de la Variante + cantidad; la `StockMovementLine` opcional (a lo
+sumo una, UNIQUE `stock_movement_id`) solo añade el desglose de UOM/costo/precio y no puede
+contradecir al encabezado.
 
--   `SALE|CONSUMPTION`: solo `from_location_id` (resta stock).
--   `TRANSFER|RETURN`: ambos (`from`, `to`) — resta en origen, suma en destino.
--   `ADJUSTMENT`: una sola dirección (entrada o salida).
--   Validar `on_hand >= qty` al restar stock.
+**Reglas de origen / destino por `reason`** (las violaciones fallan atómicamente antes de cualquier escritura):
+
+| Forma | Reasons | `from` | `to` |
+|---|---|---|---|
+| Entrada | `OPENING_BALANCE`, `PURCHASE_RECEIPT` | ∅ | requerido |
+| Salida | `SALE`, `CONSUMPTION`, `PURCHASE_RECEIPT_REVERSAL` | requerido | ∅ |
+| Movimiento | `TRANSFER`, `RETURN` | requerido | requerido (≠ `from`) |
+| Un solo lado | `ADJUSTMENT`, `COUNT_VARIANCE` | exactamente uno de `from` / `to` | |
+
+Un **reverso compensatorio** conserva el `reason` de su original pero invierte su dirección, y se
+valida contra el original (misma Variante/qty, `from`/`to` intercambiados) en `StockMovementReverser`.
+
+**Otras reglas**
+
+-   `qty` es estrictamente `> 0` (guarda de modelo + CHECK de BD).
+-   Validar `on_hand >= qty` al restar stock; un reverso que dejaría `on_hand` bajo cero se rechaza
+    (`StockMovementReversalBoundaryException`) y no persiste nada.
+-   `reverses_stock_movement_id` es UNIQUE → un movimiento posteado se compensa **a lo sumo una vez**.
 -   Persistir `meta.cost` para auditoría de costo promedio.
 
 ---

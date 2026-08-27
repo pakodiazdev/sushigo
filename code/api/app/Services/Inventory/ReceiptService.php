@@ -234,64 +234,7 @@ class ReceiptService
             $lines = $receipt->lines()->with('presentation.itemVariant')->get();
 
             foreach ($lines as $line) {
-                $itemVariant = $line->presentation->itemVariant;
-
-                if (! $itemVariant) {
-                    throw new ReceiptVariantUnavailableException(
-                        "Receipt #{$receipt->id} references a Product Variant that is no longer available."
-                    );
-                }
-
-                $baseUnits = (float) $line->base_units_received;
-
-                $stock = Stock::where('inventory_location_id', $receipt->destination_location_id)
-                    ->where('item_variant_id', $itemVariant->id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (! $stock) {
-                    throw new ReceiptReversalBoundaryException(
-                        "Cannot reverse receipt #{$receipt->id}: no stock record remains for variant #{$itemVariant->id} at the destination location."
-                    );
-                }
-
-                try {
-                    $stock->decreaseOnHand($baseUnits);
-                } catch (InvalidStockBalanceException $e) {
-                    throw new ReceiptReversalBoundaryException(
-                        "Cannot reverse receipt #{$receipt->id}: stock has already been consumed below the received amount. {$e->getMessage()}"
-                    );
-                }
-
-                $movement = StockMovement::create([
-                    'from_location_id' => $receipt->destination_location_id,
-                    'to_location_id' => null,
-                    'item_variant_id' => $itemVariant->id,
-                    'user_id' => $userId,
-                    'qty' => $baseUnits,
-                    'reason' => StockMovement::REASON_PURCHASE_RECEIPT_REVERSAL,
-                    'status' => StockMovement::STATUS_POSTED,
-                    'reference' => $receipt->reference,
-                    'related_id' => $receipt->id,
-                    'related_type' => Receipt::class,
-                    'notes' => $reason,
-                    'meta' => [
-                        'receipt_line_id' => $line->id,
-                    ],
-                    'posted_at' => now(),
-                ]);
-
-                StockMovementLine::create([
-                    'stock_movement_id' => $movement->id,
-                    'item_variant_id' => $itemVariant->id,
-                    'uom_id' => $itemVariant->uom_id,
-                    'qty' => $baseUnits,
-                    'base_qty' => $baseUnits,
-                    'conversion_factor' => $line->presentation_factor,
-                    'unit_cost' => $line->effective_unit_cost,
-                    'line_total' => $line->net_acquisition_amount,
-                    'meta' => [],
-                ]);
+                $this->reverseReceiptLine($receipt, $line, $userId, $reason);
             }
 
             $receipt->update([
@@ -303,6 +246,122 @@ class ReceiptService
 
             return $this->freshReceipt($receipt);
         });
+    }
+
+    /**
+     * Reverse a single receipt line: unwind its base units from destination
+     * Stock and write immutable, causally-linked compensating StockMovement
+     * evidence, flipping the original PURCHASE_RECEIPT movement to REVERSED.
+     *
+     * @throws ReceiptVariantUnavailableException|ReceiptReversalBoundaryException|ReceiptAlreadyReversedException
+     */
+    private function reverseReceiptLine(Receipt $receipt, ReceiptLine $line, int $userId, ?string $reason): void
+    {
+        $itemVariant = $line->presentation->itemVariant;
+
+        if (! $itemVariant) {
+            throw new ReceiptVariantUnavailableException(
+                "Receipt #{$receipt->id} references a Product Variant that is no longer available."
+            );
+        }
+
+        $baseUnits = (float) $line->base_units_received;
+
+        $originalMovement = $this->lockReversibleReceiptMovement($receipt, $line, $itemVariant->id);
+
+        $stock = Stock::where('inventory_location_id', $receipt->destination_location_id)
+            ->where('item_variant_id', $itemVariant->id)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $stock) {
+            throw new ReceiptReversalBoundaryException(
+                "Cannot reverse receipt #{$receipt->id}: no stock record remains for variant #{$itemVariant->id} at the destination location."
+            );
+        }
+
+        try {
+            $stock->decreaseOnHand($baseUnits);
+        } catch (InvalidStockBalanceException $e) {
+            throw new ReceiptReversalBoundaryException(
+                "Cannot reverse receipt #{$receipt->id}: stock has already been consumed below the received amount. {$e->getMessage()}"
+            );
+        }
+
+        $movement = StockMovement::create([
+            'from_location_id' => $receipt->destination_location_id,
+            'to_location_id' => null,
+            'item_variant_id' => $itemVariant->id,
+            'user_id' => $userId,
+            'qty' => $baseUnits,
+            'reason' => StockMovement::REASON_PURCHASE_RECEIPT_REVERSAL,
+            'status' => StockMovement::STATUS_POSTED,
+            'reference' => $receipt->reference,
+            'related_id' => $receipt->id,
+            'related_type' => Receipt::class,
+            'reverses_stock_movement_id' => $originalMovement->id,
+            'reversed_by_user_id' => null,
+            'notes' => $reason,
+            'meta' => [
+                'receipt_line_id' => $line->id,
+            ],
+            'posted_at' => now(),
+        ]);
+
+        $originalMovement->forceFill([
+            'status' => StockMovement::STATUS_REVERSED,
+            'reversed_at' => now(),
+            'reversed_by_user_id' => $userId,
+            'reversal_reason' => $reason,
+        ])->save();
+
+        StockMovementLine::create([
+            'stock_movement_id' => $movement->id,
+            'item_variant_id' => $itemVariant->id,
+            'uom_id' => $itemVariant->uom_id,
+            'qty' => $baseUnits,
+            'base_qty' => $baseUnits,
+            'conversion_factor' => $line->presentation_factor,
+            'unit_cost' => $line->effective_unit_cost,
+            'line_total' => $line->net_acquisition_amount,
+            'meta' => [],
+        ]);
+    }
+
+    /**
+     * Resolve and lock the posted PURCHASE_RECEIPT movement a line's reversal
+     * compensates, *before* any balance is touched, so an inconsistent audit
+     * state fails atomically (#438). Looked up regardless of status: if it was
+     * already reversed elsewhere (e.g. via the shared StockMovementReverser),
+     * reversing the receipt again would otherwise subtract the quantity a
+     * second time from unrelated stock and leave an unlinked compensation.
+     *
+     * @throws ReceiptReversalBoundaryException|ReceiptAlreadyReversedException
+     */
+    private function lockReversibleReceiptMovement(Receipt $receipt, ReceiptLine $line, int $itemVariantId): StockMovement
+    {
+        $originalMovement = StockMovement::query()
+            ->where('related_type', Receipt::class)
+            ->where('related_id', $receipt->id)
+            ->where('item_variant_id', $itemVariantId)
+            ->where('reason', StockMovement::REASON_PURCHASE_RECEIPT)
+            ->where('meta->receipt_line_id', $line->id)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $originalMovement) {
+            throw new ReceiptReversalBoundaryException(
+                "Cannot reverse receipt #{$receipt->id}: its posted stock movement for line #{$line->id} is missing."
+            );
+        }
+
+        if (! $originalMovement->isPosted()) {
+            throw new ReceiptAlreadyReversedException(
+                "Cannot reverse receipt #{$receipt->id}: its stock movement for line #{$line->id} has already been reversed."
+            );
+        }
+
+        return $originalMovement;
     }
 
     private function createLine(Receipt $receipt, ReceiptLineData $lineData): ReceiptLine
