@@ -58,7 +58,7 @@ class UpsertVariantReplenishmentPolicyController extends Controller
 
         $policy = VariantLocationReplenishmentPolicy::updateOrCreate(
             ['inventory_location_id' => $location->id, 'item_variant_id' => $variant->id],
-            [...$request->policyData(), 'meta' => $existing->meta ?? []],
+            [...$request->policyData(), 'meta' => $existing?->meta ?? []],
         );
 
         $policy->setRelation('inventoryLocation', $location);
