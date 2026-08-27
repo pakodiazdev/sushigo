@@ -9,11 +9,19 @@ const save = vi.fn()
 const clear = vi.fn()
 const startEditing = vi.fn()
 const cancelEditing = vi.fn()
-const hookState = vi.hoisted(() => ({ editingVariantId: null as string | null }))
+const hookState = vi.hoisted(() => ({
+  editingVariantId: null as string | null,
+  canManage: true,
+  editingPolicy: undefined as { notes: string | null } | undefined,
+  isEditingPolicyLoading: false,
+}))
 
 vi.mock('../../hooks/use-location-replenishment-policies', () => ({
   useLocationReplenishmentPolicies: () => ({
+    canManage: hookState.canManage,
     editingVariantId: hookState.editingVariantId,
+    editingPolicy: hookState.editingPolicy,
+    isEditingPolicyLoading: hookState.isEditingPolicyLoading,
     startEditing,
     cancelEditing,
     save,
@@ -45,6 +53,9 @@ describe('ReplenishmentPoliciesPanel', () => {
     cleanup()
     vi.clearAllMocks()
     hookState.editingVariantId = null
+    hookState.canManage = true
+    hookState.editingPolicy = undefined
+    hookState.isEditingPolicyLoading = false
   })
 
   it('shows an empty hint when there is no stock at the location', () => {
@@ -95,5 +106,45 @@ describe('ReplenishmentPoliciesPanel', () => {
     await waitFor(() =>
       expect(save).toHaveBeenCalledWith('v-1', { min_stock: 10, max_stock: 100, notes: null })
     )
+  })
+
+  it('seeds the editor with the resolved policy notes so Save does not blank them', async () => {
+    hookState.editingVariantId = 'v-1'
+    hookState.editingPolicy = { notes: 'Bar fridge only holds two crates' }
+    const { getByTestId } = render(
+      <ReplenishmentPoliciesPanel locationId="loc-1" items={[configured]} />
+    )
+    const row = getByTestId('replenishment-row-COLA-355')
+    fireEvent.click(within(row).getByRole('button', { name: 'Save' }))
+    await waitFor(() =>
+      expect(save).toHaveBeenCalledWith('v-1', {
+        min_stock: 10,
+        max_stock: 100,
+        notes: 'Bar fridge only holds two crates',
+      })
+    )
+  })
+
+  it('waits for the resolved policy before showing the editor for a configured row', () => {
+    hookState.editingVariantId = 'v-1'
+    hookState.isEditingPolicyLoading = true
+    const { getByTestId } = render(
+      <ReplenishmentPoliciesPanel locationId="loc-1" items={[configured]} />
+    )
+    const row = getByTestId('replenishment-row-COLA-355')
+    expect(within(row).getByText(/loading current policy/i)).toBeTruthy()
+    expect(within(row).queryByRole('button', { name: 'Save' })).toBeNull()
+  })
+
+  it('hides every write control from a viewer without stock.manage', () => {
+    hookState.canManage = false
+    const { getByTestId } = render(
+      <ReplenishmentPoliciesPanel locationId="loc-1" items={[configured]} />
+    )
+    const row = getByTestId('replenishment-row-COLA-355')
+    // the resolved threshold is still visible read-only
+    expect(within(row).getByText(/Reorder 10 · Ceiling 100/)).toBeTruthy()
+    expect(within(row).queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(within(row).queryByRole('button', { name: 'Clear' })).toBeNull()
   })
 })

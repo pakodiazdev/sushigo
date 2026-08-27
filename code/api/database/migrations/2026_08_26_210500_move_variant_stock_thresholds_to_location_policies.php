@@ -37,9 +37,10 @@ return new class extends Migration
             $table->decimal('max_stock', 15, 4)->default(0)->after('min_stock')->comment('Maximum stock alert level');
         });
 
-        // Best-effort restore: one value per variant, last policy wins. Rollback
-        // of a superseded design is inherently approximate — this just avoids
-        // leaving every variant at 0.
+        // Best-effort restore: collapse every location's policy for a variant
+        // back into one global pair using the max reorder point / max ceiling
+        // seen across its locations. Rollback of a superseded design is
+        // inherently approximate — this just avoids leaving every variant at 0.
         $rollups = DB::table('variant_location_replenishment_policies')
             ->whereNull('deleted_at')
             ->select('item_variant_id')

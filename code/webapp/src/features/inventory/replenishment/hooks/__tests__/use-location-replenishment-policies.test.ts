@@ -7,13 +7,18 @@ import { useLocationReplenishmentPolicies } from '../use-location-replenishment-
 
 const showSuccess = vi.fn()
 const showError = vi.fn()
+const canAccess = vi.hoisted(() => ({ value: true }))
 
 vi.mock('@/components/ui/toast-context', () => ({
   useToast: () => ({ showSuccess, showError }),
 }))
 
+vi.mock('@/hooks/use-can-access', () => ({
+  useCanAccess: () => canAccess.value,
+}))
+
 vi.mock('../../api/replenishment-api', () => ({
-  replenishmentPolicyApi: { upsert: vi.fn(), remove: vi.fn() },
+  replenishmentPolicyApi: { upsert: vi.fn(), remove: vi.fn(), getResolved: vi.fn() },
 }))
 
 import { replenishmentPolicyApi } from '../../api/replenishment-api'
@@ -27,7 +32,13 @@ function wrapper() {
 }
 
 describe('useLocationReplenishmentPolicies', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    canAccess.value = true
+    vi.mocked(replenishmentPolicyApi.getResolved).mockResolvedValue({
+      data: { status: 200, data: { notes: 'existing note' }, meta: null },
+    } as never)
+  })
 
   it('tracks which variant row is being edited', () => {
     const { result } = renderHook(() => useLocationReplenishmentPolicies('loc-1'), { wrapper: wrapper() })
@@ -37,6 +48,24 @@ describe('useLocationReplenishmentPolicies', () => {
     expect(result.current.editingVariantId).toBe('var-1')
     act(() => result.current.cancelEditing())
     expect(result.current.editingVariantId).toBeNull()
+  })
+
+  it('does not enter edit mode for a viewer without stock.manage', () => {
+    canAccess.value = false
+    const { result } = renderHook(() => useLocationReplenishmentPolicies('loc-1'), { wrapper: wrapper() })
+
+    expect(result.current.canManage).toBe(false)
+    act(() => result.current.startEditing('var-1'))
+    expect(result.current.editingVariantId).toBeNull()
+  })
+
+  it('exposes the resolved policy for the row being edited', async () => {
+    const { result } = renderHook(() => useLocationReplenishmentPolicies('loc-1'), { wrapper: wrapper() })
+
+    act(() => result.current.startEditing('var-1'))
+
+    await waitFor(() => expect(replenishmentPolicyApi.getResolved).toHaveBeenCalledWith('loc-1', 'var-1'))
+    await waitFor(() => expect(result.current.editingPolicy?.notes).toBe('existing note'))
   })
 
   it('saves via upsert and clears the editing row on success', async () => {

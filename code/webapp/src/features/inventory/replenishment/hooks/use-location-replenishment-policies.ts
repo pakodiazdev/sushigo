@@ -1,21 +1,35 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-context'
+import { useCanAccess } from '@/hooks/use-can-access'
 import { getApiErrorMessage } from '@/lib/api-error'
 import { replenishmentPolicyApi } from '../api/replenishment-api'
 import { replenishmentQueryKeys } from '../api/query-keys'
-import type { ReplenishmentPolicyPayload } from '../types'
+import type { ReplenishmentPolicy, ReplenishmentPolicyPayload } from '../types'
 
 /**
- * Owns the write side of per-location replenishment policies (#439): which row
- * is being edited, and the upsert / clear mutations. Reads come from whatever
+ * Owns the write side of per-location replenishment policies (#439): whether the
+ * viewer may write at all, which row is being edited, the resolved policy for
+ * that row (so an edit seeds every field, `notes` included, instead of blanking
+ * it), and the upsert / clear mutations. The list of rows comes from whatever
  * Stock/Location view embeds the panel (the Stock Dashboard's by-location
  * summary), so this hook only invalidates stock queries on success.
  */
 export function useLocationReplenishmentPolicies(locationId: string) {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
+  const canManage = useCanAccess({ permission: 'stock.manage' })
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null)
+
+  // The by-location summary carries the resolved min/max but not `notes`; fetch
+  // the full policy for the row being edited so Save never erases an existing
+  // note (Codex review on PR #526).
+  const editingPolicyQuery = useQuery({
+    queryKey: [...replenishmentQueryKeys.forLocation(locationId), 'resolved', editingVariantId],
+    queryFn: () => replenishmentPolicyApi.getResolved(locationId, editingVariantId as string),
+    enabled: canManage && editingVariantId !== null,
+  })
+  const editingPolicy: ReplenishmentPolicy | undefined = editingPolicyQuery.data?.data.data
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: replenishmentQueryKeys.forLocation(locationId) })
@@ -49,8 +63,11 @@ export function useLocationReplenishmentPolicies(locationId: string) {
   })
 
   return {
+    canManage,
     editingVariantId,
-    startEditing: (variantId: string) => setEditingVariantId(variantId),
+    editingPolicy,
+    isEditingPolicyLoading: editingPolicyQuery.isLoading,
+    startEditing: (variantId: string) => canManage && setEditingVariantId(variantId),
     cancelEditing: () => setEditingVariantId(null),
     save: (variantId: string, data: ReplenishmentPolicyPayload) =>
       upsertMutation.mutate({ variantId, data }),

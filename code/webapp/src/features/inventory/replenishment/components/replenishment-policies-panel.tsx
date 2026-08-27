@@ -1,4 +1,4 @@
-import { AlertTriangle, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, Loader2, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useLocationReplenishmentPolicies } from '../hooks/use-location-replenishment-policies'
 import { ReplenishmentPolicyForm } from './replenishment-policy-form'
@@ -22,11 +22,22 @@ interface ReplenishmentPoliciesPanelProps {
  * Minimal per-Inventory-Location replenishment management (#439), rendered in
  * the Stock Dashboard's per-location detail. Each variant that has stock here
  * gets an inline reorder-point / ceiling editor; clearing a threshold removes
- * the policy so the pair stops being eligible for low-stock alerts.
+ * the policy so the pair stops being eligible for low-stock alerts. Write
+ * controls are only shown to users with `stock.manage`.
  */
 export function ReplenishmentPoliciesPanel({ locationId, items }: ReplenishmentPoliciesPanelProps) {
-  const { editingVariantId, startEditing, cancelEditing, save, clear, isSaving, isClearing } =
-    useLocationReplenishmentPolicies(locationId)
+  const {
+    canManage,
+    editingVariantId,
+    editingPolicy,
+    isEditingPolicyLoading,
+    startEditing,
+    cancelEditing,
+    save,
+    clear,
+    isSaving,
+    isClearing,
+  } = useLocationReplenishmentPolicies(locationId)
 
   return (
     <div className="border-t border-gray-200 pt-4">
@@ -44,6 +55,7 @@ export function ReplenishmentPoliciesPanel({ locationId, items }: ReplenishmentP
           {items.map((item) => {
             const isConfigured = item.min_stock !== null || item.max_stock !== null
             const isEditing = editingVariantId === item.item_variant_id
+            const editorReady = !isConfigured || !isEditingPolicyLoading
 
             return (
               <div
@@ -71,35 +83,45 @@ export function ReplenishmentPoliciesPanel({ locationId, items }: ReplenishmentP
                           ? `Reorder ${item.min_stock ?? 0} · Ceiling ${item.max_stock ?? 0}`
                           : 'No threshold set'}
                       </span>
-                      <Button size="sm" variant="outline" onClick={() => startEditing(item.item_variant_id)}>
-                        {isConfigured ? 'Edit' : 'Set'}
-                      </Button>
-                      {isConfigured && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={isClearing}
-                          onClick={() => clear(item.item_variant_id)}
-                        >
-                          Clear
-                        </Button>
+                      {canManage && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => startEditing(item.item_variant_id)}>
+                            {isConfigured ? 'Edit' : 'Set'}
+                          </Button>
+                          {isConfigured && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={isClearing}
+                              onClick={() => clear(item.item_variant_id)}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
                 </div>
 
-                {isEditing && (
+                {isEditing && canManage && (
                   <div className="mt-3">
-                    <ReplenishmentPolicyForm
-                      defaultValues={{
-                        min_stock: item.min_stock ?? 0,
-                        max_stock: item.max_stock ?? 0,
-                        notes: '',
-                      }}
-                      isSaving={isSaving}
-                      onCancel={cancelEditing}
-                      onSubmit={(values) => save(item.item_variant_id, values)}
-                    />
+                    {editorReady ? (
+                      <ReplenishmentPolicyForm
+                        defaultValues={{
+                          min_stock: item.min_stock ?? 0,
+                          max_stock: item.max_stock ?? 0,
+                          notes: editingPolicy?.notes ?? '',
+                        }}
+                        isSaving={isSaving}
+                        onCancel={cancelEditing}
+                        onSubmit={(values) => save(item.item_variant_id, values)}
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Loading current policy…
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
