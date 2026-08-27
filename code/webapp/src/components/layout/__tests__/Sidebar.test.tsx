@@ -174,10 +174,10 @@ describe('Sidebar — disabled items render greyed-out span', () => {
 
   it('renders disabled items with opacity class', () => {
     mockResolveAccess.mockImplementation((item: { label?: string }) =>
-      item.label === 'Stock Dashboard' ? 'disabled' : 'show',
+      item.label === 'Inventario' ? 'disabled' : 'show',
     )
     render(<Sidebar />)
-    const text = screen.getByText('Stock Dashboard')
+    const text = screen.getByText('Inventario')
     const disabledSpan = text.closest('[aria-disabled="true"]')
     expect(disabledSpan).toBeDefined()
     expect(disabledSpan?.className).toContain('opacity-50')
@@ -215,7 +215,7 @@ describe('Sidebar — submenu toggle', () => {
     render(<Sidebar />)
     const inventarioBtn = screen.getByText('Inventario').closest('button')!
     fireEvent.click(inventarioBtn)
-    expect(screen.getByText('Items')).toBeDefined()
+    expect(screen.getByText('Insumos')).toBeDefined()
     expect(screen.getByText('Ubicaciones')).toBeDefined()
   })
 
@@ -278,14 +278,22 @@ describe('Sidebar — admin user sees all sections', () => {
     expect(screen.getByText('Asistencia')).toBeDefined()
     expect(screen.getByText('Inventario')).toBeDefined()
     expect(screen.getByText('Caja')).toBeDefined()
-    expect(screen.getByText('Stock Dashboard')).toBeDefined()
     expect(screen.getByText('Configuración')).toBeDefined()
+  })
+
+  it('exposes Existencias (stock dashboard) as an Inventario sub-item, not a top-level entry', () => {
+    mockCan.mockImplementation((permission: string) => permission === 'stock.view')
+    render(<Sidebar />)
+    expect(screen.queryByText('Stock Dashboard')).toBeNull()
+    const inventarioBtn = screen.getByText('Inventario').closest('button')!
+    fireEvent.click(inventarioBtn)
+    expect(screen.getByText('Existencias')).toBeDefined()
   })
 })
 
 describe('Sidebar — manager sees Empleados & Asistencia only', () => {
   beforeEach(() =>
-    setupPermissions(['Empleados', 'Asistencia'], ['Inventario', 'Caja', 'Stock Dashboard', 'Configuración']),
+    setupPermissions(['Empleados', 'Asistencia'], ['Inventario', 'Caja', 'Configuración']),
   )
 
   it('shows Empleados and Asistencia', () => {
@@ -301,14 +309,18 @@ describe('Sidebar — manager sees Empleados & Asistencia only', () => {
 })
 
 describe('Sidebar — inventory-manager sees inventory sections', () => {
-  beforeEach(() =>
-    setupPermissions(['Inventario', 'Stock Dashboard'], ['Empleados', 'Asistencia', 'Caja', 'Configuración']),
-  )
+  beforeEach(() => {
+    setupPermissions(['Inventario'], ['Empleados', 'Asistencia', 'Caja', 'Configuración'])
+    mockCan.mockImplementation((permission: string) =>
+      permission === 'stock.view' || permission === 'items.view',
+    )
+  })
 
-  it('shows Inventario and Stock Dashboard', () => {
+  it('shows Inventario with Existencias reachable as a sub-item', () => {
     render(<Sidebar />)
     expect(screen.getByText('Inventario')).toBeDefined()
-    expect(screen.getByText('Stock Dashboard')).toBeDefined()
+    fireEvent.click(screen.getByText('Inventario').closest('button')!)
+    expect(screen.getByText('Existencias')).toBeDefined()
   })
 
   it('hides Empleados and Configuración', () => {

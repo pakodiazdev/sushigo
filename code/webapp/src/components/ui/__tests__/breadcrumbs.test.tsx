@@ -6,7 +6,7 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 // Mock TanStack Router
 vi.mock('@tanstack/react-router', () => ({
   useRouterState: () => ({
-    location: { pathname: '/inventory/items' },
+    location: { pathname: '/inventario/insumos' },
   }),
   Link: ({ to, children, className, 'aria-label': ariaLabel }: {
     to: string
@@ -96,11 +96,11 @@ describe('Breadcrumbs', () => {
 
   describe('auto-generated from route', () => {
     it('auto-generates breadcrumbs from current path when no items provided', () => {
-      // useRouterState mocked to return /inventory/items
+      // useRouterState mocked to return /inventario/insumos
       const { getByText } = render(<Breadcrumbs />)
-      // Should generate: Inventario > Items
+      // Should generate: Inventario > Insumos
       expect(getByText('Inventario')).toBeDefined()
-      expect(getByText('Items')).toBeDefined()
+      expect(getByText('Insumos')).toBeDefined()
     })
 
     it('shows known route labels from mapping', () => {

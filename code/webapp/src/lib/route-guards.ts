@@ -2,6 +2,33 @@ import { redirect } from '@tanstack/react-router'
 import { useAuthStore, checkIsAdmin, checkIsSuperAdmin } from '@/stores/auth.store'
 
 /**
+ * Factory that returns a `beforeLoad` which unconditionally forwards to `to`.
+ * Used by the redirect-only stubs that keep released legacy browser URLs alive
+ * after a route is renamed (e.g. the English `/inventory/*` paths → the
+ * canonical Spanish `/inventario/*` tree, #441).
+ */
+export function redirectTo(to: string) {
+  return () => {
+    throw redirect({ to })
+  }
+}
+
+/**
+ * Factory that returns a `beforeLoad` forwarding to `whenAllowed` if the user
+ * holds `permission`, otherwise to `fallback`. Used by section-landing routes
+ * that have no page of their own (e.g. `/inventario`) so a user is never
+ * dropped on a sub-route their permissions can't open — the `fallback` target
+ * carries its own guard, which still redirects to `/unauthorized` if the user
+ * can't open that either.
+ */
+export function redirectToFirstAllowed(permission: string, whenAllowed: string, fallback: string) {
+  return () => {
+    const { can } = useAuthStore.getState()
+    throw redirect({ to: can(permission) ? whenAllowed : fallback })
+  }
+}
+
+/**
  * Factory that returns a `beforeLoad` function requiring at least one of the given permissions.
  * Uses `getState()` (non-reactive) — safe to call synchronously in beforeLoad.
  * admin and super-admin bypass all permission checks (handled by `can()`).

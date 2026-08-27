@@ -13,3 +13,8 @@ export { VariantDetails } from './variant-details'
 // Stock Movement Components
 export { OpeningBalanceForm } from './opening-balance-form'
 export { StockOutForm } from './stock-out-form'
+
+// Shared list-screen scaffolding
+export { CrudSlidePanels } from './crud-slide-panels'
+export { StatusFilterSelect } from './status-filter-select'
+export { InventoryListLayout } from './inventory-list-layout'

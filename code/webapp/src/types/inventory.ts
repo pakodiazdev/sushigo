@@ -250,35 +250,75 @@ export interface ReplenishmentPolicy {
   updated_at?: string | null
 }
 
-// Stock Movement Types
+// Stock Movement Types — aligned with the normalized backend contract from #438
+// (App\Models\StockMovement). The legacy `type` axis was dropped: a movement's
+// nature is expressed by `reason` plus the from/to location pair. `status` is
+// DRAFT → POSTED, and POSTED history is append-only; a POSTED movement can be
+// compensated at most once by a reversal movement that points back at it via
+// `reverses_stock_movement_id` and flips the original's status to REVERSED.
+export type StockMovementReason =
+  | 'TRANSFER'
+  | 'RETURN'
+  | 'SALE'
+  | 'ADJUSTMENT'
+  | 'CONSUMPTION'
+  | 'OPENING_BALANCE'
+  | 'COUNT_VARIANCE'
+  | 'PURCHASE_RECEIPT'
+  | 'PURCHASE_RECEIPT_REVERSAL'
+
+export type StockMovementStatus = 'DRAFT' | 'POSTED' | 'REVERSED'
+
 export interface StockMovement {
+  /** ULID public identifier — the numeric primary key is never serialized (SerializesPublicIdAsId). */
   id: number
-  type: 'IN' | 'OUT' | 'TRANSFER' | 'ADJUSTMENT'
-  reason: 'OPENING_BALANCE' | 'PURCHASE' | 'SALE' | 'CONSUMPTION' | 'TRANSFER' | 'ADJUSTMENT' | 'RETURN'
-  from_location_id?: number
-  to_location_id?: number
-  reference_number?: string
-  notes?: string
-  status: 'DRAFT' | 'COMPLETED' | 'CANCELLED'
+  from_location_id: number | null
+  to_location_id: number | null
+  item_variant_id: number | null
+  user_id: number | null
+  qty: number
+  reason: StockMovementReason
+  status: StockMovementStatus
+  reference: string | null
+  /** Polymorphic origin (e.g. the PurchaseReceipt that posted this movement). */
+  related_id: number | null
+  related_type: string | null
+  /** Set only on a compensating reversal: the POSTED movement this row reverses. */
+  reverses_stock_movement_id: number | null
+  /** Set on the original movement once a reversal compensates it. */
+  reversed_by_user_id: number | null
+  reversed_at: string | null
+  reversal_reason: string | null
+  notes: string | null
+  meta: Record<string, unknown> | null
+  posted_at: string | null
+  /** Single-line contract (#438): at most one line, agreeing with the header. */
   lines?: StockMovementLine[]
   from_location?: InventoryLocation
   to_location?: InventoryLocation
+  item_variant?: ItemVariant
   created_at?: string
   updated_at?: string
 }
 
 export interface StockMovementLine {
+  /** ULID public identifier (SerializesPublicIdAsId). */
   id: number
   stock_movement_id: number
   item_variant_id: number
-  quantity: number
   uom_id: number
-  unit_cost?: number
-  total_cost?: number
-  sale_price?: number
-  sale_total?: number
-  profit_margin?: number
-  profit_total?: number
+  /** Quantity in the transaction UOM. */
+  qty: number
+  /** Quantity converted to the variant's base UOM — must match the header `qty`. */
+  base_qty: number
+  conversion_factor: number
+  unit_cost: number | null
+  line_total: number | null
+  sale_price: number | null
+  sale_total: number | null
+  profit_margin: number | null
+  profit_total: number | null
+  meta: Record<string, unknown> | null
   item_variant?: ItemVariant
   uom?: UnitOfMeasure
 }

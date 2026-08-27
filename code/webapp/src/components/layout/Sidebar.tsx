@@ -3,7 +3,6 @@ import {
     Package,
     Users,
     ShoppingCart,
-    BarChart3,
     Settings,
     ChevronLeft,
     ChevronRight,
@@ -88,13 +87,17 @@ const menuItems: MenuItem[] = [
         requiredPermission: 'items.view',
         accessMode: 'hidden',
         subItems: [
-            { label: 'Productos', path: '/inventory/products' },
+            // Existencias (Stock dashboard) keeps its own stock.view gate so a
+            // stock-only user still reaches it — the parent stays visible via
+            // resolveItemAccess when a sub-item is independently accessible.
+            { label: 'Existencias', path: '/inventario/existencias', requiredPermission: 'stock.view' },
+            { label: 'Productos', path: '/inventario/productos' },
+            { label: 'Insumos', path: '/inventario/insumos' },
+            { label: 'Variantes', path: '/inventario/variantes' },
+            { label: 'Ubicaciones', path: '/inventario/ubicaciones' },
             { label: 'Proveedores', path: '/inventario/proveedores', requiredPermission: 'suppliers.view' },
-            { label: 'Ubicaciones', path: '/inventory/locations' },
-            { label: 'Items', path: '/inventory/items' },
-            { label: 'Variantes', path: '/inventory/item-variants' },
-            { label: 'Listas de Precios', path: '/inventario/listas-de-precios', requiredPermission: 'price_lists.view' },
             { label: 'Recepciones de Compra', path: '/inventario/recepciones-de-compra', requiredPermission: ['receipts.view', 'receipts.manage'] },
+            { label: 'Listas de Precios', path: '/inventario/listas-de-precios', requiredPermission: 'price_lists.view' },
         ]
     },
     {
@@ -107,13 +110,6 @@ const menuItems: MenuItem[] = [
             { label: 'Terminales', path: '/cash/terminals' },
             { label: 'Cuentas Bancarias', path: '/cash/bank-accounts' },
         ]
-    },
-    {
-        icon: BarChart3,
-        label: 'Stock Dashboard',
-        path: '/stock-dashboard',
-        requiredPermission: 'stock.view',
-        accessMode: 'hidden',
     },
     {
         icon: Settings,

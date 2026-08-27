@@ -56,7 +56,7 @@ export function useInventoryLocationsSelect(enabled = true) {
 /**
  * Hook to fetch items for use in select dropdowns.
  *
- * Only feeds the legacy global Variant page (`/inventory/item-variants`) — excludes PRODUCTO-type
+ * Only feeds the legacy global Variant page (`/inventario/variantes`) — excludes PRODUCTO-type
  * items since Product variants must be created via `/inventory/products/{id}/variants` instead
  * (#425), never through this page (#429).
  */
