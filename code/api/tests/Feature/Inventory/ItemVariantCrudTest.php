@@ -65,8 +65,6 @@ class ItemVariantCrudTest extends InventoryTestCase
             'code' => 'SALM-1KG',
             'name' => 'Salmon 1kg Pack',
             'uom_id' => $this->uomKg->id,
-            'min_stock' => 5,
-            'max_stock' => 100,
             'notes' => 'Fresh salmon fillet',
         ]);
 
@@ -77,11 +75,14 @@ class ItemVariantCrudTest extends InventoryTestCase
                 'name' => 'Salmon 1kg Pack',
             ]);
 
+        // Replenishment thresholds moved to the per-location policy (#439) —
+        // the catalog response must not carry them any more.
+        $response->assertJsonMissingPath('data.min_stock');
+        $response->assertJsonMissingPath('data.max_stock');
+
         $this->assertDatabaseHas('item_variants', [
             'item_id' => $item->id,
             'code' => 'SALM-1KG',
-            'min_stock' => 5,
-            'max_stock' => 100,
             'avg_unit_cost' => 0, // Initialized to 0
             'last_unit_cost' => 0,
         ]);
@@ -149,24 +150,25 @@ class ItemVariantCrudTest extends InventoryTestCase
     }
 
     #[Test]
-    public function it_validates_min_max_stock()
+    public function it_ignores_legacy_replenishment_fields_on_create()
     {
-        // Arrange
+        // #439: the catalog no longer knows about min_stock/max_stock. Sending
+        // them (even an "invalid" max < min pair) is simply ignored — no 422,
+        // no column written.
         $item = $this->createItem();
 
-        // Act: max_stock < min_stock
         $response = $this->postJson('/api/v1/item-variants', [
             'item_id' => $item->id,
             'code' => 'TEST-VAR',
             'name' => 'Test Variant',
             'uom_id' => $this->uomKg->id,
             'min_stock' => 100,
-            'max_stock' => 50, // Invalid: max < min
+            'max_stock' => 50,
         ]);
 
-        // Assert
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['max_stock']);
+        $response->assertStatus(201);
+        $response->assertJsonMissingPath('data.min_stock');
+        $response->assertJsonMissingPath('data.max_stock');
     }
 
     #[Test]
@@ -219,8 +221,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         // Act
         $response = $this->putJson("/api/v1/item-variants/{$variant->public_id}", [
             'name' => 'Updated Name',
-            'min_stock' => 10,
-            'max_stock' => 200,
         ]);
 
         // Assert
@@ -232,8 +232,6 @@ class ItemVariantCrudTest extends InventoryTestCase
         $this->assertDatabaseHas('item_variants', [
             'id' => $variant->id,
             'name' => 'Updated Name',
-            'min_stock' => 10,
-            'max_stock' => 200,
         ]);
     }
 

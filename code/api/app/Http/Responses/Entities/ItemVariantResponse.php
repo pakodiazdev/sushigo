@@ -19,8 +19,6 @@ namespace App\Http\Responses\Entities;
  *     @OA\Property(property="last_unit_cost", type="number", format="float", example=25.50, description="Legacy last acquisition cost — read-only, no longer written by application code (see #434); Stock.weighted_avg_cost per Inventory Location is the source of truth"),
  *     @OA\Property(property="avg_unit_cost", type="number", format="float", example=24.80, description="Legacy weighted average cost — read-only, no longer written by application code (see #434); Stock.weighted_avg_cost per Inventory Location is the source of truth"),
  *     @OA\Property(property="sale_price", type="number", format="float", example=35.00, description="Default sale price"),
- *     @OA\Property(property="min_stock", type="number", format="float", example=10.00, description="Minimum stock alert level"),
- *     @OA\Property(property="max_stock", type="number", format="float", example=100.00, description="Maximum stock level"),
  *     @OA\Property(property="is_active", type="boolean", example=true, description="Active status"),
  *     @OA\Property(property="uom", ref="#/components/schemas/UnitOfMeasureResponse", description="Base UOM details"),
  *     @OA\Property(property="item", ref="#/components/schemas/ItemResponse", description="Parent item details"),

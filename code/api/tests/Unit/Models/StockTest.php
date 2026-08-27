@@ -54,7 +54,7 @@ class StockTest extends TestCase
 
         $variant = ItemVariant::create([
             'item_id' => $item->id, 'code' => 'VAR-'.uniqid(), 'name' => 'Test Variant',
-            'uom_id' => $uom->id, 'min_stock' => 0, 'max_stock' => 1000,
+            'uom_id' => $uom->id,
             'avg_unit_cost' => 0, 'last_unit_cost' => 0, 'is_active' => true,
         ]);
 

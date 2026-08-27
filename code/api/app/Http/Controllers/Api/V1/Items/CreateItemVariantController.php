@@ -50,8 +50,6 @@ class CreateItemVariantController extends Controller
             'last_unit_cost' => 0,
             'avg_unit_cost' => 0,
             'sale_price' => $request->sale_price,
-            'min_stock' => $request->input('min_stock', 0),
-            'max_stock' => $request->input('max_stock', 0),
             'is_active' => $request->input('is_active', true),
             'meta' => [],
         ]);

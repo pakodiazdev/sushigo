@@ -102,14 +102,12 @@ describe('Inventory Types', () => {
                 code: 'VAR-001',
                 name: '1kg Bag',
                 uom_id: 1,
-                min_stock: 5,
-                max_stock: 100,
                 avg_unit_cost: 25.50,
                 last_unit_cost: 26.00,
                 is_active: true,
             }
-            expect(variant.min_stock).toBe(5)
-            expect(variant.max_stock).toBe(100)
+            expect(variant.code).toBe('VAR-001')
+            expect(variant.avg_unit_cost).toBe(25.50)
         })
     })
 
@@ -123,6 +121,9 @@ describe('Inventory Types', () => {
                 reserved: 10,
                 available: 40,
                 weighted_avg_cost: 25.00,
+                min_stock: null,
+                max_stock: null,
+                is_low_stock: false,
             }
             expect(stock.available).toBe(40)
             expect(stock.on_hand - stock.reserved).toBe(40)
@@ -137,6 +138,9 @@ describe('Inventory Types', () => {
                 reserved: 25,
                 available: 75,
                 weighted_avg_cost: 10.00,
+                min_stock: null,
+                max_stock: null,
+                is_low_stock: false,
             }
             expect(stock.on_hand - stock.reserved).toBe(stock.available)
         })

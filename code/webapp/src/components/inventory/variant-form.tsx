@@ -16,14 +16,9 @@ const variantSchema = z.object({
   code: z.string().min(2, 'Code must be at least 2 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   uom_id: z.number().min(1, 'This field is required'),
-  min_stock: z.number().min(0, 'Min stock cannot be negative'),
-  max_stock: z.number().min(0, 'Max stock cannot be negative'),
   avg_unit_cost: z.number(),
   last_unit_cost: z.number().min(0, 'Cost cannot be negative'),
   is_active: z.boolean(),
-}).refine((data) => data.max_stock >= data.min_stock, {
-  message: 'Max stock must be greater than min stock',
-  path: ['max_stock'],
 })
 
 type VariantFormValues = z.infer<typeof variantSchema>
@@ -55,8 +50,6 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
       code: variant?.code || '',
       name: variant?.name || '',
       uom_id: variant?.uom_id || 0,
-      min_stock: variant?.min_stock || 0,
-      max_stock: variant?.max_stock || 100,
       avg_unit_cost: variant?.avg_unit_cost || 0,
       last_unit_cost: variant?.last_unit_cost || 0,
       is_active: variant?.is_active ?? true,
@@ -77,8 +70,6 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
     code: errors.code?.message || validationErrors.code,
     name: errors.name?.message || validationErrors.name,
     uom_id: errors.uom_id?.message || validationErrors.uom_id,
-    min_stock: errors.min_stock?.message || validationErrors.min_stock,
-    max_stock: errors.max_stock?.message || validationErrors.max_stock,
     last_unit_cost: errors.last_unit_cost?.message || validationErrors.last_unit_cost,
   }
 
@@ -170,36 +161,8 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             </Select>
           </FormField>
 
-          {/* Stock Levels */}
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              label="Min Stock Level"
-              required
-              error={allErrors.min_stock}
-            >
-              <Input
-                type="number"
-                {...register('min_stock', { valueAsNumber: true })}
-                min="0"
-                step="0.01"
-                error={!!allErrors.min_stock}
-              />
-            </FormField>
-
-            <FormField
-              label="Max Stock Level"
-              required
-              error={allErrors.max_stock}
-            >
-              <Input
-                type="number"
-                {...register('max_stock', { valueAsNumber: true })}
-                min="0"
-                step="0.01"
-                error={!!allErrors.max_stock}
-              />
-            </FormField>
-          </div>
+          {/* Replenishment thresholds are configured per Inventory Location (#439) —
+              see the Stock Dashboard's per-location "Replenishment thresholds" panel. */}
 
           {/* Cost */}
           <FormField

@@ -27,8 +27,6 @@ class ItemVariant extends Model
         'last_unit_cost',
         'avg_unit_cost',
         'sale_price',
-        'min_stock',
-        'max_stock',
         'is_active',
         'meta',
     ];
@@ -39,8 +37,6 @@ class ItemVariant extends Model
         'last_unit_cost' => 'decimal:4',
         'avg_unit_cost' => 'decimal:4',
         'sale_price' => 'decimal:4',
-        'min_stock' => 'decimal:4',
-        'max_stock' => 'decimal:4',
         'is_active' => 'boolean',
         'meta' => 'array',
     ];
@@ -86,6 +82,16 @@ class ItemVariant extends Model
     }
 
     /**
+     * Get the per-Inventory-Location replenishment policies for this variant
+     * (#439) — the location-scoped replacement for the former global
+     * min_stock / max_stock columns.
+     */
+    public function replenishmentPolicies(): HasMany
+    {
+        return $this->hasMany(VariantLocationReplenishmentPolicy::class);
+    }
+
+    /**
      * Get the effective-dated price-list entries for this variant (#435).
      * Resolution against these — never this model's own sale_price — is the
      * authoritative source of a Variant's price. See PriceResolutionService.
@@ -104,13 +110,13 @@ class ItemVariant extends Model
     }
 
     /**
-     * Scope to filter variants needing restocking
+     * Scope to variants that are low on stock at at least one location, judged
+     * against the resolved per-location replenishment policy (#439) rather than
+     * a single global threshold.
      */
     public function scopeLowStock($query)
     {
-        return $query->whereHas('stock', function ($q) {
-            $q->whereRaw('on_hand <= min_stock');
-        });
+        return $query->whereHas('stock', fn ($q) => $q->lowStock());
     }
 
     /**

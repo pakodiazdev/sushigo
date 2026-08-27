@@ -94,15 +94,6 @@ export function ItemVariantsPage() {
       ),
     },
     {
-      key: 'min_stock',
-      header: 'Min/Max Stock',
-      render: (variant) => (
-        <div className="text-sm text-muted-foreground">
-          {Number(variant.min_stock || 0)} / {Number(variant.max_stock || 0)}
-        </div>
-      ),
-    },
-    {
       key: 'avg_unit_cost',
       header: 'Avg Cost',
       render: (variant) => (

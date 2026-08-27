@@ -48,8 +48,6 @@ const variant1: ItemVariant = {
   code: 'V1',
   name: 'Variant One',
   uom_id: 1,
-  min_stock: 0,
-  max_stock: 0,
   avg_unit_cost: 0,
   last_unit_cost: 0,
   is_active: true,

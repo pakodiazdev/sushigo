@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\Api\V1\Inventory\RegisterOpeningBalanceController;
 use App\Http\Controllers\Api\V1\Inventory\RegisterStockOutController;
+use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\DeleteVariantReplenishmentPolicyController;
+use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\ListLocationReplenishmentPoliciesController;
+use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\ShowVariantReplenishmentPolicyController;
+use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\UpsertVariantReplenishmentPolicyController;
 use App\Http\Controllers\Api\V1\InventoryLocation\CreateInventoryLocationController;
 use App\Http\Controllers\Api\V1\InventoryLocation\DeleteInventoryLocationController;
 use App\Http\Controllers\Api\V1\InventoryLocation\ListInventoryLocationsController;
@@ -54,6 +58,16 @@ Route::prefix('operating-units/{id}/users')->group(function () {
         Route::post('/', AddUserToOperatingUnitController::class)->name('operating-unit-users.add');
         Route::delete('/{userId}', RemoveUserFromOperatingUnitController::class)->name('operating-unit-users.remove');
     });
+});
+
+// Per-(Inventory Location, Variant) replenishment policies (#439) — read with
+// stock.view, write with stock.manage, same as the stock endpoints below;
+// replenishment thresholds are stock governance, not catalog identity.
+Route::middleware('auth:api')->prefix('inventory-locations/{id}/replenishment-policies')->group(function () {
+    Route::get('/', ListLocationReplenishmentPoliciesController::class)->name('replenishment-policies.list')->middleware('permission:stock.view');
+    Route::get(RouteParams::VARIANT_ID, ShowVariantReplenishmentPolicyController::class)->name('replenishment-policies.show')->middleware('permission:stock.view');
+    Route::put(RouteParams::VARIANT_ID, UpsertVariantReplenishmentPolicyController::class)->name('replenishment-policies.upsert')->middleware('permission:stock.manage');
+    Route::delete(RouteParams::VARIANT_ID, DeleteVariantReplenishmentPolicyController::class)->name('replenishment-policies.delete')->middleware('permission:stock.manage');
 });
 
 // Stock Query Endpoints (Protected read — requires stock.view)

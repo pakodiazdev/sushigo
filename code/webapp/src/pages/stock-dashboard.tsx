@@ -18,6 +18,7 @@ import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { stockApi, inventoryLocationApi } from '@/services/inventory-api'
 import type { Stock, InventoryLocation } from '@/types/inventory'
+import { ReplenishmentPoliciesPanel } from '@/features/inventory/replenishment'
 
 export const Route = createFileRoute('/stock-dashboard')({
   beforeLoad: requirePermission('stock.view'),
@@ -68,15 +69,12 @@ export function StockDashboardPage() {
       (sum, s) => sum + s.on_hand * s.weighted_avg_cost,
       0
     ),
-    low_stock_items: allStock.filter(
-      (s) => s.item_variant && s.on_hand < (s.item_variant.min_stock || 0)
-    ).length,
+    // Low-stock is the backend's resolved per-location verdict now (#439).
+    low_stock_items: allStock.filter((s) => s.is_low_stock).length,
   }
 
   // Get low stock items
-  const lowStockItems = allStock.filter(
-    (s) => s.item_variant && s.on_hand < (s.item_variant.min_stock || 0)
-  )
+  const lowStockItems = allStock.filter((s) => s.is_low_stock)
 
   // Location summary cards
   const locationSummaryCards = locations.slice(0, 4).map((location: InventoryLocation) => {
@@ -128,7 +126,7 @@ export function StockDashboardPage() {
         <div className="text-center">
           <div className="text-red-600 font-bold">{stock.on_hand}</div>
           <div className="text-xs text-muted-foreground">
-            Min: {stock.item_variant?.min_stock || 0}
+            Min: {stock.min_stock ?? 0}
           </div>
         </div>
       ),
@@ -314,6 +312,21 @@ export function StockDashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Per-location replenishment thresholds (#439) */}
+          <div className="mt-4">
+            <ReplenishmentPoliciesPanel
+              locationId={selectedLocationId}
+              items={locationStockData.data.data.items.map((item) => ({
+                item_variant_id: item.item_variant_id,
+                item_variant_code: item.item_variant_code,
+                item_variant_name: item.item_variant_name,
+                min_stock: item.min_stock,
+                max_stock: item.max_stock,
+                is_low_stock: item.is_low_stock,
+              }))}
+            />
           </div>
         </div>
       )}

@@ -23,8 +23,6 @@ trait FormatsItemVariant
             'last_unit_cost' => (float) $variant->last_unit_cost,
             'avg_unit_cost' => (float) $variant->avg_unit_cost,
             'sale_price' => $variant->sale_price ? (float) $variant->sale_price : null,
-            'min_stock' => (float) $variant->min_stock,
-            'max_stock' => (float) $variant->max_stock,
             'is_active' => $variant->is_active,
         ];
     }

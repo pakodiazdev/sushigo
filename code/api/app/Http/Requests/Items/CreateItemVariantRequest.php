@@ -20,8 +20,6 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="track_lot", type="boolean", example=false, description="Track lot numbers (default: false)"),
  *   @OA\Property(property="track_serial", type="boolean", example=false, description="Track serial numbers (default: false)"),
  *   @OA\Property(property="sale_price", type="number", format="float", example=35.00, description="Default sale price"),
- *   @OA\Property(property="min_stock", type="number", format="float", example=10.00, description="Minimum stock level"),
- *   @OA\Property(property="max_stock", type="number", format="float", example=100.00, description="Maximum stock level"),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Active status (default: true)"),
  * )
  */
@@ -37,7 +35,8 @@ class CreateItemVariantRequest extends FormRequest
         return [
             // Rejects a PRODUCTO-type item_id too, not just a nonexistent one — Product variants
             // must go through POST /inventory/products/{id}/variants (#425) instead, which never
-            // accepts sale_price/min_stock/max_stock (#424); this legacy path was closed by #429.
+            // accepts sale_price (#424); this legacy path was closed by #429. Replenishment
+            // thresholds moved to the per-Inventory-Location policy in #439.
             'item_id' => [
                 'required',
                 'integer',
@@ -51,8 +50,6 @@ class CreateItemVariantRequest extends FormRequest
             'track_lot' => ['nullable', 'boolean'],
             'track_serial' => ['nullable', 'boolean'],
             'sale_price' => ['nullable', 'numeric', 'min:0'],
-            'min_stock' => ['nullable', 'numeric', 'min:0'],
-            'max_stock' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }
@@ -69,14 +66,5 @@ class CreateItemVariantRequest extends FormRequest
         }
 
         $this->merge($data);
-    }
-
-    public function withValidator($validator): void
-    {
-        $validator->after(function ($validator) {
-            if ($this->filled('min_stock') && $this->filled('max_stock') && $this->max_stock < $this->min_stock) {
-                $validator->errors()->add('max_stock', 'Maximum stock must be greater than or equal to minimum stock');
-            }
-        });
     }
 }

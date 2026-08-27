@@ -67,6 +67,25 @@ class Stock extends Model
     }
 
     /**
+     * Scope to stock rows that are "low" against the resolved per-location
+     * replenishment policy (#439): a live policy must exist for this row's
+     * (location, variant) pair and `on_hand` must sit at or below its
+     * `min_stock`. Rows with no policy are never low — nothing was configured
+     * to compare them against.
+     */
+    public function scopeLowStock($query)
+    {
+        return $query->whereExists(function ($sub) {
+            $sub->selectRaw('1')
+                ->from('variant_location_replenishment_policies as vlrp')
+                ->whereColumn('vlrp.item_variant_id', 'stock.item_variant_id')
+                ->whereColumn('vlrp.inventory_location_id', 'stock.inventory_location_id')
+                ->whereNull('vlrp.deleted_at')
+                ->whereColumn('stock.on_hand', '<=', 'vlrp.min_stock');
+        });
+    }
+
+    /**
      * Increase on_hand quantity
      *
      * @throws InvalidStockBalanceException if $qty is not positive

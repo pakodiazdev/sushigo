@@ -50,8 +50,8 @@ export interface ItemVariant {
   code: string
   name: string
   uom_id: number
-  min_stock: number
-  max_stock: number
+  // Replenishment thresholds moved to the per-Inventory-Location policy (#439) —
+  // see ReplenishmentPolicy and the Stock fields below.
   avg_unit_cost: number
   last_unit_cost: number
   is_active: boolean
@@ -224,8 +224,30 @@ export interface Stock {
   reserved: number
   available: number
   weighted_avg_cost: number
+  /** Resolved per-location replenishment reorder point (#439); null when no policy is configured. */
+  min_stock: number | null
+  /** Resolved per-location replenishment ceiling (#439); null when no policy is configured. */
+  max_stock: number | null
+  /** True when a policy exists for this (location, variant) and on_hand <= its reorder point. */
+  is_low_stock: boolean
   inventory_location?: InventoryLocation
   item_variant?: ItemVariant
+}
+
+/**
+ * Per-(Inventory Location, Variant) replenishment policy (#439). `id` is null on the
+ * synthetic response the show endpoint returns when nothing is configured yet.
+ */
+export interface ReplenishmentPolicy {
+  id: string | null
+  inventory_location_id: string
+  item_variant_id: string
+  min_stock: number
+  max_stock: number
+  notes: string | null
+  is_configured: boolean
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 // Stock Movement Types

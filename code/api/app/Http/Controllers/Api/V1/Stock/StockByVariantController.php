@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\ItemVariant;
 use App\Models\Stock;
+use App\Services\Inventory\ReplenishmentPolicyResolver;
 
 /**
  * @OA\Get(
@@ -24,7 +25,7 @@ class StockByVariantController extends Controller
 {
     use SummarizesStock;
 
-    public function __invoke(string $id)
+    public function __invoke(string $id, ReplenishmentPolicyResolver $resolver)
     {
         $variant = ItemVariant::with(['item'])->where('public_id', $id)->firstOrFail();
 
@@ -34,19 +35,22 @@ class StockByVariantController extends Controller
             ])
             ->get();
 
-        $locations = $stockRecords->map(function ($stock) {
+        $policies = $resolver->resolveManyForVariant($variant->id, $stockRecords->pluck('inventory_location_id'));
+
+        $locations = $stockRecords->map(function ($stock) use ($policies) {
             return [
                 'inventory_location_id' => $stock->inventoryLocation->public_id,
                 'location_name' => $stock->inventoryLocation->name,
                 'location_type' => $stock->inventoryLocation->type,
                 'operating_unit' => $stock->inventoryLocation->operatingUnit->name,
-                ...$this->stockMoneyFields($stock),
+                ...$this->stockMoneyFields($stock, $policies->get($stock->inventory_location_id)),
             ];
         });
 
         $summary = [
             'total_locations' => $stockRecords->count(),
             ...$this->stockTotals($stockRecords),
+            'low_stock_locations' => $this->countLowStock($stockRecords, $policies, 'inventory_location_id'),
             'avg_weighted_cost' => (float) $stockRecords->avg('weighted_avg_cost'),
             'total_inventory_value' => (float) $stockRecords->map(fn ($s) => $s->on_hand * $s->weighted_avg_cost)->sum(),
         ];

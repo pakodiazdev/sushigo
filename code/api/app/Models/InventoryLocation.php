@@ -62,6 +62,14 @@ class InventoryLocation extends Model
     }
 
     /**
+     * Get the per-Variant replenishment policies configured at this location (#439).
+     */
+    public function replenishmentPolicies(): HasMany
+    {
+        return $this->hasMany(VariantLocationReplenishmentPolicy::class);
+    }
+
+    /**
      * Get stock movements from this location
      */
     public function stockMovementsFrom(): HasMany
