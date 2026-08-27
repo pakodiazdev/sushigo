@@ -277,7 +277,8 @@ Development is organized into documented sprints — see [`doc/conventions/sprin
 | 002 | Platillos Catalog & Platform Hardening | Completed | 2026-07-31 | 2026-08-12 (impl. finished 2026-08-11) | — | 1.85× (170.8h → 92.5h, scoped + opportunistic issues) | [sprint-002-platillos-catalog-platform-hardening.md](doc/sprints/sprint-002-platillos-catalog-platform-hardening.md) |
 | 003 | Development Platform & Product Reliability | Completed | 2026-08-12 | 2026-08-18 (impl. finished 2026-08-17) | 2026-09-05 | 1.58× (44.9h → 28.5h, scoped + opportunistic issues) | [sprint-003-development-platform-and-product-reliability.md](doc/sprints/sprint-003-development-platform-and-product-reliability.md) |
 | 004 | Product Catalog Reconstruction | Completed | 2026-08-18 | 2026-08-22 | 2026-09-19 | 1.34× (56.3h → 42.0h, formal scope) | [sprint-004-product-catalog-reconstruction.md](doc/sprints/sprint-004-product-catalog-reconstruction.md) |
-| 005 | Purchasing, Cost & Pricing | In Progress | 2026-08-22 | 100% (7/7) | 2026-10-03 | — | [sprint-005-purchasing-cost-and-pricing.md](doc/sprints/sprint-005-purchasing-cost-and-pricing.md) |
+| 005 | Purchasing, Cost & Pricing | Completed | 2026-08-22 | 2026-08-26 | 2026-10-03 | 1.41× (34.3h → 24.4h) | [sprint-005-purchasing-cost-and-pricing.md](doc/sprints/sprint-005-purchasing-cost-and-pricing.md) |
+| 006 | Stock Integrity & Inventory Completion | In Progress | 2026-08-26 | — | 2026-10-17 | — | [sprint-006-stock-integrity-and-inventory-completion.md](doc/sprints/sprint-006-stock-integrity-and-inventory-completion.md) |
 
 ## Development tips
 

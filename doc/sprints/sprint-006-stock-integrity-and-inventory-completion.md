@@ -1,15 +1,15 @@
 ---
 sprint: "006"
 title: Stock Integrity & Inventory Completion
-status: Planned
+status: In Progress
 
 created: 2026-08-12
-started:
+started: 2026-08-26
 completed:
-last_updated: 2026-08-12
+last_updated: 2026-08-26
 
 base_branch: main
-base_commit: 68ee117
+base_commit: 28e87f8e
 scope_issues: 5
 
 github_project: SushiGo Admin (#7)
@@ -58,7 +58,7 @@ Operating Unit isolation, one coherent UI, and reconciled removal of superseded 
 | Created | 2026-08-12 |
 | Planned start | 2026-10-04 |
 | Planned end | 2026-10-17 |
-| Started | — |
+| Started | 2026-08-26 (promoted early from planned by `#519`) |
 | Completed | — |
 | Target calendar duration | 14 days |
 | Active workdays | — |
@@ -84,13 +84,13 @@ Operating Unit isolation, one coherent UI, and reconciled removal of superseded 
 
 | Date | Status | Item | Change | Reason |
 |---|---|---|---|---|
-| — | — | — | None yet | Sprint not started |
+| — | — | — | None yet | — |
 
 ### 5.4 Opportunistic Work
 
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
-| — | — | — | None yet | — |
+| 2026-08-26 | #519 | Promote Sprint 006 and formally close Sprint 005 | Sprint 005 closure checklist was complete | Sprint 006 activated and both sprint indexes synchronized |
 
 ## 6. Value Ranking
 
@@ -204,6 +204,7 @@ than being silently deleted.
 | ⏳ | #440 | Pending | — | — | Horizontal authorization |
 | ⏳ | #441 | Pending | — | — | Final navigation/workflows |
 | ⏳ | #442 | Pending | — | — | Reconciled legacy removal |
+| ✅ | #519 | Sprint 005 marked `Completed`; Sprint 006 promoted from `planned/`; both sprint indexes synced; GitHub Project `Iteration` dates corrected (all 85 previously-linked items reassigned and verified); `iteration-progress.svg` badge refreshed to "Sprint 6" | PR #520 | 0.7h | opportunistic work per §5.4; 2 Copilot review threads addressed (stale `.gitignore` path reference, PR-description accuracy on the root README's `(current)` suffix convention) plus a user-reported §4 Timeline/frontmatter sync fix |
 
 ## 14. Quality Results
 
