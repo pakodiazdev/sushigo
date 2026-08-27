@@ -48,6 +48,11 @@ export const itemApi = {
   get: (id: string | number) =>
     api.get<EntityResponse<Item>>(`/items/${id}`),
 
+  // Contextual SKU suggestion for the quick-create form (#500). `name` drives the
+  // prefix (`Salmón fresco` → `SAL-001`); omitted/blank yields the `ITEM-` fallback.
+  nextSku: (params?: { name?: string; type?: string }) =>
+    api.get<{ sku: string; prefix: string }>('/items/next-sku', { params }),
+
   create: (data: Partial<Item> & Partial<ItemMediaAttachment>) =>
     api.post<EntityResponse<Item>>('/items', data),
 

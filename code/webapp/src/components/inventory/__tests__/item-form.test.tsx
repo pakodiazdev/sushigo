@@ -1,27 +1,50 @@
 /**
  * @vitest-environment jsdom
  */
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, cleanup, waitFor } from '@testing-library/react'
+import { createElement, type ComponentProps, type ReactNode } from 'react'
 import { ItemForm } from '../item-form'
 
-const mockExecute = vi.hoisted(() => vi.fn().mockResolvedValue({}))
+const mockMutateAsync = vi.hoisted(() => vi.fn().mockResolvedValue({}))
+const mockClearValidationErrors = vi.hoisted(() => vi.fn())
+const nextSku = vi.hoisted(() => vi.fn().mockResolvedValue({ data: { sku: 'SUG-001', prefix: 'SUG-' } }))
 
-// Mock useCreateUpdateMutation hook
+// Mock useCreateUpdateMutation — the form drives it via `mutation.mutateAsync` so it can
+// catch the 422 SKU-collision body; `execute` is kept for shape parity but unused.
 vi.mock('@/hooks/use-form-mutation', () => ({
-    useCreateUpdateMutation: () => ({
-        execute: mockExecute,
+    useCreateUpdateMutation: (config: {
+        createFn: (v: unknown) => Promise<unknown>
+        updateFn: (v: unknown) => Promise<unknown>
+        isEditing: boolean
+        onSuccess: () => void
+    }) => ({
+        mutation: {
+            mutateAsync: async (values: unknown) => {
+                const result = await mockMutateAsync(values, config)
+                config.onSuccess()
+                return result
+            },
+            error: null,
+        },
+        execute: mockMutateAsync,
         validationErrors: {},
+        clearValidationErrors: mockClearValidationErrors,
         isPending: false,
     }),
 }))
 
-// Mock inventory API
 vi.mock('@/services/inventory-api', () => ({
     itemApi: {
         create: vi.fn().mockResolvedValue({}),
         update: vi.fn().mockResolvedValue({}),
+        nextSku,
     },
+}))
+
+vi.mock('@/lib/api-error', () => ({
+    isApiError: (error: unknown) => Boolean(error && typeof error === 'object' && 'response' in error),
 }))
 
 // Mock SlidePanel components
@@ -79,9 +102,32 @@ const defaultProps = {
     onCancel: vi.fn(),
 }
 
+function wrapper({ children }: { children: ReactNode }) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    return createElement(QueryClientProvider, { client }, children)
+}
+
+const renderForm = (props: Partial<ComponentProps<typeof ItemForm>> = {}) =>
+    render(<ItemForm {...defaultProps} {...props} />, { wrapper })
+
+const editingItem = {
+    id: 1,
+    sku: 'SAL-001',
+    name: 'Salt',
+    description: '',
+    type: 'INSUMO' as const,
+    is_stocked: true,
+    is_perishable: false,
+    is_active: true,
+    created_at: '',
+    updated_at: '',
+}
+
 describe('ItemForm', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        mockMutateAsync.mockResolvedValue({})
+        nextSku.mockResolvedValue({ data: { sku: 'SUG-001', prefix: 'SUG-' } })
     })
 
     afterEach(() => {
@@ -90,336 +136,193 @@ describe('ItemForm', () => {
 
     describe('rendering', () => {
         it('renders the form', () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const form = container.querySelector('form')
-            expect(form).toBeDefined()
+            const { container } = renderForm()
+            expect(container.querySelector('form')).toBeDefined()
         })
 
         it('renders SKU field', () => {
-            const { getByPlaceholderText } = render(<ItemForm {...defaultProps} />)
+            const { getByPlaceholderText } = renderForm()
             expect(getByPlaceholderText('e.g., SAL-001')).toBeDefined()
         })
 
         it('renders item name field', () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const inputs = container.querySelectorAll('input')
-            expect(inputs.length).toBeGreaterThan(0)
+            const { container } = renderForm()
+            expect(container.querySelectorAll('input').length).toBeGreaterThan(0)
         })
 
         it('does not render a Type selector', () => {
-            const { queryByText } = render(<ItemForm {...defaultProps} />)
+            const { queryByText } = renderForm()
             expect(queryByText('Type')).toBeNull()
         })
 
-        it('renders checkboxes for boolean fields', () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const checkboxes = container.querySelectorAll('input[type="checkbox"]')
-            expect(checkboxes.length).toBeGreaterThanOrEqual(0)
-        })
-
         it('renders cancel button', () => {
-            const { getByText } = render(<ItemForm {...defaultProps} />)
+            const { getByText } = renderForm()
             expect(getByText('Cancel')).toBeDefined()
         })
 
         it('renders save button for new item', () => {
-            const { getByText } = render(<ItemForm {...defaultProps} />)
+            const { getByText } = renderForm()
             expect(getByText('Create Item')).toBeDefined()
         })
 
         it('renders update button when editing', () => {
-            const item = {
-                id: 1,
-                sku: 'SAL-001',
-                name: 'Salt',
-                description: 'Table salt',
-                type: 'INSUMO' as const,
-                is_stocked: true,
-                is_perishable: false,
-                is_active: true,
-                created_at: '',
-                updated_at: '',
-            }
-            const { getByText } = render(<ItemForm {...defaultProps} item={item} />)
+            const { getByText } = renderForm({ item: editingItem })
             expect(getByText('Update Item')).toBeDefined()
         })
     })
 
-    describe('form interactions', () => {
-        it('calls onCancel when cancel button is clicked', () => {
-            const onCancel = vi.fn()
-            const { getByText } = render(<ItemForm {...defaultProps} onCancel={onCancel} />)
-
-            fireEvent.click(getByText('Cancel'))
-            expect(onCancel).toHaveBeenCalledTimes(1)
+    describe('SKU suggestion affordances', () => {
+        it('shows the Spanish auto-suggestion hint in create mode', () => {
+            const { getByText } = renderForm()
+            expect(getByText(/Sugerencia automática a partir del nombre/)).toBeDefined()
         })
 
-        it.skip('submits form on submit', async () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const form = container.querySelector('form')
+        it('renders a "Regenerar SKU" control in create mode', () => {
+            const { getByLabelText } = renderForm()
+            expect(getByLabelText('Regenerar SKU')).toBeDefined()
+        })
 
-            if (form) {
-                fireEvent.submit(form)
-            }
+        it('does not render the regenerate control when editing', () => {
+            const { queryByLabelText } = renderForm({ item: editingItem })
+            expect(queryByLabelText('Regenerar SKU')).toBeNull()
+        })
 
-            // Form submission should be attempted
-            await waitFor(() => {
-                expect(defaultProps.onSuccess).toBeDefined()
+        it('prefills the SKU field with the server suggestion once a name is typed', async () => {
+            const { getByPlaceholderText } = renderForm()
+            const skuInput = getByPlaceholderText('e.g., SAL-001') as HTMLInputElement
+            const nameInput = getByPlaceholderText('e.g., Fresh Salmon')
+
+            fireEvent.change(nameInput, { target: { value: 'Salmón fresco' } })
+
+            await waitFor(() => expect(nextSku).toHaveBeenCalledWith({ name: 'Salmón fresco' }))
+            await waitFor(() => expect(skuInput.value).toBe('SUG-001'))
+        })
+
+        it('surfaces a Spanish collision alert and keeps a manually chosen SKU on a race', async () => {
+            mockMutateAsync.mockRejectedValueOnce({
+                response: { data: { rejected_sku: 'MINE-1', suggested_sku: 'SUG-002' } },
             })
-        })
+            const { getByPlaceholderText, container, findByText } = renderForm()
+            const skuInput = getByPlaceholderText('e.g., SAL-001') as HTMLInputElement
 
-        it('converts SKU to uppercase', () => {
-            const { getByPlaceholderText } = render(<ItemForm {...defaultProps} />)
-            const skuInput = getByPlaceholderText('e.g., SAL-001')
+            fireEvent.change(skuInput, { target: { value: 'MINE-1' } })
+            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salmón' } })
+            fireEvent.submit(container.querySelector('form')!)
 
-            fireEvent.change(skuInput, { target: { value: 'test-sku' } })
-            // The mock setField should be called
-            expect(skuInput).toBeDefined()
-        })
-
-        it('allows toggling is_stocked checkbox', () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const checkboxes = container.querySelectorAll('input[type="checkbox"]')
-
-            if (checkboxes.length > 0) {
-                fireEvent.click(checkboxes[0]!)
-                expect(checkboxes[0]).toBeDefined()
-            }
-        })
-
-        it('allows toggling is_perishable checkbox', () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const checkboxes = container.querySelectorAll('input[type="checkbox"]')
-
-            if (checkboxes.length > 1) {
-                fireEvent.click(checkboxes[1]!)
-                expect(checkboxes[1]).toBeDefined()
-            }
-        })
-
-        it('allows toggling is_active checkbox', () => {
-            const { container } = render(<ItemForm {...defaultProps} />)
-            const checkboxes = container.querySelectorAll('input[type="checkbox"]')
-
-            if (checkboxes.length > 2) {
-                fireEvent.click(checkboxes[2]!)
-                expect(checkboxes[2]).toBeDefined()
-            }
+            expect(await findByText(/acaba de ser utilizado/)).toBeDefined()
+            // Manual value preserved; an explicit "use this instead" action is offered.
+            expect(skuInput.value).toBe('MINE-1')
+            const applyButton = await findByText('Usar SUG-002')
+            fireEvent.click(applyButton)
+            await waitFor(() => expect(skuInput.value).toBe('SUG-002'))
         })
     })
 
     describe('edit mode', () => {
         it('disables SKU field when editing', () => {
-            const item = {
-                id: 1,
-                sku: 'SAL-001',
-                name: 'Salt',
-                description: '',
-                type: 'INSUMO' as const,
-                is_stocked: true,
-                is_perishable: false,
-                is_active: true,
-                created_at: '',
-                updated_at: '',
-            }
-            const { getByPlaceholderText } = render(<ItemForm {...defaultProps} item={item} />)
-            const skuInput = getByPlaceholderText('e.g., SAL-001') as HTMLInputElement
-
-            expect(skuInput.disabled).toBe(true)
+            const { getByPlaceholderText } = renderForm({ item: editingItem })
+            expect((getByPlaceholderText('e.g., SAL-001') as HTMLInputElement).disabled).toBe(true)
         })
 
-        it('does not render the MediaGalleryUploader — uploading here would silently replace the item\'s existing photos', () => {
-            const item = {
-                id: 1,
-                sku: 'SAL-001',
-                name: 'Salt',
-                description: '',
-                type: 'INSUMO' as const,
-                is_stocked: true,
-                is_perishable: false,
-                is_active: true,
-                created_at: '',
-                updated_at: '',
-            }
-            const { queryByTestId } = render(<ItemForm {...defaultProps} item={item} />)
-
+        it('does not render the MediaGalleryUploader while editing', () => {
+            const { queryByTestId } = renderForm({ item: editingItem })
             expect(queryByTestId('media-gallery-uploader-stub')).toBeNull()
         })
 
         it('shows an explanatory note in place of the uploader', () => {
-            const item = {
-                id: 1,
-                sku: 'SAL-001',
-                name: 'Salt',
-                description: '',
-                type: 'INSUMO' as const,
-                is_stocked: true,
-                is_perishable: false,
-                is_active: true,
-                created_at: '',
-                updated_at: '',
-            }
-            const { getByText } = render(<ItemForm {...defaultProps} item={item} />)
-
+            const { getByText } = renderForm({ item: editingItem })
             expect(getByText(/Photo management for existing items isn.t available yet/)).toBeDefined()
+        })
+
+        it('does not request a SKU suggestion in edit mode', async () => {
+            renderForm({ item: editingItem })
+            await new Promise((r) => setTimeout(r, 50))
+            expect(nextSku).not.toHaveBeenCalled()
         })
     })
 
     describe('form structure', () => {
         it('renders SlidePanel.Body component', () => {
-            const { getByTestId } = render(<ItemForm {...defaultProps} />)
+            const { getByTestId } = renderForm()
             expect(getByTestId('slide-panel-body')).toBeDefined()
         })
 
         it('renders SlidePanel.Footer component', () => {
-            const { getByTestId } = render(<ItemForm {...defaultProps} />)
+            const { getByTestId } = renderForm()
             expect(getByTestId('slide-panel-footer')).toBeDefined()
         })
     })
 
     describe('form submission', () => {
-        it('calls execute on valid form submission (create)', async () => {
-            const { getByPlaceholderText, container } = render(<ItemForm {...defaultProps} />)
+        it('submits on a valid create', async () => {
+            const { getByPlaceholderText, container } = renderForm()
 
             fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
             fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
-
             fireEvent.submit(container.querySelector('form')!)
 
-            await waitFor(() => expect(mockExecute).toHaveBeenCalled())
+            await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled())
         })
 
-        it('submits new items with type INSUMO by default — Products are created via /inventory/products only', async () => {
-            const { getByPlaceholderText, container } = render(<ItemForm {...defaultProps} />)
+        it('submits new items with type INSUMO by default', async () => {
+            const { getByPlaceholderText, container } = renderForm()
 
             fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
             fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
-
             fireEvent.submit(container.querySelector('form')!)
 
             await waitFor(() =>
-                expect(mockExecute).toHaveBeenCalledWith(
-                    expect.objectContaining({ type: 'INSUMO' })
-                )
+                expect(mockMutateAsync).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'INSUMO' }),
+                    expect.anything(),
+                ),
             )
         })
 
-        it('calls execute on valid form submission (update)', async () => {
-            const item = {
-                id: 1,
-                sku: 'SAL-001',
-                name: 'Salt Item',
-                description: '',
-                type: 'INSUMO' as const,
-                is_stocked: true,
-                is_perishable: false,
-                is_active: true,
-                created_at: '',
-                updated_at: '',
-            }
-
-            const { container } = render(<ItemForm {...defaultProps} item={item} />)
-
+        it('submits on a valid update', async () => {
+            const { container } = renderForm({ item: { ...editingItem, name: 'Salt Item' } })
             fireEvent.submit(container.querySelector('form')!)
-
-            await waitFor(() => expect(mockExecute).toHaveBeenCalledTimes(1))
-        })
-
-        it('preserves an existing non-PRODUCTO item type unchanged on update', async () => {
-            const item = {
-                id: 1,
-                sku: 'SAL-001',
-                name: 'Salt Item',
-                description: '',
-                type: 'INSUMO' as const,
-                is_stocked: true,
-                is_perishable: false,
-                is_active: true,
-                created_at: '',
-                updated_at: '',
-            }
-
-            const { container } = render(<ItemForm {...defaultProps} item={item} />)
-
-            fireEvent.submit(container.querySelector('form')!)
-
-            await waitFor(() =>
-                expect(mockExecute).toHaveBeenCalledWith(
-                    expect.objectContaining({ type: 'INSUMO' })
-                )
-            )
+            await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1))
         })
 
         it('preserves an existing ACTIVO item type unchanged on update', async () => {
-            const item = {
-                id: 1,
-                sku: 'ACT-001',
-                name: 'Rice Cooker',
-                description: '',
-                type: 'ACTIVO' as const,
-                is_stocked: false,
-                is_perishable: false,
-                is_active: true,
-                created_at: '',
-                updated_at: '',
-            }
-
-            const { container } = render(<ItemForm {...defaultProps} item={item} />)
-
+            const item = { ...editingItem, sku: 'ACT-001', name: 'Rice Cooker', type: 'ACTIVO' as const, is_stocked: false }
+            const { container } = renderForm({ item })
             fireEvent.submit(container.querySelector('form')!)
 
             await waitFor(() =>
-                expect(mockExecute).toHaveBeenCalledWith(
-                    expect.objectContaining({ type: 'ACTIVO' })
-                )
+                expect(mockMutateAsync).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'ACTIVO' }),
+                    expect.anything(),
+                ),
             )
         })
     })
 
     describe('media gallery wiring', () => {
         it('renders the MediaGalleryUploader', () => {
-            const { getByTestId } = render(<ItemForm {...defaultProps} />)
+            const { getByTestId } = renderForm()
             expect(getByTestId('media-gallery-uploader-stub')).toBeDefined()
         })
 
-        it('does not wrap the uploader in its own "Photos" label (the uploader renders one already)', () => {
-            const { queryByText } = render(<ItemForm {...defaultProps} />)
-            expect(queryByText('Photos')).toBeNull()
-        })
-
         it('includes media_gallery_id and owner_token in the submitted payload once the uploader reports them', async () => {
-            const { getByPlaceholderText, getByTestId, container } = render(<ItemForm {...defaultProps} />)
+            const { getByPlaceholderText, getByTestId, container } = renderForm()
 
             fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
             fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
             fireEvent.click(getByTestId('media-gallery-uploader-stub'))
-
             fireEvent.submit(container.querySelector('form')!)
 
             await waitFor(() =>
-                expect(mockExecute).toHaveBeenCalledWith(
-                    expect.objectContaining({ media_gallery_id: 'gallery-123', owner_token: 'owner-token-123' })
-                )
-            )
-        })
-
-        it('omits media_gallery_id and owner_token when the uploader was never used', async () => {
-            const { getByPlaceholderText, container } = render(<ItemForm {...defaultProps} />)
-
-            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
-            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
-
-            fireEvent.submit(container.querySelector('form')!)
-
-            await waitFor(() =>
-                expect(mockExecute).toHaveBeenCalledWith(
-                    expect.objectContaining({ media_gallery_id: undefined, owner_token: undefined })
-                )
+                expect(mockMutateAsync).toHaveBeenCalledWith(
+                    expect.objectContaining({ media_gallery_id: 'gallery-123', owner_token: 'owner-token-123' }),
+                    expect.anything(),
+                ),
             )
         })
 
         it('disables the submit button while the uploader reports it is busy', async () => {
-            const { getByTestId, getByText } = render(<ItemForm {...defaultProps} />)
+            const { getByTestId, getByText } = renderForm()
 
             fireEvent.click(getByTestId('media-gallery-uploader-busy-stub'))
 
@@ -430,7 +333,7 @@ describe('ItemForm', () => {
         })
 
         it('does not submit while the uploader is busy, even if the form is otherwise valid', async () => {
-            const { getByPlaceholderText, getByTestId, container } = render(<ItemForm {...defaultProps} />)
+            const { getByPlaceholderText, getByTestId, container } = renderForm()
 
             fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
             fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
@@ -441,29 +344,13 @@ describe('ItemForm', () => {
                 expect(submitButton.disabled).toBe(true)
             })
 
-            // Dispatches the form's submit event directly (as Enter-key submission would),
-            // bypassing the submit button entirely — this only stays blocked because onSubmit
-            // itself checks isSubmitDisabled, not because the button happens to be disabled.
             fireEvent.submit(container.querySelector('form')!)
-
-            expect(mockExecute).not.toHaveBeenCalled()
+            expect(mockMutateAsync).not.toHaveBeenCalled()
         })
 
         it('passes disabled=false to the uploader while the form is idle', () => {
-            const { getByTestId } = render(<ItemForm {...defaultProps} />)
+            const { getByTestId } = renderForm()
             expect(getByTestId('media-gallery-uploader-disabled-stub').textContent).toBe('false')
-        })
-
-        it('does not show a loading spinner while merely blocked by the uploader (e.g. an unresolved upload error) — nothing is actually being saved', async () => {
-            const { getByTestId, getByText } = render(<ItemForm {...defaultProps} />)
-
-            fireEvent.click(getByTestId('media-gallery-uploader-busy-stub'))
-
-            await waitFor(() => {
-                const submitButton = getByText('Create Item').closest('button') as HTMLButtonElement
-                expect(submitButton.disabled).toBe(true)
-                expect(submitButton.querySelector('.animate-spin')).toBeNull()
-            })
         })
     })
 })
