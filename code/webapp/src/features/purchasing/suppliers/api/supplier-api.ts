@@ -26,6 +26,8 @@ export interface SupplierOfferingPayload {
 export const supplierApi = {
   list: (params?: { search?: string; is_active?: boolean }) =>
     apiClient.get<CollectionResponse<Supplier>>('/inventory/suppliers', { params }),
+  nextCode: () =>
+    apiClient.get<{ code: string; prefix: string }>('/inventory/suppliers/next-code'),
   get: (supplierId: string) =>
     apiClient.get<EntityResponse<Supplier>>(`/inventory/suppliers/${supplierId}`),
   create: (data: SupplierPayload) =>

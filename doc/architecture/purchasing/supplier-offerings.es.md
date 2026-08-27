@@ -37,3 +37,23 @@ Proveedor. Los únicos identificadores externos son ULID públicos.
 
 La página `/inventario/proveedores` conserva este límite y guía Producto → Variante → Presentación de
 Compra al registrar una Oferta.
+
+## Sugerencia de código secuencial (`#497`)
+
+`GET /inventory/suppliers/next-code` (`suppliers.manage`) propone el siguiente código de Proveedor
+sin usar con formato `<prefijo><número con ceros a la izquierda>` — `PROV-` y 3 dígitos por
+omisión, configurable en `config/suppliers.php` (`SUPPLIER_CODE_PREFIX`, `SUPPLIER_CODE_PADDING`).
+El sufijo numérico máximo se calcula en SQL (`App\Support\SequentialCodeGenerator`); los
+Proveedores borrados lógicamente cuentan como ocupados, así que un código histórico nunca se vuelve
+a proponer aunque el índice único parcial sobre `(code) where deleted_at is null` permita
+técnicamente reutilizarlo.
+
+La sugerencia es una comodidad, no una reserva: sin fila de arrendamiento ni bloqueo entre
+peticiones. El índice único parcial sigue siendo la única autoridad. Ante una colisión al crear,
+`POST /inventory/suppliers` captura la violación de unicidad y responde `422` con el error de campo
+estándar `errors.code` más `rejected_code` y un `suggested_code` recalculado; nunca reintenta en
+silencio. El hook `useSuggestedCode` y el formulario de `/inventario/proveedores` precargan la
+sugerencia sólo al crear, ofrecen un refresco explícito y —ante una colisión— reemplazan en el
+lugar una sugerencia no editada (exigiendo enviar de nuevo) y dejan intacto un código escrito a
+mano tras una acción explícita de "usar este". Es el patrón reutilizable que adoptarán entidades
+secuenciales posteriores como las Cajas Registradoras (`#498`).
