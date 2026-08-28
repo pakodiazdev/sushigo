@@ -144,6 +144,7 @@ flowchart LR
 | `.github/workflows/webapp-lint.yml` | PR abierto/actualizado + push a `main` | `code/webapp/**` | ESLint + TypeScript check |
 | `.github/workflows/api-tests.yml` | PR abierto/actualizado + push a `main` | `code/api/**` | PHPUnit + coverage + análisis SonarCloud |
 | `.github/workflows/webapp-tests.yml` | PR abierto/actualizado + push a `main` | `code/webapp/**` | Vitest + coverage + análisis SonarCloud |
+| `.github/workflows/cypress-e2e.yml` | PR abierto/actualizado + push a `main` + `workflow_dispatch` | `code/api/**`, `code/webapp/**`, `docker-compose*.yml`, `docker/**`, su propio archivo | Levanta el stack de `docker-compose.e2e.yml` (PostgreSQL + Laravel/Apache + Vite) y ejecuta toda la suite de Cypress headless contra URLs de la red Docker; el check estable `cypress-e2e` reporta en cada PR (verde cuando la detección de rutas omite el job pesado) |
 
 ---
 
@@ -166,6 +167,7 @@ El conjunto completo de requerimientos funcionales (RF), reglas de negocio (RN) 
 | Vitest + coverage | [#044](https://github.com/pakodiazdev/sushigo/issues/44) | `webapp-tests.yml` — PR + main |
 | SonarCloud | [#045](https://github.com/pakodiazdev/sushigo/issues/45) | Quality gate — PR + main |
 | Branch protection | [#046](https://github.com/pakodiazdev/sushigo/issues/46) | Protección de `main` — checks requeridos: los 5 workflows |
+| Cypress E2E CI gate | [#490](https://github.com/pakodiazdev/sushigo/issues/490) | `cypress-e2e.yml` — PR + main + dispatch; agregar el check `cypress-e2e` a la protección de rama cuando sus primeras corridas sean estables (paso manual de admin) |
 
 ---
 

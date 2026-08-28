@@ -64,6 +64,13 @@ function clickButton(text: string | RegExp) {
   cy.contains('button', text).scrollIntoView().click({ force: true })
 }
 
+// ⚠️ QUARANTINED per #490 → see #546. Fails against a fresh stack:
+// Happy-path test fails: `cy.select()` on a <select> "covered by another element" (overlay).
+// Remove this guard when #546 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 

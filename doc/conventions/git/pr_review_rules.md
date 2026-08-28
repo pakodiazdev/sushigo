@@ -33,6 +33,7 @@ Mandatory rules
    - Route guards and redirect config MUST be validated with Vitest.
    - Every user-facing feature MUST include at least one Cypress spec covering its happy path.
    - Error cases, validation, and security MUST NOT be tested in Cypress — use PHPUnit or Vitest.
+   - Cypress runs in CI (`cypress-e2e` required check, `.github/workflows/cypress-e2e.yml`) — the spec must actually pass there, not just exist in the diff.
    - If CI detects a regression, it MUST be fixed for real (no skip/xfail) and its test added to that PR's local run list from then on, so the fix stays verified locally for the rest of the session.
 
 7. Coverage gate (enforced by SonarCloud).
@@ -51,7 +52,7 @@ Reviewer checklist (minimum)
 - [ ] Are there no unnecessary formatting-only changes? (if present, move them to a separate PR)
 - [ ] Is minimal documentation updated if applicable (README, comments, OpenAPI docs)?
 - [ ] Does the PR include PHPUnit Feature tests for new/changed endpoints (happy path + auth)?
-- [ ] Does the PR include at least one Cypress spec for the happy path of the delivered feature?
+- [ ] Does the PR include at least one Cypress spec for the happy path of the delivered feature, and does the `cypress-e2e` CI check pass?
 - [ ] Do linters and the delivered tests pass locally? Are CI-detected regressions fixed for real (no skip/xfail) and added to the local run list?
 - [ ] Does SonarCloud report >= 80% line coverage on new code (backend and frontend)?
 

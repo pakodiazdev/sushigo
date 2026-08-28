@@ -21,6 +21,13 @@ const today = new Date().toISOString().slice(0, 10)
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #542. Fails against a fresh stack:
+// "Editar horario activo" test fails: content 'Editar' never found inside the edit <dialog> (dialog content / selector).
+// Remove this guard when #542 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })

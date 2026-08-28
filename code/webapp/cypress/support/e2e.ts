@@ -21,6 +21,10 @@ import './commands'
 import registerCypressGrep from '@cypress/grep'
 registerCypressGrep()
 
+// Fail-fast — abort the run at the first failing test. Inert unless FAIL_FAST_ENABLED is set
+// (see cypress.config.ts); CI turns it on per shard so one red spec stops the rest.
+import 'cypress-fail-fast'
+
 // Prevenir redirecciones a HTTPS
 Cypress.on('window:before:load', (win) => {
   // Interceptar y modificar las redirecciones HTTPS

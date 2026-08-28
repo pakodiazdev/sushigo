@@ -1,0 +1,353 @@
+name: Cypress E2E (Quality Gate)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # Single source of truth for path detection (mirrors api-tests.yml's `changes` job, #481/#486).
+  # Every downstream job reads these outputs instead of re-running its own dorny/paths-filter step,
+  # and the always-running `cypress-e2e` gate job below turns "nothing relevant changed" into a
+  # green required check without ever booting the Docker-heavy E2E stack.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      e2e: ${{ steps.filter.outputs.e2e }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect E2E-relevant changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            e2e:
+              - 'code/api/**'
+              - 'code/webapp/**'
+              - 'docker-compose.yml'
+              - 'docker-compose.e2e.yml'
+              - 'docker/**'
+              - '.github/workflows/cypress-e2e.yml'
+
+  # The expensive path: boot the real E2E stack (PostgreSQL + Laravel/Apache + Vite) from the
+  # existing docker-compose.e2e.yml and run Cypress headless against Docker-network service URLs —
+  # no local Nginx / self-signed-TLS / /etc/hosts layer.
+  #
+  # Sharded across 6 parallel jobs (mirrors api-tests.yml's file-index split). Each shard boots its
+  # OWN full stack — unlike PHPUnit/Vitest shards, a Cypress shard needs the app running, not just a
+  # DB service — so this trades ~6x the runner minutes for wall-clock. Note ~2-3 min per shard is
+  # fixed overhead (image build + init.sh) that does NOT shard away, and past ~6 shards the extra
+  # runner contention makes borderline 15s assertions flaky; #559 tracks getting under ~5 min via
+  # image/dependency caching. `fail-fast: true` means the first red shard cancels the rest.
+  cypress-e2e-run:
+    name: cypress-e2e-run (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 45
+    strategy:
+      fail-fast: true
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+
+    env:
+      COMPOSE_FILES: "-f docker-compose.yml -f docker-compose.e2e.yml"
+      # Frontend bundle target: reach the Laravel API over the Docker network directly, replacing
+      # docker-compose.e2e.yml's local HTTPS default (https://api.sushigo.e2e.local/api/v1).
+      E2E_VITE_API_URL: "http://test_e2e:80/api/v1"
+      # Cypress targets (compose interpolates these into the `cypress` service via ${VAR:-default}).
+      CYPRESS_baseUrl: "http://test_e2e:5173"
+      CYPRESS_apiUrl: "http://test_e2e:80/api/v1"
+      # cypress-fail-fast: abort a shard at its first failing test (Cypress.env('FAIL_FAST_ENABLED')).
+      CYPRESS_FAIL_FAST_ENABLED: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # init.sh (docker/app/config/dev/init.sh) assumes code/api/.env already exists — in dev-lab
+      # it is created by init-agent-workspace.sh. CI has to synthesize it too, mirroring what a
+      # local `make cypress-run` runs against:
+      #   - APP_ENV=local (NOT e2e): routes/api.php only registers the /v1/test, /v1/dev and
+      #     /v1/devtools/clock route groups for testing|local|dev|devtest, and config/clock.php's
+      #     allowed_environments defaults to local,devtest,testing — the specs' before() hooks
+      #     drive the simulated clock and test-seed endpoints, so `e2e` here 404s ~half the suite.
+      #   - CLOCK_SIMULATION_ENABLED=true: config/clock.php defaults it to false; the local stack
+      #     enables it explicitly (docker-compose.yml's `dev` service does, `test_e2e` does not).
+      #   - LOG_CHANNEL=stderr: init.sh runs migrate/seed/l5-swagger as root, leaving
+      #     storage/logs/laravel.log root-owned; Apache/PHP then runs as www-data and can't append,
+      #     so any request that writes a log line 500s (SetTestTimeMiddleware logs on every
+      #     X-Test-Time request → the whole time-controlled suite). stderr sidesteps the file.
+      #   - dev-login enabled so the DevDebugger login path the specs rely on works.
+      #   - LOG_RESET_LINK=true: FileTokenRecorder::record() no-ops when false, so
+      #     cy.task('test:getResetLink') returns null and any password-reset / new-employee
+      #     login flow (employees.cy.ts, #542) fails. The `devtest` compose service sets this too.
+      - name: Synthesize code/api/.env for the E2E container
+        run: |
+          set -euo pipefail
+          cp code/api/.env.example code/api/.env
+          # Drop any pre-existing definition of every key we override — phpdotenv precedence within
+          # one file is not reliably "last wins", so appending alone is not enough.
+          sed -i -E '/^(APP_ENV|APP_DEBUG|APP_URL|API_URL|DB_CONNECTION|DB_HOST|DB_PORT|DB_DATABASE|DB_USERNAME|DB_PASSWORD|LOG_CHANNEL|LOG_STACK|QUEUE_CONNECTION|MAIL_MAILER|CLOCK_SIMULATION_ENABLED|CLOCK_SIMULATION_ALLOWED_ENVIRONMENTS|LOGIN_WITH_DEVDEBUG|DEV_LOGIN_ALLOWED_ENVIRONMENTS|LOG_RESET_LINK)=/d' code/api/.env
+          {
+            echo ""
+            echo "# ---- CI E2E overrides (cypress-e2e.yml) ----"
+            echo "APP_ENV=local"
+            echo "APP_DEBUG=true"
+            echo "APP_URL=http://test_e2e"
+            echo "API_URL=http://test_e2e"
+            echo "DB_CONNECTION=pgsql"
+            echo "DB_HOST=pgsql"
+            echo "DB_PORT=5432"
+            echo "DB_DATABASE=mydb_e2e"
+            echo "DB_USERNAME=admin"
+            echo "DB_PASSWORD=admin"
+            echo "QUEUE_CONNECTION=sync"
+            echo "MAIL_MAILER=log"
+            echo "LOG_CHANNEL=stderr"
+            echo "LOG_STACK=stderr"
+            echo "CLOCK_SIMULATION_ENABLED=true"
+            echo "CLOCK_SIMULATION_ALLOWED_ENVIRONMENTS=local,devtest,testing"
+            echo "LOGIN_WITH_DEVDEBUG=true"
+            echo "DEV_LOGIN_ALLOWED_ENVIRONMENTS=local,dev,devtest"
+            echo "LOG_RESET_LINK=true"
+          } >> code/api/.env
+
+      - name: Boot PostgreSQL
+        run: docker compose $COMPOSE_FILES up -d pgsql
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if docker compose $COMPOSE_FILES exec -T pgsql pg_isready -U admin -d mydb_e2e >/dev/null 2>&1; then
+              echo "PostgreSQL is ready (mydb_e2e reachable)"
+              exit 0
+            fi
+            echo "waiting for PostgreSQL... ($i/30)"
+            sleep 2
+          done
+          echo "PostgreSQL did not become ready in time" >&2
+          docker compose $COMPOSE_FILES logs --no-color pgsql || true
+          exit 1
+
+      - name: Boot the E2E application stack (Laravel + Vite)
+        run: docker compose $COMPOSE_FILES up -d test_e2e
+
+      # Explicit application/database readiness — not an arbitrary sleep. The container's init.sh
+      # does a cold `composer install` + `npm install` + migrate + seed + swagger generate before
+      # Apache/Vite come up, which is well past docker-compose.e2e.yml's own healthcheck window on
+      # a GitHub-hosted runner, so we poll the real endpoints directly with a generous ceiling.
+      - name: Wait for Laravel API health
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 120); do
+            if ! docker compose $COMPOSE_FILES ps --status running --services | grep -q '^test_e2e$'; then
+              echo "test_e2e container is no longer running — init failed" >&2
+              docker compose $COMPOSE_FILES logs --no-color test_e2e || true
+              exit 1
+            fi
+            if docker compose $COMPOSE_FILES exec -T test_e2e curl -fsS http://localhost:80/api/v1/health >/dev/null 2>&1; then
+              echo "Laravel API is healthy"
+              exit 0
+            fi
+            echo "waiting for Laravel API... ($i/120)"
+            sleep 10
+          done
+          echo "Laravel API did not become healthy in time" >&2
+          docker compose $COMPOSE_FILES logs --no-color test_e2e || true
+          exit 1
+
+      - name: Wait for Vite dev server
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if docker compose $COMPOSE_FILES exec -T test_e2e curl -fsS http://localhost:5173 >/dev/null 2>&1; then
+              echo "Vite dev server is up"
+              exit 0
+            fi
+            echo "waiting for Vite dev server... ($i/60)"
+            sleep 5
+          done
+          echo "Vite dev server did not come up in time" >&2
+          docker compose $COMPOSE_FILES logs --no-color test_e2e || true
+          exit 1
+
+      # init.sh runs migrate/seed/l5-swagger as root, so files it touched under storage/ (logs,
+      # framework cache, the swagger output) end up root-owned and Apache/PHP (www-data) can't
+      # write them. LOG_CHANNEL=stderr already sidesteps the log file; this makes the rest safe too.
+      - name: Fix storage permissions (init.sh ran as root)
+        run: |
+          docker compose $COMPOSE_FILES exec -T -u root test_e2e sh -c '
+            chown -R www-data:www-data /app/code/api/storage /app/code/api/bootstrap/cache || true
+            chmod -R ug+rwX /app/code/api/storage /app/code/api/bootstrap/cache || true
+          '
+
+      # One-time wiring sanity check (shard 1 only): the container env overrides and the value the
+      # served frontend bundle resolved import.meta.env.VITE_API_URL to.
+      - name: Diagnose E2E wiring
+        if: matrix.shard == 1
+        run: |
+          echo "::group::test_e2e env (VITE_/APP_ENV/CLOCK/DB)"
+          docker compose $COMPOSE_FILES exec -T test_e2e printenv | grep -E '^(VITE_|APP_ENV|APP_URL|CLOCK_|DB_|DEV_LOGIN|LOGIN_WITH)' | sort || true
+          echo "::endgroup::"
+          echo "::group::served api-client.ts (resolved VITE_API_URL)"
+          docker compose $COMPOSE_FILES exec -T test_e2e curl -fsS "http://localhost:5173/src/lib/api-client.ts" 2>&1 | head -8 || true
+          echo "::endgroup::"
+          echo "::group::app environment / clock config (artisan)"
+          docker compose $COMPOSE_FILES exec -T test_e2e php /app/code/api/artisan tinker --execute '
+            echo "env=".app()->environment().PHP_EOL;
+            echo "clock.simulation_enabled=".var_export(config("clock.simulation_enabled"), true).PHP_EOL;
+          ' 2>&1 | tail -6 || true
+          echo "::endgroup::"
+
+      # File-index shard split (i % shard-count == shard-index), the same scheme api-tests.yml uses.
+      # Round-robin over the sorted spec list distributes the ~66 specs evenly by count.
+      - name: Select this shard's Cypress specs
+        id: shard-specs
+        working-directory: code/webapp
+        run: |
+          set -euo pipefail
+          mapfile -t all < <(find cypress/e2e -name '*.cy.ts' | sort)
+          total=${#all[@]}
+          count=${{ strategy.job-total }}
+          idx=$(( ${{ matrix.shard }} - 1 ))
+          sel=()
+          for ((i = 0; i < total; i++)); do
+            if (( i % count == idx )); then sel+=("${all[$i]}"); fi
+          done
+          echo "shard ${{ matrix.shard }}/${count}: ${#sel[@]} of ${total} specs"
+          printf '%s\n' "${sel[@]}"
+          if [ "${#sel[@]}" -eq 0 ]; then
+            echo "specs=" >> "$GITHUB_OUTPUT"
+          else
+            printf -v joined '%s,' "${sel[@]}"
+            echo "specs=${joined%,}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Reuses the `cypress` service from docker-compose.e2e.yml (entrypoint is `/bin/sh -c`), with a
+      # CI-only config override: wider default command/request/response/page-load timeouts to give
+      # the loaded runner headroom. Local `make cypress-run` is untouched — it still runs the
+      # service's default command with the full spec set. --no-deps because readiness is already
+      # gated above; the service's own `depends_on: test_e2e (service_healthy)` would otherwise
+      # re-evaluate Docker's healthcheck state, which lags the real endpoint checks.
+      # --browser chrome (bundled in cypress/included): real Chromium, so the cert/security launch
+      # flags in cypress.config.ts actually apply and the "not supported by electron" warning goes
+      # away. Single browser only — cross-browser matrix is out of scope for #490.
+      # retries=2: absorbs genuine cold-runner timing flake (an assertion that just missed its 15s
+      # window passes on the next attempt). cypress-fail-fast only bails once a test has exhausted
+      # its retries, so a truly broken spec still stops the shard fast.
+      - name: Run Cypress (shard ${{ matrix.shard }}, headless)
+        if: steps.shard-specs.outputs.specs != ''
+        run: |
+          docker compose $COMPOSE_FILES run --rm --no-deps -e CYPRESS_FAIL_FAST_ENABLED cypress \
+            "npm install --no-audit --no-fund && npx cypress run --browser chrome --reporter cypress-multi-reporters --reporter-options configFile=cypress/reporter-config.json --config retries=2,defaultCommandTimeout=15000,requestTimeout=15000,responseTimeout=45000,pageLoadTimeout=120000 --spec '${{ steps.shard-specs.outputs.specs }}'"
+
+      # Per-test JUnit timing (mocha-junit-reporter, alongside the `spec` reporter) → merged into a
+      # "slowest specs" job summary by the cypress-timing job, mirroring api-tests.yml's PHPUnit
+      # timing report. if: always() so a failed/bailed shard still surfaces what it did run.
+      - name: Upload Cypress JUnit timing report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-junit-shard-${{ matrix.shard }}
+          path: code/webapp/cypress/results/*.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Cypress screenshots (failures only)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots-shard-${{ matrix.shard }}
+          path: code/webapp/cypress/screenshots
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Collect Docker / application logs
+        if: failure()
+        timeout-minutes: 5
+        run: |
+          mkdir -p e2e-logs
+          run() { timeout 45 "$@"; }
+          run docker compose $COMPOSE_FILES ps > e2e-logs/compose-ps.txt 2>&1 || true
+          run docker compose $COMPOSE_FILES logs --no-color --timestamps --tail 5000 test_e2e > e2e-logs/test_e2e.compose.log 2>&1 || true
+          run docker compose $COMPOSE_FILES logs --no-color --timestamps --tail 2000 pgsql > e2e-logs/pgsql.log 2>&1 || true
+          # In-container logs — apache/vite write to files, not stdout, so `compose logs` misses them.
+          run docker compose $COMPOSE_FILES exec -T test_e2e sh -c 'tail -n 3000 /var/log/supervisor/vite-dev.log' > e2e-logs/vite-dev.log 2>&1 || true
+          run docker compose $COMPOSE_FILES exec -T test_e2e sh -c 'tail -n 3000 /var/log/apache2/access.log' > e2e-logs/apache-access.log 2>&1 || true
+          run docker compose $COMPOSE_FILES exec -T test_e2e sh -c 'tail -n 3000 /var/log/apache2/error.log' > e2e-logs/apache-error.log 2>&1 || true
+          run docker inspect e2e_container > e2e-logs/e2e_container-inspect.json 2>&1 || true
+
+      - name: Upload Docker / application logs (failures only)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-docker-logs-shard-${{ matrix.shard }}
+          path: e2e-logs
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Tear down the E2E stack
+        if: always()
+        run: docker compose $COMPOSE_FILES down -v --remove-orphans
+
+  # Required-status-check shim (mirrors api-tests.yml's `api-tests-gate`, #486). `main`'s branch
+  # protection can require a check literally named `cypress-e2e` that reports on *every* PR: this
+  # job has no matrix, always runs, and mirrors the shard matrix's aggregate result. `skipped`
+  # (nothing E2E-relevant changed, nothing to execute) counts as a pass; `failure`/`cancelled`
+  # (a shard went red, and with fail-fast the rest were cancelled) fails the gate.
+  cypress-e2e:
+    name: cypress-e2e
+    runs-on: ubuntu-latest
+    needs: [changes, cypress-e2e-run]
+    if: always()
+
+    steps:
+      - name: Evaluate the E2E gate
+        run: |
+          changes_result="${{ needs.changes.result }}"
+          if [ "$changes_result" != "success" ]; then
+            echo "changes job result was '$changes_result' — can't trust the skip decision, failing the gate" >&2
+            exit 1
+          fi
+          run_result="${{ needs.cypress-e2e-run.result }}"
+          if [ "$run_result" != "success" ] && [ "$run_result" != "skipped" ]; then
+            echo "cypress-e2e-run matrix result was '$run_result' — failing the required-check gate" >&2
+            exit 1
+          fi
+          echo "changes: $changes_result, cypress-e2e-run: $run_result — gate passes"
+
+  # Merges every shard's per-test JUnit report into one "Top 20 slowest specs" table on the job
+  # summary — mirrors api-tests.yml's `api-junit-merge` (#477). if: always() with fail-fast means
+  # a run that bailed early still publishes timing for the shards that finished; not a gate.
+  cypress-timing:
+    name: cypress-timing
+    runs-on: ubuntu-latest
+    needs: [changes, cypress-e2e-run]
+    if: always() && (needs.changes.outputs.e2e == 'true' || github.event_name == 'workflow_dispatch')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download per-shard JUnit reports
+        uses: actions/download-artifact@v4
+        with:
+          path: cypress-junit
+          pattern: cypress-junit-shard-*
+          merge-multiple: true
+
+      - name: Publish Cypress slow-spec summary (all shards)
+        run: node .github/scripts/test-timing/generate.js cypress-junit/*.xml

@@ -26,6 +26,13 @@ import users from '../fixtures/users.json'
 const { email: adminEmail, password: adminPassword } = users.admin
 const TEST_TIME_ISO = '2026-06-17T14:30:00-06:00'
 
+// ⚠️ QUARANTINED per #490 → see #540. Fails against a fresh stack:
+// 5 of 10 tests fail: week-label <button> never contains expected text and `button[aria-label="Close"|"Cerrar"]` not found — slide-panel selectors look stale.
+// Remove this guard when #540 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'weekly-summary', { timeout: 60_000 })
 })

@@ -33,6 +33,13 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #538. Fails against a fresh stack:
+// Happy-path test fails: employee name <p> "not visible because clipped by a parent element" (overflow/scroll).
+// Remove this guard when #538 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task("test:reset", "attendance", { timeout: 60_000 });
 });

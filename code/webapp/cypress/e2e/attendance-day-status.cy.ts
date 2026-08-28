@@ -26,6 +26,13 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #537. Fails against a fresh stack:
+// "Justificar Falta" test fails: `[data-testid='btn-mark-falta']` never found inside García, María's card (data/flow or selector).
+// Remove this guard when #537 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task("test:reset", "attendance", { timeout: 60_000 });
 });

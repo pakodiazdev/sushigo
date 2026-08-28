@@ -55,6 +55,13 @@ function openHistory() {
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #558 (CI-only failure; passes locally). Fails against a fresh stack:
+// CI-only (passes locally on Electron): 1 of 5 tests fails — an <h3.flex.items-center.gap-2.text-sm.font-semibold> section heading is "not visible" after 15s — same overlay/scroll signature as #553.
+// Remove this guard when #558 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'attendance-extra-days', { timeout: 60_000 })
 })

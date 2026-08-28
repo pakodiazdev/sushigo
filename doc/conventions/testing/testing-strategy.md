@@ -68,6 +68,10 @@ This document defines the mandatory testing strategy for the SushiGo project. Ev
 - Keep Cypress specs fast: one `db:reset` per spec file (in `before()`), not per test.
 - Cypress specs MUST be idempotent — they must work with a fresh `db:reset` and not depend on state left by other specs.
 - Avoid `cy.wait(ms)` unless absolutely necessary for DOM stability (document the reason with an inline comment).
+- **Cypress runs in CI.** The `Cypress E2E (Quality Gate)` workflow (`.github/workflows/cypress-e2e.yml`)
+  boots the real E2E stack and runs the full suite headless on every PR that touches an
+  application/runtime path. A failing spec fails the required `cypress-e2e` check — a written spec
+  that was never executed is no longer an acceptable PR state. See "Cypress E2E in CI" below.
 
 ---
 
@@ -100,7 +104,7 @@ misconfigured `.env.testing` behind an accidental full-suite pass.
 | Where | What to run | Command |
 |---|---|---|
 | **Local (pre-PR), dev-lab** | Linters + delivered tests only | `php artisan test --filter=<TestClass>` · `npx vitest run <path>` |
-| **CI (every PR)** | Full suite (regression gate) | `php artisan test` · `npx vitest run` |
+| **CI (every PR)** | Full suite (regression gate) + Cypress E2E | `php artisan test` · `npx vitest run` · full Cypress suite headless (`cypress-e2e` workflow) |
 
 Dev-lab workspaces load `DB_DATABASE` automatically from `code/api/.env.testing`, so the commands
 above are safe to run as shown. **Outside dev-lab** (standalone Docker mode), `phpunit.xml` does
@@ -151,6 +155,70 @@ See [#477](https://github.com/pakodiazdev/sushigo/issues/477) — once closed it
 `doc/tasks/` per [`tasks.md`](../tasks.md) — for the measured bottleneck data this instrumentation
 produced, and [#481](https://github.com/pakodiazdev/sushigo/issues/481) for the resulting
 suite-parallelization proposal.
+
+---
+
+## Cypress E2E in CI
+
+The `Cypress E2E (Quality Gate)` workflow (`.github/workflows/cypress-e2e.yml`) makes the Cypress
+suite a real merge gate instead of a local/manual step. See
+[#490](https://github.com/pakodiazdev/sushigo/issues/490).
+
+**How it works:**
+
+- **Path-gated.** A `changes` job (centralized `dorny/paths-filter`, same pattern as
+  `api-tests.yml`) decides whether the expensive path runs. E2E-relevant paths are `code/api/**`,
+  `code/webapp/**`, `docker-compose.yml`, `docker-compose.e2e.yml`, `docker/**`, and the workflow
+  file itself. A documentation-only or otherwise unrelated PR skips the Docker-heavy job entirely.
+- **Stable required check.** A separate always-running job named `cypress-e2e` mirrors the heavy
+  job's result — `skipped` (nothing E2E-relevant changed) counts as a pass. This is the name to
+  put in branch protection; requiring the heavy job's name directly would leave protection waiting
+  on a check that never reports on unrelated PRs (the `api-tests` / `api-tests-gate` lesson, #486).
+- **Reuses the existing E2E stack.** The heavy job boots `docker-compose.e2e.yml`'s `test_e2e`
+  (Laravel + Apache + Vite) and `pgsql` (`mydb_e2e`), then runs the existing `cypress` service
+  headless — no CI-only application stack. `code/api/.env` is synthesized from `.env.example` with
+  CI overrides (`APP_ENV=local` so the `/v1/test` + `/v1/devtools/clock` routes register,
+  `CLOCK_SIMULATION_ENABLED=true`, `LOG_CHANNEL=stderr` so a root-owned `storage/logs/laravel.log`
+  from `init.sh` can't 500 every request that logs).
+- **Sharded, fail-fast.** `cypress-e2e-run` is a matrix (currently 6 shards); each shard boots its
+  own stack and runs a file-index slice of the specs (`i % strategy.job-total`, same split as
+  `api-tests.yml`). `strategy.fail-fast: true` + the `cypress-fail-fast` plugin (CI-only, via
+  `CYPRESS_FAIL_FAST_ENABLED`) mean the first failing test aborts its shard and cancels the rest —
+  one red spec already blocks the merge. Local `make cypress-run` keeps running the whole suite
+  (the plugin is off unless that env var is set).
+- **Chromium, not Electron.** CI runs `cypress run --browser chrome` (bundled in
+  `cypress/included`) — real Chromium, and the "not supported by electron" launch-flag warning
+  goes away. Local runs still default to Electron.
+- **No local HTTPS/Nginx layer.** CI talks to Docker-network service URLs directly:
+  `http://test_e2e:5173` (frontend) and `http://test_e2e:80/api/v1` (API). `VITE_API_URL` for the
+  E2E container is overridable via `E2E_VITE_API_URL` (local default keeps the
+  `https://api.sushigo.e2e.local` value); `vite.config.ts` `allowedHosts` accepts `test_e2e` (and
+  anything in `VITE_ALLOWED_HOSTS`). No dependency on `/etc/hosts`, local DNS, or trusted certs.
+- **Readiness, not sleeps.** The job polls the real `/api/v1/health` endpoint and the Vite port
+  before starting Cypress.
+- **Failure evidence.** On failure each shard uploads Cypress screenshots plus `test_e2e` / `pgsql`
+  logs and `docker compose ps` output as `*-shard-<n>` artifacts. The stack is always torn down
+  (`if: always()`).
+- **Slow-spec timing.** Each shard emits a per-test JUnit report (`mocha-junit-reporter` via
+  `cypress-multi-reporters`, alongside `spec`); the `cypress-timing` job merges them into a
+  "Top 20 slowest specs" table on the run's Job Summary, reusing
+  `.github/scripts/test-timing/generate.js` (same tool as `api-tests.yml`). Wall-clock is
+  ~5.5–7 min at 6 shards — most of that is per-shard fixed overhead (image build + `init.sh`),
+  tracked for reduction in [#559](https://github.com/pakodiazdev/sushigo/issues/559).
+
+### Quarantined specs
+
+The suite has never been fully green — even locally, ~16 specs fail on a clean `make cypress-run`
+(pre-existing overlay/scroll/selector/seed fragility; see
+`doc/sprints/sprint-002-platillos-catalog-platform-hardening.md` §17), plus ~8 more that fail only
+on the CI stack (Chromium vs Electron, fresh DB). To land the gate green on the stable subset,
+those specs carry a `before(function () { this.skip() })` guard at the top of the file, each linked
+to a maintenance issue (#535–#558). **When you fix a quarantined spec, remove its guard in the same
+PR and confirm `cypress-e2e` stays green with it re-included.** Do not add new `this.skip()` guards
+without an accompanying issue.
+
+**Local `make cypress-run` is otherwise unchanged** — it still uses the HTTPS/local-domain
+defaults and Electron; only the shared quarantine guards affect it.
 
 ---
 

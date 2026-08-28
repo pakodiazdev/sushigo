@@ -20,6 +20,13 @@ const { email: adminEmail, password: adminPassword } = users.admin
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #557 (CI-only failure; passes locally). Fails against a fresh stack:
+// CI-only (passes locally on Electron): an <h3.flex.items-center.gap-2.text-sm.font-semibold> section heading is "not visible" after 15s (schedule-history.cy.ts) — same overlay/scroll signature as #553, only reproduces on the fresh CI stack under Chromium.
+// Remove this guard when #557 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })

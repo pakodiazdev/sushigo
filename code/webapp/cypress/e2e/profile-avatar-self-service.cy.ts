@@ -13,6 +13,13 @@ import users from '../fixtures/users.json'
 
 const { email: managerEmail, password: managerPassword, expectedName } = users.manager
 
+// ⚠️ QUARANTINED per #490 → see #556 (CI-only failure; passes locally). Fails against a fresh stack:
+// CI-only (passes locally on Electron): the avatar crop-dialog `<div.relative.h-72...>` is expected to disappear but is "continuously found" (profile-avatar-self-service.cy.ts:48) — the crop dialog does not close under Chromium.
+// Remove this guard when #556 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })

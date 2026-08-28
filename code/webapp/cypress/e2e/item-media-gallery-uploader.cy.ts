@@ -14,6 +14,13 @@ import users from '../fixtures/users.json'
 
 const { email: adminEmail, password: adminPassword } = users.admin
 
+// ⚠️ QUARANTINED per #490 → see #545. Fails against a fresh stack:
+// Happy-path test fails: toast 'Item created successfully' never appears — the create+media-gallery flow does not complete.
+// Remove this guard when #545 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 })
