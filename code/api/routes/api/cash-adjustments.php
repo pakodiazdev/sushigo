@@ -20,6 +20,7 @@ use App\Http\Controllers\CashAdjustments\CashRegisters\CreateCashRegisterControl
 use App\Http\Controllers\CashAdjustments\CashRegisters\DeleteCashRegisterController;
 use App\Http\Controllers\CashAdjustments\CashRegisters\ListCashRegistersController;
 use App\Http\Controllers\CashAdjustments\CashRegisters\ShowCashRegisterController;
+use App\Http\Controllers\CashAdjustments\CashRegisters\SuggestCashRegisterCodeController;
 use App\Http\Controllers\CashAdjustments\CashRegisters\UpdateCashRegisterController;
 use App\Http\Controllers\CashAdjustments\CashSessions\CreateCashSessionController;
 use App\Http\Controllers\CashAdjustments\CashSessions\GetSessionSummaryController;
@@ -45,6 +46,11 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('cash-registers')->group(function () {
         Route::get('/', ListCashRegistersController::class)
             ->name('cash-registers.list');
+        // Declared before the {cashRegister} routes below so "next-code" is not
+        // captured as a public_id binding.
+        Route::get('/next-code', SuggestCashRegisterCodeController::class)
+            ->name('cash-registers.next-code')
+            ->middleware('permission:cash_registers.create');
         Route::post('/', CreateCashRegisterController::class)
             ->name('cash-registers.create');
         Route::get(CashAdjustmentRouteParams::CASH_REGISTER, ShowCashRegisterController::class)

@@ -26,6 +26,13 @@ class StoreCashRegisterRequest extends FormRequest
     use CastsRequestFields;
     use SharesValidationMessages;
 
+    /**
+     * Shared with CreateCashRegisterController, which surfaces the same message
+     * when the `unique` pre-check below loses a TOCTOU race against the
+     * database's unique index on `cash_registers.code`.
+     */
+    public const DUPLICATE_CODE_MESSAGE = 'Ya existe una caja registradora con este código.';
+
     public function authorize(): bool
     {
         return $this->user()->can('create', CashRegister::class);
@@ -51,10 +58,10 @@ class StoreCashRegisterRequest extends FormRequest
                 'branch_id.required',
                 'branch_id.exists',
                 'code.required',
-                'code.unique',
                 'name.required',
                 'type.required',
             ]),
+            'code.unique' => self::DUPLICATE_CODE_MESSAGE,
             'type.in' => 'El tipo debe ser ON_PREMISE, DELIVERY o EVENT',
         ];
     }
