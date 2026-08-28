@@ -32,7 +32,7 @@ export default defineConfig({
     },
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
-    setupNodeEvents(on, config) {
+    async setupNodeEvents(on, config) {
       on('task', {
         log(message) {
           console.log(message)
@@ -173,6 +173,17 @@ export default defineConfig({
           })
         },
       })
+
+      // Keep cypress-fail-fast wired the same way as cypress.config.ts: always registered (its
+      // support hooks call cy.task and would error otherwise), but OFF unless FAIL_FAST_ENABLED is
+      // truthy — so a normal dev-lab run keeps running the whole suite.
+      config.env.FAIL_FAST_ENABLED = config.env.FAIL_FAST_ENABLED ?? false
+      const failFastModule = await import('cypress-fail-fast/plugin')
+      const registerFailFast = (failFastModule.default ?? failFastModule) as (
+        on: Cypress.PluginEvents,
+        config: Cypress.PluginConfigOptions,
+      ) => void
+      registerFailFast(on, config)
 
       return config
     },

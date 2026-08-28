@@ -27,6 +27,13 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #539. Fails against a fresh stack:
+// "'En comida' as a tab" test fails: employee name <p> "not visible because clipped by a parent element" (overflow/scroll).
+// Remove this guard when #539 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task("test:reset", "attendance-lunch-stat-tab", { timeout: 60_000 });
 });

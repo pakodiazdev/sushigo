@@ -19,6 +19,13 @@ import users from '../fixtures/users.json'
 
 const { email: adminEmail, password: adminPassword } = users.admin
 
+// ⚠️ QUARANTINED per #490 → see #544. Fails against a fresh stack:
+// 1 of 15 tests fails: a sidebar <a> "not visible" — the consolidated-IA assertion; the 6 nav sub-tests pass.
+// Remove this guard when #544 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 })

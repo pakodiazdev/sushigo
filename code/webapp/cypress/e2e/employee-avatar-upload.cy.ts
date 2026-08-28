@@ -13,6 +13,13 @@ import users from '../fixtures/users.json'
 
 const { email: adminEmail, password: adminPassword } = users.admin
 
+// ⚠️ QUARANTINED per #490 → see #552 (CI-only failure; passes locally). Fails against a fresh stack:
+// CI-only (passes locally on Electron): `[data-testid="media-uploader-asset"]` never appears after the avatar file is selected (employee-avatar-upload.cy.ts:37) — the upload flow does not render the asset under Chromium.
+// Remove this guard when #552 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })

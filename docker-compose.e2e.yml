@@ -18,7 +18,9 @@ services:
     environment:
       - ENV=e2e
       - VITE_APP_PORT=${VITE_APP_PORT:-5173}
-      - VITE_API_URL=https://api.sushigo.e2e.local/api/v1
+      # Local default keeps the HTTPS/local-domain routing; CI overrides this with the direct
+      # Docker-network API URL (E2E_VITE_API_URL=http://test_e2e:80/api/v1) — see cypress-e2e.yml.
+      - VITE_API_URL=${E2E_VITE_API_URL:-https://api.sushigo.e2e.local/api/v1}
       - VITE_DEV_DEBUGGER_START_HIDDEN=false
       - VITE_LOGIN_WITH_DEVDEBUG=true
       - VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS=local,dev,devtest,e2e

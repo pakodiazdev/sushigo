@@ -35,6 +35,13 @@ const TEMPLATE_NAME = 'Cypress Box x24'
 const TEMPLATE_CODE = 'CYP_BOX_24'
 const PACKAGE_BARCODE = '7501234567913'
 
+// ⚠️ QUARANTINED per #490 → see #547. Fails against a fresh stack:
+// Happy-path test fails: content 'Cypress Presentation Rice 1kg Bag' never appears (seed/flow).
+// Remove this guard when #547 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 

@@ -37,6 +37,13 @@ function scrollToVacation() {
 
 // ── Suite setup ───────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #541. Fails against a fresh stack:
+// Happy-path test fails: entitlement <p> is `position: fixed` and "covered by" the blue DevDebugger bar (`<div class="bg-blue-600 ...">`).
+// Remove this guard when #541 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })

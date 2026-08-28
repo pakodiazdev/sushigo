@@ -20,7 +20,7 @@ export default defineConfig({
     baseUrl: process.env.CYPRESS_baseUrl || 'https://devtest.sushigo.local',
     supportFile: 'cypress/support/e2e.ts',
     specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
-    setupNodeEvents(on, config) {
+    async setupNodeEvents(on, config) {
       // ── Browser flags ──────────────────────────────────────────────
       on('before:browser:launch', (browser, launchOptions) => {
         if (browser.family === 'chromium' || browser.name === 'electron') {
@@ -212,6 +212,19 @@ export default defineConfig({
           })
         },
       })
+
+      // Fail-fast: abort the run on the first failing test. The plugin is always registered (its
+      // support-side hooks call cy.task, which would error if the task were missing), but it is
+      // OFF unless FAIL_FAST_ENABLED is truthy — so local `make cypress-run` / `cypress:run` keep
+      // running the whole suite. CI's cypress-e2e.yml sets CYPRESS_FAIL_FAST_ENABLED=true so a red
+      // shard stops at the first failure instead of churning the rest.
+      config.env.FAIL_FAST_ENABLED = config.env.FAIL_FAST_ENABLED ?? false
+      const failFastModule = await import('cypress-fail-fast/plugin')
+      const registerFailFast = (failFastModule.default ?? failFastModule) as (
+        on: Cypress.PluginEvents,
+        config: Cypress.PluginConfigOptions,
+      ) => void
+      registerFailFast(on, config)
 
       return config
     },

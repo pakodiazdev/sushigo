@@ -74,7 +74,16 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: parseInt(env.VITE_PORT || '5173'),
-      allowedHosts: ['.localhost', '.dev', '.local', 'cypress-ui', 'sushigo.local', 'devtest.sushigo.local'],
+      // `test_e2e` is the docker-compose.e2e.yml service hostname Cypress targets directly in CI
+      // (no local nginx / self-signed-TLS / /etc/hosts layer). VITE_ALLOWED_HOSTS (comma-separated)
+      // lets other CI/runtime hostnames be whitelisted without another code change.
+      allowedHosts: [
+        '.localhost', '.dev', '.local', 'cypress-ui', 'sushigo.local', 'devtest.sushigo.local',
+        'test_e2e',
+        ...(env.VITE_ALLOWED_HOSTS
+          ? env.VITE_ALLOWED_HOSTS.split(',').map((h) => h.trim()).filter(Boolean)
+          : []),
+      ],
       strictPort: true,
       watch: {
         usePolling: true,

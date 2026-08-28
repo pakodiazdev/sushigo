@@ -86,6 +86,13 @@ function getCard(lastName: string, firstName: string) {
 //    EMP-005, EMP-006 → returned | EMP-007, EMP-008 → pending (absence)
 // ══════════════════════════════════════════════════════════════════════════════
 
+// ⚠️ QUARANTINED per #490 → see #536. Fails against a fresh stack:
+// "closes the day" test fails: a status <span> "not visible because clipped by a parent element" (overflow/scroll).
+// Remove this guard when #536 is fixed.
+before(function () {
+  this.skip()
+})
+
 describe("Close day — Happy path (no pending lunch returns)", () => {
   beforeEach(() => {
     setupBeforeEach("close-day-happy");

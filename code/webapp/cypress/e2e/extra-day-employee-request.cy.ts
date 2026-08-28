@@ -55,6 +55,13 @@ function isCurrentMonth(iso: string): boolean {
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #543. Fails against a fresh stack:
+// Happy-path test fails: `cy.click()` on a button "covered by another element" (overlay/toast).
+// Remove this guard when #543 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })

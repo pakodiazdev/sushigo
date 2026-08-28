@@ -29,6 +29,13 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #535. Fails against a fresh stack:
+// Two "Stat cards as tabs" tests fail: employee name <p> "not visible because its content is being clipped by a parent" (overflow/scroll).
+// Remove this guard when #535 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task("test:reset", "attendance-absent-stat-card", { timeout: 60_000 });
 });

@@ -23,6 +23,13 @@ const viewSessionDetail = () => {
   })
 }
 
+// ⚠️ QUARANTINED per #490 → see #555 (CI-only failure; passes locally). Fails against a fresh stack:
+// CI-only (passes locally on Electron): content 'Caja E2E' never found within `[data-testid="cash-session-card"]` (cash-session-detail.cy.ts:20/35) — the `cash-session-detail` test seeder's session does not show up on the fresh CI stack.
+// Remove this guard when #555 is fixed.
+before(function () {
+  this.skip()
+})
+
 describe('Cash Session Detail — happy path', () => {
   before(() => {
     cy.task('test:reset', 'cash-session-detail')

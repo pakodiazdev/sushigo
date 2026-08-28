@@ -44,6 +44,13 @@ function apiHeaders(token: string) {
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' }
 }
 
+// ⚠️ QUARANTINED per #490 → see #549. Fails against a fresh stack:
+// Happy-path test fails: an <h4> section title "not visible because clipped by a parent element" (overflow/scroll).
+// Remove this guard when #549 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 

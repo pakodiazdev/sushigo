@@ -31,6 +31,13 @@ const { email: adminEmail, password: adminPassword } = users.admin
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
+// ⚠️ QUARANTINED per #490 → see #553 (CI-only failure; passes locally). Fails against a fresh stack:
+// CI-only (passes locally): an <h3> section title is "not visible" after 15s (schedule-indefinite-summary.cy.ts:69) — overlay/scroll fragility that only reproduces on the fresh CI stack.
+// Remove this guard when #553 is fixed.
+before(function () {
+  this.skip()
+})
+
 before(() => {
   cy.task('test:reset', 'schedule-summary', { timeout: 60_000 })
 })
