@@ -1,34 +1,10 @@
-import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useCreateCashRegister, useUpdateCashRegister } from '@/services/cash-hooks'
 import { CashRegisterType, type CashRegister, type OperatingUnit } from '@/types/cash'
-
-const cashRegisterSchema = z.object({
-    code: z.string().min(1, 'Este campo es requerido'),
-    name: z.string().min(1, 'Este campo es requerido'),
-    branch_id: z.number().min(1, 'La sucursal es requerida'),
-    operating_unit_id: z.number().nullable(),
-    type: z.nativeEnum(CashRegisterType),
-    is_active: z.boolean(),
-    meta: z.record(z.string(), z.unknown()).optional(),
-}).refine((data) => {
-    if (data.type === CashRegisterType.EVENT && !data.operating_unit_id) {
-        return false
-    }
-    return true
-}, {
-    message: 'La unidad operativa es requerida para cajas de eventos',
-    path: ['operating_unit_id'],
-})
-
-type CashRegisterFormValues = z.infer<typeof cashRegisterSchema>
+import { useCashRegisterForm } from './use-cash-register-form'
 
 interface CashRegisterFormProps {
     register?: CashRegister | null
@@ -45,75 +21,32 @@ export function CashRegisterForm({
     onClose,
     onSuccess,
 }: Readonly<CashRegisterFormProps>) {
-    const isEditing = !!register
-
     const {
-        register: _registerField,
+        isEditing,
+        registerField,
+        codeField,
+        onCodeChange,
         handleSubmit,
-        watch,
         setValue,
-        reset,
-        formState: { errors },
-    } = useForm<CashRegisterFormValues>({
-        resolver: zodResolver(cashRegisterSchema),
-        defaultValues: {
-            code: register?.code || '',
-            name: register?.name || '',
-            branch_id: register?.branch_id || 1,
-            operating_unit_id: register?.operating_unit_id || null,
-            type: register?.type || CashRegisterType.ON_PREMISE,
-            is_active: register?.is_active ?? true,
-            meta: register?.meta || undefined,
-        },
-    })
-
-    // Sync form values when register prop changes (always-mounted panel)
-    useEffect(() => {
-        reset({
-            code: register?.code || '',
-            name: register?.name || '',
-            branch_id: register?.branch_id || 1,
-            operating_unit_id: register?.operating_unit_id || null,
-            type: register?.type || CashRegisterType.ON_PREMISE,
-            is_active: register?.is_active ?? true,
-            meta: register?.meta || undefined,
-        })
-    }, [register, reset])
-
-    const createMutation = useCreateCashRegister()
-    const updateMutation = useUpdateCashRegister()
-
-    // Watch values for controlled inputs
-    const code = watch('code')
-    const name = watch('name')
-    const branchId = watch('branch_id')
-    const operatingUnitId = watch('operating_unit_id')
-    const type = watch('type')
-    const isActive = watch('is_active')
-
-    const onSubmit = async (formData: CashRegisterFormValues) => {
-        try {
-            if (isEditing && register) {
-                await updateMutation.mutateAsync({
-                    id: register.id,
-                    data: formData,
-                })
-            } else {
-                await createMutation.mutateAsync(formData)
-            }
-            onSuccess()
-            onClose()
-        } catch (error) {
-            console.error('Error submitting form:', error)
-        }
-    }
+        onSubmit,
+        errors,
+        codeError,
+        values,
+        isSubmitting,
+        isCodeSuggested,
+        isSuggestionLoading,
+        isRefreshingCode,
+        suggestionFailed,
+        handleRefreshCode,
+        collision,
+        canApplySuggestedCode,
+        applySuggestedCode,
+    } = useCashRegisterForm({ register, isOpen, onSuccess, onClose })
 
     // Filter operating units by selected branch and only EVENT type
     const filteredOperatingUnits = operatingUnits.filter(
-        ou => ou.branch_id === branchId && ou.type === 'EVENT_TEMP'
+        ou => ou.branch_id === values.branchId && ou.type === 'EVENT_TEMP'
     )
-
-    const isLoading = createMutation.isPending || updateMutation.isPending
 
     return (
         <SlidePanel
@@ -129,17 +62,59 @@ export function CashRegisterForm({
                     <div className="space-y-6">
                         <FormField
                             label="Código"
-                            error={errors.code?.message}
+                            error={codeError}
                             required
                         >
-                            <Input
-                                type="text"
-                                value={code}
-                                onChange={(e) => setValue('code', e.target.value)}
-                                placeholder="REG-001"
-                                disabled={isEditing}
-                                error={!!errors.code}
-                            />
+                            <div className="flex gap-2">
+                                <Input
+                                    type="text"
+                                    aria-label="Código"
+                                    {...codeField}
+                                    onChange={onCodeChange}
+                                    placeholder="REG-001"
+                                    disabled={isEditing}
+                                    error={!!codeError}
+                                />
+                                {!isEditing && (
+                                    <Button
+                                        type="button"
+                                        variant="neutral"
+                                        aria-label="Sugerir otro código"
+                                        onClick={handleRefreshCode}
+                                        disabled={isSuggestionLoading || isRefreshingCode}
+                                    >
+                                        <RefreshCw className={`h-4 w-4 ${isRefreshingCode ? 'animate-spin' : ''}`} />
+                                    </Button>
+                                )}
+                            </div>
+                            {!isEditing && isCodeSuggested && !suggestionFailed && (
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    Sugerido automáticamente; puedes modificarlo.
+                                </p>
+                            )}
+                            {!isEditing && suggestionFailed && (
+                                <p className="mt-1 text-xs text-amber-600">
+                                    No se pudo sugerir un código; escríbelo manualmente o vuelve a intentarlo.
+                                </p>
+                            )}
+                            {collision && (
+                                <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+                                    <p>
+                                        El código {collision.rejectedCode} acaba de ser utilizado. Te proponemos{' '}
+                                        {collision.suggestedCode}.
+                                    </p>
+                                    {canApplySuggestedCode && (
+                                        <Button
+                                            type="button"
+                                            variant="neutral"
+                                            className="mt-2"
+                                            onClick={applySuggestedCode}
+                                        >
+                                            Usar {collision.suggestedCode}
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
                         </FormField>
 
                         <FormField
@@ -149,8 +124,8 @@ export function CashRegisterForm({
                         >
                             <Input
                                 type="text"
-                                value={name}
-                                onChange={(e) => setValue('name', e.target.value)}
+                                aria-label="Nombre"
+                                {...registerField('name')}
                                 placeholder="Caja Principal"
                                 error={!!errors.name}
                             />
@@ -164,7 +139,7 @@ export function CashRegisterForm({
                             <Select
                                 id="cash-register-type"
                                 name="type"
-                                value={type}
+                                value={values.type}
                                 onChange={(e) => setValue('type', e.target.value as CashRegisterType)}
                             >
                                 <option value={CashRegisterType.ON_PREMISE}>Local</option>
@@ -173,7 +148,7 @@ export function CashRegisterForm({
                             </Select>
                         </FormField>
 
-                        {type === CashRegisterType.EVENT && (
+                        {values.type === CashRegisterType.EVENT && (
                             <FormField
                                 label="Evento"
                                 error={errors.operating_unit_id?.message}
@@ -183,7 +158,7 @@ export function CashRegisterForm({
                                 <Select
                                     id="operating-unit"
                                     name="operating_unit_id"
-                                    value={operatingUnitId || ''}
+                                    value={values.operatingUnitId || ''}
                                     onChange={(e) => setValue('operating_unit_id', e.target.value ? Number.parseInt(e.target.value) : null)}
                                 >
                                     <option value="">Selecciona un evento</option>
@@ -198,7 +173,7 @@ export function CashRegisterForm({
 
                         <FormField label="Estado">
                             <Checkbox
-                                checked={isActive}
+                                checked={values.isActive}
                                 onChange={(e) => setValue('is_active', e.target.checked)}
                                 label="Activa"
                             />
@@ -213,16 +188,16 @@ export function CashRegisterForm({
                             type="button"
                             variant="neutral"
                             onClick={onClose}
-                            disabled={isLoading}
+                            disabled={isSubmitting}
                         >
                             Cancelar
                         </Button>
                         <Button
                             type="submit"
                             variant="info"
-                            disabled={isLoading}
+                            disabled={isSubmitting}
                         >
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isEditing ? 'Actualizar' : 'Crear'}
                         </Button>
                     </div>

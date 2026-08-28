@@ -64,6 +64,18 @@ describe('cashRegisterApi', () => {
         })
     })
 
+    describe('nextCode', () => {
+        it('calls GET /cash-registers/next-code', async () => {
+            const mockResponse = { data: { code: 'REG-004', prefix: 'REG-' } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            const result = await cashRegisterApi.nextCode()
+
+            expect(apiClient.get).toHaveBeenCalledWith('/cash-registers/next-code')
+            expect(result).toEqual(mockResponse)
+        })
+    })
+
     describe('get', () => {
         it('calls GET /cash-registers/:id', async () => {
             const mockResponse = { data: { status: 200, data: { id: '1' } } }

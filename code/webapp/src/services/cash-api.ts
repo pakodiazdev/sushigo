@@ -34,6 +34,9 @@ export const cashRegisterApi = {
   list: (params?: CashRegisterFilters) =>
     api.get<PaginatedResponse<CashRegister>>('/cash-registers', { params }),
 
+  nextCode: () =>
+    api.get<{ code: string; prefix: string }>('/cash-registers/next-code'),
+
   get: (id: string) =>
     api.get<EntityResponse<CashRegister>>(`/cash-registers/${id}`),
 
