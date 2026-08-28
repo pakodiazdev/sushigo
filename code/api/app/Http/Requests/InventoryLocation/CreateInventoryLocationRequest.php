@@ -3,6 +3,8 @@
 namespace App\Http\Requests\InventoryLocation;
 
 use App\Http\Requests\InventoryLocation\Concerns\SharesInventoryLocationRules;
+use App\Models\OperatingUnit;
+use App\Support\Access\OperatingUnitScope;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -27,7 +29,24 @@ class CreateInventoryLocationRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()->can('inventory_locations.manage');
+        if (! $this->user()->can('inventory_locations.manage')) {
+            return false;
+        }
+
+        $operatingUnitId = $this->input('operating_unit_id');
+
+        // Let rules() reject a missing / non-numeric / unknown operating_unit_id
+        // with a normal 422 `exists` failure instead of a misleading 403.
+        if (! is_numeric($operatingUnitId)
+            || ! OperatingUnit::query()->whereKey((int) $operatingUnitId)->exists()) {
+            return true;
+        }
+
+        // Horizontal authorization (#440): a user may only create a location in
+        // an Operating Unit they hold an active membership in (bypass roles
+        // excepted).
+        return app(OperatingUnitScope::class)
+            ->canAccessOperatingUnit($this->user(), (int) $operatingUnitId);
     }
 
     public function rules(): array

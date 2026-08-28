@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\Inventory;
 
+use App\Http\Requests\Concerns\AuthorizesLocationOperatingUnitAccess;
 use App\Http\Requests\Concerns\ResolvesStockReferenceIds;
 use App\Models\StockMovement;
 use Illuminate\Foundation\Http\FormRequest;
@@ -28,16 +29,21 @@ use OpenApi\Attributes as OA;
 )]
 class RegisterStockOutRequest extends FormRequest
 {
+    use AuthorizesLocationOperatingUnitAccess;
     use ResolvesStockReferenceIds;
 
     private const PUBLIC_ID_EXAMPLE = '01J...';
 
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * The route already enforces `stock.manage`; the source location must also
+     * belong to an Operating Unit the caller has active membership in (#440).
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('stock.manage')
+            && $this->callerCanAccessMovementLocation();
     }
 
     /**

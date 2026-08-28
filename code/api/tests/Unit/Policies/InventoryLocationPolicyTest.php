@@ -10,6 +10,7 @@ use App\Policies\InventoryLocationPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -50,7 +51,24 @@ class InventoryLocationPolicyTest extends TestCase
         ]);
     }
 
+    /**
+     * A user holding the given permissions AND an active membership in
+     * $this->operatingUnit — the default for the permission-focused cases,
+     * since per-instance abilities now also require operating-unit membership
+     * (#440).
+     */
     private function userWith(string ...$permissions): User
+    {
+        $user = $this->bareUserWith(...$permissions);
+        $user->operatingUnits()->attach($this->operatingUnit->id, [
+            'assignment_role' => 'INVENTORY',
+            'is_active' => true,
+        ]);
+
+        return $user;
+    }
+
+    private function bareUserWith(string ...$permissions): User
     {
         $user = User::factory()->create();
         $user->givePermissionTo($permissions);
@@ -208,5 +226,82 @@ class InventoryLocationPolicyTest extends TestCase
     public function user_with_manage_permission_can_force_delete(): void
     {
         $this->assertTrue($this->policy->forceDelete($this->userWith('inventory_locations.manage'), $this->location()));
+    }
+
+    // ── Horizontal authorization: operating-unit membership (#440) ─────────
+
+    private function otherUnitLocation(): InventoryLocation
+    {
+        $otherUnit = OperatingUnit::create([
+            'branch_id' => $this->operatingUnit->branch_id,
+            'type' => OperatingUnit::TYPE_EVENT_TEMP,
+            'name' => 'Other Unit',
+            'is_active' => true,
+        ]);
+
+        return InventoryLocation::factory()->create(['operating_unit_id' => $otherUnit->id]);
+    }
+
+    #[Test]
+    public function permitted_user_cannot_view_a_location_in_a_unit_they_do_not_belong_to(): void
+    {
+        $user = $this->userWith('inventory_locations.view');
+
+        $this->assertFalse($this->policy->view($user, $this->otherUnitLocation()));
+    }
+
+    #[Test]
+    public function permitted_user_cannot_update_or_delete_a_location_in_a_foreign_unit(): void
+    {
+        $user = $this->userWith('inventory_locations.manage');
+        $foreign = $this->otherUnitLocation();
+
+        $this->assertFalse($this->policy->update($user, $foreign));
+        $this->assertFalse($this->policy->delete($user, $foreign));
+        $this->assertFalse($this->policy->restore($user, $foreign));
+        $this->assertFalse($this->policy->forceDelete($user, $foreign));
+    }
+
+    #[Test]
+    public function inactive_membership_does_not_grant_per_instance_access(): void
+    {
+        $user = $this->bareUserWith('inventory_locations.view', 'inventory_locations.manage');
+        $user->operatingUnits()->attach($this->operatingUnit->id, [
+            'assignment_role' => 'INVENTORY',
+            'is_active' => false,
+        ]);
+
+        $this->assertFalse($this->policy->view($user, $this->location()));
+        $this->assertFalse($this->policy->update($user, $this->location()));
+    }
+
+    #[Test]
+    public function class_string_checks_stay_permission_only(): void
+    {
+        // No instance → no membership dimension to check (a Gate::allows(...,
+        // InventoryLocation::class) call). Preserved from #400.
+        $user = $this->bareUserWith('inventory_locations.view', 'inventory_locations.manage');
+
+        $this->assertTrue($this->policy->view($user));
+        $this->assertTrue($this->policy->update($user));
+        $this->assertTrue($this->policy->delete($user));
+    }
+
+    #[Test]
+    public function admin_and_super_admin_bypass_membership_for_any_location(): void
+    {
+        foreach (['admin', 'super-admin'] as $roleName) {
+            Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
+            $user = User::factory()->create();
+            $user->assignRole($roleName);
+            $user->givePermissionTo('inventory_locations.view', 'inventory_locations.manage');
+            app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+            $foreign = $this->otherUnitLocation();
+
+            $this->assertTrue($this->policy->view($user, $foreign), "$roleName view");
+            $this->assertTrue($this->policy->update($user, $foreign), "$roleName update");
+            $this->assertTrue($this->policy->delete($user, $foreign), "$roleName delete");
+        }
     }
 }

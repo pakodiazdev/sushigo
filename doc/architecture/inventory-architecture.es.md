@@ -759,6 +759,43 @@ detalle de ubicación del Stock Dashboard.
 
 ---
 
+### 3.11 Autorización horizontal — alcance por Unidad Operativa (#440)
+
+Una capacidad global (`inventory_locations.*`, `stock.*`, …) define *qué* puede hacer un usuario;
+**no** define *dónde*. Aplicar solo el permiso permitiría a cualquier titular leer o mutar otra
+sucursal/evento adivinando public IDs o cambiando un filtro. La autorización horizontal
+("a nivel de fila") cierra esa brecha.
+
+**Regla.** Para toda lectura o mutación de datos de Inventario con alcance, el usuario debe tener
+una membresía **activa** en `operating_unit_users` (`is_active = true`) en la Unidad Operativa
+dueña de la `InventoryLocation` referida — *además* del permiso funcional.
+
+**Roles de bypass.** Los usuarios con rol `super-admin` o `admin` omiten por completo el requisito
+de membresía (siguen necesitando el permiso funcional). Esto es explícito y está probado, no un
+efecto secundario de que los seeders asignen a los admins a todas las unidades — ver
+`App\Support\Access\OperatingUnitScope::BYPASS_ROLES`.
+
+**Única fuente de verdad.** `App\Support\Access\OperatingUnitScope` centraliza el contrato:
+
+| Método | Usado por |
+| --- | --- |
+| `accessibleOperatingUnitIds()` / `constrainLocations()` / `constrainStock()` | Endpoints de listado — el conjunto de resultados se restringe a las unidades del usuario *antes* de cualquier filtro de la request, así `?operating_unit_id=` / `?inventory_location_id=` nunca lo amplían. |
+| `canAccessLocation()` | Habilidades por instancia de `InventoryLocationPolicy` (`view`/`update`/`delete`/`restore`/`forceDelete`) vía el concern `ChecksOperatingUnitAccess`; los checks de Gate sobre class-string siguen siendo solo de permiso (#400). |
+| `assertCanAccessLocation()` (lanza 403) | Controladores de Show / mutación y flujos de movimiento de stock — se invoca una vez por cada ubicación que toca un movimiento, de modo que **tanto** el origen como el destino de una transferencia se validan con la misma regla. |
+
+**Aplicado aquí:** listado/detalle/creación/actualización/borrado de Inventory Location, los
+endpoints de consulta de `stock` (`/stock`, `/stock/by-location/{id}`, `/stock/by-variant/{id}`),
+el sub-recurso de políticas de reabastecimiento por ubicación
+(`/inventory-locations/{id}/replenishment-policies…`, #439) y las operaciones de movimiento de
+stock (`opening-balance`, `stock-out`). Los endpoints de Receipt y los filtros adicionales de
+stock adoptan el mismo contrato de `OperatingUnitScope` a medida que aterrizan sus propias issues
+(coordinado con #432).
+
+Una ubicación u operating-unit id desconocido / `missing` sigue fallando como un error de
+validación `422` normal (regla `exists`), nunca como un `403` engañoso.
+
+---
+
 ## 4. Flujos operativos
 
 ### 4.1 Flujo de un evento

@@ -10,6 +10,7 @@ use App\Http\Resources\Inventory\ReplenishmentPolicy\ReplenishmentPolicyResource
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
 use App\Models\VariantLocationReplenishmentPolicy;
+use App\Support\Access\OperatingUnitScope;
 
 /**
  * @OA\Put(
@@ -46,9 +47,14 @@ use App\Models\VariantLocationReplenishmentPolicy;
  */
 class UpsertVariantReplenishmentPolicyController extends Controller
 {
-    public function __invoke(UpsertReplenishmentPolicyRequest $request, string $id, string $variantId): ReplenishmentPolicyResource
+    public function __invoke(UpsertReplenishmentPolicyRequest $request, string $id, string $variantId, OperatingUnitScope $scope): ReplenishmentPolicyResource
     {
         $location = InventoryLocation::findByPublicIdOrFail($id);
+
+        // Horizontal authorization (#440): replenishment policies are scoped to
+        // their location's Operating Unit, same as the location itself.
+        $scope->assertCanAccessLocation($request->user(), $location);
+
         $variant = ItemVariant::findByPublicIdOrFail($variantId);
 
         $existing = VariantLocationReplenishmentPolicy::query()

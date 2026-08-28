@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\ReplenishmentPolicy\ReplenishmentPolicyResource;
 use App\Models\InventoryLocation;
+use App\Support\Access\OperatingUnitScope;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -38,9 +39,13 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class ListLocationReplenishmentPoliciesController extends Controller
 {
-    public function __invoke(string $id): AnonymousResourceCollection
+    public function __invoke(string $id, OperatingUnitScope $scope): AnonymousResourceCollection
     {
         $location = InventoryLocation::findByPublicIdOrFail($id);
+
+        // Horizontal authorization (#440): replenishment policies are scoped to
+        // their location's Operating Unit, same as the location itself.
+        $scope->assertCanAccessLocation(request()->user(), $location);
 
         $policies = $location->replenishmentPolicies()
             ->with(['inventoryLocation', 'itemVariant'])

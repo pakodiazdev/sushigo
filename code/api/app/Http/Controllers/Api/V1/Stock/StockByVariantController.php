@@ -8,6 +8,7 @@ use App\Http\Responses\Common\ResponseEntity;
 use App\Models\ItemVariant;
 use App\Models\Stock;
 use App\Services\Inventory\ReplenishmentPolicyResolver;
+use App\Support\Access\OperatingUnitScope;
 
 /**
  * @OA\Get(
@@ -25,11 +26,16 @@ class StockByVariantController extends Controller
 {
     use SummarizesStock;
 
-    public function __invoke(string $id, ReplenishmentPolicyResolver $resolver)
+    public function __invoke(string $id, ReplenishmentPolicyResolver $resolver, OperatingUnitScope $scope)
     {
         $variant = ItemVariant::with(['item'])->where('public_id', $id)->firstOrFail();
 
-        $stockRecords = Stock::where('item_variant_id', $variant->id)
+        // Horizontal authorization (#440): the per-location breakdown only
+        // includes locations in the caller's accessible Operating Units.
+        $stockRecords = $scope->constrainStock(
+            Stock::where('item_variant_id', $variant->id),
+            request()->user()
+        )
             ->with([
                 'inventoryLocation.operatingUnit',
             ])

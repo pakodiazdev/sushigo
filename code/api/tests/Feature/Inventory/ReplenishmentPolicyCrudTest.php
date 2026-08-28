@@ -182,6 +182,12 @@ class ReplenishmentPolicyCrudTest extends InventoryTestCase
         $readOnly->syncPermissions(['stock.view']);
         $viewer = User::factory()->create(['email' => 'viewer@sushigo.com']);
         $viewer->assignRole('stock-reader');
+        // Active membership so this stays a permission-level check, not a
+        // horizontal-authorization (#440) one.
+        $viewer->operatingUnits()->attach($this->operatingUnit->id, [
+            'assignment_role' => 'AUDITOR',
+            'is_active' => true,
+        ]);
         Passport::actingAs($viewer);
 
         // read is allowed

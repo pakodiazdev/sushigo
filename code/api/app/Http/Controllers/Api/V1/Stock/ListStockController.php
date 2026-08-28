@@ -7,6 +7,7 @@ use App\Http\Requests\Stock\ListStockRequest;
 use App\Http\Responses\Common\ResponsePaginated;
 use App\Models\Stock;
 use App\Services\Inventory\ReplenishmentPolicyResolver;
+use App\Support\Access\OperatingUnitScope;
 
 /**
  * @OA\Get(
@@ -25,13 +26,18 @@ use App\Services\Inventory\ReplenishmentPolicyResolver;
  */
 class ListStockController extends Controller
 {
-    public function __invoke(ListStockRequest $request, ReplenishmentPolicyResolver $resolver)
+    public function __invoke(ListStockRequest $request, ReplenishmentPolicyResolver $resolver, OperatingUnitScope $scope)
     {
         $query = Stock::query()
             ->with([
                 'inventoryLocation.operatingUnit',
                 'itemVariant.item',
             ]);
+
+        // Horizontal authorization (#440): restrict to stock in the caller's
+        // accessible Operating Units before any request filter, so an
+        // `inventory_location_id` filter cannot reach another unit's stock.
+        $scope->constrainStock($query, $request->user());
 
         // Filter by inventory location
         if ($request->filled('inventory_location_id')) {
