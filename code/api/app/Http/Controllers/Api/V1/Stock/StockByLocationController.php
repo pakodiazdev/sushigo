@@ -8,6 +8,7 @@ use App\Http\Responses\Common\ResponseEntity;
 use App\Models\InventoryLocation;
 use App\Models\Stock;
 use App\Services\Inventory\ReplenishmentPolicyResolver;
+use App\Support\Access\OperatingUnitScope;
 
 /**
  * @OA\Get(
@@ -18,6 +19,7 @@ use App\Services\Inventory\ReplenishmentPolicyResolver;
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Inventory Location ID"),
  *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
+ *   @OA\Response(response=403, description="Forbidden — caller is not an active member of the location's Operating Unit"),
  *   @OA\Response(response=404, description="Location Not Found"),
  * )
  */
@@ -25,9 +27,14 @@ class StockByLocationController extends Controller
 {
     use SummarizesStock;
 
-    public function __invoke(string $id, ReplenishmentPolicyResolver $resolver)
+    public function __invoke(string $id, ReplenishmentPolicyResolver $resolver, OperatingUnitScope $scope)
     {
         $location = InventoryLocation::findByPublicIdOrFail($id);
+
+        // Horizontal authorization (#440): stock.view alone is not enough to
+        // read a specific location's stock — the caller must belong to its
+        // Operating Unit.
+        $scope->assertCanAccessLocation(request()->user(), $location);
 
         $stockRecords = Stock::where('inventory_location_id', $location->id)
             ->with([

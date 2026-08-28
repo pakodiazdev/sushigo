@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\InventoryLocation\ListInventoryLocationsRequest;
 use App\Http\Responses\Common\ResponsePaginated;
 use App\Models\InventoryLocation;
+use App\Support\Access\OperatingUnitScope;
 
 /**
  * @OA\Get(
@@ -25,10 +26,15 @@ use App\Models\InventoryLocation;
  */
 class ListInventoryLocationsController extends Controller
 {
-    public function __invoke(ListInventoryLocationsRequest $request)
+    public function __invoke(ListInventoryLocationsRequest $request, OperatingUnitScope $scope)
     {
         $query = InventoryLocation::query()
             ->with(['operatingUnit.branch']);
+
+        // Horizontal authorization (#440): restrict the result set to the
+        // caller's accessible Operating Units before any request filter is
+        // applied, so an `operating_unit_id` filter can never widen the scope.
+        $scope->constrainLocations($query, $request->user());
 
         // Filter by operating unit
         if ($request->filled('operating_unit_id')) {

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
 use App\Models\VariantLocationReplenishmentPolicy;
+use App\Support\Access\OperatingUnitScope;
 use Illuminate\Http\Response;
 
 /**
@@ -29,9 +30,14 @@ use Illuminate\Http\Response;
  */
 class DeleteVariantReplenishmentPolicyController extends Controller
 {
-    public function __invoke(string $id, string $variantId): Response
+    public function __invoke(string $id, string $variantId, OperatingUnitScope $scope): Response
     {
         $location = InventoryLocation::findByPublicIdOrFail($id);
+
+        // Horizontal authorization (#440): replenishment policies are scoped to
+        // their location's Operating Unit, same as the location itself.
+        $scope->assertCanAccessLocation(request()->user(), $location);
+
         $variant = ItemVariant::findByPublicIdOrFail($variantId);
 
         $policy = VariantLocationReplenishmentPolicy::query()

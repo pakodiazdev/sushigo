@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Inventory;
 
+use App\Http\Requests\Concerns\AuthorizesLocationOperatingUnitAccess;
 use App\Http\Requests\Concerns\ResolvesStockReferenceIds;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -21,11 +22,15 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class RegisterOpeningBalanceRequest extends FormRequest
 {
+    use AuthorizesLocationOperatingUnitAccess;
     use ResolvesStockReferenceIds;
 
     public function authorize(): bool
     {
-        return $this->user()->can('stock.manage');
+        // Horizontal authorization (#440): the destination location must belong
+        // to an Operating Unit the caller has active membership in.
+        return $this->user()->can('stock.manage')
+            && $this->callerCanAccessMovementLocation();
     }
 
     public function rules(): array

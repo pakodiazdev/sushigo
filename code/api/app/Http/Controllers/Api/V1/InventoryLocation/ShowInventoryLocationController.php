@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\InventoryLocation\Concerns\FormatsInventoryLocat
 use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\InventoryLocation;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * @OA\Get(
@@ -16,6 +17,7 @@ use App\Models\InventoryLocation;
  *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
  *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
+ *   @OA\Response(response=403, description="Forbidden — caller is not an active member of the location's Operating Unit"),
  *   @OA\Response(response=404, description="Not Found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  * )
  */
@@ -29,6 +31,10 @@ class ShowInventoryLocationController extends Controller
             'operatingUnit.branch',
             'stock.itemVariant.item',
         ])->where('public_id', $id)->firstOrFail();
+
+        // Horizontal authorization (#440): a user with inventory_locations.view
+        // may still only see locations in an Operating Unit they belong to.
+        Gate::authorize('view', $location);
 
         // Calculate stock totals
         $stockTotals = $location->stock()

@@ -93,6 +93,14 @@ abstract class InventoryTestCase extends TestCase
             'is_active' => true,
         ]);
 
+        // Give the test user an active membership in the operating unit so
+        // horizontal-authorization scoping (#440) treats them as an insider for
+        // the default happy-path assertions in the inventory suites.
+        $this->user->operatingUnits()->attach($this->operatingUnit->id, [
+            'assignment_role' => 'INVENTORY',
+            'is_active' => true,
+        ]);
+
         // Create inventory location
         $this->location = InventoryLocation::create([
             'operating_unit_id' => $this->operatingUnit->id,
