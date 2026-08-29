@@ -78,8 +78,3 @@ rounds were the only real cost, and the underlying change never grew in scope.
 Final gates: ~965 API tests + 236 webapp tests green; `migrate:fresh`/`rollback`/re-migrate
 verified on seeded data; Pint/ESLint/tsc clean; full CI green (30/30, incl. all 6 Cypress E2E
 shards from the newly-merged #490 gate) on the merge-ready commit.
-
-
-
-
-

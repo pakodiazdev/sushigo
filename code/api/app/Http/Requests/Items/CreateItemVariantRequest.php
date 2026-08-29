@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Items;
 
 use App\Models\Item;
+use App\Models\ItemVariant;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,7 +27,7 @@ class CreateItemVariantRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\ItemVariant::class);
+        return $this->user()->can('create', ItemVariant::class);
     }
 
     public function rules(): array
