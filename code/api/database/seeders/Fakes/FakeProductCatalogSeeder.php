@@ -57,9 +57,6 @@ class FakeProductCatalogSeeder extends Seeder
                 'item_id' => $product->id,
                 'uom_id' => $uomId,
                 'barcode' => fn () => fake()->unique()->ean13(),
-                'sale_price' => null,
-                'avg_unit_cost' => 0,
-                'last_unit_cost' => 0,
             ]);
         }
 

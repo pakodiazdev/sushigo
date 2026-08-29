@@ -170,9 +170,9 @@ class CoreTestSeeder extends Seeder
         'inventory-manager' => ['items.', 'brands.', 'inventory_categories.', 'purchase_presentation_templates.', 'inventory_locations.', 'stock.', 'suppliers.', 'receipts.', 'media.', 'price_lists.', 'price_list_assignments.', '=units_of_measure.manage', ...self::SELF_SERVICE_REQUESTS],
         // items.view + items.manage-media only (not items.update, and not the
         // 'items.' wildcard) — items.update also guards PUT /items/{id} and
-        // PUT /item-variants/{id} (name, sale_price, min_stock, ...), so
+        // PUT /item-variants/{id} (catalog identity fields), so
         // granting it just for Item::userCanManageMedia() (#377) would
-        // silently hand manager full catalog/pricing edit rights too.
+        // silently hand manager full catalog edit rights too.
         // media. stays the full wildcard since managing an item's photos is the point.
         // brands.view/inventory_categories.view mirror items.view — a manager
         // who can view Products needs to view their brand/category labels too.

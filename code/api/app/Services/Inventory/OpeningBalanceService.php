@@ -102,11 +102,10 @@ class OpeningBalanceService
             // first receipt for the same location+variant (see StockMutationService)
             $stock = $this->stockMutation->receiveInto($inventoryLocationId, $itemVariantId, $baseQuantity);
 
-            // Blend into this location's weighted-average cost (#434) —
-            // never onto ItemVariant.avg_unit_cost/last_unit_cost, which
-            // this diverged from before #434 unified the two. The Product/
-            // Variant catalog stays read-only for acquisition cost; Stock
-            // (per Inventory Location) is the single source of truth.
+            // Blend into this location's weighted-average cost (#434). The
+            // former per-Variant avg_unit_cost/last_unit_cost columns this
+            // used to diverge from were dropped in #442; Stock (per Inventory
+            // Location) is now the only source of truth for acquisition cost.
             // An explicit 0 must still blend (e.g. free stock) — only a
             // missing (null) cost means "no cost supplied," matching
             // ReceiptService's unconditional blend on every line.

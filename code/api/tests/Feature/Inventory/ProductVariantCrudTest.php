@@ -314,12 +314,12 @@ class ProductVariantCrudTest extends InventoryTestCase
 
         $response->assertStatus(201);
         $variant = ItemVariant::where('code', 'ARR-KG')->firstOrFail();
-        $this->assertNull($variant->sale_price);
-        // min_stock/max_stock no longer exist on ItemVariant (#439) — they were
-        // never accepted here, and now the column is gone entirely.
-        $this->assertFalse(array_key_exists('min_stock', $variant->getAttributes()));
-        $this->assertFalse(array_key_exists('max_stock', $variant->getAttributes()));
-        $this->assertSame('0.0000', (string) $variant->last_unit_cost);
+        // min_stock/max_stock (#439) and sale_price/last_unit_cost/avg_unit_cost
+        // (#442) no longer exist on ItemVariant — they were never accepted here,
+        // and now the columns are gone entirely.
+        foreach (['min_stock', 'max_stock', 'sale_price', 'last_unit_cost', 'avg_unit_cost'] as $legacy) {
+            $this->assertFalse(array_key_exists($legacy, $variant->getAttributes()), "$legacy must not exist on ItemVariant");
+        }
     }
 
     #[Test]
@@ -445,8 +445,9 @@ class ProductVariantCrudTest extends InventoryTestCase
 
         $response->assertStatus(200);
         $variant->refresh();
-        $this->assertFalse(array_key_exists('min_stock', $variant->getAttributes()));
-        $this->assertFalse(array_key_exists('max_stock', $variant->getAttributes()));
+        foreach (['min_stock', 'max_stock', 'sale_price', 'last_unit_cost', 'avg_unit_cost'] as $legacy) {
+            $this->assertFalse(array_key_exists($legacy, $variant->getAttributes()), "$legacy must not exist on ItemVariant");
+        }
     }
 
     #[Test]

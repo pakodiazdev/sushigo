@@ -23,8 +23,6 @@ const variant1: ItemVariant = {
   code: 'V1',
   name: 'Variant One',
   uom_id: 1,
-  avg_unit_cost: 0,
-  last_unit_cost: 0,
   is_active: true,
   item: { id: 1, sku: null, name: 'Product One', type: 'PRODUCTO', is_stocked: false, is_perishable: false, is_active: true },
 }
@@ -34,8 +32,6 @@ const variant2: ItemVariant = {
   code: 'V2',
   name: 'Variant Two',
   uom_id: 1,
-  avg_unit_cost: 0,
-  last_unit_cost: 0,
   is_active: true,
 }
 

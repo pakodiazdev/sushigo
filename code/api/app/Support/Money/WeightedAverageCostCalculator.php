@@ -6,9 +6,9 @@ namespace App\Support\Money;
  * Single source of the weighted-average-cost blend formula (#434) — every
  * caller that mutates a cost-bearing quantity (Receipts, Opening Balance,
  * and any future stock adjustment) must go through this instead of
- * re-deriving the formula with raw float arithmetic, which is what let
- * ItemVariant.avg_unit_cost and Stock.weighted_avg_cost diverge in the
- * first place.
+ * re-deriving the formula with raw float arithmetic, which is what let the
+ * former ItemVariant.avg_unit_cost (dropped in #442) and
+ * Stock.weighted_avg_cost diverge in the first place.
  *
  * Uses bcmath internally so the blend itself is exact-decimal, not float —
  * PHP floats cannot represent most decimal fractions (e.g. 0.1) exactly,
@@ -28,8 +28,8 @@ final class WeightedAverageCostCalculator
     private const CALC_SCALE = 8;
 
     /**
-     * Decimal places the result is rounded to, matching every
-     * weighted_avg_cost/avg_unit_cost column's `decimal:4` cast.
+     * Decimal places the result is rounded to, matching the
+     * weighted_avg_cost column's `decimal:4` cast.
      */
     private const RESULT_SCALE = 4;
 

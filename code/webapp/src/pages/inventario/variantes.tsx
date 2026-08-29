@@ -93,15 +93,6 @@ export function ItemVariantsPage() {
       ),
     },
     {
-      key: 'avg_unit_cost',
-      header: 'Avg Cost',
-      render: (variant) => (
-        <span className="font-mono text-sm">
-          ${Number(variant.avg_unit_cost || 0).toFixed(2)}
-        </span>
-      ),
-    },
-    {
       key: 'is_active',
       header: 'Status',
       render: (variant) => (

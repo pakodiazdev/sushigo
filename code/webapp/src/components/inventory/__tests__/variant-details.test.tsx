@@ -38,8 +38,6 @@ describe('VariantDetails', () => {
         code: 'VAR-001',
         name: 'Test Variant',
         uom_id: 1,
-        avg_unit_cost: 25.5,
-        last_unit_cost: 26.0,
         is_active: true,
         item: {
             id: 1,
