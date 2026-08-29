@@ -101,11 +101,14 @@ return new class extends Migration
 
         // 2. Best-effort avg_unit_cost for rows never archived (created after up()
         //    ran) — from the on-hand-weighted rollup of the per-location
-        //    Stock.weighted_avg_cost, the authoritative source since #434.
+        //    Stock.weighted_avg_cost, the authoritative source since #434. Rows
+        //    with a null weighted_avg_cost are excluded from both sides of the
+        //    average so they can't silently understate it.
         $rollups = DB::table('stock')
             ->select('item_variant_id')
             ->selectRaw('SUM(on_hand * weighted_avg_cost) as weighted_value')
             ->selectRaw('SUM(on_hand) as total_on_hand')
+            ->whereNotNull('weighted_avg_cost')
             ->when($restoredIds !== [], fn ($query) => $query->whereNotIn('item_variant_id', $restoredIds))
             ->groupBy('item_variant_id')
             ->havingRaw('SUM(on_hand) > 0')
