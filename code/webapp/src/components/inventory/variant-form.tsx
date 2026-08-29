@@ -16,8 +16,6 @@ const variantSchema = z.object({
   code: z.string().min(2, 'Code must be at least 2 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   uom_id: z.number().min(1, 'This field is required'),
-  avg_unit_cost: z.number(),
-  last_unit_cost: z.number().min(0, 'Cost cannot be negative'),
   is_active: z.boolean(),
 })
 
@@ -50,8 +48,6 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
       code: variant?.code || '',
       name: variant?.name || '',
       uom_id: variant?.uom_id || 0,
-      avg_unit_cost: variant?.avg_unit_cost || 0,
-      last_unit_cost: variant?.last_unit_cost || 0,
       is_active: variant?.is_active ?? true,
     },
   })
@@ -70,7 +66,6 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
     code: errors.code?.message || validationErrors.code,
     name: errors.name?.message || validationErrors.name,
     uom_id: errors.uom_id?.message || validationErrors.uom_id,
-    last_unit_cost: errors.last_unit_cost?.message || validationErrors.last_unit_cost,
   }
 
   const onSubmit = async (data: VariantFormValues) => {
@@ -162,24 +157,10 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
           </FormField>
 
           {/* Replenishment thresholds are configured per Inventory Location (#439) —
-              see the Stock Dashboard's per-location "Replenishment thresholds" panel. */}
-
-          {/* Cost */}
-          <FormField
-            label="Last Unit Cost"
-            required
-            error={allErrors.last_unit_cost}
-            hint="Most recent purchase cost per unit"
-          >
-            <Input
-              type="number"
-              {...register('last_unit_cost', { valueAsNumber: true })}
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              error={!!allErrors.last_unit_cost}
-            />
-          </FormField>
+              see the Stock Dashboard's per-location "Replenishment thresholds" panel.
+              Acquisition cost is derived from purchase receipts / opening balances
+              (Stock.weighted_avg_cost, #434) and sale price from effective-dated
+              price lists (#435); neither is a catalog field any more (#442). */}
 
           {/* Active Status */}
           <FormField label="">

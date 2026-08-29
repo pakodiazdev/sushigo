@@ -78,9 +78,8 @@ class StockOutService
             $stock = $this->assertAvailableStock($inventoryLocationId, $itemVariantId, $baseQuantity, $variant, $location);
 
             // Cost this location's outbound movement at that same location's
-            // weighted-average cost (#434) — never ItemVariant.avg_unit_cost,
-            // which the catalog no longer stores as an active source and
-            // which was never location-specific to begin with.
+            // weighted-average cost (#434). The per-Variant avg_unit_cost
+            // column was never location-specific and was dropped in #442.
             $unitCost = (float) ($stock->weighted_avg_cost ?? 0);
 
             // Calculate pricing and profit (only for SALE movements)

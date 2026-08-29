@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Package,
   Ruler,
-  DollarSign,
   Calendar,
   BarChart3,
   Edit,
@@ -126,29 +125,10 @@ export function VariantDetails({ variant, onEdit, onDelete }: Readonly<VariantDe
             )}
           </div>
 
-          {/* Replenishment thresholds are configured per Inventory Location (#439) —
-              see the Stock Dashboard's per-location "Replenishment thresholds" panel. */}
-
-          {/* Cost Information */}
-          <div className="space-y-3">
-            <h4 className="font-semibold flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Cost Information
-            </h4>
-            <div className="grid grid-cols-2 gap-4">
-              <InfoItem
-                icon={DollarSign}
-                label="Last Unit Cost"
-                value={`$${Number(variant.last_unit_cost || 0).toFixed(2)}`}
-              />
-              <InfoItem
-                icon={DollarSign}
-                label="Avg Unit Cost"
-                value={`$${Number(variant.avg_unit_cost || 0).toFixed(2)}`}
-                hint="Weighted average"
-              />
-            </div>
-          </div>
+          {/* Replenishment thresholds are configured per Inventory Location (#439);
+              acquisition cost lives on Stock.weighted_avg_cost per location (#434) and
+              sale price on effective-dated price lists (#435) — none are catalog
+              fields any more (#442). See the Stock Dashboard and the Pricing area. */}
 
           {/* Timestamps */}
           <div className="space-y-2 pt-4 border-t">

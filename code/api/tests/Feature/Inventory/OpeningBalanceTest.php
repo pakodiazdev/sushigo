@@ -86,10 +86,11 @@ class OpeningBalanceTest extends InventoryTestCase
         // Assert: weighted-average cost lands on Stock (#434), per location
         $this->assertEquals(125.50, (float) $stock->weighted_avg_cost);
 
-        // Assert: the Product/Variant catalog stays read-only for acquisition cost
+        // Assert: the Product/Variant catalog carries no acquisition cost at all —
+        // the per-Variant cost columns were dropped in #442.
         $variant->refresh();
-        $this->assertEquals(0, (float) $variant->avg_unit_cost);
-        $this->assertEquals(0, (float) $variant->last_unit_cost);
+        $this->assertFalse(array_key_exists('avg_unit_cost', $variant->getAttributes()));
+        $this->assertFalse(array_key_exists('last_unit_cost', $variant->getAttributes()));
     }
 
     #[Test]
@@ -139,9 +140,9 @@ class OpeningBalanceTest extends InventoryTestCase
         $stock = Stock::where('item_variant_id', $variant->id)->first();
         $this->assertEquals(150, (float) $stock->weighted_avg_cost); // Cost per KG
 
-        // Assert: the catalog itself is untouched
+        // Assert: the catalog itself carries no acquisition cost (columns dropped in #442)
         $variant->refresh();
-        $this->assertEquals(0, (float) $variant->avg_unit_cost);
+        $this->assertFalse(array_key_exists('avg_unit_cost', $variant->getAttributes()));
     }
 
     #[Test]
@@ -181,7 +182,7 @@ class OpeningBalanceTest extends InventoryTestCase
         $this->assertEquals(133.33, round((float) $stock->weighted_avg_cost, 2));
 
         $variant->refresh();
-        $this->assertEquals(0, (float) $variant->avg_unit_cost);
+        $this->assertFalse(array_key_exists('avg_unit_cost', $variant->getAttributes()));
     }
 
     #[Test]

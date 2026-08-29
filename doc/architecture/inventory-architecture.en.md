@@ -42,14 +42,15 @@ The system must guarantee:
 
 ## 3. Domain Model
 
-> **Note (2026-08-12):** the `Item`/`ItemVariant` shapes below (§3.2 ER diagram, §3.7 class diagram)
-> still show today's flat schema, including `sale_price`-equivalent fields that the Product vertical
-> is removing from its catalog write path. `min_stock`/`max_stock` have already been removed from
-> `ItemVariant` — replenishment thresholds are now per Inventory Location, see §3.10 (#439). See
+> **Note (updated #442):** the `Item`/`ItemVariant` shapes below (§3.2 ER diagram, §3.7 class
+> diagram) now reflect the as-built identity-only schema. `min_stock`/`max_stock` moved to a
+> per-Inventory-Location policy (#439, §3.10); `last_unit_cost`/`avg_unit_cost`/`sale_price` were
+> dropped from `item_variants` in #442 — acquisition cost lives on `Stock.weighted_avg_cost` per
+> location (#434, §3.9) and sale price on effective-dated price lists (#435). `Item.sku` is
+> retained: authoritative for `INSUMO`/`ACTIVO` (#500), deprecated only for `type = PRODUCTO`. See
 > [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.en.md) and
-> [TD-03](../decisions/td-03-product-catalog-separation.md) for the target Product/Variant/Purchase
-> Presentation model and the migration sequence; this document is updated to match once that
-> migration completes (`#442`).
+> [TD-03](../decisions/td-03-product-catalog-separation.md) for the Product/Variant/Purchase
+> Presentation model and the full migration sequence.
 
 ### 3.1 Main Entities
 
@@ -643,8 +644,10 @@ classDiagram
         `conversion_factor`, `unit_cost`, `line_total`, pricing fields, `meta`.
     -   At most **one** line per movement (UNIQUE `stock_movement_id`); it cannot express a
         different Variant or a different `base_qty` than its header (guarded at the model layer).
-        Removing the now-redundant `item_variant_id` / quantity columns from this table is deferred
-        to the legacy-reconciliation issue (#442).
+        Removing the now-redundant `item_variant_id` / quantity columns from this table was scoped
+        out of #442 (whose Technical Tasks enumerate only Item SKU and per-Variant cost/price
+        fields) and is left for a dedicated follow-up, given the risk of a schema change on an
+        actively-written transactional table.
 -   **StockCount / StockCountLine**
     -   Main properties: `inventory_location_id`, `counted_at`, `status` and lines with `qty`, `uom_id`, `base_qty`.
     -   Actions: `finalize()` processes differences against `Stock`.
@@ -678,9 +681,10 @@ read whichever field happened to be nearby.
 **Source of truth: `Stock.weighted_avg_cost`, scoped per Inventory Location.** A catalog Variant
 received into two different locations at different prices has two different actual acquisition
 costs — blending them into one Variant-level number would misstate valuation at whichever location
-paid more (or less) than the blended average. `ItemVariant.avg_unit_cost`/`last_unit_cost` remain on
-the schema (existing values were reconciled by a one-time backfill migration, not dropped) but are
-now **read-only** — nothing in application code writes to them.
+paid more (or less) than the blended average. `#434` reconciled the legacy
+`ItemVariant.avg_unit_cost`/`last_unit_cost` values with the per-location rollup and froze them
+read-only; `#442` then **dropped both columns** (along with `sale_price`) from `item_variants`
+entirely — `Stock.weighted_avg_cost` is the only acquisition cost the catalog knows about.
 
 **Every writer goes through one calculation.** `Stock::applyWeightedAverageCost(float $qtyAdded,
 float $unitCost)` is the only method that mutates `weighted_avg_cost`, and it delegates the blend

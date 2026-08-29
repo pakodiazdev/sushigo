@@ -20,9 +20,6 @@ trait FormatsItemVariant
             'description' => $variant->description,
             'track_lot' => $variant->track_lot,
             'track_serial' => $variant->track_serial,
-            'last_unit_cost' => (float) $variant->last_unit_cost,
-            'avg_unit_cost' => (float) $variant->avg_unit_cost,
-            'sale_price' => $variant->sale_price ? (float) $variant->sale_price : null,
             'is_active' => $variant->is_active,
         ];
     }

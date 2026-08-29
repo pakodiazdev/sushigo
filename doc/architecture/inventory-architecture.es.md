@@ -42,15 +42,16 @@ El sistema debe garantizar:
 
 ## 3. Modelo de dominio
 
-> **Nota (2026-08-12):** las formas de `Item`/`ItemVariant` de abajo (diagrama ER §3.2, diagrama de
-> clases §3.7) todavía muestran el esquema plano actual, incluyendo campos equivalentes a
-> `sale_price` que la vertical de Producto está retirando de su ruta de
-> escritura de catálogo. `min_stock`/`max_stock` ya se eliminaron de `ItemVariant` — los umbrales
-> de reabastecimiento ahora son por Ubicación de Inventario, ver §3.10 (#439). Ver
+> **Nota (actualizada por #442):** las formas de `Item`/`ItemVariant` de abajo (diagrama ER §3.2,
+> diagrama de clases §3.7) ya reflejan el esquema de solo-identidad tal como quedó construido.
+> `min_stock`/`max_stock` pasaron a una política por Ubicación de Inventario (#439, §3.10);
+> `last_unit_cost`/`avg_unit_cost`/`sale_price` se eliminaron de `item_variants` en #442 — el costo
+> de adquisición vive en `Stock.weighted_avg_cost` por ubicación (#434, §3.9) y el precio de venta
+> en listas de precios vigentes por fecha (#435). `Item.sku` se conserva: autoritativo para
+> `INSUMO`/`ACTIVO` (#500), deprecado solo para `type = PRODUCTO`. Ver
 > [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.es.md) y
-> [TD-03](../decisions/td-03-product-catalog-separation.md) para el modelo objetivo de
-> Producto/Variante/Presentación de Compra y la secuencia de migración; este documento se
-> actualizará para coincidir una vez que esa migración concluya (`#442`).
+> [TD-03](../decisions/td-03-product-catalog-separation.md) para el modelo de
+> Producto/Variante/Presentación de Compra y la secuencia completa de migración.
 >
 > **Nota adicional:** esta versión en español anteriormente incluía `Item.is_manufactured` en el
 > diagrama ER, el diagrama de clases y el resumen de clases, con una descripción de negocio que no
@@ -658,8 +659,10 @@ classDiagram
         `conversion_factor`, `unit_cost`, `line_total`, campos de precio, `meta`.
     -   A lo sumo **una** línea por movimiento (UNIQUE `stock_movement_id`); no puede expresar una
         Variante ni un `base_qty` distintos del encabezado. Eliminar las columnas
-        `item_variant_id`/cantidad ahora redundantes de esta tabla se difiere al issue de
-        reconciliación de legado (#442).
+        `item_variant_id`/cantidad ahora redundantes de esta tabla quedó fuera del alcance de #442
+        (cuyas Tareas Técnicas enumeran solo el SKU de Item y los campos de costo/precio por
+        Variante) y se deja para un follow-up dedicado, dado el riesgo de un cambio de esquema en
+        una tabla transaccional con escritura activa.
 -   **StockCount / StockCountLine**
     -   Propiedades principales: `inventory_location_id`, `counted_at`, `status` y líneas con `qty`, `uom_id`, `base_qty`.
     -   Acciones: `finalize()` procesa diferencias contra `Stock`.
@@ -695,9 +698,10 @@ a la mano.
 catálogo recibida en dos ubicaciones distintas a precios distintos tiene dos costos de adquisición
 reales distintos — combinarlos en un único número a nivel Variante distorsionaría la valuación en
 cualquiera de las ubicaciones que pagó más (o menos) que el promedio combinado.
-`ItemVariant.avg_unit_cost`/`last_unit_cost` permanecen en el esquema (los valores existentes se
-reconciliaron con una migración de backfill de una sola vez, no se eliminaron) pero ahora son
-**de solo lectura** — ningún código de la aplicación escribe en ellos.
+`#434` reconcilió los valores legados de `ItemVariant.avg_unit_cost`/`last_unit_cost` con el rollup
+por ubicación y los congeló como solo-lectura; `#442` luego **eliminó ambas columnas** (junto con
+`sale_price`) de `item_variants` por completo — `Stock.weighted_avg_cost` es el único costo de
+adquisición que el catálogo conoce.
 
 **Toda escritura pasa por un único cálculo.** `Stock::applyWeightedAverageCost(float $qtyAdded,
 float $unitCost)` es el único método que modifica `weighted_avg_cost`, y delega la fórmula de

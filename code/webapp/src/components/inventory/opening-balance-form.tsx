@@ -166,12 +166,6 @@ export function OpeningBalanceForm({
                     {selectedVariant.uom?.name || 'N/A'} ({selectedVariant.uom?.symbol})
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last Cost:</span>
-                  <span className="font-medium">
-                    ${selectedVariant.last_unit_cost?.toFixed(2) || '0.00'}
-                  </span>
-                </div>
               </div>
             </div>
           )}

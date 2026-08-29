@@ -179,10 +179,15 @@ erDiagram
   regla `unique:item_variants,code,{id}` una vez que lo haga — sin ella, un `code` duplicado en PATCH
   se manifestaría como una violación de constraint de BD sin manejar, en vez de un `422` limpio.
   Mismo dueño que el vacío de barcode abajo: `#424` (`CAT-03`).
-- **`Item.sku`** se vuelve nullable y deprecado para `type = PRODUCTO`. El nuevo contrato de
-  creación/edición de Producto no lo lee ni lo escribe. No se elimina en esta vertical — el borrado
-  de esquema es un tema del Hito C (`#442`, "Remove legacy Inventory fields...") una vez que ningún
-  consumidor lo lea.
+- **`Item.sku`** es nullable y está deprecado para `type = PRODUCTO` — el nuevo contrato de
+  creación/edición de Producto no lo lee ni lo escribe (los seeders lo dejan null para Productos;
+  `ProductCrudTest` / `ProductCatalogSeederTest` lo verifican). **Tal como quedó (`#442`):** la
+  columna se **conserva**, no se elimina. Sigue siendo el SKU autoritativo para los Items
+  `INSUMO`/`ACTIVO`, cuya CRUD legada `/items` sigue siendo su única superficie de gestión y sobre
+  la que `#500` construye activamente (sugerencia contextual de SKU vía `/items/next-sku`). `#442`
+  solo reconcilió la documentación y eliminó las columnas de costo/precio por Variante en desuso
+  (abajo); eliminar `Item.sku` queda descartado hasta que el catálogo de Insumos tenga su propio
+  contrato de identidad rediseñado.
 - **`ItemVariant.barcode`** es el código de barras **unitario** (ya existe, nullable). Hoy solo se
   valida como `unique:item_variants,barcode` en `CreateItemVariantRequest` — no existe una
   constraint de unicidad a nivel de base de datos, solo un índice simple (migración
@@ -243,12 +248,13 @@ escritura. El diseño objetivo las separa explícitamente:
 | Saldo de stock | `Stock` / `StockMovement` | Tablas existentes, actualizadas por servicios de recepción/venta/ajuste | Sin cambios (hardening en `#430`/`#438`) |
 | Precio de venta por sucursal | Lista de Precios | Futuras `price_lists` + asignación de precio por variante, vigente por rango de fechas por sucursal | B (`#435`/`#436`) |
 
-`OpeningBalanceService` (`code/api/app/Services/Inventory/OpeningBalanceService.php`) ya escribe hoy
-`last_unit_cost`/`avg_unit_cost` de forma transaccional — confirmando que el costo *ya* se trata como
-efecto secundario transaccional en la capa de servicio, aunque `CreateItemVariantController`
-actualmente también permite establecer `sale_price` directamente en la creación. El contrato
-objetivo elimina esa segunda vía: costo y precio nunca son aceptados por una petición de
-creación/edición de Producto/Variante, sin excepción.
+`OpeningBalanceService` (`code/api/app/Services/Inventory/OpeningBalanceService.php`) trata el costo
+de adquisición como efecto secundario transaccional en la capa de servicio, mezclándolo en
+`Stock.weighted_avg_cost` por Ubicación de Inventario (`#434`). **Tal como quedó:** costo y precio
+nunca son aceptados por una petición de creación/edición de Producto/Variante, y las columnas por
+Variante `last_unit_cost` / `avg_unit_cost` / `sale_price` que esas vías solían tocar se eliminaron
+por completo en `#442` — `Stock.weighted_avg_cost` y las listas de precios vigentes por fecha
+(`#435`) son las únicas fuentes de verdad.
 
 ---
 
@@ -421,17 +427,22 @@ dependencias ya refleja este diseño.
    esto como una verificación condicional, no un borrado garantizado.
 7. **`#438`/`#439`/`#440`/`#441`** e Hito B (`#431`–`#437`) proceden según el mapa de dependencias
    existente en `plan/inventory-product-catalog-redesign.md` §15 — sin cambios por este documento.
-8. **`#442`** (`STK-06`, Hito C) — Eliminación final de campos legados: eliminar `Item.sku` y las
-   columnas ahora no usadas `ItemVariant.last_unit_cost/avg_unit_cost/sale_price/min_stock/max_stock`
-   (una vez que la fuente única de verdad de costo de `#434` y los umbrales por ubicación de `#439`
-   hayan aterrizado ambos), y reconciliar este documento e
-   `inventory-architecture.en.md`/`.es.md` con el sistema tal como quedó construido.
+8. **`#442`** (`STK-06`, Hito C) — Eliminación final de campos legados. **Tal como quedó:** se
+   eliminaron las columnas ahora no usadas `ItemVariant.last_unit_cost/avg_unit_cost/sale_price`
+   (`#439` ya había eliminado `min_stock/max_stock`), tras aterrizar la fuente única de verdad de
+   costo de `#434` y los umbrales por ubicación de `#439`; la migración de borrado registra la
+   población previa como evidencia de paridad y su `down()` re-crea las columnas con un backfill de
+   mejor esfuerzo. `Item.sku` **no** se eliminó — ver §3.4: sigue siendo autoritativo para
+   `INSUMO`/`ACTIVO` (`#500`), solo deprecado para `PRODUCTO`. Este documento e
+   `inventory-architecture.en.md`/`.es.md` se reconciliaron con el sistema tal como quedó en el
+   mismo PR.
 
 **Rollback:** cada migración en los pasos 1 y 4 es aditiva (columnas nuevas nullable / tablas
 nuevas) — un rollback es un simple `migrate:rollback` sin riesgo de pérdida de datos antes del paso
-8. El paso 8 es la única migración destructiva de toda la secuencia y está explícitamente
-condicionada a que dos issues prerrequisito independientes aterricen primero, más un pase de
-reconciliación — no un borrado en el mismo PR.
+8. El borrado de columnas del paso 8 es la única migración destructiva de toda la secuencia y
+estuvo condicionado a que dos issues prerrequisito (`#434`, `#439`) aterrizaran primero, más un
+pase de reconciliación — no un borrado en el mismo PR. Su `down()` re-crea las columnas; el
+backfill de costo en el rollback es de mejor esfuerzo (aproximado para un diseño ya superado).
 
 ---
 

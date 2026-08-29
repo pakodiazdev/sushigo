@@ -116,13 +116,12 @@ class ProductCatalogSeederTest extends TestCase
         $this->seed(ProductCatalogSeeder::class);
 
         foreach (ItemVariant::all() as $variant) {
-            $this->assertNull($variant->sale_price, "Variant {$variant->code} must not have an invented sale_price");
-            $this->assertSame('0.0000', (string) $variant->last_unit_cost, "Variant {$variant->code} must not have an invented last_unit_cost");
-            $this->assertSame('0.0000', (string) $variant->avg_unit_cost, "Variant {$variant->code} must not have an invented avg_unit_cost");
-            // Replenishment thresholds are no longer an ItemVariant concern (#439) —
-            // the seeder can't invent what the column no longer holds.
-            $this->assertFalse(array_key_exists('min_stock', $variant->getAttributes()), "Variant {$variant->code} must not carry a min_stock attribute");
-            $this->assertFalse(array_key_exists('max_stock', $variant->getAttributes()), "Variant {$variant->code} must not carry a max_stock attribute");
+            // The per-Variant cost/price columns (#442) and replenishment
+            // thresholds (#439) no longer exist — the seeder can't invent what
+            // the columns no longer hold.
+            foreach (['sale_price', 'last_unit_cost', 'avg_unit_cost', 'min_stock', 'max_stock'] as $legacy) {
+                $this->assertFalse(array_key_exists($legacy, $variant->getAttributes()), "Variant {$variant->code} must not carry a {$legacy} attribute");
+            }
         }
     }
 

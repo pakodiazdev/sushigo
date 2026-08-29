@@ -14,7 +14,6 @@ use Illuminate\Foundation\Http\FormRequest;
  *   @OA\Property(property="description", type="string", example="Presentación de 1 kilogramo", description="Variant description"),
  *   @OA\Property(property="track_lot", type="boolean", example=false, description="Track lot numbers"),
  *   @OA\Property(property="track_serial", type="boolean", example=false, description="Track serial numbers"),
- *   @OA\Property(property="sale_price", type="number", format="float", example=35.00, description="Default sale price"),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Active status"),
  * )
  */
@@ -34,7 +33,6 @@ class UpdateItemVariantRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string'],
             'track_lot' => ['sometimes', 'boolean'],
             'track_serial' => ['sometimes', 'boolean'],
-            'sale_price' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

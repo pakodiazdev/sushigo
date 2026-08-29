@@ -40,21 +40,25 @@ parallel table would fork the catalog mid-migration and duplicate media integrat
 and test infrastructure that already work. "Product" stays a UI/API vocabulary scoped to
 `type = PRODUCTO`; the internal model name doesn't change.
 
-**Why deprecate `Item.sku` instead of dropping it immediately?** Existing rows and read paths still
-reference it. Dropping it is the last step of the migration sequence (Milestone C, `#442`), gated
-behind every replacement write path landing first — not a same-PR deletion. `ItemVariant.code`
-becomes the documented, authoritative SKU going forward.
+**Why deprecate `Item.sku` for `PRODUCTO` instead of dropping the column?** `ItemVariant.code` is
+the documented, authoritative SKU for Products. But `Item.sku` stays the authoritative SKU for
+`INSUMO`/`ACTIVO` Items, which still use the legacy `/items` CRUD and have no redesigned identity
+contract yet — and `#500` actively builds on it (contextual SKU suggestion). **As-built (`#442`,
+Milestone C):** the column was **not** dropped; only made nullable and left unset for `PRODUCTO`
+rows (enforced by the Product write contract and seeders). `#442` instead dropped the unused
+per-Variant cost/price columns — see the limitation note below.
 
 **Why is Brand optional but InventoryCategory required?** Not every product line has a distinct
 brand worth filtering by, so a mandatory Brand would force placeholder data. Every product needs a
 category for navigation and reporting, and there is no meaningful "uncategorized" state the UI
 should render around.
 
-**Known, accepted limitation:** cost and stock columns (`last_unit_cost`, `avg_unit_cost`,
-`sale_price`, `min_stock`, `max_stock`) remain on `item_variants` through Milestone A and most of
-Milestone B — only the *write path used by the new Product UI* stops touching them. They are not
-dropped until `#442`, after `#434` (single cost source of truth) and `#439` (per-location
-thresholds) land.
+**Resolved (was: known limitation):** cost and stock columns (`last_unit_cost`, `avg_unit_cost`,
+`sale_price`, `min_stock`, `max_stock`) stayed on `item_variants` through Milestone A and most of
+Milestone B — only the *write path used by the new Product UI* stopped touching them. `#439`
+dropped `min_stock`/`max_stock` (per-location replenishment policies); `#442` dropped
+`last_unit_cost`/`avg_unit_cost`/`sale_price` once `#434` (single cost source of truth) and `#439`
+had landed. `item_variants` now carries identity columns only.
 
 ## When to revisit
 

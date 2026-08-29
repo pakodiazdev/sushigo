@@ -172,8 +172,6 @@ class ProductCatalogTestSeeder extends Seeder
             'code' => $code,
             'name' => $name,
             'barcode' => $barcode,
-            'last_unit_cost' => 0,
-            'avg_unit_cost' => 0,
             'is_active' => $isActive,
             'created_at' => $now,
             'updated_at' => $now,
