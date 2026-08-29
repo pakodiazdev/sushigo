@@ -224,10 +224,10 @@ class PermissionSeeder extends LockedSeeder
         // of an employee is admin/super-admin-only; manager still reviews self-service
         // vacation requests via employee-requests.approve.
         // items.view + items.manage-media only — items.update also guards PUT
-        // /items/{id} and PUT /item-variants/{id} (name, sale_price,
-        // min_stock, ...), so granting it just to satisfy
+        // /items/{id} and PUT /item-variants/{id} (catalog identity fields),
+        // so granting it just to satisfy
         // Item::userCanManageMedia() (#377) would silently hand manager full
-        // catalog/pricing edit rights too. items.manage-media is the
+        // catalog edit rights too. items.manage-media is the
         // dedicated permission that check actually looks for. media.% is the
         // full wildcard on purpose — managing an item's photos
         // (upload/reorder/delete) is the actual point.

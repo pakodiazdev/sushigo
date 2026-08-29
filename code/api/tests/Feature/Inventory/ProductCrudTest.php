@@ -218,10 +218,12 @@ class ProductCrudTest extends InventoryTestCase
 
         $response->assertStatus(201);
         $item = Item::where('name', 'Coca-Cola 600ml')->firstOrFail();
+        // sku stays null for a Product — it is authoritative only for INSUMO/ACTIVO
+        // Items (#500) and deprecated for PRODUCTO.
         $this->assertNull($item->sku);
-        // sale_price/min_stock/max_stock/uom_id are ItemVariant columns, not Item —
-        // asserting the create request never even reaches them is implicit: Item has
-        // no such columns, so this would fatal at the DB layer if they were written.
+        // sale_price/min_stock/max_stock/uom_id are not Item columns (and the first
+        // three no longer exist on ItemVariant either, dropped by #439/#442) — the
+        // create request silently ignores every one of them.
         $this->assertSame('Coca-Cola 600ml', $item->name);
     }
 

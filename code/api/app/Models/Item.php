@@ -133,9 +133,9 @@ class Item extends Model implements AuthorizesMediaOwnership
     /**
      * Gate media changes (attach/reorder/delete) on a dedicated permission,
      * not items.update — that's also the guard for PUT /items/{id} and
-     * PUT /item-variants/{id}, which accept name, sale_price, min_stock,
-     * etc. Reusing it here would let anyone granted "manage this item's
-     * photos" also silently edit catalog data and pricing. Not
+     * PUT /item-variants/{id}, which accept catalog identity fields (name,
+     * code, barcode, etc.). Reusing it here would let anyone granted "manage
+     * this item's photos" also silently edit catalog data. Not
      * ItemPolicy::update() either — even now that it enforces items.update
      * (see #400) — since that permission is still the catalog/pricing one,
      * not this narrower media-only permission.

@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
  * @OA\Get(
  *   path="/api/v1/pricing/resolve",
  *   summary="Resolve a Variant's authoritative sale price for a Branch/Operating Unit context",
- *   description="Never falls back to ItemVariant.sale_price — 'resolved: false' with a null price is a valid, explicit outcome, not an error.",
+ *   description="Price-list evidence is the sole source (the ItemVariant.sale_price fallback column was dropped in #442) — 'resolved: false' with a null price is a valid, explicit outcome, not an error.",
  *   tags={"Pricing Resolution"},
  *   security={{"passport": {}}},
  *

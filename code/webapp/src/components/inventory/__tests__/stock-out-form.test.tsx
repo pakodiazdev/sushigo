@@ -67,7 +67,6 @@ const MOCK_VARIANTS = [{
     id: 'variant-01', code: 'VAR-001', name: 'Salt 500g', uom_id: 1,
     uom: { id: 'uom-01', name: 'Kilogram', symbol: 'kg' },
     item: { sku: 'SAL-001', name: 'Salt' },
-    last_unit_cost: 5.0,
 }]
 const MOCK_UNITS = [{ id: 'uom-01', name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' }]
 
@@ -394,11 +393,9 @@ describe('StockOutForm', () => {
 
     it('shows the profit analysis panel with revenue, cost and profit for a sale, costed at the location weighted-average', async () => {
         // Regression (#434 Codex P2): cost basis must come from the selected
-        // location's Stock.weighted_avg_cost, not the catalog Variant's
-        // stale last_unit_cost (5.0 in MOCK_VARIANTS, which the backend no
-        // longer writes) — this location's weighted_avg_cost (7.0) is used
-        // instead, and must differ from last_unit_cost to prove it's not
-        // silently falling back to it.
+        // location's Stock.weighted_avg_cost. The catalog Variant no longer
+        // carries any acquisition-cost field at all (dropped in #442), so this
+        // location's weighted_avg_cost (7.0) is the only possible source.
         watchValues.variant_id = 'variant-01'
         watchValues.location_id = 'location-01'
         watchValues.qty = 10

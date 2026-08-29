@@ -24,9 +24,6 @@ class ItemVariant extends Model
         'description',
         'track_lot',
         'track_serial',
-        'last_unit_cost',
-        'avg_unit_cost',
-        'sale_price',
         'is_active',
         'meta',
     ];
@@ -34,9 +31,6 @@ class ItemVariant extends Model
     protected $casts = [
         'track_lot' => 'boolean',
         'track_serial' => 'boolean',
-        'last_unit_cost' => 'decimal:4',
-        'avg_unit_cost' => 'decimal:4',
-        'sale_price' => 'decimal:4',
         'is_active' => 'boolean',
         'meta' => 'array',
     ];
@@ -93,8 +87,9 @@ class ItemVariant extends Model
 
     /**
      * Get the effective-dated price-list entries for this variant (#435).
-     * Resolution against these — never this model's own sale_price — is the
-     * authoritative source of a Variant's price. See PriceResolutionService.
+     * Resolution against these is the authoritative — and only — source of a
+     * Variant's price; the former per-Variant sale_price column was dropped in
+     * #442. See PriceResolutionService.
      */
     public function prices(): HasMany
     {

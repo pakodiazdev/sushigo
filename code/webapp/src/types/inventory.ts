@@ -50,10 +50,10 @@ export interface ItemVariant {
   code: string
   name: string
   uom_id: number
-  // Replenishment thresholds moved to the per-Inventory-Location policy (#439) —
-  // see ReplenishmentPolicy and the Stock fields below.
-  avg_unit_cost: number
-  last_unit_cost: number
+  // Replenishment thresholds moved to the per-Inventory-Location policy (#439);
+  // per-Variant acquisition cost / sale price were dropped in #442 (Stock.weighted_avg_cost
+  // and effective-dated price lists are the sources of truth). See ReplenishmentPolicy,
+  // the Stock fields below, and the pricing feature.
   is_active: boolean
   item?: Item
   uom?: UnitOfMeasure

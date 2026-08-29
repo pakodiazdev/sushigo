@@ -8,7 +8,7 @@ use App\Models\PriceListAssignment;
 /**
  * The outcome of PriceResolutionService::resolve() — always a concrete,
  * explicit answer (found or not-found), never an exception or a silent
- * fallback to ItemVariant.sale_price.
+ * fallback (the former ItemVariant.sale_price column was dropped in #442).
  */
 final readonly class PriceResolutionResult
 {

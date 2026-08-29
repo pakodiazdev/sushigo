@@ -14,7 +14,8 @@ use InvalidArgumentException;
 
 /**
  * Resolves a Variant's authoritative sale price from effective, authorized
- * price-list evidence only — never reads ItemVariant.sale_price. See
+ * price-list evidence only. The former per-Variant sale_price fallback column
+ * was dropped in #442, so price-list evidence is now the sole source. See
  * doc/architecture/pricing/pricing-architecture.en.md for the full algorithm.
  */
 class PriceResolutionService

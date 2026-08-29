@@ -47,9 +47,6 @@ class CreateItemVariantController extends Controller
             'description' => $request->description,
             'track_lot' => $request->input('track_lot', false),
             'track_serial' => $request->input('track_serial', false),
-            'last_unit_cost' => 0,
-            'avg_unit_cost' => 0,
-            'sale_price' => $request->sale_price,
             'is_active' => $request->input('is_active', true),
             'meta' => [],
         ]);

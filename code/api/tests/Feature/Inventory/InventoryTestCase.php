@@ -163,8 +163,6 @@ abstract class InventoryTestCase extends TestCase
             'code' => 'VAR-'.uniqid(),
             'name' => 'Test Variant',
             'uom_id' => $this->uomKg->id,
-            'avg_unit_cost' => 0,
-            'last_unit_cost' => 0,
             'is_active' => true,
         ], $attributes));
     }

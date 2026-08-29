@@ -175,9 +175,14 @@ erDiagram
   surface as a raw, unhandled DB constraint violation instead of a clean `422`. Same owner as the
   barcode gap below: `#424` (`CAT-03`). **As-built (`#424`):** `UpdateVariantRequest` now accepts
   `code` with `Rule::unique('item_variants', 'code')->ignore($variantId)`.
-- **`Item.sku`** becomes nullable and deprecated for `type = PRODUCTO`. It is not read or written by
-  the new Product create/edit contract. It is not dropped in this vertical — schema deletion is a
-  Milestone C concern (`#442`, "Remove legacy Inventory fields...") once no consumer reads it.
+- **`Item.sku`** is nullable and deprecated for `type = PRODUCTO` — not read or written by the new
+  Product create/edit contract (seeders leave it null for Products; `ProductCrudTest` /
+  `ProductCatalogSeederTest` assert this). **As-built (`#442`):** the column is **retained**, not
+  dropped. It stays the authoritative SKU for `INSUMO`/`ACTIVO` Items, whose legacy `/items` CRUD is
+  still the only management surface for them and which `#500` actively builds on (contextual SKU
+  suggestion via `/items/next-sku`). `#442` only reconciled the docs and dropped the unused
+  per-Variant cost/price columns (below); `Item.sku` removal is off the table until the Insumo
+  catalog gets its own redesigned identity contract.
 - **`ItemVariant.barcode`** is the **unit** barcode (already exists, nullable). Today it is only
   validated as `unique:item_variants,barcode` on `CreateItemVariantRequest` — there is no
   database-level unique constraint, only a plain index (`add_barcode_to_item_variants_table`
@@ -236,11 +241,12 @@ The target design separates them explicitly:
 | Stock balance | `Stock` / `StockMovement` | Existing tables, posted by receiving/sale/adjustment services | Unchanged (hardening in `#430`/`#438`) |
 | Branch sale price | Price List | Future `price_lists` + variant price assignment, effective-dated per branch | B (`#435`/`#436`) |
 
-`OpeningBalanceService` (`code/api/app/Services/Inventory/OpeningBalanceService.php`) already writes
-`last_unit_cost`/`avg_unit_cost` transactionally today — confirming cost is *already* treated as a
-transactional side effect in the service layer, even though `CreateItemVariantController` currently
-also lets `sale_price` be set directly on create. The target contract removes that second path: cost
-and price are never accepted by a Product/Variant create-or-update request, full stop.
+`OpeningBalanceService` (`code/api/app/Services/Inventory/OpeningBalanceService.php`) treats
+acquisition cost as a transactional side effect in the service layer, blending it into
+`Stock.weighted_avg_cost` per Inventory Location (`#434`). **As-built:** cost and price are never
+accepted by a Product/Variant create-or-update request, and the per-Variant `last_unit_cost` /
+`avg_unit_cost` / `sale_price` columns those paths used to touch were dropped entirely in `#442` —
+`Stock.weighted_avg_cost` and effective-dated price lists (`#435`) are the sole sources of truth.
 
 ---
 
@@ -462,15 +468,21 @@ order already reflects this design.
    needs it — the plan doc already frames this as a conditional check, not a guaranteed deletion.
 7. **`#438`/`#439`/`#440`/`#441`** and Milestone B (`#431`–`#437`) proceed per the existing dependency
    map in `plan/inventory-product-catalog-redesign.md` §15 — unchanged by this document.
-8. **`#442`** (`STK-06`, Milestone C) — Final legacy-field removal: drop `Item.sku` and the
-   now-unused `ItemVariant.last_unit_cost/avg_unit_cost/sale_price/min_stock/max_stock` columns (once
-   `#434`'s single cost source of truth and `#439`'s per-location thresholds have both landed), and
-   reconcile this document and `inventory-architecture.en.md`/`.es.md` with the as-built system.
+8. **`#442`** (`STK-06`, Milestone C) — Final legacy-field removal. **As-built:** dropped the
+   now-unused `ItemVariant.last_unit_cost/avg_unit_cost/sale_price` columns (`#439` had already
+   dropped `min_stock/max_stock`), after `#434`'s single cost source of truth and `#439`'s
+   per-location thresholds both landed; the drop migration logs pre-drop population as parity
+   evidence and its `down()` re-adds the columns with a best-effort backfill. `Item.sku` was
+   **not** dropped — see §3.4: it stays authoritative for `INSUMO`/`ACTIVO` (`#500`), only
+   deprecated for `PRODUCTO`. This document and `inventory-architecture.en.md`/`.es.md` were
+   reconciled with the as-built system in the same PR.
 
 **Rollback:** every migration in steps 1 and 4 is additive (new nullable columns / new tables) — a
-rollback is a plain `migrate:rollback` with no data-loss risk before step 8. Step 8 is the only
-destructive migration in the whole sequence and is explicitly gated behind two independent
-prerequisite issues landing first, plus a reconciliation pass — not a same-PR deletion.
+rollback is a plain `migrate:rollback` with no data-loss risk before step 8. Step 8's column drop is
+the only destructive migration in the whole sequence and was gated behind two independent
+prerequisite issues (`#434`, `#439`) landing first, plus a reconciliation pass — not a same-PR
+deletion. Its `down()` re-creates the columns; the cost backfill on rollback is best-effort
+(approximate for a superseded design).
 
 ---
 

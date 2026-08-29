@@ -128,8 +128,8 @@ export function StockOutForm({
 
   // Calculate profit (only for sales) — cost this location's outbound
   // movement at that same location's weighted-average cost (#434), matching
-  // StockOutService server-side; never the catalog Variant's stale
-  // last_unit_cost, which the backend no longer writes.
+  // StockOutService server-side. The catalog Variant no longer carries any
+  // acquisition-cost field (dropped in #442).
   const unitCost = locationStock?.weighted_avg_cost || 0
   const totalCost = qty * unitCost
   const totalRevenue = qty * salePrice

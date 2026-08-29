@@ -75,16 +75,18 @@ class ItemVariantCrudTest extends InventoryTestCase
                 'name' => 'Salmon 1kg Pack',
             ]);
 
-        // Replenishment thresholds moved to the per-location policy (#439) —
-        // the catalog response must not carry them any more.
+        // Replenishment thresholds moved to the per-location policy (#439) and
+        // the per-Variant cost/price columns were dropped in #442 — the catalog
+        // response must not carry any of them any more.
         $response->assertJsonMissingPath('data.min_stock');
         $response->assertJsonMissingPath('data.max_stock');
+        $response->assertJsonMissingPath('data.sale_price');
+        $response->assertJsonMissingPath('data.avg_unit_cost');
+        $response->assertJsonMissingPath('data.last_unit_cost');
 
         $this->assertDatabaseHas('item_variants', [
             'item_id' => $item->id,
             'code' => 'SALM-1KG',
-            'avg_unit_cost' => 0, // Initialized to 0
-            'last_unit_cost' => 0,
         ]);
     }
 
@@ -112,7 +114,7 @@ class ItemVariantCrudTest extends InventoryTestCase
     public function it_rejects_creating_a_variant_for_a_producto_item()
     {
         // Arrange — Product variants must go through POST /inventory/products/{id}/variants
-        // (#425) instead, which never accepts sale_price/min_stock/max_stock (#424).
+        // (#425) instead; this legacy flat path was closed by #429.
         $product = $this->createProduct();
 
         // Act
@@ -150,11 +152,11 @@ class ItemVariantCrudTest extends InventoryTestCase
     }
 
     #[Test]
-    public function it_ignores_legacy_replenishment_fields_on_create()
+    public function it_ignores_legacy_replenishment_cost_and_price_fields_on_create()
     {
-        // #439: the catalog no longer knows about min_stock/max_stock. Sending
-        // them (even an "invalid" max < min pair) is simply ignored — no 422,
-        // no column written.
+        // #439 dropped min_stock/max_stock; #442 dropped sale_price and the
+        // per-Variant acquisition-cost columns. Sending any of them (even an
+        // "invalid" max < min pair) is simply ignored — no 422, no column written.
         $item = $this->createItem();
 
         $response = $this->postJson('/api/v1/item-variants', [
@@ -164,11 +166,17 @@ class ItemVariantCrudTest extends InventoryTestCase
             'uom_id' => $this->uomKg->id,
             'min_stock' => 100,
             'max_stock' => 50,
+            'sale_price' => 42.00,
+            'avg_unit_cost' => 12.00,
+            'last_unit_cost' => 13.00,
         ]);
 
         $response->assertStatus(201);
         $response->assertJsonMissingPath('data.min_stock');
         $response->assertJsonMissingPath('data.max_stock');
+        $response->assertJsonMissingPath('data.sale_price');
+        $response->assertJsonMissingPath('data.avg_unit_cost');
+        $response->assertJsonMissingPath('data.last_unit_cost');
     }
 
     #[Test]

@@ -50,7 +50,6 @@ const MOCK_VARIANTS = [
         uom_id: 1,
         uom: { id: 'uom-01', name: 'Kilogram', symbol: 'kg' },
         item: { sku: 'SAL-001', name: 'Salt' },
-        last_unit_cost: 5.0,
         min_stock: 10,
     },
     {
@@ -60,7 +59,6 @@ const MOCK_VARIANTS = [
         uom_id: 2,
         uom: { id: 'uom-02', name: 'Kilogram', symbol: 'kg' },
         item: { sku: 'SUG-001', name: 'Sugar' },
-        last_unit_cost: 3.5,
         min_stock: 5,
     },
 ]

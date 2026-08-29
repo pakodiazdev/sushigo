@@ -106,12 +106,12 @@ describe('Inventory Types', () => {
                 code: 'VAR-001',
                 name: '1kg Bag',
                 uom_id: 1,
-                avg_unit_cost: 25.50,
-                last_unit_cost: 26.00,
                 is_active: true,
             }
             expect(variant.code).toBe('VAR-001')
-            expect(variant.avg_unit_cost).toBe(25.50)
+            // Per-Variant acquisition cost / sale price were dropped in #442 —
+            // Stock.weighted_avg_cost and price lists own those now.
+            expect('avg_unit_cost' in variant).toBe(false)
         })
     })
 

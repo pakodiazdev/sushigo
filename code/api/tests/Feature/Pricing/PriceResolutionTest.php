@@ -3,6 +3,7 @@
 namespace Tests\Feature\Pricing;
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 
 class PriceResolutionTest extends PricingTestCase
@@ -57,8 +58,11 @@ class PriceResolutionTest extends PricingTestCase
     #[Test]
     public function it_never_falls_back_to_item_variant_sale_price()
     {
+        // The per-Variant sale_price fallback column was dropped in #442, so this
+        // is now structurally guaranteed — resolution has nothing to fall back to.
         $this->actingAsUserWithoutBranchAccess(['price_lists.view']);
-        $variant = $this->createItemVariant(['sale_price' => '999.9999']);
+        $this->assertFalse(Schema::hasColumn('item_variants', 'sale_price'));
+        $variant = $this->createItemVariant();
         $branch = $this->createBranch();
 
         $response = $this->getJson('/api/v1/pricing/resolve?'.http_build_query([
