@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\CreatePur
 use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\DeletePurchasePresentationTemplateController;
 use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\ListPurchasePresentationTemplatesController;
 use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\ShowPurchasePresentationTemplateController;
+use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\SuggestPurchasePresentationTemplateCodeController;
 use App\Http\Controllers\Api\V1\Inventory\PurchasePresentationTemplate\UpdatePurchasePresentationTemplateController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\CreateVariantController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\DeleteVariantController;
@@ -97,6 +98,7 @@ Route::middleware('auth:api')->prefix('inventory/purchase-presentation-templates
     $templateParam = '/{template}';
 
     Route::get('/', ListPurchasePresentationTemplatesController::class)->name('purchase-presentation-templates.list')->middleware('permission:purchase_presentation_templates.view');
+    Route::get('/suggest-code', SuggestPurchasePresentationTemplateCodeController::class)->name('purchase-presentation-templates.suggest-code')->middleware('permission:purchase_presentation_templates.manage');
     Route::get($templateParam, ShowPurchasePresentationTemplateController::class)->name('purchase-presentation-templates.show')->middleware('permission:purchase_presentation_templates.view');
     Route::post('/', CreatePurchasePresentationTemplateController::class)->name('purchase-presentation-templates.create')->middleware('permission:purchase_presentation_templates.manage');
     Route::put($templateParam, UpdatePurchasePresentationTemplateController::class)->name('purchase-presentation-templates.update')->middleware('permission:purchase_presentation_templates.manage');

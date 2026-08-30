@@ -147,12 +147,21 @@ export interface PurchasePresentationTemplatePayload {
   is_active?: boolean
 }
 
+export interface PurchasePresentationTemplateCodeContext {
+  package_type: PurchasePresentationPackageType
+  base_unit_quantity: number
+  compatible_dimension_uom_id: string
+}
+
 export const purchasePresentationTemplateApi = {
   list: (params?: { is_active?: boolean; package_type?: PurchasePresentationPackageType }) =>
     api.get<CollectionResponse<PurchasePresentationTemplate>>('/inventory/purchase-presentation-templates', { params }),
 
   get: (templateId: string) =>
     api.get<EntityResponse<PurchasePresentationTemplate>>(`/inventory/purchase-presentation-templates/${templateId}`),
+
+  suggestCode: (params: PurchasePresentationTemplateCodeContext) =>
+    api.get<{ code: string }>('/inventory/purchase-presentation-templates/suggest-code', { params }),
 
   create: (data: PurchasePresentationTemplatePayload) =>
     api.post<EntityResponse<PurchasePresentationTemplate>>('/inventory/purchase-presentation-templates', data),

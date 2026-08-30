@@ -13,6 +13,9 @@ class PurchasePresentationTemplate extends Model
 {
     use HasFactory, HasPublicId, SoftDeletes;
 
+    /** Maximum value representable by the base_unit_quantity decimal(15,4) column. */
+    public const MAX_BASE_UNIT_QUANTITY = '99999999999.9999';
+
     public const PACKAGE_TYPE_UNIT = 'UNIT';
 
     public const PACKAGE_TYPE_PACK = 'PACK';

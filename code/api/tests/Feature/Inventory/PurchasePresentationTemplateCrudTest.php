@@ -102,6 +102,21 @@ class PurchasePresentationTemplateCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_a_quantity_the_database_column_cannot_store()
+    {
+        $response = $this->postJson('/api/v1/inventory/purchase-presentation-templates', [
+            'code' => 'BOX_HUGE',
+            'name' => 'Oversized box',
+            'package_type' => 'BOX',
+            'base_unit_quantity' => '100000000000',
+            'compatible_dimension_uom_id' => $this->uomKg->public_id,
+        ]);
+
+        $response->assertUnprocessable()->assertJsonValidationErrors(['base_unit_quantity']);
+        $this->assertDatabaseMissing('purchase_presentation_templates', ['code' => 'BOX_HUGE']);
+    }
+
+    #[Test]
     public function it_validates_code_uniqueness()
     {
         $this->createPurchasePresentationTemplate(['code' => 'BOX_24']);

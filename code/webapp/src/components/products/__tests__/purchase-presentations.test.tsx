@@ -98,10 +98,10 @@ describe('PurchasePresentations', () => {
     expect(onAssignPresentation).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onManageTemplates when Manage templates is clicked', () => {
+  it('calls onManageTemplates when Gestionar plantillas is clicked', () => {
     const onManageTemplates = vi.fn()
     const { getByText } = renderComponent({ onManageTemplates })
-    fireEvent.click(getByText('Manage templates'))
+    fireEvent.click(getByText('Gestionar plantillas'))
     expect(onManageTemplates).toHaveBeenCalledTimes(1)
   })
 
@@ -111,10 +111,10 @@ describe('PurchasePresentations', () => {
     expect(queryByText('Assign template')).toBeNull()
   })
 
-  it('hides Manage templates when the user lacks purchase_presentation_templates.view', () => {
+  it('hides Gestionar plantillas when the user lacks purchase_presentation_templates.view', () => {
     mockAuthState.can.mockImplementation((permission: string) => permission !== 'purchase_presentation_templates.view')
     const { queryByText } = renderComponent()
-    expect(queryByText('Manage templates')).toBeNull()
+    expect(queryByText('Gestionar plantillas')).toBeNull()
   })
 
   it('renders a non-interactive row and does not call onPresentationClick when the user lacks items.update', () => {

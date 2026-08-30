@@ -20,6 +20,7 @@ vi.mock('@/services/inventory-api', () => ({
   purchasePresentationTemplateApi: {
     create: vi.fn(),
     update: vi.fn(),
+    suggestCode: vi.fn(),
   },
 }))
 
@@ -74,6 +75,7 @@ describe('usePurchasePresentationTemplateForm', () => {
       data: [kilogram],
       isLoading: false,
     } as never)
+    vi.mocked(purchasePresentationTemplateApi.suggestCode).mockResolvedValue({ data: { code: 'BOX_24' } } as never)
   })
 
   afterEach(() => {
@@ -215,7 +217,7 @@ describe('usePurchasePresentationTemplateForm', () => {
     })
 
     expect(purchasePresentationTemplateApi.create).not.toHaveBeenCalled()
-    expect(result.current.allErrors.code).toBe('Code is required')
+    expect(result.current.allErrors.code).toBe('El código es requerido')
   })
 
   it('surfaces server-side validation errors, e.g. rejecting an immutable-field change once assigned', async () => {
@@ -259,5 +261,199 @@ describe('usePurchasePresentationTemplateForm', () => {
         'This field cannot be changed once the template has been assigned to a Variant.'
       )
     )
+  })
+
+  it('fills and updates the suggestion while create context changes and the code is untouched', async () => {
+    vi.mocked(purchasePresentationTemplateApi.suggestCode).mockImplementation(async ({ base_unit_quantity }) => ({
+      data: { code: `BOX_${base_unit_quantity}` },
+    }) as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: null, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    act(() => {
+      result.current.setValue('package_type', 'BOX')
+      result.current.setValue('base_unit_quantity', '24')
+      result.current.setValue('compatible_dimension_uom_id', '1')
+    })
+    await waitFor(() => expect(result.current.currentCode).toBe('BOX_24'))
+
+    act(() => result.current.setValue('base_unit_quantity', '12'))
+    await waitFor(() => expect(result.current.currentCode).toBe('BOX_12'))
+  })
+
+  it('debounces quantity-driven suggestions until typing pauses', async () => {
+    vi.mocked(purchasePresentationTemplateApi.suggestCode).mockResolvedValue({
+      data: { code: 'BOX_1440' },
+    } as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: null, onSuccess: vi.fn() }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.setValue('package_type', 'BOX')
+      result.current.setValue('compatible_dimension_uom_id', '1')
+      result.current.setValue('base_unit_quantity', '1')
+    })
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    act(() => result.current.setValue('base_unit_quantity', '14'))
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    act(() => result.current.setValue('base_unit_quantity', '144'))
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    act(() => result.current.setValue('base_unit_quantity', '1440'))
+
+    expect(purchasePresentationTemplateApi.suggestCode).not.toHaveBeenCalled()
+    await waitFor(() => expect(purchasePresentationTemplateApi.suggestCode).toHaveBeenCalledTimes(1))
+    expect(purchasePresentationTemplateApi.suggestCode).toHaveBeenCalledWith(expect.objectContaining({
+      base_unit_quantity: 1440,
+    }))
+  })
+
+  it('does not request or replace a persisted code in edit mode', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: existingTemplate, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    act(() => result.current.setValue('base_unit_quantity', '12'))
+
+    expect(result.current.currentCode).toBe('BOX_24')
+    expect(purchasePresentationTemplateApi.suggestCode).not.toHaveBeenCalled()
+  })
+
+  it('keeps a manual code across context changes until explicit regeneration', async () => {
+    vi.mocked(purchasePresentationTemplateApi.suggestCode)
+      .mockResolvedValueOnce({ data: { code: 'BOX_24' } } as never)
+      .mockResolvedValueOnce({ data: { code: 'BOX_12' } } as never)
+      .mockResolvedValueOnce({ data: { code: 'BOX_12_KG' } } as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: null, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    act(() => {
+      result.current.setValue('package_type', 'BOX')
+      result.current.setValue('base_unit_quantity', '24')
+      result.current.setValue('compatible_dimension_uom_id', '1')
+    })
+    await waitFor(() => expect(result.current.currentCode).toBe('BOX_24'))
+
+    act(() => {
+      result.current.onCodeChange({ target: { name: 'code', value: 'MI_CAJA' }, type: 'change' } as never)
+      result.current.setValue('base_unit_quantity', '12')
+    })
+    await waitFor(() => expect(purchasePresentationTemplateApi.suggestCode).toHaveBeenCalledTimes(2))
+    expect(result.current.currentCode).toBe('MI_CAJA')
+
+    act(() => result.current.handleRefreshCode())
+    await waitFor(() => expect(result.current.currentCode).toBe('BOX_12_KG'))
+  })
+
+  it('preserves a manual code on collision and applies the replacement only explicitly', async () => {
+    const collisionError = new AxiosError('Validation failed', '422', undefined, undefined, {
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      headers: {},
+      config: {} as never,
+      data: {
+        message: 'El código ya está en uso.',
+        errors: { code: ['El código ya está en uso.'] },
+        rejected_code: 'MI_CODIGO',
+        suggested_code: 'BOX_24_KG',
+      },
+    } as never)
+    vi.mocked(purchasePresentationTemplateApi.create).mockRejectedValue(collisionError)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: null, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    act(() => {
+      result.current.onCodeChange({ target: { name: 'code', value: 'MI_CODIGO' }, type: 'change' } as never)
+    })
+    await act(async () => {
+      await result.current.onSubmit({
+        code: 'MI_CODIGO', name: 'Caja', package_type: 'BOX', base_unit_quantity: '24',
+        compatible_dimension_uom_id: '1', is_active: true,
+      })
+    })
+
+    expect(result.current.currentCode).toBe('MI_CODIGO')
+    expect(result.current.collision?.suggestedCode).toBe('BOX_24_KG')
+    expect(mockShowError).not.toHaveBeenCalled()
+
+    act(() => result.current.applySuggestedCode())
+    expect(result.current.currentCode).toBe('BOX_24_KG')
+  })
+
+  it('discards an untouched collision replacement when the suggestion context changes', async () => {
+    vi.mocked(purchasePresentationTemplateApi.suggestCode)
+      .mockResolvedValueOnce({ data: { code: 'BOX_24' } } as never)
+      .mockResolvedValueOnce({ data: { code: 'BOX_12' } } as never)
+    vi.mocked(purchasePresentationTemplateApi.create).mockRejectedValue(
+      new AxiosError('Validation failed', '422', undefined, undefined, {
+        status: 422,
+        statusText: 'Unprocessable Entity',
+        headers: {},
+        config: {} as never,
+        data: {
+          errors: { code: ['El código ya está en uso.'] },
+          rejected_code: 'BOX_24',
+          suggested_code: 'BOX_24_KG',
+        },
+      } as never),
+    )
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: null, onSuccess: vi.fn() }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.setValue('package_type', 'BOX')
+      result.current.setValue('base_unit_quantity', '24')
+      result.current.setValue('compatible_dimension_uom_id', '1')
+    })
+    await waitFor(() => expect(result.current.currentCode).toBe('BOX_24'))
+
+    await act(async () => {
+      await result.current.onSubmit({
+        code: 'BOX_24', name: 'Caja', package_type: 'BOX', base_unit_quantity: '24',
+        compatible_dimension_uom_id: '1', is_active: true,
+      })
+    })
+    expect(result.current.currentCode).toBe('BOX_24_KG')
+
+    act(() => result.current.setValue('base_unit_quantity', '12'))
+
+    await waitFor(() => expect(result.current.currentCode).toBe('BOX_12'))
+    expect(result.current.collision).toBeNull()
+  })
+
+  it('clears a generated code when its suggestion context becomes incomplete', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => usePurchasePresentationTemplateForm({ template: null, onSuccess: vi.fn() }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.setValue('package_type', 'BOX')
+      result.current.setValue('base_unit_quantity', '24')
+      result.current.setValue('compatible_dimension_uom_id', '1')
+    })
+    await waitFor(() => expect(result.current.currentCode).toBe('BOX_24'))
+
+    act(() => result.current.setValue('base_unit_quantity', ''))
+
+    await waitFor(() => expect(result.current.currentCode).toBe(''))
+    expect(result.current.isCodeSuggested).toBe(false)
   })
 })

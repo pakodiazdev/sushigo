@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { type ChangeEventHandler, useEffect, useRef, useState } from 'react'
+import { useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useFormMutation } from '@/hooks/use-form-mutation'
 import { useSuggestedCode } from '@/hooks/use-suggested-code'
+import { useSuggestedCodeField } from '@/hooks/use-suggested-code-field'
 import { isApiError } from '@/lib/api-error'
 import { supplierApi } from '../api/supplier-api'
 import type { Supplier } from '../types'
@@ -23,11 +24,6 @@ export type SupplierFormValues = z.infer<typeof supplierSchema>
 interface CodeCollisionResponse {
   rejected_code?: string
   suggested_code?: string
-}
-
-export interface SupplierCodeCollision {
-  rejectedCode: string
-  suggestedCode: string
 }
 
 export interface UseSupplierFormOptions {
@@ -63,43 +59,12 @@ export function useSupplierForm({ supplier, onSuccess }: Readonly<UseSupplierFor
     !isEditing,
   )
 
-  // `true` once the operator types in the code field — their value is never
-  // overwritten by a fetched or collision-regenerated suggestion after that.
-  // The ref mirrors the state so async callbacks (submit → collision) read the
-  // current value instead of a stale render's.
-  const [codeManuallyEdited, setCodeManuallyEdited] = useState(false)
-  const codeManuallyEditedRef = useRef(false)
-  const setManualEdited = (value: boolean) => {
-    codeManuallyEditedRef.current = value
-    setCodeManuallyEdited(value)
-  }
-  // A suggestion we have committed to showing after a collision, overriding the
-  // query's value until the operator refreshes or edits the field.
-  const [pinnedCode, setPinnedCode] = useState<string | null>(null)
-  const [collision, setCollision] = useState<SupplierCodeCollision | null>(null)
-
-  const prefillCode = pinnedCode ?? suggestion.suggestedCode
-
-  useEffect(() => {
-    if (!isEditing && !codeManuallyEdited && prefillCode) {
-      setValue('code', prefillCode, { shouldValidate: false })
-    }
-  }, [isEditing, codeManuallyEdited, prefillCode, setValue])
-
   const codeField = register('code')
-  const onCodeChange: ChangeEventHandler<HTMLInputElement> = (event) => {
-    void codeField.onChange(event)
-    setManualEdited(true)
-    setPinnedCode(null)
-    setCollision(null)
-  }
-
-  const handleRefreshCode = () => {
-    setManualEdited(false)
-    setPinnedCode(null)
-    setCollision(null)
-    suggestion.refresh()
-  }
+  const writeCode = useCallback(
+    (code: string, shouldValidate: boolean) => setValue('code', code, { shouldValidate }),
+    [setValue],
+  )
+  const suggestedCodeField = useSuggestedCodeField({ isEditing, suggestion, codeField, writeCode })
 
   // ── Mutation ───────────────────────────────────────────────────────────────
   const { mutation, validationErrors, clearValidationErrors, isPending } = useFormMutation({
@@ -119,38 +84,27 @@ export function useSupplierForm({ supplier, onSuccess }: Readonly<UseSupplierFor
   })
 
   const applyCollision = (values: SupplierFormValues, body: CodeCollisionResponse) => {
-    const next: SupplierCodeCollision = {
+    const next = {
       rejectedCode: body.rejected_code ?? values.code.toUpperCase(),
       suggestedCode: body.suggested_code as string,
     }
-    setCollision(next)
     // An untouched generated value is replaced in place; the operator still has
     // to submit again. The stale "code already taken" field error from the failed
     // submit is cleared — it applied to the rejected code, not the fresh one.
     // A manually chosen value is left alone (error kept) — the view offers an
     // explicit "use this instead" action driven by `collision`.
-    if (!codeManuallyEditedRef.current) {
-      setPinnedCode(next.suggestedCode)
-      setValue('code', next.suggestedCode, { shouldValidate: false })
-      clearValidationErrors()
-    }
+    suggestedCodeField.acceptCollision(next, clearValidationErrors)
   }
 
   const applySuggestedCode = () => {
-    if (!collision) return
-    setValue('code', collision.suggestedCode, { shouldValidate: true })
-    setPinnedCode(collision.suggestedCode)
-    setManualEdited(false)
-    setCollision(null)
-    clearValidationErrors()
+    suggestedCodeField.applySuggestedCode(clearValidationErrors)
   }
 
   const onSubmit = async (values: SupplierFormValues) => {
     clearValidationErrors()
     try {
       await mutation.mutateAsync(values)
-      setCollision(null)
-      setPinnedCode(null)
+      suggestedCodeField.clearSuggestionState()
     } catch (error) {
       const body = isApiError(error)
         ? (error.response?.data as CodeCollisionResponse | undefined)
@@ -173,7 +127,7 @@ export function useSupplierForm({ supplier, onSuccess }: Readonly<UseSupplierFor
     isEditing,
     register,
     codeField,
-    onCodeChange,
+    onCodeChange: suggestedCodeField.onCodeChange,
     handleSubmit,
     setValue,
     onSubmit,
@@ -181,13 +135,13 @@ export function useSupplierForm({ supplier, onSuccess }: Readonly<UseSupplierFor
     isActive: watch('is_active'),
     isSubmitting: isPending,
     // Suggested-code UI
-    isCodeSuggested: !isEditing && !codeManuallyEdited,
+    isCodeSuggested: !isEditing && !suggestedCodeField.codeManuallyEdited,
     isSuggestionLoading: suggestion.isLoading,
     isRefreshingCode: suggestion.isRefreshing,
     suggestionFailed: suggestion.isError,
-    handleRefreshCode,
-    collision,
-    canApplySuggestedCode: collision !== null && codeManuallyEdited,
+    handleRefreshCode: suggestedCodeField.handleRefreshCode,
+    collision: suggestedCodeField.collision,
+    canApplySuggestedCode: suggestedCodeField.collision !== null && suggestedCodeField.codeManuallyEdited,
     applySuggestedCode,
   }
 }
