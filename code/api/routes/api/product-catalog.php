@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\Inventory\Variant\CreateVariantController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\DeleteVariantController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\ListVariantsController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\ShowVariantController;
+use App\Http\Controllers\Api\V1\Inventory\Variant\SuggestVariantSkuController;
 use App\Http\Controllers\Api\V1\Inventory\Variant\UpdateVariantController;
 use App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation\CreateVariantPurchasePresentationController;
 use App\Http\Controllers\Api\V1\Inventory\VariantPurchasePresentation\DeleteVariantPurchasePresentationController;
@@ -82,6 +83,7 @@ Route::middleware('auth:api')->prefix('inventory/products')->group(function () {
 // note above; same reasoning.
 Route::middleware('auth:api')->prefix('inventory/products/{id}/variants')->group(function () {
     Route::get('/', ListVariantsController::class)->name('products.variants.list')->middleware('permission:items.view|suppliers.manage|receipts.manage');
+    Route::get('/suggest-code', SuggestVariantSkuController::class)->name('products.variants.suggest-code')->middleware('permission:items.create');
     Route::get(RouteParams::VARIANT_ID, ShowVariantController::class)->name('products.variants.show')->middleware('permission:items.view');
     Route::post('/', CreateVariantController::class)->name('products.variants.create')->middleware('permission:items.create');
     Route::put(RouteParams::VARIANT_ID, UpdateVariantController::class)->name('products.variants.update')->middleware('permission:items.update');

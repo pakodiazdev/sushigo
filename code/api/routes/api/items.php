@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Items\ListItemVariantsController;
 use App\Http\Controllers\Api\V1\Items\ShowItemController;
 use App\Http\Controllers\Api\V1\Items\ShowItemVariantController;
 use App\Http\Controllers\Api\V1\Items\SuggestItemSkuController;
+use App\Http\Controllers\Api\V1\Items\SuggestItemVariantSkuController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemController;
 use App\Http\Controllers\Api\V1\Items\UpdateItemVariantController;
 use App\Support\RouteParams;
@@ -28,6 +29,7 @@ Route::middleware('auth:api')->prefix('items')->group(function () {
 // Item Variants (Protected read + write — inherits items.* permissions)
 Route::middleware('auth:api')->prefix('item-variants')->group(function () {
     Route::get('/', ListItemVariantsController::class)->name('item-variants.list')->middleware('permission:items.view');
+    Route::get('/suggest-code', SuggestItemVariantSkuController::class)->name('item-variants.suggest-code')->middleware('permission:items.create');
     Route::get(RouteParams::ID, ShowItemVariantController::class)->name('item-variants.show')->middleware('permission:items.view');
     Route::post('/', CreateItemVariantController::class)->name('item-variants.create')->middleware('permission:items.create');
     Route::put(RouteParams::ID, UpdateItemVariantController::class)->name('item-variants.update')->middleware('permission:items.update');

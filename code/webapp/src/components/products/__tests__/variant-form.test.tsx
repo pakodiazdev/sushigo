@@ -55,6 +55,8 @@ function defaultState() {
     uoms: [kilogram],
     isUomsLoading: false,
     register: mockRegister,
+    codeField: { name: 'code', onChange: vi.fn(), onBlur: vi.fn(), ref: vi.fn() },
+    onCodeChange: vi.fn(),
     handleSubmit: mockHandleSubmit,
     setValue: mockSetValue,
     onSubmit: mockOnSubmit,
@@ -63,6 +65,16 @@ function defaultState() {
     trackLot: false,
     trackSerial: false,
     isSubmitting: false,
+    isSubmitDisabled: false,
+    canSuggestCode: true,
+    isCodeSuggested: false,
+    isSuggestionLoading: false,
+    isRefreshingCode: false,
+    suggestionFailed: false,
+    handleRefreshCode: vi.fn(),
+    collision: null as { rejectedCode: string; suggestedCode: string } | null,
+    canApplySuggestedCode: false,
+    applySuggestedCode: vi.fn(),
   }
 }
 
@@ -99,17 +111,17 @@ describe('VariantForm', () => {
       expect(queryByText(/Item/)).toBeNull()
     })
 
-    it('renders "Create Variant" as the submit label', () => {
+    it('renders the Spanish create label', () => {
       setHookState()
       const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      expect(getByText('Create Variant')).toBeDefined()
+      expect(getByText('Crear variante')).toBeDefined()
     })
 
-    it('calls onCancel when Cancel is clicked', () => {
+    it('calls onCancel when Cancelar is clicked', () => {
       setHookState()
       const onCancel = vi.fn()
       const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={onCancel} />)
-      fireEvent.click(getByText('Cancel'))
+      fireEvent.click(getByText('Cancelar'))
       expect(onCancel).toHaveBeenCalledTimes(1)
     })
 
@@ -121,9 +133,9 @@ describe('VariantForm', () => {
     })
 
     it('disables the submit button while submitting', () => {
-      setHookState({ isSubmitting: true })
+      setHookState({ isSubmitting: true, isSubmitDisabled: true })
       const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      expect((getByText('Create Variant').closest('button') as HTMLButtonElement).disabled).toBe(true)
+      expect((getByText('Crear variante').closest('button') as HTMLButtonElement).disabled).toBe(true)
     })
 
     it('shows a spinner while submitting', () => {
@@ -133,9 +145,9 @@ describe('VariantForm', () => {
     })
 
     it('surfaces field errors', () => {
-      setHookState({ allErrors: { name: 'Name is required' } })
+      setHookState({ allErrors: { name: 'El nombre es requerido' } })
       const { getByText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      expect(getByText('Name is required')).toBeDefined()
+      expect(getByText('El nombre es requerido')).toBeDefined()
     })
 
     it('disables the base unit select while units of measure are loading', () => {
@@ -144,35 +156,49 @@ describe('VariantForm', () => {
       expect((container.querySelector('select[name="uom_id"]') as HTMLSelectElement).disabled).toBe(true)
     })
 
-    it('wires the Track lot numbers checkbox into setValue', () => {
+    it('wires the lot tracking checkbox into setValue', () => {
       setHookState()
       const { getByLabelText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      fireEvent.click(getByLabelText('Track lot numbers'))
+      fireEvent.click(getByLabelText('Rastrear lotes'))
       expect(mockSetValue).toHaveBeenCalledWith('track_lot', true)
     })
 
-    it('wires the Track serial numbers checkbox into setValue', () => {
+    it('wires the serial tracking checkbox into setValue', () => {
       setHookState()
       const { getByLabelText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      fireEvent.click(getByLabelText('Track serial numbers'))
+      fireEvent.click(getByLabelText('Rastrear números de serie'))
       expect(mockSetValue).toHaveBeenCalledWith('track_serial', true)
     })
 
-    it('wires the Active checkbox into setValue', () => {
+    it('wires the active checkbox into setValue', () => {
       setHookState({ isActive: true })
       const { getByLabelText } = render(<VariantForm productId={'42'} onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      fireEvent.click(getByLabelText('Active'))
+      fireEvent.click(getByLabelText('Activa'))
       expect(mockSetValue).toHaveBeenCalledWith('is_active', false)
     })
   })
 
   describe('edit mode', () => {
-    it('shows "Update Variant" as the submit label', () => {
+    it('shows the Spanish update label', () => {
       setHookState()
       const { getByText } = render(
         <VariantForm productId={'42'} variant={existingVariant} onSuccess={vi.fn()} onCancel={vi.fn()} />
       )
-      expect(getByText('Update Variant')).toBeDefined()
+      expect(getByText('Actualizar variante')).toBeDefined()
     })
+  })
+
+  it('shows the collision replacement and applies it explicitly', () => {
+    const applySuggestedCode = vi.fn()
+    setHookState({
+      collision: { rejectedCode: 'MI-SKU', suggestedCode: 'ARR-KG-002' },
+      canApplySuggestedCode: true,
+      applySuggestedCode,
+    })
+    const { getByText } = render(<VariantForm productId="42" onSuccess={vi.fn()} onCancel={vi.fn()} />)
+
+    fireEvent.click(getByText('Usar ARR-KG-002'))
+
+    expect(applySuggestedCode).toHaveBeenCalledTimes(1)
   })
 })

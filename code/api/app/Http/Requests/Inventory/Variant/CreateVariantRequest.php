@@ -31,6 +31,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class CreateVariantRequest extends FormRequest
 {
+    public const DUPLICATE_CODE_MESSAGE = 'El SKU ya está en uso. Revisa la nueva sugerencia y vuelve a enviar el formulario.';
+
     use ResolvesPublicIdReferences;
 
     public function authorize(): bool
@@ -44,7 +46,10 @@ class CreateVariantRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:100', 'unique:item_variants,code'],
+            // The database constraint is authoritative. Handling the collision after the insert
+            // lets the API return a fresh contextual suggestion even when the code was claimed
+            // between suggestion and submission.
+            'code' => ['required', 'string', 'max:100'],
             'barcode' => ['nullable', 'string', 'max:50', 'unique:item_variants,barcode'],
             'uom_id' => ['required', 'string', 'exists:units_of_measure,public_id'],
             'description' => ['nullable', 'string'],

@@ -38,4 +38,19 @@ trait ResolvesPublicIdReferences
 
         return $modelClass::where('public_id', $publicId)->value('id');
     }
+
+    /**
+     * Preserve legacy numeric inputs while normalizing a public-id input to the
+     * internal foreign key before validation.
+     *
+     * @param  class-string<Model>  $modelClass
+     */
+    protected function normalizePublicIdReference(string $modelClass, mixed $value): mixed
+    {
+        if (! is_string($value) || ctype_digit($value)) {
+            return $value;
+        }
+
+        return $modelClass::where('public_id', $value)->value('id') ?? $value;
+    }
 }

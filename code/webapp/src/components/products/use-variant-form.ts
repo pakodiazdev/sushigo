@@ -1,9 +1,13 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
-import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
+import { useFormMutation } from '@/hooks/use-form-mutation'
+import { useSuggestedCode } from '@/hooks/use-suggested-code'
+import { useSuggestedCodeField } from '@/hooks/use-suggested-code-field'
+import { isApiError } from '@/lib/api-error'
 import { productVariantApi } from '@/services/inventory-api'
 import type { ProductVariant, UnitOfMeasure } from '@/types/inventory'
 
@@ -13,10 +17,10 @@ type UomOption = Pick<UnitOfMeasure, 'id' | 'name' | 'symbol'>
 // or opening balance. See doc/architecture/product-catalog/product-catalog-architecture.en.md §6.
 // No Product/Item selector — the parent Product is fixed by `productId`, never user-editable.
 const variantSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required'),
-  code: z.string().trim().min(1, 'SKU is required'),
+  name: z.string().trim().min(1, 'El nombre es requerido'),
+  code: z.string().trim().min(1, 'El SKU es requerido').max(100, 'El SKU no puede exceder 100 caracteres'),
   barcode: z.string(),
-  uom_id: z.string().min(1, 'Base unit is required'),
+  uom_id: z.string().min(1, 'La unidad base es requerida'),
   description: z.string(),
   track_lot: z.boolean(),
   track_serial: z.boolean(),
@@ -29,6 +33,18 @@ export interface UseVariantFormOptions {
   productId: string
   variant?: ProductVariant | null
   onSuccess: (variant: ProductVariant) => void
+}
+
+interface CodeCollisionResponse {
+  rejected_code?: string
+  suggested_code: string
+}
+
+function collisionResponse(error: unknown): CodeCollisionResponse | undefined {
+  if (!isApiError(error)) return undefined
+  const body = error.response?.data as CodeCollisionResponse | undefined
+
+  return body?.suggested_code ? body : undefined
 }
 
 export function useVariantForm({ productId, variant, onSuccess }: Readonly<UseVariantFormOptions>) {
@@ -70,31 +86,58 @@ export function useVariantForm({ productId, variant, onSuccess }: Readonly<UseVa
     },
   })
 
-  const { execute, validationErrors, isPending } = useCreateUpdateMutation({
-    createFn: (data: VariantFormValues) =>
-      productVariantApi.create(productId, {
-        name: data.name,
-        code: data.code,
-        barcode: data.barcode || null,
-        uom_id: data.uom_id,
-        description: data.description || null,
-        track_lot: data.track_lot,
-        track_serial: data.track_serial,
-        is_active: data.is_active,
-      }),
-    updateFn: (data: VariantFormValues) =>
-      productVariantApi.update(productId, variant!.id, {
-        name: data.name,
-        code: data.code,
-        barcode: data.barcode || null,
-        uom_id: data.uom_id,
-        description: data.description || null,
-        track_lot: data.track_lot,
-        track_serial: data.track_serial,
-        is_active: data.is_active,
-      }),
-    entityName: 'Variant',
+  const variantName = watch('name')
+  const uomId = watch('uom_id')
+  const [codeManuallyEdited, setCodeManuallyEdited] = useState(false)
+  const hasSuggestionContext = !isEditing && variantName.trim().length > 0 && uomId.length > 0
+  const debouncedVariantName = useDebouncedValue(variantName, 400)
+  const hasSettledSuggestionContext = hasSuggestionContext && variantName === debouncedVariantName
+  const suggestion = useSuggestedCode(
+    ['product-variants', productId, 'suggest-code', debouncedVariantName, uomId],
+    async () => {
+      const response = await productVariantApi.suggestCode(productId, {
+        name: debouncedVariantName,
+        uom_id: uomId,
+      })
+      return response.data
+    },
+    hasSettledSuggestionContext && !codeManuallyEdited,
+  )
+  const codeField = register('code')
+  const writeCode = useCallback(
+    (code: string, shouldValidate: boolean) => setValue('code', code, { shouldValidate }),
+    [setValue],
+  )
+  const suggestedCodeField = useSuggestedCodeField({
     isEditing,
+    contextKey: `${productId}\u0000${variantName}\u0000${uomId}`,
+    canPrefill: hasSettledSuggestionContext,
+    suggestion,
+    codeField,
+    writeCode,
+    onManualEditChange: setCodeManuallyEdited,
+    clearValidationOnManualCollision: true,
+  })
+
+  const { mutation, validationErrors, clearValidationErrors, isPending } = useFormMutation({
+    mutationFn: (data: VariantFormValues) => {
+      const payload = {
+        name: data.name,
+        code: data.code,
+        barcode: data.barcode || null,
+        uom_id: data.uom_id,
+        description: data.description || null,
+        track_lot: data.track_lot,
+        track_serial: data.track_serial,
+        is_active: data.is_active,
+      }
+      return isEditing
+        ? productVariantApi.update(productId, variant!.id, payload)
+        : productVariantApi.create(productId, payload)
+    },
+    successMessage: isEditing ? 'Variante actualizada' : 'Variante creada',
+    errorMessageFallback: 'No fue posible guardar la variante',
+    shouldSuppressErrorToast: (error) => Boolean(collisionResponse(error)),
     onSuccess: (response) => onSuccess(response.data.data),
   })
 
@@ -106,11 +149,29 @@ export function useVariantForm({ productId, variant, onSuccess }: Readonly<UseVa
   }
 
   const isSubmitting = isPending
+  const isSubmitDisabled = isSubmitting || (
+    hasSuggestionContext
+    && !codeManuallyEdited
+    && !suggestedCodeField.prefillCode
+  )
 
   const onSubmit = async (data: VariantFormValues) => {
     if (isSubmitting) return
-    await execute(data)
+    clearValidationErrors()
+    try {
+      await mutation.mutateAsync(data)
+      suggestedCodeField.clearSuggestionState()
+    } catch (error) {
+      const body = collisionResponse(error)
+      if (!body) return
+      suggestedCodeField.acceptCollision({
+        rejectedCode: body.rejected_code ?? data.code.toUpperCase(),
+        suggestedCode: body.suggested_code,
+      }, clearValidationErrors)
+    }
   }
+
+  const applySuggestedCode = () => suggestedCodeField.applySuggestedCode(clearValidationErrors)
 
   const isActive = watch('is_active')
   const trackLot = watch('track_lot')
@@ -121,6 +182,8 @@ export function useVariantForm({ productId, variant, onSuccess }: Readonly<UseVa
     uoms: uomOptions,
     isUomsLoading,
     register,
+    codeField,
+    onCodeChange: suggestedCodeField.onCodeChange,
     handleSubmit,
     setValue,
     onSubmit,
@@ -129,5 +192,16 @@ export function useVariantForm({ productId, variant, onSuccess }: Readonly<UseVa
     trackLot,
     trackSerial,
     isSubmitting,
+    isSubmitDisabled,
+    currentCode: watch('code'),
+    canSuggestCode: hasSuggestionContext,
+    isCodeSuggested: !isEditing && !suggestedCodeField.codeManuallyEdited && Boolean(suggestedCodeField.prefillCode),
+    isSuggestionLoading: suggestion.isLoading,
+    isRefreshingCode: suggestion.isRefreshing,
+    suggestionFailed: suggestion.isError,
+    handleRefreshCode: suggestedCodeField.handleRefreshCode,
+    collision: suggestedCodeField.collision,
+    canApplySuggestedCode: suggestedCodeField.collision !== null && suggestedCodeField.codeManuallyEdited,
+    applySuggestedCode,
   }
 }

@@ -6,6 +6,44 @@ import { render, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { VariantForm } from '../variant-form'
 
 const mockVariantExecute = vi.hoisted(() => vi.fn().mockResolvedValue({}))
+const mockSetValue = vi.hoisted(() => vi.fn())
+
+vi.mock('../use-legacy-variant-form', () => ({
+  useLegacyVariantForm: ({ variant, preselectedItemId }: { variant?: { item_id?: number; uom_id?: number; is_active?: boolean }; preselectedItemId?: number }) => ({
+    items: [
+      { id: 'item-01', name: 'Salt', sku: 'SAL-001' },
+      { id: 'item-02', name: 'Pepper', sku: 'PEP-001' },
+    ],
+    units: [
+      { id: 'uom-01', name: 'Kilogram', symbol: 'kg' },
+      { id: 'uom-02', name: 'Gram', symbol: 'g' },
+    ],
+    register: (name: string) => ({ name }),
+    codeField: { name: 'code', onChange: vi.fn(), onBlur: vi.fn(), ref: vi.fn() },
+    onCodeChange: vi.fn(),
+    handleSubmit: (callback: (data: unknown) => void) => (event?: { preventDefault?: () => void }) => {
+      event?.preventDefault?.()
+      callback({})
+    },
+    setValue: mockSetValue,
+    onSubmit: mockVariantExecute,
+    allErrors: {},
+    itemId: variant?.item_id ?? preselectedItemId ?? 0,
+    uomId: variant?.uom_id ?? 0,
+    isActive: variant?.is_active ?? true,
+    isPending: false,
+    isSubmitDisabled: false,
+    canSuggestCode: false,
+    isCodeSuggested: false,
+    isSuggestionLoading: false,
+    isRefreshingCode: false,
+    suggestionFailed: false,
+    handleRefreshCode: vi.fn(),
+    collision: null,
+    canApplySuggestedCode: false,
+    applySuggestedCode: vi.fn(),
+  }),
+}))
 
 // Mock useFormState hook (legacy — kept for compatibility)
 vi.mock('@/hooks/use-form-state', () => ({
@@ -101,7 +139,7 @@ describe('VariantForm', () => {
 
     it('renders header with new variant title', () => {
       const { getByText } = render(<VariantForm {...defaultProps} />)
-      expect(getByText('New Variant')).toBeDefined()
+      expect(getByText('Nueva variante')).toBeDefined()
     })
 
     it('renders header with edit variant title when editing', () => {
@@ -118,12 +156,12 @@ describe('VariantForm', () => {
         updated_at: '',
       }
       const { getByText } = render(<VariantForm {...defaultProps} variant={variant} />)
-      expect(getByText('Edit Variant')).toBeDefined()
+      expect(getByText('Editar variante')).toBeDefined()
     })
 
     it('renders item select', () => {
       const { getByText } = render(<VariantForm {...defaultProps} />)
-      expect(getByText('Select an item...')).toBeDefined()
+      expect(getByText('Selecciona un artículo...')).toBeDefined()
     })
 
     it('renders item options', () => {
@@ -133,22 +171,22 @@ describe('VariantForm', () => {
 
     it('renders unit of measure select', () => {
       const { getByText } = render(<VariantForm {...defaultProps} />)
-      expect(getByText('Select unit...')).toBeDefined()
+      expect(getByText('Selecciona una unidad...')).toBeDefined()
     })
 
     it('renders unit options', () => {
       const { getByText } = render(<VariantForm {...defaultProps} />)
-      expect(getByText('Select unit...')).toBeDefined()
+      expect(getByText('Selecciona una unidad...')).toBeDefined()
     })
 
     it('renders cancel button', () => {
       const { getByText } = render(<VariantForm {...defaultProps} />)
-      expect(getByText('Cancel')).toBeDefined()
+      expect(getByText('Cancelar')).toBeDefined()
     })
 
     it('renders create button for new variant', () => {
       const { getByText } = render(<VariantForm {...defaultProps} />)
-      expect(getByText('Create')).toBeDefined()
+      expect(getByText('Crear')).toBeDefined()
     })
 
     it('renders update button when editing', () => {
@@ -165,7 +203,7 @@ describe('VariantForm', () => {
         updated_at: '',
       }
       const { getByText } = render(<VariantForm {...defaultProps} variant={variant} />)
-      expect(getByText('Update')).toBeDefined()
+      expect(getByText('Actualizar')).toBeDefined()
     })
   })
 
@@ -174,7 +212,7 @@ describe('VariantForm', () => {
       const onCancel = vi.fn()
       const { getByText } = render(<VariantForm {...defaultProps} onCancel={onCancel} />)
 
-      fireEvent.click(getByText('Cancel'))
+      fireEvent.click(getByText('Cancelar'))
       expect(onCancel).toHaveBeenCalledTimes(1)
     })
 
@@ -196,8 +234,8 @@ describe('VariantForm', () => {
       const selects = container.querySelectorAll('select')
       const itemSelect = selects[0] as HTMLSelectElement
 
-      fireEvent.change(itemSelect, { target: { value: '1' } })
-      expect(itemSelect.value).toBe('1')
+      fireEvent.change(itemSelect, { target: { value: 'item-01' } })
+      expect(mockSetValue).toHaveBeenCalledWith('item_id', 'item-01')
     })
 
     it('allows changing unit of measure select', () => {
@@ -205,13 +243,13 @@ describe('VariantForm', () => {
       const selects = container.querySelectorAll('select')
       const uomSelect = selects[1] as HTMLSelectElement
 
-      fireEvent.change(uomSelect, { target: { value: '1' } })
-      expect(uomSelect.value).toBe('1')
+      fireEvent.change(uomSelect, { target: { value: 'uom-01' } })
+      expect(mockSetValue).toHaveBeenCalledWith('uom_id', 'uom-01')
     })
 
     it('converts variant code to uppercase', () => {
       const { getByPlaceholderText } = render(<VariantForm {...defaultProps} />)
-      const codeInput = getByPlaceholderText('e.g., PROD-KG') as HTMLInputElement
+      const codeInput = getByPlaceholderText('Ej. HAR-KG') as HTMLInputElement
 
       fireEvent.change(codeInput, { target: { value: 'test-code' } })
       expect(codeInput).toBeDefined()
@@ -259,11 +297,11 @@ describe('VariantForm', () => {
       const { getByPlaceholderText, container } = render(<VariantForm {...defaultProps} />)
 
       const selects = container.querySelectorAll('select')
-      fireEvent.change(selects[0]!, { target: { value: '1' } }) // item_id
-      fireEvent.change(selects[1]!, { target: { value: '1' } }) // uom_id
+      fireEvent.change(selects[0]!, { target: { value: 'item-01' } }) // item_id
+      fireEvent.change(selects[1]!, { target: { value: 'uom-01' } }) // uom_id
 
-      fireEvent.change(getByPlaceholderText('e.g., PROD-KG'), { target: { value: 'PR-001' } })
-      fireEvent.change(getByPlaceholderText('e.g., 1 Kilogram'), { target: { value: 'Salt 1kg' } })
+      fireEvent.change(getByPlaceholderText('Ej. HAR-KG'), { target: { value: 'PR-001' } })
+      fireEvent.change(getByPlaceholderText('Ej. 1 kilogramo'), { target: { value: 'Salt 1kg' } })
 
       const form = container.querySelector('form#variant-form')
       fireEvent.submit(form!)

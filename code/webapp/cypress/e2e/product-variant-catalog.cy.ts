@@ -67,7 +67,7 @@ describe('Product detail — embedded Variant catalog', () => {
     cy.closeDevDebugger()
   })
 
-  it('creates a Product, adds its first Variant from the embedded catalog, and shows it back in the list', () => {
+  it('creates a Product, accepts its contextual Variant SKU suggestion, and shows it back in the list', () => {
     // ── 1. Create the Product (same flow as #423) ──────────────────────────
     cy.contains('button', 'New Product').click()
     cy.contains('h2', 'New Product', { timeout: 10_000 }).should('be.visible')
@@ -92,22 +92,22 @@ describe('Product detail — embedded Variant catalog', () => {
     cy.get('form').should('not.contain.text', 'Product')
 
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., Arroz Premium 1kg"]').type('Cypress Rice 1kg Bag', { force: true })
-      cy.get('input[placeholder="e.g., ARR-KG"]').type('CYP-RICE-KG', { force: true })
+      cy.get('input[placeholder="Ej. 1 kg"]').type('1 kg', { force: true })
       cy.get('select').select(`${UOM_NAME} (${UOM_SYMBOL})`)
-      cy.contains('button', 'Create Variant').scrollIntoView().click({ force: true })
+      cy.get('input[placeholder="Ej. ARR-KG"]', { timeout: 10_000 }).should('have.value', 'CYP-KG')
+      cy.contains('button', 'Crear variante').scrollIntoView().click({ force: true })
     })
 
     // ── 3. Confirm the same panel transitioned to the saved Variant's detail ──
-    cy.contains('Variant created successfully', { timeout: 10_000 }).should('be.visible')
+    cy.contains('Variante creada', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Variant Detail', { timeout: 10_000 }).should('be.visible')
-    cy.contains('Cypress Rice 1kg Bag').should('be.visible')
-    cy.contains('CYP-RICE-KG').should('be.visible')
+    cy.contains('1 kg').should('be.visible')
+    cy.contains('CYP-KG').should('be.visible')
 
     // ── 4. Back to the Product — the catalog now shows the new Variant ───────
     cy.contains('button', 'Back to Product').click()
     cy.contains('h2', 'Cypress Rice 1kg', { timeout: 10_000 }).should('be.visible')
-    cy.contains('Cypress Rice 1kg Bag').should('be.visible')
+    cy.contains('1 kg').should('be.visible')
     cy.contains('No variants yet').should('not.exist')
 
     // ── 5. Close the panel — the outer list's own Variants column also reflects it ──
