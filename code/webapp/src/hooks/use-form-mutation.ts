@@ -14,6 +14,8 @@ export interface FormMutationConfig<TData, TVariables> {
   errorMessageFallback?: string
   /** Error title for the toast */
   errorTitle?: string
+  /** Suppress the automatic error toast when the caller handles a recoverable error inline. */
+  shouldSuppressErrorToast?: (error: unknown) => boolean
   /** Callback on successful mutation */
   onSuccess?: (data: TData, variables: TVariables) => void
   /** Additional mutation options */
@@ -80,10 +82,12 @@ export function useFormMutation<TData = unknown, TVariables = unknown>(
       if (hasApiValidationErrors(error)) {
         setValidationErrors(getApiValidationErrors(error))
       }
-      showError(
-        getApiErrorMessage(error, config.errorMessageFallback || 'An error occurred'),
-        config.errorTitle || 'Error'
-      )
+      if (!config.shouldSuppressErrorToast?.(error)) {
+        showError(
+          getApiErrorMessage(error, config.errorMessageFallback || 'An error occurred'),
+          config.errorTitle || 'Error'
+        )
+      }
     },
     ...config.mutationOptions,
   })

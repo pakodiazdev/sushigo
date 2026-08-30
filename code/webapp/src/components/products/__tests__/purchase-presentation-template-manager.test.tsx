@@ -119,7 +119,7 @@ describe('PurchasePresentationTemplateManager', () => {
   it('shows an empty-state message when there are no templates', () => {
     setHookState()
     const { getByText } = render(<PurchasePresentationTemplateManager isOpen={true} onClose={vi.fn()} />)
-    expect(getByText(/No templates yet/)).toBeDefined()
+    expect(getByText(/Aún no hay plantillas/)).toBeDefined()
   })
 
   it('renders code, package type, factor and status for each template', () => {
@@ -127,7 +127,7 @@ describe('PurchasePresentationTemplateManager', () => {
     const { getByText } = render(<PurchasePresentationTemplateManager isOpen={true} onClose={vi.fn()} />)
     expect(getByText('Box x24')).toBeDefined()
     expect(getByText(/BOX_24 · BOX · ×24 kg/)).toBeDefined()
-    expect(getByText('Active')).toBeDefined()
+    expect(getByText('Activa')).toBeDefined()
   })
 
   it('calls handleTemplateClick when a template row is clicked', () => {
@@ -138,19 +138,19 @@ describe('PurchasePresentationTemplateManager', () => {
     expect(handleTemplateClick).toHaveBeenCalledWith(boxTemplate)
   })
 
-  it('calls handleNewTemplate when New Template is clicked', () => {
+  it('calls handleNewTemplate when Nueva plantilla is clicked', () => {
     const handleNewTemplate = vi.fn()
     setHookState({ handleNewTemplate })
     const { getByText } = render(<PurchasePresentationTemplateManager isOpen={true} onClose={vi.fn()} />)
-    fireEvent.click(getByText('New Template'))
+    fireEvent.click(getByText('Nueva plantilla'))
     expect(handleNewTemplate).toHaveBeenCalledTimes(1)
   })
 
-  it('hides New Template when the user lacks purchase_presentation_templates.manage', () => {
+  it('hides Nueva plantilla when the user lacks purchase_presentation_templates.manage', () => {
     mockAuthState.can.mockImplementation((permission: string) => permission !== 'purchase_presentation_templates.manage')
     setHookState()
     const { queryByText } = render(<PurchasePresentationTemplateManager isOpen={true} onClose={vi.fn()} />)
-    expect(queryByText('New Template')).toBeNull()
+    expect(queryByText('Nueva plantilla')).toBeNull()
   })
 
   it('renders a non-interactive row and does not call handleTemplateClick when the user lacks purchase_presentation_templates.manage', () => {

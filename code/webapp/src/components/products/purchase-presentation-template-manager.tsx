@@ -12,9 +12,9 @@ interface PurchasePresentationTemplateManagerProps {
 }
 
 const TITLE_BY_MODE = {
-  list: 'Purchase Presentation Templates',
-  create: 'New Template',
-  edit: 'Edit Template',
+  list: 'Plantillas de presentación de compra',
+  create: 'Nueva plantilla de presentación',
+  edit: 'Editar plantilla de presentación',
 } as const
 
 /**
@@ -53,13 +53,12 @@ export function PurchasePresentationTemplateManager({
           <SlidePanel.Body className="flex-1 space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Reusable commercial package definitions, assignable to any Variant with a
-                compatible base unit.
+                Definiciones reutilizables de empaque comercial para variantes con una unidad base compatible.
               </p>
               <CanAccess permission="purchase_presentation_templates.manage">
                 <Button type="button" size="sm" onClick={handleNewTemplate} className="gap-1">
                   <Plus className="h-4 w-4" />
-                  New Template
+                  Nueva plantilla
                 </Button>
               </CanAccess>
             </div>
@@ -72,13 +71,13 @@ export function PurchasePresentationTemplateManager({
 
             {!isLoading && isError && (
               <p className="text-sm text-muted-foreground">
-                Failed to load templates. Please try again.
+                No fue posible cargar las plantillas. Vuelve a intentarlo.
               </p>
             )}
 
             {!isLoading && !isError && templates.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                No templates yet. Create the first one to start assigning purchase presentations.
+                Aún no hay plantillas. Crea la primera para asignar presentaciones de compra.
               </p>
             )}
 
@@ -100,7 +99,7 @@ export function PurchasePresentationTemplateManager({
                           : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
                           }`}
                       >
-                        {template.is_active ? 'Active' : 'Inactive'}
+                        {template.is_active ? 'Activa' : 'Inactiva'}
                       </span>
                     </>
                   )

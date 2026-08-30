@@ -72,12 +72,24 @@ function defaultState() {
     uoms: [kilogram],
     isUomsLoading: false,
     register: mockRegister,
+    codeField: mockRegister('code'),
+    onCodeChange: vi.fn(),
     handleSubmit: mockHandleSubmit,
     setValue: mockSetValue,
     onSubmit: mockOnSubmit,
     allErrors: {},
     isActive: true,
     isSubmitting: false,
+    currentCode: '',
+    canSuggestCode: true,
+    isCodeSuggested: true,
+    isSuggestionLoading: false,
+    isRefreshingCode: false,
+    suggestionFailed: false,
+    handleRefreshCode: vi.fn(),
+    collision: null,
+    canApplySuggestedCode: false,
+    applySuggestedCode: vi.fn(),
   }
 }
 
@@ -91,21 +103,21 @@ describe('PurchasePresentationTemplateForm', () => {
     it('renders the package type and compatible unit options', () => {
       setHookState()
       const { getByText } = render(<PurchasePresentationTemplateForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      expect(getByText('Box')).toBeDefined()
+      expect(getByText('Caja')).toBeDefined()
       expect(getByText('Kilogram (kg)')).toBeDefined()
     })
 
-    it('renders "Create Template" as the submit label', () => {
+    it('renders the Spanish create label', () => {
       setHookState()
       const { getByText } = render(<PurchasePresentationTemplateForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      expect(getByText('Create Template')).toBeDefined()
+      expect(getByText('Crear plantilla')).toBeDefined()
     })
 
     it('calls onCancel when Cancel is clicked', () => {
       setHookState()
       const onCancel = vi.fn()
       const { getByText } = render(<PurchasePresentationTemplateForm onSuccess={vi.fn()} onCancel={onCancel} />)
-      fireEvent.click(getByText('Cancel'))
+      fireEvent.click(getByText('Cancelar'))
       expect(onCancel).toHaveBeenCalledTimes(1)
     })
 
@@ -114,6 +126,14 @@ describe('PurchasePresentationTemplateForm', () => {
       const { container } = render(<PurchasePresentationTemplateForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
       fireEvent.submit(container.querySelector('form')!)
       expect(mockOnSubmit).toHaveBeenCalled()
+    })
+
+    it('regenerates the code only through the explicit action', () => {
+      const handleRefreshCode = vi.fn()
+      setHookState({ handleRefreshCode })
+      const { getByLabelText } = render(<PurchasePresentationTemplateForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
+      fireEvent.click(getByLabelText('Regenerar código'))
+      expect(handleRefreshCode).toHaveBeenCalledTimes(1)
     })
 
     it('surfaces field errors', () => {
@@ -125,18 +145,18 @@ describe('PurchasePresentationTemplateForm', () => {
     it('wires the Active checkbox into setValue', () => {
       setHookState({ isActive: true })
       const { getByLabelText } = render(<PurchasePresentationTemplateForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      fireEvent.click(getByLabelText('Active'))
+      fireEvent.click(getByLabelText('Activa'))
       expect(mockSetValue).toHaveBeenCalledWith('is_active', false)
     })
   })
 
   describe('edit mode', () => {
-    it('shows "Update Template" as the submit label', () => {
+    it('shows the Spanish update label', () => {
       setHookState({ isEditing: true })
       const { getByText } = render(
         <PurchasePresentationTemplateForm template={existingTemplate} onSuccess={vi.fn()} onCancel={vi.fn()} />
       )
-      expect(getByText('Update Template')).toBeDefined()
+      expect(getByText('Actualizar plantilla')).toBeDefined()
     })
   })
 })

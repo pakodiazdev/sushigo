@@ -103,6 +103,27 @@ describe('useFormMutation', () => {
     expect(mockShowError).toHaveBeenCalledWith('Failed to create item', 'Error')
   })
 
+  it('should suppress the error toast when the caller handles a recoverable error', async () => {
+    const error = new Error('Recoverable conflict')
+    const shouldSuppressErrorToast = vi.fn().mockReturnValue(true)
+    const { result } = renderHook(
+      () =>
+        useFormMutation({
+          mutationFn: vi.fn().mockRejectedValue(error),
+          errorMessageFallback: 'Failed to create item',
+          shouldSuppressErrorToast,
+        }),
+      { wrapper },
+    )
+
+    await act(async () => {
+      await result.current.execute({ name: 'Test' })
+    })
+
+    expect(shouldSuppressErrorToast).toHaveBeenCalledWith(error)
+    expect(mockShowError).not.toHaveBeenCalled()
+  })
+
   it('should extract and set validation errors from API', async () => {
     const validationErrors = { name: 'Name is required', email: 'Invalid email' }
     vi.mocked(apiError.hasApiValidationErrors).mockReturnValue(true)

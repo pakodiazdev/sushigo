@@ -62,7 +62,7 @@ export function PurchasePresentations({
           <CanAccess permission="purchase_presentation_templates.view">
             <Button type="button" variant="ghost" size="sm" onClick={onManageTemplates} className="gap-1">
               <Settings className="h-4 w-4" />
-              Manage templates
+              Gestionar plantillas
             </Button>
           </CanAccess>
           {/* Requires items.update AND purchase_presentation_templates.view — see

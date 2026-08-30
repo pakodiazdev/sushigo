@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Inventory\PurchasePresentationTemplate;
 
 use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
+use App\Http\Requests\Inventory\PurchasePresentationTemplate\Concerns\ValidatesPurchasePresentationTemplateQuantity;
 use App\Models\PurchasePresentationTemplate;
 use App\Models\UnitOfMeasure;
 use Illuminate\Contracts\Validation\Validator;
@@ -18,14 +19,14 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="code", type="string", maxLength=50),
  *   @OA\Property(property="name", type="string", maxLength=255),
  *   @OA\Property(property="package_type", type="string", enum={"UNIT", "PACK", "BOX", "TRAY"}),
- *   @OA\Property(property="base_unit_quantity", type="number", format="float"),
+ *   @OA\Property(property="base_unit_quantity", type="number", format="float", minimum=0.0001, maximum=99999999999.9999),
  *   @OA\Property(property="compatible_dimension_uom_id", type="string"),
  *   @OA\Property(property="is_active", type="boolean")
  * )
  */
 class UpdatePurchasePresentationTemplateRequest extends FormRequest
 {
-    use ResolvesPublicIdReferences;
+    use ResolvesPublicIdReferences, ValidatesPurchasePresentationTemplateQuantity;
 
     public function authorize(): bool
     {
@@ -46,7 +47,7 @@ class UpdatePurchasePresentationTemplateRequest extends FormRequest
                 PurchasePresentationTemplate::PACKAGE_TYPE_BOX,
                 PurchasePresentationTemplate::PACKAGE_TYPE_TRAY,
             ])],
-            'base_unit_quantity' => ['sometimes', 'numeric', 'min:0.0001'],
+            'base_unit_quantity' => $this->baseUnitQuantityRules('sometimes'),
             'compatible_dimension_uom_id' => ['sometimes', 'string', 'exists:units_of_measure,public_id'],
             'is_active' => ['sometimes', 'boolean'],
         ];

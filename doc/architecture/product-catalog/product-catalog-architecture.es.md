@@ -371,11 +371,23 @@ más grueso por dominio usado por Platillos, para mantener consistencia con el m
 | PATCH | `/inventory/products/{product}/variants/{variant}` | Misma forma que crear, parcial | `items.update` | |
 | DELETE | `/inventory/products/{product}/variants/{variant}` | — | `items.delete` | |
 | GET | `/inventory/purchase-presentation-templates` | — (query: `is_active, package_type`) | `purchase_presentation_templates.view` | Global, no acotado por Producto. |
+| GET | `/inventory/purchase-presentation-templates/suggest-code` | Query: `package_type, base_unit_quantity, compatible_dimension_uom_id` | `purchase_presentation_templates.manage` | Ayuda exclusiva de creación; devuelve un código semántico disponible y nunca modifica una plantilla persistida. |
 | POST | `/inventory/purchase-presentation-templates` | `code, name, package_type, base_unit_quantity, compatible_dimension_uom_id, is_active?` | `purchase_presentation_templates.manage` | Administrado por el admin; deliberadamente un único permiso `manage` más grueso (crear+editar+desactivar) por ser gobernanza de catálogo de baja frecuencia, no edición diaria de producto. |
 | PATCH / DELETE | `/inventory/purchase-presentation-templates/{template}` | — | `purchase_presentation_templates.manage` | Desactivar, no borrar, una vez referenciada por cualquier asignación. |
 | GET | `/inventory/products/{product}/variants/{variant}/purchase-presentations` | — | `items.view` | |
 | POST | `/inventory/products/{product}/variants/{variant}/purchase-presentations` | `template_id, package_barcode?, is_default?` | `items.update` | La asignación se acota a una Variante que el usuario ya puede editar — no se necesita un permiso nuevo aquí, a diferencia de la gobernanza de plantillas arriba. |
 | PATCH / DELETE | `.../purchase-presentations/{assignment}` | `package_barcode?, is_default?` | `items.update` | |
+
+**Implementado (`#499`) — códigos semánticos de plantilla:** la composición es
+`TIPO_DE_EMPAQUE` + `_` + cantidad normalizada a la escala de cuatro decimales de la columna,
+eliminando ceros finales (`24`, `24.0` y `24.0000` producen `24`; `2.5000` produce `2.5`). Ante una
+colisión se agrega el código de la UOM compatible (`BOX_24_KG`) y después un sufijo numérico desde
+`_2`. Los tokens usan ASCII en mayúsculas y reemplazan secuencias no alfanuméricas con `_`; el
+resultado nunca excede 50 caracteres. Las sugerencias consideran ocupados también los códigos
+soft-deleted para no reutilizar significados históricos, aunque la creación sigue aceptando códigos
+manuales. El índice único parcial conserva la autoridad final: una colisión concurrente responde
+422 con el error de campo compartido, `rejected_code` y una nueva `suggested_code`, y requiere un
+nuevo envío explícito.
 | GET | `/inventory/brands` | — | `brands.view` | |
 | POST / PATCH / DELETE | `/inventory/brands[/{brand}]` | `name, is_active?` | `brands.create` / `brands.update` / `brands.delete` | |
 | GET | `/inventory/inventory-categories` | — | `inventory_categories.view` | |
