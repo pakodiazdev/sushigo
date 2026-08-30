@@ -14,6 +14,9 @@ interface UseSuggestedCodeFieldOptions {
   suggestion: Pick<UseSuggestedCodeResult, 'suggestedCode' | 'refresh'>
   codeField: UseFormRegisterReturn<'code'>
   writeCode: (code: string, shouldValidate: boolean) => void
+  normalizeCode?: (code: string) => string
+  onManualEditChange?: (manuallyEdited: boolean) => void
+  clearValidationOnManualCollision?: boolean
 }
 
 /**
@@ -27,6 +30,9 @@ export function useSuggestedCodeField({
   suggestion,
   codeField,
   writeCode,
+  normalizeCode = (code) => code,
+  onManualEditChange,
+  clearValidationOnManualCollision = false,
 }: Readonly<UseSuggestedCodeFieldOptions>) {
   const [codeManuallyEdited, setCodeManuallyEdited] = useState(false)
   const codeManuallyEditedRef = useRef(false)
@@ -45,6 +51,7 @@ export function useSuggestedCodeField({
   const setManualEdited = (value: boolean) => {
     codeManuallyEditedRef.current = value
     setCodeManuallyEdited(value)
+    onManualEditChange?.(value)
   }
 
   useEffect(() => {
@@ -62,6 +69,7 @@ export function useSuggestedCodeField({
   }, [contextKey, isEditing, codeManuallyEdited, prefillCode, writeCode])
 
   const onCodeChange: ChangeEventHandler<HTMLInputElement> = (event) => {
+    event.target.value = normalizeCode(event.target.value)
     void codeField.onChange(event)
     setManualEdited(true)
     setPinnedCode(null)
@@ -78,10 +86,12 @@ export function useSuggestedCodeField({
   const acceptCollision = (next: SuggestedCodeCollision, clearValidationErrors: () => void) => {
     if (contextKeyRef.current !== contextKey) return
     setStoredCollision({ collision: next, contextKey })
+    if (!codeManuallyEditedRef.current || clearValidationOnManualCollision) {
+      clearValidationErrors()
+    }
     if (!codeManuallyEditedRef.current) {
       setPinnedCode({ code: next.suggestedCode, contextKey })
       writeCode(next.suggestedCode, false)
-      clearValidationErrors()
     }
   }
 

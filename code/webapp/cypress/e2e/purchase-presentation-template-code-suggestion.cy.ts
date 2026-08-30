@@ -38,12 +38,12 @@ describe('Código semántico de plantilla de presentación', () => {
     cy.contains('Product created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('button', 'New Variant').click({ force: true })
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., Arroz Premium 1kg"]').type(variantName, { force: true })
-      cy.get('input[placeholder="e.g., ARR-KG"]').type('CYP-SEM-499', { force: true })
+      cy.get('input[placeholder="Ej. 1 kg"]').type(variantName, { force: true })
+      cy.get('input[placeholder="Ej. ARR-KG"]').type('CYP-SEM-499', { force: true })
       cy.get('select').select('Kilogramo 499 (kg499)', { force: true })
-      cy.contains('button', 'Create Variant').scrollIntoView().click({ force: true })
+      cy.contains('button', 'Crear variante').scrollIntoView().click({ force: true })
     })
-    cy.contains('Variant created successfully', { timeout: 10_000 }).should('be.visible')
+    cy.contains('Variante creada', { timeout: 10_000 }).should('be.visible')
     cy.contains('button', 'Gestionar plantillas').click({ force: true })
     cy.contains('button', 'Nueva plantilla').click({ force: true })
 

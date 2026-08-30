@@ -20,6 +20,7 @@ vi.mock('@/services/inventory-api', () => ({
   productVariantApi: {
     create: vi.fn(),
     update: vi.fn(),
+    suggestCode: vi.fn(),
   },
 }))
 
@@ -73,6 +74,7 @@ function makeWrapper() {
 
 describe('useVariantForm', () => {
   beforeEach(() => {
+    vi.mocked(productVariantApi.suggestCode).mockResolvedValue({ data: { code: 'ARR-KG', prefix: 'ARR-' } } as never)
     vi.mocked(useUnitsOfMeasureSelect).mockReturnValue({
       data: [kilogram],
       isLoading: false,
@@ -218,7 +220,7 @@ describe('useVariantForm', () => {
     })
 
     expect(productVariantApi.create).not.toHaveBeenCalled()
-    expect(result.current.allErrors.name).toBe('Name is required')
+    expect(result.current.allErrors.name).toBe('El nombre es requerido')
   })
 
   it('requires a base unit', async () => {
@@ -238,7 +240,7 @@ describe('useVariantForm', () => {
     })
 
     expect(productVariantApi.create).not.toHaveBeenCalled()
-    expect(result.current.allErrors.uom_id).toBe('Base unit is required')
+    expect(result.current.allErrors.uom_id).toBe('La unidad base es requerida')
   })
 
   it('surfaces server-side validation errors alongside client ones', async () => {
@@ -276,5 +278,133 @@ describe('useVariantForm', () => {
     })
 
     await waitFor(() => expect(result.current.allErrors.code).toBe('SKU already taken'))
+  })
+
+  it('prefills and regenerates an untouched contextual suggestion when name or UOM changes', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useVariantForm({ productId: '42', variant: null, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    act(() => {
+      result.current.setValue('name', '1 kg')
+      result.current.setValue('uom_id', '1')
+    })
+
+    await waitFor(() => expect(productVariantApi.suggestCode).toHaveBeenCalledWith('42', {
+      name: '1 kg',
+      uom_id: '1',
+    }), { timeout: 1500 })
+    await waitFor(() => expect(result.current.currentCode).toBe('ARR-KG'))
+
+    vi.mocked(productVariantApi.suggestCode).mockResolvedValue({ data: { code: 'ARR-500G', prefix: 'ARR-' } } as never)
+    act(() => {
+      result.current.setValue('name', '500 g')
+    })
+
+    await waitFor(() => expect(result.current.currentCode).toBe('ARR-500G'), { timeout: 1500 })
+  })
+
+  it('never fetches or overwrites the persisted SKU in edit mode', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useVariantForm({ productId: '42', variant: existingVariant, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    expect(productVariantApi.suggestCode).not.toHaveBeenCalled()
+    expect(result.current.currentCode).toBe('ARR-KG')
+  })
+
+  it('preserves a manual SKU across context changes and regenerates only on explicit action', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useVariantForm({ productId: '42', variant: null, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    act(() => {
+      result.current.setValue('name', '1 kg')
+      result.current.setValue('uom_id', '1')
+    })
+    await waitFor(() => expect(result.current.currentCode).toBe('ARR-KG'), { timeout: 1500 })
+
+    act(() => {
+      result.current.setValue('code', 'MI-SKU')
+      result.current.onCodeChange({ target: { name: 'code', value: 'MI-SKU' }, type: 'change' } as never)
+      result.current.setValue('name', '500 g')
+    })
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    expect(result.current.currentCode).toBe('MI-SKU')
+    expect(productVariantApi.suggestCode).toHaveBeenCalledTimes(1)
+
+    act(() => result.current.handleRefreshCode())
+    await waitFor(() => expect(result.current.currentCode).toBe('ARR-KG'))
+  })
+
+  it('disables submission while a complete context is waiting for its initial suggestion', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useVariantForm({ productId: '42', variant: null, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    act(() => {
+      result.current.setValue('name', '1 kg')
+      result.current.setValue('uom_id', '1')
+    })
+
+    expect(result.current.isSubmitDisabled).toBe(true)
+    await waitFor(() => expect(result.current.currentCode).toBe('ARR-KG'), { timeout: 1500 })
+    expect(result.current.isSubmitDisabled).toBe(false)
+  })
+
+  it('keeps a manual SKU after a collision and clears stale validation when it changes', async () => {
+    const error = new AxiosError('Validation failed', '422', undefined, undefined, {
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      headers: {},
+      config: {} as never,
+      data: {
+        message: 'El SKU ya está en uso.',
+        errors: { code: ['El SKU ya está en uso.'] },
+        rejected_code: 'MI-SKU',
+        suggested_code: 'ARR-KG-002',
+      },
+    } as never)
+    vi.mocked(productVariantApi.create).mockRejectedValue(error)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useVariantForm({ productId: '42', variant: null, onSuccess: vi.fn() }),
+      { wrapper }
+    )
+
+    act(() => {
+      result.current.setValue('code', 'MI-SKU')
+      result.current.onCodeChange({ target: { name: 'code', value: 'MI-SKU' }, type: 'change' } as never)
+    })
+    await act(async () => {
+      await result.current.onSubmit({
+        name: '1 kg', code: 'MI-SKU', barcode: '', uom_id: '1', description: '',
+        track_lot: false, track_serial: false, is_active: true,
+      })
+    })
+
+    await waitFor(() => expect(result.current.collision).toEqual({
+      rejectedCode: 'MI-SKU', suggestedCode: 'ARR-KG-002',
+    }))
+    expect(result.current.currentCode).toBe('MI-SKU')
+    expect(result.current.canApplySuggestedCode).toBe(true)
+    expect(result.current.allErrors.code).toBeUndefined()
+
+    act(() => {
+      result.current.setValue('code', 'NUEVO-SKU')
+      result.current.onCodeChange({ target: { name: 'code', value: 'NUEVO-SKU' }, type: 'change' } as never)
+    })
+    expect(result.current.collision).toBeNull()
+    expect(result.current.allErrors.code).toBeUndefined()
   })
 })

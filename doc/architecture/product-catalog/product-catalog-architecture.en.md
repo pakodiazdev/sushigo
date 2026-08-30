@@ -175,6 +175,19 @@ erDiagram
   surface as a raw, unhandled DB constraint violation instead of a clean `422`. Same owner as the
   barcode gap below: `#424` (`CAT-03`). **As-built (`#424`):** `UpdateVariantRequest` now accepts
   `code` with `Rule::unique('item_variants', 'code')->ignore($variantId)`.
+  **As-built (`#501`):** create mode now offers an editable contextual default. Normalize Product/
+  Item and Variant/UOM inputs by transliterating to ASCII, removing non-alphanumerics and uppercasing;
+  use the first three Product/Item characters (fallback `ITEM`), then `-`, then the normalized
+  Variant descriptor. A descriptor equal to one base unit (`1 kg` + `KG`) collapses to `KG`; when
+  the descriptor does not already end in the UOM token, append `-<UOM>`. The result is capped at
+  100 characters. The unsuffixed stem is tried first, then `-002`, `-003`, etc., truncating the stem
+  to keep the maximum length. Availability is global across `item_variants`, including soft-deleted
+  rows. Product, Variant-name, or UOM changes regenerate only while the field remains system-owned;
+  a manual edit stops overwrites until the operator explicitly regenerates. Edit mode never calls
+  the suggestion endpoint. A create-time race returns `422` with `rejected_code` and
+  `suggested_code` and requires a second explicit submission. The reachable legacy INSUMO/ACTIVO
+  Variant form uses the same generator through `/item-variants/suggest-code`; it remains active after
+  `#442`, while PRODUCTO variants remain exclusive to the Product-scoped flow.
 - **`Item.sku`** is nullable and deprecated for `type = PRODUCTO` — not read or written by the new
   Product create/edit contract (seeders leave it null for Products; `ProductCrudTest` /
   `ProductCatalogSeederTest` assert this). **As-built (`#442`):** the column is **retained**, not
@@ -398,6 +411,7 @@ already codifies.
 | PUT | `/inventory/products/{product}` | Same shape as create, partial | `items.update` | **As-built (`#422`):** `PUT`, not `PATCH` as originally drafted here — matches the `PUT`-for-update convention already used by every other domain in the codebase (`Dish`, `Item`, `CashAdjustment`, etc.); `PATCH` doesn't appear anywhere else in the route tree outside a handful of narrow exceptions. |
 | DELETE | `/inventory/products/{product}` | — | `items.delete` | Soft-delete / deactivate, existing pattern. |
 | GET | `/inventory/products/{product}/variants` | — (query: `per_page`) | `items.view` \| `suppliers.manage` \| `receipts.manage` | **As-built (`#424`):** no `search`/`is_active` filters — always scoped to the parent Product's own variants. **As-built (`#505`):** also accepts `suppliers.manage`, same reasoning as the Products list row above. **As-built (`#433`):** also accepts `receipts.manage`, same reasoning. |
+| GET | `/inventory/products/{product}/variants/suggest-code` | Query: `name, uom_id` | `items.create` | Create-mode contextual SKU suggestion; global historical availability, no mutation. |
 | POST | `/inventory/products/{product}/variants` | `name, code, barcode?, uom_id, description?, track_lot?, track_serial?, is_active?` | `items.create` | `item_id` comes from the route, not the body — removes the global Item selector the plan doc flags. No `sale_price`/`min_stock`/`max_stock`/cost fields — this is the contract change from today's `CreateItemVariantRequest`. |
 | GET | `/inventory/products/{product}/variants/{variant}` | — | `items.view` | |
 | PUT | `/inventory/products/{product}/variants/{variant}` | Same shape as create, partial | `items.update` | **As-built (`#424`):** `PUT`, not `PATCH` as originally drafted here — same verb correction already made for `/inventory/products` (`#422`) and `/brands`/`/inventory-categories`; `PATCH` doesn't appear anywhere else in the route tree. |

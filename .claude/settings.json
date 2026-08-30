@@ -1,4 +1,12 @@
 {
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Posting a code review to an existing pull request as comments on the pakodiazdev/sushigo or pakodiazdev/sushigo-dev-lab repo: `gh pr comment`, `gh pr review`, or `gh api` with --method POST/PATCH targeting `/repos/pakodiazdev/*/pulls/*/comments`, `/repos/pakodiazdev/*/pulls/*/reviews`, or `/repos/pakodiazdev/*/pulls/comments/*`. This is the intended, user-invoked output of the `/code-review --comment` command; the PR already exists, the target repo is owned by the user, and a posted review comment is reversible (editable/deletable)."
+    ],
+    "environment": [
+    ]
+  },
   "permissions": {
     "allow": [
       "Write",

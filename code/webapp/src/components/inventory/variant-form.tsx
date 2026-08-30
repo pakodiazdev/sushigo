@@ -1,87 +1,62 @@
-import { Loader2 } from 'lucide-react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField, Select, Checkbox } from '@/components/ui/form-fields'
-import { useCreateUpdateMutation } from '@/hooks/use-form-mutation'
-import { useItemsSelect, useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
-import { itemVariantApi } from '@/services/inventory-api'
 import type { ItemVariant, UnitOfMeasure, Item } from '@/types/inventory'
-
-const variantSchema = z.object({
-  item_id: z.number().min(1, 'This field is required'),
-  code: z.string().min(2, 'Code must be at least 2 characters'),
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  uom_id: z.number().min(1, 'This field is required'),
-  is_active: z.boolean(),
-})
-
-type VariantFormValues = z.infer<typeof variantSchema>
+import { useLegacyVariantForm } from './use-legacy-variant-form'
 
 interface VariantFormProps {
   variant?: ItemVariant | null
   onSuccess: () => void
   onCancel: () => void
-  preselectedItemId?: number
+  preselectedItemId?: string | number
 }
 
 export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }: Readonly<VariantFormProps>) {
   const isEditing = !!variant
-
-  // Use shared query hooks
-  const { data: items = [] } = useItemsSelect()
-  const { data: units = [] } = useUnitsOfMeasureSelect()
-
   const {
+    items,
+    units,
     register,
+    codeField,
+    onCodeChange,
     handleSubmit,
-    watch,
     setValue,
-    formState: { errors },
-  } = useForm<VariantFormValues>({
-    resolver: zodResolver(variantSchema),
-    defaultValues: {
-      item_id: variant?.item_id || preselectedItemId || 0,
-      code: variant?.code || '',
-      name: variant?.name || '',
-      uom_id: variant?.uom_id || 0,
-      is_active: variant?.is_active ?? true,
-    },
-  })
+    onSubmit,
+    allErrors,
+    itemId,
+    uomId,
+    isActive,
+    isPending,
+    isSubmitDisabled,
+    canSuggestCode,
+    isCodeSuggested,
+    isSuggestionLoading,
+    isRefreshingCode,
+    suggestionFailed,
+    handleRefreshCode,
+    collision,
+    canApplySuggestedCode,
+    applySuggestedCode,
+  } = useLegacyVariantForm({ variant, onSuccess, preselectedItemId })
 
-  const { execute, validationErrors, isPending } = useCreateUpdateMutation({
-    createFn: (data: VariantFormValues) => itemVariantApi.create(data),
-    updateFn: (data: VariantFormValues) => itemVariantApi.update(variant!.id, data),
-    entityName: 'Variant',
-    isEditing,
-    onSuccess,
-  })
-
-  // Merge client and server validation errors
-  const allErrors = {
-    item_id: errors.item_id?.message || validationErrors.item_id,
-    code: errors.code?.message || validationErrors.code,
-    name: errors.name?.message || validationErrors.name,
-    uom_id: errors.uom_id?.message || validationErrors.uom_id,
+  let codeHint: string | undefined
+  if (isSuggestionLoading) {
+    codeHint = 'Generando una sugerencia contextual…'
+  } else if (isCodeSuggested) {
+    codeHint = 'Sugerencia editable; puedes reemplazarla.'
+  } else if (suggestionFailed) {
+    codeHint = 'No fue posible generar una sugerencia. Puedes capturar el SKU manualmente.'
+  } else if (!isEditing && !canSuggestCode) {
+    codeHint = 'Completa el artículo, nombre y unidad para generar una sugerencia.'
   }
-
-  const onSubmit = async (data: VariantFormValues) => {
-    await execute(data)
-  }
-
-  // Watch values for controlled inputs
-  const itemId = watch('item_id')
-  const uomId = watch('uom_id')
-  const isActive = watch('is_active')
 
   return (
     <>
       <SlidePanel.Header>
         <h2 className="text-lg font-semibold">
-          {isEditing ? 'Edit Variant' : 'New Variant'}
+          {isEditing ? 'Editar variante' : 'Nueva variante'}
         </h2>
       </SlidePanel.Header>
 
@@ -89,16 +64,16 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
         <form id="variant-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Item Select */}
           <FormField
-            label="Item"
+            label="Artículo"
             required
             error={allErrors.item_id}
           >
             <Select
               value={itemId.toString()}
-              onChange={(e) => setValue('item_id', Number.parseInt(e.target.value))}
+              onChange={(e) => setValue('item_id', e.target.value)}
               disabled={isEditing}
             >
-              <option value="0">Select an item...</option>
+              <option value="">Selecciona un artículo...</option>
               {items.map((item: Item) => (
                 <option key={item.id} value={item.id}>
                   {item.sku} - {item.name}
@@ -109,45 +84,58 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
 
           {/* Code */}
           <FormField
-            label="Variant Code"
+            label="SKU de variante"
             required
             error={allErrors.code}
-            hint="Unique code for this variant (e.g., SKU-001-L, PROD-KG)"
+            hint={codeHint}
           >
-            <Input
-              {...register('code', {
-                onChange: (e) => setValue('code', e.target.value.toUpperCase()),
-              })}
-              placeholder="e.g., PROD-KG"
-              error={!!allErrors.code}
-            />
+            <div className="flex gap-2">
+              <Input {...codeField} onChange={onCodeChange} placeholder="Ej. HAR-KG" error={!!allErrors.code} />
+              {!isEditing && (
+                <Button type="button" variant="outline" onClick={handleRefreshCode} disabled={!canSuggestCode || isRefreshingCode}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingCode ? 'animate-spin' : ''}`} />
+                  Regenerar
+                </Button>
+              )}
+            </div>
           </FormField>
+
+          {!isEditing && collision && (
+            <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+              <p>El SKU {collision.rejectedCode} acaba de ser utilizado. Te proponemos {collision.suggestedCode}. Vuelve a enviar para confirmar.</p>
+              {canApplySuggestedCode && (
+                <Button type="button" variant="outline" className="mt-2" onClick={applySuggestedCode}>
+                  Usar {collision.suggestedCode}
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Name */}
           <FormField
-            label="Variant Name"
+            label="Nombre de la variante"
             required
             error={allErrors.name}
-            hint="Descriptive name (e.g., Large, 1 Kilogram, 500ml)"
+            hint="Nombre descriptivo (ej. Grande, 1 kilogramo, 500 ml)"
           >
             <Input
               {...register('name')}
-              placeholder="e.g., 1 Kilogram"
+              placeholder="Ej. 1 kilogramo"
               error={!!allErrors.name}
             />
           </FormField>
 
           {/* Unit of Measure */}
           <FormField
-            label="Unit of Measure"
+            label="Unidad de medida"
             required
             error={allErrors.uom_id}
           >
             <Select
               value={uomId.toString()}
-              onChange={(e) => setValue('uom_id', Number.parseInt(e.target.value))}
+              onChange={(e) => setValue('uom_id', e.target.value)}
             >
-              <option value="0">Select unit...</option>
+              <option value="">Selecciona una unidad...</option>
               {units.map((uom: UnitOfMeasure) => (
                 <option key={uom.id} value={uom.id}>
                   {uom.name} ({uom.symbol}) - {uom.type}
@@ -167,7 +155,7 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             <Checkbox
               checked={isActive}
               onChange={(e) => setValue('is_active', e.target.checked)}
-              label="Active"
+              label="Activa"
             />
           </FormField>
         </form>
@@ -181,16 +169,16 @@ export function VariantForm({ variant, onSuccess, onCancel, preselectedItemId }:
             onClick={onCancel}
             className="flex-1"
           >
-            Cancel
+            Cancelar
           </Button>
           <Button
             type="submit"
             form="variant-form"
-            disabled={isPending}
+            disabled={isSubmitDisabled}
             className="flex-1"
           >
             {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isEditing ? 'Update' : 'Create'}
+            {isEditing ? 'Actualizar' : 'Crear'}
           </Button>
         </div>
       </SlidePanel.Footer>

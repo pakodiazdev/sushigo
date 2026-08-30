@@ -179,6 +179,19 @@ erDiagram
   regla `unique:item_variants,code,{id}` una vez que lo haga — sin ella, un `code` duplicado en PATCH
   se manifestaría como una violación de constraint de BD sin manejar, en vez de un `422` limpio.
   Mismo dueño que el vacío de barcode abajo: `#424` (`CAT-03`).
+  **Tal como quedó (`#501`):** el modo creación propone un valor contextual editable. Los nombres
+  de Producto/Item y Variante/UOM se transliteran a ASCII, se eliminan caracteres no alfanuméricos
+  y se convierten a mayúsculas; se usan los primeros tres caracteres del Producto/Item (fallback
+  `ITEM`), `-` y el descriptor normalizado de Variante. Un descriptor de una unidad base (`1 kg` +
+  `KG`) se colapsa a `KG`; si el descriptor no termina en el token de UOM, se agrega `-<UOM>`. El
+  máximo es 100 caracteres. Se intenta primero el stem sin sufijo y después `-002`, `-003`, etc.,
+  truncándolo para respetar el máximo. La disponibilidad es global en `item_variants`, incluyendo
+  filas eliminadas lógicamente. Cambiar Producto, nombre de Variante o UOM regenera solo mientras el
+  campo siga siendo propiedad del sistema; una edición manual detiene sobrescrituras hasta pulsar
+  Regenerar. El modo edición nunca consulta sugerencias. Una carrera al crear responde `422` con
+  `rejected_code` y `suggested_code` y exige un segundo envío explícito. La pantalla legada aún
+  activa para variantes INSUMO/ACTIVO reutiliza el generador mediante `/item-variants/suggest-code`;
+  después de `#442`, las variantes PRODUCTO siguen siendo exclusivas del flujo acotado al Producto.
 - **`Item.sku`** es nullable y está deprecado para `type = PRODUCTO` — el nuevo contrato de
   creación/edición de Producto no lo lee ni lo escribe (los seeders lo dejan null para Productos;
   `ProductCrudTest` / `ProductCatalogSeederTest` lo verifican). **Tal como quedó (`#442`):** la
@@ -366,6 +379,7 @@ más grueso por dominio usado por Platillos, para mantener consistencia con el m
 | PATCH | `/inventory/products/{product}` | Misma forma que crear, parcial | `items.update` | |
 | DELETE | `/inventory/products/{product}` | — | `items.delete` | Soft-delete / desactivación, patrón existente. |
 | GET | `/inventory/products/{product}/variants` | — | `items.view` | |
+| GET | `/inventory/products/{product}/variants/suggest-code` | Query: `name, uom_id` | `items.create` | Sugerencia contextual exclusiva de creación; disponibilidad histórica global, sin mutación. |
 | POST | `/inventory/products/{product}/variants` | `name, code, barcode?, uom_id, description?, track_lot?, track_serial?, is_active?` | `items.create` | `item_id` viene de la ruta, no del body — elimina el selector global de Item que señala el plan. Sin campos `sale_price`/`min_stock`/`max_stock`/costo — este es el cambio de contrato respecto al `CreateItemVariantRequest` de hoy. |
 | GET | `/inventory/products/{product}/variants/{variant}` | — | `items.view` | |
 | PATCH | `/inventory/products/{product}/variants/{variant}` | Misma forma que crear, parcial | `items.update` | |

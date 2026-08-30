@@ -71,10 +71,13 @@ export const itemVariantApi = {
   get: (id: string | number) =>
     api.get<EntityResponse<ItemVariant>>(`/item-variants/${id}`),
 
-  create: (data: Partial<ItemVariant>) =>
+  suggestCode: (params: { item_id: string; name: string; uom_id: string }) =>
+    api.get<{ code: string; prefix: string }>('/item-variants/suggest-code', { params }),
+
+  create: (data: Partial<Omit<ItemVariant, 'item_id' | 'uom_id'>> & { item_id?: string | number; uom_id?: string | number }) =>
     api.post<EntityResponse<ItemVariant>>('/item-variants', data),
 
-  update: (id: string | number, data: Partial<ItemVariant>) =>
+  update: (id: string | number, data: Partial<Omit<ItemVariant, 'item_id' | 'uom_id'>> & { item_id?: string | number; uom_id?: string | number }) =>
     api.put<EntityResponse<ItemVariant>>(`/item-variants/${id}`, data),
 
   delete: (id: string | number) =>
@@ -127,6 +130,9 @@ export const productVariantApi = {
 
   get: (productId: string | number, variantId: string | number) =>
     api.get<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants/${variantId}`),
+
+  suggestCode: (productId: string | number, params: { name: string; uom_id: string }) =>
+    api.get<{ code: string; prefix: string }>(`/inventory/products/${productId}/variants/suggest-code`, { params }),
 
   create: (productId: string | number, data: ProductVariantPayload) =>
     api.post<EntityResponse<ProductVariant>>(`/inventory/products/${productId}/variants`, data),

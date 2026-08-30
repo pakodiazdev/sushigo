@@ -6,7 +6,13 @@ use App\Http\Controllers\Api\V1\Items\Concerns\FormatsItemVariant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Items\CreateItemVariantRequest;
 use App\Http\Responses\Common\ResponseEntity;
+use App\Models\Item;
 use App\Models\ItemVariant;
+use App\Models\UnitOfMeasure;
+use App\Support\VariantSkuCollisionResponder;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Post(
@@ -30,26 +36,42 @@ use App\Models\ItemVariant;
  *       )
  *   ),
  *
- *   @OA\Response(response=422, description="Validation Error", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
+ *   @OA\Response(
+ *       response=422,
+ *       description="Validation Error. A concurrent SKU collision also returns rejected_code and suggested_code.",
+ *
+ *       @OA\JsonContent(allOf={@OA\Schema(ref="#/components/schemas/ResponseError"), @OA\Schema(@OA\Property(property="rejected_code", type="string", example="HAR-KG"), @OA\Property(property="suggested_code", type="string", example="HAR-KG-002"))})
+ *   )
  * )
  */
 class CreateItemVariantController extends Controller
 {
     use FormatsItemVariant;
 
-    public function __invoke(CreateItemVariantRequest $request)
-    {
-        $variant = ItemVariant::create([
-            'item_id' => $request->item_id,
-            'uom_id' => $request->uom_id,
-            'code' => $request->code,
-            'name' => $request->name,
-            'description' => $request->description,
-            'track_lot' => $request->input('track_lot', false),
-            'track_serial' => $request->input('track_serial', false),
-            'is_active' => $request->input('is_active', true),
-            'meta' => [],
-        ]);
+    public function __invoke(
+        CreateItemVariantRequest $request,
+        VariantSkuCollisionResponder $collisionResponder,
+    ): ResponseEntity|JsonResponse {
+        $data = $request->variantData();
+
+        try {
+            $variant = DB::transaction(fn () => ItemVariant::create($data));
+        } catch (UniqueConstraintViolationException $exception) {
+            if (! $collisionResponder->isCodeViolation($exception)) {
+                throw $exception;
+            }
+
+            $item = Item::findOrFail($data['item_id']);
+            $uom = UnitOfMeasure::findOrFail($data['uom_id']);
+
+            return $collisionResponder->response(
+                CreateItemVariantRequest::DUPLICATE_CODE_MESSAGE,
+                $data['code'],
+                $item->name,
+                $data['name'],
+                $uom->code,
+            );
+        }
 
         $variant->load(['item', 'unitOfMeasure']);
 
