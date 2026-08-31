@@ -36,6 +36,13 @@ PriceList  ──< PriceListAssignment >── Branch (required) ── Operatin
   Eloquent `decimal:4` cast, the same convention already used by `ItemVariant.sale_price`/
   `last_unit_cost` and `StockMovementLine.sale_price` — no new Money value-object library.
 
+  **As-built versus Sprint 8 target.** The paragraph above records the implementation delivered by
+  #435. [TD-05](../../decisions/td-05-monetary-precision-and-rounding.md) supersedes it as the
+  target contract: a customer-facing `VariantPrice.price` is Money at scale 2 and must not cross a
+  binary-float boundary. Unit cost remains a distinct scale-4 rate. Issue #415 owns the compatible
+  migration and exact PHP/API/TypeScript representations; until it ships, `decimal(15,4)` remains
+  the as-built pricing storage.
+
 ## 2. Branch vs. Operating Unit precedence
 
 Every `OperatingUnit` already belongs to exactly one `Branch` (see
