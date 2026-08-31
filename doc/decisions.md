@@ -17,3 +17,4 @@ Format modeled on the same convention used in
 | [TD-02](decisions/td-02-media-cleanup-strategy.md) | Orphaned media cleanup runs at container startup, not on a recurring schedule | Infrastructure |
 | [TD-03](decisions/td-03-product-catalog-separation.md) | Product catalog splits identity from packaging, cost, and price into four write surfaces | Inventory |
 | [TD-04](decisions/td-04-domain-oriented-frontend-structure.md) | Frontend code is organized by business domain through incremental migration | Frontend |
+| [TD-05](decisions/td-05-monetary-precision-and-rounding.md) | Monetary amounts use two decimals while unit rates retain higher precision | Finance / Inventory |
