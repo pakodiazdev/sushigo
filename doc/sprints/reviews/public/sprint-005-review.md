@@ -125,7 +125,9 @@ The resulting valuation is $1,500 instead of the original $1,000.
 
 **Risk.** Margin, valuation and later reporting can consume an inconsistent cost.
 
-**Status.** Open; should be addressed explicitly in Sprint 006.
+**Follow-up status (2026-08-30).** #438 delivered immutable quantity compensation but explicitly did
+not solve valuation reconciliation. The remaining cost/value invariant is tracked by
+[#579](https://github.com/pakodiazdev/sushigo/issues/579) for Sprint 8.
 
 ---
 
@@ -168,7 +170,11 @@ the complete money path is not exact-decimal end to end.
 **Risk.** Small floating-point errors may propagate as the project adds Orders, discounts, taxes and
 margin calculations.
 
-**Status.** Open technical debt; should be solved before the financial surface expands substantially.
+**Follow-up status (2026-08-30).** Scheduled for Sprint 8 in the matured exact-money contract
+[#415](https://github.com/pakodiazdev/sushigo/issues/415); it now covers Receipt DTO/calculation
+floats and implements [TD-05](../../decisions/td-05-monetary-precision-and-rounding.md): Money uses
+two decimals, while quantities, conversion factors, unit costs and intermediate arithmetic retain
+their explicitly higher fixed-point precision.
 
 ---
 
@@ -190,8 +196,9 @@ extending the same OR-list.
 
 **Risk.** Lookup access and catalog-management authorization become increasingly coupled.
 
-**Status.** Emerging pattern; no immediate refactor required. Re-evaluate when another major
-consumer appears.
+**Follow-up status (2026-08-30).** Sprint 7 adds several Inventory consumers, satisfying the review's
+re-evaluation trigger. A dedicated lookup/reference-data authorization contract is tracked by
+[#580](https://github.com/pakodiazdev/sushigo/issues/580) for Sprint 8.
 
 ---
 
@@ -211,6 +218,9 @@ work N times.
 **Status.** Not a current defect. Measure at Orders/POS design time and consider `resolveMany()` or
 a context-resolved menu endpoint.
 
+**Follow-up status (2026-08-30).** Intentionally remains unfiled until Orders/POS provides a measured
+batch size and query baseline; no speculative Sprint 8 optimization was created.
+
 ---
 
 ### Low — OpenAPI still contains legacy integer-ID descriptions after the public-ID rollout
@@ -223,7 +233,21 @@ OpenAPI path parameter is still documented as an integer.
 **Where.**
 - `code/api/app/Http/Controllers/Api/V1/Inventory/Product/ShowProductController.php`
 
-**Status.** Open documentation debt.
+**Follow-up status (2026-08-30).** The Inventory-wide generated-contract audit and regression guard
+are tracked by [#581](https://github.com/pakodiazdev/sushigo/issues/581) for Sprint 8.
+
+---
+
+### Follow-up disposition summary (2026-08-30)
+
+| Review finding | Disposition |
+|---|---|
+| Receipt reversal valuation | Sprint 8 #579 |
+| Exact-decimal money boundary | Sprint 8 #415 |
+| Horizontal Operating Unit authorization | #440 delivered the shared boundary; Sprint 7 #572/#574 finish Receipt/read consumers |
+| Workflow-specific lookup OR permissions | Sprint 8 #580 |
+| Single-Variant price resolution | Measure at Orders/POS; no Issue yet |
+| OpenAPI integer IDs after #399 | Sprint 8 #581 |
 
 ## Source of truth
 

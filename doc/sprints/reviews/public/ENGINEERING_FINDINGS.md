@@ -10,5 +10,6 @@ Use this file only as navigation:
 - [Sprint 003 review](sprint-003-review.md#material-engineering-findings)
 - [Sprint 004 review](sprint-004-review.md#material-engineering-findings)
 - [Sprint 005 review](sprint-005-review.md#material-engineering-findings)
+- [Sprint 006 review](sprint-006-review.md#material-engineering-findings)
 
 Each review records: what was found, why it matters, risk, location and current status/follow-up.

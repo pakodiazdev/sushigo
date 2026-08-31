@@ -292,7 +292,7 @@ erDiagram
 ### 3.4 Seguridad y roles
 
 El detalle del sistema de usuarios, roles y permisos se documenta en
-[Security & User System Architecture](./security-and-user-system-architecture.md).
+[Arquitectura de Seguridad y Usuarios](./security-and-user-system-architecture.es.md).
 Allí se describe el flujo de asignación, los roles base (`super-admin`, `admin`, `user`) y la estrategia para combinar permisos directos con roles contextuales.
 
 ---
@@ -301,7 +301,11 @@ Allí se describe el flujo de asignación, los roles base (`super-admin`, `admin
 
 -   **Branch** actúa como contenedor maestro. Cada sucursal tiene al menos un inventario permanente (`OperatingUnit` de tipo `BRANCH_MAIN`) y puede sumar inventarios auxiliares (`BRANCH_BUFFER`, `BRANCH_RETURN`, etc.).
 -   Los **events** se representan como `OperatingUnit` temporales (`EVENT_TEMP`) asociados a una sucursal origen; poseen `start_date` y `end_date` para delimitar el corte y el retorno de stock.
--   Las **transferencias** se realizan entre `OperatingUnit`, permitiendo movimientos intra-sucursal (principal ↔ cocina) e inter-sucursal (Sucursal A → Sucursal B). El servicio de transferencias valida capacidad y registra trazabilidad cruzada.
+-   Las **transferencias** se expresan entre `InventoryLocation`; el `OperatingUnit` de cada extremo
+    determina si el movimiento es interno, entre unidades de una sucursal o entre sucursales. El
+    contrato de `StockMovement` ya admite `TRANSFER`, pero al 2026-08-30 el documento/API/UI de
+    transferencias sigue planeado en [#573](https://github.com/pakodiazdev/sushigo/issues/573); no
+    debe interpretarse como un flujo construido todavía.
 -   Cuando el sistema aún no expone la gestión de sucursales, se puede inicializar una sucursal por defecto y trabajar con su inventario principal. El diseño soporta activar sucursales adicionales sin refactorizar dominios.
 -   Los reportes de stock y rentabilidad se calculan por `OperatingUnit` y agregan métricas por sucursal para análisis financiero y operativo.
 
@@ -311,7 +315,7 @@ Allí se describe el flujo de asignación, los roles base (`super-admin`, `admin
 | --------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
 | `branches`            | `id`, `code`, `name`, `region`, `timezone`, `is_active`            | Catálogo de sucursales; inicialmente se crea una por defecto.                     |
 | `operating_units`     | `branch_id`, `type`, `name`, `start_date`, `end_date`, `is_active` | Inventarios permanentes (`BRANCH_*`) o temporales (`EVENT_TEMP`).                 |
-| `inventory_locations` | `operating_unit_id`, `name`, `type`, `is_primary`                  | Localidades dentro de cada inventario (Main, Kitchen, Bar, Waste, etc.).          |
+| `inventory_locations` | `operating_unit_id`, `name`, `type`, `is_primary`; objetivo Sprint 7: `can_receive_purchases` | Localidades dentro de cada inventario; #568 hará explícita la capacidad de recibir compras. |
 | `stock_movements`     | `from_location_id`, `to_location_id`, `reason`, `related_id`       | Permite traspasos inter-sucursal gracias al branch asociado a cada localidad.     |
 | `event_closures`      | `operating_unit_id`, `closed_at`, `kpis`                           | Aplica solo a inventarios temporales; ejecuta cierre y retorno a sucursal origen. |
 
@@ -714,6 +718,22 @@ de entrada que involucre costo:
 -   `OpeningBalanceService::registerOpeningBalance()` — una llamada cuando se provee un costo
     unitario.
 
+**Objetivo de precisión (#415).**
+[TD-05](../decisions/td-05-monetary-precision-and-rounding.md) define `weighted_avg_cost` y los
+demás costos unitarios como tasas exactas con escala 4, las cantidades con escala 4 y los cálculos
+intermedios del promedio con escala 8 o mayor. La valuación se convierte en Money solo en su
+frontera documentada, donde redondea a escala 2 con `ROUND_HALF_UP`. El total original de la
+transacción con dos decimales permanece autoritativo; una tasa unitaria redondeada nunca debe
+multiplicarse para reescribir esa evidencia. La firma `float` actual descrita arriba es as-built y
+debe eliminarse mediante el issue #415 de Sprint 8.
+
+**Transferencias (objetivo #573).** Al postear una transferencia, el costo promedio de la ubicación
+origen no cambia: retirar unidades homogéneas no altera el costo de las que permanecen. La línea
+captura una instantánea de ese costo origen y el destino lo combina como costo de entrada mediante el mismo
+calculador. Un reverso no intenta reconstruir promedios históricos después de movimientos
+posteriores; sin capas/lotes esa reconstrucción no sería exacta. El movimiento compensatorio
+restaura cantidades y conserva la evidencia del costo utilizado.
+
 **Toda lectura pasa por el mismo campo.** `StockOutService` costea un movimiento de salida usando el
 `Stock.weighted_avg_cost` de *esa misma ubicación* (nunca el de la Variante de catálogo);
 `SummarizesStock`, `StockByLocationController` y `StockByVariantController` ya lo leen
@@ -800,9 +820,164 @@ validación `422` normal (regla `exists`), nunca como un `403` engañoso.
 
 ---
 
+### 3.12 Recepción de almacén y existencia por ubicación — objetivo Sprint 7
+
+> **Estado al 2026-08-30:** esta sección es la arquitectura objetivo aprobada para
+> [Sprint 007](../sprints/planned/sprint-007-warehouse-receiving-and-location-aware-stock.md), no
+> una descripción del código ya entregado. Las piezas pendientes están rastreadas en #567–#574.
+
+#### Límite de almacén
+
+Sprint 7 no agrega una tabla `warehouses`. El modelo existente ya separa el contexto operativo y
+el punto de custodia:
+
+```text
+Branch
+  └─ OperatingUnit          alcance operativo y de autorización
+       └─ InventoryLocation ubicación física/lógica que custodia Stock
+```
+
+Una ubicación gana la capacidad explícita `can_receive_purchases` (#568). Esta capacidad es
+independiente de `type`, `is_primary`, `is_active` e `is_pickable`: una bodega principal puede ser
+solo almacenamiento y un andén dedicado puede recibir compras sin ser la ubicación primaria. Una
+Recepción solo puede apuntar a una ubicación no eliminada, activa, receptora y dentro del
+`OperatingUnitScope` del usuario (#572).
+
+Una entidad `Warehouse` separada se justifica únicamente cuando una misma Unidad Operativa deba
+contener varios almacenes administrativamente independientes. Hasta entonces duplicaría ownership,
+autorización y valores por defecto ya resueltos por `OperatingUnit` + `InventoryLocation`.
+
+#### Surtido, evidencia y saldo son conceptos distintos
+
+| Concepto | Fuente de verdad objetivo | Semántica |
+|---|---|---|
+| Surtido administrado | `VariantLocationAssignment` (#569) | La Variante se maneja en la Ubicación; no crea cantidad |
+| Política | `VariantLocationReplenishmentPolicy` (#439) | Min/max opcionales del par; no implica saldo |
+| Evidencia | `StockMovement` + línea (#438, #567, #574) | Libro mayor inmutable y consultable: razón, dirección, cantidad, origen documental, actor y tiempo |
+| Proyección | `Stock` (#430, #434) | Saldo actual y costo promedio por Ubicación + Variante |
+
+Asignar una Variante nunca inserta `Stock`. La primera entrada posteada crea la fila de saldo de
+forma perezosa y segura ante carreras. Las consultas de Existencias parten del surtido y hacen una
+proyección opcional de Stock (#571), por lo que un par asignado sin fila física se presenta como
+cero sin persistir un saldo ficticio ni un movimiento.
+
+#### Diagrama ER objetivo
+
+```mermaid
+erDiagram
+  OPERATING_UNIT ||--o{ INVENTORY_LOCATION : contains
+  INVENTORY_LOCATION ||--o{ VARIANT_LOCATION_ASSIGNMENT : manages
+  ITEM_VARIANT ||--o{ VARIANT_LOCATION_ASSIGNMENT : assigned
+  INVENTORY_LOCATION ||--o{ VARIANT_LOCATION_REPLENISHMENT_POLICY : configures
+  ITEM_VARIANT ||--o{ VARIANT_LOCATION_REPLENISHMENT_POLICY : governed
+  INVENTORY_LOCATION ||--o{ STOCK : holds
+  ITEM_VARIANT ||--o{ STOCK : balances
+
+  SUPPLIER ||--o{ RECEIPT : supplies
+  INVENTORY_LOCATION ||--o{ RECEIPT : receiving_destination
+  RECEIPT ||--|{ RECEIPT_LINE : contains
+  ITEM_VARIANT ||--o{ RECEIPT_LINE : received_as_presentation
+
+  INVENTORY_LOCATION ||--o{ STOCK_TRANSFER : source
+  INVENTORY_LOCATION ||--o{ STOCK_TRANSFER : destination
+  STOCK_TRANSFER ||--|{ STOCK_TRANSFER_LINE : contains
+  ITEM_VARIANT ||--o{ STOCK_TRANSFER_LINE : moves
+
+  INVENTORY_LOCATION ||--o{ STOCK_MOVEMENT : origin
+  INVENTORY_LOCATION ||--o{ STOCK_MOVEMENT : destination
+  ITEM_VARIANT ||--o{ STOCK_MOVEMENT : ledger_entry
+  STOCK_MOVEMENT ||--o| STOCK_MOVEMENT_LINE : details
+
+  INVENTORY_LOCATION {
+    bigint operating_unit_id FK
+    string type
+    boolean is_active
+    boolean is_primary
+    boolean is_pickable
+    boolean can_receive_purchases "target #568"
+  }
+
+  VARIANT_LOCATION_ASSIGNMENT {
+    bigint inventory_location_id FK
+    bigint item_variant_id FK
+    timestamp deleted_at
+  }
+
+  STOCK {
+    bigint inventory_location_id FK
+    bigint item_variant_id FK
+    decimal on_hand
+    decimal reserved
+    decimal weighted_avg_cost
+  }
+
+  STOCK_MOVEMENT {
+    bigint from_location_id FK
+    bigint to_location_id FK
+    bigint item_variant_id FK
+    decimal qty
+    string reason
+    string related_type
+    bigint related_id
+    bigint related_line_id "target #567"
+    string status
+  }
+```
+
+#### Límites de escritura
+
+- Crear Producto/Variante, asignar surtido, configurar min/max y guardar documentos `DRAFT` no
+  cambian Stock.
+- Confirmar una Recepción crea/incrementa Stock en su ubicación receptora y registra evidencia
+  `PURCHASE_RECEIPT` por línea (#572).
+- Registrar un saldo inicial crea/incrementa Stock con evidencia `OPENING_BALANCE`; no simula una
+  compra y no exige `can_receive_purchases` (#570).
+- Postear una Transferencia disminuye origen e incrementa destino dentro de una sola transacción y
+  registra `TRANSFER` por línea (#573).
+- #567 centraliza entradas y agrega identidad única de documento/línea para que un reintento nunca
+  aplique el mismo efecto dos veces.
+- Todo reverso es compensatorio; el historial posteado no se edita ni elimina.
+
+#### Libro mayor de movimientos de solo lectura (objetivo #574)
+
+El historial de movimientos es un modelo de lectura sobre la evidencia inmutable existente, no otra
+fuente de verdad de Stock. Las consultas de lista y detalle son paginadas, usan IDs públicos,
+aplican `stock.view` y restringen las ubicaciones origen y destino al `OperatingUnitScope` activo del
+usuario. Filtrar o abrir un detalle nunca materializa Stock, crea evidencia ni modifica un
+movimiento posteado.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Operador
+  participant UI as Inventario > Movimientos
+  participant API as API de consulta de movimientos
+  participant Scope as OperatingUnitScope
+  participant DB as Libro mayor Stock Movement
+
+  Operador->>UI: Filtrar por Ubicación, Variante, razón, estado, fecha u origen
+  UI->>API: GET movimientos paginados (IDs públicos)
+  API->>Scope: Autorizar stock.view + Unidad Operativa activa
+  Scope-->>API: Límite de Ubicaciones permitido
+  API->>DB: Leer movimientos y relaciones coincidentes
+  DB-->>API: Página de evidencia inmutable
+  API-->>UI: Filas + metadatos de paginación
+  Operador->>UI: Abrir detalle del movimiento
+  UI->>API: GET movement/{public_id}
+  API->>Scope: Revalidar visibilidad de origen/destino
+  API->>DB: Leer detalle + enlace original/reverso
+  DB-->>API: Evidencia (sin escrituras)
+  API-->>UI: Qué, dónde, por qué, cuándo, actor y origen
+```
+
+---
+
 ## 4. Flujos operativos
 
 ### 4.1 Flujo de un evento
+
+> **Objetivo, no as-built completo:** el tramo de Transferencia se habilita con #573. El resto del
+> diagrama conserva la visión de largo plazo de eventos.
 
 ```mermaid
 sequenceDiagram
@@ -898,6 +1073,64 @@ valida contra el original (misma Variante/qty, `from`/`to` intercambiados) en `S
 -   `reverses_stock_movement_id` es UNIQUE → un movimiento posteado se compensa **a lo sumo una vez**.
 -   Persistir `meta.cost` para auditoría de costo promedio.
 
+### 4.4 Recepción confirmada hacia una ubicación receptora — objetivo Sprint 7
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Operator as Operador
+  participant UI as Recepciones UI
+  participant API as Receipt API
+  participant Scope as OperatingUnitScope
+  participant Posting as InventoryEntryPostingService
+  participant DB as PostgreSQL
+
+  Operator->>UI: Crear/editar Recepción
+  UI->>API: Guardar DRAFT con ubicación receptora
+  API->>Scope: Validar acceso + activa + can_receive_purchases
+  API->>DB: Guardar Receipt + líneas
+  Note over DB: Sin Stock, costo, asignación ni movimiento
+  Operator->>UI: Confirmar Recepción
+  UI->>API: POST /inventory/receipts/{id}/post
+  API->>DB: Bloquear Receipt y revalidar destino
+  loop cada línea
+    API->>DB: Asegurar VariantLocationAssignment
+    API->>Posting: Postear cantidad base + costo + source line
+    Posting->>DB: Bloquear/crear Stock y mezclar costo
+    Posting->>DB: Insertar StockMovement + línea
+  end
+  API->>DB: Receipt = POSTED
+  DB-->>API: COMMIT atómico
+  API-->>UI: Existencia y valuación actualizadas
+```
+
+### 4.5 Transferencia interna — objetivo Sprint 7
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Operator as Operador
+  participant API as Transfer API
+  participant Scope as OperatingUnitScope
+  participant StockSvc as StockMutationService
+  participant DB as PostgreSQL
+
+  Operator->>API: Guardar Transferencia DRAFT
+  API->>DB: Guardar encabezado + líneas
+  Note over DB: DRAFT no cambia Stock
+  Operator->>API: Postear Transferencia
+  API->>DB: Bloquear documento y saldos en orden determinista
+  API->>Scope: Autorizar origen y destino
+  loop cada línea
+    API->>DB: Validar asignación destino
+    API->>StockSvc: Disminuir origen sin bajar reserved/cero
+    API->>StockSvc: Crear/incrementar destino
+    API->>DB: Insertar movimiento TRANSFER inmutable
+  end
+  API->>DB: Transferencia = POSTED
+  DB-->>API: COMMIT atómico
+```
+
 ---
 
 ## 5. Identificadores ofuscados
@@ -927,18 +1160,28 @@ valida contra el original (misma Variante/qty, `from`/`to` intercambiados) en `S
 | **Policies**                 | Autorización por unidad operativa y rol.                                |
 | **Resources / Transformers** | Serializan respuestas exponiendo `public_id` (como `id`) y datos calculados. |
 
-Servicios principales:
+Servicios principales as-built:
 
--   `TransfersService`
--   `SalesService`
--   `AdjustmentsService`
--   `EventsService`
--   `CostingService`
+-   `StockMutationService` — bloqueo, primera creación race-safe, incrementos y decrementos.
+-   `StockMovementReverser` — movimientos compensatorios inmutables.
+-   `OpeningBalanceService` y `StockOutService` — entradas iniciales y salidas actuales.
+-   `ReceiptService` — ciclo de vida y posting/reverso de Recepciones.
+-   `ReplenishmentPolicyResolver` — min/max efectivos por Ubicación + Variante.
+
+Servicios objetivo Sprint 7:
+
+-   `InventoryEntryPostingService` (#567) — entrada idempotente de saldo + costo + evidencia.
+-   Servicio de Transferencias (#573; nombre final durante implementación) — documento
+    multi-línea, posting y reverso entre ubicaciones.
+-   Límite de consulta del libro de movimientos (#574; nombres finales durante implementación) —
+    lista/detalle paginados, filtrables, acotados por Unidad Operativa y sin efectos de escritura.
 
 ---
 
 ## 7. Referencias
 
+-   [Sprint 007 — Warehouse Receiving & Location-Aware Stock](../sprints/planned/sprint-007-warehouse-receiving-and-location-aware-stock.md)
+-   [Recepciones de compra](purchasing/purchase-receipts.es.md)
 -   [Tenancy for Laravel](https://tenancyforlaravel.com/docs)
 -   [Martin Fowler — DDD Aggregates](https://martinfowler.com/bliki/DDD_Aggregate.html)
 -   [Eric Evans — Domain Driven Design](https://domainlanguage.com/ddd/)

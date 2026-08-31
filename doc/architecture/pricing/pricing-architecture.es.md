@@ -37,6 +37,14 @@ PriceList  ──< PriceListAssignment >── Branch (requerido) ── Operati
   Eloquent `decimal:4`, la misma convención que ya usan `ItemVariant.sale_price`/`last_unit_cost` y
   `StockMovementLine.sale_price` — sin una nueva librería de value-object Money.
 
+  **As-built frente al objetivo de Sprint 8.** El párrafo anterior registra la implementación
+  entregada por #435. [TD-05](../../decisions/td-05-monetary-precision-and-rounding.md) la sustituye
+  como contrato objetivo: un `VariantPrice.price` visible al cliente es Money con escala 2 y no
+  debe cruzar una frontera de punto flotante binario. El costo unitario sigue siendo una tasa
+  distinta con escala 4. El issue #415 es dueño de la migración compatible y de las
+  representaciones exactas en PHP/API/TypeScript; hasta entregarlo, `decimal(15,4)` continúa como
+  almacenamiento as-built de precios.
+
 ## 2. Precedencia Branch vs. Operating Unit
 
 Todo `OperatingUnit` ya pertenece a exactamente un `Branch` (ver

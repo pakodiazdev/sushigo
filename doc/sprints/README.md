@@ -10,7 +10,8 @@ Index of every SushiGo sprint document. See `doc/conventions/sprints.md` for the
 | 003 | Development Platform & Product Reliability | Completed | [sprint-003-development-platform-and-product-reliability.md](sprint-003-development-platform-and-product-reliability.md) |
 | 004 | Product Catalog Reconstruction | Completed | [sprint-004-product-catalog-reconstruction.md](sprint-004-product-catalog-reconstruction.md) |
 | 005 | Purchasing, Cost & Pricing | Completed | [sprint-005-purchasing-cost-and-pricing.md](sprint-005-purchasing-cost-and-pricing.md) |
-| 006 | Stock Integrity & Inventory Completion | In Progress (current) | [sprint-006-stock-integrity-and-inventory-completion.md](sprint-006-stock-integrity-and-inventory-completion.md) |
+| 006 | Stock Integrity & Inventory Completion | Completed | [sprint-006-stock-integrity-and-inventory-completion.md](sprint-006-stock-integrity-and-inventory-completion.md) |
+| 007 | Warehouse Receiving & Location-Aware Stock | In Progress (current) | [sprint-007-warehouse-receiving-and-location-aware-stock.md](sprint-007-warehouse-receiving-and-location-aware-stock.md) |
 
 Planned sprints not yet started live under [`planned/`](planned/) and are not listed here until promoted.
 
