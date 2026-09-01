@@ -314,6 +314,32 @@ Every PR title **must** include the workspace letter, in its own bracket right a
 
 **Why:** dev-lab runs up to 8 parallel workspace clones. Without the letter in the title, reviewers scanning a PR list can't tell which workspace a PR came from without opening it.
 
+#### Execution-mode flag — the optional third bracket
+
+An optional **third bracket**, immediately after `[x]` (lowercase, case-insensitive, whitespace
+inside the bracket tolerated), selects the PR's CI execution mode in the unified pipeline
+(`.github/workflows/ci.yml`, [TD-06](doc/decisions/td-06-unified-ci-dag.md)). **What each flag
+triggers:**
+
+| Title | Mode | `api-ci` / `webapp-ci` | `e2e-ci` (Cypress) | `scripts-tests` | `ci-gate` | Mergeable? |
+|---|---|---|---|---|---|---|
+| `… [#NNN][x][e2e-test] - …` | **e2e-test** (Cypress-only diagnostic loop) | **skipped** — no lint / PHPUnit / Vitest / coverage / Sonar | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** (even if `.github/scripts/**` changed) | **red** — "diagnostic mode, not a merge candidate" | ❌ never |
+| `… [#NNN][x][wip] - …` | **wip** (implementation / review / correction) | run when their surface — or pipeline infra — changed, in order `lint → tests → coverage → sonar` | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`. Falls back to the **full** suite if any changed code file is unmapped, or pipeline infra changed | runs iff `.github/scripts/**` changed | **red** — "not a merge candidate, even if every check is green" | ❌ never |
+| `… [#NNN][x] - …` (no third bracket) | **final** (merge candidate) | same as `[wip]` | **full** suite whenever anything E2E-relevant changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed. A documentation / non-pipeline-config-only PR (no `code/**`, infra or `.github/scripts/**` change) short-circuits to a fast green | ✅ **the only mode a PR can merge from** |
+
+- The mode is parsed from the **PR title only** — never from the branch name. The branch keeps its
+  `<type>/<NNN>-<desc>` name unchanged.
+- **Open the PR with `[wip]` from the start** (or `[e2e-test]` while iterating on Cypress specs).
+  When it's ready for final validation and merge, **edit the title to remove the bracket** — the
+  `pull_request: edited` trigger re-runs CI in *final* mode and `ci-gate` can then go green.
+- `push` to `main` always runs in **final** mode.
+- If both `[e2e-test]` and `[wip]` appear, `[e2e-test]` wins (the narrowest mode).
+- `[review]` is **not** a mode — review/correction has the same CI semantics as `[wip]`.
+
+Canonical reference: [`doc/conventions/git/pull-requests.md`](doc/conventions/git/pull-requests.md)
+→ "PR Title Execution-Mode Flags". Full CI flow:
+[`doc/conventions/ci/pipeline.md`](doc/conventions/ci/pipeline.md).
+
 ---
 
 ### PR Description (mandatory)

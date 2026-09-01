@@ -1,38 +1,29 @@
-name: Webapp Tests (Vitest + Coverage)
+name: _webapp-ci
+
+# Reusable Webapp quality branch for the unified CI DAG (#560). Called by ci.yml only when
+# the PR touched code/webapp/** and the execution mode is [wip] or final.
+#
+# Quality order:  lint+typecheck ─► vitest shards ─► coverage-merge ─► sonar
+#
+# Sharding / blob-merge logic ported verbatim from the standalone webapp-tests.yml; the
+# per-step `if: changes.outputs.webapp` guards are gone because ci.yml's analyze-pr already
+# gated this whole branch.
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
+  workflow_call:
 
 jobs:
-  webapp-tests:
-    name: webapp-tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+  lint:
+    name: webapp-lint
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-
     defaults:
       run:
         working-directory: code/webapp
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect changes in code/webapp
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            webapp:
-              - 'code/webapp/**'
-
       - name: Setup Node 24
-        if: steps.changes.outputs.webapp == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -40,21 +31,49 @@ jobs:
           cache-dependency-path: code/webapp/package-lock.json
 
       - name: Install dependencies
-        if: steps.changes.outputs.webapp == 'true'
         run: npm ci
 
-      # Sharded across 4 parallel jobs — running the full 200-file suite with
-      # V8 coverage in a single process accumulates enough memory/GC pressure
-      # by the end to hang GH Actions' low-resource runners. Each shard only
-      # covers ~1/4 of the files, keeping per-process overhead low. Shards
-      # write a "blob" report instead of the final coverage report; a separate
-      # job merges them back into one report for SonarCloud.
+      - name: Generate route tree
+        run: npm run generate
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript check
+        run: npm run typecheck
+
+  webapp-tests:
+    name: webapp-tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: code/webapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: code/webapp/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Sharded across 4 parallel jobs — a single-process full run with V8 coverage
+      # accumulates enough GC pressure to hang low-resource runners. Shards write a blob
+      # report; webapp-coverage-merge stitches them into one report for SonarCloud.
       - name: Run Vitest shard with coverage
-        if: steps.changes.outputs.webapp == 'true'
         run: npx vitest run --coverage --reporter=blob --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: Upload blob report
-        if: steps.changes.outputs.webapp == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: webapp-blob-report-${{ matrix.shard }}
@@ -66,25 +85,15 @@ jobs:
     name: webapp-coverage-merge
     runs-on: ubuntu-latest
     needs: webapp-tests
-
+    if: needs.webapp-tests.result == 'success'
     defaults:
       run:
         working-directory: code/webapp
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect changes in code/webapp
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            webapp:
-              - 'code/webapp/**'
-
       - name: Setup Node 24
-        if: steps.changes.outputs.webapp == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -92,11 +101,9 @@ jobs:
           cache-dependency-path: code/webapp/package-lock.json
 
       - name: Install dependencies
-        if: steps.changes.outputs.webapp == 'true'
         run: npm ci
 
       - name: Download all blob reports
-        if: steps.changes.outputs.webapp == 'true'
         uses: actions/download-artifact@v4
         with:
           path: code/webapp/.vitest-reports
@@ -104,11 +111,9 @@ jobs:
           merge-multiple: true
 
       - name: Merge shard reports into final coverage
-        if: steps.changes.outputs.webapp == 'true'
         run: npx vitest run --mergeReports=.vitest-reports --coverage
 
       - name: Upload coverage report
-        if: steps.changes.outputs.webapp == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: webapp-coverage
@@ -120,30 +125,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: webapp-coverage-merge
     if: needs.webapp-coverage-merge.result == 'success'
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Detect changes in code/webapp
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            webapp:
-              - 'code/webapp/**'
-
       - name: Download coverage report
-        if: steps.changes.outputs.webapp == 'true'
         uses: actions/download-artifact@v4
         with:
           name: webapp-coverage
           path: code/webapp/coverage
 
       - name: SonarCloud Scan (Webapp)
-        if: steps.changes.outputs.webapp == 'true'
         uses: SonarSource/sonarcloud-github-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
