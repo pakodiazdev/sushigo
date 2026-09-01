@@ -8,6 +8,8 @@ This guide establishes the format for PR titles and descriptions, ensuring clari
 
 ```
 :emoji [#NNN][x] - Short description :emoji
+:emoji [#NNN][x][wip] - Short description :emoji        ← non-mergeable WIP CI run
+:emoji [#NNN][x][e2e-test] - Short description :emoji    ← Cypress-only diagnostic CI run
 ```
 
 ### Components
@@ -22,7 +24,41 @@ This guide establishes the format for PR titles and descriptions, ensuring clari
   developed in (e.g. `a`, `b`, `c`). Dev-lab runs up to 8 parallel workspace clones; without the
   letter, reviewers scanning a PR list can't tell which workspace a PR came from without opening
   it. Omit this bracket only for PRs opened from standalone Docker mode (no workspace clone).
+- **Execution-mode bracket** (optional): a third bracket, immediately after `[x]`, that selects the
+  PR's CI execution mode — see [PR Title Execution-Mode Flags](#pr-title-execution-mode-flags)
+  below.
 - **Description**: Imperative mood, concise summary of the change.
+
+### PR Title Execution-Mode Flags
+
+The execution mode of the unified CI pipeline (`.github/workflows/ci.yml`,
+[TD-06](../../decisions/td-06-unified-ci-dag.md)) is read from an **optional third bracket in the PR
+title**, immediately after the workspace letter `[x]` (lowercase, case-insensitive, whitespace
+inside the bracket tolerated). **It is read from the title only — never from the branch name;** the
+branch keeps its `<type>/<NNN>-<desc>` name (see [`branches.md`](./branches.md)) unchanged.
+
+**What each flag triggers:**
+
+| Title | Mode | `api-ci` / `webapp-ci` | `e2e-ci` (Cypress) | `scripts-tests` | `ci-gate` | Mergeable? |
+|---|---|---|---|---|---|---|
+| `… [#NNN][x][e2e-test] - …` | **e2e-test** — Cypress-only diagnostic loop | **skipped** (no lint / PHPUnit / Vitest / coverage / Sonar) | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** even if `.github/scripts/**` changed | **red** — "diagnostic mode, not a merge candidate" | ❌ never |
+| `… [#NNN][x][wip] - …` | **wip** — implementation / review / correction | run when their surface, or pipeline infra, changed (`lint → tests → coverage → sonar`) | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`; **full** suite if any changed code file is unmapped or pipeline infra changed | runs iff `.github/scripts/**` changed | **red** — "not a merge candidate even if every check is green" | ❌ never |
+| `… [#NNN][x] - …` (no third bracket) | **final** — merge candidate | same as `[wip]` | **full** suite whenever anything E2E-relevant changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed; a documentation / non-pipeline-config-only PR short-circuits to a fast green | ✅ **the only mode a PR can merge from** |
+
+Rules:
+
+1. **Open the PR with `[wip]` from the start** (or `[e2e-test]` while iterating specifically on
+   Cypress specs) — CI runs the WIP mode while work is in progress and keeps `ci-gate` red.
+2. **Promote to final by editing the title to remove the bracket.** The `pull_request: edited`
+   trigger re-runs CI in *final* mode (full Cypress + a green `ci-gate`); nothing else changes.
+   ```bash
+   gh pr edit <N> --title "✨ [#016][a] - Employee CRUD API ✨"
+   ```
+3. `push` to `main` always runs in **final** mode.
+4. If both `[e2e-test]` and `[wip]` appear, `[e2e-test]` wins (the narrowest mode).
+5. `[review]` is **not** a mode — review/correction has the same CI semantics as `[wip]`.
+
+Full flow: [`doc/conventions/ci/pipeline.md`](../ci/pipeline.md).
 
 ### Title Examples
 

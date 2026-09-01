@@ -95,7 +95,7 @@ The thirteen Issues are on **SushiGo Admin**, `Todo`, labeled `sprint-7`, and as
 
 | Status | Issue | Title | Investment | Priority | Size | Opt. | Pess. |
 |---|---:|---|---|---|---|---:|---:|
-| ⏳ | #560 | Refactor PR CI into one visible quality-gate DAG | Dev platform | P0 | L | 4h | 12h |
+| ✅ | #560 | Refactor PR CI into one visible quality-gate DAG | Dev platform | P0 | L | 4h | 12h |
 | ⏳ | #544 | Fix quarantined Cypress spec: inventory-navigation | Dev platform | P1 | S | 0.5h | 3h |
 | ⏳ | #547 | Fix quarantined Cypress spec: Variant Purchase Presentation | Dev platform | P0 | S | 0.5h | 3h |
 | ⏳ | #548 | Fix quarantined Cypress spec: Purchase Receipts | Dev platform | P0 | S | 0.5h | 3h |

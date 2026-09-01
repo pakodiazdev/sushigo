@@ -1,0 +1,260 @@
+name: _api-ci
+
+# Reusable API quality branch for the unified CI DAG (#560). Called by ci.yml only when
+# the PR touched code/api/** and the execution mode is [wip] or final.
+#
+# Quality order:  swagger-validate ─┐
+#                                   ├─► phpunit shards ─► coverage-merge ─► sonar
+#                 lint ─────────────┘                └─► junit-merge (timing, never a gate)
+#
+# The step logic (PHPUnit file-index sharding, isolated per-shard Postgres, raw
+# --coverage-php merge via phpcov, JUnit timing) is ported verbatim from the standalone
+# api-tests.yml (#477 / #481 / #486). What changed for #560: lint and swagger now block
+# PHPUnit, and there is no in-file `changes` job — ci.yml's analyze-pr already gated us.
+
+on:
+  workflow_call:
+
+jobs:
+  swagger:
+    name: api-swagger
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: code/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Copy .env and generate app key
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+          php artisan passport:keys --ansi
+
+      - name: Generate Swagger docs (fails on invalid annotations)
+        run: php artisan l5-swagger:generate
+
+  lint:
+    name: api-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: code/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Run PHP Pint (check mode)
+        run: ./vendor/bin/pint --test
+
+  api-tests:
+    name: api-tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    needs: [swagger, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    services:
+      pgsql:
+        image: postgres:16
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: mydb_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: code/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5 with PCOV
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: pcov
+          extensions: pdo_pgsql
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Copy .env and generate app key
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+          php artisan passport:keys --ansi
+
+      # File-level sharding (#481): whole test files split round-robin (index % shard-count)
+      # so every file's RefreshDatabase lifecycle stays inside one shard's process, and each
+      # shard has its own `pgsql` service above — no shared DB, no SQLSTATE[40P01].
+      - name: List PHPUnit test files for this shard
+        id: shard-files
+        run: |
+          mapfile -t all_files < <(find tests/Unit tests/Feature -name '*Test.php' | sort)
+          total=${#all_files[@]}
+          shard_count=${{ strategy.job-total }}
+          shard_index=$(( ${{ matrix.shard }} - 1 ))
+          shard_files=()
+          for ((i = 0; i < total; i++)); do
+            if (( i % shard_count == shard_index )); then
+              shard_files+=("${all_files[$i]}")
+            fi
+          done
+          printf '%s\n' "${shard_files[@]}" > /tmp/shard-files.txt
+          echo "Shard ${{ matrix.shard }}/${shard_count}: ${#shard_files[@]} of ${total} test files"
+          if [ "${#shard_files[@]}" -eq 0 ]; then
+            echo "has-files=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-files=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Raw --coverage-php (.cov) per shard, merged accurately by phpcov later — a per-shard
+      # Clover report would misrepresent line coverage. vendor/bin/phpunit directly, not
+      # `php artisan test --coverage`, to avoid the wrapper's double --coverage-php injection.
+      - name: Run PHPUnit with coverage
+        if: steps.shard-files.outputs.has-files == 'true'
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: mydb_test
+        run: vendor/bin/phpunit --coverage-php=coverage-shard-${{ matrix.shard }}.cov --log-junit=test-results-shard-${{ matrix.shard }}.xml $(cat /tmp/shard-files.txt)
+
+      - name: Upload JUnit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-junit-report-shard-${{ matrix.shard }}
+          path: code/api/test-results-shard-${{ matrix.shard }}.xml
+          retention-days: 7
+
+      - name: Upload raw coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-coverage-raw-shard-${{ matrix.shard }}
+          path: code/api/coverage-shard-${{ matrix.shard }}.cov
+          retention-days: 1
+
+  # Auxiliary reporting only — never a merge gate (see api-tests job above / pipeline.md).
+  # continue-on-error is at the JOB level so that ANY failure here (a missing/failed artifact
+  # download, the timing generator crashing, …) can never fail the _api-ci.yml run and block
+  # ci-gate over a summary nobody is gating on.
+  api-junit-merge:
+    name: api-junit-merge
+    runs-on: ubuntu-latest
+    needs: api-tests
+    if: always()
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: code/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download per-shard JUnit reports
+        uses: actions/download-artifact@v4
+        with:
+          path: code/api
+          pattern: phpunit-junit-report-shard-*
+          merge-multiple: true
+
+      - name: Publish PHPUnit slow-test summary (whole suite, merged across shards)
+        working-directory: .
+        continue-on-error: true
+        run: node .github/scripts/test-timing/generate.js code/api/test-results-shard-*.xml
+
+  api-coverage-merge:
+    name: api-coverage-merge
+    runs-on: ubuntu-latest
+    needs: api-tests
+    if: needs.api-tests.result == 'success'
+    defaults:
+      run:
+        working-directory: code/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Download per-shard raw coverage
+        uses: actions/download-artifact@v4
+        with:
+          path: code/api/coverage-shards
+          pattern: php-coverage-raw-shard-*
+          merge-multiple: true
+
+      - name: Merge shard coverage into a single Clover report
+        run: vendor/bin/phpcov merge --clover=coverage.xml coverage-shards
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-coverage
+          path: code/api/coverage.xml
+          retention-days: 7
+
+  api-sonar:
+    name: api-sonar
+    runs-on: ubuntu-latest
+    needs: api-coverage-merge
+    if: needs.api-coverage-merge.result == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: php-coverage
+          path: code/api
+
+      - name: SonarCloud Scan (API)
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_API }}
+        with:
+          projectBaseDir: code/api

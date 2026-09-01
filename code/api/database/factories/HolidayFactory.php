@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\Holiday;
 use App\Models\HolidayDefinition;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /** @extends Factory<Holiday> */
@@ -13,11 +14,20 @@ class HolidayFactory extends Factory
 {
     protected $model = Holiday::class;
 
+    /**
+     * Monotonic per-process offset so every generated holiday gets a distinct `date`.
+     * `faker->unique()` only tracks values within a single generator instance, so it
+     * still collided under `->count(n)` / repeated `create()` calls against the
+     * `holidays.date` UNIQUE constraint. Starts in 2030 to stay clear of the 2026/2027
+     * dates tests hard-code explicitly.
+     */
+    private static int $dateSequence = 0;
+
     public function definition(): array
     {
         return [
             'definition_id' => null,
-            'date' => $this->faker->unique()->dateTimeBetween('2026-01-01', '2026-12-31')->format('Y-m-d'),
+            'date' => Carbon::parse('2030-01-01')->addDays(self::$dateSequence++)->format('Y-m-d'),
             'name' => $this->faker->words(3, true),
             'type' => null,
             'is_auto_generated' => false,

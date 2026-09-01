@@ -93,7 +93,11 @@ feature/016_employee_crud    # Underscores instead of hyphens
 
 2. Work on your branch, commit following [commits.md](./commits.md).
 
-3. Push and create PR:
+3. Push and open the PR. Open it **with `[wip]` in the title** so CI runs the WIP execution mode
+   while the work is in progress, and drop that bracket when it's ready for final validation — this
+   is the **PR title's** concern, not the branch's: see
+   [`pull-requests.md`](./pull-requests.md) → "PR Title Execution-Mode Flags". The branch name
+   never changes for any of this.
 
     ```bash
     git push -u origin feature/016-employee-crud-api
@@ -120,3 +124,4 @@ The branch type should correspond to the primary commit type:
 | `docs/`     | 📚           |
 | `test/`     | ✅           |
 | `chore/`    | 🔧           |
+
