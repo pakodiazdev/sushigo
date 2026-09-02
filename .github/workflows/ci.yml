@@ -14,15 +14,16 @@ name: CI
 #
 # Execution mode comes from the PR title's optional third bracket
 # (doc/conventions/git/pull-requests.md):
-#   [#NNN][x][e2e-test]  — Cypress-only diagnostic loop; merge-gate neutral → never mergeable
-#   [#NNN][x][wip]       — quality branches + targeted Cypress; merge-gate neutral → never mergeable
+#   [#NNN][x][e2e-test]  — Cypress-only diagnostic loop; merge-gate action_required → never mergeable
+#   [#NNN][x][wip]       — quality branches + targeted Cypress; merge-gate action_required → never mergeable
 #   [#NNN][x]            — final: quality branches + full Cypress; merge-gate can go green
 #
 # In wip / e2e-test, `ci-gate` still evaluates quality normally and goes GREEN when the jobs that
 # ran passed — so a red ci-gate always means a real failure, never "just wip". `merge-gate` is
-# posted (via the Checks API) with a `neutral` conclusion in those modes: a grey dot, not a red X,
-# that still keeps the merge button disabled because `neutral` is not `success`. Removing the
-# bracket re-runs CI in final mode and merge-gate is posted `success` (iff ci-gate passed).
+# posted (via the Checks API) as `action_required` in those modes: an "action needed" state, not a
+# red failure X, that keeps the merge button disabled (action_required is not in GitHub's passing
+# set {success, skipped, neutral}). Removing the bracket re-runs CI in final mode and merge-gate is
+# posted `success` (iff ci-gate passed).
 #
 # The reusable `_api-ci.yml` / `_webapp-ci.yml` / `_e2e-ci.yml` files exist only to keep each
 # surface's step order and quality logic isolated and reusable — they are NOT separate runs.
@@ -288,15 +289,19 @@ jobs:
 
   # Required check #2: the merge-candidacy gate. "May this PR merge right now?"
   #
-  # Posted via the Checks API (not a job exit code) so it can carry a `neutral` conclusion, which a
-  # job's exit code cannot produce:
+  # Posted via the Checks API (not a job exit code) so it can carry an `action_required`
+  # conclusion, which a job's exit code cannot produce:
   #
-  #   * final mode, ci-gate passed → conclusion: success  (merge candidate, pending manual review)
+  #   * final mode, ci-gate passed → conclusion: success          (merge candidate, pending review)
   #   * final mode, ci-gate failed → conclusion: failure
-  #   * [wip] / [e2e-test]         → conclusion: neutral   (grey dot, NOT a red X — still blocks
-  #                                   merge because `neutral` is not `success`, so a reviewer can
-  #                                   tell "held for [wip]" apart from "a check failed" at a glance)
-  #   * analyze-pr failed          → conclusion: failure   (fails closed the same way ci-gate does)
+  #   * [wip] / [e2e-test]         → conclusion: action_required  (blocks merge — action_required
+  #                                   is NOT in GitHub's passing set {success, skipped, neutral} —
+  #                                   and renders as an "action needed" state, not a red failure X,
+  #                                   so "held for [wip]" reads differently from "a check failed")
+  #   * analyze-pr failed          → conclusion: failure          (fails closed like ci-gate)
+  #
+  # NB: `neutral` and `skipped` both COUNT AS PASSING for a required status check, so neither
+  # would block the merge here — `action_required` is the least-alarming conclusion that does.
   #
   # Branch protection must require the context `merge-gate`. This job is named differently so its
   # own auto check run does not collide with the `merge-gate` check run it posts.
@@ -326,12 +331,12 @@ jobs:
               title = 'analyze-pr did not succeed';
               summary = `analyze-pr concluded \`${analyze}\` — failing merge-gate closed.`;
             } else if (mode === 'wip' || mode === 'e2e-test') {
-              conclusion = 'neutral';
+              conclusion = 'action_required';
               title = `Held — remove the [${mode}] title bracket to enable merge`;
               summary = [
                 `This PR is in **${mode}** mode, so it is deliberately not a merge candidate yet.`,
-                '`ci-gate` still reflects real quality; this gate is neutral, not failed.',
-                'Drop the execution-mode bracket from the PR title to re-run CI in final mode.',
+                '`ci-gate` still reflects real quality; this gate is not failed — it just requires',
+                'an action: drop the execution-mode bracket from the PR title to re-run CI in final mode.',
               ].join('\n\n');
             } else if (ciGate === 'success') {
               conclusion = 'success';

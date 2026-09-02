@@ -9,10 +9,10 @@ as **one dependency graph in one workflow run**. See
 `api-swagger.yml` / `api-tests.yml` / `webapp-lint.yml` / `webapp-tests.yml` / `cypress-e2e.yml`
 were removed, and `main`'s branch protection requires two contexts: **`ci-gate`** (quality — "did
 everything that ran pass?", evaluated the same in every mode) and **`merge-gate`** (merge
-candidacy — runs only in final mode; **skipped** in `[wip]` / `[e2e-test]`, which blocks merge
-without a red X). The `_api-ci.yml` / `_webapp-ci.yml` / `_e2e-ci.yml` files are `workflow_call`
-reusables that keep each surface's step order and quality logic isolated — they are not separate
-runs.
+candidacy — `success` only in final mode; posted **`action_required`** in `[wip]` / `[e2e-test]`,
+which blocks merge as an "action needed" state rather than a red failure). The `_api-ci.yml` /
+`_webapp-ci.yml` / `_e2e-ci.yml` files are `workflow_call` reusables that keep each surface's step
+order and quality logic isolated — they are not separate runs.
 
 ---
 
@@ -43,7 +43,7 @@ flowchart TD
 
     GATE --> MG{execution mode}
     MG -->|final| MERGEGATE["merge-gate — success iff ci-gate passed"]
-    MG -->|wip / e2e-test| MGNEUTRAL["merge-gate — neutral (grey, blocks merge)"]
+    MG -->|wip / e2e-test| MGHOLD["merge-gate — action_required (blocks merge)"]
     MERGEGATE --> MERGEOK[merge candidate — manual review]
 ```
 
@@ -65,8 +65,8 @@ then waits for the final-mode run and validates it. Dropping it by hand earlier 
 
 | Title | Mode | What runs | Mergeable? |
 |---|---|---|---|
-| `… [#123][a][e2e-test] - …` | **e2e-test** | Only the `.cy.ts` specs this PR added/modified. No lint, no PHPUnit, no Vitest, no coverage, no Sonar, no full Cypress. | **Never** — `merge-gate` is posted `neutral` (even if every selected spec is green). |
-| `… [#123][a][wip] - …` | **wip** | Applicable `api-ci` / `webapp-ci` branches (`lint → tests → coverage → sonar`), then **targeted** Cypress by functional impact. `ci-gate` still goes green when they pass. | **Never** — `merge-gate` is posted `neutral` even if `ci-gate` and every check is green. |
+| `… [#123][a][e2e-test] - …` | **e2e-test** | Only the `.cy.ts` specs this PR added/modified. No lint, no PHPUnit, no Vitest, no coverage, no Sonar, no full Cypress. | **Never** — `merge-gate` is posted `action_required` (even if every selected spec is green). |
+| `… [#123][a][wip] - …` | **wip** | Applicable `api-ci` / `webapp-ci` branches (`lint → tests → coverage → sonar`), then **targeted** Cypress by functional impact. `ci-gate` still goes green when they pass. | **Never** — `merge-gate` is posted `action_required` even if `ci-gate` and every check is green. |
 | `… [#123][a] - …` (no third bracket) | **final** | All applicable `api-ci` / `webapp-ci` branches, then the **full** Cypress suite, then a green `ci-gate`, then `merge-gate` `success`. | **Yes** — the only mode `merge-gate` reports `success` in. |
 
 `[review]` is intentionally **not** a mode: review/correction has the same CI semantics as normal
@@ -74,7 +74,7 @@ WIP.
 
 Changed surfaces (`api`, `webapp`) and the execution mode are **independent dimensions** — a
 `[wip]` PR that only touched `code/webapp/**` runs `webapp-ci` + targeted Cypress, skips `api-ci`,
-and its `ci-gate` goes green when those pass; `merge-gate` is still `neutral` because it is `[wip]`,
+and its `ci-gate` goes green when those pass; `merge-gate` is still `action_required` because it is `[wip]`,
 so the PR is not mergeable.
 
 ### Title edits
@@ -123,12 +123,12 @@ wait on.
 | Mode | Failure | Effect |
 |---|---|---|
 | e2e-test | PR Cypress fails | `ci-gate` red. |
-| e2e-test | PR Cypress passes | `ci-gate` green, `merge-gate` `neutral` — not a merge candidate. |
+| e2e-test | PR Cypress passes | `ci-gate` green, `merge-gate` `action_required` — not a merge candidate. |
 | wip / final | API/Webapp lint fails | Tests don't run. |
 | wip / final | Tests fail | Coverage / Sonar don't run. |
 | wip / final | Sonar fails | E2E doesn't run. |
 | wip | Targeted E2E fails | `ci-gate` red (a real failure). |
-| wip | All applicable branches green | `ci-gate` green, `merge-gate` `neutral` — not mergeable until `[wip]` is dropped. |
+| wip | All applicable branches green | `ci-gate` green, `merge-gate` `action_required` — not mergeable until `[wip]` is dropped. |
 | final | Full E2E fails | `ci-gate` red → `merge-gate` red. |
 | final | All applicable branches green | `ci-gate` green → `merge-gate` green → manual review / merge. |
 
@@ -209,16 +209,17 @@ red "just because the PR is `[wip]`".
 
 **`merge-gate` — merge candidacy.** "May this PR merge right now?" It is a check run **posted via
 the Checks API** (job `merge-gate-report` → `actions/github-script`), not a job exit code — so it
-can carry a `neutral` conclusion, which a job cannot. It is posted `success` **only in final
-mode** and only iff `ci-gate` passed; `failure` in final mode if `ci-gate` failed or if
-`analyze-pr` broke; and **`neutral`** in `[wip]` / `[e2e-test]` — a grey dot, not a red X, that
-still blocks merge because `neutral` is not `success`. Removing the `[wip]` / `[e2e-test]` bracket
-re-runs CI in final mode and `merge-gate` is re-posted `success`.
+can carry an `action_required` conclusion, which a job exit code cannot. It is posted `success`
+**only in final mode** and only iff `ci-gate` passed; `failure` in final mode if `ci-gate` failed
+or if `analyze-pr` broke; and **`action_required`** in `[wip]` / `[e2e-test]` — an "action needed"
+state, not a red failure X, that blocks merge. Removing the `[wip]` / `[e2e-test]` bracket re-runs
+CI in final mode and `merge-gate` is re-posted `success`.
 
-A job-level `if:`-skip would *not* work here: GitHub treats a skipped required check as passing, so
-the merge would not be blocked (see the rejected alternative in
-[TD-06](../../decisions/td-06-unified-ci-dag.md)). The `neutral` check run is what actually holds
-the merge.
+**Why `action_required` and not `neutral` or a skipped job:** GitHub's *passing* set for a
+required status check is exactly `{success, skipped, neutral}` — a `neutral` conclusion, and a
+job-level `if:`-skip (which reports `skipped`), both **let the merge through**. `action_required`
+is the least-alarming conclusion that is *not* in that set, so it is what actually holds the merge.
+See the amendment in [TD-06](../../decisions/td-06-unified-ci-dag.md).
 
 ---
 

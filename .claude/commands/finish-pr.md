@@ -145,11 +145,11 @@ user to run `/pr-comments <N>` first if any are open.
 
 `mergeStateStatus` must be `CLEAN` — **or** `BLOCKED` for the single expected reason that the PR
 title still carries a `[wip]` / `[e2e-test]` execution-mode bracket, which makes the required
-`merge-gate` check `neutral` (`ci-gate` itself is still green in `[wip]` when the checks pass).
-That is not a real blocker here: Phase 7.5a strips the bracket and Phase 7.6 re-validates in final
-mode. Treat it as `CLEAN` for the purpose of continuing **only when** `ci-gate` and every
+`merge-gate` check `action_required` (`ci-gate` itself is still green in `[wip]` when the checks
+pass). That is not a real blocker here: Phase 7.5a strips the bracket and Phase 7.6 re-validates in
+final mode. Treat it as `CLEAN` for the purpose of continuing **only when** `ci-gate` and every
 non-`skipped` branch job (`api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`) on the current head is
-`success`, `merge-gate` is `neutral` (not `failure`), and there are no merge conflicts. If
+`success`, `merge-gate` is `action_required` (not `failure`), and there are no merge conflicts. If
 `ci-gate` or a branch job is failing, or `BLOCKED` has any other cause, treat it as a real
 `BLOCKED` below.
 
@@ -455,20 +455,22 @@ git commit -m "📚 [#NNN] - Mark #NNN's row complete in the sprint doc 📊
 gh pr view <N> --repo <owner>/<repo> --json title --jq .title
 ```
 
-If the title carries a `[wip]` or `[e2e-test]` bracket (the third bracket, right after `[x]`),
-remove **only** that bracket and re-set the title — nothing else about it changes:
+If the title contains a `[wip]` or `[e2e-test]` token — matched by **content**, the same way CI
+parses it (`.github/scripts/ci-analyze/parse-mode.js`: `/\[\s*wip\s*\]/i`, `/\[\s*e2e-test\s*\]/i`)
+— remove **only** that one bracket and re-set the title, nothing else about it changes. It is
+normally the last bracket before the ` - `, right after `[x]`; on a standalone-Docker PR with no
+`[x]` workspace bracket it is the second bracket instead, so do not key off its position:
 
 ```bash
-gh pr edit <N> --repo <owner>/<repo> --title "<same title, third bracket removed>"
+gh pr edit <N> --repo <owner>/<repo> --title "<same title, the [wip]/[e2e-test] bracket removed>"
 ```
 
 This is the promotion the review flow was waiting on: the `pull_request: edited` trigger re-runs
-CI in **final mode** — the full Cypress suite runs and the `merge-gate` check, `neutral` while the
-bracket was present, is re-posted as `success` (iff `ci-gate` passes). The squash force-push below
-supersedes that run within
-seconds via the `ci-*` concurrency group, so Phase 7.6a ends up watching a single final-mode run
-against the squashed commit. If the title had no such bracket, this is a no-op — record it as
-"already final" and continue.
+CI in **final mode** — the full Cypress suite runs and the `merge-gate` check, `action_required`
+while the bracket was present, is re-posted as `success` (iff `ci-gate` passes). The squash
+force-push below supersedes that run within seconds via the `ci-*` concurrency group, so Phase 7.6a
+ends up watching a single final-mode run against the squashed commit. If the title contained no
+such token, this is a no-op — record it as "already final" and continue.
 
 ### 7.5b. Final squash and single push
 
@@ -540,8 +542,8 @@ gh pr checks <N> --repo <owner>/<repo> --watch
 
 This blocks until every check finishes running. The PR is now in final mode (7.5a), so both
 required checks — `ci-gate` **and** `merge-gate` — must conclude `SUCCESS`; `merge-gate` flipping
-from `neutral` to `success` is the proof the bracket is really gone. If any check's conclusion is
-not `SUCCESS` (or a
+from `action_required` to `success` is the proof the bracket is really gone. If any check's
+conclusion is not `SUCCESS` (or a
 legitimate `SKIPPED` for a surface this PR didn't touch), list it by name and stop — do not declare
 the PR ready to merge, but do **not** revert the Phase 7.5b push either. The
 housekeeping is already committed and pushed; the user (or a follow-up code fix) just needs a new

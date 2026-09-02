@@ -72,10 +72,12 @@ fast green in final mode rather than running the arsenal against nothing.
 - **Making `ci-gate` neutral (not red) in `[wip]`/`[e2e-test]`.** Originally rejected in favour of
   an explicit red `ci-gate`. **Superseded — see amendment below:** the red `ci-gate` conflated
   "held for `[wip]`" with "a check failed", so the merge-candidacy question was split into its own
-  `merge-gate` check, and that one carries the neutral conclusion.
-- **A job-level `if:`-skipped `merge-gate`.** Rejected: GitHub treats a skipped required check as
-  passing, so a skipped `merge-gate` would *not* block the merge. `merge-gate` is therefore a
-  Checks-API check run posted with an explicit `neutral` conclusion, which does block.
+  `merge-gate` check.
+- **A job-level `if:`-skipped `merge-gate`, or a `neutral` conclusion.** Rejected: GitHub's
+  *passing* set for a required status check is exactly `{success, skipped, neutral}` — a skipped
+  job **and** a `neutral` conclusion both let the merge through. `merge-gate` is therefore a
+  Checks-API check run posted with **`action_required`** in `[wip]` / `[e2e-test]` — the
+  least-alarming conclusion that is not in that passing set.
 
 ## Amendment — split the merge gate (2026-09)
 
@@ -87,8 +89,9 @@ Checks API by the `merge-gate-report` job (`actions/github-script`):
 
 - **final mode, `ci-gate` passed** → `merge-gate` = `success`
 - **final mode, `ci-gate` failed**, or `analyze-pr` broke → `merge-gate` = `failure`
-- **`[wip]` / `[e2e-test]`** → `merge-gate` = **`neutral`** — a grey dot, not a red X; still blocks
-  merge because `neutral` is not `success`.
+- **`[wip]` / `[e2e-test]`** → `merge-gate` = **`action_required`** — an "action needed" state,
+  not a red failure X; blocks merge because `action_required` is not in GitHub's passing set
+  `{success, skipped, neutral}`.
 
 `ci-gate` is now evaluated **identically in every mode** — green whenever the jobs that ran passed
 — so a red `ci-gate` always means a real lint/test/e2e failure. Branch protection must require

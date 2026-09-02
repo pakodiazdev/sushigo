@@ -323,15 +323,16 @@ triggers:**
 
 | Title | Mode | `api-ci` / `webapp-ci` | `e2e-ci` (Cypress) | `scripts-tests` | `ci-gate` (quality) | `merge-gate` | Mergeable? |
 |---|---|---|---|---|---|---|---|
-| `… [#NNN][x][e2e-test] - …` | **e2e-test** (Cypress-only diagnostic loop) | **skipped** — no lint / PHPUnit / Vitest / coverage / Sonar | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** (even if `.github/scripts/**` changed) | **green** iff the specs that ran passed | **`neutral`** (grey) | ❌ never |
-| `… [#NNN][x][wip] - …` | **wip** (implementation / review / correction) | run when their surface — or pipeline infra — changed, in order `lint → tests → coverage → sonar` | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`. Falls back to the **full** suite if any changed code file is unmapped, or pipeline infra changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed — a red `ci-gate` is always a real failure, never "just wip" | **`neutral`** (grey) — blocks merge without a red X | ❌ never |
+| `… [#NNN][x][e2e-test] - …` | **e2e-test** (Cypress-only diagnostic loop) | **skipped** — no lint / PHPUnit / Vitest / coverage / Sonar | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** (even if `.github/scripts/**` changed) | **green** iff the specs that ran passed | **`action_required`** | ❌ never |
+| `… [#NNN][x][wip] - …` | **wip** (implementation / review / correction) | run when their surface — or pipeline infra — changed, in order `lint → tests → coverage → sonar` | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`. Falls back to the **full** suite if any changed code file is unmapped, or pipeline infra changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed — a red `ci-gate` is always a real failure, never "just wip" | **`action_required`** — blocks merge, not a red failure | ❌ never |
 | `… [#NNN][x] - …` (no third bracket) | **final** (merge candidate) | same as `[wip]` | **full** suite whenever anything E2E-relevant changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed. A documentation / non-pipeline-config-only PR (no `code/**`, infra or `.github/scripts/**` change) short-circuits to a fast green | **green** iff `ci-gate` passed | ✅ **the only mode a PR can merge from** |
 
 Both `ci-gate` and `merge-gate` are required status checks. `ci-gate` = "did everything that ran
 pass?" (same in every mode). `merge-gate` = "may this PR merge now?" — a Checks-API check run
-posted `success` only in final mode (iff `ci-gate` passed) and **`neutral`** in `[wip]` /
-`[e2e-test]`: a grey dot, not a red X, that keeps the merge button disabled (because `neutral` is
-not `success`) until the bracket is removed.
+posted `success` only in final mode (iff `ci-gate` passed) and **`action_required`** in `[wip]` /
+`[e2e-test]`: an "action needed" state, not a red failure, that keeps the merge button disabled
+(`action_required` is not in GitHub's passing set `{success, skipped, neutral}`) until the bracket
+is removed.
 
 - The mode is parsed from the **PR title only** — never from the branch name. The branch keeps its
   `<type>/<NNN>-<desc>` name unchanged.

@@ -32,25 +32,29 @@ This guide establishes the format for PR titles and descriptions, ensuring clari
 ### PR Title Execution-Mode Flags
 
 The execution mode of the unified CI pipeline (`.github/workflows/ci.yml`,
-[TD-06](../../decisions/td-06-unified-ci-dag.md)) is read from an **optional third bracket in the PR
-title**, immediately after the workspace letter `[x]` (lowercase, case-insensitive, whitespace
-inside the bracket tolerated). **It is read from the title only — never from the branch name;** the
-branch keeps its `<type>/<NNN>-<desc>` name (see [`branches.md`](./branches.md)) unchanged.
+[TD-06](../../decisions/td-06-unified-ci-dag.md)) is read from an **optional bracket in the PR
+title** — normally the third one, immediately after the workspace letter `[x]` (lowercase,
+case-insensitive, whitespace inside the bracket tolerated). CI matches the token by **content**,
+not position (`.github/scripts/ci-analyze/parse-mode.js`: `/\[\s*wip\s*\]/i`,
+`/\[\s*e2e-test\s*\]/i`), so on a standalone-Docker PR with no `[x]` bracket it is simply the
+second bracket. **It is read from the title only — never from the branch name;** the branch keeps
+its `<type>/<NNN>-<desc>` name (see [`branches.md`](./branches.md)) unchanged.
 
 **What each flag triggers:**
 
 | Title | Mode | `api-ci` / `webapp-ci` | `e2e-ci` (Cypress) | `scripts-tests` | `ci-gate` (quality) | `merge-gate` | Mergeable? |
 |---|---|---|---|---|---|---|---|
-| `… [#NNN][x][e2e-test] - …` | **e2e-test** — Cypress-only diagnostic loop | **skipped** (no lint / PHPUnit / Vitest / coverage / Sonar) | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** even if `.github/scripts/**` changed | **green** iff the specs that ran passed | **`neutral`** (grey) | ❌ never |
-| `… [#NNN][x][wip] - …` | **wip** — implementation / review / correction | run when their surface, or pipeline infra, changed (`lint → tests → coverage → sonar`) | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`; **full** suite if any changed code file is unmapped or pipeline infra changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed — a red `ci-gate` is always a real failure | **`neutral`** (grey) — blocks merge without a red X | ❌ never |
+| `… [#NNN][x][e2e-test] - …` | **e2e-test** — Cypress-only diagnostic loop | **skipped** (no lint / PHPUnit / Vitest / coverage / Sonar) | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** even if `.github/scripts/**` changed | **green** iff the specs that ran passed | **`action_required`** | ❌ never |
+| `… [#NNN][x][wip] - …` | **wip** — implementation / review / correction | run when their surface, or pipeline infra, changed (`lint → tests → coverage → sonar`) | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`; **full** suite if any changed code file is unmapped or pipeline infra changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed — a red `ci-gate` is always a real failure | **`action_required`** — blocks merge, not a red failure | ❌ never |
 | `… [#NNN][x] - …` (no third bracket) | **final** — merge candidate | same as `[wip]` | **full** suite whenever anything E2E-relevant changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed; a documentation / non-pipeline-config-only PR short-circuits to a fast green | **green** iff `ci-gate` passed | ✅ **the only mode a PR can merge from** |
 
 Both `ci-gate` and `merge-gate` are required status checks. `ci-gate` answers "did everything that
 ran pass?" and is evaluated identically in every mode. `merge-gate` answers "may this PR merge
-now?" — it is a check run posted via the Checks API so it can carry a `neutral` conclusion: it is
-posted `success` only in final mode (iff `ci-gate` passed), and **`neutral`** in `[wip]` /
-`[e2e-test]` — a grey dot, not a red X, that still keeps the merge button disabled because
-`neutral` is not `success`, until the bracket is removed.
+now?" — a check run posted via the Checks API so it can carry an `action_required` conclusion: it
+is posted `success` only in final mode (iff `ci-gate` passed), and **`action_required`** in `[wip]`
+/ `[e2e-test]` — an "action needed" state, not a red failure, that keeps the merge button disabled
+(`action_required` is not in GitHub's passing set `{success, skipped, neutral}`) until the bracket
+is removed.
 
 Rules:
 
@@ -73,11 +77,12 @@ Two **required** status checks split one question in two, so "held for `[wip]`" 
 | Check | Question | `[wip]` / `[e2e-test]` | final |
 |---|---|---|---|
 | **`ci-gate`** | Did everything that ran pass? | **green** when the applicable branch jobs passed (evaluated the same as final). A red `ci-gate` is **always a real lint/test/e2e failure** | same |
-| **`merge-gate`** | May this PR merge now? | **`neutral`** — a grey dot, not a red X. Blocks merge (`neutral` ≠ `success`) with the title *"Held — remove the [wip] title bracket to enable merge"* | **green** iff `ci-gate` passed |
+| **`merge-gate`** | May this PR merge now? | **`action_required`** — an "action needed" state, not a red failure X. Blocks merge (`action_required` ∉ `{success, skipped, neutral}`) with the title *"Held — remove the [wip] title bracket to enable merge"* | **green** iff `ci-gate` passed |
 
 `merge-gate` is a check run posted through the Checks API by the `merge-gate-report` job — a job's
-exit code cannot produce a `neutral` conclusion, and a job-level `if:`-skip would let the merge
-through (GitHub treats a skipped required check as passing).
+exit code cannot produce an `action_required` conclusion, and a job-level `if:`-skip (or a
+`neutral` conclusion) would let the merge through — GitHub treats `skipped` and `neutral` required
+checks as passing.
 
 **The lifecycle:**
 
@@ -85,7 +90,7 @@ through (GitHub treats a skipped required check as passing).
    `/issue-devin-interactive` commands put `[wip]` in the `gh pr create` title automatically. Open
    it by hand the same way if you are not using them. None of these commands ever remove it.
 2. **Work under `[wip]`.** Every push runs the quality branches + a *targeted* Cypress selection.
-   `ci-gate` tells you whether the code is sound; `merge-gate` sits `neutral` so the PR cannot be
+   `ci-gate` tells you whether the code is sound; `merge-gate` sits `action_required` so the PR cannot be
    merged by accident. Review (human or automated) happens here.
 3. **Promote.** `/finish-pr` drops the `[wip]` bracket (its Phase 7.5a); the `pull_request: edited`
    trigger re-runs CI in final mode (full Cypress, `merge-gate` now posts `success` iff `ci-gate`
@@ -459,7 +464,7 @@ Every component with **3+ `useState` calls or API mutations** must extract its l
 | Element          | Format                                               |
 | ---------------- | ---------------------------------------------------- |
 | Title            | `:emoji [#NNN][x][wip] - Description :emoji` at creation; drop `[wip]` only via `/finish-pr` (or by hand) once ready |
-| Merge checks     | `ci-gate` (quality, any mode) **and** `merge-gate` (`neutral` while `[wip]`, `success` in final) — both required |
+| Merge checks     | `ci-gate` (quality, any mode) **and** `merge-gate` (`action_required` while `[wip]`, `success` in final) — both required |
 | Summary opening  | `Closes #NNN` then `Devin Review: <deepwiki URL>`    |
 | Commits section  | `**hash** :emoji message`                            |
 | Breaking changes | Use ⚠️ section, be explicit                          |
