@@ -192,7 +192,9 @@ jobs:
           pattern: phpunit-junit-report-shard-*
           merge-multiple: true
 
-      - name: Publish PHPUnit slow-test summary (whole suite, merged across shards)
+      # Also surfaces each shard's first database-level failure and its SQLSTATE,
+      # separate from the aborted-transaction (25P02) errors it cascades into (#578).
+      - name: Publish PHPUnit slow-test + per-shard DB-failure summary
         working-directory: .
         continue-on-error: true
         run: node .github/scripts/test-timing/generate.js code/api/test-results-shard-*.xml
