@@ -303,6 +303,13 @@ jobs:
   # NB: `neutral` and `skipped` both COUNT AS PASSING for a required status check, so neither
   # would block the merge here — `action_required` is the least-alarming conclusion that does.
   #
+  # NB: this whole pipeline assumes **same-repo** PRs (dev-lab workspace clones push branches
+  # straight to this repo). A `pull_request` from a fork gets a read-only GITHUB_TOKEN, so
+  # `checks.create` cannot post `merge-gate` there; the step logs a warning and exits 0 instead of
+  # failing red. The required `merge-gate` check then simply never reports, and the fork PR stays
+  # unmergeable — which is the correct outcome for an unsupported contribution path. A maintainer
+  # who wants to land fork work re-pushes it from a same-repo branch.
+  #
   # Branch protection must require the context `merge-gate`. This job is named differently so its
   # own auto check run does not collide with the `merge-gate` check run it posts.
   merge-gate-report:
@@ -348,14 +355,33 @@ jobs:
               summary = `\`ci-gate\` concluded \`${ciGate}\` — not a merge candidate.`;
             }
 
-            const sha = context.payload.pull_request?.head?.sha ?? context.sha;
-            await github.rest.checks.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'merge-gate',
-              head_sha: sha,
-              status: 'completed',
-              conclusion,
-              output: { title, summary },
-            });
+            const pr = context.payload.pull_request;
+            const isFork = !!pr && pr.head?.repo?.full_name !== pr.base?.repo?.full_name;
+            const sha = pr?.head?.sha ?? context.sha;
+
+            if (isFork) {
+              core.warning(
+                'merge-gate not posted: this is a fork PR and the GITHUB_TOKEN is read-only. ' +
+                'Fork PRs are unsupported by this pipeline — re-push the work from a same-repo branch.'
+              );
+              return;
+            }
+
+            try {
+              await github.rest.checks.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'merge-gate',
+                head_sha: sha,
+                status: 'completed',
+                conclusion,
+                output: { title, summary },
+              });
+            } catch (err) {
+              // Most likely a read-only token (fork PR that slipped past the check above, or a
+              // permissions regression). Warn rather than fail red — a hard failure would just
+              // add a confusing second blocking signal next to the un-reported `merge-gate`.
+              core.warning(`merge-gate could not be posted: ${err.message}`);
+              return;
+            }
             core.info(`merge-gate → ${conclusion} @ ${sha}`);

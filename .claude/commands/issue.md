@@ -595,9 +595,14 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   review-threads check, 1b's dirty-working-tree guard before the `BEHIND` auto-rebase, 1b's
   rebase-conflict abort-and-report, and 1b's `DIRTY`/`BLOCKED` mergeable-state check can each stop
   the run on their own — e.g. `main` picking up branch-protection rules this run didn't anticipate,
-  or an unrelated local change dirtying the tree between Phase 7's push and Phase 9 starting. None
-  of these are a bug in this pipeline when they fire — follow `finish-pr.md`'s own instruction for
-  that condition (report and stop, or the `/rebase-main` pointer on a rebase conflict) rather than
+  or an unrelated local change dirtying the tree between Phase 7's push and Phase 9 starting. **One
+  override for this path:** 1b's new `reviewDecision == REVIEW_REQUIRED` guard is written for a
+  human running `/finish-pr` standalone — this pipeline runs unattended and never has an approval,
+  so a bare `REVIEW_REQUIRED` (with the `[wip]` bracket the only other blocker, `ci-gate` and the
+  branch jobs green) is **not** a stop here; carry on. A `CHANGES_REQUESTED` decision still stops,
+  the same as standalone. None of the other conditions are a bug in this pipeline when they fire —
+  follow `finish-pr.md`'s own instruction for that condition (report and stop, or the `/rebase-main`
+  pointer on a rebase conflict) rather than
   guessing at a workaround.
 - **Phase 2** (squash to one commit) — a single commit from Phase 7 above *if* Phase 8's loop made
   no further fix commits; each Phase 8 cycle commits and pushes its own fix without re-squashing, so

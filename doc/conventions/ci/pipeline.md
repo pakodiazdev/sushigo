@@ -221,6 +221,12 @@ job-level `if:`-skip (which reports `skipped`), both **let the merge through**. 
 is the least-alarming conclusion that is *not* in that set, so it is what actually holds the merge.
 See the amendment in [TD-06](../../decisions/td-06-unified-ci-dag.md).
 
+**Same-repo PRs only.** `merge-gate-report` needs `checks: write`, which a `pull_request` run from
+a **fork** never gets (read-only `GITHUB_TOKEN`). On a fork PR the job detects this, logs a
+warning, and exits 0 — `merge-gate` is simply never reported and the fork PR stays unmergeable.
+That is the intended outcome: dev-lab pushes workspace branches straight to this repo, and fork
+contributions are not a supported path — re-push the work from a same-repo branch to land it.
+
 ---
 
 ## Documentation / config-only PRs

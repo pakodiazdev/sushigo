@@ -92,9 +92,11 @@ checks as passing.
 2. **Work under `[wip]`.** Every push runs the quality branches + a *targeted* Cypress selection.
    `ci-gate` tells you whether the code is sound; `merge-gate` sits `action_required` so the PR cannot be
    merged by accident. Review (human or automated) happens here.
-3. **Promote.** `/finish-pr` drops the `[wip]` bracket (its Phase 7.5a); the `pull_request: edited`
-   trigger re-runs CI in final mode (full Cypress, `merge-gate` now posts `success` iff `ci-gate`
-   passed). You may also drop the bracket by hand earlier — nothing else about the title changes:
+3. **Promote.** `/finish-pr` drops **every** `[wip]` / `[e2e-test]` token from the title (Phase
+   7.5a — a title may carry both while iterating, per rule 4, and either one left keeps CI out of
+   final mode); the `pull_request: edited` trigger re-runs CI in final mode (full Cypress,
+   `merge-gate` now posts `success` iff `ci-gate` passed). You may also drop the tokens by hand
+   earlier — nothing else about the title changes:
    ```bash
    gh pr edit <N> --title "✨ [#016][a] - Employee CRUD API ✨"
    ```

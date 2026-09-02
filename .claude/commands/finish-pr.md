@@ -147,11 +147,31 @@ user to run `/pr-comments <N>` first if any are open.
 title still carries a `[wip]` / `[e2e-test]` execution-mode bracket, which makes the required
 `merge-gate` check `action_required` (`ci-gate` itself is still green in `[wip]` when the checks
 pass). That is not a real blocker here: Phase 7.5a strips the bracket and Phase 7.6 re-validates in
-final mode. Treat it as `CLEAN` for the purpose of continuing **only when** `ci-gate` and every
-non-`skipped` branch job (`api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`) on the current head is
-`success`, `merge-gate` is `action_required` (not `failure`), and there are no merge conflicts. If
-`ci-gate` or a branch job is failing, or `BLOCKED` has any other cause, treat it as a real
-`BLOCKED` below.
+final mode.
+
+`BLOCKED` is coarse — it does not say *why*. Before accepting the bracket exception, prove the
+bracket is the **only** cause. Fetch the extra fields:
+
+```bash
+gh pr view <N> --repo <owner>/<repo> --json mergeStateStatus,mergeable,reviewDecision
+```
+
+Treat it as `CLEAN` for the purpose of continuing **only when every one** of these holds:
+- `ci-gate` and every non-`skipped` branch job (`api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`)
+  on the current head concluded `success`;
+- `merge-gate` is `action_required` (not `failure`);
+- `mergeable` is not `CONFLICTING` (no merge conflicts);
+- `reviewDecision` is **not** `CHANGES_REQUESTED` — a reviewer has actively blocked it, which
+  removing the bracket will not clear;
+- `reviewDecision` is **not** `REVIEW_REQUIRED` — branch protection wants an approval that is not
+  there yet. (The `/issue*` pipelines run this automatically and never have one, so their Phase 9
+  notes override this bullet for that path; a human running `/finish-pr` standalone must get the
+  approval first — stop and say so, do not start the housekeeping.)
+
+If any of those fails — `ci-gate`/a branch job failing, a conflict, `CHANGES_REQUESTED`,
+`REVIEW_REQUIRED` on a standalone run, or `BLOCKED` with any other cause — treat it as a real
+`BLOCKED` below and stop **before** Phase 2, so no issue/board/sprint bookkeeping runs on a PR that
+is not actually one promotion away from mergeable.
 
 - If it is `BEHIND`, auto-rebase instead of stopping — this is the common case (main moved while
   the PR sat waiting for review) and rebases cleanly almost every time. First confirm the working
@@ -165,17 +185,19 @@ non-`skipped` branch job (`api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`) on t
     git fetch origin <baseRefName>
     git rebase origin/<baseRefName>
     ```
-  - If the rebase **succeeds**, push the rewritten history and re-fetch PR metadata to confirm
-    `mergeStateStatus` is now `CLEAN` before continuing:
+  - If the rebase **succeeds**, push the rewritten history:
     ```bash
     git push --force-with-lease origin HEAD
     gh pr view <N> --repo <owner>/<repo> --json mergeStateStatus
     ```
-    Report how many commits arrived on `<baseRefName>` and that the rebase/push completed, then
-    continue with the rest of Phase 1. This push does trigger a new CI run and restarts the Codex
-    re-review, same as any push — that's harmless, not avoided, since neither is checked until
-    Phase 7.6, which validates whatever commit sits on the branch tip after Phase 7.5's own push,
-    regardless of how many earlier pushes (this one included) happened before it.
+    Do **not** expect `CLEAN` here: the force-push just restarted CI, so `mergeStateStatus` will
+    read `BLOCKED` / `UNKNOWN` / `UNSTABLE` for the minutes the fresh run is pending (and `BLOCKED`
+    anyway while the `[wip]` bracket is still on). That is fine — Phase 7.6 is the authoritative
+    CI + mergeable gate, run after Phase 7.5's own push. Only stop here if it now reads `DIRTY`
+    (the rebase surfaced a conflict the conflict path below should already have caught). Otherwise
+    report how many commits arrived on `<baseRefName>` and that the rebase/push completed, then
+    continue with the rest of Phase 1. Restarting CI and the Codex re-review is harmless — neither
+    is read until Phase 7.6.
   - If the rebase **hits conflicts**, capture the conflicting files *before* aborting — `git
     rebase --abort` discards the conflict state, so the list is unrecoverable afterward:
     ```bash
@@ -455,14 +477,16 @@ git commit -m "📚 [#NNN] - Mark #NNN's row complete in the sprint doc 📊
 gh pr view <N> --repo <owner>/<repo> --json title --jq .title
 ```
 
-If the title contains a `[wip]` or `[e2e-test]` token — matched by **content**, the same way CI
-parses it (`.github/scripts/ci-analyze/parse-mode.js`: `/\[\s*wip\s*\]/i`, `/\[\s*e2e-test\s*\]/i`)
-— remove **only** that one bracket and re-set the title, nothing else about it changes. It is
-normally the last bracket before the ` - `, right after `[x]`; on a standalone-Docker PR with no
-`[x]` workspace bracket it is the second bracket instead, so do not key off its position:
+Remove **every** `[wip]` and `[e2e-test]` token from the title (a title may legitimately carry
+both while iterating — `pull-requests.md` rule 4 — and leaving either one keeps CI out of final
+mode). Match by **content**, the same way CI parses it
+(`.github/scripts/ci-analyze/parse-mode.js`: `/\[\s*wip\s*\]/i`, `/\[\s*e2e-test\s*\]/i`) — do not
+key off position: the token is normally the last bracket before the ` - `, right after `[x]`, but
+on a standalone-Docker PR with no `[x]` workspace bracket it sits one position left. Change nothing
+else about the title.
 
 ```bash
-gh pr edit <N> --repo <owner>/<repo> --title "<same title, the [wip]/[e2e-test] bracket removed>"
+gh pr edit <N> --repo <owner>/<repo> --title "<same title, every [wip]/[e2e-test] token removed>"
 ```
 
 This is the promotion the review flow was waiting on: the `pull_request: edited` trigger re-runs
