@@ -6,18 +6,28 @@ name: CI
 #                ├─ webapp-ci     (reusable _webapp-ci.yml: lint+typecheck → vitest shards → coverage → sonar)
 #                ├─ e2e-ci        (reusable _e2e-ci.yml:    boot stack → cypress, scope = pr-specs | targeted | full)
 #                ├─ scripts-tests (node --test for .github/scripts/*)
-#                └─ ci-gate       (the ONLY required check — its name never changes with shard counts)
+#                ├─ ci-gate       (quality gate — "did everything that ran pass?", mode-independent)
+#                └─ merge-gate    (merge-candidacy check run — "may this PR merge now?")
+#
+# Both `ci-gate` and `merge-gate` are required status checks. Their names never change with shard
+# counts, so branch protection never needs editing when a reusable workflow's job list changes.
 #
 # Execution mode comes from the PR title's optional third bracket
 # (doc/conventions/git/pull-requests.md):
-#   [#NNN][x][e2e-test]  — Cypress-only diagnostic loop; never a merge candidate
-#   [#NNN][x][wip]       — quality branches + targeted Cypress; never a merge candidate
-#   [#NNN][x]            — final: quality branches + full Cypress + a green ci-gate
+#   [#NNN][x][e2e-test]  — Cypress-only diagnostic loop; merge-gate neutral → never mergeable
+#   [#NNN][x][wip]       — quality branches + targeted Cypress; merge-gate neutral → never mergeable
+#   [#NNN][x]            — final: quality branches + full Cypress; merge-gate can go green
+#
+# In wip / e2e-test, `ci-gate` still evaluates quality normally and goes GREEN when the jobs that
+# ran passed — so a red ci-gate always means a real failure, never "just wip". `merge-gate` is
+# posted (via the Checks API) with a `neutral` conclusion in those modes: a grey dot, not a red X,
+# that still keeps the merge button disabled because `neutral` is not `success`. Removing the
+# bracket re-runs CI in final mode and merge-gate is posted `success` (iff ci-gate passed).
 #
 # The reusable `_api-ci.yml` / `_webapp-ci.yml` / `_e2e-ci.yml` files exist only to keep each
 # surface's step order and quality logic isolated and reusable — they are NOT separate runs.
 # The legacy standalone api-lint / api-swagger / api-tests / webapp-* / cypress-e2e workflows
-# were removed once this became the sole gate; branch protection requires only `ci-gate`.
+# were removed once this became the sole gate; branch protection requires `ci-gate` and `merge-gate`.
 # deploy-preview / update-iteration-progress / wif-smoke-test stay independent (not PR validation).
 
 on:
@@ -221,18 +231,20 @@ jobs:
       specs: ${{ needs.analyze-pr.outputs.e2e_specs }}
     secrets: inherit
 
-  # The one and only required check. Its name never changes, so branch protection never
-  # needs editing when a shard count changes inside a reusable workflow.
+  # Required check #1: the quality gate. "Did everything that actually ran pass?" — evaluated the
+  # SAME way in every execution mode. It is GREEN on a green [wip] PR; a red ci-gate always means a
+  # real lint/test/e2e failure, never "just wip". Merge candidacy is a separate question, answered
+  # by `merge-gate` below. Its name never changes, so branch protection never needs editing when a
+  # shard count changes inside a reusable workflow.
   ci-gate:
     name: ci-gate
     needs: [analyze-pr, api-ci, webapp-ci, e2e-ci, scripts-tests, e2e-test-empty-guard]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Evaluate the merge gate
+      - name: Evaluate the quality gate
         env:
           ANALYZE: ${{ needs.analyze-pr.result }}
-          MODE: ${{ needs.analyze-pr.outputs.mode }}
           VERIFY_NEEDED: ${{ needs.analyze-pr.outputs.verify_needed }}
           API: ${{ needs.api-ci.result }}
           WEBAPP: ${{ needs.webapp-ci.result }}
@@ -248,24 +260,16 @@ jobs:
             exit 1
           fi
 
-          # 2. Diagnostic / WIP modes are deliberately never merge candidates, even fully green.
-          if [ "$MODE" = "e2e-test" ]; then
-            echo "::notice::[e2e-test] diagnostic mode — NOT a merge candidate. Drop the [e2e-test] title prefix for a full validation run."
-            exit 1
-          fi
-          if [ "$MODE" = "wip" ]; then
-            echo "::notice::[wip] mode — NOT a merge candidate even if every check is green. Drop the [wip] title prefix for a full validation run."
-            exit 1
-          fi
-
-          # 3. Documentation / non-pipeline-config-only PR (final mode): nothing to verify.
+          # 2. Documentation / non-pipeline-config-only PR: nothing to verify.
           if [ "$VERIFY_NEEDED" = "false" ]; then
             echo "No code, test, pipeline or script changes — documentation/config-only PR. Nothing to verify; ci-gate passes."
             exit 0
           fi
 
-          # 4. Final mode: every applicable branch must have passed. A legitimately skipped
-          #    branch (surface not touched) counts as pass; failure/cancelled/timed_out does not.
+          # 3. Every applicable branch must have passed. A legitimately skipped branch (surface not
+          #    touched, or a whole surface skipped in [e2e-test] mode) counts as pass;
+          #    failure/cancelled/timed_out does not. This is mode-independent — [wip] with green
+          #    targeted branches passes here exactly like final mode does.
           rc=0
           for pair in "api-ci:$API" "webapp-ci:$WEBAPP" "e2e-ci:$E2E" "scripts-tests:$SCRIPTS" "e2e-test-empty-guard:$GUARD"; do
             name="${pair%%:*}"
@@ -276,8 +280,77 @@ jobs:
             esac
           done
           if [ "$rc" -eq 0 ]; then
-            echo "final mode — all applicable branches passed. This PR is a merge candidate (pending manual review)."
+            echo "all applicable branches passed."
           else
-            echo "::error::final mode — one or more applicable branches did not pass."
+            echo "::error::one or more applicable branches did not pass."
           fi
           exit $rc
+
+  # Required check #2: the merge-candidacy gate. "May this PR merge right now?"
+  #
+  # Posted via the Checks API (not a job exit code) so it can carry a `neutral` conclusion, which a
+  # job's exit code cannot produce:
+  #
+  #   * final mode, ci-gate passed → conclusion: success  (merge candidate, pending manual review)
+  #   * final mode, ci-gate failed → conclusion: failure
+  #   * [wip] / [e2e-test]         → conclusion: neutral   (grey dot, NOT a red X — still blocks
+  #                                   merge because `neutral` is not `success`, so a reviewer can
+  #                                   tell "held for [wip]" apart from "a check failed" at a glance)
+  #   * analyze-pr failed          → conclusion: failure   (fails closed the same way ci-gate does)
+  #
+  # Branch protection must require the context `merge-gate`. This job is named differently so its
+  # own auto check run does not collide with the `merge-gate` check run it posts.
+  merge-gate-report:
+    name: merge-gate-report
+    needs: [analyze-pr, ci-gate]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    steps:
+      - name: Report merge-gate
+        uses: actions/github-script@v7
+        env:
+          MODE: ${{ needs.analyze-pr.outputs.mode }}
+          ANALYZE: ${{ needs.analyze-pr.result }}
+          CI_GATE: ${{ needs.ci-gate.result }}
+        with:
+          script: |
+            const mode = process.env.MODE || '';
+            const analyze = process.env.ANALYZE || '';
+            const ciGate = process.env.CI_GATE || '';
+
+            let conclusion, title, summary;
+            if (analyze !== 'success') {
+              conclusion = 'failure';
+              title = 'analyze-pr did not succeed';
+              summary = `analyze-pr concluded \`${analyze}\` — failing merge-gate closed.`;
+            } else if (mode === 'wip' || mode === 'e2e-test') {
+              conclusion = 'neutral';
+              title = `Held — remove the [${mode}] title bracket to enable merge`;
+              summary = [
+                `This PR is in **${mode}** mode, so it is deliberately not a merge candidate yet.`,
+                '`ci-gate` still reflects real quality; this gate is neutral, not failed.',
+                'Drop the execution-mode bracket from the PR title to re-run CI in final mode.',
+              ].join('\n\n');
+            } else if (ciGate === 'success') {
+              conclusion = 'success';
+              title = 'Merge candidate';
+              summary = 'final mode and `ci-gate` passed — this PR is a merge candidate (pending manual review).';
+            } else {
+              conclusion = 'failure';
+              title = 'ci-gate did not pass';
+              summary = `\`ci-gate\` concluded \`${ciGate}\` — not a merge candidate.`;
+            }
+
+            const sha = context.payload.pull_request?.head?.sha ?? context.sha;
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'merge-gate',
+              head_sha: sha,
+              status: 'completed',
+              conclusion,
+              output: { title, summary },
+            });
+            core.info(`merge-gate → ${conclusion} @ ${sha}`);

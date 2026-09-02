@@ -302,7 +302,8 @@ gh pr edit <N> --body-file <path-to-updated-body>   # inserts Devin Review:, per
 ```
 
 The title carries the `[wip]` execution-mode bracket per `start-issue.md` Phase 8c — CI runs the
-quality branches plus a *targeted* Cypress selection, and `ci-gate` stays red by design. This
+quality branches plus a *targeted* Cypress selection; `ci-gate` still turns green when they pass,
+and the `merge-gate` check is posted `neutral` (grey) so the PR can't merge. This
 pipeline runs every phase below against the `[wip]` PR; the `[wip]` bracket is dropped later, in
 Phase 9's `finish-pr` delegation (Phase 7.5a), which then waits for the final-mode flow to pass.
 
@@ -318,24 +319,24 @@ gh pr checks <N> --repo pakodiazdev/sushigo --watch
 
 This blocks until every check (linters + tests, per the repo's GitHub Actions workflows) finishes.
 
-- **`[wip]` mode — `ci-gate` is red by design.** The PR title carries `[wip]` (Phase 4), so
-  `ci-gate` deliberately concludes `failure` with a `[wip] mode — NOT a merge candidate`
-  annotation. That is the **expected terminal state**, not a check to diagnose or fix. Judge this
-  gate from the branch jobs only — `api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`: the gate
-  passes when every one of them that is not `skipped` concluded `success`. Ignore `ci-gate`'s own
-  result while the title has `[wip]` (or `[e2e-test]`).
+- **`[wip]` mode — `ci-gate` still means what it says; `merge-gate` is neutral.** The PR title
+  carries `[wip]` (Phase 4). `ci-gate` evaluates quality the same as in final mode: it goes green
+  when every applicable branch job (`api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`) passed, so a
+  **red `ci-gate` here is always a real failure** to diagnose and fix — never "just wip". The
+  `merge-gate` check is posted `neutral` (grey dot, not a red X) in `[wip]` / `[e2e-test]` by
+  design — it keeps the PR unmergeable until the bracket is dropped; that is expected, not a check
+  to fix.
 - **Called right after `gh pr create` (end of Phase 4, or after a fresh push elsewhere in this
   command):** GitHub Actions can take several seconds to register the workflow runs as pending
   checks. If this command reports "no checks reported" immediately, that means it ran before any
   check exists yet — not that there's nothing to wait for. Wait ~10s and re-run it once or twice
   before treating an empty result as meaningful; only trust "no checks reported" as final if it
   still says so after that short retry.
-- **All branch jobs green** → continue.
-- **A branch job failed** → pull the failing job's log (`gh run view <run-id> --log-failed`, using
-  the run ID from `gh pr checks` or `gh api repos/.../commits/<sha>/check-runs`), diagnose against
-  the same discipline as Phase 3, fix, commit, push, and re-run this gate. `ci-gate`'s `[wip]`
-  failure is never the thing being fixed here.
-- **Safety cap:** if the *same* branch job fails **6 times in a row**, stop looping and report the
+- **`ci-gate` green (plus any branch jobs)** → continue. `merge-gate` `neutral` is fine.
+- **`ci-gate` or a branch job failed** → pull the failing job's log (`gh run view <run-id> --log-failed`,
+  using the run ID from `gh pr checks` or `gh api repos/.../commits/<sha>/check-runs`), diagnose
+  against the same discipline as Phase 3, fix, commit, push, and re-run this gate.
+- **Safety cap:** if the *same* check fails **6 times in a row**, stop looping and report the
   failure to the user instead of continuing indefinitely — this is a protective cap, not a
   business-rule stop. Close the Sessions entry (Phase 2's rule) before reporting — do not attempt
   cost logging (Phase 10 skips it entirely per the zero-interruption rule; there's nothing to do

@@ -310,8 +310,10 @@ Docker mode has no workspace letter).
 **Open the PR in `[wip]` mode** — a third bracket `[wip]` immediately after `[x]`, per
 `doc/conventions/git/pull-requests.md` → "PR Title Execution-Mode Flags". While the PR is `[wip]`,
 CI runs the quality branches plus a *targeted* Cypress selection (PR-changed specs + impact-mapped
-specs) instead of the full 6-shard suite, and `ci-gate` stays red so the PR can never be mistaken
-for a merge candidate. **Opening the PR always includes `[wip]`; dropping it is a separate, later
+specs) instead of the full 6-shard suite, and the `merge-gate` check is posted `neutral` (grey dot,
+not a red X) so the PR can never be merged while the bracket is present; `ci-gate` still runs and
+turns green when the checks pass, so a red `ci-gate` always means a real failure.
+**Opening the PR always includes `[wip]`; dropping it is a separate, later
 step** — `/finish-pr` does it (its Phase 7.5a) once review has left the PR ready, whether a human
 runs `/finish-pr` or `/issue` runs it automatically at close-out. This `/start-issue` flow stops
 after opening the PR, so here the bracket stays until someone promotes.

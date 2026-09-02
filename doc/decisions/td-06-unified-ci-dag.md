@@ -8,7 +8,9 @@ entire quality flow as **one dependency graph in one workflow run**. It has:
 - a single `analyze-pr` job — the only place path/change detection and PR execution-mode parsing
   happen;
 - three reusable branches called from it — `_api-ci.yml`, `_webapp-ci.yml`, `_e2e-ci.yml`;
-- one stable required check, **`ci-gate`**, whose name never changes with internal shard counts.
+- two stable required checks whose names never change with internal shard counts:
+  **`ci-gate`** ("did everything that ran pass?", evaluated identically in every mode) and
+  **`merge-gate`** ("may this PR merge now?" — see the amendment below).
 
 The PR execution mode comes from the PR title's optional third bracket, `[#NNN][x][<mode>]`:
 
@@ -16,15 +18,15 @@ The PR execution mode comes from the PR title's optional third bracket, `[#NNN][
 |---|---|---|
 | `[e2e-test]` | Only the Cypress specs the PR added/modified | No |
 | `[wip]` | API/Webapp `lint → tests → coverage → sonar`, then **targeted** Cypress by functional impact | No |
-| (no bracket) → **final** | All applicable API/Webapp branches, then the **full** Cypress suite, then `ci-gate` | Yes |
+| (no bracket) → **final** | All applicable API/Webapp branches, then the **full** Cypress suite, then `ci-gate`, then `merge-gate` | Yes |
 
 `[e2e-test]` with zero changed specs fails loudly (`e2e-test-empty-guard`) instead of a green
 no-op. `[wip]` targeted selection uses `.github/e2e-impact-map.json` and falls back to the full
 suite whenever a code change matches no entry — it never runs "no E2E" for a code change. Full
 reference: [`doc/conventions/ci/pipeline.md`](../conventions/ci/pipeline.md).
 
-Branch protection depends only on `ci-gate`. `deploy-preview`, the iteration-progress badge, and
-WIF diagnostics stay independent workflows.
+Branch protection depends on `ci-gate` **and** `merge-gate` (see amendment below). `deploy-preview`,
+the iteration-progress badge, and WIF diagnostics stay independent workflows.
 
 ## Justification
 
@@ -67,6 +69,27 @@ fast green in final mode rather than running the arsenal against nothing.
 - **Test Impact Analysis for `[e2e-test]`.** Rejected as out of scope; `[e2e-test]` is
   deliberately the simple, deterministic "just my changed specs" loop. `[wip]` carries the
   (lightweight, glob-based) impact map instead.
-- **Making `ci-gate` neutral (not red) in `[wip]`/`[e2e-test]`.** Rejected: GitHub treats a
-  never-reported required check and a skipped one inconsistently; an explicit red with a clear
-  "not a merge candidate" message is unambiguous.
+- **Making `ci-gate` neutral (not red) in `[wip]`/`[e2e-test]`.** Originally rejected in favour of
+  an explicit red `ci-gate`. **Superseded — see amendment below:** the red `ci-gate` conflated
+  "held for `[wip]`" with "a check failed", so the merge-candidacy question was split into its own
+  `merge-gate` check, and that one carries the neutral conclusion.
+- **A job-level `if:`-skipped `merge-gate`.** Rejected: GitHub treats a skipped required check as
+  passing, so a skipped `merge-gate` would *not* block the merge. `merge-gate` is therefore a
+  Checks-API check run posted with an explicit `neutral` conclusion, which does block.
+
+## Amendment — split the merge gate (2026-09)
+
+`ci-gate` used to conclude **red** in `[wip]` / `[e2e-test]` "even when every check is green".
+That made a `[wip]` PR indistinguishable at a glance from one with a real failing test.
+
+The merge-candidacy question is now a **separate required check, `merge-gate`**, posted via the
+Checks API by the `merge-gate-report` job (`actions/github-script`):
+
+- **final mode, `ci-gate` passed** → `merge-gate` = `success`
+- **final mode, `ci-gate` failed**, or `analyze-pr` broke → `merge-gate` = `failure`
+- **`[wip]` / `[e2e-test]`** → `merge-gate` = **`neutral`** — a grey dot, not a red X; still blocks
+  merge because `neutral` is not `success`.
+
+`ci-gate` is now evaluated **identically in every mode** — green whenever the jobs that ran passed
+— so a red `ci-gate` always means a real lint/test/e2e failure. Branch protection must require
+**both** `ci-gate` and `merge-gate`.

@@ -144,12 +144,14 @@ user to run `/pr-comments <N>` first if any are open.
 ### 1b. Mergeable state
 
 `mergeStateStatus` must be `CLEAN` — **or** `BLOCKED` for the single expected reason that the PR
-title still carries a `[wip]` / `[e2e-test]` execution-mode bracket, which keeps `ci-gate`
-deliberately red. That is not a real blocker here: Phase 7.5a strips the bracket and Phase 7.6
-re-validates in final mode. Treat it as `CLEAN` for the purpose of continuing **only when** every
+title still carries a `[wip]` / `[e2e-test]` execution-mode bracket, which makes the required
+`merge-gate` check `neutral` (`ci-gate` itself is still green in `[wip]` when the checks pass).
+That is not a real blocker here: Phase 7.5a strips the bracket and Phase 7.6 re-validates in final
+mode. Treat it as `CLEAN` for the purpose of continuing **only when** `ci-gate` and every
 non-`skipped` branch job (`api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`) on the current head is
-`success` and there are no merge conflicts — i.e. `ci-gate`'s `[wip]` annotation is the sole cause.
-If branch jobs are failing, or `BLOCKED` has any other cause, treat it as a real `BLOCKED` below.
+`success`, `merge-gate` is `neutral` (not `failure`), and there are no merge conflicts. If
+`ci-gate` or a branch job is failing, or `BLOCKED` has any other cause, treat it as a real
+`BLOCKED` below.
 
 - If it is `BEHIND`, auto-rebase instead of stopping — this is the common case (main moved while
   the PR sat waiting for review) and rebases cleanly almost every time. First confirm the working
@@ -461,10 +463,12 @@ gh pr edit <N> --repo <owner>/<repo> --title "<same title, third bracket removed
 ```
 
 This is the promotion the review flow was waiting on: the `pull_request: edited` trigger re-runs
-CI in **final mode** (full Cypress suite, `ci-gate` able to go green). The squash force-push below
-supersedes that run within seconds via the `ci-*` concurrency group, so Phase 7.6a ends up
-watching a single final-mode run against the squashed commit. If the title had no such bracket,
-this is a no-op — record it as "already final" and continue.
+CI in **final mode** — the full Cypress suite runs and the `merge-gate` check, `neutral` while the
+bracket was present, is re-posted as `success` (iff `ci-gate` passes). The squash force-push below
+supersedes that run within
+seconds via the `ci-*` concurrency group, so Phase 7.6a ends up watching a single final-mode run
+against the squashed commit. If the title had no such bracket, this is a no-op — record it as
+"already final" and continue.
 
 ### 7.5b. Final squash and single push
 
@@ -534,10 +538,12 @@ while Phases 2–6 and 7.5 run.
 gh pr checks <N> --repo <owner>/<repo> --watch
 ```
 
-This blocks until every check finishes running. The PR is now in final mode (7.5a), so `ci-gate`
-**must** conclude `SUCCESS` — its `[wip]` annotation must be gone. If any check's conclusion is not
-`SUCCESS` (or a legitimate `SKIPPED` for a surface this PR didn't touch), list it by name and stop
-— do not declare the PR ready to merge, but do **not** revert the Phase 7.5b push either. The
+This blocks until every check finishes running. The PR is now in final mode (7.5a), so both
+required checks — `ci-gate` **and** `merge-gate` — must conclude `SUCCESS`; `merge-gate` flipping
+from `neutral` to `success` is the proof the bracket is really gone. If any check's conclusion is
+not `SUCCESS` (or a
+legitimate `SKIPPED` for a surface this PR didn't touch), list it by name and stop — do not declare
+the PR ready to merge, but do **not** revert the Phase 7.5b push either. The
 housekeeping is already committed and pushed; the user (or a follow-up code fix) just needs a new
 commit, after which Phases 7.5b–7.6 alone can be re-run.
 
@@ -642,7 +648,7 @@ If `DIRTY`/`BLOCKED` instead, report the reason and stop.
 - [x] Promoted `[wip]` → final (or: already final)
 
 ### Final validation on the merge-ready commit (Phase 7.6)
-- [x] CI checks (final mode): <M>/<M> passing — `ci-gate` green
+- [x] CI checks (final mode): <M>/<M> passing — `ci-gate` + `merge-gate` green
 - [x] Codex review: no major findings (reviewed `<sha>`, matches HEAD) — <M> minor suggestions
 - [x] SonarCloud quality gate: passed (api + webapp)
 - [x] Mergeable: still clean, no conflicts (re-checked post-push — `main` didn't move under us)

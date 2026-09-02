@@ -39,22 +39,30 @@ branch keeps its `<type>/<NNN>-<desc>` name (see [`branches.md`](./branches.md))
 
 **What each flag triggers:**
 
-| Title | Mode | `api-ci` / `webapp-ci` | `e2e-ci` (Cypress) | `scripts-tests` | `ci-gate` | Mergeable? |
-|---|---|---|---|---|---|---|
-| `… [#NNN][x][e2e-test] - …` | **e2e-test** — Cypress-only diagnostic loop | **skipped** (no lint / PHPUnit / Vitest / coverage / Sonar) | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** even if `.github/scripts/**` changed | **red** — "diagnostic mode, not a merge candidate" | ❌ never |
-| `… [#NNN][x][wip] - …` | **wip** — implementation / review / correction | run when their surface, or pipeline infra, changed (`lint → tests → coverage → sonar`) | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`; **full** suite if any changed code file is unmapped or pipeline infra changed | runs iff `.github/scripts/**` changed | **red** — "not a merge candidate even if every check is green" | ❌ never |
-| `… [#NNN][x] - …` (no third bracket) | **final** — merge candidate | same as `[wip]` | **full** suite whenever anything E2E-relevant changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed; a documentation / non-pipeline-config-only PR short-circuits to a fast green | ✅ **the only mode a PR can merge from** |
+| Title | Mode | `api-ci` / `webapp-ci` | `e2e-ci` (Cypress) | `scripts-tests` | `ci-gate` (quality) | `merge-gate` | Mergeable? |
+|---|---|---|---|---|---|---|---|
+| `… [#NNN][x][e2e-test] - …` | **e2e-test** — Cypress-only diagnostic loop | **skipped** (no lint / PHPUnit / Vitest / coverage / Sonar) | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** even if `.github/scripts/**` changed | **green** iff the specs that ran passed | **`neutral`** (grey) | ❌ never |
+| `… [#NNN][x][wip] - …` | **wip** — implementation / review / correction | run when their surface, or pipeline infra, changed (`lint → tests → coverage → sonar`) | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`; **full** suite if any changed code file is unmapped or pipeline infra changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed — a red `ci-gate` is always a real failure | **`neutral`** (grey) — blocks merge without a red X | ❌ never |
+| `… [#NNN][x] - …` (no third bracket) | **final** — merge candidate | same as `[wip]` | **full** suite whenever anything E2E-relevant changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed; a documentation / non-pipeline-config-only PR short-circuits to a fast green | **green** iff `ci-gate` passed | ✅ **the only mode a PR can merge from** |
+
+Both `ci-gate` and `merge-gate` are required status checks. `ci-gate` answers "did everything that
+ran pass?" and is evaluated identically in every mode. `merge-gate` answers "may this PR merge
+now?" — it is a check run posted via the Checks API so it can carry a `neutral` conclusion: it is
+posted `success` only in final mode (iff `ci-gate` passed), and **`neutral`** in `[wip]` /
+`[e2e-test]` — a grey dot, not a red X, that still keeps the merge button disabled because
+`neutral` is not `success`, until the bracket is removed.
 
 Rules:
 
 1. **Open the PR with `[wip]` from the start** (or `[e2e-test]` while iterating specifically on
-   Cypress specs) — CI runs the WIP mode while work is in progress and keeps `ci-gate` red. The
-   `/start-issue`, `/issue`, `/issue-full` and `/issue-no-review` commands do this automatically:
-   their `gh pr create` title template carries the `[wip]` bracket. None of them ever removes it.
+   Cypress specs) — CI runs the WIP mode while work is in progress: `ci-gate` still goes green when
+   the checks pass, and `merge-gate` is posted `neutral` so the PR stays unmergeable. The `/start-issue`,
+   `/issue`, `/issue-full` and `/issue-no-review` commands do this automatically: their
+   `gh pr create` title template carries the `[wip]` bracket. None of them ever removes it.
 2. **Promotion to final — dropping the bracket — is what `/finish-pr` does** (its Phase 7.5a), once
    the review (manual or automated) has left the PR ready. The `pull_request: edited` trigger
-   re-runs CI in *final* mode (full Cypress + a green `ci-gate`); `/finish-pr` then waits for that
-   run and validates it (Phase 7.6). You can also drop the bracket by hand earlier if you want
+   re-runs CI in *final* mode (full Cypress + `merge-gate` now runs); `/finish-pr` then waits for
+   that run and validates it (Phase 7.6). You can also drop the bracket by hand earlier if you want
    final-mode CI sooner — nothing else about the title changes:
    ```bash
    gh pr edit <N> --title "✨ [#016][a] - Employee CRUD API ✨"
