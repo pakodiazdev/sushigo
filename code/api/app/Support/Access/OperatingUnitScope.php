@@ -143,6 +143,33 @@ class OperatingUnitScope
         );
     }
 
+    /**
+     * Constrain a Receipt query to the user's accessible units, via the
+     * receiving destinationLocation relation. A no-op for bypass-role users.
+     *
+     * Purchase Receipts are an append-only operational history whose read
+     * path (#586) paginates and counts *after* this scope, so page metadata
+     * never leaks the existence or count of receipts in units the caller
+     * cannot access. #572 layers its receiving-Location routing contract on
+     * top of this same relation without touching the list pipeline.
+     *
+     * @param  Builder<\App\Models\Receipt>  $query
+     * @return Builder<\App\Models\Receipt>
+     */
+    public function constrainReceipts(Builder $query, User $user): Builder
+    {
+        if ($this->hasUnrestrictedAccess($user)) {
+            return $query;
+        }
+
+        $unitIds = $this->accessibleOperatingUnitIds($user);
+
+        return $query->whereHas(
+            'destinationLocation',
+            fn (Builder $locationQuery) => $locationQuery->whereIn('operating_unit_id', $unitIds)
+        );
+    }
+
     private function resolveLocationOperatingUnitId(InventoryLocation|int|string|null $location): ?int
     {
         if ($location === null) {

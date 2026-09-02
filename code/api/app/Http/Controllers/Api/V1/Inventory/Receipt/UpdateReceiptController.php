@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Inventory\Receipt;
 
 use App\Exceptions\ReceiptAlreadyPostedException;
+use App\Http\Controllers\Api\V1\Inventory\Receipt\Concerns\AssertsReceiptOperatingUnitAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\Receipt\UpdateReceiptRequest;
 use App\Http\Resources\Inventory\Receipt\ReceiptResource;
 use App\Models\Receipt;
 use App\Services\Inventory\ReceiptService;
+use App\Support\Access\OperatingUnitScope;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -34,10 +36,14 @@ use Illuminate\Http\JsonResponse;
  */
 class UpdateReceiptController extends Controller
 {
+    use AssertsReceiptOperatingUnitAccess;
+
     public function __construct(private readonly ReceiptService $service) {}
 
-    public function __invoke(UpdateReceiptRequest $request, Receipt $receipt): ReceiptResource|JsonResponse
+    public function __invoke(UpdateReceiptRequest $request, Receipt $receipt, OperatingUnitScope $scope): ReceiptResource|JsonResponse
     {
+        $this->assertReceiptInScope($scope, $receipt);
+
         try {
             $updated = $this->service->updateDraft($receipt->id, $request->receiptData());
         } catch (ReceiptAlreadyPostedException $e) {

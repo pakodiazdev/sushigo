@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Receipt } from '../../types'
+import type { Receipt, ReceiptSummary } from '../../types'
 
 const draftReceipt: Receipt = {
   id: 'r1',
@@ -21,11 +21,33 @@ const draftReceipt: Receipt = {
   lines: [],
 }
 
-const mocks = vi.hoisted(() => ({ invalidateQueries: vi.fn(), showSuccess: vi.fn(), showError: vi.fn() }))
+const draftSummary: ReceiptSummary = {
+  id: 'r1',
+  status: 'DRAFT',
+  reference: 'FAC-0001',
+  receipt_date: '2026-08-25',
+  notes: null,
+  total: 4950,
+  supplier: { id: 's1', code: 'SUP', name: 'Proveedor Uno' },
+  destination_location: { id: 'loc1', name: 'Bodega Central' },
+  posted_at: null,
+  reversed_at: null,
+  created_at: '2026-08-25T00:00:00Z',
+  updated_at: '2026-08-25T00:00:00Z',
+}
+
+const mocks = vi.hoisted(() => ({ invalidateQueries: vi.fn(), setQueryData: vi.fn(), showSuccess: vi.fn(), showError: vi.fn() }))
 
 vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
-  useQuery: () => ({ data: { data: { data: [draftReceipt] } }, isLoading: false, isError: false }),
+  useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries, setQueryData: mocks.setQueryData }),
+  useQuery: ({ queryKey }: { queryKey: unknown[] }) =>
+    queryKey.includes('detail')
+      ? { data: { data: { data: draftReceipt } }, isLoading: false, isError: false }
+      : {
+          data: { data: { data: [draftSummary], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } } },
+          isLoading: false,
+          isError: false,
+        },
   useMutation: (config: { mutationFn: (value: unknown) => Promise<unknown>; onSuccess: (data: unknown) => void }) => ({
     mutate: async (value: unknown) => {
       const data = await config.mutationFn(value)
@@ -35,10 +57,10 @@ vi.mock('@tanstack/react-query', () => ({
   }),
 }))
 vi.mock('@/components/ui/toast-context', () => ({ useToast: () => ({ showSuccess: mocks.showSuccess, showError: mocks.showError }) }))
-vi.mock('../../api/receipt-api', () => ({ receiptApi: { list: vi.fn(), delete: vi.fn(), post: vi.fn(), reverse: vi.fn() } }))
+vi.mock('../../api/receipt-api', () => ({ receiptApi: { list: vi.fn(), get: vi.fn(), delete: vi.fn(), post: vi.fn(), reverse: vi.fn() } }))
 vi.mock('@/components/auth', () => ({ CanAccess: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 vi.mock('@/components/ui/data-grid', () => ({
-  DataGrid: ({ data, onRowClick }: { data: Receipt[]; onRowClick: (value: Receipt, event: unknown) => void }) => (
+  DataGrid: ({ data, onRowClick }: { data: ReceiptSummary[]; onRowClick: (value: ReceiptSummary, event: unknown) => void }) => (
     <div>{data.map((receipt) => <button key={receipt.id} onClick={(event) => onRowClick(receipt, event)}>{receipt.reference}</button>)}</div>
   ),
 }))
@@ -91,7 +113,7 @@ describe('ReceiptsPage', () => {
     expect(view.getByRole('heading', { name: 'Nueva recepción', level: 2 })).toBeDefined()
     fireEvent.click(view.getByRole('button', { name: 'Guardar recepción' }))
 
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['receipts'] })
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['receipts', 'list'] })
   })
 
   it('switches to edit mode from the detail panel and back to detail on save', () => {

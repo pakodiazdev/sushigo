@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Inventory\Receipt;
 
+use App\Http\Controllers\Api\V1\Inventory\Receipt\Concerns\AssertsReceiptOperatingUnitAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\Receipt\ReceiptResource;
 use App\Models\Receipt;
+use App\Support\Access\OperatingUnitScope;
 
 /**
  * @OA\Get(
@@ -26,8 +28,12 @@ use App\Models\Receipt;
  */
 class ShowReceiptController extends Controller
 {
-    public function __invoke(Receipt $receipt): ReceiptResource
+    use AssertsReceiptOperatingUnitAccess;
+
+    public function __invoke(Receipt $receipt, OperatingUnitScope $scope): ReceiptResource
     {
+        $this->assertReceiptInScope($scope, $receipt);
+
         return new ReceiptResource($receipt->load([
             'supplier',
             'destinationLocation',

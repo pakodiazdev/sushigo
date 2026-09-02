@@ -8,11 +8,13 @@ use App\Exceptions\ReceiptAlreadyReversedException;
 use App\Exceptions\ReceiptNotPostedException;
 use App\Exceptions\ReceiptReversalBoundaryException;
 use App\Exceptions\ReceiptVariantUnavailableException;
+use App\Http\Controllers\Api\V1\Inventory\Receipt\Concerns\AssertsReceiptOperatingUnitAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\Receipt\ReverseReceiptRequest;
 use App\Http\Resources\Inventory\Receipt\ReceiptResource;
 use App\Models\Receipt;
 use App\Services\Inventory\ReceiptService;
+use App\Support\Access\OperatingUnitScope;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -36,10 +38,14 @@ use Illuminate\Http\JsonResponse;
  */
 class ReverseReceiptController extends Controller
 {
+    use AssertsReceiptOperatingUnitAccess;
+
     public function __construct(private readonly ReceiptService $service) {}
 
-    public function __invoke(ReverseReceiptRequest $request, Receipt $receipt): ReceiptResource|JsonResponse
+    public function __invoke(ReverseReceiptRequest $request, Receipt $receipt, OperatingUnitScope $scope): ReceiptResource|JsonResponse
     {
+        $this->assertReceiptInScope($scope, $receipt);
+
         try {
             $reversed = $this->service->reverseReceipt($receipt->id, $request->user()->id, $request->input('reason'));
         } catch (ReceiptNotPostedException|ReceiptAlreadyReversedException|ReceiptReversalBoundaryException|ReceiptVariantUnavailableException $e) {

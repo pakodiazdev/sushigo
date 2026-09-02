@@ -15,8 +15,17 @@ import { apiClient } from '@/lib/api-client'
 describe('receiptApi', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('lists receipts with status and supplier filters', () => {
-    const params = { status: 'DRAFT' as const, supplier_id: 'supplier-id' }
+  it('lists receipts with pagination, status, supplier and search params', () => {
+    const params = {
+      page: 2,
+      per_page: 15,
+      status: 'DRAFT' as const,
+      supplier_id: 'supplier-id',
+      destination_location_id: 'location-id',
+      date_from: '2026-08-01',
+      date_to: '2026-08-31',
+      search: 'FAC-2026',
+    }
     receiptApi.list(params)
     expect(apiClient.get).toHaveBeenCalledWith('/inventory/receipts', { params })
   })

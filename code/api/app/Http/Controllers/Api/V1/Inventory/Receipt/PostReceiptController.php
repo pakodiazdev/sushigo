@@ -8,10 +8,12 @@ use App\Exceptions\ReceiptAlreadyPostedException;
 use App\Exceptions\ReceiptAlreadyReversedException;
 use App\Exceptions\ReceiptDestinationUnavailableException;
 use App\Exceptions\ReceiptVariantUnavailableException;
+use App\Http\Controllers\Api\V1\Inventory\Receipt\Concerns\AssertsReceiptOperatingUnitAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\Receipt\ReceiptResource;
 use App\Models\Receipt;
 use App\Services\Inventory\ReceiptService;
+use App\Support\Access\OperatingUnitScope;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -33,10 +35,14 @@ use Illuminate\Http\JsonResponse;
  */
 class PostReceiptController extends Controller
 {
+    use AssertsReceiptOperatingUnitAccess;
+
     public function __construct(private readonly ReceiptService $service) {}
 
-    public function __invoke(Receipt $receipt): ReceiptResource|JsonResponse
+    public function __invoke(Receipt $receipt, OperatingUnitScope $scope): ReceiptResource|JsonResponse
     {
+        $this->assertReceiptInScope($scope, $receipt);
+
         try {
             $posted = $this->service->postReceipt($receipt->id, request()->user()->id);
         } catch (ReceiptAlreadyPostedException|ReceiptAlreadyReversedException|ReceiptDestinationUnavailableException|ReceiptVariantUnavailableException $e) {

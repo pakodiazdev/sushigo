@@ -194,4 +194,90 @@ describe('Purchase Receipts', () => {
     cy.contains('Revertida').should('be.visible')
     cy.contains('Recepción de prueba Cypress').should('be.visible')
   })
+
+  // #586 — the Receipt history list is server-side paginated (bounded page size 15).
+  // Prove the operator can browse a Receipt that lives past page 1 without the UI
+  // loading the whole dataset. Un-quarantines together with the rest of this spec
+  // under #548.
+  it('browses to a Purchase Receipt outside the first page', () => {
+    cy.request({
+      method: 'POST',
+      url: `${apiUrl}/auth/login`,
+      body: { email, password },
+    }).then((loginResponse) => {
+      const headers = { Authorization: `Bearer ${loginResponse.body.data.token as string}` }
+
+      cy.request({
+        method: 'GET',
+        url: `${apiUrl}/inventory/suppliers?search=${encodeURIComponent(SUPPLIER_NAME)}`,
+        headers,
+      }).then((suppliersResponse) => {
+        const supplierId = (suppliersResponse.body.data as Array<{ id: string; name: string }>)
+          .find((candidate) => candidate.name === SUPPLIER_NAME)!.id
+
+        cy.request({
+          method: 'GET',
+          url: `${apiUrl}/inventory-locations?search=${encodeURIComponent(LOCATION_NAME)}`,
+          headers,
+        }).then((locationsResponse) => {
+          const locationId = (locationsResponse.body.data as Array<{ id: string; name: string }>)
+            .find((candidate) => candidate.name === LOCATION_NAME)!.id
+
+          cy.request({
+            method: 'GET',
+            url: `${apiUrl}/inventory/products?search=${encodeURIComponent(PRODUCT_NAME)}`,
+            headers,
+          }).then((productsResponse) => {
+            const productId = (productsResponse.body.data as Array<{ id: string; name: string }>)
+              .find((candidate) => candidate.name === PRODUCT_NAME)!.id
+
+            cy.request({
+              method: 'GET',
+              url: `${apiUrl}/inventory/products/${productId}/variants/purchase-presentations`,
+              headers,
+            }).then((presentationsResponse) => {
+              const presentationId = (presentationsResponse.body.data as Array<{ id: string }>)[0].id
+
+              // Seed 16 receipts so the default 15-per-page bound leaves one on page 2.
+              Cypress._.times(16, (index) => {
+                cy.request({
+                  method: 'POST',
+                  url: `${apiUrl}/inventory/receipts`,
+                  headers,
+                  body: {
+                    supplier_id: supplierId,
+                    destination_location_id: locationId,
+                    reference: `PAGINATION-${String(index + 1).padStart(3, '0')}`,
+                    receipt_date: `2026-07-${String(index + 1).padStart(2, '0')}`,
+                    lines: [
+                      {
+                        variant_purchase_presentation_id: presentationId,
+                        received_packages: 1,
+                        gross_amount: 100,
+                      },
+                    ],
+                  },
+                })
+              })
+            })
+          })
+        })
+      })
+    })
+
+    cy.visitWithAuth('/inventario/recepciones-de-compra')
+    cy.contains('h1', 'Recepciones de Compra', { timeout: 10_000 }).should('be.visible')
+
+    // Bounded page: exactly 15 rows, and the oldest reference (PAGINATION-001) is not
+    // on page 1 under receipt_date DESC ordering.
+    cy.get('table tbody tr').should('have.length', 15)
+    cy.contains('PAGINATION-001').should('not.exist')
+
+    cy.get('nav[aria-label], [aria-label="Página siguiente"]').first().should('exist')
+    cy.get('[aria-label="Página siguiente"]').click()
+
+    cy.contains('PAGINATION-001', { timeout: 10_000 }).should('be.visible').click()
+    cy.contains('h2', 'Detalle de la recepción').should('be.visible')
+    cy.contains('PAGINATION-001').should('be.visible')
+  })
 })
