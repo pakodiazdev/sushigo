@@ -73,20 +73,30 @@ de Sprint 8.
 
 Registrar una Recepción (`ReceiptService::postReceipt`) es atómico por línea: bloquea la fila del
 encabezado de la Recepción durante toda la transacción (cerrando el mismo hueco de registro
-duplicado/concurrente que el `#430` cerró para Stock), luego para cada línea invoca el
-`StockMutationService::receiveInto()` existente —el mismo patrón de bloqueo/recuperación de
-condición de carrera que introdujo `#430` para Stock— y escribe evidencia inmutable de
-`StockMovement`/`StockMovementLine` (`reason: PURCHASE_RECEIPT`, vinculada a la Recepción mediante
-`related_id`/`related_type`). Revertir una Recepción registrada (`reverseReceipt`) disminuye Stock
-en las mismas unidades base mediante el propio `decreaseOnHand()` protegido de Stock; si el consumo
-ya redujo el disponible por debajo de lo que aportó la recepción, la reversión se rechaza
+duplicado/concurrente que el `#430` cerró para Stock), luego delega cada línea al
+`InventoryEntryPostingService` compartido (#567) —la única primitiva de entrada que bloquea o crea
+de forma segura ante condiciones de carrera la fila de `Stock` destino (el patrón de
+bloqueo/recuperación de `#430`), combina el costo unitario efectivo (`#434`) y agrega evidencia
+inmutable de `StockMovement`/`StockMovementLine` (`reason: PURCHASE_RECEIPT`, vinculada a la
+Recepción mediante `related_type`/`related_id`/`related_line_id`) como una sola operación
+transaccionalmente consistente—. Revertir una Recepción registrada (`reverseReceipt`) disminuye
+Stock en las mismas unidades base mediante el propio `decreaseOnHand()` protegido de Stock; si el
+consumo ya redujo el disponible por debajo de lo que aportó la recepción, la reversión se rechaza
 (`ReceiptReversalBoundaryException`) en vez de dejar Stock en negativo.
 
-**Estado as-built al 2026-08-30.** El bloqueo del encabezado protege la confirmación normal, pero
-cada línea todavía orquesta Stock/costo/movimiento dentro de `ReceiptService`; la identidad de la
-línea origen vive en `meta.receipt_line_id`, sin una restricción única reutilizable. #567
-centraliza la entrada y agrega identidad de documento/línea respaldada por BD para que reintentos,
-procesos en segundo plano o importaciones no dupliquen el efecto.
+### Identidad de línea origen e idempotencia (#567)
+
+Cada entrada registrada lleva identidad de origen explícita —`related_type`/`related_id` (la
+Recepción) más `related_line_id` (la `ReceiptLine`)— en vez de esconder la clave de línea dentro de
+`meta`. Un índice UNIQUE parcial sobre `(related_type, related_id, related_line_id, reason)`,
+restringido a filas `POSTED` vivas con línea no nula, es el respaldo final de idempotencia: reprocesar
+la misma línea de recepción (un reintento en cola, una importación, un doble registro concurrente)
+devuelve el movimiento ya registrado en vez de incrementar Stock una segunda vez. `related_line_id`
+es nulo para movimientos manuales sin documento origen (p. ej. Saldo Inicial), que el índice parcial
+deja sin restringir; `reason` forma parte de la clave para que una reversión compensatoria
+`PURCHASE_RECEIPT_REVERSAL` que comparte la línea del documento no choque con su original
+`PURCHASE_RECEIPT`. `reverseReceipt` resuelve el movimiento que compensa por `related_line_id` (los
+movimientos registrados antes de #567 se rellenaron desde el anterior `meta.receipt_line_id`).
 
 El costo de adquisición se registra en `Stock.weighted_avg_cost`, nunca en `ItemVariant` — el Issue
 es explícito en que el costo "no debe capturarse en Producto o Variante". El `#434` unificó esto:

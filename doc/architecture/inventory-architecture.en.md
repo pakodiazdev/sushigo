@@ -909,8 +909,15 @@ erDiagram
   purchase and does not require `can_receive_purchases` (#570).
 - Posting a Transfer decrements source and increments destination in one transaction and appends
   one `TRANSFER` row per line (#573).
-- #567 centralizes entries and adds unique document-line identity so a retry cannot apply the same
-  effect twice.
+- Every inbound entry (Receipt line, Opening Balance) posts through the one
+  `InventoryEntryPostingService` primitive (#567), which appends the immutable movement, locks or
+  race-safely creates `Stock`, and blends weighted-average cost as one operation the owning document
+  transaction controls.
+- Source-line identity is explicit on the movement — `related_type`/`related_id`/`related_line_id` —
+  and a partial UNIQUE index over `(related_type, related_id, related_line_id, reason)` (live `POSTED`
+  rows with a non-null line only) makes replaying the same source line idempotent: it returns the
+  existing movement instead of incrementing Stock twice. `related_line_id` is null for manual
+  movements with no source document, which the index leaves unconstrained.
 - Every reversal is compensating; posted history is never edited or deleted.
 
 #### Read-only movement ledger (#574 target)

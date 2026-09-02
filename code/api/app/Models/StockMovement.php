@@ -26,6 +26,7 @@ class StockMovement extends Model
         'reference',
         'related_id',
         'related_type',
+        'related_line_id',
         'reverses_stock_movement_id',
         'reversed_by_user_id',
         'reversed_at',

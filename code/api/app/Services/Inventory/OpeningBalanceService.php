@@ -2,12 +2,13 @@
 
 namespace App\Services\Inventory;
 
+use App\DataTransferObjects\Inventory\InventoryEntryLineData;
+use App\DataTransferObjects\Inventory\InventoryEntryPostingData;
 use App\DataTransferObjects\Inventory\RegisterOpeningBalanceData;
 use App\Exceptions\UomConversionNotFoundException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
 use App\Models\StockMovement;
-use App\Models\StockMovementLine;
 use App\Models\UnitOfMeasure;
 use App\Services\Inventory\Concerns\ConvertsUomQuantities;
 use App\Support\Clock\ApplicationClock;
@@ -19,7 +20,7 @@ class OpeningBalanceService
 
     public function __construct(
         private readonly ApplicationClock $clock,
-        private readonly StockMutationService $stockMutation,
+        private readonly InventoryEntryPostingService $entryPosting,
     ) {}
 
     /**
@@ -63,18 +64,22 @@ class OpeningBalanceService
             // Calculate unit cost in base UOM
             $baseCost = $this->calculateBaseCost($unitCost, $conversionFactor);
 
-            // Create stock movement
-            $movement = StockMovement::create([
-                'from_location_id' => null,
-                'to_location_id' => $inventoryLocationId,
-                'item_variant_id' => $itemVariantId,
-                'user_id' => $userId,
-                'qty' => $baseQuantity,
-                'reason' => StockMovement::REASON_OPENING_BALANCE,
-                'status' => StockMovement::STATUS_POSTED,
-                'reference' => $reference,
-                'notes' => $notes,
-                'meta' => [
+            // One posting primitive writes the immutable movement + line,
+            // race-safely creates/increments Stock, and blends the
+            // weighted-average cost (#567). An Opening Balance has no source
+            // document, so it carries no source-line identity — it stays a
+            // manual entry with no idempotency contract. A null cost skips the
+            // blend; an explicit 0 still blends (e.g. free stock).
+            $movement = $this->entryPosting->post(new InventoryEntryPostingData(
+                inventoryLocationId: $inventoryLocationId,
+                itemVariantId: $itemVariantId,
+                baseQuantity: $baseQuantity,
+                reason: StockMovement::REASON_OPENING_BALANCE,
+                userId: $userId,
+                unitCost: $baseCost,
+                reference: $reference,
+                notes: $notes,
+                movementMeta: [
                     'original_qty' => $quantity,
                     'original_uom' => $entryUom->code,
                     'original_uom_id' => $entryUomId,
@@ -82,36 +87,16 @@ class OpeningBalanceService
                     'unit_cost' => $unitCost,
                     'base_cost' => $baseCost,
                 ],
-                'posted_at' => $this->clock->nowUtc(),
-            ]);
-
-            // Create movement line
-            StockMovementLine::create([
-                'stock_movement_id' => $movement->id,
-                'item_variant_id' => $itemVariantId,
-                'uom_id' => $entryUomId,
-                'qty' => $quantity,
-                'base_qty' => $baseQuantity,
-                'conversion_factor' => $conversionFactor,
-                'unit_cost' => $baseCost,
-                'line_total' => $baseCost ? $baseQuantity * $baseCost : null,
-                'meta' => [],
-            ]);
-
-            // Update or create stock record — race-safe against a concurrent
-            // first receipt for the same location+variant (see StockMutationService)
-            $stock = $this->stockMutation->receiveInto($inventoryLocationId, $itemVariantId, $baseQuantity);
-
-            // Blend into this location's weighted-average cost (#434). The
-            // former per-Variant avg_unit_cost/last_unit_cost columns this
-            // used to diverge from were dropped in #442; Stock (per Inventory
-            // Location) is now the only source of truth for acquisition cost.
-            // An explicit 0 must still blend (e.g. free stock) — only a
-            // missing (null) cost means "no cost supplied," matching
-            // ReceiptService's unconditional blend on every line.
-            if ($baseCost !== null) {
-                $stock->applyWeightedAverageCost($baseQuantity, $baseCost);
-            }
+                postedAt: $this->clock->nowUtc(),
+                line: new InventoryEntryLineData(
+                    uomId: $entryUomId,
+                    qty: $quantity,
+                    baseQty: $baseQuantity,
+                    conversionFactor: $conversionFactor,
+                    unitCost: $baseCost,
+                    lineTotal: $baseCost ? $baseQuantity * $baseCost : null,
+                ),
+            ));
 
             return $movement->fresh(['lines', 'toLocation', 'itemVariant.item']);
         });

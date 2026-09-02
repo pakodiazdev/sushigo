@@ -2,6 +2,8 @@
 
 namespace App\Services\Inventory;
 
+use App\DataTransferObjects\Inventory\InventoryEntryLineData;
+use App\DataTransferObjects\Inventory\InventoryEntryPostingData;
 use App\DataTransferObjects\Inventory\ReceiptLineData;
 use App\DataTransferObjects\Inventory\SaveReceiptData;
 use App\Exceptions\InvalidStockBalanceException;
@@ -22,13 +24,16 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Creates/edits draft Purchase Receipts and posts/reverses them atomically
- * into Stock, reusing StockMutationService's lockForUpdate + race-recovery
- * pattern from #430 for every location+variant it touches.
+ * into Stock. Posting delegates every received line to the shared
+ * InventoryEntryPostingService (#567), which owns the lockForUpdate +
+ * race-recovery pattern from #430, the weighted-average cost blend (#434), the
+ * immutable movement/line evidence (#438), and the per-source-line idempotency
+ * backstop. Receipt-header locking still guards the document lifecycle.
  */
 class ReceiptService
 {
     public function __construct(
-        private readonly StockMutationService $stockMutation,
+        private readonly InventoryEntryPostingService $entryPosting,
     ) {}
 
     public function createDraft(SaveReceiptData $data): Receipt
@@ -153,45 +158,43 @@ class ReceiptService
 
                 $baseUnits = (float) $line->base_units_received;
 
-                $stock = $this->stockMutation->receiveInto($receipt->destination_location_id, $itemVariant->id, $baseUnits);
-                $stock->applyWeightedAverageCost($baseUnits, (float) $line->effective_unit_cost);
-
-                $movement = StockMovement::create([
-                    'from_location_id' => null,
-                    'to_location_id' => $receipt->destination_location_id,
-                    'item_variant_id' => $itemVariant->id,
-                    'user_id' => $userId,
-                    'qty' => $baseUnits,
-                    'reason' => StockMovement::REASON_PURCHASE_RECEIPT,
-                    'status' => StockMovement::STATUS_POSTED,
-                    'reference' => $receipt->reference,
-                    'related_id' => $receipt->id,
-                    'related_type' => Receipt::class,
-                    'meta' => [
-                        'receipt_line_id' => $line->id,
+                // One posting primitive per line (#567): locks/creates Stock,
+                // blends the effective unit cost, and appends immutable
+                // evidence. Source identity is explicit via
+                // related_type/related_id/related_line_id — replaying the same
+                // receipt line (queue retry, import) returns the existing
+                // movement instead of incrementing Stock twice.
+                $this->entryPosting->post(new InventoryEntryPostingData(
+                    inventoryLocationId: $receipt->destination_location_id,
+                    itemVariantId: $itemVariant->id,
+                    baseQuantity: $baseUnits,
+                    reason: StockMovement::REASON_PURCHASE_RECEIPT,
+                    userId: $userId,
+                    unitCost: (float) $line->effective_unit_cost,
+                    reference: $receipt->reference,
+                    sourceType: Receipt::class,
+                    sourceId: $receipt->id,
+                    sourceLineId: $line->id,
+                    movementMeta: [
                         'received_packages' => (float) $line->received_packages,
                         'bonus_packages' => (float) $line->bonus_packages,
                         'presentation_factor' => (float) $line->presentation_factor,
                     ],
-                    'posted_at' => now(),
-                ]);
-
-                StockMovementLine::create([
-                    'stock_movement_id' => $movement->id,
-                    'item_variant_id' => $itemVariant->id,
-                    // The base-unit UOM is the variant's own stock UOM — a purchase
-                    // package (Box x24, etc.) is not itself a UnitOfMeasure, so unlike
-                    // OpeningBalance (a real entry-UOM -> base-UOM conversion) this line
-                    // is expressed natively in base units; conversion_factor still
-                    // records the snapshotted package factor for traceability.
-                    'uom_id' => $itemVariant->uom_id,
-                    'qty' => $baseUnits,
-                    'base_qty' => $baseUnits,
-                    'conversion_factor' => $line->presentation_factor,
-                    'unit_cost' => $line->effective_unit_cost,
-                    'line_total' => $line->net_acquisition_amount,
-                    'meta' => [],
-                ]);
+                    line: new InventoryEntryLineData(
+                        // The base-unit UOM is the variant's own stock UOM — a
+                        // purchase package (Box x24, etc.) is not itself a
+                        // UnitOfMeasure, so unlike OpeningBalance (a real
+                        // entry-UOM -> base-UOM conversion) this line is
+                        // expressed natively in base units; conversion_factor
+                        // still snapshots the package factor for traceability.
+                        uomId: $itemVariant->uom_id,
+                        qty: $baseUnits,
+                        baseQty: $baseUnits,
+                        conversionFactor: (float) $line->presentation_factor,
+                        unitCost: (float) $line->effective_unit_cost,
+                        lineTotal: (float) $line->net_acquisition_amount,
+                    ),
+                ));
             }
 
             $receipt->update([
@@ -299,12 +302,11 @@ class ReceiptService
             'reference' => $receipt->reference,
             'related_id' => $receipt->id,
             'related_type' => Receipt::class,
+            'related_line_id' => $line->id,
             'reverses_stock_movement_id' => $originalMovement->id,
             'reversed_by_user_id' => null,
             'notes' => $reason,
-            'meta' => [
-                'receipt_line_id' => $line->id,
-            ],
+            'meta' => [],
             'posted_at' => now(),
         ]);
 
@@ -343,9 +345,9 @@ class ReceiptService
         $originalMovement = StockMovement::query()
             ->where('related_type', Receipt::class)
             ->where('related_id', $receipt->id)
+            ->where('related_line_id', $line->id)
             ->where('item_variant_id', $itemVariantId)
             ->where('reason', StockMovement::REASON_PURCHASE_RECEIPT)
-            ->where('meta->receipt_line_id', $line->id)
             ->lockForUpdate()
             ->first();
 

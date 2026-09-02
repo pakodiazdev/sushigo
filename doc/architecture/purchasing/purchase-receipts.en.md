@@ -69,18 +69,28 @@ Receipt DTOs still contain PHP `float` boundaries until that Sprint 8 issue is d
 
 Posting a Receipt (`ReceiptService::postReceipt`) is atomic per line: it locks the Receipt header row
 for the duration of the transaction (closing the same duplicate/concurrent-posting gap #430 closed
-for Stock itself), then for every line calls the existing `StockMutationService::receiveInto()` —
-the exact lock/race-recovery pattern #430 introduced for Stock — and writes immutable
+for Stock itself), then delegates every line to the shared `InventoryEntryPostingService` (#567) —
+the one inbound posting primitive that locks or race-safely creates the destination `Stock` row (the
+`#430` lock/recovery pattern), blends the effective unit cost (`#434`), and appends immutable
 `StockMovement`/`StockMovementLine` evidence (`reason: PURCHASE_RECEIPT`, linked back to the Receipt
-via `related_id`/`related_type`). Reversing a posted Receipt (`reverseReceipt`) decreases Stock by
-the same base units through Stock's own guarded `decreaseOnHand()`; if consumption has since dropped
-on-hand below what the receipt added, reversal is rejected (`ReceiptReversalBoundaryException`)
-rather than driving Stock negative.
+via `related_type`/`related_id`/`related_line_id`) as one transactionally consistent operation.
+Reversing a posted Receipt (`reverseReceipt`) decreases Stock by the same base units through Stock's
+own guarded `decreaseOnHand()`; if consumption has since dropped on-hand below what the receipt
+added, reversal is rejected (`ReceiptReversalBoundaryException`) rather than driving Stock negative.
 
-**As-built status on 2026-08-30.** Receipt-header locking protects normal confirmation, but every
-line still orchestrates Stock/cost/movement inside `ReceiptService`; source-line identity lives in
-`meta.receipt_line_id` without a reusable database uniqueness contract. #567 centralizes entry and
-adds DB-backed document/line identity so retries, jobs, or imports cannot apply the same effect twice.
+### Source-line identity and idempotency (#567)
+
+Every posted entry carries explicit source identity — `related_type`/`related_id` (the Receipt) plus
+`related_line_id` (the `ReceiptLine`) — instead of hiding the line key inside `meta`. A partial
+UNIQUE index over `(related_type, related_id, related_line_id, reason)`, restricted to live `POSTED`
+rows with a non-null line, is the final idempotency backstop: replaying the same receipt line (a
+queue retry, an import, a concurrent double-post) returns the already-posted movement rather than
+incrementing Stock a second time. `related_line_id` is null for manual movements with no source
+document (e.g. Opening Balance), which the partial index leaves unconstrained; `reason` is part of
+the key so a compensating `PURCHASE_RECEIPT_REVERSAL` sharing the document line does not collide with
+its `PURCHASE_RECEIPT` original. `reverseReceipt` resolves the movement it compensates by
+`related_line_id` (movements posted before #567 were backfilled from the former
+`meta.receipt_line_id`).
 
 Acquisition cost lands on `Stock.weighted_avg_cost`, never on `ItemVariant` — the issue is explicit
 that cost "must not be entered on Product or Variant". `#434` unified this: `OpeningBalanceService`

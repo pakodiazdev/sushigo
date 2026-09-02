@@ -312,6 +312,46 @@ class StockMovementContractTest extends InventoryTestCase
         ]);
     }
 
+    // ---- #567: explicit source-line identity -----------------------------
+
+    #[Test]
+    public function a_movement_records_explicit_source_line_identity_alongside_related_type_and_id(): void
+    {
+        $movement = StockMovement::create([
+            'to_location_id' => $this->location->id,
+            'item_variant_id' => $this->variant->id,
+            'user_id' => $this->user->id,
+            'qty' => 6,
+            'reason' => StockMovement::REASON_PURCHASE_RECEIPT,
+            'status' => StockMovement::STATUS_POSTED,
+            'related_type' => 'App\\Models\\Receipt',
+            'related_id' => 12,
+            'related_line_id' => 34,
+            'meta' => [],
+            'posted_at' => now(),
+        ]);
+
+        $this->assertSame(34, (int) $movement->fresh()->related_line_id);
+
+        // The single-line contract still holds with a source line present.
+        StockMovementLine::create([
+            'stock_movement_id' => $movement->id,
+            'item_variant_id' => $this->variant->id,
+            'uom_id' => $this->uomKg->id,
+            'qty' => 6, 'base_qty' => 6, 'conversion_factor' => 1,
+            'unit_cost' => 0, 'line_total' => 0, 'meta' => [],
+        ]);
+
+        $this->expectException(InvalidStockMovementContractException::class);
+        StockMovementLine::create([
+            'stock_movement_id' => $movement->id,
+            'item_variant_id' => $this->variant->id,
+            'uom_id' => $this->uomKg->id,
+            'qty' => 6, 'base_qty' => 6, 'conversion_factor' => 1,
+            'unit_cost' => 0, 'line_total' => 0, 'meta' => [],
+        ]);
+    }
+
     #[Test]
     public function a_movement_cannot_be_created_already_flagged_reversed(): void
     {
