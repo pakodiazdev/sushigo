@@ -596,12 +596,17 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   rebase-conflict abort-and-report, and 1b's `DIRTY`/`BLOCKED` mergeable-state check can each stop
   the run on their own — e.g. `main` picking up branch-protection rules this run didn't anticipate,
   or an unrelated local change dirtying the tree between Phase 7's push and Phase 9 starting. **One
-  override for this path:** the `reviewDecision == REVIEW_REQUIRED` carve-out in **both** 1b and
-  7.6c is written for a human running `/finish-pr` standalone — this pipeline runs unattended and
-  never has an approval, so a bare `REVIEW_REQUIRED` (with `ci-gate` + `merge-gate` and the branch
-  jobs green and no conflict) is **not** a stop at either point; carry on to Phase 10 and let its
-  report say "all gates green — pending your approval and merge". A `CHANGES_REQUESTED` decision
-  still stops, the same as standalone. None of the other conditions are a bug in this pipeline when they fire —
+  override for this path:** `finish-pr.md` Phase 1b (and Phase 7.6c) already accept a `BLOCKED`
+  state whose *only* app-level cause is the `[wip]` bracket — but their `reviewDecision` bullet, as
+  written, stops a *standalone* run on `REVIEW_REQUIRED` (branch protection wants an approval).
+  This pipeline runs unattended and never carries an approval, so **`REVIEW_REQUIRED` alone is not
+  a stop here** — at 1b it is expected (the PR is still `[wip]`, `merge-gate` is `action_required`,
+  and `mergeStateStatus` is `BLOCKED` regardless of approval); at 7.6c, after promotion, `ci-gate`
+  and `merge-gate` are green and a missing approval is the only remaining cause. Carry on to Phase
+  10 and let its report say "all gates green — pending your approval and merge". Everything else
+  `finish-pr.md` Phase 1b/7.6c checks still applies verbatim: `CHANGES_REQUESTED`, a merge
+  conflict, a failed `ci-gate`/branch job, unresolved review threads (1a), or `BLOCKED` for any
+  cause other than a bare pending approval **still stops** the run. None of those are a bug in this pipeline when they fire —
   follow `finish-pr.md`'s own instruction for that condition (report and stop, or the `/rebase-main`
   pointer on a rebase conflict) rather than
   guessing at a workaround.

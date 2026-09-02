@@ -307,11 +307,12 @@ jobs:
   # would block the merge here — `action_required` is the least-alarming conclusion that does.
   #
   # NB: this whole pipeline assumes **same-repo** PRs (dev-lab workspace clones push branches
-  # straight to this repo). A `pull_request` from a fork gets a read-only GITHUB_TOKEN, so
-  # `checks.create` cannot post `merge-gate` there; the step logs a warning and exits 0 instead of
-  # failing red. The required `merge-gate` check then simply never reports, and the fork PR stays
-  # unmergeable — which is the correct outcome for an unsupported contribution path. A maintainer
-  # who wants to land fork work re-pushes it from a same-repo branch.
+  # straight to this repo — fork contributions are not a supported path; there is no
+  # `pull_request_target` companion by design). A `pull_request` from a fork gets a read-only
+  # GITHUB_TOKEN, so `checks.create` cannot post `merge-gate`. The step then FAILS this job with an
+  # explicit "fork PRs unsupported" message — a loud, named signal — and the required `merge-gate`
+  # context also never reports, so the fork PR is doubly blocked. A maintainer who wants to land
+  # fork work re-pushes it from a same-repo branch.
   #
   # Branch protection must require the context `merge-gate`. This job is named differently so its
   # own auto check run does not collide with the `merge-gate` check run it posts.
@@ -363,9 +364,10 @@ jobs:
             const sha = pr?.head?.sha ?? context.sha;
 
             if (isFork) {
-              core.warning(
-                'merge-gate not posted: this is a fork PR and the GITHUB_TOKEN is read-only. ' +
-                'Fork PRs are unsupported by this pipeline — re-push the work from a same-repo branch.'
+              core.setFailed(
+                'Fork PRs are not supported by this pipeline: the GITHUB_TOKEN on a fork-triggered ' +
+                '`pull_request` run is read-only, so the required `merge-gate` check cannot be ' +
+                'posted. Re-push this work from a branch in pakodiazdev/sushigo to run CI.'
               );
               return;
             }
@@ -381,10 +383,10 @@ jobs:
                 output: { title, summary },
               });
             } catch (err) {
-              // Most likely a read-only token (fork PR that slipped past the check above, or a
-              // permissions regression). Warn rather than fail red — a hard failure would just
-              // add a confusing second blocking signal next to the un-reported `merge-gate`.
-              core.warning(`merge-gate could not be posted: ${err.message}`);
+              // A same-repo PR reached here, so `checks: write` should have been granted — a
+              // failure now is a real regression (permissions, API outage). Fail loudly rather
+              // than leave the required `merge-gate` context silently un-reported.
+              core.setFailed(`merge-gate could not be posted: ${err.message}`);
               return;
             }
             core.info(`merge-gate → ${conclusion} @ ${sha}`);

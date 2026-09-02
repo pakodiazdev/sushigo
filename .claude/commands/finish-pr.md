@@ -623,17 +623,26 @@ the Phase 8 report would otherwise claim "clean, no conflicts" on stale informat
 gh pr view <N> --repo <owner>/<repo> --json mergeable,mergeStateStatus,reviewDecision
 ```
 
-`mergeStateStatus` must still be `CLEAN` — **or** `BLOCKED` for the one remaining benign reason:
-the branch requires a human approval that isn't there yet (`reviewDecision == REVIEW_REQUIRED`).
-This is the same narrowly-scoped exception as Phase 1b, carried through to the final check: by now
-7.5a has promoted the PR, so `merge-gate` is `success` and every required check is green — a bare
-`REVIEW_REQUIRED` is the only thing left, and it is not something this command can or should
-resolve. Accept it here **only when** 7.6a's checks were all green, `mergeable` is not
-`CONFLICTING`, and `reviewDecision` is **not** `CHANGES_REQUESTED`. Record it so Phase 8's report
-says "all gates green — pending your approval and merge" instead of "Ready to merge". A human
-running `/finish-pr` standalone is expected to approve first; if they haven't, this is still not a
-hard stop — the report just names the missing approval. The `/issue*` pipelines rely on this
-exception (they run unattended and never carry an approval) — see their Phase 9 notes.
+`mergeStateStatus` must still be `CLEAN` — **or** `BLOCKED` with `reviewDecision ==
+REVIEW_REQUIRED`, which by now (7.5a promoted the PR, so `merge-gate` is `success` and every
+required check 7.6a saw is green) most likely means only a pending human approval. Accept it here
+**only when** all of these hold:
+- 7.6a's checks were all green (`ci-gate` + `merge-gate` + every branch job);
+- `mergeable` is not `CONFLICTING`;
+- `reviewDecision` is **not** `CHANGES_REQUESTED`;
+- **re-run Phase 1a's review-thread query** — every thread must still be `isResolved: true`. The
+  promotion push can attract a fresh automated-review thread; an unresolved one is a real stop
+  (point the user at `/pr-comments <N>`), not "pending approval".
+
+`REVIEW_REQUIRED` does **not** prove a pending approval is the *sole* blocker — a `BLOCKED` state
+can also carry a required check this command doesn't know to look for, a CODEOWNERS review, a
+"require linear history" rule, etc. So do not assert "approval is the only thing left". Record it
+for Phase 8 as: *"All gates this command checks are green. GitHub still reports the merge blocked
+(`reviewDecision: REVIEW_REQUIRED`) — approve the PR, and if it stays blocked after that, a branch-
+protection rule outside this command's view (CODEOWNERS, linear history, another required check) is
+also in play."* A human running `/finish-pr` standalone is expected to approve first; this is not
+a hard stop. The `/issue*` pipelines rely on this exception (they run unattended, never carry an
+approval) — see their Phase 9 notes.
 
 If it is now `BEHIND` (someone else's PR merged into `<baseRefName>` while Phases 2–6, 7.5, and
 7.6 ran), auto-rebase the same way as Phase 1b instead of stopping:
@@ -704,11 +713,13 @@ Everything above is green. I have not merged it — that's on you:
   gh pr merge <N> --merge      (branch is already a single commit, no need for --squash)
 ```
 
-If every gate is green but the branch still needs a human **approval** (7.6c saw `BLOCKED` /
-`reviewDecision == REVIEW_REQUIRED`, nothing else), replace "✅ Ready to merge" with
-`### ✅ All gates green — pending your approval`: the "Mergeable" line reads
-`[ ] Pending required approval — approve the PR, then merge`, and the closing line is
-`Approve, then: gh pr merge <N> --merge`.
+If every gate this command checks is green but 7.6c still saw `BLOCKED` /
+`reviewDecision == REVIEW_REQUIRED` (checks green, no conflict, threads resolved, not
+`CHANGES_REQUESTED`), replace "✅ Ready to merge" with
+`### ✅ All gates green — GitHub still reports the merge blocked`. The "Mergeable" line reads
+`[ ] BLOCKED — reviewDecision: REVIEW_REQUIRED. Approve the PR; if it stays blocked, a rule outside
+this command's view (CODEOWNERS, linear history, another required check) is also in play.` and the
+closing line is `Approve (and clear any remaining rule), then: gh pr merge <N> --merge`.
 
 If a merge requirement is **not** met, replace the "✅ Ready to merge" block with a
 `### ❌ Not ready to merge` block that lists each unmet requirement and, for each, the one concrete
