@@ -575,8 +575,9 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   is intended in this pipeline too: the automated flow drops the bracket and waits for the
   final-mode CI run) and **7.6** (final CI + Codex/Sonar re-validation) — this is the true final
   gate before Phase 10 below presents anything to the human. **Override for 7.6b:** `finish-pr.md`'s
-  own Phase 7.6b is now a read-only Codex-review + SonarCloud-quality-gate check. Run its Sonar
-  quality-gate sub-check as written. This variant does not drive Codex (its automated review is the
+  own Phase 7.6b is a Codex-review + SonarCloud-quality-gate check with no browser automation. Run
+  its Sonar quality-gate sub-check as written. This variant does not drive Codex (its automated
+  review is the
   Phase 8 Devin/DeepWiki subagent, already complete), so if no Codex review exists on the
   merge-ready commit, record 7.6b's Codex sub-check as `n/a — Devin/DeepWiki is this variant's
   automated review` rather than treating it as a failure; note that in Phase 10's report.
@@ -702,8 +703,8 @@ protective limit on a runaway loop or a precondition that genuinely isn't met ye
   automatically instead of waiting for a human. Its opening line already names both entry points
   ("call this only after the review — manual or automated — has left the PR ready"), so no edit is
   needed there. Its Phase 7.5a (promote the PR out of `[wip]`) runs as written. Its Phase 7.6b is
-  now a read-only Codex + SonarCloud-quality-gate check, not a Devin scan — Phase 9's override
-  above runs its Sonar sub-check and marks the Codex sub-check `n/a` for this variant. The
+  a Codex + SonarCloud-quality-gate check with no browser automation, not a Devin scan — Phase 9's
+  override above runs its Sonar sub-check and marks the Codex sub-check `n/a` for this variant. The
   Devin/DeepWiki re-scan post-squash is this file's **own** concern, driven by Phase 8's loop.
 - `.claude/skills/fix-tests/SKILL.md` — a narrower, standalone tool for fixing failures in an
   *existing* test suite outside of an active issue; its confirmation gate exists because it may be

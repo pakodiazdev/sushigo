@@ -617,12 +617,11 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   is intended in this pipeline: the automated flow drops the bracket and waits for the final-mode
   CI run) and **7.6** (final CI, plus the Codex-review + SonarCloud-quality-gate re-validation in
   `finish-pr.md`'s own text) — this is the true final gate before Phase 10 below presents anything
-  to the human. `finish-pr.md`'s Phase 7.6b is now a read-only check with no browser automation, so
-  run it as written — no `app.devin.ai`, no Chrome-extension tool, no prompt. Its Codex sub-check
-  should already be green: Phase 8 above drove Codex to completion against this same merge-ready
-  commit. Its Sonar sub-check reads the SonarCloud checks from `gh pr checks`. If 7.6b's Codex
-  sub-check finds the latest Codex review is stale (reviewed an older SHA), post one more
-  `@codex review` using this file's Phase 8 contract and let 7.6b re-read it.
+  to the human. `finish-pr.md`'s Phase 7.6b has no browser automation — run it as written (no
+  `app.devin.ai`, no Chrome-extension tool, no prompt). Phase 8 above already drove Codex against
+  this merge-ready commit, so 7.6b's Codex sub-check normally finds a matching review immediately;
+  if 7.5b's squash rewrote HEAD after that, 7.6b posts its own single `@codex review` and waits —
+  let it, do not pre-empt it here.
 
 **This changes when `finish-pr.md`'s stated precondition applies.** Its own text says "call this
 only after the review — manual or automated — has left the PR ready" — that already covers this
@@ -750,9 +749,10 @@ protective limit on a runaway loop or a precondition that genuinely isn't met ye
 - `.claude/commands/finish-pr.md` — its Phases 1–7.6 are reused wholesale in Phase 9 above, run
   automatically instead of waiting for a human. Its opening line already names both entry points
   ("call this only after the review — manual or automated — has left the PR ready"), so no edit is
-  needed there. Its Phase 7.5a (promote the PR out of `[wip]`) and Phase 7.6b (read-only Codex +
-  SonarCloud quality gate) run as written from Phase 9 above — the Codex sub-check is satisfied by
-  Phase 8's Codex loop against the same merge-ready commit.
+  needed there. Its Phase 7.5a (promote the PR out of `[wip]`) and Phase 7.6b (Codex review +
+  SonarCloud quality gate, no browser) run as written from Phase 9 above — Phase 8's Codex loop
+  usually satisfies the Codex sub-check already; 7.6b re-triggers Codex once itself only if 7.5b's
+  squash left the review SHA stale.
 - `.claude/skills/fix-tests/SKILL.md` — a narrower, standalone tool for fixing failures in an
   *existing* test suite outside of an active issue; its confirmation gate exists because it may be
   touching behavior nobody currently intends to change, which doesn't apply to Phase 3 above (you

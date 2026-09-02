@@ -613,10 +613,11 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   is intended here too: the flow drops the bracket and waits for the final-mode CI run) and **7.6**
   (final CI + Codex/Sonar re-validation + this variant's own interactive Devin relay) — this is the
   true final gate before Phase 10 below presents anything to the human. **Override for 7.6b:**
-  `finish-pr.md`'s own Phase 7.6b is now a read-only Codex-review + SonarCloud-quality-gate check
-  with no browser automation. Run its Sonar quality-gate sub-check as written; this variant does not
-  drive Codex (its automated review is the interactive Devin relay), so record 7.6b's Codex
-  sub-check as `n/a — interactive Devin relay is this variant's automated review`. Then, still run
+  `finish-pr.md`'s own Phase 7.6b is a Codex-review + SonarCloud-quality-gate check with no browser
+  automation. Run its Sonar quality-gate sub-check as written; this variant does not drive Codex
+  (its automated review is the interactive Devin relay), so record 7.6b's Codex sub-check as
+  `n/a — interactive Devin relay is this variant's automated review` (its one-time `@codex review`
+  trigger therefore never fires here). Then, still run
   the interactive Devin check the same way as this file's own Phase 8: give the operator the Devin
   URL for the post-squash commit,
   wait for their relay, and if they report any remaining bug or flag, fix it, commit, push, and let
@@ -756,8 +757,8 @@ protective limit on a runaway loop or a precondition that genuinely isn't met ye
   automatically instead of waiting for a human. Its opening line already names both entry points
   ("call this only after the review — manual or automated — has left the PR ready"), so no edit is
   needed there. Its Phase 7.5a (promote the PR out of `[wip]`) runs as written. Its Phase 7.6b is
-  now a read-only Codex + SonarCloud-quality-gate check, not a browser scan — Phase 9's override
-  above runs its Sonar sub-check, marks the Codex sub-check `n/a` for this variant, and keeps this
+  a Codex + SonarCloud-quality-gate check with no browser automation — Phase 9's override above
+  runs its Sonar sub-check, marks the Codex sub-check `n/a` for this variant, and keeps this
   file's own interactive Devin relay as the post-squash review check.
 - `.claude/skills/fix-tests/SKILL.md` — a narrower, standalone tool for fixing failures in an
   *existing* test suite outside of an active issue; its confirmation gate exists because it may be

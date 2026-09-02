@@ -268,9 +268,9 @@ those closes the Sessions entry (Phase 2's rule) and reports what happened befor
 - `.claude/commands/pr-comments.md` — the tool a human runs manually after this command finishes, to
   process whatever Copilot/Codex actually posted.
 - `.claude/commands/finish-pr.md` — its Phases 0–7.6 are reused wholesale in Phase 7 above (via
-  `issue.md`'s own Phase 9), run automatically instead of waiting for a human. Its Devin/DeepWiki
-  check (Phase 7.6b) is skipped by this file's override, with no substitute re-check — unlike
-  `issue.md`'s own Phase 9 override, which optionally re-triggers Codex there; this file already did
-  that once, in Phase 4, and leaves the rest to the human.
+  `issue.md`'s own Phase 9), run automatically instead of waiting for a human. Its Phase 7.6b
+  Codex sub-check is marked `n/a` by this file's override — so 7.6b's one-time `@codex review`
+  trigger never fires here. This file already triggered Codex once, in Phase 4, and leaves every
+  further review cycle to the human; only the Sonar quality-gate sub-check of 7.6b runs.
 - `.claude/skills/fix-tests/SKILL.md` — a narrower, standalone tool for fixing failures in an
   *existing* test suite outside of an active issue.

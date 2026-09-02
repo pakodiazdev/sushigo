@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git rebase:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(tail:*), Bash(wc:*), Read, Edit, Write, WebFetch
+allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git rebase:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(tail:*), Bash(wc:*), Read, Edit, Write, WebFetch
 description: Validate a PR is ready to merge and perform the final housekeeping (squash commits, finalize the issue in place, archive it locally, update the sprint doc's per-issue row, move the issue to Done) — never merges automatically
 argument-hint: [pr-number]
 ---
@@ -549,14 +549,16 @@ the PR ready to merge, but do **not** revert the Phase 7.5b push either. The
 housekeeping is already committed and pushed; the user (or a follow-up code fix) just needs a new
 commit, after which Phases 7.5b–7.6 alone can be re-run.
 
-### 7.6b. Automated review — Codex review + SonarCloud quality gate (read-only)
+### 7.6b. Automated review — Codex review + SonarCloud quality gate
 
-No browser automation, no `@codex review` re-trigger, no polling loop — 7.6a already blocked until
-CI finished, so both signals below are settled by the time you read them. This sub-check only
-*reports*; it never drives a review.
+No browser automation. This sub-check *reports* Codex + Sonar status; it never fixes anything and
+never enters a fix loop. It **may** post one `@codex review` comment — Codex does not reliably
+re-review a push on its own (this repo's integration starts a pass from an `@codex review` comment;
+see `doc/tasks/2026-08/478-issue-no-review-command.md`), and Phases 7.5a/7.5b just rewrote the
+merge-ready commit, so getting Codex to look at *that* commit is this command's job.
 
-**Codex review** — the automated reviewer on this repo is Codex (`chatgpt-codex-connector`), which
-re-reviews on every push and posts a PR review whose body starts `### 💡 Codex Review`:
+**Codex review** — the automated reviewer on this repo is Codex (`chatgpt-codex-connector`); it
+posts a PR review whose body starts `### 💡 Codex Review` and names a `Reviewed commit:` SHA.
 
 ```bash
 git rev-parse HEAD
@@ -564,15 +566,21 @@ gh pr view <N> --repo <owner>/<repo> --json reviews \
   --jq '[.reviews[] | select(.author.login=="chatgpt-codex-connector")] | last'
 ```
 
-- Read the `Reviewed commit:` SHA in that review's body. It must match the current branch `HEAD`
-  (the commit 7.5b pushed). If the latest Codex review is against an older SHA, or there is no
-  Codex review at all, report `Codex review: pending on the merge-ready commit` and stop before
-  Phase 8 — the review has not caught up. (A short wait-and-re-read is fine; do not loop
-  indefinitely, and do not post a trigger — that is the review flow's job, not this command's.)
-- If the review reports a **major / blocking** finding (Codex marks these distinctly from minor
-  suggestions), list each one and stop before Phase 8 — a blocking review finding is an unmet
-  merge requirement, exactly like a failing check. Minor suggestions are FYI only; surface the
-  count, don't block on them.
+- Read the latest Codex review's `Reviewed commit:` SHA. **If it already matches the current
+  branch `HEAD`** (the commit 7.5b pushed), evaluate it directly — go to the last bullet.
+- **If it is an older SHA, or there is no Codex review yet**, post the trigger **once** and wait:
+  ```bash
+  gh pr comment <N> --repo <owner>/<repo> --body "@codex review"
+  ```
+  Then poll `gh pr view <N> --json reviews` on the same ~30s / ~10min cadence as `issue.md`'s
+  Phase 8. If a fresh review lands with `Reviewed commit:` == `HEAD`, evaluate it. If the ~10min
+  window elapses with no fresh review, report `Codex review: did not post on the merge-ready
+  commit <sha> within 10 min` and stop before Phase 8 — an honest "not verified" outcome, not a
+  hang. Do **not** post the trigger a second time.
+- **Evaluate the matching review:** if it reports a **major / blocking** finding (Codex marks
+  these distinctly from minor suggestions), list each one and stop before Phase 8 — a blocking
+  review finding is an unmet merge requirement, exactly like a failing check. Minor suggestions
+  are FYI only; surface the count, don't block on them.
 
 **SonarCloud quality gate** — from the same `gh pr checks <N>` output as 7.6a, the SonarCloud
 checks must all be `SUCCESS` (or a legitimate `SKIPPED` when that surface wasn't touched):
@@ -666,8 +674,9 @@ action that clears it (app-doctor style — you name the problem and the fix, yo
 
 If Phase 1 failed, print only that checklist (with the failing items marked ❌ and what's
 blocking them) and stop — do not run Phases 2–6, 7.5, or 7.6. If Phase 7.6 failed (CI not green in
-final mode, Codex review pending or reporting a major finding, or the Sonar gate not passed), print
-all three sections (Phase 1 and the housekeeping already happened) with 7.6's failing items marked
-❌, and stop before the "Ready to merge" line.
+final mode, Codex review reporting a major finding or not posting on the merge-ready commit within
+the wait window, or the Sonar gate not passed), print all three sections (Phase 1 and the
+housekeeping already happened) with 7.6's failing items marked ❌, and stop before the "Ready to
+merge" line.
 
 **Never run `gh pr merge` yourself, regardless of how clean the checklist is.**
