@@ -1,6 +1,6 @@
 import { apiClient } from '@/lib/api-client'
-import type { CollectionResponse, EntityResponse } from '@/types/inventory'
-import type { Receipt, ReceiptStatus } from '../types'
+import type { EntityResponse, PaginatedResponse } from '@/types/inventory'
+import type { Receipt, ReceiptListParams, ReceiptSummary } from '../types'
 
 export interface ReceiptLinePayload {
   variant_purchase_presentation_id: string
@@ -27,8 +27,8 @@ export interface ReceiptPayload {
 }
 
 export const receiptApi = {
-  list: (params?: { status?: ReceiptStatus; supplier_id?: string }) =>
-    apiClient.get<CollectionResponse<Receipt>>('/inventory/receipts', { params }),
+  list: (params?: ReceiptListParams) =>
+    apiClient.get<PaginatedResponse<ReceiptSummary>>('/inventory/receipts', { params }),
 
   get: (receiptId: string) =>
     apiClient.get<EntityResponse<Receipt>>(`/inventory/receipts/${receiptId}`),

@@ -11,15 +11,15 @@ import { FilterSelect } from '@/components/ui/filter-select'
 import { formatCurrency } from '@/lib/format'
 import { ReceiptForm, ReceiptDetails } from '../components'
 import { useReceiptsPage } from '../hooks/use-receipts-page'
-import type { Receipt } from '../types'
+import type { ReceiptStatus, ReceiptSummary } from '../types'
 
-const statusLabels: Record<Receipt['status'], string> = {
+const statusLabels: Record<ReceiptStatus, string> = {
   DRAFT: 'Borrador',
   POSTED: 'Confirmada',
   REVERSED: 'Revertida',
 }
 
-const statusBadgeClasses: Record<Receipt['status'], string> = {
+const statusBadgeClasses: Record<ReceiptStatus, string> = {
   POSTED: 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-950/50 dark:text-green-300 dark:ring-green-800/50',
   REVERSED: 'bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-950/50 dark:text-red-300 dark:ring-red-800/50',
   DRAFT: 'bg-muted text-muted-foreground ring-border',
@@ -31,15 +31,14 @@ const panelTitles: Record<'create' | 'edit' | 'detail', string> = {
   detail: 'Detalle de la recepción',
 }
 
-function receiptTotal(receipt: Receipt): number {
-  return receipt.lines.reduce((sum, line) => sum + line.net_acquisition_amount, 0)
-}
-
 export function ReceiptsPage() {
   const newReceiptButtonRef = useRef<HTMLButtonElement>(null)
   const lastOpenerRef = useRef<HTMLElement | null>(null)
 
   const {
+    currentPage,
+    setCurrentPage,
+    totalPages,
     statusFilter,
     setStatusFilter,
     searchQuery,
@@ -50,6 +49,7 @@ export function ReceiptsPage() {
     isPanelOpen,
     panelMode,
     selectedReceipt,
+    isDetailLoading,
     handleRowClick,
     handleNewReceipt,
     handleEdit,
@@ -70,7 +70,10 @@ export function ReceiptsPage() {
     handleNewReceipt()
   }
 
-  const handleRowClickTracked = (receipt: Receipt, event: React.SyntheticEvent<HTMLTableRowElement>) => {
+  const handleRowClickTracked = (
+    receipt: ReceiptSummary,
+    event: React.SyntheticEvent<HTMLTableRowElement>
+  ) => {
     lastOpenerRef.current = event.currentTarget
     handleRowClick(receipt)
   }
@@ -80,7 +83,7 @@ export function ReceiptsPage() {
     lastOpenerRef.current?.focus()
   }
 
-  const columns: Column<Receipt>[] = [
+  const columns: Column<ReceiptSummary>[] = [
     {
       key: 'reference',
       header: 'Referencia',
@@ -105,7 +108,7 @@ export function ReceiptsPage() {
       key: 'total',
       header: 'Total',
       align: 'right',
-      render: (receipt) => formatCurrency(receiptTotal(receipt)),
+      render: (receipt) => formatCurrency(receipt.total),
     },
     {
       key: 'status',
@@ -141,14 +144,14 @@ export function ReceiptsPage() {
         <SearchInput
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Buscar por referencia, proveedor o ubicación..."
+          placeholder="Buscar por referencia..."
           className="flex-1"
         />
 
         <FilterSelect
           label="Estado"
           value={statusFilter}
-          onChange={(value) => setStatusFilter(value as Receipt['status'] | '')}
+          onChange={(value) => setStatusFilter(value as ReceiptStatus | '')}
           options={[
             { value: 'DRAFT', label: 'Borrador' },
             { value: 'POSTED', label: 'Confirmada' },
@@ -164,6 +167,11 @@ export function ReceiptsPage() {
         loading={isLoading}
         emptyMessage={isError ? 'No fue posible cargar las recepciones. Intenta de nuevo.' : undefined}
         getRowId={(receipt) => receipt.id}
+        pagination={{
+          currentPage,
+          totalPages,
+          onPageChange: setCurrentPage,
+        }}
       />
 
       <SlidePanel isOpen={isPanelOpen} onClose={handleClosePanel} title={panelTitle}>
@@ -184,6 +192,9 @@ export function ReceiptsPage() {
             isPosting={isPosting}
             isReversing={isReversing}
           />
+        )}
+        {panelMode !== 'create' && !selectedReceipt && isDetailLoading && (
+          <p className="p-6 text-sm text-muted-foreground">Cargando recepción…</p>
         )}
       </SlidePanel>
     </PageContainer>

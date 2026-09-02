@@ -119,10 +119,49 @@ would fail authorization and come back empty.
 Editing or deleting is only allowed while a Receipt is still a draft; posting/reversing a Receipt
 that isn't in the expected state returns `409`, never a silent no-op.
 
-**As-built gap on 2026-08-30.** `ReceiptRequest` proves `destination_location_id` exists and is not
-soft-deleted, but does not yet require an active, purchase-receiving, caller-accessible Location.
-The UI selector uses the scoped Location list, but a direct payload must not rely on browser-side
-filtering for authorization or business validity.
+**Bounded list contract (`#586`).** `GET /inventory/receipts` is a server-side paginated *summary*
+read model — Purchase Receipts are append-only operational history, so the list never returns an
+unbounded match. Response envelope is `ResponsePaginated` (`{ status, data, meta: { current_page,
+last_page, per_page, total } }`). `per_page` defaults to `15` and is capped at `100` (over the cap
+is `422`). Ordering is deterministic newest-first: `receipt_date DESC, id DESC`. Validated filters:
+`status`, `supplier_id`, `destination_location_id`, `date_from`/`date_to` (each independently
+optional, inclusive, on `receipt_date`; `date_to` must not precede `date_from` only when both are
+given) and `search` (case-insensitive on `reference`). The summary row carries a single
+aggregate `total` (SQL `SUM` of line `net_acquisition_amount`) instead of the `lines` array and the
+per-user `posted_by`/`reversed_by` refs — full line evidence is fetched from `GET
+/inventory/receipts/{id}` (`ReceiptResource`). The query pipeline is
+**`OperatingUnitScope::constrainReceipts` → validated filters → deterministic order → paginate/count
+→ serialize**: horizontal Operating Unit scope (via the receiving `destination_location`'s owning
+unit; bypass roles per `#440`) is applied *before* filters, counting and pagination, so page
+metadata (`total`, `last_page`) can never reflect receipts in units the caller cannot access. `#572`
+layers its receiving-Location routing contract onto the same relation without changing this
+pipeline.
+
+The by-ID routes (`show` / `update` / `delete` / `post` / `reverse`) apply the **same** unit scope
+(`AssertsReceiptOperatingUnitAccess` → `OperatingUnitScope::assertCanAccessLocation` on the
+Receipt's `destinationLocation`, a `withTrashed()` relation): a scoped caller who learns a Receipt's
+ULID from another unit gets `403`, not the record. Bypass roles pass. The **write** side is scoped
+too: `ReceiptRequest`'s `destination_location_id` rule
+(`ScopesDestinationLocationToAccessibleUnits`) is constrained to the caller's accessible units for
+non-bypass roles, so a create payload — or an `update` that names a new destination — into a
+foreign unit is a `422`, not a silent cross-unit transfer (`assertReceiptInScope` alone only checks
+the Receipt's *old* destination). `#572` still owns the remaining business constraints on that
+Location (active, purchase-receiving). `AssertsReceiptOperatingUnitAccess` runs before the service
+transaction and is a fast fail, not the last word: every mutating service method (`updateDraft` /
+`deleteDraft` / `postReceipt` / `reverseReceipt`) re-runs `assertCanAccessLocation` under its row
+lock, against the Receipt's current destination, via
+`ReceiptService::assertActorMayMutateLockedReceipt`; `createDraft` and `updateDraft` additionally
+re-check the *payload's* destination via `assertActorMayUseDestination`, so the Service enforces the
+scope itself rather than trusting request validation. So a scope change between the pre-lock guard
+and the lock — a membership revoked, or a bypass-role transfer of a still-draft Receipt — cannot
+let a scoped caller mutate (or post Stock into) a unit they can no longer reach. The one residual
+gap — those membership reads are not `lockForUpdate` on `operating_unit_users`, so a revocation in
+the *same instant* is not serialized against an in-flight mutation — is a whole-domain
+`OperatingUnitScope` property left to `#572`, not this read model.
+
+The list `search` filter matches `reference` with `ILIKE`; the term is passed through
+`addcslashes(term, '\\%_')` so `%` / `_` in a search string match literally instead of acting as
+LIKE wildcards.
 
 ## Sprint 7 target: warehouse receiving
 

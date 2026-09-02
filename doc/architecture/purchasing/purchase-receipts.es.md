@@ -116,10 +116,53 @@ Los endpoints autenticados viven bajo `/api/v1/inventory/receipts`, más los end
 Editar o eliminar solo se permite mientras la Recepción sigue en borrador; registrar/revertir una
 Recepción que no está en el estado esperado responde `409`, nunca un no-op silencioso.
 
-**Brecha as-built al 2026-08-30.** `ReceiptRequest` comprueba que `destination_location_id` exista y
-no esté eliminado, pero todavía no exige que esté activo, que pueda recibir compras ni que pertenezca
-al `OperatingUnitScope` del solicitante. El selector usa el listado restringido por alcance, pero
-una solicitud directa no debe depender de que el navegador haya filtrado correctamente.
+**Contrato de listado acotado (`#586`).** `GET /inventory/receipts` es un modelo de lectura
+*resumen* paginado en el servidor — las Recepciones de Compra son historia operativa de solo
+adición, así que el listado nunca devuelve una coincidencia sin límite. El sobre de respuesta es
+`ResponsePaginated` (`{ status, data, meta: { current_page, last_page, per_page, total } }`).
+`per_page` es `15` por defecto y tiene un máximo de `100` (superarlo es `422`). El orden es
+determinista, más reciente primero: `receipt_date DESC, id DESC`. Filtros validados: `status`,
+`supplier_id`, `destination_location_id`, `date_from`/`date_to` (cada uno opcional de forma
+independiente, inclusivos, sobre `receipt_date`; `date_to` no puede ser anterior a `date_from` solo
+cuando se envían ambos) y
+`search` (sin distinción de mayúsculas sobre `reference`). La fila de resumen lleva un único
+agregado `total` (`SUM` en SQL de `net_acquisition_amount` de las líneas) en lugar del arreglo
+`lines` y de las referencias de usuario `posted_by`/`reversed_by` — la evidencia completa de líneas
+se obtiene de `GET /inventory/receipts/{id}` (`ReceiptResource`). El pipeline de la consulta es
+**`OperatingUnitScope::constrainReceipts` → filtros validados → orden determinista → paginar/contar →
+serializar**: el alcance horizontal por Unidad Operativa (mediante la Ubicación de recepción
+`destination_location` y su unidad; los roles con bypass según `#440`) se aplica *antes* de los
+filtros, el conteo y la paginación, para que los metadatos de página (`total`, `last_page`) nunca
+reflejen Recepciones de unidades a las que quien llama no tiene acceso. `#572` añade su contrato de
+enrutamiento de Ubicación de recepción sobre la misma relación sin cambiar este pipeline.
+
+Las rutas por ID (`show` / `update` / `delete` / `post` / `reverse`) aplican el **mismo** alcance de
+unidad (`AssertsReceiptOperatingUnitAccess` → `OperatingUnitScope::assertCanAccessLocation` sobre la
+`destinationLocation` de la Recepción, una relación `withTrashed()`): quien conozca el ULID de una
+Recepción de otra unidad recibe `403`, no el registro. Los roles con bypass pasan. El lado de
+*escritura* también está restringido por alcance: la regla de `destination_location_id` de
+`ReceiptRequest` (`ScopesDestinationLocationToAccessibleUnits`) se limita a las unidades accesibles
+del solicitante para los roles sin bypass, así que un payload de creación —o un `update` que nombra
+un destino nuevo— hacia una unidad ajena es `422`, no una transferencia silenciosa entre unidades
+(`assertReceiptInScope` por sí solo solo valida el destino *anterior* de la Recepción). `#572` sigue
+a cargo de las demás restricciones de negocio sobre esa Ubicación (activa, apta para recepción de
+compras). `AssertsReceiptOperatingUnitAccess` corre antes de la transacción del servicio y es un
+fallo rápido, no la última palabra: cada método mutador del servicio (`updateDraft` / `deleteDraft`
+/ `postReceipt` / `reverseReceipt`) vuelve a ejecutar `assertCanAccessLocation` bajo su bloqueo de
+fila, contra el destino actual de la Recepción, mediante
+`ReceiptService::assertActorMayMutateLockedReceipt`; además, `createDraft` y `updateDraft` revalidan
+el destino del *payload* mediante `assertActorMayUseDestination`, de modo que el Servicio impone el
+alcance por sí mismo en vez de confiar en la validación del request. Así, un cambio de alcance entre
+el guard previo al bloqueo y el bloqueo —una membresía revocada, o una transferencia por un rol con
+bypass de una Recepción aún en borrador— no puede dejar que quien llama mute (ni deje Stock en) una
+unidad a la que ya no tiene acceso. El único hueco residual —esas lecturas de membresía no usan
+`lockForUpdate` sobre `operating_unit_users`, así que una revocación en el *mismo instante* no queda
+serializada contra una mutación en curso— es una propiedad de todo el `OperatingUnitScope` que
+queda para `#572`, no para este modelo de lectura.
+
+El filtro `search` del listado compara `reference` con `ILIKE`; el término pasa por
+`addcslashes(term, '\\%_')` para que `%` / `_` en la búsqueda se traten como literales y no como
+comodines de LIKE.
 
 ## Objetivo Sprint 7: recepción hacia almacén
 

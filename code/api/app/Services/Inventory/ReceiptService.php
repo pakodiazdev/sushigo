@@ -19,7 +19,9 @@ use App\Models\ReceiptLine;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockMovementLine;
+use App\Models\User;
 use App\Models\VariantPurchasePresentation;
+use App\Support\Access\OperatingUnitScope;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -34,11 +36,14 @@ class ReceiptService
 {
     public function __construct(
         private readonly InventoryEntryPostingService $entryPosting,
+        private readonly OperatingUnitScope $scope,
     ) {}
 
     public function createDraft(SaveReceiptData $data): Receipt
     {
         return DB::transaction(function () use ($data) {
+            $this->assertActorMayUseDestination($data->destinationLocationId, $data->actingUserId);
+
             $receipt = Receipt::create([
                 'supplier_id' => $data->supplierId,
                 'destination_location_id' => $data->destinationLocationId,
@@ -65,6 +70,9 @@ class ReceiptService
     {
         return DB::transaction(function () use ($receiptId, $data) {
             $receipt = Receipt::where('id', $receiptId)->lockForUpdate()->firstOrFail();
+
+            $this->assertActorMayMutateLockedReceipt($receipt, $data->actingUserId);
+            $this->assertActorMayUseDestination($data->destinationLocationId, $data->actingUserId);
 
             if (! $receipt->isDraft()) {
                 throw new ReceiptAlreadyPostedException(
@@ -93,10 +101,12 @@ class ReceiptService
     /**
      * @throws ReceiptAlreadyPostedException if the Receipt is not a draft
      */
-    public function deleteDraft(int $receiptId): void
+    public function deleteDraft(int $receiptId, int $userId): void
     {
-        DB::transaction(function () use ($receiptId) {
+        DB::transaction(function () use ($receiptId, $userId) {
             $receipt = Receipt::where('id', $receiptId)->lockForUpdate()->firstOrFail();
+
+            $this->assertActorMayMutateLockedReceipt($receipt, $userId);
 
             if (! $receipt->isDraft()) {
                 throw new ReceiptAlreadyPostedException(
@@ -126,6 +136,8 @@ class ReceiptService
     {
         return DB::transaction(function () use ($receiptId, $userId) {
             $receipt = Receipt::where('id', $receiptId)->lockForUpdate()->firstOrFail();
+
+            $this->assertActorMayMutateLockedReceipt($receipt, $userId);
 
             if ($receipt->isPosted()) {
                 throw new ReceiptAlreadyPostedException("Receipt #{$receipt->id} is already posted.");
@@ -225,6 +237,8 @@ class ReceiptService
     {
         return DB::transaction(function () use ($receiptId, $userId, $reason) {
             $receipt = Receipt::where('id', $receiptId)->lockForUpdate()->firstOrFail();
+
+            $this->assertActorMayMutateLockedReceipt($receipt, $userId);
 
             if ($receipt->isDraft()) {
                 throw new ReceiptNotPostedException("Receipt #{$receipt->id} was never posted; nothing to reverse.");
@@ -394,6 +408,45 @@ class ReceiptService
             'effective_unit_cost' => $effectiveUnitCost,
             'meta' => [],
         ]);
+    }
+
+    /**
+     * Re-assert horizontal (Operating Unit) authorization against a Receipt
+     * already locked by the surrounding transaction.
+     *
+     * The by-ID controllers run AssertsReceiptOperatingUnitAccess *before* the
+     * transaction, on the route-bound model. Between that check and this lock a
+     * scope change — a membership revoked, or a bypass-role user transferring a
+     * still-draft Receipt to another unit — would otherwise let a scoped caller
+     * update / delete / post / reverse a Receipt they can no longer access
+     * (#586). Checked here under the lock, against the Receipt's current
+     * destination, it cannot be raced. `destinationLocation` is a `withTrashed()`
+     * relation, so a soft-deleted destination still resolves to its owning unit.
+     * Bypass roles (`super-admin` / `admin`) pass.
+     */
+    private function assertActorMayMutateLockedReceipt(Receipt $receipt, int $userId): void
+    {
+        $this->scope->assertCanAccessLocation(User::findOrFail($userId), $receipt->destinationLocation);
+    }
+
+    /**
+     * Assert the actor may write into the destination named by a create/update
+     * payload, re-checked here rather than trusting the FormRequest's
+     * `accessibleDestinationLocationRule`. This keeps the Service self-sufficient
+     * on the horizontal-authorization contract (`OperatingUnitScope` is the one
+     * source of truth for every layer), so a create or a transfer cannot land a
+     * Receipt in a unit the actor can't access even if it reaches the Service by
+     * a path that skipped request validation. Bypass roles pass.
+     *
+     * Note: like every `OperatingUnitScope` check in the codebase, this reads the
+     * `operating_unit_users` membership without locking it, so it is not
+     * serialized against a membership revoked in the same instant — closing that
+     * sub-transaction race across the Inventory domain is #572's contract, not
+     * this read model's.
+     */
+    private function assertActorMayUseDestination(int $destinationLocationId, int $userId): void
+    {
+        $this->scope->assertCanAccessLocation(User::findOrFail($userId), $destinationLocationId);
     }
 
     private function freshReceipt(Receipt $receipt): Receipt

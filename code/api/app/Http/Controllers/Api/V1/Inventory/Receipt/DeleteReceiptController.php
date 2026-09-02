@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Inventory\Receipt;
 
 use App\Exceptions\ReceiptAlreadyPostedException;
+use App\Http\Controllers\Api\V1\Inventory\Receipt\Concerns\AssertsReceiptOperatingUnitAccess;
 use App\Http\Controllers\Controller;
 use App\Models\Receipt;
 use App\Services\Inventory\ReceiptService;
+use App\Support\Access\OperatingUnitScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
@@ -30,12 +32,16 @@ use Illuminate\Http\Response;
  */
 class DeleteReceiptController extends Controller
 {
+    use AssertsReceiptOperatingUnitAccess;
+
     public function __construct(private readonly ReceiptService $service) {}
 
-    public function __invoke(Receipt $receipt): Response|JsonResponse
+    public function __invoke(Receipt $receipt, OperatingUnitScope $scope): Response|JsonResponse
     {
+        $this->assertReceiptInScope($scope, $receipt);
+
         try {
-            $this->service->deleteDraft($receipt->id);
+            $this->service->deleteDraft($receipt->id, request()->user()->id);
         } catch (ReceiptAlreadyPostedException) {
             return response()->json([
                 'status' => 409,

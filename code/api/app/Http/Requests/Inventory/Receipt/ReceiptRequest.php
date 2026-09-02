@@ -6,6 +6,7 @@ namespace App\Http\Requests\Inventory\Receipt;
 
 use App\DataTransferObjects\Inventory\ReceiptLineData;
 use App\DataTransferObjects\Inventory\SaveReceiptData;
+use App\Http\Requests\Inventory\Receipt\Concerns\ScopesDestinationLocationToAccessibleUnits;
 use App\Http\Requests\Inventory\Receipt\Concerns\SharesReceiptValidationMessages;
 use App\Models\InventoryLocation;
 use App\Models\Supplier;
@@ -17,6 +18,7 @@ use Illuminate\Validation\Rule;
 
 abstract class ReceiptRequest extends FormRequest
 {
+    use ScopesDestinationLocationToAccessibleUnits;
     use SharesReceiptValidationMessages;
 
     public function authorize(): bool
@@ -29,7 +31,11 @@ abstract class ReceiptRequest extends FormRequest
     {
         return [
             'supplier_id' => ['required', 'string', Rule::exists('suppliers', 'public_id')->withoutTrashed()],
-            'destination_location_id' => ['required', 'string', Rule::exists('inventory_locations', 'public_id')->withoutTrashed()],
+            // Scoped to the caller's accessible Operating Units — `assertReceiptInScope`
+            // only guards the Receipt's *current* destination, so without this a
+            // scoped caller could create a Receipt into, or transfer an accessible
+            // draft to, a unit they can't act in. Bypass roles are unconstrained.
+            'destination_location_id' => ['required', 'string', $this->accessibleDestinationLocationRule()],
             'reference' => ['nullable', 'string', 'max:255'],
             'receipt_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
