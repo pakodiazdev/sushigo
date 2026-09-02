@@ -11,6 +11,14 @@ name: _e2e-ci
 # standalone cypress-e2e.yml (#490). What #560 adds: a `plan` job that resolves the spec
 # list (expanding impact-map globs against the checkout) and picks the shard count — 6 for
 # a full run, 1 for the handful of specs a diagnostic/WIP run touches.
+#
+# What #559 adds (per-shard fixed-overhead reduction, targeting <5 min wall-clock):
+#   - a cross-run GHA layer cache for docker/app/Dockerfile's `dev` image, prebuilt and
+#     reused by `docker compose up test_e2e` instead of rebuilt on every shard;
+#   - actions/cache for code/api/{vendor,node_modules} + a primed code/webapp/node_modules,
+#     bind-mounted in so init.sh skips its cold composer/npm installs;
+#   - init.sh skips `l5-swagger:generate` when ENV=e2e (Cypress never reads the Swagger docs);
+#   - the cypress-timing summary is Cypress-labelled and rolled up per .cy.ts spec file.
 
 on:
   workflow_call:
@@ -48,6 +56,9 @@ jobs:
           resolved=()
           if [ "$SELECTION" = "full" ]; then
             mapfile -t resolved < <(find cypress/e2e -name '*.cy.ts' | sort)
+            # 6 shards. #559 measured 8: it moved the *slowest* shard by ~1s (the wall-clock
+            # bottleneck is the file-index split's imbalance, not the shard count) for +33%
+            # runners — see doc/conventions/testing/testing-strategy.md.
             shards='[1,2,3,4,5,6]'
           else
             IFS=',' read -ra entries <<< "$SPECS_INPUT"
@@ -115,6 +126,63 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # ---- #559: cut the per-shard fixed overhead (image build + cold installs) ----
+      # docker-compose.e2e.yml bind-mounts ./:/app, so anything restored here on the runner
+      # is what init.sh and the cypress container see inside the containers. init.sh only
+      # installs a dependency dir when it is missing/empty, and the cypress container's
+      # `npm install --prefer-offline` becomes a near-no-op, so a warm cache removes the
+      # cold `composer install` + `npm install` (×2) from every shard's critical path.
+      # Exact combined-lock key, no restore-keys: any lockfile change busts the whole cache
+      # and everything reinstalls cold (today's behaviour) rather than running stale.
+      # A restored vendor/ can carry a stale optimized classmap when a first-party PHP class
+      # moved without a composer.lock change — init.sh runs `composer dump-autoload` (with
+      # post-autoload-dump scripts, so `artisan package:discover` also rebuilds the uncached
+      # bootstrap/cache/packages.php) on the cache-hit path.
+      - name: Restore API + webapp dependencies
+        id: deps-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            code/api/vendor
+            code/api/node_modules
+            code/webapp/node_modules
+          key: e2e-deps-${{ runner.os }}-${{ hashFiles('code/api/composer.lock', 'code/api/package-lock.json', 'code/webapp/package-lock.json') }}
+
+      - name: Setup Node 24
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: code/webapp/package-lock.json
+
+      # Cache miss only: prime code/webapp/node_modules so the cypress container's install
+      # and init.sh's webapp `npm install` stay cheap. code/api/{vendor,node_modules} are
+      # left for init.sh to install in-container on a miss (its existing cold path).
+      - name: Install webapp dependencies (cache miss)
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        working-directory: code/webapp
+        run: npm ci --no-audit --no-fund
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build docker/app/Dockerfile's `dev` target once, backed by a cross-run GHA layer
+      # cache, and load it into the daemon as the exact tag docker-compose.e2e.yml expects
+      # (image: ${TEST_E2E_IMAGE:-sushigo-test-e2e:dev}). `docker compose up test_e2e` then
+      # reuses it instead of rebuilding on every shard. The `dev` target copies no app code
+      # (only init.sh + supervisord.conf), so this cache is stable across code-only PRs.
+      - name: Build the E2E app image (dev) with a shared layer cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/app/Dockerfile
+          target: dev
+          tags: sushigo-test-e2e:dev
+          load: true
+          cache-from: type=gha,scope=e2e-app-dev
+          cache-to: type=gha,mode=max,scope=e2e-app-dev
 
       # init.sh assumes code/api/.env exists; CI synthesizes it (mirrors `make cypress-run`).
       # APP_ENV=local (not e2e) so the /v1/test|/v1/dev|/v1/devtools/clock route groups and the
@@ -256,8 +324,10 @@ jobs:
       - name: Run Cypress (shard ${{ matrix.shard }}, headless)
         if: steps.shard-specs.outputs.specs != ''
         run: |
+          # node_modules is already primed on the host (bind-mounted in), so this install
+          # only reconciles anything platform-specific and is near-instant (#559).
           docker compose $COMPOSE_FILES run --rm --no-deps -e CYPRESS_FAIL_FAST_ENABLED cypress \
-            "npm install --no-audit --no-fund && npx cypress run --browser chrome --reporter cypress-multi-reporters --reporter-options configFile=cypress/reporter-config.json --config retries=2,defaultCommandTimeout=15000,requestTimeout=15000,responseTimeout=45000,pageLoadTimeout=120000 --spec '${{ steps.shard-specs.outputs.specs }}'"
+            "npm install --prefer-offline --no-audit --no-fund && npx cypress run --browser chrome --reporter cypress-multi-reporters --reporter-options configFile=cypress/reporter-config.json --config retries=2,defaultCommandTimeout=15000,requestTimeout=15000,responseTimeout=45000,pageLoadTimeout=120000 --spec '${{ steps.shard-specs.outputs.specs }}'"
 
       - name: Upload Cypress JUnit timing report
         if: always()
@@ -330,4 +400,7 @@ jobs:
           merge-multiple: true
 
       - name: Publish Cypress slow-spec summary (all shards)
+        env:
+          TEST_TIMING_LABEL: Cypress
+          TEST_TIMING_GROUP_BY_FILE: 'true'
         run: node .github/scripts/test-timing/generate.js cypress-junit/*.xml

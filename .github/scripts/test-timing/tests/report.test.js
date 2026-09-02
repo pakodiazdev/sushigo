@@ -46,6 +46,67 @@ test('buildSummaryMarkdown reports a graceful message when there are no testcase
   assert.match(summary, /No test cases were found/);
 });
 
+test('buildSummaryMarkdown uses the provided label in the heading', () => {
+  const parsed = { testcases: [testcase('a', 1)], suiteTime: 1, totalTests: 1 };
+
+  const summary = buildSummaryMarkdown(parsed, 5, { label: 'Cypress' });
+
+  assert.match(summary, /## 🐢 Cypress Test Timing — Top 1 Slowest Tests/);
+  assert.doesNotMatch(summary, /PHPUnit/);
+});
+
+test('buildSummaryMarkdown defaults the label to PHPUnit for backward compatibility', () => {
+  const withCases = buildSummaryMarkdown(
+    { testcases: [testcase('a', 1)], suiteTime: 1, totalTests: 1 },
+    5,
+  );
+  const empty = buildSummaryMarkdown({ testcases: [], suiteTime: 0, totalTests: 0 });
+
+  assert.match(withCases, /## 🐢 PHPUnit Test Timing — Top 1 Slowest Tests/);
+  assert.match(empty, /## 🐢 PHPUnit Test Timing/);
+});
+
+test('buildSummaryMarkdown adds a per-spec-file rollup when groupByFile is set', () => {
+  const parsed = {
+    testcases: [
+      { name: 'a1', class: 'x', file: null, line: null, time: 5, specFile: 'cypress/e2e/login.cy.ts' },
+      { name: 'a2', class: 'x', file: null, line: null, time: 3, specFile: 'cypress/e2e/login.cy.ts' },
+      { name: 'b1', class: 'y', file: null, line: null, time: 4, specFile: 'cypress/e2e/dash.cy.ts' },
+    ],
+    suiteTime: 12,
+    totalTests: 3,
+  };
+
+  const summary = buildSummaryMarkdown(parsed, 20, { label: 'Cypress', groupByFile: true });
+  const loginLine = summary.split('\n').find((line) => line.includes('login.cy.ts'));
+
+  assert.match(summary, /Slowest spec files/);
+  assert.match(loginLine, /8\.00s/); // 5 + 3
+  assert.match(loginLine, /\| 2 \|/); // 2 cases
+  assert.ok(
+    summary.indexOf('login.cy.ts') < summary.indexOf('dash.cy.ts'),
+    'the slower spec file must rank first',
+  );
+});
+
+test('buildSummaryMarkdown rolls unattributed cases under "(unknown spec)"', () => {
+  const parsed = {
+    testcases: [{ name: 'orphan', class: 'x', file: null, line: null, time: 2, specFile: null }],
+    suiteTime: 2,
+    totalTests: 1,
+  };
+
+  const summary = buildSummaryMarkdown(parsed, 20, { label: 'Cypress', groupByFile: true });
+
+  assert.match(summary, /\(unknown spec\)/);
+});
+
+test('buildSummaryMarkdown omits the per-spec-file rollup by default', () => {
+  const parsed = { testcases: [testcase('a', 1)], suiteTime: 1, totalTests: 1 };
+
+  assert.doesNotMatch(buildSummaryMarkdown(parsed, 5), /Slowest spec files/);
+});
+
 test('formatSeconds always renders two decimal places', () => {
   assert.equal(formatSeconds(1), '1.00s');
   assert.equal(formatSeconds(0.005), '0.01s');

@@ -8,10 +8,40 @@ function escapeMarkdownCell(value) {
   return String(value).replace(/\|/g, '\\|');
 }
 
-function buildSummaryMarkdown({ testcases, suiteTime, totalTests }, topN = 20) {
+function buildSpecFileRollup(testcases, topN) {
+  const byFile = new Map();
+  for (const testcase of testcases) {
+    const key = testcase.specFile || testcase.file || '(unknown spec)';
+    const current = byFile.get(key) ?? { time: 0, count: 0 };
+    current.time += testcase.time;
+    current.count += 1;
+    byFile.set(key, current);
+  }
+
+  const rows = [...byFile.entries()]
+    .sort((a, b) => b[1].time - a[1].time)
+    .slice(0, topN)
+    .map(
+      ([file, agg], index) =>
+        `| ${index + 1} | ${formatSeconds(agg.time)} | ${agg.count} | ${escapeMarkdownCell(file)} |`,
+    );
+
+  return [
+    '### 🗂️ Slowest spec files (total time across all cases)',
+    '',
+    '| # | Total | Cases | Spec file |',
+    '|---|---|---|---|',
+    ...rows,
+    '',
+  ];
+}
+
+function buildSummaryMarkdown({ testcases, suiteTime, totalTests }, topN = 20, options = {}) {
+  const { label = 'PHPUnit', groupByFile = false } = options;
+
   if (testcases.length === 0) {
     return [
-      '## 🐢 PHPUnit Test Timing',
+      `## 🐢 ${label} Test Timing`,
       '',
       'No test cases were found in the JUnit report — the suite may have failed before producing results.',
       '',
@@ -29,8 +59,8 @@ function buildSummaryMarkdown({ testcases, suiteTime, totalTests }, topN = 20) {
       `| ${index + 1} | ${formatSeconds(testcase.time)} | ${escapeMarkdownCell(testcase.class)} | ${escapeMarkdownCell(testcase.name)} |`,
   );
 
-  return [
-    `## 🐢 PHPUnit Test Timing — Top ${top.length} Slowest Tests`,
+  const lines = [
+    `## 🐢 ${label} Test Timing — Top ${top.length} Slowest Tests`,
     '',
     '| # | Time | Class | Test |',
     '|---|---|---|---|',
@@ -39,10 +69,16 @@ function buildSummaryMarkdown({ testcases, suiteTime, totalTests }, topN = 20) {
     '### Aggregate',
     `- Tests reported: ${totalTests}`,
     `- Sum of individual test durations: ${formatSeconds(sumTestTime)}`,
-    `- Reported suite duration (PHPUnit \`testsuite\` time): ${formatSeconds(suiteTime)}`,
+    `- Reported suite duration (reporter total): ${formatSeconds(suiteTime)}`,
     `- Top ${top.length} contribution: ${formatSeconds(topTime)} (${topSharePercent.toFixed(1)}% of total test time)`,
     '',
-  ].join('\n');
+  ];
+
+  if (groupByFile) {
+    lines.push(...buildSpecFileRollup(testcases, topN));
+  }
+
+  return lines.join('\n');
 }
 
 module.exports = { buildSummaryMarkdown, formatSeconds, escapeMarkdownCell };

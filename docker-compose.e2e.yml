@@ -1,6 +1,10 @@
 services:
   # ✅ Headless (default, profesional)
   test_e2e:
+    # Named so CI (#559) can prebuild this image with a shared layer cache and have
+    # `docker compose up test_e2e` reuse it instead of rebuilding on every shard. Locally
+    # `docker compose ... build test_e2e` still rebuilds it after a Dockerfile change.
+    image: ${TEST_E2E_IMAGE:-sushigo-test-e2e:dev}
     build:
       context: .
       dockerfile: docker/app/Dockerfile
