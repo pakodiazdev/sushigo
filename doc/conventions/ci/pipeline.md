@@ -51,9 +51,11 @@ flowchart TD
 The mode is parsed from the PR title's optional **third bracket**, after `[#NNN][x]` — from the
 **title only, never the branch name** (canonical reference:
 [`pull-requests.md`](./../git/pull-requests.md) → "PR Title Execution-Mode Flags"). The intended
-workflow: **open the PR with `[wip]`** (or `[e2e-test]` while iterating on specs) and **edit the
-title to drop the bracket** when it's ready for final validation — the `edited` trigger re-runs CI
-in final mode.
+workflow: **open the PR with `[wip]`** (or `[e2e-test]` while iterating on specs) and **drop the
+bracket** when it's ready for final validation — the `edited` trigger re-runs CI in final mode. The
+issue slash commands (`/start-issue`, `/issue`, `/issue-full`, `/issue-no-review`) open the PR with
+`[wip]` automatically and never remove it; `/finish-pr` is what drops the bracket (its Phase 7.5a),
+then waits for the final-mode run and validates it. Dropping it by hand earlier is fine too.
 
 | Title | Mode | What runs | Mergeable? |
 |---|---|---|---|

@@ -10,18 +10,21 @@ You are closing out a GitHub Pull Request for the SushiGo monorepo: verifying it
 to merge, then doing every piece of bookkeeping a human would otherwise have to do by hand before
 merging — **except the merge itself**.
 
-**Call this only after the human has manually tested the PR and approved it.** Your job is to
-confirm review threads and mergeable state, then finish the paperwork — squash the branch to one
-commit, finalize the GitHub issue itself (time tracking, checklist, retrospective), archive it
-locally as a closing snapshot, move the issue to Done on the project board, and update the sprint
-document's own row for this issue — and only then check CI and the automated review (Devin/
-DeepWiki), once, against the final commit that push produced. Doing it in that order (paperwork
-before the CI/Devin check, not after) means Phases 2–6 add no restarts at all, since they only
-commit locally — the only push whose result actually gets checked is Phase 7.5's. A pre-flight
-rebase (Phase 1b) or a late rebase (Phase 7.6c) still pushes and still restarts CI/Devin, same as
-any other push to the branch, but that restart is irrelevant: nothing reads its result before
-Phase 7.5 pushes again anyway. You report a checklist at the end. **You never run `gh pr merge`.**
-The user merges by hand once your report says everything is green.
+**Call this only after the review — manual or automated — has left the PR ready.** Your job is
+verification plus paperwork, "app-doctor" style: confirm review threads and mergeable state,
+finish the bookkeeping — squash the branch to one commit, finalize the GitHub issue itself (time
+tracking, checklist, retrospective), archive it locally as a closing snapshot, move the issue to
+Done on the project board, and update the sprint document's own row for this issue — then
+**promote the PR out of `[wip]`** (Phase 7.5a strips the execution-mode bracket) and, only after
+that, check the final-mode CI run, the Codex review, and the SonarCloud quality gate once against
+the commit that push produced. Doing it in that order (paperwork before the final CI check, not
+after) means Phases 2–6 add no restarts at all, since they only commit locally — the only push
+whose result actually gets checked is Phase 7.5's. A pre-flight rebase (Phase 1b) or a late rebase
+(Phase 7.6c) still pushes and still restarts CI and the Codex re-review, same as any other push to
+the branch, but that restart is irrelevant: nothing reads its result before Phase 7.5 pushes again
+anyway. You **do not fix anything** — if a merge requirement is unmet, you report exactly what and
+stop. You report a checklist at the end. **You never run `gh pr merge`.** The user merges by hand
+once your report says everything is green.
 
 Per [TD-01](../../doc/decisions/td-01-single-source-issue-tracking.md), the GitHub issue is the
 only live document for this work up to this point — nothing under `doc/tasks/` exists yet for it.
@@ -97,13 +100,14 @@ present, ask the user which issue this PR closes — do not guess.
 Build a checklist for the items that survive the rest of this flow unchanged. Do **not** proceed
 to Phase 2+ unless every item here passes.
 
-CI status and the Devin/DeepWiki scan are deliberately **not** checked here: Phase 7.5 is the only
-push in this entire command (Phases 2, 4, and 6 only commit locally — see those phases; Phase 3
-only edits the GitHub issue via `gh issue edit`, no local git commit), and every push
-force-restarts both CI and the Devin scan. A result captured now would just describe a commit
-that's about to be replaced, and Phase 8 would end up reporting stale status. They're checked
-authoritatively in **Phase 7.6**, right after that single final push — that is the real gate before
-Phase 8 declares the PR ready to merge.
+CI status, the Codex review, and the SonarCloud quality gate are deliberately **not** checked here:
+Phase 7.5 is the only push in this entire command (Phases 2, 4, and 6 only commit locally — see
+those phases; Phase 3 only edits the GitHub issue via `gh issue edit`, no local git commit), and
+every push force-restarts CI and the Codex re-review. Phase 7.5a also strips the `[wip]` bracket,
+which moves CI into final mode — so any CI/Codex result captured now describes both a stale commit
+*and* the wrong execution mode. They're checked authoritatively in **Phase 7.6**, right after that
+single final push in final mode — that is the real gate before Phase 8 declares the PR ready to
+merge.
 
 Before the checks below (and therefore before any Phase 1b auto-rebase), follow the safe
 working-directory rule above. Refresh the base ref first in its own Bash call so a stale local
@@ -139,7 +143,13 @@ user to run `/pr-comments <N>` first if any are open.
 
 ### 1b. Mergeable state
 
-`mergeStateStatus` must be `CLEAN`.
+`mergeStateStatus` must be `CLEAN` — **or** `BLOCKED` for the single expected reason that the PR
+title still carries a `[wip]` / `[e2e-test]` execution-mode bracket, which keeps `ci-gate`
+deliberately red. That is not a real blocker here: Phase 7.5a strips the bracket and Phase 7.6
+re-validates in final mode. Treat it as `CLEAN` for the purpose of continuing **only when** every
+non-`skipped` branch job (`api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`) on the current head is
+`success` and there are no merge conflicts — i.e. `ci-gate`'s `[wip]` annotation is the sole cause.
+If branch jobs are failing, or `BLOCKED` has any other cause, treat it as a real `BLOCKED` below.
 
 - If it is `BEHIND`, auto-rebase instead of stopping — this is the common case (main moved while
   the PR sat waiting for review) and rebases cleanly almost every time. First confirm the working
@@ -160,10 +170,10 @@ user to run `/pr-comments <N>` first if any are open.
     gh pr view <N> --repo <owner>/<repo> --json mergeStateStatus
     ```
     Report how many commits arrived on `<baseRefName>` and that the rebase/push completed, then
-    continue with the rest of Phase 1. This push does trigger a new CI run and restarts the
-    Devin/DeepWiki scan, same as any push — that's harmless, not avoided, since neither is checked
-    until Phase 7.6, which validates whatever commit sits on the branch tip after Phase 7.5's own
-    push, regardless of how many earlier pushes (this one included) happened before it.
+    continue with the rest of Phase 1. This push does trigger a new CI run and restarts the Codex
+    re-review, same as any push — that's harmless, not avoided, since neither is checked until
+    Phase 7.6, which validates whatever commit sits on the branch tip after Phase 7.5's own push,
+    regardless of how many earlier pushes (this one included) happened before it.
   - If the rebase **hits conflicts**, capture the conflicting files *before* aborting — `git
     rebase --abort` discards the conflict state, so the list is unrecoverable afterward:
     ```bash
@@ -172,7 +182,8 @@ user to run `/pr-comments <N>` first if any are open.
     ```
     Report that file list and stop — do not attempt to resolve conflicts automatically. Tell the
     user to run `/rebase-main` (or resolve manually) before retrying `/finish-pr`.
-- If it is `DIRTY` (conflicts) or `BLOCKED`, report the reason and stop.
+- If it is `DIRTY` (conflicts), or `BLOCKED` for any reason other than the `[wip]` / `[e2e-test]`
+  bracket described above, report the reason and stop.
 
 ### Report the checklist
 
@@ -434,14 +445,35 @@ git commit -m "📚 [#NNN] - Mark #NNN's row complete in the sprint doc 📊
 
 ---
 
-## PHASE 7.5 — Final squash and single push
+## PHASE 7.5 — Promote out of `[wip]`, final squash, single push
+
+### 7.5a. Promote the PR to final mode
+
+```bash
+gh pr view <N> --repo <owner>/<repo> --json title --jq .title
+```
+
+If the title carries a `[wip]` or `[e2e-test]` bracket (the third bracket, right after `[x]`),
+remove **only** that bracket and re-set the title — nothing else about it changes:
+
+```bash
+gh pr edit <N> --repo <owner>/<repo> --title "<same title, third bracket removed>"
+```
+
+This is the promotion the review flow was waiting on: the `pull_request: edited` trigger re-runs
+CI in **final mode** (full Cypress suite, `ci-gate` able to go green). The squash force-push below
+supersedes that run within seconds via the `ci-*` concurrency group, so Phase 7.6a ends up
+watching a single final-mode run against the squashed commit. If the title had no such bracket,
+this is a no-op — record it as "already final" and continue.
+
+### 7.5b. Final squash and single push
 
 Phases 2–6 commit incrementally on purpose (so partial progress is never lost to a mid-flow typo
 or crash), but none of them push. Phase 1b may already have pushed once, if it had to auto-rebase
-a `BEHIND` branch — that push's CI/Devin result was never read, though, so it doesn't count against
-what follows: this phase's push is the one whose result Phase 7.6 actually checks. Folding
-everything into one commit here, instead of after every phase, means CI and the Devin/DeepWiki
-scan restart at most once between here and Phase 7.6's check, instead of on every intermediate
+a `BEHIND` branch — that push's CI/Codex result was never read, though, so it doesn't count
+against what follows: this phase's push is the one whose result Phase 7.6 actually checks. Folding
+everything into one commit here, instead of after every phase, means CI and the Codex re-review
+restart at most once between here and Phase 7.6's check, instead of on every intermediate
 housekeeping commit:
 
 Follow the safe working-directory rule above. Run its `cd` as a standalone Bash call first; only
@@ -479,59 +511,71 @@ comparison succeeds, push in a separate Bash call:
 git push --force-with-lease origin HEAD
 ```
 
-If Phase 7.6 (next) finds a real bug that needs a code fix, fix it, commit it, then repeat Phase
-7.5 (and then 7.6 again) so the branch still ends at exactly one commit and the final CI/Devin
-check runs against the commit that will actually be merged.
+If Phase 7.6 (next) finds a real bug that needs a code fix, **do not fix it yourself** — report it
+(app-doctor style: name the failing requirement and what a fix looks like) and stop before Phase 8.
+The user (or a follow-up run) adds the fix commit, after which Phases 7.5b–7.6 alone can be re-run
+against the commit that will actually be merged. 7.5a's promotion is idempotent — re-running it on
+an already-final title is a no-op.
 
 ---
 
 ## PHASE 7.6 — Final validation (the real gate)
 
-This is the only point in the flow where CI and the Devin/DeepWiki scan are checked. Phase 1b's
-pre-flight rebase may have pushed earlier, but Phase 7.5's push is the last one before this check
-runs, so it's the only push result that ever actually gets read — checking any earlier push would
-just describe a commit that's since been replaced. It also re-checks mergeable state (7.6c), since
-Phase 1's `CLEAN` result can go stale while Phases 2–6 and 7.5 run.
+This is the only point in the flow where the final-mode CI run, the Codex review, and the
+SonarCloud quality gate are checked. Phase 1b's pre-flight rebase may have pushed earlier, but
+Phase 7.5b's push is the last one before this check runs, so it's the only push result that ever
+actually gets read — checking any earlier push would just describe a commit that's since been
+replaced. It also re-checks mergeable state (7.6c), since Phase 1's `CLEAN` result can go stale
+while Phases 2–6 and 7.5 run.
 
-### 7.6a. Wait for CI
+### 7.6a. Wait for CI (final mode)
 
 ```bash
 gh pr checks <N> --repo <owner>/<repo> --watch
 ```
 
-This blocks until every check finishes running. If any check's conclusion is not `SUCCESS`, list
-it by name and stop — do not declare the PR ready to merge, but do **not** revert the Phase 7.5
-push either. The housekeeping is already committed and pushed; the user (or a follow-up code fix)
-just needs a new commit, after which Phases 7.5–7.6 alone can be re-run.
+This blocks until every check finishes running. The PR is now in final mode (7.5a), so `ci-gate`
+**must** conclude `SUCCESS` — its `[wip]` annotation must be gone. If any check's conclusion is not
+`SUCCESS` (or a legitimate `SKIPPED` for a surface this PR didn't touch), list it by name and stop
+— do not declare the PR ready to merge, but do **not** revert the Phase 7.5b push either. The
+housekeeping is already committed and pushed; the user (or a follow-up code fix) just needs a new
+commit, after which Phases 7.5b–7.6 alone can be re-run.
 
-### 7.6b. Automated review — Devin / DeepWiki (best-effort)
+### 7.6b. Automated review — Codex review + SonarCloud quality gate (read-only)
 
-This project is on Devin's free tier, so the only review surface available is the public
-DeepWiki-mirrored review page — check it for reported bugs instead of a paid private review.
+No browser automation, no `@codex review` re-trigger, no polling loop — 7.6a already blocked until
+CI finished, so both signals below are settled by the time you read them. This sub-check only
+*reports*; it never drives a review.
 
-If `mcp__claude-in-chrome__*` tools are available (load them via `ToolSearch` if deferred), open
-`https://app.devin.ai/review/<owner>/<repo>/pull/<N>` and read the **Bugs** count and any
-**Flags** panel (screenshot + `get_page_text`/`find` as needed — the page is a client-rendered SPA,
-so a plain `WebFetch` will only return an empty shell and is not sufficient here).
+**Codex review** — the automated reviewer on this repo is Codex (`chatgpt-codex-connector`), which
+re-reviews on every push and posts a PR review whose body starts `### 💡 Codex Review`:
 
-- The scan restarts on the Phase 7.5 push and needs time to finish. If the page still shows
-  "in progress"/"scanning" on first load, wait and re-check (a short poll loop, or
-  `ScheduleWakeup` if running as a background task) rather than reporting an incomplete result.
-- If the browser extension is not connected: try `tabs_context_mcp` once, and if it still fails,
-  ask the user whether to wait for them to connect it or skip this sub-check as best-effort. Do
-  not block indefinitely on this — it is supplementary to 7.6a and the review threads already
-  validated in Phase 1, not a hard gate, since Copilot's review already runs automatically on
-  every PR in this repo.
-- Record: bug count, and the title + severity label of every flag (`Investigate` flags are worth
-  surfacing to the user even though they aren't a hard blocker; `Informational` flags are FYI
-  only).
-- If a real **bug** (not a flag) is reported, treat it as a blocker like a failing check — tell
-  the user what it is and stop before Phase 8 declares anything ready.
+```bash
+git rev-parse HEAD
+gh pr view <N> --repo <owner>/<repo> --json reviews \
+  --jq '[.reviews[] | select(.author.login=="chatgpt-codex-connector")] | last'
+```
+
+- Read the `Reviewed commit:` SHA in that review's body. It must match the current branch `HEAD`
+  (the commit 7.5b pushed). If the latest Codex review is against an older SHA, or there is no
+  Codex review at all, report `Codex review: pending on the merge-ready commit` and stop before
+  Phase 8 — the review has not caught up. (A short wait-and-re-read is fine; do not loop
+  indefinitely, and do not post a trigger — that is the review flow's job, not this command's.)
+- If the review reports a **major / blocking** finding (Codex marks these distinctly from minor
+  suggestions), list each one and stop before Phase 8 — a blocking review finding is an unmet
+  merge requirement, exactly like a failing check. Minor suggestions are FYI only; surface the
+  count, don't block on them.
+
+**SonarCloud quality gate** — from the same `gh pr checks <N>` output as 7.6a, the SonarCloud
+checks must all be `SUCCESS` (or a legitimate `SKIPPED` when that surface wasn't touched):
+`[sushigo-api] SonarCloud Code Analysis`, `[sushigo-webapp] SonarCloud Code Analysis`, and the
+`api-ci / api-sonar` / `webapp-ci / webapp-sonar` jobs. A `FAILURE` or still-`PENDING` Sonar gate
+is an unmet merge requirement — list it and stop before Phase 8.
 
 ### 7.6c. Re-validate mergeable state
 
 Phase 1's `mergeStateStatus: CLEAN` check ran before Phases 2–6 and 7.5, which can take a while
-(issue finalization, sprint doc, waiting on CI/Devin above). If `main` advanced during that
+(issue finalization, sprint doc, waiting on CI/Codex above). If `main` advanced during that
 window — someone else's PR merged — the branch can have silently gone `BEHIND` since Phase 1, and
 the Phase 8 report would otherwise claim "clean, no conflicts" on stale information.
 
@@ -565,7 +609,7 @@ git rebase origin/<baseRefName>
   ```bash
   git push --force-with-lease origin HEAD
   ```
-  This push restarts CI and the Devin/DeepWiki scan, so re-run 7.6a–7.6c from the top against the
+  This push restarts CI and the Codex re-review, so re-run 7.6a–7.6c from the top against the
   new commit before Phase 8 declares anything ready — do not reuse the pre-rebase results.
 - If it **hits conflicts**, capture the conflicting files *before* aborting — same as Phase 1b:
   ```bash
@@ -595,10 +639,12 @@ If `DIRTY`/`BLOCKED` instead, report the reason and stop.
 - [x] GitHub Project status → Done
 - [x] Sprint doc updated — this issue's row marked complete in Round table + Execution Evidence
       (or: not part of the current sprint, skipped)
+- [x] Promoted `[wip]` → final (or: already final)
 
 ### Final validation on the merge-ready commit (Phase 7.6)
-- [x] CI checks: <M>/<M> passing
-- [x] Devin/DeepWiki: 0 bugs (<M> flags — <list Investigate-severity ones, if any>)
+- [x] CI checks (final mode): <M>/<M> passing — `ci-gate` green
+- [x] Codex review: no major findings (reviewed `<sha>`, matches HEAD) — <M> minor suggestions
+- [x] SonarCloud quality gate: passed (api + webapp)
 - [x] Mergeable: still clean, no conflicts (re-checked post-push — `main` didn't move under us)
 
 ### ✅ Ready to merge
@@ -606,9 +652,14 @@ Everything above is green. I have not merged it — that's on you:
   gh pr merge <N> --merge      (branch is already a single commit, no need for --squash)
 ```
 
+If a merge requirement is **not** met, replace the "✅ Ready to merge" block with a
+`### ❌ Not ready to merge` block that lists each unmet requirement and, for each, the one concrete
+action that clears it (app-doctor style — you name the problem and the fix, you do not apply it).
+
 If Phase 1 failed, print only that checklist (with the failing items marked ❌ and what's
-blocking them) and stop — do not run Phases 2–6, 7.5, or 7.6. If Phase 7.6 failed, print all three
-sections (Phase 1 and the housekeeping already happened) with 7.6's failing items marked ❌, and
-stop before the "Ready to merge" line.
+blocking them) and stop — do not run Phases 2–6, 7.5, or 7.6. If Phase 7.6 failed (CI not green in
+final mode, Codex review pending or reporting a major finding, or the Sonar gate not passed), print
+all three sections (Phase 1 and the housekeeping already happened) with 7.6's failing items marked
+❌, and stop before the "Ready to merge" line.
 
 **Never run `gh pr merge` yourself, regardless of how clean the checklist is.**

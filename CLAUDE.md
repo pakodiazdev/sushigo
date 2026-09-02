@@ -330,8 +330,10 @@ triggers:**
 - The mode is parsed from the **PR title only** — never from the branch name. The branch keeps its
   `<type>/<NNN>-<desc>` name unchanged.
 - **Open the PR with `[wip]` from the start** (or `[e2e-test]` while iterating on Cypress specs).
-  When it's ready for final validation and merge, **edit the title to remove the bracket** — the
-  `pull_request: edited` trigger re-runs CI in *final* mode and `ci-gate` can then go green.
+  The `/start-issue`, `/issue`, `/issue-full`, `/issue-no-review` commands do this automatically and
+  never remove the bracket. **`/finish-pr` drops the bracket** (Phase 7.5a) once review has left the
+  PR ready, then waits for the `pull_request: edited` re-run in *final* mode and validates it;
+  dropping it by hand earlier is fine too.
 - `push` to `main` always runs in **final** mode.
 - If both `[e2e-test]` and `[wip]` appear, `[e2e-test]` wins (the narrowest mode).
 - `[review]` is **not** a mode — review/correction has the same CI semantics as `[wip]`.

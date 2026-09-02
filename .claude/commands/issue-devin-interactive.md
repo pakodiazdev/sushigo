@@ -315,9 +315,14 @@ covers the workspace-letter title bracket, the `Devin Review:` follow-up edit, a
 
 ```bash
 git push -u origin <branch-name>
-gh pr create --title "..." --body "..."
+gh pr create --title "<emoji> [#NNN][<letter>][wip] - <desc> <emoji>" --body "..."
 gh pr edit <N> --body-file <path-to-updated-body>   # inserts Devin Review:, per start-issue.md 8c
 ```
+
+The title carries the `[wip]` execution-mode bracket per `start-issue.md` Phase 8c. Every phase
+below runs against the `[wip]` PR; the bracket is dropped in Phase 9's `finish-pr` delegation
+(Phase 7.5a), which then waits for the final-mode flow. Phase 5's CI gate is judged from the branch
+jobs — `ci-gate`'s deliberate `[wip]` red is expected, not a check to fix.
 
 **Never merge.** Report the PR URL and continue to Phase 5.
 
@@ -331,17 +336,24 @@ gh pr checks <N> --repo pakodiazdev/sushigo --watch
 
 This blocks until every check (linters + tests, per the repo's GitHub Actions workflows) finishes.
 
+- **`[wip]` mode — `ci-gate` is red by design.** The PR title carries `[wip]` (Phase 4), so
+  `ci-gate` deliberately concludes `failure` with a `[wip] mode — NOT a merge candidate`
+  annotation. That is the **expected terminal state**, not a check to diagnose or fix. Judge this
+  gate from the branch jobs only — `api-ci`, `webapp-ci`, `e2e-ci`, `scripts-tests`: the gate
+  passes when every one of them that is not `skipped` concluded `success`. Ignore `ci-gate`'s own
+  result while the title has `[wip]` (or `[e2e-test]`).
 - **Called right after `gh pr create` (end of Phase 4, or after a fresh push elsewhere in this
   command):** GitHub Actions can take several seconds to register the workflow runs as pending
   checks. If this command reports "no checks reported" immediately, that means it ran before any
   check exists yet — not that there's nothing to wait for. Wait ~10s and re-run it once or twice
   before treating an empty result as meaningful; only trust "no checks reported" as final if it
   still says so after that short retry.
-- **All green** → continue.
-- **Something failed** → pull the failing job's log (`gh run view <run-id> --log-failed`, using the
-  run ID from `gh pr checks` or `gh api repos/.../commits/<sha>/check-runs`), diagnose against the
-  same discipline as Phase 3, fix, commit, push, and re-run this gate.
-- **Safety cap:** if the *same* check fails **6 times in a row**, stop looping and report the
+- **All branch jobs green** → continue.
+- **A branch job failed** → pull the failing job's log (`gh run view <run-id> --log-failed`, using
+  the run ID from `gh pr checks` or `gh api repos/.../commits/<sha>/check-runs`), diagnose against
+  the same discipline as Phase 3, fix, commit, push, and re-run this gate. `ci-gate`'s `[wip]`
+  failure is never the thing being fixed here.
+- **Safety cap:** if the *same* branch job fails **6 times in a row**, stop looping and report the
   failure to the user instead of continuing indefinitely — this is a protective cap, not a
   business-rule stop. Close the Sessions entry (Phase 2's rule) before reporting — do not attempt
   cost logging (Phase 10 skips it entirely per the zero-interruption rule; there's nothing to do
@@ -596,11 +608,16 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   as documented in `finish-pr.md`, which no longer touches the sprint doc's aggregate percentage
   or README as a side effect of closing a single PR (see `/sync-sprint-progress` for that, run
   deliberately by a human).
-- **Phase 7.5** (final squash+push) and **7.6** (final CI + Devin re-validation) — this is the true
-  final gate before Phase 10 below presents anything to the human. **Override:** `finish-pr.md`'s
-  own Phase 7.6b normally auto-checks Devin via the Chrome extension (or falls back to asking whether
-  to wait for it if the extension isn't connected). In this variant, run 7.6b the same interactive
-  way as this file's own Phase 8 instead: give the operator the Devin URL for the post-squash commit,
+- **Phase 7.5** (final squash+push, including **7.5a**'s promotion of the PR out of `[wip]` — that
+  is intended here too: the flow drops the bracket and waits for the final-mode CI run) and **7.6**
+  (final CI + Codex/Sonar re-validation + this variant's own interactive Devin relay) — this is the
+  true final gate before Phase 10 below presents anything to the human. **Override for 7.6b:**
+  `finish-pr.md`'s own Phase 7.6b is now a read-only Codex-review + SonarCloud-quality-gate check
+  with no browser automation. Run its Sonar quality-gate sub-check as written; this variant does not
+  drive Codex (its automated review is the interactive Devin relay), so record 7.6b's Codex
+  sub-check as `n/a — interactive Devin relay is this variant's automated review`. Then, still run
+  the interactive Devin check the same way as this file's own Phase 8: give the operator the Devin
+  URL for the post-squash commit,
   wait for their relay, and if they report any remaining bug or flag, fix it, commit, push, and let
   `finish-pr.md`'s own Phase 7.5/7.6a repeat (squash+push, then CI) before checking Devin again — the
   same one-fix-one-commit discipline from Phase 8 applies here too. **Any correction made here also
@@ -735,14 +752,12 @@ protective limit on a runaway loop or a precondition that genuinely isn't met ye
 - `.claude/commands/pr-comments.md` — Steps 1–7 reused in Phase 6; run standalone to re-resolve
   comments outside this flow.
 - `.claude/commands/finish-pr.md` — its Phases 1–7.6 are reused wholesale in Phase 9 above, run
-  automatically instead of waiting for a human. Its own opening line ("call this only after the
-  human has manually tested the PR and approved it") still describes running it *standalone* on a
-  PR that didn't go through one of the `/issue*` variants — worth a small edit to `finish-pr.md`
-  itself if you want that file to name both entry points explicitly, e.g.: "Call this after a PR is
-  ready to close out — either by hand once you've manually tested and approved it, or automatically
-  as this file's (or a sibling variant's) own Phase 9." Its Devin/DeepWiki check (Phase 7.6b) is
-  replaced by this file's own interactive relay in Phase 9 above (see that phase's override) — the
-  human confirms 0 bugs on the final commit directly, the same as Phase 8 does earlier in the run.
+  automatically instead of waiting for a human. Its opening line already names both entry points
+  ("call this only after the review — manual or automated — has left the PR ready"), so no edit is
+  needed there. Its Phase 7.5a (promote the PR out of `[wip]`) runs as written. Its Phase 7.6b is
+  now a read-only Codex + SonarCloud-quality-gate check, not a browser scan — Phase 9's override
+  above runs its Sonar sub-check, marks the Codex sub-check `n/a` for this variant, and keeps this
+  file's own interactive Devin relay as the post-squash review check.
 - `.claude/skills/fix-tests/SKILL.md` — a narrower, standalone tool for fixing failures in an
   *existing* test suite outside of an active issue; its confirmation gate exists because it may be
   touching behavior nobody currently intends to change, which doesn't apply to Phase 3 above (you

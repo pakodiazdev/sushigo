@@ -48,12 +48,18 @@ branch keeps its `<type>/<NNN>-<desc>` name (see [`branches.md`](./branches.md))
 Rules:
 
 1. **Open the PR with `[wip]` from the start** (or `[e2e-test]` while iterating specifically on
-   Cypress specs) — CI runs the WIP mode while work is in progress and keeps `ci-gate` red.
-2. **Promote to final by editing the title to remove the bracket.** The `pull_request: edited`
-   trigger re-runs CI in *final* mode (full Cypress + a green `ci-gate`); nothing else changes.
+   Cypress specs) — CI runs the WIP mode while work is in progress and keeps `ci-gate` red. The
+   `/start-issue`, `/issue`, `/issue-full` and `/issue-no-review` commands do this automatically:
+   their `gh pr create` title template carries the `[wip]` bracket. None of them ever removes it.
+2. **Promotion to final — dropping the bracket — is what `/finish-pr` does** (its Phase 7.5a), once
+   the review (manual or automated) has left the PR ready. The `pull_request: edited` trigger
+   re-runs CI in *final* mode (full Cypress + a green `ci-gate`); `/finish-pr` then waits for that
+   run and validates it (Phase 7.6). You can also drop the bracket by hand earlier if you want
+   final-mode CI sooner — nothing else about the title changes:
    ```bash
    gh pr edit <N> --title "✨ [#016][a] - Employee CRUD API ✨"
    ```
+   `/finish-pr` refuses to declare a still-`[wip]` PR ready without promoting it first.
 3. `push` to `main` always runs in **final** mode.
 4. If both `[e2e-test]` and `[wip]` appear, `[e2e-test]` wins (the narrowest mode).
 5. `[review]` is **not** a mode — review/correction has the same CI semantics as `[wip]`.

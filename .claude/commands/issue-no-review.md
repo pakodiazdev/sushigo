@@ -174,12 +174,13 @@ same as it never reads Codex's.
 test and approval. Here, it runs automatically as the last stage of this pipeline, exactly the way
 `.claude/commands/issue.md`'s **Phase 9** runs it — follow that phase's text exactly as written,
 substituting this file's own Phase 2 (branch/session) and Phase 6 (squash) wherever it refers to
-`issue.md`'s Phase 2 and Phase 7. In particular, keep its override of `finish-pr.md`'s Phase 7.6b:
-skip the Devin/DeepWiki check entirely (no Chrome-extension tool, no `app.devin.ai`, no asking
-whether to wait) — but unlike `issue.md`'s own Phase 9, do **not** substitute a best-effort `@codex
-review` re-trigger in its place; this file already triggered Codex once, in Phase 4, and leaves every
-further review cycle to the human. Note in Phase 8's report that Devin/DeepWiki and any post-squash
-Codex confirmation were skipped by design, not because anything was unavailable.
+`issue.md`'s Phase 2 and Phase 7. Phase 7.5a's promotion out of `[wip]` runs here too — the
+automated flow drops the bracket and waits for the final-mode CI run. Override `finish-pr.md`'s
+Phase 7.6b: run its **SonarCloud quality-gate** sub-check as written, but record its **Codex**
+sub-check as `n/a — review skipped by request` rather than a failure. This file triggered Codex
+once, in Phase 4, and does not poll or wait for it; every further review cycle is the human's, so a
+Codex review not yet posted on the squashed commit must not stop close-out. Note in Phase 8's
+report that the Codex confirmation was skipped by design, not because anything was unavailable.
 
 Any stop reached while executing `finish-pr.md`'s Phases 0–2 is a genuine early stop for this
 pipeline too — close the Sessions entry (Phase 2's rule above) with the current time before

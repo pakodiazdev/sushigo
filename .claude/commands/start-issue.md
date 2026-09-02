@@ -307,6 +307,15 @@ basename "$(git rev-parse --show-toplevel)"   # e.g. sushigo-a → workspace let
 If the repo root doesn't match `sushigo-<letter>`, omit the `[x]` bracket entirely (standalone
 Docker mode has no workspace letter).
 
+**Open the PR in `[wip]` mode** — a third bracket `[wip]` immediately after `[x]`, per
+`doc/conventions/git/pull-requests.md` → "PR Title Execution-Mode Flags". While the PR is `[wip]`,
+CI runs the quality branches plus a *targeted* Cypress selection (PR-changed specs + impact-mapped
+specs) instead of the full 6-shard suite, and `ci-gate` stays red so the PR can never be mistaken
+for a merge candidate. **Opening the PR always includes `[wip]`; dropping it is a separate, later
+step** — `/finish-pr` does it (its Phase 7.5a) once review has left the PR ready, whether a human
+runs `/finish-pr` or `/issue` runs it automatically at close-out. This `/start-issue` flow stops
+after opening the PR, so here the bracket stays until someone promotes.
+
 Populate the `## Workspace` section with the name of the current workspace directory
 (e.g. `sushigo-c`) and the branch name from `git branch --show-current`. Write `## Manual Testing`
 with concrete, executable steps — the exact command, URL/route, or UI action and the expected
@@ -320,7 +329,7 @@ follow-up edit right after creation, not in the initial body:
 
 ```bash
 PR_URL=$(gh pr create \
-  --title "<emoji> [#NNN][<letter>] - <short description> <emoji>" \
+  --title "<emoji> [#NNN][<letter>][wip] - <short description> <emoji>" \
   --body "$(cat <<'EOF'
 ## Summary
 Closes #NNN
