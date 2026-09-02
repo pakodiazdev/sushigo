@@ -16,6 +16,12 @@ function errorMessage(error) {
 }
 
 const TOP_N = parsePositiveInt(process.env.TEST_TIMING_TOP_N, 20);
+// `_api-ci.yml` leaves both unset → the PHPUnit heading and no per-file rollup, unchanged.
+// `_e2e-ci.yml`'s cypress-timing step sets TEST_TIMING_LABEL=Cypress and
+// TEST_TIMING_GROUP_BY_FILE=true so the summary is titled for Cypress and adds a
+// slowest-spec-files table (the useful unit when every .cy.ts boots its own stack).
+const LABEL = process.env.TEST_TIMING_LABEL || 'PHPUnit';
+const GROUP_BY_FILE = process.env.TEST_TIMING_GROUP_BY_FILE === 'true';
 
 function main() {
   // One path per shard (api-tests.yml's `matrix.shard` strategy, #481) — the shell expands the
@@ -34,7 +40,7 @@ function main() {
 
   const parsedReports = existingPaths.map((junitPath) => parseJunitXml(fs.readFileSync(junitPath, 'utf8')));
   const parsed = mergeParsed(parsedReports);
-  const summary = buildSummaryMarkdown(parsed, TOP_N);
+  const summary = buildSummaryMarkdown(parsed, TOP_N, { label: LABEL, groupByFile: GROUP_BY_FILE });
 
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (summaryFile) {

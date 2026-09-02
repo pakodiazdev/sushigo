@@ -180,9 +180,8 @@ suite a real merge gate instead of a local/manual step. See
   CI overrides (`APP_ENV=local` so the `/v1/test` + `/v1/devtools/clock` routes register,
   `CLOCK_SIMULATION_ENABLED=true`, `LOG_CHANNEL=stderr` so a root-owned `storage/logs/laravel.log`
   from `init.sh` can't 500 every request that logs).
-- **Sharded, fail-fast.** `cypress-e2e-run` is a matrix (currently 6 shards); each shard boots its
-  own stack and runs a file-index slice of the specs (`i % strategy.job-total`, same split as
-  `api-tests.yml`). `strategy.fail-fast: true` + the `cypress-fail-fast` plugin (CI-only, via
+- **Sharded, fail-fast.** `cypress-e2e-run` is a matrix (6 shards); each shard boots its own stack
+  and runs a file-index slice of the specs (`i % strategy.job-total`, same split as `_api-ci.yml`). `strategy.fail-fast: true` + the `cypress-fail-fast` plugin (CI-only, via
   `CYPRESS_FAIL_FAST_ENABLED`) mean the first failing test aborts its shard and cancels the rest —
   one red spec already blocks the merge. Local `make cypress-run` keeps running the whole suite
   (the plugin is off unless that env var is set).
@@ -201,10 +200,49 @@ suite a real merge gate instead of a local/manual step. See
   (`if: always()`).
 - **Slow-spec timing.** Each shard emits a per-test JUnit report (`mocha-junit-reporter` via
   `cypress-multi-reporters`, alongside `spec`); the `cypress-timing` job merges them into a
-  "Top 20 slowest specs" table on the run's Job Summary, reusing
-  `.github/scripts/test-timing/generate.js` (same tool as `api-tests.yml`). Wall-clock is
-  ~5.5–7 min at 6 shards — most of that is per-shard fixed overhead (image build + `init.sh`),
-  tracked for reduction in [#559](https://github.com/pakodiazdev/sushigo/issues/559).
+  "Top 20 slowest tests" table on the run's Job Summary, reusing
+  `.github/scripts/test-timing/generate.js` (same tool as `_api-ci.yml`). For the Cypress run it
+  sets `TEST_TIMING_LABEL=Cypress` + `TEST_TIMING_GROUP_BY_FILE=true`, so the summary is
+  Cypress-labelled and adds a **slowest-spec-files** rollup — `parse.js` attributes each testcase
+  to its `.cy.ts` via the nearest enclosing `<testsuite file=…>` when the testcase itself carries
+  no `file` attribute (#559).
+
+### Per-shard overhead reduction (#559)
+
+Baseline was ~5.5–7 min for the slowest shard at 6 shards. Every shard boots its own stack, so
+fixed overhead — the `docker/app/Dockerfile` `dev` image build, `init.sh`'s cold `composer
+install` + `npm install` (×2), and `l5-swagger:generate` — is paid per shard and does not shrink
+when shards are added. `_e2e-ci.yml` cuts it:
+
+| Lever | Mechanism | Notes |
+|---|---|---|
+| `dev` image build | `docker/build-push-action` builds the `dev` target with a cross-run `type=gha` layer cache and `load`s it as `sushigo-test-e2e:dev`; `docker-compose.e2e.yml` now names that `image:`, so `docker compose up test_e2e` reuses it instead of rebuilding. | The `dev` target copies no app code, so the cache stays warm across code-only PRs. First push after a Dockerfile change rebuilds cold once. |
+| `composer install` / API `npm install` | `actions/cache` on `code/api/{vendor,node_modules}` (bind-mounted in); `init.sh` skips installing a dir that already exists. | Exact combined-lock cache key, no `restore-keys` — a lockfile change reinstalls cold rather than running stale. |
+| webapp `npm install` (init.sh **and** the `cypress` container) | Same cache entry also carries `code/webapp/node_modules`; on a miss it is primed once with `npm ci` on the runner. The container call is now `npm install --prefer-offline`. | |
+| `l5-swagger:generate` | `init.sh` skips it when `ENV=e2e` (the `test_e2e` service sets it). Cypress never reads the Swagger docs. | dev-lab / standalone `init.sh` (`ENV` unset) is unchanged. |
+
+**Measured (warm cache, full suite on a representative PR):** per-shard fixed overhead dropped
+from ~150–190s to ~105s (deps cache restore ~5s; runner `npm ci` skipped on a hit; `init.sh`
+API-health wait ~30s vs ~65s; `dev` image ~40s vs ~65s). Slowest shard: **~5.5–6 min**, down
+from the ~5.5–7 min baseline and much tighter at the low end.
+
+**Runner-minute trade-off (AC of #559):** the overhead cuts trade a little *added* warm-cache
+work (cache restore, one `docker buildx` layer import, a `type=gha` export) for a large hot-path
+reduction — the removed installs/build were pure compute, so total runner-minutes fall with the
+wall-clock. The one regression is the **first** run after a Dockerfile or lockfile change, which
+pays a cold rebuild plus a cache export.
+
+**Avenue 5 (more shards) — measured and rejected.** With fixed overhead gone, Cypress
+*execution* is the bottleneck, but the file-index split (`sort` order, not duration) is uneven:
+at 6 shards the warm slowest/fastest were ~6m / ~5.5m; going to 8 shards only made the *fast*
+shards faster (~4m) and moved the *slowest* shard by ~1s, for +33% runners. Shard count is not
+the lever — **duration-aware shard balancing** (feed the per-shard JUnit timings, already
+uploaded as `cypress-junit-shard-*`, back into the `plan` job's split) is the follow-up worth
+the last ~1 min.
+
+**Local `make cypress-run`:** unaffected at runtime, but after editing `docker/app/Dockerfile`
+run `docker compose -f docker-compose.yml -f docker-compose.e2e.yml build test_e2e` once — with
+an explicit `image:` set, `up` alone will not notice the Dockerfile changed.
 
 ### Quarantined specs
 

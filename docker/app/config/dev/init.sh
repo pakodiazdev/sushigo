@@ -89,7 +89,14 @@ if [ ! -d "vendor" ] || [ -z "$(ls -A vendor)" ]; then
     composer install --no-interaction --prefer-dist --optimize-autoloader
     print_message "✓ Dependencias de Composer instaladas"
 else
-    print_message "✓ Dependencias de Composer ya instaladas"
+    # vendor/ puede venir de una caché de CI cacheada solo por composer.lock: si una clase
+    # de primera parte se movió sin cambiar el lock, el classmap optimizado quedaría obsoleto.
+    # Se regenera el autoloader contra el código actual. Sin --no-scripts, para que
+    # post-autoload-dump ejecute `artisan package:discover` y reconstruya
+    # bootstrap/cache/packages.php (que no se cachea y nace ausente en cada runner),
+    # igual que hace la instalación desde cero de arriba (#559 review).
+    print_message "✓ Dependencias de Composer ya instaladas — regenerando autoloader..."
+    composer dump-autoload --optimize --no-interaction
 fi
 
 # Instalar dependencias de Node.js del API si es necesario
@@ -202,12 +209,17 @@ print_message "Creando link simbólico de storage..."
 php artisan storage:link --force || true
 print_message "✓ Link de storage creado"
 
-# Generar documentación de Swagger
-print_message "Generando documentación de Swagger..."
-if php artisan l5-swagger:generate; then
-    print_message "✓ Documentación de Swagger generada correctamente"
+# Generar documentación de Swagger (se omite en E2E: los specs de Cypress no la consumen
+# y `l5-swagger:generate` añade ~5s al arranque de cada shard — ver #559)
+if [ "${ENV:-}" = "e2e" ]; then
+    print_message "Omitiendo generación de Swagger (ENV=e2e)"
 else
-    print_warning "⚠ Hubo un problema al generar la documentación de Swagger, continuando..."
+    print_message "Generando documentación de Swagger..."
+    if php artisan l5-swagger:generate; then
+        print_message "✓ Documentación de Swagger generada correctamente"
+    else
+        print_warning "⚠ Hubo un problema al generar la documentación de Swagger, continuando..."
+    fi
 fi
 
 # Crear directorios de logs de supervisor

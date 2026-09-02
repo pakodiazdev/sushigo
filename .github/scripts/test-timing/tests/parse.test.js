@@ -20,6 +20,77 @@ const NESTED_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
   </testsuite>
 </testsuites>`;
 
+const CYPRESS_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="12.5" tests="3" failures="0">
+  <testsuite name="Root Suite" tests="0" file="cypress/e2e/login.cy.ts" time="0"></testsuite>
+  <testsuite name="login flow" tests="2" file="cypress/e2e/login.cy.ts" time="8">
+    <testcase name="login flow logs the user in" time="5" classname="logs the user in"/>
+    <testcase name="login flow rejects bad credentials" time="3" classname="rejects bad credentials"/>
+  </testsuite>
+  <testsuite name="dashboard" tests="1" file="cypress/e2e/dashboard.cy.ts" time="4.5">
+    <testcase name="dashboard renders the widgets" time="4.5" classname="renders the widgets"/>
+  </testsuite>
+</testsuites>`;
+
+test('parseJunitXml resolves each testcase spec file from the nearest enclosing <testsuite file=...>', () => {
+  const { testcases } = parseJunitXml(CYPRESS_SAMPLE);
+
+  assert.equal(testcases.length, 3);
+  assert.deepEqual(
+    testcases.map((testcase) => testcase.specFile),
+    ['cypress/e2e/login.cy.ts', 'cypress/e2e/login.cy.ts', 'cypress/e2e/dashboard.cy.ts'],
+  );
+});
+
+test('parseJunitXml prefers a testcase own file= attribute over the enclosing suite', () => {
+  const xml = `<testsuites><testsuite name="s" file="cypress/e2e/outer.cy.ts">
+    <testcase name="t" time="1" file="cypress/e2e/inner.cy.ts"/>
+  </testsuite></testsuites>`;
+
+  const { testcases } = parseJunitXml(xml);
+
+  assert.equal(testcases[0].specFile, 'cypress/e2e/inner.cy.ts');
+});
+
+test('parseJunitXml leaves specFile null when no file= is available anywhere', () => {
+  const xml = '<testsuites><testsuite name="s"><testcase name="t" time="1"/></testsuite></testsuites>';
+
+  const { testcases } = parseJunitXml(xml);
+
+  assert.equal(testcases[0].specFile, null);
+});
+
+test('parseJunitXml stops inheriting a suite file once its </testsuite> has closed', () => {
+  const xml = `<testsuites>
+    <testsuite name="a" file="cypress/e2e/a.cy.ts"><testcase name="ta" time="1"/></testsuite>
+    <testsuite name="b"><testcase name="tb" time="1"/></testsuite>
+  </testsuites>`;
+
+  const { testcases } = parseJunitXml(xml);
+
+  assert.equal(testcases[0].specFile, 'cypress/e2e/a.cy.ts');
+  assert.equal(testcases[1].specFile, null);
+});
+
+test('parseJunitXml does not let a self-closing <testsuite/> unbalance the file stack', () => {
+  const xml = `<testsuites>
+    <testsuite name="empty" file="cypress/e2e/skipped.cy.ts"/>
+    <testsuite name="real" file="cypress/e2e/real.cy.ts"><testcase name="t" time="1"/></testsuite>
+  </testsuites>`;
+
+  const { testcases } = parseJunitXml(xml);
+
+  assert.equal(testcases.length, 1);
+  assert.equal(testcases[0].specFile, 'cypress/e2e/real.cy.ts');
+});
+
+test('parseJunitXml sets specFile from a PHPUnit testcase own file attribute', () => {
+  const { testcases } = parseJunitXml(NESTED_SAMPLE);
+
+  assert.equal(testcases[0].specFile, 'tests/Unit/ExampleTest.php');
+  assert.equal(testcases[1].specFile, 'tests/Feature/ExampleTest.php');
+});
+
 test('parseJunitXml extracts every leaf testcase with its duration', () => {
   const { testcases } = parseJunitXml(NESTED_SAMPLE);
 
@@ -36,6 +107,29 @@ test('parseJunitXml reads the root testsuite time and tests count', () => {
   const { suiteTime, totalTests } = parseJunitXml(NESTED_SAMPLE);
 
   assert.equal(suiteTime, 0.242288);
+  assert.equal(totalTests, 2);
+});
+
+test('parseJunitXml reads Cypress aggregate totals from the <testsuites> root, not the zeroed "Root Suite"', () => {
+  const { suiteTime, totalTests } = parseJunitXml(CYPRESS_SAMPLE);
+
+  // <testsuites name="Mocha Tests" time="12.5" tests="3"> — must win over the inner
+  // <testsuite name="Root Suite" tests="0" time="0"> that ROOT_SUITE_RE matches first.
+  assert.equal(suiteTime, 12.5);
+  assert.equal(totalTests, 3);
+});
+
+test('parseJunitXml falls back to summed/counted totals when <testsuites> carries no tests/time', () => {
+  const xml = `<testsuites name="Mocha Tests">
+    <testsuite name="s" file="cypress/e2e/a.cy.ts">
+      <testcase name="one" time="1.5"/>
+      <testcase name="two" time="0.5"/>
+    </testsuite>
+  </testsuites>`;
+
+  const { suiteTime, totalTests } = parseJunitXml(xml);
+
+  assert.equal(suiteTime, 2);
   assert.equal(totalTests, 2);
 });
 
