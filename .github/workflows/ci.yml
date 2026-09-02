@@ -261,16 +261,12 @@ jobs:
             exit 1
           fi
 
-          # 2. Documentation / non-pipeline-config-only PR: nothing to verify.
-          if [ "$VERIFY_NEEDED" = "false" ]; then
-            echo "No code, test, pipeline or script changes — documentation/config-only PR. Nothing to verify; ci-gate passes."
-            exit 0
-          fi
-
-          # 3. Every applicable branch must have passed. A legitimately skipped branch (surface not
-          #    touched, or a whole surface skipped in [e2e-test] mode) counts as pass;
-          #    failure/cancelled/timed_out does not. This is mode-independent — [wip] with green
-          #    targeted branches passes here exactly like final mode does.
+          # 2. Any dependency that actually RAN and did not pass fails ci-gate — checked BEFORE the
+          #    docs short-circuit below, so a failing `e2e-test-empty-guard` (an [e2e-test] PR with
+          #    no changed specs) can never slip through as green just because `verify_needed=false`.
+          #    A legitimately skipped branch (surface not touched, or a whole surface skipped in
+          #    [e2e-test] mode) counts as pass; failure/cancelled/timed_out does not. Mode-independent
+          #    — [wip] with green targeted branches passes here exactly like final mode does.
           rc=0
           for pair in "api-ci:$API" "webapp-ci:$WEBAPP" "e2e-ci:$E2E" "scripts-tests:$SCRIPTS" "e2e-test-empty-guard:$GUARD"; do
             name="${pair%%:*}"
@@ -280,12 +276,19 @@ jobs:
               *) echo "::error::$name result was '$res'"; rc=1 ;;
             esac
           done
-          if [ "$rc" -eq 0 ]; then
-            echo "all applicable branches passed."
-          else
+          if [ "$rc" -ne 0 ]; then
             echo "::error::one or more applicable branches did not pass."
+            exit 1
           fi
-          exit $rc
+
+          # 3. Nothing failed. Documentation / non-pipeline-config-only PR: note it and pass.
+          if [ "$VERIFY_NEEDED" = "false" ]; then
+            echo "No code, test, pipeline or script changes — documentation/config-only PR. Nothing to verify; ci-gate passes."
+            exit 0
+          fi
+
+          echo "all applicable branches passed."
+          exit 0
 
   # Required check #2: the merge-candidacy gate. "May this PR merge right now?"
   #

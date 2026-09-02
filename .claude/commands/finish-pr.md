@@ -620,12 +620,23 @@ window — someone else's PR merged — the branch can have silently gone `BEHIN
 the Phase 8 report would otherwise claim "clean, no conflicts" on stale information.
 
 ```bash
-gh pr view <N> --repo <owner>/<repo> --json mergeable,mergeStateStatus
+gh pr view <N> --repo <owner>/<repo> --json mergeable,mergeStateStatus,reviewDecision
 ```
 
-`mergeStateStatus` must still be `CLEAN`. If it is now `BEHIND` (someone else's PR merged into
-`<baseRefName>` while Phases 2–6, 7.5, and 7.6 ran), auto-rebase the same way as Phase 1b instead
-of stopping:
+`mergeStateStatus` must still be `CLEAN` — **or** `BLOCKED` for the one remaining benign reason:
+the branch requires a human approval that isn't there yet (`reviewDecision == REVIEW_REQUIRED`).
+This is the same narrowly-scoped exception as Phase 1b, carried through to the final check: by now
+7.5a has promoted the PR, so `merge-gate` is `success` and every required check is green — a bare
+`REVIEW_REQUIRED` is the only thing left, and it is not something this command can or should
+resolve. Accept it here **only when** 7.6a's checks were all green, `mergeable` is not
+`CONFLICTING`, and `reviewDecision` is **not** `CHANGES_REQUESTED`. Record it so Phase 8's report
+says "all gates green — pending your approval and merge" instead of "Ready to merge". A human
+running `/finish-pr` standalone is expected to approve first; if they haven't, this is still not a
+hard stop — the report just names the missing approval. The `/issue*` pipelines rely on this
+exception (they run unattended and never carry an approval) — see their Phase 9 notes.
+
+If it is now `BEHIND` (someone else's PR merged into `<baseRefName>` while Phases 2–6, 7.5, and
+7.6 ran), auto-rebase the same way as Phase 1b instead of stopping:
 
 ```bash
 git fetch origin <baseRefName>
@@ -659,7 +670,8 @@ git rebase origin/<baseRefName>
   Report that file list and stop before Phase 8 (the housekeeping commits already pushed before
   this rebase attempt are not lost — resolve manually, or run `/rebase-main`, then re-run 7.5–7.6).
 
-If `DIRTY`/`BLOCKED` instead, report the reason and stop.
+If `DIRTY`, or `BLOCKED` for any reason other than the bare `REVIEW_REQUIRED` carve-out above,
+report the reason and stop.
 
 ---
 
@@ -691,6 +703,12 @@ If `DIRTY`/`BLOCKED` instead, report the reason and stop.
 Everything above is green. I have not merged it — that's on you:
   gh pr merge <N> --merge      (branch is already a single commit, no need for --squash)
 ```
+
+If every gate is green but the branch still needs a human **approval** (7.6c saw `BLOCKED` /
+`reviewDecision == REVIEW_REQUIRED`, nothing else), replace "✅ Ready to merge" with
+`### ✅ All gates green — pending your approval`: the "Mergeable" line reads
+`[ ] Pending required approval — approve the PR, then merge`, and the closing line is
+`Approve, then: gh pr merge <N> --merge`.
 
 If a merge requirement is **not** met, replace the "✅ Ready to merge" block with a
 `### ❌ Not ready to merge` block that lists each unmet requirement and, for each, the one concrete

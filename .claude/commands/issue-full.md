@@ -554,10 +554,11 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   rebase-conflict abort-and-report, and 1b's `DIRTY`/`BLOCKED` mergeable-state check can each stop
   the run on their own — e.g. `main` picking up branch-protection rules this run didn't anticipate,
   or an unrelated local change dirtying the tree between Phase 7's push and Phase 9 starting. **One
-  override for this path:** 1b's `reviewDecision == REVIEW_REQUIRED` guard is written for a human
-  running `/finish-pr` standalone — this pipeline runs unattended and never has an approval, so a
-  bare `REVIEW_REQUIRED` (with the `[wip]` bracket the only other blocker and `ci-gate` + the branch
-  jobs green) is **not** a stop here; carry on. `CHANGES_REQUESTED` still stops. None of the other
+  override for this path:** the `reviewDecision == REVIEW_REQUIRED` carve-out in **both** 1b and
+  7.6c is written for a human running `/finish-pr` standalone — this pipeline runs unattended and
+  never has an approval, so a bare `REVIEW_REQUIRED` (with `ci-gate` + `merge-gate` and the branch
+  jobs green and no conflict) is **not** a stop at either point; carry on and let the final report
+  say "all gates green — pending your approval and merge". `CHANGES_REQUESTED` still stops. None of the other
   conditions are a bug in this pipeline when they fire — follow `finish-pr.md`'s own instruction for
   that condition (report and stop, or the `/rebase-main` pointer on a rebase conflict) rather than
   guessing at a workaround.
