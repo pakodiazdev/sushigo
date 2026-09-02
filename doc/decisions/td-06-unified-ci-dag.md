@@ -85,13 +85,19 @@ fast green in final mode rather than running the arsenal against nothing.
 That made a `[wip]` PR indistinguishable at a glance from one with a real failing test.
 
 The merge-candidacy question is now a **separate required check, `merge-gate`**, posted via the
-Checks API by the `merge-gate-report` job (`actions/github-script`):
+Checks API (`actions/github-script`) by two jobs, last-write-wins:
 
 - **final mode, `ci-gate` passed** → `merge-gate` = `success`
 - **final mode, `ci-gate` failed**, or `analyze-pr` broke → `merge-gate` = `failure`
 - **`[wip]` / `[e2e-test]`** → `merge-gate` = **`action_required`** — an "action needed" state,
   not a red failure X; blocks merge because `action_required` is not in GitHub's passing set
   `{success, skipped, neutral}`.
+
+`merge-gate-hold` (`needs: analyze-pr`) posts the `[wip]` / `[e2e-test]` / analyze-broke verdicts
+within tens of seconds of the event; `merge-gate-report` (`needs: analyze-pr, ci-gate`) posts the
+authoritative final-mode verdict. The split closes a race where adding `[wip]` to an already-final
+PR — a title-only edit, no new commit — would leave the previous `merge-gate: success` valid on
+that SHA for as long as it took `ci-gate` to re-run.
 
 `ci-gate` is now evaluated **identically in every mode** — green whenever the jobs that ran passed
 — so a red `ci-gate` always means a real lint/test/e2e failure. Branch protection must require

@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git rebase:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(tail:*), Bash(wc:*), Read, Edit, Write, WebFetch
+allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr edit:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh api:*), Bash(gh project:*), Bash(gh repo view:*), Bash(sleep:*), Bash(git fetch:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git status:*), Bash(git branch:*), Bash(git merge-base:*), Bash(git reset:*), Bash(git rebase:*), Bash(git commit:*), Bash(git push:*), Bash(git rev-parse:*), Bash(date:*), Bash(find:*), Bash(ls:*), Bash(grep:*), Bash(mkdir:*), Bash(cd:*), Bash(sort:*), Bash(diff:*), Bash(cp:*), Bash(tail:*), Bash(wc:*), Read, Edit, Write, WebFetch
 description: Validate a PR is ready to merge and perform the final housekeeping (squash commits, finalize the issue in place, archive it locally, update the sprint doc's per-issue row, move the issue to Done) — never merges automatically
 argument-hint: [pr-number]
 ---
@@ -559,6 +559,21 @@ replaced. It also re-checks mergeable state (7.6c), since Phase 1's `CLEAN` resu
 while Phases 2–6 and 7.5 run.
 
 ### 7.6a. Wait for CI (final mode)
+
+**First, wait for the checks to register.** The 7.5b force-push (and 7.5a's title edit) fired only
+seconds ago; GitHub Actions takes a little while to create the check runs. A `--watch` started
+before any check exists returns **"no checks reported"** and exits immediately — that is *not* a
+green result. Run a plain (non-watch) `gh pr checks <N>` first:
+
+```bash
+gh pr checks <N> --repo <owner>/<repo>
+```
+
+If it lists the pipeline (at least `analyze-pr` / `ci-gate` appear, in any state), continue to the
+blocking watch below. If it prints **"no checks reported"** (or lists nothing), wait ~10–15s and
+re-run this same command; repeat up to ~8 times. Only treat a persistently empty list as real
+after that many retries — then report "CI never registered a run for the merge-ready commit" and
+stop (do **not** treat it as success). Once checks are present:
 
 ```bash
 gh pr checks <N> --repo <owner>/<repo> --watch

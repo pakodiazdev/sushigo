@@ -208,12 +208,22 @@ when one failed. A red `ci-gate` therefore always means a real lint/test/e2e fai
 red "just because the PR is `[wip]`".
 
 **`merge-gate` — merge candidacy.** "May this PR merge right now?" It is a check run **posted via
-the Checks API** (job `merge-gate-report` → `actions/github-script`), not a job exit code — so it
-can carry an `action_required` conclusion, which a job exit code cannot. It is posted `success`
-**only in final mode** and only iff `ci-gate` passed; `failure` in final mode if `ci-gate` failed
-or if `analyze-pr` broke; and **`action_required`** in `[wip]` / `[e2e-test]` — an "action needed"
-state, not a red failure X, that blocks merge. Removing the `[wip]` / `[e2e-test]` bracket re-runs
-CI in final mode and `merge-gate` is re-posted `success`.
+the Checks API** (`actions/github-script`), not a job exit code — so it can carry an
+`action_required` conclusion, which a job exit code cannot. It is posted `success` **only in final
+mode** and only iff `ci-gate` passed; `failure` in final mode if `ci-gate` failed or if
+`analyze-pr` broke; and **`action_required`** in `[wip]` / `[e2e-test]` — an "action needed" state,
+not a red failure X, that blocks merge. Removing the `[wip]` / `[e2e-test]` bracket re-runs CI in
+final mode and `merge-gate` is re-posted `success`.
+
+**Two jobs post it, last-write-wins.** `merge-gate-hold` (`needs: analyze-pr` only) fires within
+tens of seconds of the triggering event and posts `action_required` / `failure` for the
+wip / e2e-test / analyze-broke cases; `merge-gate-report` (`needs: analyze-pr, ci-gate`) posts the
+authoritative final-mode verdict once `ci-gate` is done, and re-posts `action_required` otherwise.
+The hold job exists to close a race: adding `[wip]` to an already-final PR is a **title-only edit**
+(no new commit), so the previous `merge-gate: success` stays valid on that SHA until something
+overwrites it — waiting for `ci-gate` would leave the now-`[wip]` PR mergeable for that whole
+window. In final mode the hold job posts nothing and `merge-gate-report` owns the verdict; "no
+`merge-gate` yet on the new state" fails safe (branch protection shows it pending → blocked).
 
 **Why `action_required` and not `neutral` or a skipped job:** GitHub's *passing* set for a
 required status check is exactly `{success, skipped, neutral}` — a `neutral` conclusion, and a
@@ -221,7 +231,7 @@ job-level `if:`-skip (which reports `skipped`), both **let the merge through**. 
 is the least-alarming conclusion that is *not* in that set, so it is what actually holds the merge.
 See the amendment in [TD-06](../../decisions/td-06-unified-ci-dag.md).
 
-**Same-repo PRs only.** `merge-gate-report` needs `checks: write`, which a `pull_request` run from
+**Same-repo PRs only.** Both merge-gate jobs need `checks: write`, which a `pull_request` run from
 a **fork** never gets (read-only `GITHUB_TOKEN`). On a fork PR the job detects this and **fails
 with an explicit "fork PRs unsupported" message**; the required `merge-gate` context also never
 reports, so the fork PR is doubly blocked with a clear reason. That is the intended outcome: dev-lab
