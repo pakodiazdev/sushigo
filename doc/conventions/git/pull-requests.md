@@ -55,24 +55,51 @@ posted `success` only in final mode (iff `ci-gate` passed), and **`neutral`** in
 Rules:
 
 1. **Open the PR with `[wip]` from the start** (or `[e2e-test]` while iterating specifically on
-   Cypress specs) — CI runs the WIP mode while work is in progress: `ci-gate` still goes green when
-   the checks pass, and `merge-gate` is posted `neutral` so the PR stays unmergeable. The `/start-issue`,
-   `/issue`, `/issue-full` and `/issue-no-review` commands do this automatically: their
-   `gh pr create` title template carries the `[wip]` bracket. None of them ever removes it.
-2. **Promotion to final — dropping the bracket — is what `/finish-pr` does** (its Phase 7.5a), once
-   the review (manual or automated) has left the PR ready. The `pull_request: edited` trigger
-   re-runs CI in *final* mode (full Cypress + `merge-gate` now runs); `/finish-pr` then waits for
-   that run and validates it (Phase 7.6). You can also drop the bracket by hand earlier if you want
-   final-mode CI sooner — nothing else about the title changes:
-   ```bash
-   gh pr edit <N> --title "✨ [#016][a] - Employee CRUD API ✨"
-   ```
-   `/finish-pr` refuses to declare a still-`[wip]` PR ready without promoting it first.
+   Cypress specs). The issue slash commands do this automatically; none of them ever remove it.
+   Promotion to final is a separate step — see [The `[wip]` → final lifecycle](#the-wip--final-lifecycle) below.
+2. **Only `/finish-pr` (or you, by hand) drops the bracket** — and only once review has left the PR
+   ready. It is never part of opening or updating the PR.
 3. `push` to `main` always runs in **final** mode.
 4. If both `[e2e-test]` and `[wip]` appear, `[e2e-test]` wins (the narrowest mode).
 5. `[review]` is **not** a mode — review/correction has the same CI semantics as `[wip]`.
 
 Full flow: [`doc/conventions/ci/pipeline.md`](../ci/pipeline.md).
+
+### The `[wip]` → final lifecycle
+
+Two **required** status checks split one question in two, so "held for `[wip]`" never looks like
+"a check failed":
+
+| Check | Question | `[wip]` / `[e2e-test]` | final |
+|---|---|---|---|
+| **`ci-gate`** | Did everything that ran pass? | **green** when the applicable branch jobs passed (evaluated the same as final). A red `ci-gate` is **always a real lint/test/e2e failure** | same |
+| **`merge-gate`** | May this PR merge now? | **`neutral`** — a grey dot, not a red X. Blocks merge (`neutral` ≠ `success`) with the title *"Held — remove the [wip] title bracket to enable merge"* | **green** iff `ci-gate` passed |
+
+`merge-gate` is a check run posted through the Checks API by the `merge-gate-report` job — a job's
+exit code cannot produce a `neutral` conclusion, and a job-level `if:`-skip would let the merge
+through (GitHub treats a skipped required check as passing).
+
+**The lifecycle:**
+
+1. **Open `[wip]`.** The `/start-issue`, `/issue`, `/issue-full`, `/issue-no-review`,
+   `/issue-devin-interactive` commands put `[wip]` in the `gh pr create` title automatically. Open
+   it by hand the same way if you are not using them. None of these commands ever remove it.
+2. **Work under `[wip]`.** Every push runs the quality branches + a *targeted* Cypress selection.
+   `ci-gate` tells you whether the code is sound; `merge-gate` sits `neutral` so the PR cannot be
+   merged by accident. Review (human or automated) happens here.
+3. **Promote.** `/finish-pr` drops the `[wip]` bracket (its Phase 7.5a); the `pull_request: edited`
+   trigger re-runs CI in final mode (full Cypress, `merge-gate` now posts `success` iff `ci-gate`
+   passed). You may also drop the bracket by hand earlier — nothing else about the title changes:
+   ```bash
+   gh pr edit <N> --title "✨ [#016][a] - Employee CRUD API ✨"
+   ```
+4. **Verify.** `/finish-pr` then waits for that final-mode run and reports merge-readiness
+   "app-doctor" style — `ci-gate` + `merge-gate` green, the Codex review (`chatgpt-codex-connector`)
+   clean on the merge-ready commit, the SonarCloud quality gate passed, threads resolved. It
+   **fixes nothing** and **never merges**: if a requirement is unmet it says exactly what and
+   stops. A human runs `gh pr merge` after their own check.
+
+`/finish-pr` refuses to declare a still-`[wip]` PR ready without promoting it first.
 
 ### Title Examples
 
@@ -431,7 +458,8 @@ Every component with **3+ `useState` calls or API mutations** must extract its l
 
 | Element          | Format                                               |
 | ---------------- | ---------------------------------------------------- |
-| Title            | `:emoji [#NNN][x] - Description :emoji`              |
+| Title            | `:emoji [#NNN][x][wip] - Description :emoji` at creation; drop `[wip]` only via `/finish-pr` (or by hand) once ready |
+| Merge checks     | `ci-gate` (quality, any mode) **and** `merge-gate` (`neutral` while `[wip]`, `success` in final) — both required |
 | Summary opening  | `Closes #NNN` then `Devin Review: <deepwiki URL>`    |
 | Commits section  | `**hash** :emoji message`                            |
 | Breaking changes | Use ⚠️ section, be explicit                          |
