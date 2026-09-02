@@ -320,57 +320,51 @@ jobs:
   #
   # TWO jobs post `merge-gate`, and the last write on a SHA wins:
   #
-  #   merge-gate-hold   — needs [analyze-pr] only. Fires within ~15s of the triggering event and
-  #                       posts `action_required` (wip / e2e-test) or `failure` (analyze-pr broke).
-  #                       It exists to close a race: adding `[wip]` to an already-final PR is a
-  #                       title-only edit (no new commit), so the previous `merge-gate: success`
-  #                       stays valid on that SHA until something overwrites it. Waiting for
-  #                       `ci-gate` (minutes, if branch jobs re-run) would leave the now-`[wip]` PR
-  #                       mergeable that whole window. This job shrinks it to job-startup latency.
-  #                       In final mode it posts nothing — `merge-gate-report` owns that verdict,
-  #                       and "no merge-gate yet on the new state" fails safe (branch protection
-  #                       shows the context pending → blocked).
+  #   merge-gate-hold   — NO `needs`, so it starts the instant the workflow is scheduled. It parses
+  #                       the execution mode straight from the PR title (same regexes as
+  #                       ci-analyze/parse-mode.js) and, for a `[wip]` / `[e2e-test]` title, posts
+  #                       `action_required` immediately. It exists to close a race: adding `[wip]`
+  #                       to an already-final PR is a title-only edit (no new commit), so the prior
+  #                       `merge-gate: success` stays valid on that SHA until something overwrites
+  #                       it. Not waiting for `analyze-pr` or `ci-gate` shrinks that window to the
+  #                       irreducible GitHub-Actions event→runner latency (~10-20s) — it cannot be
+  #                       driven to zero by any workflow. For a final title this job posts nothing;
+  #                       `merge-gate-report` owns that verdict, and "no merge-gate yet on the new
+  #                       state" fails safe (branch protection shows the context pending → blocked).
   #   merge-gate-report — needs [analyze-pr, ci-gate]. The authoritative verdict: `success` in
-  #                       final mode iff `ci-gate` passed, `failure` otherwise; re-posts
-  #                       `action_required` for wip / e2e-test (idempotent with the hold).
+  #                       final mode iff `ci-gate` passed, `failure` if `ci-gate` failed or
+  #                       `analyze-pr` broke; re-posts `action_required` for wip / e2e-test
+  #                       (idempotent with the hold).
   merge-gate-hold:
     name: merge-gate-hold
-    needs: [analyze-pr]
-    if: >-
-      always() &&
-      (needs.analyze-pr.result != 'success' ||
-       needs.analyze-pr.outputs.mode == 'wip' ||
-       needs.analyze-pr.outputs.mode == 'e2e-test')
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       checks: write
     steps:
       - name: Post merge-gate (interim hold)
         uses: actions/github-script@v7
-        env:
-          MODE: ${{ needs.analyze-pr.outputs.mode }}
-          ANALYZE: ${{ needs.analyze-pr.result }}
         with:
           script: |
-            const mode = process.env.MODE || '';
-            const analyze = process.env.ANALYZE || '';
-
-            let conclusion, title, summary;
-            if (analyze !== 'success') {
-              conclusion = 'failure';
-              title = 'analyze-pr did not succeed';
-              summary = `analyze-pr concluded \`${analyze}\` — failing merge-gate closed.`;
-            } else {
-              conclusion = 'action_required';
-              title = `Held — remove the [${mode}] title bracket to enable merge`;
-              summary = [
-                `This PR is in **${mode}** mode, so it is deliberately not a merge candidate yet.`,
-                '`ci-gate` still reflects real quality; this gate is not failed — it just requires',
-                'an action: drop the execution-mode bracket from the PR title to re-run CI in final mode.',
-              ].join('\n\n');
+            const pr = context.payload.pull_request;
+            const rawTitle = pr?.title || '';
+            // Same tokens ci-analyze/parse-mode.js recognises; [e2e-test] wins over [wip].
+            const mode = /\[\s*e2e-test\s*\]/i.test(rawTitle) ? 'e2e-test'
+                       : /\[\s*wip\s*\]/i.test(rawTitle) ? 'wip'
+                       : 'final';
+            if (mode === 'final') {
+              core.info('final-mode title — merge-gate-report owns the verdict; hold posts nothing.');
+              return;
             }
 
-            const pr = context.payload.pull_request;
+            const conclusion = 'action_required';
+            const title = `Held — remove the [${mode}] title bracket to enable merge`;
+            const summary = [
+              `This PR is in **${mode}** mode, so it is deliberately not a merge candidate yet.`,
+              '`ci-gate` still reflects real quality; this gate is not failed — it just requires',
+              'an action: drop the execution-mode bracket from the PR title to re-run CI in final mode.',
+            ].join('\n\n');
+
             if (pr && pr.head?.repo?.full_name !== pr.base?.repo?.full_name) {
               core.setFailed(
                 'Fork PRs are not supported by this pipeline: the GITHUB_TOKEN on a fork-triggered ' +

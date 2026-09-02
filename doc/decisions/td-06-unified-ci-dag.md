@@ -93,11 +93,13 @@ Checks API (`actions/github-script`) by two jobs, last-write-wins:
   not a red failure X; blocks merge because `action_required` is not in GitHub's passing set
   `{success, skipped, neutral}`.
 
-`merge-gate-hold` (`needs: analyze-pr`) posts the `[wip]` / `[e2e-test]` / analyze-broke verdicts
-within tens of seconds of the event; `merge-gate-report` (`needs: analyze-pr, ci-gate`) posts the
-authoritative final-mode verdict. The split closes a race where adding `[wip]` to an already-final
-PR — a title-only edit, no new commit — would leave the previous `merge-gate: success` valid on
-that SHA for as long as it took `ci-gate` to re-run.
+`merge-gate-hold` has **no `needs`** — it parses the mode from the PR title itself and posts the
+`[wip]` / `[e2e-test]` verdict the instant the workflow starts; `merge-gate-report`
+(`needs: analyze-pr, ci-gate`) posts the authoritative final-mode verdict. The split closes a race
+where adding `[wip]` to an already-final PR — a title-only edit, no new commit — would leave the
+previous `merge-gate: success` valid on that SHA for as long as it took `ci-gate` to re-run. The
+residual window is the irreducible GitHub-Actions event→runner latency (~10–20s); no workflow can
+flip a check in zero time.
 
 `ci-gate` is now evaluated **identically in every mode** — green whenever the jobs that ran passed
 — so a red `ci-gate` always means a real lint/test/e2e failure. Branch protection must require

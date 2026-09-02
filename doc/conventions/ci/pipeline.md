@@ -215,15 +215,19 @@ mode** and only iff `ci-gate` passed; `failure` in final mode if `ci-gate` faile
 not a red failure X, that blocks merge. Removing the `[wip]` / `[e2e-test]` bracket re-runs CI in
 final mode and `merge-gate` is re-posted `success`.
 
-**Two jobs post it, last-write-wins.** `merge-gate-hold` (`needs: analyze-pr` only) fires within
-tens of seconds of the triggering event and posts `action_required` / `failure` for the
-wip / e2e-test / analyze-broke cases; `merge-gate-report` (`needs: analyze-pr, ci-gate`) posts the
-authoritative final-mode verdict once `ci-gate` is done, and re-posts `action_required` otherwise.
-The hold job exists to close a race: adding `[wip]` to an already-final PR is a **title-only edit**
-(no new commit), so the previous `merge-gate: success` stays valid on that SHA until something
-overwrites it — waiting for `ci-gate` would leave the now-`[wip]` PR mergeable for that whole
-window. In final mode the hold job posts nothing and `merge-gate-report` owns the verdict; "no
-`merge-gate` yet on the new state" fails safe (branch protection shows it pending → blocked).
+**Two jobs post it, last-write-wins.** `merge-gate-hold` has **no `needs`** — it starts the instant
+the workflow is scheduled, parses the execution mode straight from the PR title (same regexes as
+`ci-analyze/parse-mode.js`), and for a `[wip]` / `[e2e-test]` title posts `action_required`
+immediately. `merge-gate-report` (`needs: analyze-pr, ci-gate`) posts the authoritative final-mode
+verdict once `ci-gate` is done, and re-posts `action_required` otherwise. The hold job exists to
+close a race: adding `[wip]` to an already-final PR is a **title-only edit** (no new commit), so
+the previous `merge-gate: success` stays valid on that SHA until something overwrites it — waiting
+for `analyze-pr` / `ci-gate` would leave the now-`[wip]` PR mergeable for that whole window. Not
+waiting shrinks it to the **irreducible GitHub-Actions event→runner latency (~10–20s)** — no
+workflow can react in zero time, so a deliberate "add `[wip]` then immediately click merge" race
+in that sliver is an accepted limitation, not a fixable bug. In final mode the hold job posts
+nothing and `merge-gate-report` owns the verdict; "no `merge-gate` yet on the new state" fails safe
+(branch protection shows it pending → blocked).
 
 **Why `action_required` and not `neutral` or a skipped job:** GitHub's *passing* set for a
 required status check is exactly `{success, skipped, neutral}` — a `neutral` conclusion, and a
