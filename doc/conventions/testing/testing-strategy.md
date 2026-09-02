@@ -109,8 +109,13 @@ misconfigured `.env.testing` behind an accidental full-suite pass.
 Dev-lab workspaces load `DB_DATABASE` automatically from `code/api/.env.testing`, so the commands
 above are safe to run as shown. **Outside dev-lab** (standalone Docker mode), `phpunit.xml` does
 not hardcode `DB_DATABASE` — you MUST pass it explicitly (`DB_DATABASE=mydb_test php artisan
-test --filter=...`, see `doc/TESTING.md`), otherwise the command silently falls back to the dev
-database and `RefreshDatabase` wipes it.
+test --filter=...`, see `doc/TESTING.md`), otherwise the command would fall back to the dev
+database and `RefreshDatabase` would wipe it. The suite now **refuses to start** in that case:
+`Tests\Support\DatabaseIsolationGuard` aborts the run unless the resolved database is a dedicated
+`*_test` database, and takes a PostgreSQL advisory lock so two processes cannot share one test
+database silently. It also fails any test that leaks an unclosed transaction into the next one.
+The full contract, the root-cause chain, and a deterministic reproduction command are in
+[`test-database-isolation.md`](test-database-isolation.md).
 
 **Rules:**
 

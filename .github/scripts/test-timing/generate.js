@@ -5,6 +5,7 @@ const fs = require('node:fs');
 
 const { parseJunitXml, mergeParsed } = require('./parse.js');
 const { buildSummaryMarkdown } = require('./report.js');
+const { collectDatabaseFailures, buildDatabaseFailureMarkdown } = require('./db-failures.js');
 
 function parsePositiveInt(value, fallback) {
   const parsed = Number(value);
@@ -13,6 +14,14 @@ function parsePositiveInt(value, fallback) {
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
+}
+
+// `test-results-shard-3.xml` -> `shard 3`; anything without a shard marker
+// (the pre-#481 single-file invocation) -> `this run`.
+function shardLabelFromPath(filePath) {
+  const base = String(filePath).replace(/^.*[\\/]/, '');
+  const match = base.match(/shard[-_]?([A-Za-z0-9]+)/i);
+  return match ? `shard ${match[1]}` : 'this run';
 }
 
 const TOP_N = parsePositiveInt(process.env.TEST_TIMING_TOP_N, 20);
@@ -38,15 +47,30 @@ function main() {
     return;
   }
 
-  const parsedReports = existingPaths.map((junitPath) => parseJunitXml(fs.readFileSync(junitPath, 'utf8')));
-  const parsed = mergeParsed(parsedReports);
+  const reports = existingPaths.map((junitPath) => ({
+    shard: shardLabelFromPath(junitPath),
+    xml: fs.readFileSync(junitPath, 'utf8'),
+  }));
+  const parsed = mergeParsed(reports.map((report) => parseJunitXml(report.xml)));
   const summary = buildSummaryMarkdown(parsed, TOP_N, { label: LABEL, groupByFile: GROUP_BY_FILE });
+
+  // Issue #578: surface each shard's first database-level failure (its SQLSTATE)
+  // ahead of the timing table, distinct from the aborted-transaction errors it
+  // cascades into, so a poisoned-transaction run is triaged from the root cause
+  // — per shard, since shards have independent databases. Only meaningful for the
+  // PHPUnit invocation (`_api-ci.yml`); the Cypress invocation (`_e2e-ci.yml`,
+  // TEST_TIMING_LABEL=Cypress) has no PostgreSQL SQLSTATE failures to classify.
+  const dbFailureSummary = LABEL === 'PHPUnit'
+    ? buildDatabaseFailureMarkdown(collectDatabaseFailures(reports))
+    : '';
+
+  const combined = dbFailureSummary ? `${dbFailureSummary}\n${summary}` : summary;
 
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (summaryFile) {
-    fs.appendFileSync(summaryFile, `${summary}\n`);
+    fs.appendFileSync(summaryFile, `${combined}\n`);
   } else {
-    console.log(summary);
+    console.log(combined);
   }
 }
 
