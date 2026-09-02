@@ -934,8 +934,15 @@ erDiagram
   compra y no exige `can_receive_purchases` (#570).
 - Postear una Transferencia disminuye origen e incrementa destino dentro de una sola transacción y
   registra `TRANSFER` por línea (#573).
-- #567 centraliza entradas y agrega identidad única de documento/línea para que un reintento nunca
-  aplique el mismo efecto dos veces.
+- Toda entrada de ingreso (línea de Recepción, Saldo Inicial) se registra mediante la única
+  primitiva `InventoryEntryPostingService` (#567), que agrega el movimiento inmutable, bloquea o crea
+  de forma segura ante condiciones de carrera `Stock` y combina el costo promedio ponderado como una
+  sola operación que controla la transacción del documento propietario.
+- La identidad de línea origen es explícita en el movimiento —`related_type`/`related_id`/`related_line_id`—
+  y un índice UNIQUE parcial sobre `(related_type, related_id, related_line_id, reason)` (solo filas
+  `POSTED` vivas con línea no nula) hace idempotente reprocesar la misma línea origen: devuelve el
+  movimiento existente en vez de incrementar Stock dos veces. `related_line_id` es nulo para
+  movimientos manuales sin documento origen, que el índice deja sin restringir.
 - Todo reverso es compensatorio; el historial posteado no se edita ni elimina.
 
 #### Libro mayor de movimientos de solo lectura (objetivo #574)

@@ -129,6 +129,63 @@ class ReceiptPostingTest extends InventoryTestCase
     }
 
     #[Test]
+    public function posting_stamps_explicit_source_line_identity_on_each_movement(): void
+    {
+        ['id' => $id, 'variant' => $variant] = $this->createDraft();
+        $receipt = Receipt::where('public_id', $id)->firstOrFail();
+
+        $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertOk();
+
+        $line = $receipt->lines()->firstOrFail();
+        $movement = StockMovement::where('related_type', Receipt::class)
+            ->where('related_id', $receipt->id)
+            ->where('reason', StockMovement::REASON_PURCHASE_RECEIPT)
+            ->firstOrFail();
+
+        $this->assertSame($line->id, (int) $movement->related_line_id);
+        // Identity is a first-class column now, not hidden in meta.
+        $this->assertArrayNotHasKey('receipt_line_id', $movement->meta ?? []);
+    }
+
+    #[Test]
+    public function two_lines_of_one_receipt_post_as_independent_movements(): void
+    {
+        $item = $this->createItem();
+        $variantA = $this->createItemVariant($item, ['name' => 'Variant A']);
+        $variantB = $this->createItemVariant($item, ['name' => 'Variant B']);
+        $template = $this->createPurchasePresentationTemplate(); // BOX x24
+        $presentationA = $this->createVariantPurchasePresentation($variantA, $template);
+        $presentationB = $this->createVariantPurchasePresentation($variantB, $template);
+        $supplier = $this->createSupplier();
+
+        $id = $this->postJson('/api/v1/inventory/receipts', [
+            'supplier_id' => $supplier->public_id,
+            'destination_location_id' => $this->location->public_id,
+            'receipt_date' => '2026-08-25',
+            'lines' => [
+                ['variant_purchase_presentation_id' => $presentationA->public_id, 'received_packages' => 1, 'gross_amount' => 240],
+                ['variant_purchase_presentation_id' => $presentationB->public_id, 'received_packages' => 2, 'gross_amount' => 480],
+            ],
+        ])->json('data.id');
+
+        $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertOk();
+
+        $receipt = Receipt::where('public_id', $id)->firstOrFail();
+        $movements = StockMovement::where('related_type', Receipt::class)
+            ->where('related_id', $receipt->id)
+            ->where('reason', StockMovement::REASON_PURCHASE_RECEIPT)
+            ->get();
+
+        $this->assertCount(2, $movements);
+        $this->assertEqualsCanonicalizing(
+            $receipt->lines()->pluck('id')->all(),
+            $movements->pluck('related_line_id')->map(fn ($v) => (int) $v)->all()
+        );
+        $this->assertEquals(24.0, (float) Stock::where('item_variant_id', $variantA->id)->value('on_hand'));
+        $this->assertEquals(48.0, (float) Stock::where('item_variant_id', $variantB->id)->value('on_hand'));
+    }
+
+    #[Test]
     public function it_locks_the_receipt_row_for_update_when_posting(): void
     {
         ['id' => $id] = $this->createDraft();
