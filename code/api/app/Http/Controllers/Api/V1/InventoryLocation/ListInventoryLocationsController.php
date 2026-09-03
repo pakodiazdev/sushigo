@@ -17,6 +17,7 @@ use App\Support\Access\OperatingUnitScope;
  *   @OA\Parameter(name="operating_unit_id", in="query", required=false, @OA\Schema(type="integer")),
  *   @OA\Parameter(name="type", in="query", required=false, @OA\Schema(type="string", enum={"MAIN", "TEMP", "KITCHEN", "BAR", "RETURN"})),
  *   @OA\Parameter(name="is_active", in="query", required=false, @OA\Schema(type="boolean")),
+ *   @OA\Parameter(name="can_receive_purchases", in="query", required=false, @OA\Schema(type="boolean")),
  *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer")),
  *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponsePaginated")),
@@ -51,6 +52,14 @@ class ListInventoryLocationsController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
+        // Filter by purchase-receiving capability (#568). Uses has() + a null
+        // check rather than filled() so an explicit `?can_receive_purchases=0`
+        // (false) still narrows the result set; an unparseable value is
+        // coerced to null upstream and treated as "no filter".
+        if ($request->has('can_receive_purchases') && $request->input('can_receive_purchases') !== null) {
+            $query->where('can_receive_purchases', $request->boolean('can_receive_purchases'));
+        }
+
         // Order by priority desc, then name
         $query->orderBy('priority', 'desc')
             ->orderBy('name');
@@ -68,6 +77,7 @@ class ListInventoryLocationsController extends Controller
                 'priority' => $location->priority,
                 'is_primary' => $location->is_primary,
                 'is_active' => $location->is_active,
+                'can_receive_purchases' => $location->can_receive_purchases,
             ];
         });
 

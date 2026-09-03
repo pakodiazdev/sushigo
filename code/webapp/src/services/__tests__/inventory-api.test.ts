@@ -52,6 +52,17 @@ describe('inventoryLocationApi', () => {
             expect(apiClient.get).toHaveBeenCalledWith('/inventory-locations', { params })
             expect(result).toEqual(mockResponse)
         })
+
+        it('forwards the can_receive_purchases filter (#568)', async () => {
+            const mockResponse = { data: { status: 200, data: [], meta: {} } }
+            vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+            await inventoryLocationApi.list({ can_receive_purchases: true })
+
+            expect(apiClient.get).toHaveBeenCalledWith('/inventory-locations', {
+                params: { can_receive_purchases: true },
+            })
+        })
     })
 
     describe('get', () => {

@@ -894,7 +894,7 @@ erDiagram
     boolean is_active
     boolean is_primary
     boolean is_pickable
-    boolean can_receive_purchases "target #568"
+    boolean can_receive_purchases "#568"
   }
 
   VARIANT_LOCATION_ASSIGNMENT {

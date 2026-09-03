@@ -20,6 +20,7 @@ class InventoryLocation extends Model
         'type',
         'is_primary',
         'is_active',
+        'can_receive_purchases',
         'priority',
         'notes',
         'meta',
@@ -28,6 +29,7 @@ class InventoryLocation extends Model
     protected $casts = [
         'is_primary' => 'boolean',
         'is_active' => 'boolean',
+        'can_receive_purchases' => 'boolean',
         'priority' => 'integer',
         'meta' => 'array',
     ];

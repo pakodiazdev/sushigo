@@ -16,6 +16,7 @@ use Illuminate\Foundation\Http\FormRequest;
  *   @OA\Property(property="is_primary", type="boolean", example=true, description="Is primary location"),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Is location active"),
  *   @OA\Property(property="is_pickable", type="boolean", example=true, description="Can be used for picking"),
+ *   @OA\Property(property="can_receive_purchases", type="boolean", example=true, description="Whether supplier purchases may be received into this location (#568)"),
  *   @OA\Property(property="notes", type="string", example="Updated notes", description="Additional notes"),
  * )
  */

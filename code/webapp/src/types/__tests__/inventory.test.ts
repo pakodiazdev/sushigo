@@ -21,9 +21,25 @@ describe('Inventory Types', () => {
                 priority: 1,
                 is_primary: true,
                 is_active: true,
+                can_receive_purchases: true,
             }
             expect(location.type).toBe('MAIN')
             expect(location.is_primary).toBe(true)
+            expect(location.can_receive_purchases).toBe(true)
+        })
+
+        it('carries an explicit can_receive_purchases capability (#568)', () => {
+            const storageOnly: InventoryLocation = {
+                id: 'location-03',
+                operating_unit_id: 1,
+                name: 'Storage Only',
+                type: 'MAIN',
+                priority: 1,
+                is_primary: true,
+                is_active: true,
+                can_receive_purchases: false,
+            }
+            expect(storageOnly.can_receive_purchases).toBe(false)
         })
 
         it('can create a TEMP location', () => {
@@ -35,6 +51,7 @@ describe('Inventory Types', () => {
                 priority: 5,
                 is_primary: false,
                 is_active: true,
+                can_receive_purchases: false,
             }
             expect(location.type).toBe('TEMP')
         })
@@ -50,6 +67,7 @@ describe('Inventory Types', () => {
                     priority: 1,
                     is_primary: false,
                     is_active: true,
+                    can_receive_purchases: false,
                 }
                 expect(location.type).toBe(type)
             })

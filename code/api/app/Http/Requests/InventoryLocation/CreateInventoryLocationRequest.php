@@ -20,6 +20,7 @@ use Illuminate\Foundation\Http\FormRequest;
  *   @OA\Property(property="is_primary", type="boolean", example=false, description="Is primary location for this unit"),
  *   @OA\Property(property="is_active", type="boolean", example=true, description="Is location active"),
  *   @OA\Property(property="is_pickable", type="boolean", example=true, description="Can be used for automatic picking/reservation"),
+ *   @OA\Property(property="can_receive_purchases", type="boolean", example=false, description="Whether supplier purchases may be received into this location (#568). Defaults to false."),
  *   @OA\Property(property="notes", type="string", example="Main storage area", description="Additional notes"),
  * )
  */
@@ -73,6 +74,10 @@ class CreateInventoryLocationRequest extends FormRequest
 
         if (! $this->has('is_active')) {
             $defaults['is_active'] = true;
+        }
+
+        if (! $this->has('can_receive_purchases')) {
+            $defaults['can_receive_purchases'] = false;
         }
 
         if (! empty($defaults)) {

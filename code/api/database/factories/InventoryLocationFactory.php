@@ -29,6 +29,7 @@ class InventoryLocationFactory extends Factory
             ]),
             'is_primary' => false,
             'is_active' => true,
+            'can_receive_purchases' => false,
             'priority' => fake()->numberBetween(0, 100),
             'notes' => fake()->optional()->sentence(),
         ];

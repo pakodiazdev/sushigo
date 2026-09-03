@@ -101,7 +101,7 @@ The thirteen Issues are on **SushiGo Admin**, `Todo`, labeled `sprint-7`, and as
 | ⏳ | #548 | Fix quarantined Cypress spec: Purchase Receipts | Dev platform | P0 | S | 0.5h | 3h |
 | ⏳ | #549 | Fix quarantined Cypress spec: replenishment thresholds | Dev platform | P1 | S | 0.5h | 3h |
 | ✅ | #567 | Centralize idempotent Inventory entry posting | Product engineering | P0 | L | 7h | 12h |
-| ⏳ | #568 | Define purchase-receiving capabilities for Inventory Locations | Product | P0 | M | 5h | 9h |
+| ✅ | #568 | Define purchase-receiving capabilities for Inventory Locations | Product | P0 | M | 5h | 9h |
 | ⏳ | #569 | Assign managed Variants to Inventory Locations | Product | P1 | L | 8h | 14h |
 | ⏳ | #570 | Expose an auditable Opening Balance workflow | Product | P1 | M | 5h | 9h |
 | ⏳ | #571 | Show assigned Variants with zero Stock in Existencias | Product | P1 | M | 6h | 11h |

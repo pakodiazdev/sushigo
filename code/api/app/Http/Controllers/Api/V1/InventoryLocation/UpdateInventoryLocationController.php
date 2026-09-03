@@ -41,6 +41,7 @@ class UpdateInventoryLocationController extends Controller
             'priority',
             'is_primary',
             'is_active',
+            'can_receive_purchases',
             'notes',
         ]));
 
@@ -55,6 +56,7 @@ class UpdateInventoryLocationController extends Controller
                 'priority' => $location->priority,
                 'is_primary' => $location->is_primary,
                 'is_active' => $location->is_active,
+                'can_receive_purchases' => $location->can_receive_purchases,
                 'notes' => $location->notes,
                 'operating_unit' => [
                     'id' => $location->operatingUnit->id,

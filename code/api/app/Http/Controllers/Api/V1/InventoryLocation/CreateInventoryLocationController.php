@@ -34,6 +34,7 @@ class CreateInventoryLocationController extends Controller
             'priority' => $request->input('priority', 100),
             'is_primary' => $request->input('is_primary', false),
             'is_active' => $request->input('is_active', true),
+            'can_receive_purchases' => $request->boolean('can_receive_purchases'),
             'notes' => $request->notes,
         ]);
 

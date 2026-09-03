@@ -117,12 +117,63 @@ describe('LocationForm', () => {
         priority: 100,
         is_primary: true,
         is_active: true,
+        can_receive_purchases: true,
         notes: '',
         created_at: '',
         updated_at: '',
       }
       const { getByText } = render(<LocationForm {...defaultProps} location={location} />)
       expect(getByText('Actualizar Ubicación')).toBeDefined()
+    })
+  })
+
+  describe('receiving capability (#568)', () => {
+    const receivingCheckbox = (container: HTMLElement) => {
+      const label = Array.from(container.querySelectorAll('label')).find(
+        (el) => el.textContent === 'Puede recibir compras'
+      )
+      return label?.parentElement?.querySelector('input[type="checkbox"]') as HTMLInputElement
+    }
+
+    it('renders the "Puede recibir compras" checkbox', () => {
+      const { getByText } = render(<LocationForm {...defaultProps} />)
+      expect(getByText('Puede recibir compras')).toBeDefined()
+    })
+
+    it('explains the capability controls receipt destinations', () => {
+      const { getByText } = render(<LocationForm {...defaultProps} />)
+      expect(getByText(/destino de una recepción de compra/i)).toBeDefined()
+    })
+
+    it('defaults the checkbox to unchecked for a new location', () => {
+      const { container } = render(<LocationForm {...defaultProps} />)
+      expect(receivingCheckbox(container).checked).toBe(false)
+    })
+
+    it('reflects an existing location that can receive purchases', () => {
+      const location = {
+        id: 'location-01',
+        operating_unit_id: 1,
+        name: 'Receiving Dock',
+        type: 'MAIN' as const,
+        priority: 100,
+        is_primary: false,
+        is_active: true,
+        can_receive_purchases: true,
+        notes: '',
+        created_at: '',
+        updated_at: '',
+      }
+      const { container } = render(<LocationForm {...defaultProps} location={location} />)
+      expect(receivingCheckbox(container).checked).toBe(true)
+    })
+
+    it('toggles the checkbox on click', () => {
+      const { container } = render(<LocationForm {...defaultProps} />)
+      const checkbox = receivingCheckbox(container)
+
+      fireEvent.click(checkbox)
+      expect(checkbox.checked).toBe(true)
     })
   })
 

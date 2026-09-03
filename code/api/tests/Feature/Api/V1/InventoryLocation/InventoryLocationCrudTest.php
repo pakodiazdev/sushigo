@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1\InventoryLocation;
 
+use App\Models\Branch;
 use App\Models\InventoryLocation;
 use App\Models\Item;
 use App\Models\ItemVariant;
@@ -344,5 +345,214 @@ class InventoryLocationCrudTest extends InventoryTestCase
         $response = $this->getJson('/api/v1/inventory-locations/99999');
 
         $response->assertStatus(404);
+    }
+
+    #[Test]
+    public function it_serializes_can_receive_purchases_in_the_list()
+    {
+        $response = $this->getJson('/api/v1/inventory-locations');
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => ['id', 'name', 'can_receive_purchases'],
+                ],
+            ]);
+
+        $row = collect($response->json('data'))->firstWhere('id', $this->location->public_id);
+        $this->assertFalse($row['can_receive_purchases']);
+    }
+
+    #[Test]
+    public function it_creates_a_location_with_the_receiving_capability_opted_in()
+    {
+        $unit = OperatingUnit::where('type', 'BRANCH_MAIN')->first();
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/inventory-locations', [
+            'operating_unit_id' => $unit->id,
+            'name' => 'Receiving Dock',
+            'type' => 'MAIN',
+            'can_receive_purchases' => true,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'data' => [
+                    'name' => 'Receiving Dock',
+                    'can_receive_purchases' => true,
+                ],
+            ]);
+
+        $this->assertDatabaseHas('inventory_locations', [
+            'name' => 'Receiving Dock',
+            'can_receive_purchases' => true,
+        ]);
+    }
+
+    #[Test]
+    public function it_defaults_can_receive_purchases_to_false_on_create()
+    {
+        $unit = OperatingUnit::where('type', 'BRANCH_MAIN')->first();
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/inventory-locations', [
+            'operating_unit_id' => $unit->id,
+            'name' => 'Storage Only',
+            'type' => 'MAIN',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJson(['data' => ['can_receive_purchases' => false]]);
+
+        $this->assertDatabaseHas('inventory_locations', [
+            'name' => 'Storage Only',
+            'can_receive_purchases' => false,
+        ]);
+    }
+
+    #[Test]
+    public function it_rejects_a_non_boolean_can_receive_purchases_on_create()
+    {
+        $unit = OperatingUnit::where('type', 'BRANCH_MAIN')->first();
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/inventory-locations', [
+            'operating_unit_id' => $unit->id,
+            'name' => 'Bad Capability',
+            'type' => 'MAIN',
+            'can_receive_purchases' => 'not-a-boolean',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['can_receive_purchases']);
+    }
+
+    #[Test]
+    public function it_rejects_a_null_can_receive_purchases_on_create()
+    {
+        $unit = OperatingUnit::where('type', 'BRANCH_MAIN')->first();
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/inventory-locations', [
+            'operating_unit_id' => $unit->id,
+            'name' => 'Null Capability',
+            'type' => 'MAIN',
+            'can_receive_purchases' => null,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['can_receive_purchases']);
+    }
+
+    #[Test]
+    public function it_rejects_a_null_can_receive_purchases_on_update()
+    {
+        $location = InventoryLocation::factory()->create([
+            'operating_unit_id' => $this->operatingUnit->id,
+            'type' => 'MAIN',
+            'can_receive_purchases' => true,
+        ]);
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/inventory-locations/{$location->public_id}", [
+            'can_receive_purchases' => null,
+        ]);
+
+        // Must be a 422, not a 500 from writing NULL into the NOT NULL column.
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['can_receive_purchases']);
+
+        $this->assertDatabaseHas('inventory_locations', [
+            'id' => $location->id,
+            'can_receive_purchases' => true,
+        ]);
+    }
+
+    #[Test]
+    public function it_updates_the_receiving_capability_without_touching_type()
+    {
+        $location = InventoryLocation::factory()->create([
+            'operating_unit_id' => $this->operatingUnit->id,
+            'type' => 'MAIN',
+            'can_receive_purchases' => false,
+        ]);
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/inventory-locations/{$location->public_id}", [
+            'can_receive_purchases' => true,
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'type' => 'MAIN',
+                    'can_receive_purchases' => true,
+                ],
+            ]);
+
+        $this->assertDatabaseHas('inventory_locations', [
+            'id' => $location->id,
+            'can_receive_purchases' => true,
+        ]);
+    }
+
+    #[Test]
+    public function it_filters_locations_by_can_receive_purchases_true_and_false()
+    {
+        $receiving = InventoryLocation::factory()->create([
+            'operating_unit_id' => $this->operatingUnit->id,
+            'name' => 'Receiving Capable',
+            'can_receive_purchases' => true,
+        ]);
+        $storage = InventoryLocation::factory()->create([
+            'operating_unit_id' => $this->operatingUnit->id,
+            'name' => 'Storage Only',
+            'can_receive_purchases' => false,
+        ]);
+
+        $onlyReceiving = $this->getJson('/api/v1/inventory-locations?can_receive_purchases=1');
+        $onlyReceiving->assertOk();
+        $receivingIds = collect($onlyReceiving->json('data'))->pluck('id');
+        $this->assertContains($receiving->public_id, $receivingIds);
+        $this->assertNotContains($storage->public_id, $receivingIds);
+        foreach ($onlyReceiving->json('data') as $row) {
+            $this->assertTrue($row['can_receive_purchases']);
+        }
+
+        $onlyStorage = $this->getJson('/api/v1/inventory-locations?can_receive_purchases=0');
+        $onlyStorage->assertOk();
+        $storageIds = collect($onlyStorage->json('data'))->pluck('id');
+        $this->assertContains($storage->public_id, $storageIds);
+        $this->assertNotContains($receiving->public_id, $storageIds);
+        foreach ($onlyStorage->json('data') as $row) {
+            $this->assertFalse($row['can_receive_purchases']);
+        }
+    }
+
+    #[Test]
+    public function the_can_receive_purchases_filter_never_escapes_operating_unit_scope()
+    {
+        // A receiving-capable location in an Operating Unit the user has no
+        // membership in must stay invisible even when explicitly filtered for.
+        $this->user->removeRole('inventory-manager');
+        $this->user->givePermissionTo('inventory_locations.view');
+
+        $foreignBranch = Branch::create([
+            'code' => 'FGN', 'name' => 'Foreign Branch', 'address' => 'x', 'city' => 'x',
+            'state' => 'x', 'country' => 'MX', 'postal_code' => '00000', 'is_active' => true,
+        ]);
+        $foreignUnit = OperatingUnit::create([
+            'branch_id' => $foreignBranch->id,
+            'type' => 'BRANCH_MAIN',
+            'name' => 'Foreign Unit',
+            'is_active' => true,
+        ]);
+        $foreignReceiving = InventoryLocation::factory()->create([
+            'operating_unit_id' => $foreignUnit->id,
+            'can_receive_purchases' => true,
+        ]);
+
+        $response = $this->getJson('/api/v1/inventory-locations?can_receive_purchases=1');
+
+        $response->assertOk();
+        $this->assertNotContains(
+            $foreignReceiving->public_id,
+            collect($response->json('data'))->pluck('id')
+        );
     }
 }
