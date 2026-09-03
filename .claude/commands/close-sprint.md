@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh issue create:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh project item-add:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh api:*), Bash(gh workflow run:*), Bash(gh run list:*), Bash(gh run view:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git mv:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(basename:*), Bash(ls:*), Bash(grep:*), Bash(find:*), Bash(sort:*), Bash(tail:*), Bash(date:*), Bash(python3:*), Read, Edit, Write
+allowed-tools: Bash(gh issue create:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh project item-add:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh api:*), Bash(gh workflow run:*), Bash(gh run list:*), Bash(gh run view:*), Bash(gh repo view:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git mv:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(basename:*), Bash(ls:*), Bash(grep:*), Bash(find:*), Bash(sort:*), Bash(tail:*), Bash(date:*), Bash(python3:*), Bash(node:*), Bash(gh auth token:*), Read, Edit, Write
 description: Formally close the current sprint and promote the next one — sprint docs, both README indexes, the GitHub Project Iteration field's date windows, and the committed progress badge, all in one pass
 ---
 
@@ -25,10 +25,30 @@ ls doc/sprints/*.md | grep -v README | sort | tail -1        # current sprint do
 ls doc/sprints/planned/*.md 2>/dev/null | sort                # candidate next sprint(s)
 ```
 
-- **Current sprint doc**: read its `§18. Sprint Closure Checklist`. Every box must be `[x]` except
-  possibly the last one (`The next sprint was promoted...`) — that's the one this command exists to
-  tick. If any *other* box is unticked, **stop** and tell the user the closure checklist itself
-  isn't done yet; this command does not do that work.
+- **Sprint closure audit (run this first)**: run the deterministic reconciliation audit against the
+  outgoing sprint and confirm it reports `PASS` before anything else in this phase:
+  ```bash
+  GH_TOKEN=$(gh auth token) node .github/scripts/sprint-audit/generate.js
+  ```
+  This is read-only (it never closes Issues, merges PRs, or edits scope — see
+  `doc/conventions/sprint-closure-audit.md`). If it exits non-zero / prints `RESULT: FAIL`, **stop**
+  and report the FAIL lines verbatim — the drift (a scoped Issue still open, a missing exact
+  `sprint-<N>` label or Iteration assignment, a missing/non-canonical `investment:` label, a closed
+  Issue with an undisposed unchecked task, a `scope_issues` count mismatch) must be resolved on
+  GitHub or in the sprint doc first. `WARN` lines (orphan / same-window / metric-confidence) do not
+  block promotion — surface them in the final report so the user can decide whether to act. On
+  `PASS`, this command records the audit result on the outgoing sprint's own closure checklist in
+  Phase 2 — ticking the "sprint closure audit reports `PASS`" box if the doc has one, or **adding**
+  that box (already ticked, with the same wording as `doc/conventions/sprints.md` §18) if the doc
+  predates this convention. Older sprint docs (e.g. Sprint 007) use a custom, sprint-specific
+  checklist and will not have the box yet — that is expected, not a stop condition.
+- **Current sprint doc**: read its closure checklist (the last `##` section, `§18` in the
+  `doc/conventions/sprints.md` template but sometimes a lower number in an older doc). Every box must
+  be `[x]` **except**: the promotion box (`The next sprint was promoted...`) and the
+  `sprint closure audit reports PASS` box — both of which this command satisfies itself in Phase 2
+  (adding the audit box if it is absent). A missing audit box is **not** a stop condition. If any
+  *other* box is unticked, **stop** and tell the user the closure checklist itself isn't done yet;
+  this command does not do that work.
 - **Next sprint candidate**: `doc/sprints/planned/` may legitimately hold several sprints planned
   ahead of time (e.g. `sprint-005-...md` and `sprint-006-...md` coexisting) — that's normal, not an
   error. Select the one file whose sprint number is exactly the current sprint's number **+1**; the
@@ -89,8 +109,12 @@ already written (the planned doc already points at its siblings correctly).
 **Outgoing sprint's frontmatter**: `status: Completed`, `completed: <today>`,
 `last_updated: <today>`.
 
-**Outgoing sprint's body** — tick the last `§18` checklist box
-(`The next sprint was promoted...`) with the promoting issue number and date; update its intro
+**Outgoing sprint's body** — in its closure-checklist section, tick the promotion box
+(`The next sprint was promoted...`) with the promoting issue number and date. Also record the
+audit: tick the `sprint closure audit reports PASS` box if the doc has one, or **insert** it
+(already `[x]`) using the `doc/conventions/sprints.md` §18 wording —
+`- [x] The sprint closure audit reports \`PASS\` (\`node .github/scripts/sprint-audit/generate.js\` — see \`doc/conventions/sprint-closure-audit.md\`).` —
+since Phase 0 just ran the audit and confirmed `PASS`. Then update its intro
 note (if the doc has one, like Sprint 003's did) from "not yet formally closed" language to
 "formally closed" language; if the outgoing doc's own closure issue left any other now-stale
 "still open" / "pending merge" references elsewhere in the doc (§13 Execution Evidence rows,

@@ -85,6 +85,7 @@ For conventions and tasks:
 ### Conventions (English)
 
 -   [Task Documentation Guide](conventions/tasks.md)
+-   [Sprint Documentation Convention](conventions/sprints.md) · [Sprint Closure Audit](conventions/sprint-closure-audit.md)
 -   [Git Commit Conventions](conventions/git/commits.md)
 -   [Backend Standards](conventions/backend/)
 -   [Frontend Standards](conventions/frontend/)
