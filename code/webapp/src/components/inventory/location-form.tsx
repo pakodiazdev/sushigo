@@ -19,6 +19,7 @@ const locationSchema = z.object({
   priority: z.number().min(0).max(1000, 'La prioridad debe estar entre 0 y 1000'),
   is_primary: z.boolean(),
   is_active: z.boolean(),
+  can_receive_purchases: z.boolean(),
   notes: z.string(),
 })
 
@@ -51,6 +52,7 @@ export function LocationForm({ location, onSuccess, onCancel }: Readonly<Locatio
       priority: location?.priority || 100,
       is_primary: location?.is_primary || false,
       is_active: location?.is_active ?? true,
+      can_receive_purchases: location?.can_receive_purchases ?? false,
       notes: location?.notes || '',
     },
   })
@@ -83,6 +85,7 @@ export function LocationForm({ location, onSuccess, onCancel }: Readonly<Locatio
   const locationType = watch('type')
   const isPrimary = watch('is_primary')
   const isActive = watch('is_active')
+  const canReceivePurchases = watch('can_receive_purchases')
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
@@ -170,6 +173,16 @@ export function LocationForm({ location, onSuccess, onCancel }: Readonly<Locatio
             onChange={(e) => setValue('is_active', e.target.checked)}
             label="Activa"
           />
+          <div className="space-y-1">
+            <Checkbox
+              checked={canReceivePurchases}
+              onChange={(e) => setValue('can_receive_purchases', e.target.checked)}
+              label="Puede recibir compras"
+            />
+            <p className="ml-6 text-sm text-muted-foreground">
+              Controla si esta ubicación puede seleccionarse como destino de una recepción de compra.
+            </p>
+          </div>
         </div>
       </SlidePanel.Body>
 

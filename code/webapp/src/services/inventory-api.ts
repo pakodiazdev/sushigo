@@ -24,7 +24,7 @@ const api = apiClient
 
 // Inventory Locations
 export const inventoryLocationApi = {
-  list: (params?: { type?: string; is_active?: boolean; per_page?: number; page?: number; search?: string }) =>
+  list: (params?: { type?: string; is_active?: boolean; can_receive_purchases?: boolean; per_page?: number; page?: number; search?: string }) =>
     api.get<PaginatedResponse<InventoryLocation>>('/inventory-locations', { params }),
 
   get: (id: string | number) =>

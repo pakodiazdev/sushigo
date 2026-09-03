@@ -45,6 +45,7 @@ describe('LocationDetails', () => {
         priority: 1,
         is_primary: true,
         is_active: true,
+        can_receive_purchases: true,
         notes: 'Primary storage location',
         operating_unit: {
             id: 1,
@@ -116,6 +117,34 @@ describe('LocationDetails', () => {
         )
 
         expect(screen.getByText('Location Information')).toBeDefined()
+    })
+
+    it('shows the receiving capability as "Sí" when the location can receive purchases', () => {
+        render(
+            <LocationDetails
+                location={mockLocation}
+                onEdit={mockOnEdit}
+                onDelete={mockOnDelete}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        expect(screen.getByText('Puede recibir compras')).toBeDefined()
+        expect(screen.getByText('Sí')).toBeDefined()
+    })
+
+    it('shows the receiving capability as "No" when the location cannot receive purchases', () => {
+        render(
+            <LocationDetails
+                location={{ ...mockLocation, can_receive_purchases: false }}
+                onEdit={mockOnEdit}
+                onDelete={mockOnDelete}
+            />,
+            { wrapper: createWrapper() },
+        )
+
+        expect(screen.getByText('Puede recibir compras')).toBeDefined()
+        expect(screen.getByText('No')).toBeDefined()
     })
 
     it('shows N/A when operating unit is missing', () => {

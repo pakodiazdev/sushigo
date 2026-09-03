@@ -8,6 +8,7 @@ import {
   Edit,
   Trash2,
   TrendingUp,
+  Truck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -123,6 +124,21 @@ export function LocationDetails({
                     }`}
                 >
                   {location.is_active ? 'Active' : 'Inactive'}
+                </span>
+              }
+            />
+
+            <InfoItem
+              icon={<Truck className="h-5 w-5" />}
+              label="Puede recibir compras"
+              value={
+                <span
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${location.can_receive_purchases
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                    }`}
+                >
+                  {location.can_receive_purchases ? 'Sí' : 'No'}
                 </span>
               }
             />

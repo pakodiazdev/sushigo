@@ -18,6 +18,10 @@ trait SharesInventoryLocationRules
             'is_primary' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
             'is_pickable' => ['nullable', 'boolean'],
+            // Not `nullable`: this maps to a NOT NULL column, so an explicit
+            // `can_receive_purchases: null` must fail with 422 rather than reach
+            // the DB and surface as a 500. An absent key is still left untouched.
+            'can_receive_purchases' => ['boolean'],
             'notes' => ['nullable', 'string'],
         ];
     }

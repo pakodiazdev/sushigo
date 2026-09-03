@@ -300,7 +300,7 @@ It describes the assignment flow, base roles (`super-admin`, `admin`, `user`), a
 | --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | `branches`            | `id`, `code`, `name`, `region`, `timezone`, `is_active`            | Branch catalog; initially one is created by default.                                 |
 | `operating_units`     | `branch_id`, `type`, `name`, `start_date`, `end_date`, `is_active` | Permanent (`BRANCH_*`) or temporary (`EVENT_TEMP`) inventories.                      |
-| `inventory_locations` | `operating_unit_id`, `name`, `type`, `is_primary`; Sprint 7 target: `can_receive_purchases` | Locations within each inventory; #568 makes purchase-receiving eligibility explicit. |
+| `inventory_locations` | `operating_unit_id`, `name`, `type`, `is_primary`, `is_active`, `can_receive_purchases` (#568) | Locations within each inventory; `can_receive_purchases` makes purchase-receiving eligibility an explicit, queryable capability. |
 | `stock_movements`     | `from_location_id`, `to_location_id`, `reason`, `related_id`       | Allows inter-branch transfers thanks to the branch associated with each location.    |
 | `event_closures`      | `operating_unit_id`, `closed_at`, `kpis`                           | Applies only to temporary inventories; executes closure and return to source branch. |
 
@@ -813,10 +813,15 @@ Branch
        └─ InventoryLocation physical/logical custody point for Stock
 ```
 
-A Location gains the explicit `can_receive_purchases` capability (#568). It is independent from
-`type`, `is_primary`, `is_active`, and `is_pickable`: primary storage may be storage-only, while a
-receiving dock may accept purchases without being primary. A Receipt may target only a non-deleted,
-active, receiving-capable Location inside the caller's `OperatingUnitScope` (#572).
+A Location carries an explicit persisted `can_receive_purchases` capability (#568, delivered),
+independent from `type`, `is_primary`, `is_active`, and `is_pickable`: primary storage may be
+storage-only, while a receiving dock may accept purchases without being primary. New Locations
+default to `false`; the #568 migration backfills only today's active, primary `MAIN` Locations
+(excluding soft-deleted rows) to `true`, and rewrites no Receipt/Stock/StockMovement history.
+`GET /api/v1/inventory-locations` accepts an optional `can_receive_purchases` filter that is always
+applied inside the caller's `OperatingUnitScope`. Receipt-destination enforcement itself — a Receipt
+may target only a non-deleted, active, receiving-capable Location inside the caller's
+`OperatingUnitScope` — remains #572's target.
 
 A separate `Warehouse` entity becomes justified only when one Operating Unit must contain multiple
 administratively independent warehouses. Before that requirement exists it would duplicate the
@@ -869,7 +874,7 @@ erDiagram
     boolean is_active
     boolean is_primary
     boolean is_pickable
-    boolean can_receive_purchases "target #568"
+    boolean can_receive_purchases "#568"
   }
 
   VARIANT_LOCATION_ASSIGNMENT {

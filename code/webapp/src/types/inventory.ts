@@ -7,6 +7,9 @@ export interface InventoryLocation {
   priority: number
   is_primary: boolean
   is_active: boolean
+  /** Explicit purchase-receiving capability (#568) — whether supplier purchases
+   *  may be received into this Location. Independent from `is_primary`/`is_active`. */
+  can_receive_purchases: boolean
   notes?: string
   operating_unit?: {
     id: number
