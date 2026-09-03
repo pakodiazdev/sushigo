@@ -157,7 +157,7 @@ jobs:
     uses: ./.github/workflows/_webapp-ci.yml
     secrets: inherit
 
-  # Unit tests for the .github/scripts/* helpers (test-timing report + ci-analyze).
+  # Unit tests for the .github/scripts/* helpers (test-timing report + ci-analyze + sprint-audit).
   # Was api-tests.yml's `api-timing-script-tests` job before that workflow was removed.
   # Excluded from [e2e-test]: that mode is the Cypress-only diagnostic loop and must not run
   # anything unrelated to the PR's own specs, even if the PR also touched .github/scripts/**.
@@ -181,6 +181,7 @@ jobs:
         run: |
           node --test .github/scripts/test-timing/tests/*.test.js
           node --test .github/scripts/ci-analyze/tests/*.test.js
+          node --test .github/scripts/sprint-audit/tests/*.test.js
 
   # [e2e-test] with zero added/modified Cypress specs must fail loudly, not skip green.
   e2e-test-empty-guard:

@@ -424,4 +424,5 @@ Each Issue is done only when:
 - [ ] Full Inventory API regression, frontend tests, lint, typecheck, and focused E2E paths are green.
 - [ ] Architecture target markers are reconciled to as-built behavior.
 - [ ] Estimates, tracked effort, wall-clock overlap, evidence, risks, and lessons are consolidated.
+- [ ] The sprint closure audit reports `PASS` (`node .github/scripts/sprint-audit/generate.js` — see `doc/conventions/sprint-closure-audit.md`).
 - [ ] The next sprint is planned/promoted or Sprint 007 remains current per the lifecycle convention.

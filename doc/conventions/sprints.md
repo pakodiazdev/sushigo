@@ -726,6 +726,7 @@ Follow-up work belongs in the backlog or in a future document under `planned/`.
 - [ ] Estimate variance was calculated.
 - [ ] Consolidated effort was completed.
 - [ ] Wall-clock time, parallelization factor, and peak concurrency were computed (`doc/conventions/sprints.md` §7).
+- [ ] The sprint closure audit reports `PASS` (`node .github/scripts/sprint-audit/generate.js` — see `doc/conventions/sprint-closure-audit.md`).
 - [ ] Dependencies reflect actual execution.
 - [ ] Conflict notes reflect actual execution.
 - [ ] Tests and relevant quality metrics were recorded.
@@ -737,7 +738,11 @@ Follow-up work belongs in the backlog or in a future document under `planned/`.
 ```
 ````
 
-A sprint must not be considered closed until this checklist is complete.
+A sprint must not be considered closed until this checklist is complete. The **sprint closure
+audit** (`doc/conventions/sprint-closure-audit.md`) is the deterministic gate for the scope,
+tracked-time, opportunistic-vs-formal, and label/Iteration/state-consistency boxes above: it must
+report `PASS` before `status: Completed` is written and before the next sprint is promoted. It is
+read-only — it never closes Issues, merges PRs, or edits scope.
 
 ---
 
@@ -933,6 +938,7 @@ This is a cross-file pointer to `doc/conventions/sprints.md` §7 (Time and Durat
 - [ ] Estimates and totals were recalculated.
 - [ ] Consolidated effort was completed.
 - [ ] Wall-clock time, parallelization factor, and peak concurrency were computed (`doc/conventions/sprints.md` §7).
+- [ ] The sprint closure audit reports `PASS` (`node .github/scripts/sprint-audit/generate.js` — see `doc/conventions/sprint-closure-audit.md`).
 - [ ] Quality results were recorded.
 - [ ] Scope changes and limitations were documented.
 - [ ] Follow-up work and lessons learned were captured.
