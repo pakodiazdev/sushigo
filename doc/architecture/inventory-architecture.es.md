@@ -945,13 +945,28 @@ erDiagram
   movimientos manuales sin documento origen, que el índice deja sin restringir.
 - Todo reverso es compensatorio; el historial posteado no se edita ni elimina.
 
-#### Libro mayor de movimientos de solo lectura (objetivo #574)
+#### Libro mayor de movimientos de solo lectura (#574 — entregado)
 
 El historial de movimientos es un modelo de lectura sobre la evidencia inmutable existente, no otra
 fuente de verdad de Stock. Las consultas de lista y detalle son paginadas, usan IDs públicos,
 aplican `stock.view` y restringen las ubicaciones origen y destino al `OperatingUnitScope` activo del
 usuario. Filtrar o abrir un detalle nunca materializa Stock, crea evidencia ni modifica un
 movimiento posteado.
+
+**Contrato entregado:**
+
+| Aspecto | Decisión |
+|---|---|
+| Endpoints | `GET /api/v1/inventory/movements` (lista paginada) · `GET /api/v1/inventory/movements/{movement}` (detalle, resuelto por `public_id`) |
+| Permiso | `stock.view` — sin permiso de lectura dedicado; el libro solo expone evidencia que los endpoints de consulta de Stock ya implican |
+| Alcance por Unidad Operativa | `OperatingUnitScope::constrainStockMovements()` (lista) / `assertCanAccessStockMovement()` (detalle) — un movimiento es visible cuando **alguna** de sus ubicaciones pertenece a una unidad accesible; se aplica **antes** de filtros/conteo/paginación, así los metadatos de página nunca filtran filas ajenas. `super-admin`/`admin` sin restricción. Las ubicaciones con borrado lógico igual resuelven su unidad. |
+| Orden | `posted_at DESC NULLS LAST, id DESC` — determinista, desempate estable; los borradores (`posted_at` nulo) quedan al final |
+| Tamaño de página | 15 por defecto, máximo duro 100 (`>100` → 422) |
+| Filtros | `location_id` (origen **o** destino), `item_variant_id`, `reason`, `status`, `date_from`/`date_to` (sobre `posted_at`), `search` (ILIKE sobre `reference`, comodines escapados), `source_type` (token estable → FQCN vía `StockMovementSourceType`; hoy `receipt`). Los IDs de filtro se validan contra el mismo alcance de unidad: un ULID fuera de alcance da 422 igual que uno inexistente. |
+| Carga útil | ID público, `direction` derivada (`entry`/`exit`/`transfer`/`adjustment` — nunca el `type` legado eliminado), `is_reversal`, cantidad + UOM base, ubicación origen/destino, variante, actor, referencia, `posted_at`, `source` `{type, id}` donde `id` es el **ULID público** del documento de origen (nulo para movimientos manuales o un origen con borrado físico — nunca las claves internas `related_id`/`related_line_id`). El detalle agrega `notes`, el enlace bidireccional `reverses` / `reversed_by` y la auditoría de reversa. Las relaciones opcionales o con borrado lógico se serializan como `null` sin ocultar el movimiento. |
+| Enmascarado de unidad ajena | Un traspaso entre unidades se devuelve cuando *un* extremo está en alcance (el OR de `constrainStockMovements`), pero la Ubicación del extremo que el usuario no puede alcanzar se anula antes de serializar — se muestra igual que un extremo externo real, así un usuario con alcance nunca conoce el nombre ni el ID público de una Ubicación de otra unidad. Sin efecto para roles bypass. |
+| N+1 | La lista precarga `fromLocation`/`toLocation`/`itemVariant.unitOfMeasure`/`user` (todo `withTrashed`); el conteo de consultas es plano sin importar el tamaño de página. |
+| Navegación | `Inventario > Movimientos` → `/inventario/movimientos`, con `stock.view`. El estado de filtros y de la fila abierta vive en el query string de la URL, así una vista filtrada o un movimiento concreto se comparten copiando la dirección. |
 
 ```mermaid
 sequenceDiagram

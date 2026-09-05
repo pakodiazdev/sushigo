@@ -75,7 +75,10 @@ export function useItemsSelect(enabled = true) {
 export function useItemVariantsSelect(enabled = true) {
   return useQuery({
     queryKey: inventoryQueryKeys.variantsList({ is_active: true, for_select: true }),
-    queryFn: () => itemVariantApi.list({ is_active: true, per_page: 200 }),
+    // /item-variants paginates — fetch every page up front so a variant ordered past the first
+    // page is still selectable (same fix already applied to Locations and the receipt line's
+    // product/variant selects).
+    queryFn: () => fetchAllPages((page) => itemVariantApi.list({ is_active: true, page, per_page: 100 })),
     enabled,
     select: (response) => response.data.data || [],
   })

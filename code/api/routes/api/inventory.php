@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\DeleteVariantReple
 use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\ListLocationReplenishmentPoliciesController;
 use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\ShowVariantReplenishmentPolicyController;
 use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\UpsertVariantReplenishmentPolicyController;
+use App\Http\Controllers\Api\V1\Inventory\StockMovement\ListStockMovementsController;
+use App\Http\Controllers\Api\V1\Inventory\StockMovement\ShowStockMovementController;
 use App\Http\Controllers\Api\V1\InventoryLocation\CreateInventoryLocationController;
 use App\Http\Controllers\Api\V1\InventoryLocation\DeleteInventoryLocationController;
 use App\Http\Controllers\Api\V1\InventoryLocation\ListInventoryLocationsController;
@@ -81,4 +83,13 @@ Route::middleware('auth:api')->prefix('stock')->group(function () {
 Route::middleware('auth:api')->prefix('inventory')->group(function () {
     Route::post('opening-balance', RegisterOpeningBalanceController::class)->name('inventory.opening-balance')->middleware('permission:stock.manage');
     Route::post('stock-out', RegisterStockOutController::class)->name('inventory.stock-out')->middleware('permission:stock.manage');
+});
+
+// Immutable Stock Movement ledger (#574) — read-only. Reuses stock.view: the
+// ledger only exposes evidence the stock query endpoints already imply, and no
+// dedicated movement-read permission exists in the catalog. Operating Unit
+// scoping is applied in the controller/resource layer, not the route.
+Route::middleware('auth:api')->prefix('inventory/movements')->group(function () {
+    Route::get('/', ListStockMovementsController::class)->name('inventory.movements.list')->middleware('permission:stock.view');
+    Route::get('/{movement}', ShowStockMovementController::class)->name('inventory.movements.show')->middleware('permission:stock.view');
 });

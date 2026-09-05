@@ -175,7 +175,7 @@ describe('Inventory Query Hooks', () => {
       ]
 
       vi.mocked(inventoryApi.itemVariantApi.list).mockResolvedValue({
-        data: { data: mockVariants },
+        data: { data: mockVariants, meta: { current_page: 1, last_page: 1 } },
       } as unknown as Awaited<ReturnType<typeof inventoryApi.itemVariantApi.list>>)
 
       const { result } = renderHook(() => useItemVariantsSelect(), { wrapper })
@@ -185,6 +185,29 @@ describe('Inventory Query Hooks', () => {
       })
 
       expect(result.current.data).toEqual(mockVariants)
+    })
+
+    it('fetches every page so a variant past the first page stays selectable', async () => {
+      const firstPage = [{ id: 1, name: 'Salmon 100g', item_id: 1 }]
+      const secondPage = [{ id: 2, name: 'Tuna 500g', item_id: 2 }]
+
+      vi.mocked(inventoryApi.itemVariantApi.list).mockImplementation((params) =>
+        Promise.resolve({
+          data: {
+            data: params?.page === 2 ? secondPage : firstPage,
+            meta: { current_page: params?.page ?? 1, last_page: 2 },
+          },
+        } as unknown as Awaited<ReturnType<typeof inventoryApi.itemVariantApi.list>>)
+      )
+
+      const { result } = renderHook(() => useItemVariantsSelect(), { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(inventoryApi.itemVariantApi.list).toHaveBeenCalledTimes(2)
+      expect(result.current.data).toEqual([...firstPage, ...secondPage])
     })
   })
 

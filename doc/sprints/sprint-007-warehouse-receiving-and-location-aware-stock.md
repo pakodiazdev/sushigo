@@ -6,7 +6,7 @@ status: In Progress
 created: 2026-08-30
 started: 2026-08-30
 completed:
-last_updated: 2026-08-30
+last_updated: 2026-09-05
 
 base_branch: main
 base_commit: 57d76c1
@@ -85,6 +85,7 @@ evidence and `Stock` as the fast current-balance projection.
 | Planned end | 2026-09-22 |
 | Target calendar duration | 14 days |
 | Started | 2026-08-30 (promoted early by #582) |
+| Progress (Issues completed) | 3 / 13 (23.1%) as of 2026-09-05 — #560 (PR #589), #567 (PR #595) and #568 (PR #599) merged to `main` |
 
 The thirteen Issues are on **SushiGo Admin**, `Todo`, labeled `sprint-7`, and assigned to the
 **Sprint 7** Project iteration created during promotion by #582.
