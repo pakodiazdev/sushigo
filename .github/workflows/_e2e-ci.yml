@@ -1,16 +1,15 @@
 name: _e2e-ci
 
-# Reusable Cypress E2E branch for the unified CI DAG (#560). Called by ci.yml with a
+# Reusable Cypress E2E branch for the unified CI DAG (#560, #598). Called by ci.yml with a
 # `selection` telling it how many specs to run:
 #
-#   pr-specs  ([e2e-test] mode) — only the .cy.ts files this PR added/modified
-#   targeted  ([wip] mode)      — PR-changed specs + impact-mapped specs
-#   full      (final mode)      — the entire suite, split across 6 shards
+#   pr-specs  (draft default / [ci-check]) — only the .cy.ts files this PR added/modified
+#   full      (ready default / [ci-check-all]) — the entire suite, split across 6 shards
 #
 # The stack-boot / health-check / teardown / artifact logic is ported verbatim from the
 # standalone cypress-e2e.yml (#490). What #560 adds: a `plan` job that resolves the spec
-# list (expanding impact-map globs against the checkout) and picks the shard count — 6 for
-# a full run, 1 for the handful of specs a diagnostic/WIP run touches.
+# list (expanding the passed spec paths against the checkout) and picks the shard count —
+# 6 for a full run, 1 for the handful of specs a [ci-check] run touches.
 #
 # What #559 adds (per-shard fixed-overhead reduction, targeting <5 min wall-clock):
 #   - a cross-run GHA layer cache for docker/app/Dockerfile's `dev` image, prebuilt and
@@ -24,7 +23,7 @@ on:
   workflow_call:
     inputs:
       selection:
-        description: 'pr-specs | targeted | full'
+        description: 'pr-specs | full'
         required: true
         type: string
       specs:
@@ -84,7 +83,7 @@ jobs:
           # closed regardless of $SELECTION stops ci-gate from approving a "full" E2E run that
           # actually executed no Cypress tests at all (e.g. the spec directory got wiped).
           if [ "$count" -eq 0 ]; then
-            echo "::error::selection=$SELECTION resolved zero Cypress specs — refusing to let ci-gate pass an E2E run that executes nothing (stale impact-map glob, removed spec, or an empty cypress/e2e/ directory)." >&2
+            echo "::error::selection=$SELECTION resolved zero Cypress specs — refusing to let ci-gate pass an E2E run that executes nothing (a removed spec, or an empty cypress/e2e/ directory)." >&2
             exit 1
           fi
           specs_json=$(printf '%s\n' "${resolved[@]}" | sed '/^$/d' | jq -R . | jq -cs .)

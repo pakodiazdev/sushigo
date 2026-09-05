@@ -174,12 +174,15 @@ same as it never reads Codex's.
 test and approval. Here, it runs automatically as the last stage of this pipeline, exactly the way
 `.claude/commands/issue.md`'s **Phase 9** runs it — follow that phase's text exactly as written,
 substituting this file's own Phase 2 (branch/session) and Phase 6 (squash) wherever it refers to
-`issue.md`'s Phase 2 and Phase 7. In particular, keep its override of `finish-pr.md`'s Phase 7.6b:
-skip the Devin/DeepWiki check entirely (no Chrome-extension tool, no `app.devin.ai`, no asking
-whether to wait) — but unlike `issue.md`'s own Phase 9, do **not** substitute a best-effort `@codex
-review` re-trigger in its place; this file already triggered Codex once, in Phase 4, and leaves every
-further review cycle to the human. Note in Phase 8's report that Devin/DeepWiki and any post-squash
-Codex confirmation were skipped by design, not because anything was unavailable.
+`issue.md`'s Phase 2 and Phase 7. Since #598, `finish-pr.md`'s Phase 7.5a promotes the draft PR
+with `gh pr ready` (after stripping any `[skip-ci]` / `[ci-check]` / `[ci-check-all]` title
+modifier) and its Phase 7.6b reads the **Codex** review and the **SonarCloud** quality gate
+read-only — no browser, no Devin/DeepWiki. Run 7.5a and 7.6a's CI wait as written. For 7.6b:
+run only its **SonarCloud** read-only check; do **not** post a fresh `@codex review` trigger and
+do **not** wait on Codex — this file triggered Codex once, in Phase 4, and leaves every further
+review cycle to the human. Surface whatever Codex has already posted (if anything) in Phase 8's
+report without acting on it, and note that Devin/DeepWiki and any post-squash Codex confirmation
+were skipped by design, not because anything was unavailable.
 
 Any stop reached while executing `finish-pr.md`'s Phases 0–2 is a genuine early stop for this
 pipeline too — close the Sessions entry (Phase 2's rule above) with the current time before
@@ -267,9 +270,11 @@ those closes the Sessions entry (Phase 2's rule) and reports what happened befor
 - `.claude/commands/pr-comments.md` — the tool a human runs manually after this command finishes, to
   process whatever Copilot/Codex actually posted.
 - `.claude/commands/finish-pr.md` — its Phases 0–7.6 are reused wholesale in Phase 7 above (via
-  `issue.md`'s own Phase 9), run automatically instead of waiting for a human. Its Devin/DeepWiki
-  check (Phase 7.6b) is skipped by this file's override, with no substitute re-check — unlike
-  `issue.md`'s own Phase 9 override, which optionally re-triggers Codex there; this file already did
+  `issue.md`'s own Phase 9), run automatically instead of waiting for a human. Since #598 it promotes
+  the draft with `gh pr ready` (Phase 7.5a) and its Phase 7.6b is a read-only Codex + SonarCloud
+  check. This file runs only 7.6b's SonarCloud half — it does not post a fresh `@codex review` or
+  wait on Codex — unlike `issue.md`'s own Phase 9 override, which does a best-effort Codex re-check;
+  this file already did
   that once, in Phase 4, and leaves the rest to the human.
 - `.claude/skills/fix-tests/SKILL.md` — a narrower, standalone tool for fixing failures in an
   *existing* test suite outside of an active issue.

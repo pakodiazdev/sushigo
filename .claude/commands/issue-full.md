@@ -296,11 +296,14 @@ covers the workspace-letter title bracket, the `Devin Review:` follow-up edit, a
 
 ```bash
 git push -u origin <branch-name>
-gh pr create --title "..." --body "..."
+gh pr create --draft --title "..." --body "..."   # DRAFT — merge-blocking is draft status (#598), no [wip]
 gh pr edit <N> --body-file <path-to-updated-body>   # inserts Devin Review:, per start-issue.md 8c
 ```
 
-**Never merge.** Report the PR URL and continue to Phase 5.
+The PR opens as a **draft**: it cannot be merged, `ci-gate` is skipped on it, and with no title
+modifier CI runs the fast `[ci-check]` scope. `/finish-pr` (Phase 9) promotes it with `gh pr ready`,
+firing the full regression. **Never run `gh pr ready` yourself before Phase 9**, and **never merge.**
+Report the PR URL and continue to Phase 5.
 
 ---
 
@@ -525,9 +528,11 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   are unreachable here — this pipeline always has both. Still run this phase's metadata fetch
   (`gh pr view ... --json ...,mergeable,mergeStateStatus,reviewDecision`) — nothing earlier in this
   pipeline has fetched `mergeable`/`mergeStateStatus`, and Phase 1's readiness gate depends on it.
-  Its "Stop immediately" conditions (`state` not `OPEN`, or `isDraft`) are real, if unlikely — this
-  pipeline created the PR itself in Phase 4 as non-draft and open, but something outside this run
-  could still change that between phases.
+  Since #598, `finish-pr.md`'s Phase 0 treats a **draft** PR as the expected input (it no longer
+  stops on `isDraft`) — this pipeline created the PR as a draft in Phase 4, and `finish-pr.md`'s
+  own Phase 7.5a is what promotes it with `gh pr ready`. Its remaining "Stop immediately" condition
+  (`state` not `OPEN`) is real, if unlikely — something outside this run could close or merge the
+  PR between phases.
 - **Phase 1** (pre-flight: review threads + mergeable state) — `finish-pr.md`'s own Phase 1
   deliberately doesn't check CI itself (that's 7.6a's job); the review-thread and mergeable-state
   checks it *does* run should already pass here, since Phase 6 resolved every thread from the

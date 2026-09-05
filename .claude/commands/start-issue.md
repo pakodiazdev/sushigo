@@ -315,11 +315,19 @@ plus steps confirming it no longer happens. **Never include passwords or other c
 for seeded test users — reference them by email only (e.g. `admin@sushigo.com`), per the Test
 Users table in this workspace's `CLAUDE.md`.
 
+**Open the PR as a draft.** Per [TD-06](../../doc/decisions/td-06-unified-ci-dag.md) (as amended by
+#598), merge-blocking is native GitHub *draft* status, not a title bracket — a draft PR cannot be
+merged and `ci-gate` is skipped on it, while a draft with no title modifier still runs a fast
+`[ci-check]` scope (only the test files this PR changed + its changed Cypress specs). There is no
+`[wip]` bracket. `/finish-pr` promotes the PR with `gh pr ready` when it is ready for the full
+regression. A first push of pure scaffolding/docs may additionally carry a `[skip-ci]` title
+modifier to run nothing at all; drop it once there is something worth checking.
+
 The PR number isn't known until `gh pr create` returns it, so `Devin Review:` is added in a
 follow-up edit right after creation, not in the initial body:
 
 ```bash
-PR_URL=$(gh pr create \
+PR_URL=$(gh pr create --draft \
   --title "<emoji> [#NNN][<letter>] - <short description> <emoji>" \
   --body "$(cat <<'EOF'
 ## Summary
@@ -359,7 +367,9 @@ N=$(basename "$(tail -1 <<< "$PR_URL")")   # last line of gh pr create's output 
 gh pr edit "$N" --body-file <path-to-updated-body>
 ```
 
-**Never merge the PR.** Report the PR URL to the user and stop. The merge must be done by the user from GitHub after review.
+**Never merge the PR, and never run `gh pr ready` here** — the PR stays a draft until `/finish-pr`
+promotes it. Report the PR URL to the user and stop. The merge must be done by the user from GitHub
+after review.
 
 ---
 

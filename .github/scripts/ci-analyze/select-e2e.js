@@ -1,33 +1,30 @@
 'use strict';
 
-// Decides which Cypress specs a PR CI run should execute, given the execution mode
-// (#560), the files the PR changed, and the functional-impact map
-// (.github/e2e-impact-map.json).
+// Decides which Cypress specs a PR CI run should execute (#598), given the
+// effective E2E intent (from parse-mode.js's `resolveCi().e2eIntent`) and the
+// files the PR changed.
 //
 // Return shape:
 //   {
-//     selection: 'none' | 'pr-specs' | 'targeted' | 'full',
-//     specs:     string[]  // repo-relative spec paths and/or impact-map globs
+//     selection: 'none' | 'pr-specs' | 'full',
+//     specs:     string[]  // repo-relative spec paths (empty for 'none' / 'full')
 //     specsEmpty: boolean  // true when nothing will run
 //     reason:    string    // human-readable, surfaced on the job summary
 //   }
 //
-// Selection semantics (see the issue's "E2E selection semantics" section):
-//   [e2e-test]  -> ONLY the specs the PR added/modified; empty => 'none' (caller fails loudly).
-//                  Never falls back to targeted/full. Ignores `infraChanged`.
-//   [wip]       -> PR-changed specs  +  specs mapped from impacted functional areas.
-//                  Any changed code file that no map entry covers => 'full' (conservative).
-//                  Pipeline/E2E infra changed => 'full'.
-//                  Nothing E2E-relevant changed => 'none'.
-//   final       -> 'full' whenever any code file, any changed spec, or pipeline/E2E infra
-//                  changed, else 'none'.
-//   unknown     -> treated as final.
+// Intent semantics:
+//   'none'      ([skip-ci], or nothing E2E-relevant) -> run no Cypress.
+//   'pr-specs'  (draft default / [ci-check])         -> ONLY the .cy.ts files this PR
+//               added/modified. Zero changed specs => 'none' (NOT a failure — the
+//               retired [e2e-test] empty-guard is gone).
+//   'full'      (ready default / [ci-check-all])     -> the entire suite, whenever any
+//               code file, any changed spec, or pipeline/E2E infra changed; else 'none'.
+//   unknown     -> treated as 'full' (conservative).
 //
 // `infraChanged` is supplied by the workflow (its own dorny `infra` filter over
-// docker-compose*.yml, docker/**, the reusable workflows and .github/scripts/ci-analyze/**,
-// .github/e2e-impact-map.json). A change there can alter any Cypress flow without touching a
-// code/** file or a .cy.ts, so it forces the full suite in [wip]/final — the legacy
-// cypress-e2e.yml treated the same Docker paths as E2E-relevant.
+// docker-compose*.yml, docker/**, the reusable workflows and
+// .github/scripts/ci-analyze/**). A change there can alter any Cypress flow without
+// touching a code/** file or a .cy.ts, so it forces the full suite for a 'full' run.
 
 const SPEC_GLOB = 'code/webapp/cypress/e2e/**/*.cy.ts';
 const CODE_PREFIXES = ['code/api/', 'code/webapp/'];
@@ -57,10 +54,6 @@ function globToRegExp(glob) {
   return new RegExp(`^${re}$`);
 }
 
-function matchesAnyGlob(filePath, globs) {
-  return globs.some((glob) => globToRegExp(glob).test(filePath));
-}
-
 function isSpec(filePath) {
   return globToRegExp(SPEC_GLOB).test(filePath);
 }
@@ -81,103 +74,48 @@ function uniqueStable(items) {
   return out;
 }
 
-// Every spec glob an entry contributes: its own `run`, plus (transitively) the `run` of every
-// area named in its optional `includes` list. `includes` lets an area whose model is a
-// dependency of another domain (e.g. `employees` -> `attendance`, `payroll`) pull that domain's
-// FULL current spec set without copying — and re-copying — a subset that drifts out of date.
-function resolveEntryRun(entry, byArea, seen) {
-  if (!entry || seen.has(entry.area)) {
-    return [];
-  }
-  seen.add(entry.area);
-  const out = [...(Array.isArray(entry.run) ? entry.run : [])];
-  for (const includedArea of (Array.isArray(entry.includes) ? entry.includes : [])) {
-    out.push(...resolveEntryRun(byArea.get(includedArea), byArea, seen));
-  }
-  return out;
-}
-
-function mappedSpecs(changedFiles, impactMap) {
-  const entries = (impactMap && Array.isArray(impactMap.entries)) ? impactMap.entries : [];
-  const byArea = new Map(entries.map((entry) => [entry.area, entry]));
-  const out = [];
-  for (const entry of entries) {
-    const when = Array.isArray(entry.when) ? entry.when : [];
-    if (changedFiles.some((file) => matchesAnyGlob(file, when))) {
-      out.push(...resolveEntryRun(entry, byArea, new Set()));
-    }
-  }
-  return uniqueStable(out);
-}
-
-// A changed non-spec code file is "covered" when at least one impact-map entry's `when` globs
-// match it. Changed .cy.ts specs are excluded — they're already carried in `prSpecs`.
-function unmappedCodeFiles(changedFiles, impactMap) {
-  const entries = (impactMap && Array.isArray(impactMap.entries)) ? impactMap.entries : [];
-  const allWhen = entries.flatMap((entry) => (Array.isArray(entry.when) ? entry.when : []));
-  return changedFiles.filter(
-    (file) => isCode(file) && !isSpec(file) && !matchesAnyGlob(file, allWhen),
-  );
-}
-
 /**
  * @param {object}   args
- * @param {string}   args.mode           'e2e-test' | 'wip' | 'final' (anything else => final)
+ * @param {string}   args.mode           'none' | 'pr-specs' | 'full' (anything else => 'full')
  * @param {string[]} args.changedFiles   repo-relative paths added/modified/renamed by the PR
- * @param {object}   args.impactMap      parsed .github/e2e-impact-map.json ({ entries: [...] })
  * @param {boolean}  args.infraChanged   pipeline/E2E infra files changed (workflow's `infra` filter)
  */
-function selectE2e({ mode, changedFiles, impactMap, infraChanged = false }) {
+function selectE2e({ mode, changedFiles, infraChanged = false }) {
   const files = Array.isArray(changedFiles) ? changedFiles : [];
-  const prSpecs = files.filter(isSpec);
+  const prSpecs = uniqueStable(files.filter(isSpec));
   const codeChanged = files.some(isCode);
   const infra = infraChanged === true || infraChanged === 'true';
 
   const none = (reason) => ({ selection: 'none', specs: [], specsEmpty: true, reason });
-  const fullSuite = (reason) => ({ selection: 'full', specs: [], specsEmpty: false, reason });
 
-  if (mode === 'e2e-test') {
+  if (mode === 'none') {
+    return none('no Cypress this run (skip-ci, or nothing E2E-relevant changed)');
+  }
+
+  if (mode === 'pr-specs') {
     if (prSpecs.length === 0) {
-      return none('[e2e-test] mode: the PR added/modified no Cypress spec — nothing to run');
+      return none('draft / [ci-check]: the PR added/modified no Cypress spec — nothing to run');
     }
     return {
       selection: 'pr-specs',
-      specs: uniqueStable(prSpecs),
+      specs: prSpecs,
       specsEmpty: false,
-      reason: `[e2e-test] mode: running the ${prSpecs.length} Cypress spec(s) this PR changed`,
+      reason: `draft / [ci-check]: running the ${prSpecs.length} Cypress spec(s) this PR changed`,
     };
   }
 
-  if (mode === 'wip') {
-    if (!codeChanged && prSpecs.length === 0 && !infra) {
-      return none('[wip] mode: nothing E2E-relevant changed');
-    }
-    if (infra) {
-      return fullSuite('[wip] mode: pipeline/E2E infra changed — running the full suite');
-    }
-    const unmapped = unmappedCodeFiles(files, impactMap);
-    if (unmapped.length > 0) {
-      return fullSuite(
-        `[wip] mode: ${unmapped.length} changed code file(s) match no impact-map entry — running the full suite (conservative fallback)`,
-      );
-    }
-    return {
-      selection: 'targeted',
-      specs: uniqueStable([...prSpecs, ...mappedSpecs(files, impactMap)]),
-      specsEmpty: false,
-      reason: '[wip] mode: running PR-changed specs plus impact-mapped specs',
-    };
-  }
-
-  // final (and any unknown mode)
+  // 'full' (ready default / [ci-check-all]) and any unknown value (conservative).
   if (!codeChanged && prSpecs.length === 0 && !infra) {
-    return none('final mode: nothing E2E-relevant changed');
+    return none('full run: nothing E2E-relevant changed');
   }
-  return fullSuite(
-    infra
-      ? 'final mode: pipeline/E2E infra changed — running the full Cypress suite'
-      : 'final mode: running the full Cypress suite',
-  );
+  return {
+    selection: 'full',
+    specs: [],
+    specsEmpty: false,
+    reason: infra
+      ? 'full run: pipeline/E2E infra changed — running the full Cypress suite'
+      : 'full run: running the full Cypress suite',
+  };
 }
 
 module.exports = { selectE2e, globToRegExp };

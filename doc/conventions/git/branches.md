@@ -93,11 +93,12 @@ feature/016_employee_crud    # Underscores instead of hyphens
 
 2. Work on your branch, commit following [commits.md](./commits.md).
 
-3. Push and open the PR. Open it **with `[wip]` in the title** so CI runs the WIP execution mode
-   while the work is in progress, and drop that bracket when it's ready for final validation — this
-   is the **PR title's** concern, not the branch's: see
-   [`pull-requests.md`](./pull-requests.md) → "PR Title Execution-Mode Flags". The branch name
-   never changes for any of this.
+3. Push and open the PR **as a draft** (`gh pr create --draft`) — merge-blocking is native draft
+   status (#598), and a draft with no title modifier runs the fast `[ci-check]` CI scope. Mark it
+   ready (`gh pr ready`, or let `/finish-pr` do it) for the full regression. Optional CI-cost
+   modifiers (`[skip-ci]` / `[ci-check-all]`) are the **PR title's** concern, not the branch's: see
+   [`pull-requests.md`](./pull-requests.md) → "PR Title CI-Cost Modifiers". The branch name never
+   changes for any of this.
 
     ```bash
     git push -u origin feature/016-employee-crud-api
