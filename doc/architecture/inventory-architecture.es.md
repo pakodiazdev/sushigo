@@ -994,6 +994,42 @@ sequenceDiagram
 
 ---
 
+### 3.13 Surtido administrado, por Ubicación de Inventario (#569) — implementado
+
+El enfoque «objetivo» de §3.12 para `VariantLocationAssignment` ya está entregado. Esta subsección
+registra el contrato implementado; el objetivo más amplio de Sprint 7 en §3.12 sigue cubriendo los
+flujos consumidores (#570–#574).
+
+**Fuente de verdad: `VariantLocationAssignment`, una fila por par `(inventory_location_id,
+item_variant_id)`.** Solo declara que la Variante se *administra* en la Ubicación. No lleva cantidad,
+ni costo, ni umbral — eso permanece en `Stock` (#430/#434) y `VariantLocationReplenishmentPolicy`
+(#439), sin renombrar ni sobrecargar ninguno. Un índice único parcial
+(`vla_one_assignment_per_pair`) mantiene una fila viva por par; la fila usa borrado suave, de modo
+que desasignar y luego reasignar reactiva la misma fila y conserva la traza de auditoría.
+
+**Backfill.** La migración que crea la tabla la puebla con la unión distinta de los pares de `stock`
+existentes y los pares de políticas de reabastecimiento vivas (`VariantLocationAssignmentBackfill`),
+para que ninguna Variante actualmente administrada desaparezca de las lecturas que parten del
+surtido. El backfill no escribe filas de `Stock` ni `StockMovement`, es idempotente y se revierte
+con `down()` eliminando la tabla.
+
+**API.** Con alcance por Ubicación, bajo `inventory-locations/{id}/variant-assignments`, reutilizando
+los permisos de stock (`stock.view` lectura, `stock.manage` escritura) y `OperatingUnitScope` para
+el acceso horizontal, igual que el subrecurso de reabastecimiento:
+
+| Ruta | Propósito |
+| --- | --- |
+| `GET /` | Listado centrado en Variante, con búsqueda y paginación, para un selector. `state=assigned` (por defecto) devuelve el surtido administrado, `state=unassigned` el resto asignable (solo Variantes activas del catálogo), `state=all` toda Variante activa anotada con su estado. |
+| `PUT /{variantId}` | Asignación idempotente — `201` al crear una fila viva o reactivar una borrada, `200` si ya hay una viva. Nunca crea `Stock` ni movimiento. |
+| `DELETE /{variantId}` | Borrado suave de la asignación viva. Rechazado con un `409` determinista mientras la fila de `Stock` del par tenga `on_hand > 0` o `reserved > 0`. |
+
+**UI.** Un panel enfocado en el detalle de la Ubicación de Inventario (`LocationDetails`),
+deliberadamente separado del editor de umbrales de reabastecimiento del Panel de Existencias:
+búsqueda, filtro asignado/no asignado/todos, controles de asignar/desasignar restringidos a
+`stock.manage`, y el mensaje de rechazo `409` mostrado literalmente en un toast.
+
+---
+
 ## 4. Flujos operativos
 
 ### 4.1 Flujo de un evento

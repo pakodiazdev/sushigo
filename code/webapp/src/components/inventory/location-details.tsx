@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { stockApi } from '@/services/inventory-api'
+import { VariantAssignmentsPanel } from '@/features/inventory/assignments'
 import type { InventoryLocation } from '@/types/inventory'
 
 interface LocationDetailsProps {
@@ -178,6 +179,9 @@ export function LocationDetails({
             </div>
           </div>
         )}
+
+        {/* Managed-variant assignments (#569) — separate from replenishment thresholds */}
+        <VariantAssignmentsPanel locationId={location.id} />
 
         {/* Timestamps */}
         {location.created_at && (

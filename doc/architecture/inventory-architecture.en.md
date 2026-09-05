@@ -973,6 +973,42 @@ sequenceDiagram
 
 ---
 
+### 3.13 Managed assortment, per Inventory Location (#569) — as built
+
+The "target" framing in §3.12 for `VariantLocationAssignment` is now delivered. This subsection
+records the shipped contract; §3.12's wider Sprint 7 target still covers the consuming workflows
+(#570–#574).
+
+**Source of truth: `VariantLocationAssignment`, one row per `(inventory_location_id,
+item_variant_id)` pair.** It states only that the Variant is *managed* at the Location. It carries
+no quantity, no cost, and no threshold — those stay in `Stock` (#430/#434) and
+`VariantLocationReplenishmentPolicy` (#439) respectively, neither renamed nor overloaded here. A
+partial unique index (`vla_one_assignment_per_pair`) keeps one live row per pair; the row
+soft-deletes, so unassigning and later re-assigning reactivates the same row and keeps the audit
+trail.
+
+**Backfill.** The create-table migration seeds the table from the distinct union of existing
+`stock` pairs and live replenishment-policy pairs (`VariantLocationAssignmentBackfill`), so no
+currently-managed Variant disappears from reads that start from assortment. The backfill writes no
+`Stock` row and no `StockMovement`, is idempotent, and is reversed by `down()` dropping the table.
+
+**API.** Location-scoped, under `inventory-locations/{id}/variant-assignments`, reusing the stock
+permissions (`stock.view` read, `stock.manage` write) and `OperatingUnitScope` for horizontal
+access, exactly like the replenishment sub-resource:
+
+| Route | Purpose |
+| --- | --- |
+| `GET /` | Variant-centric, searchable, paginated listing for a picker. `state=assigned` (default) returns the managed assortment, `state=unassigned` the assignable remainder (active catalog Variants only), `state=all` every active Variant annotated with its state. |
+| `PUT /{variantId}` | Idempotent assign — `201` when a live row is created or a soft-deleted one is reactivated, `200` when one is already live. Never creates `Stock` or a movement. |
+| `DELETE /{variantId}` | Soft-delete the live assignment. Refused with a deterministic `409` while the pair's `Stock` row still has `on_hand > 0` or `reserved > 0`. |
+
+**UI.** A focused panel in the Inventory Location detail workflow (`LocationDetails`), deliberately
+separate from the replenishment-threshold editor in the Stock Dashboard: search, an
+assigned/unassigned/all filter, assign/unassign controls gated on `stock.manage`, and the `409`
+rejection message surfaced verbatim in a toast.
+
+---
+
 ## 4. Operational Flows
 
 ### 4.1 Event Flow

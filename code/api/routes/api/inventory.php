@@ -8,6 +8,9 @@ use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\ShowVariantRepleni
 use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\UpsertVariantReplenishmentPolicyController;
 use App\Http\Controllers\Api\V1\Inventory\StockMovement\ListStockMovementsController;
 use App\Http\Controllers\Api\V1\Inventory\StockMovement\ShowStockMovementController;
+use App\Http\Controllers\Api\V1\Inventory\VariantAssignment\AssignVariantToLocationController;
+use App\Http\Controllers\Api\V1\Inventory\VariantAssignment\ListLocationVariantAssignmentsController;
+use App\Http\Controllers\Api\V1\Inventory\VariantAssignment\UnassignVariantFromLocationController;
 use App\Http\Controllers\Api\V1\InventoryLocation\CreateInventoryLocationController;
 use App\Http\Controllers\Api\V1\InventoryLocation\DeleteInventoryLocationController;
 use App\Http\Controllers\Api\V1\InventoryLocation\ListInventoryLocationsController;
@@ -70,6 +73,16 @@ Route::middleware('auth:api')->prefix('inventory-locations/{id}/replenishment-po
     Route::get(RouteParams::VARIANT_ID, ShowVariantReplenishmentPolicyController::class)->name('replenishment-policies.show')->middleware('permission:stock.view');
     Route::put(RouteParams::VARIANT_ID, UpsertVariantReplenishmentPolicyController::class)->name('replenishment-policies.upsert')->middleware('permission:stock.manage');
     Route::delete(RouteParams::VARIANT_ID, DeleteVariantReplenishmentPolicyController::class)->name('replenishment-policies.delete')->middleware('permission:stock.manage');
+});
+
+// Per-(Inventory Location, Variant) managed-assortment assignments (#569) —
+// "this Variant is managed here", independent of physical stock and of
+// replenishment thresholds. Read with stock.view, write with stock.manage,
+// same governance seam as the stock endpoints below.
+Route::middleware('auth:api')->prefix('inventory-locations/{id}/variant-assignments')->group(function () {
+    Route::get('/', ListLocationVariantAssignmentsController::class)->name('variant-assignments.list')->middleware('permission:stock.view');
+    Route::put(RouteParams::VARIANT_ID, AssignVariantToLocationController::class)->name('variant-assignments.assign')->middleware('permission:stock.manage');
+    Route::delete(RouteParams::VARIANT_ID, UnassignVariantFromLocationController::class)->name('variant-assignments.unassign')->middleware('permission:stock.manage');
 });
 
 // Stock Query Endpoints (Protected read — requires stock.view)
