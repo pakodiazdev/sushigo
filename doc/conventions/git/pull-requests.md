@@ -8,9 +8,16 @@ This guide establishes the format for PR titles and descriptions, ensuring clari
 
 ```
 :emoji [#NNN][x] - Short description :emoji
-:emoji [#NNN][x][wip] - Short description :emoji        ← non-mergeable WIP CI run
-:emoji [#NNN][x][e2e-test] - Short description :emoji    ← Cypress-only diagnostic CI run
+:emoji [#NNN][x][ci-check] - Short description :emoji      ← run only the test files this PR changed
+:emoji [#NNN][x][ci-check-all] - Short description :emoji  ← run the full surface suites + full Cypress
+:emoji [#NNN][x][skip-ci] - Short description :emoji       ← run nothing at all (not even lint)
 ```
+
+**Merge-blocking is native GitHub *draft* status** ([TD-06](../../decisions/td-06-unified-ci-dag.md),
+as amended by #598), not a title bracket. A draft PR cannot be merged; `ci-gate` is skipped on it;
+every other check still renders green when it passes. Promote with `gh pr ready` (or let `/finish-pr`
+do it) when the PR is ready for the full regression. There is **no `[wip]` bracket** — the optional
+third bracket now only scopes CI *cost* while iterating.
 
 ### Components
 
@@ -24,39 +31,56 @@ This guide establishes the format for PR titles and descriptions, ensuring clari
   developed in (e.g. `a`, `b`, `c`). Dev-lab runs up to 8 parallel workspace clones; without the
   letter, reviewers scanning a PR list can't tell which workspace a PR came from without opening
   it. Omit this bracket only for PRs opened from standalone Docker mode (no workspace clone).
-- **Execution-mode bracket** (optional): a third bracket, immediately after `[x]`, that selects the
-  PR's CI execution mode — see [PR Title Execution-Mode Flags](#pr-title-execution-mode-flags)
-  below.
+- **CI-cost modifier bracket** (optional): a third bracket, immediately after `[x]`, that scopes how
+  much CI runs while iterating — see [PR Title CI-Cost Modifiers](#pr-title-ci-cost-modifiers) below.
 - **Description**: Imperative mood, concise summary of the change.
 
-### PR Title Execution-Mode Flags
+### PR Title CI-Cost Modifiers
 
-The execution mode of the unified CI pipeline (`.github/workflows/ci.yml`,
-[TD-06](../../decisions/td-06-unified-ci-dag.md)) is read from an **optional third bracket in the PR
-title**, immediately after the workspace letter `[x]` (lowercase, case-insensitive, whitespace
-inside the bracket tolerated). **It is read from the title only — never from the branch name;** the
-branch keeps its `<type>/<NNN>-<desc>` name (see [`branches.md`](./branches.md)) unchanged.
+The unified CI pipeline (`.github/workflows/ci.yml`,
+[TD-06](../../decisions/td-06-unified-ci-dag.md) as amended by #598) reads two independent signals:
 
-**What each flag triggers:**
+- **Draft status** (`github.event.pull_request.draft`) — merge-blocking. A draft PR cannot be
+  merged and `ci-gate` is *skipped* on it (a skipped required check counts as satisfied; the draft
+  itself blocks the merge). Promote with `gh pr ready`.
+- **An optional CI-cost modifier bracket** in the title, immediately after the workspace letter
+  `[x]` (lowercase, case-insensitive, whitespace inside the bracket tolerated). **Read from the
+  title only — never from the branch name;** the branch keeps its `<type>/<NNN>-<desc>` name (see
+  [`branches.md`](./branches.md)) unchanged.
 
-| Title | Mode | `api-ci` / `webapp-ci` | `e2e-ci` (Cypress) | `scripts-tests` | `ci-gate` | Mergeable? |
-|---|---|---|---|---|---|---|
-| `… [#NNN][x][e2e-test] - …` | **e2e-test** — Cypress-only diagnostic loop | **skipped** (no lint / PHPUnit / Vitest / coverage / Sonar) | runs **only the `.cy.ts` specs this PR added/modified**, on one dynamic shard. Zero changed specs → `e2e-test-empty-guard` **fails** the run | **skipped** even if `.github/scripts/**` changed | **red** — "diagnostic mode, not a merge candidate" | ❌ never |
-| `… [#NNN][x][wip] - …` | **wip** — implementation / review / correction | run when their surface, or pipeline infra, changed (`lint → tests → coverage → sonar`) | **targeted**: PR-changed specs + specs mapped from impacted areas in `.github/e2e-impact-map.json`; **full** suite if any changed code file is unmapped or pipeline infra changed | runs iff `.github/scripts/**` changed | **red** — "not a merge candidate even if every check is green" | ❌ never |
-| `… [#NNN][x] - …` (no third bracket) | **final** — merge candidate | same as `[wip]` | **full** suite whenever anything E2E-relevant changed | runs iff `.github/scripts/**` changed | **green** iff every applicable branch passed; a documentation / non-pipeline-config-only PR short-circuits to a fast green | ✅ **the only mode a PR can merge from** |
+**What each modifier triggers** (lint + typecheck run in every case except `[skip-ci]`; surface
+scoping is unchanged — `api-ci` runs iff `code/api/**` or infra changed, `webapp-ci` likewise):
+
+| Title | Tests that run |
+|---|---|
+| `… [#NNN][x][skip-ci] - …` | **nothing** — no lint, no typecheck, no PHPUnit / Vitest / Cypress, no coverage, no Sonar |
+| `… [#NNN][x][ci-check] - …` | only the **test files this PR added/modified** (PHPUnit `*Test.php`, Vitest `*.test.ts(x)`, Cypress `*.cy.ts`) within touched surfaces — 1 shard, no coverage, no Sonar |
+| `… [#NNN][x][ci-check-all] - …` | the **full suite** of each touched surface (api and/or webapp) + full Cypress + coverage + Sonar |
+| `… [#NNN][x] - …` (no modifier) | **draft** → same as `[ci-check]`, **but** a PR that changes pipeline infra (`ci.yml`, the reusable workflows, `ci-analyze`, `docker/**`) is forced to `[ci-check-all]` so the changed pipeline is actually exercised · **ready** → same as `[ci-check-all]` (the full regression) |
+
+**`ci-gate`** (the one required check):
+
+- **Skipped on a draft** — the draft blocks the merge.
+- **On a ready PR** — `success` iff the effective run was the full regression (`[ci-check-all]`
+  level) and every applicable branch job passed. A documentation / non-pipeline-config-only PR
+  short-circuits to a fast green.
+- **On a ready PR still carrying `[skip-ci]` / `[ci-check]`** — **`failure`** with a message:
+  *"remove the `[skip-ci]` / `[ci-check]` modifier from the title to run the full regression and
+  enable the merge."* This is the only `ci-gate` red that is not a real test failure; it is
+  self-inflicted and clearly explained. `/finish-pr` Phase 7.5a strips the modifier before
+  `gh pr ready` so this does not happen on the promotion path.
 
 Rules:
 
-1. **Open the PR with `[wip]` from the start** (or `[e2e-test]` while iterating specifically on
-   Cypress specs) — CI runs the WIP mode while work is in progress and keeps `ci-gate` red.
-2. **Promote to final by editing the title to remove the bracket.** The `pull_request: edited`
-   trigger re-runs CI in *final* mode (full Cypress + a green `ci-gate`); nothing else changes.
-   ```bash
-   gh pr edit <N> --title "✨ [#016][a] - Employee CRUD API ✨"
-   ```
-3. `push` to `main` always runs in **final** mode.
-4. If both `[e2e-test]` and `[wip]` appear, `[e2e-test]` wins (the narrowest mode).
-5. `[review]` is **not** a mode — review/correction has the same CI semantics as `[wip]`.
+1. **Open the PR as a draft** (`gh pr create --draft`) — the `/issue*` commands and `/start-issue`
+   do this. With no modifier, a draft runs the fast `[ci-check]` scope. Add `[skip-ci]` for a first
+   push of pure scaffolding/docs; add `[ci-check-all]` to run the full regression early.
+2. **Promote by marking the PR ready** — `gh pr ready <N>`, or let `/finish-pr` (Phase 7.5a) do it.
+   The `pull_request: ready_for_review` trigger re-runs CI as the full regression and un-skips
+   `ci-gate`.
+3. `push` to `main` always runs the full regression, gated.
+4. If several modifiers appear, the **narrowest wins**: `[skip-ci]` > `[ci-check]` > `[ci-check-all]`.
+5. `[review]` is **not** a modifier — review/correction just uses the draft default.
 
 Full flow: [`doc/conventions/ci/pipeline.md`](../ci/pipeline.md).
 

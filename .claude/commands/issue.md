@@ -303,11 +303,15 @@ covers the workspace-letter title bracket, the `Devin Review:` follow-up edit, a
 
 ```bash
 git push -u origin <branch-name>
-gh pr create --title "..." --body "..."
+gh pr create --draft --title "..." --body "..."   # DRAFT — merge-blocking is draft status (#598), no [wip]
 gh pr edit <N> --body-file <path-to-updated-body>   # inserts Devin Review:, per start-issue.md 8c
 ```
 
-**Never merge.** Report the PR URL and continue to Phase 5.
+The PR opens as a **draft**: it cannot be merged, `ci-gate` is skipped on it, and with no title
+modifier CI runs the fast `[ci-check]` scope (only the test files this PR touched + its changed
+Cypress specs). `/finish-pr` (Phase 9) promotes it with `gh pr ready`, which fires the full
+regression and lets `ci-gate` go green. **Never run `gh pr ready` yourself before Phase 9**, and
+**never merge.** Report the PR URL and continue to Phase 5.
 
 ---
 
@@ -319,6 +323,10 @@ gh pr checks <N> --repo pakodiazdev/sushigo --watch
 
 This blocks until every check (linters + tests, per the repo's GitHub Actions workflows) finishes.
 
+- **`ci-gate` is `skipped` on the draft PR — that is expected, not a failure** (#598): the draft
+  status itself blocks the merge, so the gate defers to the promoted run `/finish-pr` triggers in
+  Phase 9. This phase is validating the fast `[ci-check]` scope (lint/typecheck + the PR's own
+  changed test files + its changed Cypress specs); a green `ci-gate` only appears after promotion.
 - **Called right after `gh pr create` (end of Phase 4, or after a fresh push elsewhere in this
   command):** GitHub Actions can take several seconds to register the workflow runs as pending
   checks. If this command reports "no checks reported" immediately, that means it ran before any
@@ -567,9 +575,11 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   are unreachable here — this pipeline always has both. Still run this phase's metadata fetch
   (`gh pr view ... --json ...,mergeable,mergeStateStatus,reviewDecision`) — nothing earlier in this
   pipeline has fetched `mergeable`/`mergeStateStatus`, and Phase 1's readiness gate depends on it.
-  Its "Stop immediately" conditions (`state` not `OPEN`, or `isDraft`) are real, if unlikely — this
-  pipeline created the PR itself in Phase 4 as non-draft and open, but something outside this run
-  could still change that between phases.
+  Since #598, `finish-pr.md`'s Phase 0 treats a **draft** PR as the expected input (it no longer
+  stops on `isDraft`) — this pipeline created the PR as a draft in Phase 4, and `finish-pr.md`'s
+  own Phase 7.5a is what promotes it with `gh pr ready`. Its remaining "Stop immediately" condition
+  (`state` not `OPEN`) is real, if unlikely — something outside this run could close or merge the
+  PR between phases.
 - **Phase 1** (pre-flight: review threads + mergeable state) — `finish-pr.md`'s own Phase 1
   deliberately doesn't check CI itself (that's 7.6a's job); the review-thread and mergeable-state
   checks it *does* run should already pass here, since Phase 6 resolved every thread from the
@@ -599,17 +609,15 @@ instruction at every one — assume it applies anywhere a phase says "stop."
   as documented in `finish-pr.md`, which no longer touches the sprint doc's aggregate percentage
   or README as a side effect of closing a single PR (see `/sync-sprint-progress` for that, run
   deliberately by a human).
-- **Phase 7.5** (final squash+push) and **7.6** (final CI, plus Devin re-validation in `finish-pr.md`'s
-  own text) — this is the true final gate before Phase 10 below presents anything to the human.
-  **Override — skip 7.6b entirely:**
-  `finish-pr.md`'s own Phase 7.6b checks Devin/DeepWiki via the Chrome extension (or falls back to
-  asking whether to wait for it). This lightweight variant doesn't use Devin anywhere, so do not run
-  7.6b at all — do not open `app.devin.ai`, do not invoke any Chrome-extension browser tool, and do
-  not ask the user whether to wait for the extension. If you want a final sanity check on the
-  merge-ready commit, post one more `@codex review` trigger here using this file's own Phase 8
-  contract (best-effort, short poll, never a hard gate — mirroring how `finish-pr.md` itself treats
-  7.6b as supplementary to 7.6a's CI check). Note in Phase 10's report that Devin/DeepWiki was
-  skipped by design, not because anything was unavailable.
+- **Phase 7.5 / 7.5a** (promote the draft with `gh pr ready` after stripping any `[skip-ci]` /
+  `[ci-check]` / `[ci-check-all]` title modifier, then final squash+push) and **7.6** (final CI +
+  Codex + SonarCloud, all read-only) — this is the true final gate before Phase 10 below presents
+  anything to the human. Since #598, `finish-pr.md`'s own 7.6b reads the **Codex** review and the
+  **SonarCloud** quality gate (no browser, no Devin/DeepWiki). This lightweight variant already ran
+  its own Codex loop in Phase 8, so 7.6b's Codex read is a supplementary best-effort re-check on the
+  merge-ready commit, never a hard gate — run it as `finish-pr.md` writes it. Note in Phase 10's
+  report that Devin/DeepWiki was skipped by design (this variant never uses it), not because
+  anything was unavailable.
 
 **This changes when `finish-pr.md`'s stated precondition applies.** Its own text says "call this
 only after the human has manually tested the PR and approved it" — that line still describes

@@ -1,32 +1,42 @@
 name: CI
 
-# The single PR-validation workflow (#560). One workflow run, one visible dependency graph:
+# The single PR-validation workflow (#560, #598). One workflow run, one visible dependency graph:
 #
-#   analyze-pr ──┬─ api-ci        (reusable _api-ci.yml:   swagger + lint → phpunit shards → coverage → sonar)
-#                ├─ webapp-ci     (reusable _webapp-ci.yml: lint+typecheck → vitest shards → coverage → sonar)
-#                ├─ e2e-ci        (reusable _e2e-ci.yml:    boot stack → cypress, scope = pr-specs | targeted | full)
+#   analyze-pr ──┬─ api-ci        (reusable _api-ci.yml:   swagger + lint → phpunit → [coverage → sonar])
+#                ├─ webapp-ci     (reusable _webapp-ci.yml: lint+typecheck → vitest → [coverage → sonar])
+#                ├─ e2e-ci        (reusable _e2e-ci.yml:    boot stack → cypress, selection = pr-specs | full)
 #                ├─ scripts-tests (node --test for .github/scripts/*)
 #                └─ ci-gate       (the ONLY required check — its name never changes with shard counts)
 #
-# Execution mode comes from the PR title's optional third bracket
-# (doc/conventions/git/pull-requests.md):
-#   [#NNN][x][e2e-test]  — Cypress-only diagnostic loop; never a merge candidate
-#   [#NNN][x][wip]       — quality branches + targeted Cypress; never a merge candidate
-#   [#NNN][x]            — final: quality branches + full Cypress + a green ci-gate
+# Merge-blocking is GitHub DRAFT status (#598): the issue slash-commands open the PR with
+# `gh pr create --draft`, and `/finish-pr` promotes it with `gh pr ready`. A draft PR cannot be
+# merged natively — every check still renders green when it passes — so `ci-gate` is SKIPPED on
+# drafts (a skipped required check counts as passing; the draft itself blocks the merge).
+#
+# CI cost while iterating is the developer's explicit choice, via an optional title modifier
+# bracket right after `[x]` (doc/conventions/git/pull-requests.md), matched by content,
+# case-insensitively:
+#   [skip-ci]      — nothing runs, not even lint
+#   [ci-check]     — lint/typecheck + only the test files this PR added/modified (the DRAFT default)
+#   [ci-check-all] — lint/typecheck + the full suite of every touched surface + full Cypress
+#   (no modifier)  — draft => [ci-check] ; ready => [ci-check-all]  (the full regression, gated)
+#
+# A READY PR whose title still carries [skip-ci] / [ci-check] ran a shallow/suppressed scope:
+# `ci-gate` goes RED with a "remove the modifier" message. That is the only non-failure ci-gate red.
 #
 # The reusable `_api-ci.yml` / `_webapp-ci.yml` / `_e2e-ci.yml` files exist only to keep each
 # surface's step order and quality logic isolated and reusable — they are NOT separate runs.
-# The legacy standalone api-lint / api-swagger / api-tests / webapp-* / cypress-e2e workflows
-# were removed once this became the sole gate; branch protection requires only `ci-gate`.
-# deploy-preview / update-iteration-progress / wif-smoke-test stay independent (not PR validation).
+# Branch protection requires only `ci-gate`. deploy-preview / update-iteration-progress /
+# wif-smoke-test stay independent (not PR validation).
 
 on:
   pull_request:
-    # `edited` is required so a title-only state transition ([wip] -> final, etc.) re-runs CI.
-    # A description/label edit also re-triggers, but analyze-pr is cheap and every heavy branch
-    # re-gates on api / webapp / infra / scripts changes and mode, so nothing expensive runs
+    # `edited` re-runs CI on a title-only modifier transition. `ready_for_review` /
+    # `converted_to_draft` re-run it on the draft<->ready transition so `ci-gate` (skipped on
+    # drafts) and the effective scope re-resolve. analyze-pr is cheap and every heavy branch
+    # re-gates on api / webapp / infra / scripts changes and scope, so nothing expensive runs
     # unless the diff warrants it; `concurrency` below supersedes the previous run either way.
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, synchronize, reopened, edited, ready_for_review, converted_to_draft]
   push:
     branches: [main]
 
@@ -39,15 +49,22 @@ jobs:
     name: analyze-pr
     runs-on: ubuntu-latest
     outputs:
-      mode: ${{ steps.mode.outputs.mode }}
+      modifier: ${{ steps.mode.outputs.modifier }}
+      is_draft: ${{ steps.mode.outputs.is_draft }}
+      run_lint: ${{ steps.mode.outputs.run_lint }}
+      test_scope: ${{ steps.mode.outputs.test_scope }}
+      e2e_intent: ${{ steps.mode.outputs.e2e_intent }}
+      ci_gate: ${{ steps.mode.outputs.ci_gate }}
+      shallow_on_ready: ${{ steps.mode.outputs.shallow_on_ready }}
       api_changed: ${{ steps.filter.outputs.api }}
       webapp_changed: ${{ steps.filter.outputs.webapp }}
       infra_changed: ${{ steps.filter.outputs.infra }}
       scripts_changed: ${{ steps.filter.outputs.scripts }}
+      api_test_files: ${{ steps.changed-tests.outputs.api_test_files }}
+      webapp_test_files: ${{ steps.changed-tests.outputs.webapp_test_files }}
       verify_needed: ${{ steps.scope.outputs.verify_needed }}
       e2e_selection: ${{ steps.e2e.outputs.e2e_selection }}
       e2e_specs: ${{ steps.e2e.outputs.e2e_specs }}
-      e2e_specs_empty: ${{ steps.e2e.outputs.e2e_specs_empty }}
       e2e_reason: ${{ steps.e2e.outputs.e2e_reason }}
 
     steps:
@@ -78,13 +95,12 @@ jobs:
               - '.github/workflows/_webapp-ci.yml'
               - '.github/workflows/_e2e-ci.yml'
               - '.github/scripts/ci-analyze/**'
-              - '.github/e2e-impact-map.json'
             scripts:
               - '.github/scripts/**'
 
       # `verify_needed=false` == this PR touched no code, test, pipeline or script file —
       # a documentation / non-pipeline-config-only change. ci-gate short-circuits it to a
-      # fast green in final mode instead of sending the whole arsenal to verify nothing.
+      # fast green on a ready PR instead of sending the whole arsenal to verify nothing.
       - name: Compute verification scope
         id: scope
         env:
@@ -94,17 +110,32 @@ jobs:
           SCRIPTS: ${{ steps.filter.outputs.scripts }}
         run: node .github/scripts/ci-analyze/print-verify-scope.js
 
-      - name: Parse execution mode
+      - name: Resolve execution model (draft status + title modifier)
         id: mode
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_IS_DRAFT: ${{ github.event.pull_request.draft }}
           EVENT_NAME: ${{ github.event_name }}
+          INFRA_CHANGED: ${{ steps.filter.outputs.infra }}
         run: node .github/scripts/ci-analyze/print-mode.js
+
+      - name: Resolve the PR's changed test files (per surface)
+        id: changed-tests
+        env:
+          API_FILES: ${{ steps.filter.outputs.api_files }}
+          WEBAPP_FILES: ${{ steps.filter.outputs.webapp_files }}
+        run: |
+          set -euo pipefail
+          [ -n "$API_FILES" ] || API_FILES='[]'
+          [ -n "$WEBAPP_FILES" ] || WEBAPP_FILES='[]'
+          CHANGED_JSON="$(jq -cn --argjson a "$API_FILES" --argjson b "$WEBAPP_FILES" '$a + $b')"
+          export CHANGED_JSON
+          node .github/scripts/ci-analyze/print-changed-tests.js
 
       - name: Resolve Cypress selection
         id: e2e
         env:
-          MODE: ${{ steps.mode.outputs.mode }}
+          MODE: ${{ steps.mode.outputs.e2e_intent }}
           API_FILES: ${{ steps.filter.outputs.api_files }}
           WEBAPP_FILES: ${{ steps.filter.outputs.webapp_files }}
           INFRA_CHANGED: ${{ steps.filter.outputs.infra }}
@@ -114,7 +145,19 @@ jobs:
           [ -n "$WEBAPP_FILES" ] || WEBAPP_FILES='[]'
           # Merge the api + webapp changed-file lists into the single JSON array the
           # selector expects (it derives changed .cy.ts specs from this list itself).
-          CHANGED_JSON="$(jq -cn --argjson a "$API_FILES" --argjson b "$WEBAPP_FILES" '$a + $b')"
+          # Drop *.cy.ts paths the PR *deleted* (no longer in the checkout): otherwise a
+          # deletion-only PR would still select 'pr-specs' pointing at a missing spec, and
+          # _e2e-ci.yml's plan job fails closed on zero resolved. Non-spec deletions are
+          # kept — they still count as a code change for the 'full' path.
+          MERGED="$(jq -cn --argjson a "$API_FILES" --argjson b "$WEBAPP_FILES" '$a + $b')"
+          CHANGED_JSON='[]'
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            case "$f" in
+              *.cy.ts) [ -f "$f" ] || { echo "skipping deleted spec: $f"; continue; } ;;
+            esac
+            CHANGED_JSON="$(jq -c --arg f "$f" '. + [$f]' <<< "$CHANGED_JSON")"
+          done < <(jq -r '.[]' <<< "$MERGED")
           export CHANGED_JSON
           node .github/scripts/ci-analyze/print-e2e-selection.js
 
@@ -124,8 +167,10 @@ jobs:
           {
             echo "### analyze-pr"
             echo ""
-            echo "- **mode**: \`${{ steps.mode.outputs.mode }}\`"
+            echo "- **draft**: ${{ steps.mode.outputs.is_draft }} · **modifier**: \`${{ steps.mode.outputs.modifier }}\` · **test scope**: \`${{ steps.mode.outputs.test_scope }}\`"
+            echo "- **ci-gate**: \`${{ steps.mode.outputs.ci_gate }}\` · **shallow-on-ready**: ${{ steps.mode.outputs.shallow_on_ready }}"
             echo "- **changed**: api=${{ steps.filter.outputs.api }} · webapp=${{ steps.filter.outputs.webapp }} · infra=${{ steps.filter.outputs.infra }} · scripts=${{ steps.filter.outputs.scripts }}"
+            echo "- **changed test files**: api=\`${{ steps.changed-tests.outputs.api_test_files }}\` · webapp=\`${{ steps.changed-tests.outputs.webapp_test_files }}\`"
             echo "- **verify needed**: ${{ steps.scope.outputs.verify_needed }}"
             echo "- **e2e selection**: \`${{ steps.e2e.outputs.e2e_selection }}\` — ${{ steps.e2e.outputs.e2e_reason }}"
             echo "- **e2e specs**: \`${{ steps.e2e.outputs.e2e_specs }}\`"
@@ -134,38 +179,43 @@ jobs:
   api-ci:
     name: api-ci
     needs: analyze-pr
-    # `infra_changed` too: a change to _api-ci.yml / the analyze scripts must exercise the
-    # API branch it governs, or the gate could pass on an untested pipeline change.
+    # Skipped entirely under [skip-ci] (run_lint=false). `infra_changed` too: a change to
+    # _api-ci.yml / the analyze scripts must exercise the API branch it governs, or the gate
+    # could pass on an untested pipeline change.
     if: >-
-      needs.analyze-pr.outputs.mode != 'e2e-test' &&
+      needs.analyze-pr.outputs.run_lint == 'true' &&
       (
         needs.analyze-pr.outputs.api_changed == 'true' ||
         needs.analyze-pr.outputs.infra_changed == 'true'
       )
     uses: ./.github/workflows/_api-ci.yml
+    with:
+      test_scope: ${{ needs.analyze-pr.outputs.test_scope }}
+      test_files: ${{ needs.analyze-pr.outputs.api_test_files }}
     secrets: inherit
 
   webapp-ci:
     name: webapp-ci
     needs: analyze-pr
     if: >-
-      needs.analyze-pr.outputs.mode != 'e2e-test' &&
+      needs.analyze-pr.outputs.run_lint == 'true' &&
       (
         needs.analyze-pr.outputs.webapp_changed == 'true' ||
         needs.analyze-pr.outputs.infra_changed == 'true'
       )
     uses: ./.github/workflows/_webapp-ci.yml
+    with:
+      test_scope: ${{ needs.analyze-pr.outputs.test_scope }}
+      test_files: ${{ needs.analyze-pr.outputs.webapp_test_files }}
     secrets: inherit
 
   # Unit tests for the .github/scripts/* helpers (test-timing report + ci-analyze + sprint-audit).
   # Was api-tests.yml's `api-timing-script-tests` job before that workflow was removed.
-  # Excluded from [e2e-test]: that mode is the Cypress-only diagnostic loop and must not run
-  # anything unrelated to the PR's own specs, even if the PR also touched .github/scripts/**.
   scripts-tests:
     name: scripts-tests
     needs: analyze-pr
     if: >-
-      needs.analyze-pr.outputs.mode != 'e2e-test' &&
+      needs.analyze-pr.outputs.run_lint == 'true' &&
       needs.analyze-pr.outputs.scripts_changed == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -183,39 +233,19 @@ jobs:
           node --test .github/scripts/ci-analyze/tests/*.test.js
           node --test .github/scripts/sprint-audit/tests/*.test.js
 
-  # [e2e-test] with zero added/modified Cypress specs must fail loudly, not skip green.
-  e2e-test-empty-guard:
-    name: e2e-test-empty-guard
-    needs: analyze-pr
-    if: >-
-      needs.analyze-pr.outputs.mode == 'e2e-test' &&
-      needs.analyze-pr.outputs.e2e_specs_empty == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Fail — nothing to diagnose
-        run: |
-          echo "::error::[e2e-test] mode needs at least one Cypress spec added or modified by this PR, but it changed none. Add/adjust a spec, or drop the [e2e-test] title prefix."
-          exit 1
-
   e2e-ci:
     name: e2e-ci
     needs: [analyze-pr, api-ci, webapp-ci]
-    # Runs when a selection exists AND either we're in the Cypress-only diagnostic mode
-    # (no quality branches to wait on) or every applicable quality branch has passed.
-    # `analyze-pr.result == 'success'` is explicit because `always()` disables the implicit
-    # needs-success gate — without it a cancelled/failed analyze-pr (empty outputs) would
-    # slip past `'' != 'none'` and boot the E2E stack with no selection.
+    # Runs when a selection exists AND every applicable quality branch has passed (or was
+    # legitimately skipped). `analyze-pr.result == 'success'` is explicit because `always()`
+    # disables the implicit needs-success gate — without it a cancelled/failed analyze-pr
+    # (empty outputs) would slip past `'' != 'none'` and boot the E2E stack with no selection.
     if: >-
       always() &&
       needs.analyze-pr.result == 'success' &&
       needs.analyze-pr.outputs.e2e_selection != 'none' &&
-      (
-        needs.analyze-pr.outputs.mode == 'e2e-test' ||
-        (
-          (needs.api-ci.result == 'success' || needs.api-ci.result == 'skipped') &&
-          (needs.webapp-ci.result == 'success' || needs.webapp-ci.result == 'skipped')
-        )
-      )
+      (needs.api-ci.result == 'success' || needs.api-ci.result == 'skipped') &&
+      (needs.webapp-ci.result == 'success' || needs.webapp-ci.result == 'skipped')
     uses: ./.github/workflows/_e2e-ci.yml
     with:
       selection: ${{ needs.analyze-pr.outputs.e2e_selection }}
@@ -224,22 +254,28 @@ jobs:
 
   # The one and only required check. Its name never changes, so branch protection never
   # needs editing when a shard count changes inside a reusable workflow.
+  #
+  # SKIPPED on a draft PR (`draft != true`): the draft itself blocks the merge, and GitHub
+  # treats a skipped required check as satisfied. On a ready PR it evaluates the run.
   ci-gate:
     name: ci-gate
-    needs: [analyze-pr, api-ci, webapp-ci, e2e-ci, scripts-tests, e2e-test-empty-guard]
-    if: always()
+    needs: [analyze-pr, api-ci, webapp-ci, e2e-ci, scripts-tests]
+    if: >-
+      always() &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft != true)
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate the merge gate
         env:
           ANALYZE: ${{ needs.analyze-pr.result }}
-          MODE: ${{ needs.analyze-pr.outputs.mode }}
+          MODIFIER: ${{ needs.analyze-pr.outputs.modifier }}
+          TEST_SCOPE: ${{ needs.analyze-pr.outputs.test_scope }}
+          SHALLOW_ON_READY: ${{ needs.analyze-pr.outputs.shallow_on_ready }}
           VERIFY_NEEDED: ${{ needs.analyze-pr.outputs.verify_needed }}
           API: ${{ needs.api-ci.result }}
           WEBAPP: ${{ needs.webapp-ci.result }}
           E2E: ${{ needs.e2e-ci.result }}
           SCRIPTS: ${{ needs.scripts-tests.result }}
-          GUARD: ${{ needs.e2e-test-empty-guard.result }}
         run: |
           set -euo pipefail
 
@@ -249,26 +285,24 @@ jobs:
             exit 1
           fi
 
-          # 2. Diagnostic / WIP modes are deliberately never merge candidates, even fully green.
-          if [ "$MODE" = "e2e-test" ]; then
-            echo "::notice::[e2e-test] diagnostic mode — NOT a merge candidate. Drop the [e2e-test] title prefix for a full validation run."
-            exit 1
-          fi
-          if [ "$MODE" = "wip" ]; then
-            echo "::notice::[wip] mode — NOT a merge candidate even if every check is green. Drop the [wip] title prefix for a full validation run."
+          # 2. Ready PR still carrying a suppressed/shallow modifier — self-inflicted red
+          #    with a clear one-line fix. This is the ONLY ci-gate red that isn't a real
+          #    test failure.
+          if [ "$SHALLOW_ON_READY" = "true" ]; then
+            echo "::error::This PR is marked ready for review, but its title still carries a [$MODIFIER] modifier, so CI ran a suppressed/shallow scope ('$TEST_SCOPE') instead of the full regression. Remove the [skip-ci] / [ci-check] modifier from the title to run the full regression and enable the merge."
             exit 1
           fi
 
-          # 3. Documentation / non-pipeline-config-only PR (final mode): nothing to verify.
+          # 3. Documentation / non-pipeline-config-only PR: nothing to verify.
           if [ "$VERIFY_NEEDED" = "false" ]; then
             echo "No code, test, pipeline or script changes — documentation/config-only PR. Nothing to verify; ci-gate passes."
             exit 0
           fi
 
-          # 4. Final mode: every applicable branch must have passed. A legitimately skipped
-          #    branch (surface not touched) counts as pass; failure/cancelled/timed_out does not.
+          # 4. Full-regression run: every applicable branch must have passed. A legitimately
+          #    skipped branch (surface not touched) counts as pass; failure/cancelled does not.
           rc=0
-          for pair in "api-ci:$API" "webapp-ci:$WEBAPP" "e2e-ci:$E2E" "scripts-tests:$SCRIPTS" "e2e-test-empty-guard:$GUARD"; do
+          for pair in "api-ci:$API" "webapp-ci:$WEBAPP" "e2e-ci:$E2E" "scripts-tests:$SCRIPTS"; do
             name="${pair%%:*}"
             res="${pair#*:}"
             case "$res" in
@@ -277,8 +311,8 @@ jobs:
             esac
           done
           if [ "$rc" -eq 0 ]; then
-            echo "final mode — all applicable branches passed. This PR is a merge candidate (pending manual review)."
+            echo "Full regression passed — this PR is a merge candidate (pending manual review)."
           else
-            echo "::error::final mode — one or more applicable branches did not pass."
+            echo "::error::one or more applicable branches did not pass."
           fi
           exit $rc

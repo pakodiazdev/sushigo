@@ -19,7 +19,9 @@ Address all open review thread comments on a GitHub PR.
   ```bash
   gh pr view <number> --repo <owner/repo> --json title,state,headRefName,baseRefName,isDraft
   ```
-- If the PR is closed, merged, or a draft, stop and inform the user.
+- If the PR is closed or merged, stop and inform the user. A **draft** PR is fine to process
+  (#598): merge-blocking is draft status now, and the `/issue*` pipelines open PRs as drafts, so
+  addressing review comments on a still-draft PR is the normal case — do not stop on `isDraft`.
 - Read the root `CLAUDE.md` (if present) to understand the project's commit convention, linting commands, and code style rules. This is critical — do not skip it.
 
 ### 2. Fetch open review threads

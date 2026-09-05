@@ -1,9 +1,13 @@
 name: _webapp-ci
 
-# Reusable Webapp quality branch for the unified CI DAG (#560). Called by ci.yml only when
-# the PR touched code/webapp/** and the execution mode is [wip] or final.
+# Reusable Webapp quality branch for the unified CI DAG (#560, #598). Called by ci.yml only
+# when the PR touched code/webapp/** (or pipeline infra) and the run is not [skip-ci].
 #
-# Quality order:  lint+typecheck ─► vitest shards ─► coverage-merge ─► sonar
+# Quality order:  lint+typecheck ─► vitest ─► [coverage-merge ─► sonar]   (full scope only)
+#
+#   test_scope = full     — all specs, 4 shards, coverage + Sonar (the ready / [ci-check-all] run)
+#   test_scope = changed  — only `test_files` (the PR's own changed *.test.ts(x)), 1 shard, NO
+#                           coverage, NO Sonar (the draft default / [ci-check] fast loop)
 #
 # Sharding / blob-merge logic ported verbatim from the standalone webapp-tests.yml; the
 # per-step `if: changes.outputs.webapp` guards are gone because ci.yml's analyze-pr already
@@ -11,6 +15,17 @@ name: _webapp-ci
 
 on:
   workflow_call:
+    inputs:
+      test_scope:
+        description: 'full | changed'
+        required: false
+        type: string
+        default: 'full'
+      test_files:
+        description: 'Comma-separated repo-relative Vitest *.test.ts(x) paths (used when test_scope=changed)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   lint:
@@ -49,7 +64,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        # 4 shards for a full run; 1 for the [ci-check] changed-file list.
+        shard: ${{ fromJson(inputs.test_scope == 'full' && '[1,2,3,4]' || '[1]') }}
     defaults:
       run:
         working-directory: code/webapp
@@ -70,10 +86,38 @@ jobs:
       # Sharded across 4 parallel jobs — a single-process full run with V8 coverage
       # accumulates enough GC pressure to hang low-resource runners. Shards write a blob
       # report; webapp-coverage-merge stitches them into one report for SonarCloud.
-      - name: Run Vitest shard with coverage
+      - name: Run Vitest shard with coverage (full scope)
+        if: inputs.test_scope == 'full'
         run: npx vitest run --coverage --reporter=blob --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
+      # changed scope ([ci-check]): only the PR's own changed *.test.ts(x), no coverage,
+      # no blob report, no Sonar downstream — a fast loop. Zero resolved files => no-op.
+      - name: Run Vitest (changed scope, no coverage)
+        if: inputs.test_scope != 'full'
+        env:
+          TEST_FILES: ${{ inputs.test_files }}
+        run: |
+          set -euo pipefail
+          files=()
+          IFS=',' read -ra raw <<< "$TEST_FILES"
+          for f in "${raw[@]}"; do
+            [ -n "$f" ] || continue
+            p="${f#code/webapp/}"
+            if [ -f "$p" ]; then
+              files+=("$p")
+            else
+              echo "changed-scope test file not found, skipping: $p"
+            fi
+          done
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "changed scope: no Vitest file from the PR diff — nothing to run"
+            exit 0
+          fi
+          echo "changed scope: ${#files[@]} Vitest file(s) from the PR diff"
+          npx vitest run "${files[@]}"
+
       - name: Upload blob report
+        if: inputs.test_scope == 'full'
         uses: actions/upload-artifact@v4
         with:
           name: webapp-blob-report-${{ matrix.shard }}
@@ -81,11 +125,12 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  # coverage + Sonar only on a full-scope run; a [ci-check] loop skips both.
   webapp-coverage-merge:
     name: webapp-coverage-merge
     runs-on: ubuntu-latest
     needs: webapp-tests
-    if: needs.webapp-tests.result == 'success'
+    if: inputs.test_scope == 'full' && needs.webapp-tests.result == 'success'
     defaults:
       run:
         working-directory: code/webapp
@@ -124,7 +169,7 @@ jobs:
     name: webapp-sonar
     runs-on: ubuntu-latest
     needs: webapp-coverage-merge
-    if: needs.webapp-coverage-merge.result == 'success'
+    if: inputs.test_scope == 'full' && needs.webapp-coverage-merge.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

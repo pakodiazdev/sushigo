@@ -2,32 +2,21 @@
 'use strict';
 
 // CI entrypoint: resolves the Cypress selection for this PR CI run and appends
-//   e2e_selection=none|pr-specs|targeted|full
-//   e2e_specs=<newline-free, comma-separated repo-relative paths / globs>
+//   e2e_selection=none|pr-specs|full
+//   e2e_specs=<newline-free, comma-separated repo-relative paths>
 //   e2e_specs_empty=true|false
 //   e2e_reason=<one line>
 // to $GITHUB_OUTPUT (or stdout locally). Consumed by the `analyze-pr` job.
 //
-//   MODE          - output of print-mode.js
+//   MODE          - the effective E2E intent (print-mode.js's `e2e_intent`:
+//                   none | pr-specs | full)
 //   CHANGED_JSON  - JSON array of every repo-relative code path the PR changed
 //                   (dorny/paths-filter api_files + webapp_files, merged by the workflow)
 //   INFRA_CHANGED - 'true' when the workflow's `infra` filter matched (docker, reusable
-//                   workflows, ci-analyze scripts, e2e-impact-map.json)
+//                   workflows, ci-analyze scripts)
 
 const fs = require('node:fs');
-const path = require('node:path');
 const { selectE2e } = require('./select-e2e.js');
-
-function loadImpactMap() {
-  const mapPath = path.join(__dirname, '..', '..', 'e2e-impact-map.json');
-  try {
-    return JSON.parse(fs.readFileSync(mapPath, 'utf8'));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`ci-analyze: could not read e2e-impact-map.json (${message}) — treating it as empty`);
-    return { entries: [] };
-  }
-}
 
 function parseChangedFiles(raw) {
   if (!raw) {
@@ -42,11 +31,11 @@ function parseChangedFiles(raw) {
   }
 }
 
-const mode = process.env.MODE || 'final';
+const mode = process.env.MODE || 'full';
 const changedFiles = parseChangedFiles(process.env.CHANGED_JSON);
 const infraChanged = process.env.INFRA_CHANGED === 'true';
 
-const result = selectE2e({ mode, changedFiles, impactMap: loadImpactMap(), infraChanged });
+const result = selectE2e({ mode, changedFiles, infraChanged });
 
 const lines = [
   `e2e_selection=${result.selection}`,

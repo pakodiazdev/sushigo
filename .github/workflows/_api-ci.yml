@@ -1,19 +1,34 @@
 name: _api-ci
 
-# Reusable API quality branch for the unified CI DAG (#560). Called by ci.yml only when
-# the PR touched code/api/** and the execution mode is [wip] or final.
+# Reusable API quality branch for the unified CI DAG (#560, #598). Called by ci.yml only when
+# the PR touched code/api/** (or pipeline infra) and the run is not [skip-ci].
 #
 # Quality order:  swagger-validate ─┐
-#                                   ├─► phpunit shards ─► coverage-merge ─► sonar
-#                 lint ─────────────┘                └─► junit-merge (timing, never a gate)
+#                                   ├─► phpunit ─► [coverage-merge ─► sonar]   (full scope only)
+#                 lint ─────────────┘         └─► junit-merge (timing, never a gate)
+#
+#   test_scope = full     — every *Test.php, 4 shards, coverage + Sonar (the ready / [ci-check-all] run)
+#   test_scope = changed  — only `test_files` (the PR's own changed *Test.php), 1 shard, NO coverage,
+#                           NO Sonar (the draft default / [ci-check] fast loop)
 #
 # The step logic (PHPUnit file-index sharding, isolated per-shard Postgres, raw
 # --coverage-php merge via phpcov, JUnit timing) is ported verbatim from the standalone
-# api-tests.yml (#477 / #481 / #486). What changed for #560: lint and swagger now block
-# PHPUnit, and there is no in-file `changes` job — ci.yml's analyze-pr already gated us.
+# api-tests.yml (#477 / #481 / #486). lint and swagger always block PHPUnit; there is no
+# in-file `changes` job — ci.yml's analyze-pr already gated us.
 
 on:
   workflow_call:
+    inputs:
+      test_scope:
+        description: 'full | changed'
+        required: false
+        type: string
+        default: 'full'
+      test_files:
+        description: 'Comma-separated repo-relative PHPUnit *Test.php paths (used when test_scope=changed)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   swagger:
@@ -73,7 +88,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        # 4 shards for a full run; 1 for the [ci-check] changed-file list.
+        shard: ${{ fromJson(inputs.test_scope == 'full' && '[1,2,3,4]' || '[1]') }}
 
     services:
       pgsql:
@@ -114,24 +130,45 @@ jobs:
           php artisan key:generate --ansi
           php artisan passport:keys --ansi
 
-      # File-level sharding (#481): whole test files split round-robin (index % shard-count)
-      # so every file's RefreshDatabase lifecycle stays inside one shard's process, and each
-      # shard has its own `pgsql` service above — no shared DB, no SQLSTATE[40P01].
+      # full scope — file-level sharding (#481): whole test files split round-robin
+      # (index % shard-count) so every file's RefreshDatabase lifecycle stays inside one
+      # shard's process, and each shard has its own `pgsql` service above — no shared DB,
+      # no SQLSTATE[40P01].
+      # changed scope ([ci-check]) — the shard-of-1 runs exactly `inputs.test_files` (the
+      # PR's own added/modified *Test.php), no `find`.
       - name: List PHPUnit test files for this shard
         id: shard-files
+        env:
+          TEST_SCOPE: ${{ inputs.test_scope }}
+          TEST_FILES: ${{ inputs.test_files }}
         run: |
-          mapfile -t all_files < <(find tests/Unit tests/Feature -name '*Test.php' | sort)
-          total=${#all_files[@]}
-          shard_count=${{ strategy.job-total }}
-          shard_index=$(( ${{ matrix.shard }} - 1 ))
+          set -euo pipefail
           shard_files=()
-          for ((i = 0; i < total; i++)); do
-            if (( i % shard_count == shard_index )); then
-              shard_files+=("${all_files[$i]}")
-            fi
-          done
+          if [ "$TEST_SCOPE" = "full" ]; then
+            mapfile -t all_files < <(find tests/Unit tests/Feature -name '*Test.php' | sort)
+            total=${#all_files[@]}
+            shard_count=${{ strategy.job-total }}
+            shard_index=$(( ${{ matrix.shard }} - 1 ))
+            for ((i = 0; i < total; i++)); do
+              if (( i % shard_count == shard_index )); then
+                shard_files+=("${all_files[$i]}")
+              fi
+            done
+            echo "Shard ${{ matrix.shard }}/${shard_count}: ${#shard_files[@]} of ${total} test files"
+          else
+            IFS=',' read -ra raw <<< "$TEST_FILES"
+            for f in "${raw[@]}"; do
+              [ -n "$f" ] || continue
+              p="${f#code/api/}"
+              if [ -f "$p" ]; then
+                shard_files+=("$p")
+              else
+                echo "changed-scope test file not found, skipping: $p"
+              fi
+            done
+            echo "changed scope: ${#shard_files[@]} PHPUnit file(s) from the PR diff"
+          fi
           printf '%s\n' "${shard_files[@]}" > /tmp/shard-files.txt
-          echo "Shard ${{ matrix.shard }}/${shard_count}: ${#shard_files[@]} of ${total} test files"
           if [ "${#shard_files[@]}" -eq 0 ]; then
             echo "has-files=false" >> "$GITHUB_OUTPUT"
           else
@@ -141,12 +178,20 @@ jobs:
       # Raw --coverage-php (.cov) per shard, merged accurately by phpcov later — a per-shard
       # Clover report would misrepresent line coverage. vendor/bin/phpunit directly, not
       # `php artisan test --coverage`, to avoid the wrapper's double --coverage-php injection.
-      - name: Run PHPUnit with coverage
-        if: steps.shard-files.outputs.has-files == 'true'
+      - name: Run PHPUnit with coverage (full scope)
+        if: steps.shard-files.outputs.has-files == 'true' && inputs.test_scope == 'full'
         env:
           DB_HOST: 127.0.0.1
           DB_DATABASE: mydb_test
         run: vendor/bin/phpunit --coverage-php=coverage-shard-${{ matrix.shard }}.cov --log-junit=test-results-shard-${{ matrix.shard }}.xml $(cat /tmp/shard-files.txt)
+
+      # changed scope ([ci-check]): no coverage instrumentation, no Sonar downstream — a fast loop.
+      - name: Run PHPUnit (changed scope, no coverage)
+        if: steps.shard-files.outputs.has-files == 'true' && inputs.test_scope != 'full'
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: mydb_test
+        run: vendor/bin/phpunit --log-junit=test-results-shard-${{ matrix.shard }}.xml $(cat /tmp/shard-files.txt)
 
       - name: Upload JUnit test report
         if: always()
@@ -157,6 +202,7 @@ jobs:
           retention-days: 7
 
       - name: Upload raw coverage report
+        if: inputs.test_scope == 'full'
         uses: actions/upload-artifact@v4
         with:
           name: php-coverage-raw-shard-${{ matrix.shard }}
@@ -199,11 +245,12 @@ jobs:
         continue-on-error: true
         run: node .github/scripts/test-timing/generate.js code/api/test-results-shard-*.xml
 
+  # coverage + Sonar only on a full-scope run; a [ci-check] loop skips both.
   api-coverage-merge:
     name: api-coverage-merge
     runs-on: ubuntu-latest
     needs: api-tests
-    if: needs.api-tests.result == 'success'
+    if: inputs.test_scope == 'full' && needs.api-tests.result == 'success'
     defaults:
       run:
         working-directory: code/api
@@ -240,7 +287,7 @@ jobs:
     name: api-sonar
     runs-on: ubuntu-latest
     needs: api-coverage-merge
-    if: needs.api-coverage-merge.result == 'success'
+    if: inputs.test_scope == 'full' && needs.api-coverage-merge.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

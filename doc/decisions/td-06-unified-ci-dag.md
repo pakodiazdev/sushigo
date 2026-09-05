@@ -70,3 +70,59 @@ fast green in final mode rather than running the arsenal against nothing.
 - **Making `ci-gate` neutral (not red) in `[wip]`/`[e2e-test]`.** Rejected: GitHub treats a
   never-reported required check and a skipped one inconsistently; an explicit red with a clear
   "not a merge candidate" message is unambiguous.
+
+---
+
+## Amendment (#598) — draft status is the merge block; the title bracket only scopes CI cost
+
+**Supersedes** the original `[wip]` / `[e2e-test]` execution-mode model above. `[wip]` and
+`[e2e-test]`, the `e2e-test-empty-guard` job, the `targeted` E2E selection, and
+`.github/e2e-impact-map.json` are all **removed**. (#596/#597's abandoned `merge-gate` /
+`merge-gate-hold` / `merge-gate-report` approach — a green-but-merge-blocking check — is likewise
+rejected: GitHub has no check state that is both green and merge-blocking, and it did nothing for
+CI cost or latency.)
+
+**New model:**
+
+- **Merge-blocking = native GitHub draft status.** The issue slash-commands
+  (`/start-issue`, `/issue`, `/issue-full`, `/issue-no-review`, `/issue-devin-interactive`) open the
+  PR with `gh pr create --draft`. A draft PR cannot be merged; `ci-gate` has `if: !draft` and is
+  *skipped* on it (GitHub treats a skipped required check as satisfied — the draft itself blocks the
+  merge). `/finish-pr` Phase 7.5a promotes with `gh pr ready`, firing `pull_request:
+  ready_for_review` and the full-regression run.
+
+- **CI cost while iterating = an optional title modifier bracket** after `[#NNN][x]`, matched by
+  content, case-insensitively:
+
+  | Modifier | Tests |
+  |---|---|
+  | `[skip-ci]` | none at all (not even lint) |
+  | `[ci-check]` | only the test files this PR added/modified, within touched surfaces — 1 shard, no coverage, no Sonar |
+  | `[ci-check-all]` | the full suite of every touched surface + full Cypress + coverage + Sonar |
+  | *(none)* | draft → `[ci-check]` · ready → `[ci-check-all]` |
+
+  Lint + typecheck run in every mode except `[skip-ci]`. Narrowest modifier wins if several appear.
+  A no-modifier **draft that changes pipeline infra** (`ci.yml`, the reusable workflows,
+  `ci-analyze`, `docker/**`) is forced to `[ci-check-all]` — a shallow run would hand the reusable
+  workflows empty file lists and never exercise the edited pipeline before it governs `main`. An
+  explicit `[skip-ci]` / `[ci-check]` still opts out.
+
+- **`ci-gate`** is `if: !draft`. On a ready PR it is `success` iff the effective run was full
+  (`[ci-check-all]` level) and every applicable branch passed; on a ready PR whose title still
+  carries `[skip-ci]` / `[ci-check]` it is `failure` with a "remove the modifier" message (the only
+  `ci-gate` red that is not a real test failure — `/finish-pr` strips the modifier before promoting).
+
+- **`/finish-pr`** promotes (`gh pr ready`) + verifies read-only — CI, the **Codex** review
+  (`chatgpt-codex-connector`, body `### 💡 Codex Review`), and the **SonarCloud** quality gate — and
+  reports readiness "app-doctor" style: each unmet merge requirement plus the one action that clears
+  it. It never opens a browser, never checks Devin/DeepWiki, and never merges. A `BLOCKED` mergeable
+  state whose sole cause is a pending required approval (`reviewDecision == REVIEW_REQUIRED`, checks
+  green, threads resolved, no conflict) is reported as "all gates green — pending your approval", not
+  a hard stop, so the unattended `/issue*` pipelines don't hang on it.
+
+**Branch protection:** unchanged — still requires only `ci-gate`. No admin action beyond keeping
+that one context (no `merge-gate*` context is or was added).
+
+Canonical reference: [`doc/conventions/ci/pipeline.md`](../conventions/ci/pipeline.md) and
+[`doc/conventions/git/pull-requests.md`](../conventions/git/pull-requests.md) → "PR Title CI-Cost
+Modifiers".
