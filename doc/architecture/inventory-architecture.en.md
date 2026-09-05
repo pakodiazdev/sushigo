@@ -925,12 +925,27 @@ erDiagram
   movements with no source document, which the index leaves unconstrained.
 - Every reversal is compensating; posted history is never edited or deleted.
 
-#### Read-only movement ledger (#574 target)
+#### Read-only movement ledger (#574 — delivered)
 
 The movement ledger is a read model over existing immutable evidence, not another Stock source of
 truth. List and detail queries are paginated, use public IDs, apply `stock.view`, and restrict both
 source and destination Locations to the caller's active `OperatingUnitScope`. Filtering or opening
 a detail must never materialize Stock, create evidence, or mutate a posted movement.
+
+**Delivered contract:**
+
+| Concern | Decision |
+|---|---|
+| Endpoints | `GET /api/v1/inventory/movements` (paginated list) · `GET /api/v1/inventory/movements/{movement}` (detail, bound by `public_id`) |
+| Permission | `stock.view` — no dedicated read permission; the ledger only exposes evidence the Stock query endpoints already imply |
+| Operating Unit scope | `OperatingUnitScope::constrainStockMovements()` (list) / `assertCanAccessStockMovement()` (detail) — a movement is visible when **either** touched Location belongs to an accessible unit; applied **before** filters/count/pagination so page metadata never leaks foreign rows. `super-admin`/`admin` bypass. Soft-deleted Locations still resolve to their owning unit. |
+| Ordering | `posted_at DESC NULLS LAST, id DESC` — deterministic, stable tie-breaker, DRAFT rows (null `posted_at`) sort last |
+| Page size | default 15, hard max 100 (`>100` → 422) |
+| Filters | `location_id` (source **or** destination), `item_variant_id`, `reason`, `status`, `date_from`/`date_to` (on `posted_at`), `search` (ILIKE on `reference`, wildcards escaped), `source_type` (stable token → FQCN via `StockMovementSourceType`; `receipt` today). Filter IDs are validated against the same unit scope, so an out-of-scope ULID 422s exactly like a nonexistent one. |
+| Payload | Public ID, derived `direction` (`entry`/`exit`/`transfer`/`adjustment` — never the removed legacy `type`), `is_reversal`, quantity + base UOM, source/destination Location, Variant, actor, reference, `posted_at`, `source` `{type, id}` where `id` is the origin document's **public ULID** (null for manual movements or a hard-deleted source — never the internal `related_id`/`related_line_id` keys). Detail adds `notes`, the two-way `reverses` / `reversed_by` linkage, and the reversal audit trail. Optional/soft-deleted relations serialize as `null` without hiding the movement. |
+| Foreign-unit masking | A cross-unit transfer is returned when *one* end is in scope (the OR in `constrainStockMovements`), but the endpoint Location the caller cannot reach is nulled out before serialization — it renders exactly like a genuinely external endpoint, so a scoped caller never learns a foreign unit's Location name or public ID. No-op for bypass roles. |
+| N+1 | List eager-loads `fromLocation`/`toLocation`/`itemVariant.unitOfMeasure`/`user` (all `withTrashed`); query count is flat regardless of page size. |
+| Navigation | `Inventario > Movimientos` → `/inventario/movimientos`, gated by `stock.view`. Filter and open-row state live in the URL query string, so a filtered view or a specific movement is shareable by copying the address. |
 
 ```mermaid
 sequenceDiagram

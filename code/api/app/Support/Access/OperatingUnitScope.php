@@ -4,6 +4,7 @@ namespace App\Support\Access;
 
 use App\Models\InventoryLocation;
 use App\Models\OperatingUnit;
+use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
@@ -168,6 +169,80 @@ class OperatingUnitScope
             'destinationLocation',
             fn (Builder $locationQuery) => $locationQuery->whereIn('operating_unit_id', $unitIds)
         );
+    }
+
+    /**
+     * Constrain a StockMovement query to the user's accessible units. A
+     * movement is in scope when *either* its source or destination Location
+     * belongs to an accessible unit — the immutable ledger read model (#574)
+     * never surfaces a movement whose only touched Location is foreign. A
+     * no-op for bypass-role users. Soft-deleted Locations still resolve to
+     * their owning unit so a movement is not hidden once its Location is
+     * archived.
+     *
+     * @param  Builder<StockMovement>  $query
+     * @return Builder<StockMovement>
+     */
+    public function constrainStockMovements(Builder $query, User $user): Builder
+    {
+        if ($this->hasUnrestrictedAccess($user)) {
+            return $query;
+        }
+
+        $unitIds = $this->accessibleOperatingUnitIds($user);
+
+        $inUnit = fn (Builder $locationQuery) => $locationQuery
+            ->withTrashed()
+            ->whereIn('operating_unit_id', $unitIds);
+
+        return $query->where(fn (Builder $scoped) => $scoped
+            ->whereHas('fromLocation', $inUnit)
+            ->orWhereHas('toLocation', $inUnit));
+    }
+
+    /**
+     * Whether the user may read the given StockMovement, resolved through
+     * either of its touched Locations (source or destination). Soft-deleted
+     * Locations are considered, so an archived Location does not 403 its own
+     * unit's members out of the immutable history.
+     */
+    public function canAccessStockMovement(User $user, StockMovement $movement): bool
+    {
+        if ($this->hasUnrestrictedAccess($user)) {
+            return true;
+        }
+
+        $locationIds = array_values(array_filter([
+            $movement->from_location_id,
+            $movement->to_location_id,
+        ]));
+
+        if ($locationIds === []) {
+            return false;
+        }
+
+        $movementUnitIds = InventoryLocation::withTrashed()
+            ->whereKey($locationIds)
+            ->pluck('operating_unit_id');
+
+        return $movementUnitIds
+            ->intersect($this->accessibleOperatingUnitIds($user))
+            ->isNotEmpty();
+    }
+
+    /**
+     * Assert the user may read the given StockMovement, throwing a 403
+     * otherwise.
+     *
+     * @throws AuthorizationException
+     */
+    public function assertCanAccessStockMovement(User $user, StockMovement $movement): void
+    {
+        if (! $this->canAccessStockMovement($user, $movement)) {
+            throw new AuthorizationException(
+                'You do not have access to the operating unit that owns this stock movement.'
+            );
+        }
     }
 
     private function resolveLocationOperatingUnitId(InventoryLocation|int|string|null $location): ?int

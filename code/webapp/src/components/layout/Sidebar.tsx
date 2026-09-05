@@ -91,6 +91,7 @@ const menuItems: MenuItem[] = [
             // stock-only user still reaches it — the parent stays visible via
             // resolveItemAccess when a sub-item is independently accessible.
             { label: 'Existencias', path: '/inventario/existencias', requiredPermission: 'stock.view' },
+            { label: 'Movimientos', path: '/inventario/movimientos', requiredPermission: 'stock.view' },
             { label: 'Productos', path: '/inventario/productos' },
             { label: 'Insumos', path: '/inventario/insumos' },
             { label: 'Variantes', path: '/inventario/variantes' },
