@@ -86,6 +86,16 @@ class ItemVariant extends Model
     }
 
     /**
+     * Get the per-Inventory-Location "managed here" assignments for this
+     * variant (#569) — the managed assortment, independent of physical stock
+     * and of replenishment thresholds.
+     */
+    public function locationAssignments(): HasMany
+    {
+        return $this->hasMany(VariantLocationAssignment::class);
+    }
+
+    /**
      * Get the effective-dated price-list entries for this variant (#435).
      * Resolution against these is the authoritative — and only — source of a
      * Variant's price; the former per-Variant sale_price column was dropped in

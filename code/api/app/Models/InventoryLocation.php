@@ -72,6 +72,16 @@ class InventoryLocation extends Model
     }
 
     /**
+     * Get the Variant-managed-here assignments for this location (#569) — the
+     * managed assortment, independent of physical stock or replenishment
+     * thresholds.
+     */
+    public function variantAssignments(): HasMany
+    {
+        return $this->hasMany(VariantLocationAssignment::class);
+    }
+
+    /**
      * Get stock movements from this location
      */
     public function stockMovementsFrom(): HasMany

@@ -7,6 +7,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LocationDetails } from '../location-details'
 import type { InventoryLocation } from '@/types/inventory'
 
+// The managed-Variant assignment panel (#569) has its own dedicated test suite
+// and pulls in toast/query context this focused suite doesn't provide — stub it.
+vi.mock('@/features/inventory/assignments', () => ({
+    VariantAssignmentsPanel: () => null,
+}))
+
 // Mock stockApi
 vi.mock('@/services/inventory-api', () => ({
     stockApi: {
