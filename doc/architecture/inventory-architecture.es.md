@@ -1069,6 +1069,15 @@ hacia cero. `OperatingUnitScope` se aplica a la consulta de asignaciones antes d
 o paginación (`constrainAssignments` / `assertCanAccessLocation`), así que una fila cero proyectada
 nunca puede filtrar el surtido de una unidad ajena.
 
+**Invariantes de la espina.** Dos hechos evitan que la espina de asignaciones oculte un saldo
+real: `StockMutationService::receiveInto()` ahora crea (o reactiva) la `VariantLocationAssignment`
+del par en cada primera recepción, así que el "un par de `stock` implica una asignación viva" de
+#569 se mantiene también para los movimientos posteriores al backfill único, no solo para los
+previos; y `baseQuery()` exige que la Ubicación **y** la Variante de la asignación sigan
+resolviendo por su scope de SoftDeletes, de modo que una Variante borrada por
+`DeleteItemVariantController` (o una Ubicación borrada estando vacía) sale de Existencias en vez de
+hidratar una relación nula en un `500`.
+
 **UI.** `/inventario/existencias` (copy operativo en español) renderiza la lista con espina en la
 asignación directamente: las Variantes asignadas pero nunca recibidas se muestran en cero,
 etiquetadas **"nunca recibido"**, y — cuando una política las marca como bajas — en la tabla de

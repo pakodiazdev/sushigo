@@ -4,6 +4,7 @@ namespace App\Services\Inventory;
 
 use App\Exceptions\InvalidStockBalanceException;
 use App\Models\Stock;
+use App\Models\VariantLocationAssignment;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
@@ -58,6 +59,16 @@ class StockMutationService
                 "Quantity must be positive to receive stock. Requested: {$qty}"
             );
         }
+
+        // Receiving stock into a (Location, Variant) pair means that Variant is
+        // managed there — keep the managed-assortment assignment (#569) in
+        // lockstep so the assignment-spined Existencias read model (#571) never
+        // hides a balance a posted movement just committed. #569's one-time
+        // backfill only covered pairs that had Stock at migration time; this
+        // extends the same "a Stock pair implies a live assignment" invariant
+        // to every subsequent first receipt (Receipts, Opening Balances,
+        // reversals into a source Location).
+        $this->ensureManagedAssignment($inventoryLocationId, $itemVariantId);
 
         $stock = $this->lockAndGet($inventoryLocationId, $itemVariantId);
 
@@ -122,5 +133,40 @@ class StockMutationService
         $stock->decreaseOnHand($qty);
 
         return $stock->fresh();
+    }
+
+    /**
+     * Idempotently land a live managed assignment (#569) for the pair being
+     * received into. Reactivates a soft-deleted assignment (a receipt into a
+     * pair someone unassigned once its balance hit zero re-manages it, matching
+     * the #569 assign endpoint's "201 on create/reactivate"), and recovers from
+     * the partial-unique-index race two concurrent first receipts would
+     * otherwise lose — the same savepoint shape as insertOrRecoverFromRace()
+     * above, so a lost INSERT never aborts the caller's outer transaction.
+     */
+    private function ensureManagedAssignment(int $inventoryLocationId, int $itemVariantId): void
+    {
+        $existing = VariantLocationAssignment::withTrashed()
+            ->where('inventory_location_id', $inventoryLocationId)
+            ->where('item_variant_id', $itemVariantId)
+            ->first();
+
+        if ($existing !== null) {
+            if ($existing->trashed()) {
+                $existing->restore();
+            }
+
+            return;
+        }
+
+        try {
+            DB::transaction(fn () => VariantLocationAssignment::create([
+                'inventory_location_id' => $inventoryLocationId,
+                'item_variant_id' => $itemVariantId,
+            ]));
+        } catch (UniqueConstraintViolationException) {
+            // A concurrent first receipt created the live assignment between
+            // our read and this insert — the invariant already holds.
+        }
     }
 }

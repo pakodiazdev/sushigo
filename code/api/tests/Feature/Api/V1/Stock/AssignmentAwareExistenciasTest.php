@@ -309,4 +309,53 @@ class AssignmentAwareExistenciasTest extends InventoryTestCase
         $this->assertContains($locationB->public_id, $locationIds);
         $this->getJson('/api/v1/stock/by-location/'.$locationB->public_id)->assertOk();
     }
+
+    #[Test]
+    public function receiving_stock_into_an_unassigned_pair_keeps_it_visible(): void
+    {
+        // A pair with no assignment and no Stock at setUp time.
+        $variant = $this->createItemVariant($this->createItem(), ['code' => 'LATE-1']);
+        $this->assertDatabaseMissing('variant_location_assignments', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+
+        // Receiving into it (opening balance → StockMutationService::receiveInto)
+        // must land a live assignment so the committed balance is not hidden by
+        // the assignment-spined read (#571 / Codex P1).
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 30,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 4,
+        ])->assertStatus(201);
+
+        $this->assertDatabaseHas('variant_location_assignments', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'deleted_at' => null,
+        ]);
+
+        $row = $this->rowFor($this->listRows(), $variant);
+        $this->assertNotNull($row, 'received balance must stay visible in Existencias');
+        $this->assertNotNull($row['stock_id']);
+        $this->assertEquals(30.0, $row['on_hand']);
+    }
+
+    #[Test]
+    public function an_assignment_with_a_soft_deleted_relation_is_excluded_not_a_500(): void
+    {
+        // Live assignment whose Variant is then soft-deleted (DeleteItemVariant
+        // does not cascade to the assignment). The projection must skip it, not
+        // dereference a null relation into a global 500 (#571 / Codex P1).
+        $orphan = $this->createItemVariant($this->createItem(), ['code' => 'GONE-1']);
+        $this->assignVariantToLocation($this->location, $orphan);
+        $orphan->delete();
+
+        $rows = $this->getJson('/api/v1/stock')->assertOk()->json('data');
+        $this->assertNull(collect($rows)->first(fn ($r) => $r['item_variant']['id'] === $orphan->public_id));
+
+        $this->getJson('/api/v1/stock/by-location/'.$this->location->public_id)->assertOk();
+    }
 }
