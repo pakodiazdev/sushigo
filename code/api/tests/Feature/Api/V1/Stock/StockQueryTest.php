@@ -50,6 +50,13 @@ class StockQueryTest extends InventoryTestCase
             'is_active' => true,
         ]);
 
+        // The Existencias read model (#571) is spined on the managed
+        // Variant-to-Location assignment (#569): a Stock row only surfaces in
+        // these endpoints when its (location, variant) pair is also assigned
+        // (which #569's backfill guarantees for every pre-existing pair).
+        $this->assignVariantToLocation($location, $variant1);
+        $this->assignVariantToLocation($location, $variant2);
+
         // Create stock in location
         Stock::create([
             'inventory_location_id' => $location->id,

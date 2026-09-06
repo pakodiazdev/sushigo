@@ -134,15 +134,18 @@ describe('Inventory Types', () => {
     })
 
     describe('Stock type', () => {
-        it('can create a valid stock record', () => {
+        it('can create a valid stock record backed by a physical Stock row', () => {
             const stock: Stock = {
-                id: 1,
+                id: 'assign-01',
+                assignment_id: 'assign-01',
+                stock_id: 'stock-01',
                 inventory_location_id: 'location-01',
                 item_variant_id: 'variant-01',
                 on_hand: 50,
                 reserved: 10,
                 available: 40,
                 weighted_avg_cost: 25.00,
+                total_value: 1250,
                 min_stock: null,
                 max_stock: null,
                 is_low_stock: false,
@@ -151,19 +154,24 @@ describe('Inventory Types', () => {
             expect(stock.on_hand - stock.reserved).toBe(40)
         })
 
-        it('calculates available from on_hand minus reserved', () => {
+        it('models an assigned Variant with no physical Stock row as a zero projection (#571)', () => {
             const stock: Stock = {
-                id: 1,
+                id: 'assign-02',
+                assignment_id: 'assign-02',
+                stock_id: null,
                 inventory_location_id: 'location-01',
                 item_variant_id: 'variant-01',
-                on_hand: 100,
-                reserved: 25,
-                available: 75,
-                weighted_avg_cost: 10.00,
+                on_hand: 0,
+                reserved: 0,
+                available: 0,
+                weighted_avg_cost: 0,
+                total_value: 0,
                 min_stock: null,
                 max_stock: null,
                 is_low_stock: false,
             }
+            expect(stock.stock_id).toBeNull()
+            expect(stock.id).toBe(stock.assignment_id)
             expect(stock.on_hand - stock.reserved).toBe(stock.available)
         })
     })

@@ -232,8 +232,13 @@ export const inventoryCategoryApi = {
 
 // Stock
 export const stockApi = {
-  list: (params?: { location_id?: number; per_page?: number }) =>
-    api.get<PaginatedResponse<Stock>>('/stock', { params }),
+  list: (params?: {
+    inventory_location_id?: string
+    item_variant_id?: string
+    min_on_hand?: number
+    low_stock?: boolean
+    per_page?: number
+  }) => api.get<PaginatedResponse<Stock>>('/stock', { params }),
 
   byLocation: (locationId: string | number) =>
     api.get<EntityResponse<{
@@ -247,6 +252,10 @@ export const stockApi = {
         total_inventory_value: number
       }
       items: Array<{
+        /** ULID of the managed assignment (#569) — stable identity, present even with no Stock row. */
+        assignment_id: string
+        /** ULID of the physical Stock row, or null when the assigned Variant was never received (#571). */
+        stock_id: string | null
         item_variant_id: string
         item_variant_code: string
         item_variant_name: string

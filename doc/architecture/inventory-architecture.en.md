@@ -1007,6 +1007,50 @@ separate from the replenishment-threshold editor in the Stock Dashboard: search,
 assigned/unassigned/all filter, assign/unassign controls gated on `stock.manage`, and the `409`
 rejection message surfaced verbatim in a toast.
 
+### 3.14 Existencias read model — assignment-spined balance projection (#571) — as built
+
+The Existencias endpoints now **start from `VariantLocationAssignment` (live rows only) and
+`LEFT JOIN` the physical `stock` row and the live `VariantLocationReplenishmentPolicy`** — three
+distinct concerns kept separate: assortment (*is this Variant managed here?*), balance (*how much
+is physically here?*), and governance (*what is the reorder point?*). This replaces the former
+stock-spined query, which could not tell "expected here, out of stock" from "not managed here".
+
+**Projection rule.** An assigned pair with no `stock` row is a real result: `on_hand`, `reserved`,
+`available`, `weighted_avg_cost` and `total_value` project as `0`, and `stock_id` is `null`. No
+zero `stock` row is written — the read is side-effect free (no `stock`, no `stock_movements`).
+#569's backfill guarantees every pre-existing `stock` pair already carries a live assignment, so
+the assignment-spined result is a superset of the old one, never a subset. The single-place
+implementation is `App\Services\Inventory\AssignmentAwareStockProjection`
+(`baseQuery` / `projectRow` / `moneyFields` / `variantFields` / `summarize`), consumed by all
+three controllers.
+
+**Response shape.** Each list row carries `id` = `assignment_id` (the ULID of the managed
+assignment — a stable identity whether or not `stock` backs the row) plus `stock_id`
+(nullable physical identity). The `by-location` items and `by-variant` locations gain the same
+`assignment_id` / `stock_id` pair.
+
+**Low stock for a projected zero row.** Uses the existing #439 rule unchanged: low only when a
+live policy exists and `on_hand <= min_stock`. A never-received row (`on_hand = 0`) is therefore
+low iff `0 <= min_stock`, i.e. whenever a live policy exists with a non-negative reorder point.
+
+**Filters (zero-row behaviour).** `inventory_location_id` / `item_variant_id` unchanged.
+`min_on_hand` is matched against the *projected* on-hand: `min_on_hand=0` keeps projected zero
+rows, any positive value drops them. `low_stock=true` includes projected zero rows per the rule
+above.
+
+**Summaries.** `total_variants` (`by-location`) and `total_locations` (`by-variant`) now count
+**assigned pairs**, not only materialized `stock` rows. Monetary totals are unaffected by zero
+rows (they contribute `0`); `avg_weighted_cost` is averaged over materialized rows only, so a
+never-received assignment does not drag a Location's valuation toward zero. `OperatingUnitScope`
+is applied to the assignment query before any filter or pagination
+(`constrainAssignments` / `assertCanAccessLocation`), so a projected zero row can never leak a
+foreign unit's assortment.
+
+**UI.** `/inventario/existencias` (Spanish operational copy) renders the assignment-aware list
+directly: assigned-but-never-received Variants show at zero, tagged **"nunca recibido"**, and — when
+a policy makes them low — in the low-stock alert table, without implying a database Stock record
+exists.
+
 ---
 
 ## 4. Operational Flows

@@ -1028,6 +1028,52 @@ deliberadamente separado del editor de umbrales de reabastecimiento del Panel de
 búsqueda, filtro asignado/no asignado/todos, controles de asignar/desasignar restringidos a
 `stock.manage`, y el mensaje de rechazo `409` mostrado literalmente en un toast.
 
+### 3.14 Modelo de lectura de Existencias — proyección de saldos con espina en la asignación (#571) — implementado
+
+Los endpoints de Existencias ahora **parten de `VariantLocationAssignment` (solo filas vivas) y
+hacen `LEFT JOIN` con la fila física de `stock` y con la `VariantLocationReplenishmentPolicy`
+viva** — tres conceptos separados: surtido (*¿esta Variante se administra aquí?*), saldo (*¿cuánto
+hay físicamente?*) y gobernanza (*¿cuál es el punto de reorden?*). Reemplaza la consulta anterior
+con espina en `stock`, que no distinguía "esperada aquí, sin existencia" de "no administrada aquí".
+
+**Regla de proyección.** Un par asignado sin fila de `stock` es un resultado real: `on_hand`,
+`reserved`, `available`, `weighted_avg_cost` y `total_value` se proyectan en `0`, y `stock_id` es
+`null`. No se escribe ninguna fila `stock` cero — la lectura no tiene efectos secundarios (ni
+`stock` ni `stock_movements`). El backfill de #569 garantiza que todo par de `stock` preexistente
+ya tiene una asignación viva, así que el resultado con espina en la asignación es un superconjunto
+del anterior, nunca un subconjunto. La implementación única es
+`App\Services\Inventory\AssignmentAwareStockProjection`
+(`baseQuery` / `projectRow` / `moneyFields` / `variantFields` / `summarize`), consumida por los
+tres controladores.
+
+**Forma de la respuesta.** Cada fila de la lista lleva `id` = `assignment_id` (el ULID de la
+asignación administrada — identidad estable exista o no una fila de `stock`) más `stock_id`
+(identidad física, nulable). Los items de `by-location` y las ubicaciones de `by-variant` reciben
+el mismo par `assignment_id` / `stock_id`.
+
+**Stock bajo para una fila proyectada en cero.** Usa la regla de #439 sin cambios: baja solo
+cuando existe una política viva y `on_hand <= min_stock`. Una fila nunca recibida (`on_hand = 0`)
+es baja si y solo si `0 <= min_stock`, es decir, siempre que exista una política viva con punto de
+reorden no negativo.
+
+**Filtros (comportamiento de filas cero).** `inventory_location_id` / `item_variant_id` sin
+cambios. `min_on_hand` se compara contra el on-hand *proyectado*: `min_on_hand=0` conserva las
+filas cero, cualquier valor positivo las descarta. `low_stock=true` incluye las filas cero
+proyectadas según la regla anterior.
+
+**Resúmenes.** `total_variants` (`by-location`) y `total_locations` (`by-variant`) ahora cuentan
+**pares asignados**, no solo filas de `stock` materializadas. Los totales monetarios no se ven
+afectados por las filas cero (aportan `0`); `avg_weighted_cost` se promedia solo sobre filas
+materializadas, para que una asignación nunca recibida no arrastre la valuación de la Ubicación
+hacia cero. `OperatingUnitScope` se aplica a la consulta de asignaciones antes de cualquier filtro
+o paginación (`constrainAssignments` / `assertCanAccessLocation`), así que una fila cero proyectada
+nunca puede filtrar el surtido de una unidad ajena.
+
+**UI.** `/inventario/existencias` (copy operativo en español) renderiza la lista con espina en la
+asignación directamente: las Variantes asignadas pero nunca recibidas se muestran en cero,
+etiquetadas **"nunca recibido"**, y — cuando una política las marca como bajas — en la tabla de
+alertas de stock bajo, sin sugerir que exista un registro de Stock en la base de datos.
+
 ---
 
 ## 4. Flujos operativos

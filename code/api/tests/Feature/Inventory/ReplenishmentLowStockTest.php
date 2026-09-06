@@ -28,6 +28,12 @@ class ReplenishmentLowStockTest extends InventoryTestCase
 
         $this->variant = $this->createItemVariant($this->createItem(), ['code' => 'COLA-355']);
 
+        // The Existencias endpoints (#571) are spined on the managed
+        // assignment (#569); assign the pair at both locations so the Stock
+        // rows below surface in /stock and its summaries.
+        $this->assignVariantToLocation($this->location, $this->variant);
+        $this->assignVariantToLocation($this->bar, $this->variant);
+
         // Same on_hand (5) at both locations...
         Stock::create(['inventory_location_id' => $this->location->id, 'item_variant_id' => $this->variant->id, 'on_hand' => 5, 'reserved' => 0, 'weighted_avg_cost' => 3]);
         Stock::create(['inventory_location_id' => $this->bar->id, 'item_variant_id' => $this->variant->id, 'on_hand' => 5, 'reserved' => 0, 'weighted_avg_cost' => 3]);

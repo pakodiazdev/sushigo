@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers\Api\V1\Stock;
 
-use App\Http\Controllers\Api\V1\Stock\Concerns\SummarizesStock;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\InventoryLocation;
-use App\Models\Stock;
-use App\Services\Inventory\ReplenishmentPolicyResolver;
+use App\Models\VariantLocationAssignment;
+use App\Services\Inventory\AssignmentAwareStockProjection;
 use App\Support\Access\OperatingUnitScope;
 
 /**
  * @OA\Get(
  *   path="/api/v1/stock/by-location/{id}",
- *   summary="Get Stock Summary by Location",
+ *   summary="Get Existencias summary by Location",
+ *   description="Spined on the managed Variant-to-Location assignment (#569), not on Stock (#571): every live assigned Variant is an item, one with no Stock row projecting zero balances and `stock_id: null`. `summary.total_variants` counts assigned Variants.",
  *   tags={"Stock"},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Inventory Location ID"),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Inventory Location public_id"),
  *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=403, description="Forbidden — caller is not an active member of the location's Operating Unit"),
@@ -25,42 +25,27 @@ use App\Support\Access\OperatingUnitScope;
  */
 class StockByLocationController extends Controller
 {
-    use SummarizesStock;
-
-    public function __invoke(string $id, ReplenishmentPolicyResolver $resolver, OperatingUnitScope $scope)
+    public function __invoke(string $id, AssignmentAwareStockProjection $projection, OperatingUnitScope $scope)
     {
         $location = InventoryLocation::findByPublicIdOrFail($id);
 
         // Horizontal authorization (#440): stock.view alone is not enough to
-        // read a specific location's stock — the caller must belong to its
+        // read a specific location's assortment — the caller must belong to its
         // Operating Unit.
         $scope->assertCanAccessLocation(request()->user(), $location);
 
-        $stockRecords = Stock::where('inventory_location_id', $location->id)
-            ->with([
-                'itemVariant.item',
-            ])
+        $rows = $projection->baseQuery()
+            ->where('variant_location_assignments.inventory_location_id', $location->id)
+            ->orderBy('variant_location_assignments.item_variant_id')
             ->get();
 
-        $policies = $resolver->resolveManyForLocation($location->id, $stockRecords->pluck('item_variant_id'));
+        $items = $rows->map(fn (VariantLocationAssignment $row) => [
+            'assignment_id' => $row->public_id,
+            ...$projection->variantFields($row),
+            ...$projection->moneyFields($row),
+        ]);
 
-        $items = $stockRecords->map(function ($stock) use ($policies) {
-            return [
-                'item_variant_id' => $stock->itemVariant->public_id,
-                'item_variant_code' => $stock->itemVariant->code,
-                'item_variant_name' => $stock->itemVariant->name,
-                'item_name' => $stock->itemVariant->item->name,
-                'item_sku' => $stock->itemVariant->item->sku,
-                ...$this->stockMoneyFields($stock, $policies->get($stock->item_variant_id)),
-            ];
-        });
-
-        $summary = [
-            'total_variants' => $stockRecords->count(),
-            ...$this->stockTotals($stockRecords),
-            'low_stock_variants' => $this->countLowStock($stockRecords, $policies, 'item_variant_id'),
-            'total_inventory_value' => (float) $stockRecords->map(fn ($s) => $s->on_hand * $s->weighted_avg_cost)->sum(),
-        ];
+        $totals = $projection->summarize($rows);
 
         return new ResponseEntity(
             data: [
@@ -68,9 +53,17 @@ class StockByLocationController extends Controller
                     'id' => $location->public_id,
                     'name' => $location->name,
                     'type' => $location->type,
+                    'priority' => $location->priority,
                     'operating_unit' => $location->operatingUnit->name,
                 ],
-                'summary' => $summary,
+                'summary' => [
+                    'total_variants' => $totals['assigned_count'],
+                    'total_on_hand' => $totals['total_on_hand'],
+                    'total_reserved' => $totals['total_reserved'],
+                    'total_available' => $totals['total_available'],
+                    'low_stock_variants' => $totals['low_stock_count'],
+                    'total_inventory_value' => $totals['total_inventory_value'],
+                ],
                 'items' => $items,
             ]
         );

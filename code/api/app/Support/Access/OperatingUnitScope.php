@@ -145,6 +145,30 @@ class OperatingUnitScope
     }
 
     /**
+     * Constrain a VariantLocationAssignment query (#569) to the user's
+     * accessible units, via the inventoryLocation relation. A no-op for
+     * bypass-role users. The Existencias read model (#571) spines its list and
+     * summaries on assignments, so this is the scope that keeps a projected
+     * zero row from leaking a foreign unit's managed assortment.
+     *
+     * @param  Builder<\App\Models\VariantLocationAssignment>  $query
+     * @return Builder<\App\Models\VariantLocationAssignment>
+     */
+    public function constrainAssignments(Builder $query, User $user): Builder
+    {
+        if ($this->hasUnrestrictedAccess($user)) {
+            return $query;
+        }
+
+        $unitIds = $this->accessibleOperatingUnitIds($user);
+
+        return $query->whereHas(
+            'inventoryLocation',
+            fn (Builder $locationQuery) => $locationQuery->whereIn('operating_unit_id', $unitIds)
+        );
+    }
+
+    /**
      * Constrain a Receipt query to the user's accessible units, via the
      * receiving destinationLocation relation. A no-op for bypass-role users.
      *
