@@ -35,14 +35,19 @@ return new class extends Migration
             $table->id();
             $table->char('public_id', 26)->unique();
 
+            // Restrict, not cascade — a Transfer is auditable evidence linked
+            // from immutable Stock Movements (`related_type`/`related_id`), so a
+            // Location that appears in transfer history must not be permanently
+            // force-deletable out from under it. Same choice Receipts make for
+            // `destination_location_id`. Soft-deleting a Location is unaffected.
             $table->foreignId('source_location_id')
                 ->constrained('inventory_locations')
-                ->cascadeOnDelete()
+                ->restrictOnDelete()
                 ->comment('Location stock is moved out of');
 
             $table->foreignId('destination_location_id')
                 ->constrained('inventory_locations')
-                ->cascadeOnDelete()
+                ->restrictOnDelete()
                 ->comment('Location stock is moved into');
 
             $table->string('reference', 255)->nullable()->comment('Optional external reference');
@@ -82,16 +87,21 @@ return new class extends Migration
             $table->id();
             $table->char('public_id', 26)->unique();
 
+            // A line belongs to its document — cascade with the header.
             $table->foreignId('stock_transfer_id')
                 ->constrained('stock_transfers')
                 ->cascadeOnDelete();
 
+            // Restrict the Variant and entry UOM, matching `receipt_lines` — a
+            // Variant or UOM referenced by transfer history blocks its own
+            // permanent deletion rather than silently taking the evidence with it.
             $table->foreignId('item_variant_id')
                 ->constrained('item_variants')
-                ->cascadeOnDelete();
+                ->restrictOnDelete();
 
             $table->foreignId('entry_uom_id')
                 ->constrained('units_of_measure')
+                ->restrictOnDelete()
                 ->comment('UOM the operator captured the quantity in');
 
             $table->decimal('entry_quantity', 15, 4)->comment('Quantity in the entry UOM');
