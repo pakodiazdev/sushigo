@@ -40,17 +40,20 @@ class AssignmentAwareStockProjection
     public function baseQuery(): Builder
     {
         return VariantLocationAssignment::query()
-            // Only assignments whose Location and Variant both still resolve
-            // through their SoftDeletes scope. A Variant deleted via
-            // DeleteItemVariantController (or a Location deleted while empty)
-            // is soft-deleted without cascading to its live assignment, so
-            // without this guard the eager loads below hydrate a null relation
-            // and projectRow() dereferences it — a 500 on the global `/stock`
-            // request for every caller. A soft-deleted Variant is also not an
-            // "active assigned Variant" (Acceptance Criteria), so excluding it
-            // is the intended behaviour, not just crash avoidance.
-            ->whereHas('inventoryLocation')
+            // Only assignments whose Variant, Location, and the Location's
+            // Operating Unit all still resolve through their SoftDeletes scope.
+            // DeleteItemVariantController soft-deletes a Variant, a Location
+            // deleted while empty is soft-deleted, and DeleteOperatingUnit
+            // controller soft-deletes an Operating Unit with no cascade to its
+            // Locations — none of which touch the live assignment. Without this
+            // guard the eager loads below hydrate a null relation and
+            // projectRow() / the summary controllers dereference it, 500ing
+            // every stock read (for admins, who bypass OU scoping, even the
+            // Operating-Unit case). A resource whose context has been deleted is
+            // also not an "active assigned Variant" (Acceptance Criteria), so
+            // excluding it is the intended behaviour, not just crash avoidance.
             ->whereHas('itemVariant')
+            ->whereHas('inventoryLocation', fn (Builder $location) => $location->whereHas('operatingUnit'))
             ->leftJoin('stock', function ($join) {
                 $join->on('stock.inventory_location_id', '=', 'variant_location_assignments.inventory_location_id')
                     ->on('stock.item_variant_id', '=', 'variant_location_assignments.item_variant_id');

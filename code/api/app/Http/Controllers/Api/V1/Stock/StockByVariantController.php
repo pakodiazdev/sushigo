@@ -43,7 +43,10 @@ class StockByVariantController extends Controller
             'inventory_location_id' => $row->inventoryLocation->public_id,
             'location_name' => $row->inventoryLocation->name,
             'location_type' => $row->inventoryLocation->type,
-            'operating_unit' => $row->inventoryLocation->operatingUnit->name,
+            // baseQuery() already excludes assignments whose Location's Operating
+            // Unit is soft-deleted; `?->` keeps a global read from ever 500ing
+            // on a relation race even so.
+            'operating_unit' => $row->inventoryLocation->operatingUnit?->name,
             ...$projection->moneyFields($row),
         ]);
 

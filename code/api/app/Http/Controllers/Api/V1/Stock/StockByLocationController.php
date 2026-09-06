@@ -29,6 +29,11 @@ class StockByLocationController extends Controller
     {
         $location = InventoryLocation::findByPublicIdOrFail($id);
 
+        // A Location whose Operating Unit was soft-deleted (DeleteOperatingUnit
+        // controller has no cascade) has no operational context to summarize —
+        // treat it as not found rather than dereferencing a null relation below.
+        abort_if($location->operatingUnit === null, 404);
+
         // Horizontal authorization (#440): stock.view alone is not enough to
         // read a specific location's assortment — the caller must belong to its
         // Operating Unit.
