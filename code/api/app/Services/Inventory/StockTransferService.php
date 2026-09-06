@@ -13,6 +13,7 @@ use App\Exceptions\StockTransferInsufficientStockException;
 use App\Exceptions\StockTransferLocationUnavailableException;
 use App\Exceptions\StockTransferNotPostedException;
 use App\Exceptions\StockTransferReversalBoundaryException;
+use App\Exceptions\StockTransferValueOutOfRangeException;
 use App\Exceptions\StockTransferVariantNotAssignedException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
@@ -54,6 +55,9 @@ use Illuminate\Support\Facades\DB;
 class StockTransferService
 {
     use ConvertsUomQuantities;
+
+    /** Largest magnitude a `decimal(15,4)` column can hold — used to keep a derived line total off the PostgreSQL overflow (500) path. */
+    private const MAX_DECIMAL_15_4 = 99999999999.9999;
 
     public function __construct(
         private readonly StockMutationService $stockMutation,
@@ -382,6 +386,18 @@ class StockTransferService
         }
 
         $sourceCost = (float) $sourceStock->weighted_avg_cost;
+        $lineTotal = $sourceCost * $baseQty;
+
+        // A large-but-in-range quantity times a modest unit cost can still
+        // overflow `stock_movement_lines.line_total` (decimal(15,4)). Catch it
+        // as a 409 here, before any balance is touched, instead of a raw
+        // PostgreSQL numeric-overflow 500 at INSERT time.
+        if (round(abs($lineTotal), 4) > self::MAX_DECIMAL_15_4) {
+            throw new StockTransferValueOutOfRangeException(
+                "Stock Transfer #{$transfer->id}: the value of line #{$line->id} "
+                ."({$baseQty} × {$sourceCost}) exceeds the amount that can be recorded."
+            );
+        }
 
         try {
             $this->stockMutation->decreaseOnHand($sourceStock, $baseQty);
@@ -430,7 +446,7 @@ class StockTransferService
             'base_qty' => $baseQty,
             'conversion_factor' => (float) $line->conversion_factor,
             'unit_cost' => $sourceCost,
-            'line_total' => $sourceCost * $baseQty,
+            'line_total' => $lineTotal,
             'meta' => [],
         ]);
     }

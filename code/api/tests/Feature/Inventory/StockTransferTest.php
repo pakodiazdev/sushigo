@@ -329,6 +329,23 @@ class StockTransferTest extends InventoryTestCase
     }
 
     #[Test]
+    public function posting_is_rejected_when_a_line_value_exceeds_the_recordable_range(): void
+    {
+        // 6e10 units at cost 2 = 1.2e11 — each input fits decimal(15,4), the
+        // product does not. Expect a controlled 409, not a PostgreSQL 500.
+        $this->seedSourceStock(onHand: 60000000000, cost: 2);
+        $id = $this->createDraft([
+            ['item_variant_id' => $this->variant->public_id, 'entry_uom_id' => $this->uomKg->public_id, 'entry_quantity' => 60000000000],
+        ]);
+
+        $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertStatus(409);
+
+        $this->assertEquals(60000000000.0, (float) Stock::where('inventory_location_id', $this->location->id)->value('on_hand'));
+        $this->assertSame(0, StockMovement::count());
+        $this->assertSame('DRAFT', StockTransfer::where('public_id', $id)->value('status'));
+    }
+
+    #[Test]
     public function a_two_line_transfer_posts_each_line_as_its_own_transfer_movement(): void
     {
         $variantB = $this->createItemVariant($this->createItem(), ['name' => 'Variant B']);
