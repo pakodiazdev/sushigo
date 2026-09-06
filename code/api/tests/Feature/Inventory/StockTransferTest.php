@@ -564,17 +564,46 @@ class StockTransferTest extends InventoryTestCase
 
         // The scoped base user can only reach the source unit → 403 on mutate,
         // and the detail resource tells the UI so via can_mutate=false (it can
-        // still read the cross-unit transfer via the source endpoint).
+        // still read the cross-unit transfer via the source endpoint). The
+        // foreign destination Location is masked to null so its name/ID never
+        // leaks (#574).
         Passport::actingAs($this->user);
         $this->getJson("/api/v1/inventory/transfers/{$id}")
             ->assertOk()
-            ->assertJsonPath('data.can_mutate', false);
+            ->assertJsonPath('data.can_mutate', false)
+            ->assertJsonPath('data.source_location.name', 'Test Warehouse')
+            ->assertJsonPath('data.destination_location', null);
         $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertStatus(403);
 
+        // The list summary row masks it the same way.
+        $this->getJson('/api/v1/inventory/transfers')
+            ->assertOk()
+            ->assertJsonPath('data.0.destination_location', null)
+            ->assertJsonPath('data.0.source_location.name', 'Test Warehouse');
+
+        // A bypass admin sees both endpoints in full.
         Passport::actingAs($admin);
         $this->getJson("/api/v1/inventory/transfers/{$id}")
             ->assertOk()
-            ->assertJsonPath('data.can_mutate', true);
+            ->assertJsonPath('data.can_mutate', true)
+            ->assertJsonPath('data.destination_location.name', 'Foreign Kitchen');
+    }
+
+    #[Test]
+    public function posted_transfer_movements_are_filterable_in_the_ledger_by_source_type(): void
+    {
+        $this->seedSourceStock();
+        $id = $this->createDraft();
+        $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertOk();
+
+        $this->getJson('/api/v1/inventory/movements?source_type=stock_transfer')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.reason', 'TRANSFER');
+
+        $this->getJson('/api/v1/inventory/movements?source_type=receipt')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0);
     }
 
     #[Test]

@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Resources\Inventory\StockTransfer;
 
 use App\Http\Resources\BaseResource;
+use App\Http\Resources\Inventory\StockTransfer\Concerns\SerializesAccessibleTransferLocation;
 use App\Models\StockTransfer;
 use App\Support\Access\OperatingUnitScope;
 
 /** @mixin StockTransfer */
 class StockTransferResource extends BaseResource
 {
+    use SerializesAccessibleTransferLocation;
+
     public function toArray($request): array
     {
         return [
@@ -26,14 +29,17 @@ class StockTransferResource extends BaseResource
             // rather than the global `stock.manage` permission alone.
             'can_mutate' => $request->user() !== null
                 && app(OperatingUnitScope::class)->canMutateStockTransfer($request->user(), $this->resource),
-            'source_location' => $this->whenLoaded('sourceLocation', fn () => [
-                'id' => $this->sourceLocation->public_id,
-                'name' => $this->sourceLocation->name,
-            ]),
-            'destination_location' => $this->whenLoaded('destinationLocation', fn () => [
-                'id' => $this->destinationLocation->public_id,
-                'name' => $this->destinationLocation->name,
-            ]),
+            // An endpoint in an Operating Unit this caller cannot access is
+            // nulled out — a cross-unit transfer is readable via the *other*
+            // endpoint but must not leak the foreign Location's name/ID (#574).
+            'source_location' => $this->whenLoaded(
+                'sourceLocation',
+                fn () => $this->accessibleLocationRef($this->sourceLocation, $request),
+            ),
+            'destination_location' => $this->whenLoaded(
+                'destinationLocation',
+                fn () => $this->accessibleLocationRef($this->destinationLocation, $request),
+            ),
             'lines' => StockTransferLineResource::collection($this->whenLoaded('lines')),
             'posted_at' => $this->posted_at?->toIso8601String(),
             'posted_by' => $this->whenLoaded('postedByUser', fn () => $this->postedByUser ? [
