@@ -102,13 +102,15 @@ abstract class InventoryTestCase extends TestCase
             'is_active' => true,
         ]);
 
-        // Create inventory location
+        // Create inventory location — active and purchase-receiving (#568/#572) so
+        // it is a valid Purchase Receipt destination for the happy-path suites.
         $this->location = InventoryLocation::create([
             'operating_unit_id' => $this->operatingUnit->id,
             'name' => 'Test Warehouse',
             'type' => 'MAIN',
             'priority' => 100,
             'is_active' => true,
+            'can_receive_purchases' => true,
         ]);
 
         // Create units of measure

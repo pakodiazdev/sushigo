@@ -224,6 +224,35 @@ describe('useReceiptsPage', () => {
     await waitFor(() => expect(result.current.selectedReceipt?.status).toBe('REVERSED'))
   })
 
+  it('invalidates the Stock, assignment and movement read models after posting (#572)', async () => {
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
+
+    vi.mocked(receiptApi.list).mockResolvedValue(listResult([summary()]))
+    vi.mocked(receiptApi.get).mockResolvedValue(entityResult(fullReceipt()))
+    vi.mocked(receiptApi.post).mockResolvedValue(entityResult(fullReceipt({ status: 'POSTED' })))
+
+    const { result } = renderHook(() => useReceiptsPage(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.receipts).toHaveLength(1))
+
+    act(() => result.current.handleRowClick(summary()))
+    await act(async () => {
+      result.current.handlePost()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(result.current.selectedReceipt?.status).toBe('POSTED'))
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map(([arg]) =>
+      JSON.stringify((arg as { queryKey: unknown[] })?.queryKey)
+    )
+    expect(invalidatedKeys).toContain(JSON.stringify(['stock-all']))
+    expect(invalidatedKeys).toContain(JSON.stringify(['stock-by-location']))
+    expect(invalidatedKeys).toContain(JSON.stringify(['variant-assignments']))
+    expect(invalidatedKeys).toContain(JSON.stringify(['stock-movements']))
+
+    invalidateSpy.mockRestore()
+  })
+
   it('reports an API error via the error toast instead of throwing', async () => {
     vi.mocked(receiptApi.list).mockResolvedValue(listResult([summary()]))
     vi.mocked(receiptApi.get).mockResolvedValue(entityResult(fullReceipt()))

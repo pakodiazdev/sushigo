@@ -37,6 +37,7 @@ class ReceiptService
     public function __construct(
         private readonly InventoryEntryPostingService $entryPosting,
         private readonly OperatingUnitScope $scope,
+        private readonly VariantLocationAssignmentEnsurer $assignmentEnsurer,
     ) {}
 
     public function createDraft(SaveReceiptData $data): Receipt
@@ -157,6 +158,18 @@ class ReceiptService
                 );
             }
 
+            // Destination eligibility is re-checked here, under the row lock,
+            // because the Location's state can change while the Receipt sits as a
+            // draft (#572): a save-time-valid destination that has since been
+            // deactivated or had `can_receive_purchases` cleared must block
+            // posting with a stable 409 and roll back every line, rather than
+            // landing supplier stock in a Location that can no longer receive it.
+            if (! $destination->is_active || ! $destination->can_receive_purchases) {
+                throw new ReceiptDestinationUnavailableException(
+                    "Receipt #{$receipt->id}'s destination location can no longer receive purchases."
+                );
+            }
+
             $lines = $receipt->lines()->with('presentation.itemVariant')->get();
 
             foreach ($lines as $line) {
@@ -169,6 +182,14 @@ class ReceiptService
                 }
 
                 $baseUnits = (float) $line->base_units_received;
+
+                // Posting a purchase is sufficient evidence that this Variant is
+                // managed at the destination (#569/#572) — ensure the assortment
+                // assignment idempotently, inside this same transaction, so it
+                // rolls back with the rest if any later line fails. Never writes a
+                // Stock row or a movement; a soft-deleted assignment is
+                // reactivated, a live one is a no-op.
+                $this->assignmentEnsurer->ensure($receipt->destination_location_id, $itemVariant->id);
 
                 // One posting primitive per line (#567): locks/creates Stock,
                 // blends the effective unit cost, and appends immutable
@@ -440,9 +461,11 @@ class ReceiptService
      *
      * Note: like every `OperatingUnitScope` check in the codebase, this reads the
      * `operating_unit_users` membership without locking it, so it is not
-     * serialized against a membership revoked in the same instant — closing that
-     * sub-transaction race across the Inventory domain is #572's contract, not
-     * this read model's.
+     * serialized against a membership revoked in the same instant. #572 hardened
+     * the Receipt *destination* contract (active + purchase-receiving, re-checked
+     * under lock at post time) but deliberately left that whole-domain
+     * membership-lock question open — it is a property of `OperatingUnitScope`
+     * itself, not of this service.
      */
     private function assertActorMayUseDestination(int $destinationLocationId, int $userId): void
     {
@@ -456,7 +479,7 @@ class ReceiptService
             'lines.presentation.template',
             'lines.supplierOffering',
             'supplier',
-            'destinationLocation',
+            'destinationLocation.operatingUnit',
             'createdByUser',
             'postedByUser',
             'reversedByUser',

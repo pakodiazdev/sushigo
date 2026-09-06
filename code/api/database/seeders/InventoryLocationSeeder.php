@@ -30,6 +30,11 @@ class InventoryLocationSeeder extends Seeder
             [
                 'name' => 'Almacén Principal',
                 'is_primary' => true,
+                // The primary MAIN warehouse is the branch's supplier-receiving
+                // point (#568/#572) — same predicate as the #568 backfill
+                // (active + primary + MAIN). Every other seeded location stays
+                // non-receiving until a user opts it in.
+                'can_receive_purchases' => true,
                 'priority' => 100,
                 'meta' => [
                     'description' => 'Main warehouse storage',

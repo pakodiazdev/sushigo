@@ -74,8 +74,13 @@ export function ReceiptDetails({
             <p className="font-medium text-foreground">{receipt.supplier?.name ?? 'No disponible'}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Ubicación destino</p>
+            <p className="text-muted-foreground">Almacén receptor</p>
             <p className="font-medium text-foreground">{receipt.destination_location?.name ?? 'No disponible'}</p>
+            {receipt.destination_location?.operating_unit && (
+              <p className="text-xs text-muted-foreground">
+                {receipt.destination_location.operating_unit.name} · {receipt.destination_location.type}
+              </p>
+            )}
           </div>
           <div>
             <p className="text-muted-foreground">Fecha de recepción</p>

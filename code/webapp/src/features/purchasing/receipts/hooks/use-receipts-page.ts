@@ -98,6 +98,17 @@ export function useReceiptsPage() {
 
   const invalidateLists = () => queryClient.invalidateQueries({ queryKey: receiptQueryKeys.lists() })
 
+  // Posting or reversing a Receipt moves Stock, its weighted-average cost, the
+  // Variant-to-Location assortment (#569/#572) and appends a Stock Movement
+  // (#574) — every downstream read model the operator might have open needs to
+  // refetch, not just the Receipt list.
+  const invalidateInventoryReadModels = () => {
+    queryClient.invalidateQueries({ queryKey: ['stock-all'] })
+    queryClient.invalidateQueries({ queryKey: ['stock-by-location'] })
+    queryClient.invalidateQueries({ queryKey: ['variant-assignments'] })
+    queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
+  }
+
   const closePanel = () => setIsPanelOpen(false)
 
   // post/reverse return the full, updated Receipt — write it straight to the detail
@@ -107,6 +118,7 @@ export function useReceiptsPage() {
     queryClient.setQueryData(receiptQueryKeys.detail(receipt.id), { data: { data: receipt, status: 200 } })
     setSelectedReceiptId(receipt.id)
     invalidateLists()
+    invalidateInventoryReadModels()
     setPanelMode('detail')
   }
 

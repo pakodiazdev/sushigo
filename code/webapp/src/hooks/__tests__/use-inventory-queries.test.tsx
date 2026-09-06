@@ -105,6 +105,33 @@ describe('Inventory Query Hooks', () => {
       expect(result.current.isFetching).toBe(false)
       expect(inventoryApi.inventoryLocationApi.list).not.toHaveBeenCalled()
     })
+
+    it('constrains to active, purchase-receiving locations when receivingOnly is set (#572)', async () => {
+      vi.mocked(inventoryApi.inventoryLocationApi.list).mockResolvedValue({
+        data: { data: [{ id: 1, name: 'Dock', priority: 10 }], meta: { current_page: 1, last_page: 1 } },
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.inventoryLocationApi.list>>)
+
+      const { result } = renderHook(() => useInventoryLocationsSelect(true, true), { wrapper })
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+      expect(inventoryApi.inventoryLocationApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ is_active: true, can_receive_purchases: true })
+      )
+    })
+
+    it('does not constrain by can_receive_purchases by default', async () => {
+      vi.mocked(inventoryApi.inventoryLocationApi.list).mockResolvedValue({
+        data: { data: [], meta: { current_page: 1, last_page: 1 } },
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.inventoryLocationApi.list>>)
+
+      const { result } = renderHook(() => useInventoryLocationsSelect(), { wrapper })
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+      const params = vi.mocked(inventoryApi.inventoryLocationApi.list).mock.calls[0]![0] as Record<string, unknown>
+      expect(params).not.toHaveProperty('can_receive_purchases')
+    })
   })
 
   describe('useItemsSelect', () => {

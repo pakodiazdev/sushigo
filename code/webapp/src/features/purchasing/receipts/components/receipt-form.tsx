@@ -1,4 +1,5 @@
-import { Loader2, Plus } from 'lucide-react'
+import { useMemo } from 'react'
+import { Info, Loader2, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
@@ -38,14 +39,40 @@ export function ReceiptForm({ receipt, onSuccess, onCancel }: Readonly<ReceiptFo
     queryKey: ['receipt-form-suppliers'],
     queryFn: () => supplierApi.list({ is_active: true }),
   })
-  const locationsQuery = useInventoryLocationsSelect()
+  // Only active, purchase-receiving Locations (#568/#572) — a draft saved against
+  // any other destination is a 422, so it must never be offered here.
+  const locationsQuery = useInventoryLocationsSelect(true, true)
 
   const suppliers = suppliersQuery.data?.data.data ?? []
   const locations = locationsQuery.data ?? []
 
+  // Group the receiving Locations by their owning Operating Unit so the operator
+  // picks a destination in the right unit at a glance (#572).
+  const locationGroups = useMemo(() => {
+    const groups = new Map<string, { unitName: string; items: typeof locations }>()
+    for (const location of locations) {
+      const unitName = location.operating_unit?.name ?? 'Sin unidad operativa'
+      const group = groups.get(unitName) ?? { unitName, items: [] }
+      group.items.push(location)
+      groups.set(unitName, group)
+    }
+    return [...groups.values()].sort((a, b) => a.unitName.localeCompare(b.unitName))
+  }, [locations])
+
+  const groupByUnit = locationGroups.length > 1
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-5">
+        <div className="flex gap-2 rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <p>
+            Crear o actualizar un borrador <strong className="font-semibold text-foreground">no modifica el inventario</strong>.
+            Al confirmar la recepción se aplica la cantidad recibida y el costo efectivo en el
+            almacén receptor seleccionado.
+          </p>
+        </div>
+
         <FormField label="Proveedor" required error={errors.supplier_id?.message}>
           <Select
             aria-label="Proveedor"
@@ -60,16 +87,29 @@ export function ReceiptForm({ receipt, onSuccess, onCancel }: Readonly<ReceiptFo
           </Select>
         </FormField>
 
-        <FormField label="Ubicación destino" required error={errors.destination_location_id?.message}>
+        <FormField
+          label="Almacén / ubicación receptora"
+          required
+          error={errors.destination_location_id?.message}
+          hint="Solo se listan ubicaciones activas habilitadas para recibir compras."
+        >
           <Select
-            aria-label="Ubicación destino"
+            aria-label="Almacén / ubicación receptora"
             error={Boolean(errors.destination_location_id)}
             {...register('destination_location_id')}
           >
             <option value="">Selecciona una ubicación</option>
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>{location.name}</option>
-            ))}
+            {groupByUnit
+              ? locationGroups.map((group) => (
+                  <optgroup key={group.unitName} label={group.unitName}>
+                    {group.items.map((location) => (
+                      <option key={location.id} value={location.id}>{location.name}</option>
+                    ))}
+                  </optgroup>
+                ))
+              : locations.map((location) => (
+                  <option key={location.id} value={location.id}>{location.name}</option>
+                ))}
           </Select>
         </FormField>
 

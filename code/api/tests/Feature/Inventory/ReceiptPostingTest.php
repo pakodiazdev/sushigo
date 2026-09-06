@@ -239,6 +239,7 @@ class ReceiptPostingTest extends InventoryTestCase
             'type' => 'MAIN',
             'priority' => 50,
             'is_active' => true,
+            'can_receive_purchases' => true,
         ]);
 
         ['id' => $id] = $this->createDraft([], ['destination_location_id' => $destination->public_id]);
