@@ -44,17 +44,20 @@ export function ReceiptForm({ receipt, onSuccess, onCancel }: Readonly<ReceiptFo
   const locationsQuery = useInventoryLocationsSelect(true, true)
 
   const suppliers = suppliersQuery.data?.data.data ?? []
-  const locations = locationsQuery.data ?? []
+  const locations = useMemo(() => locationsQuery.data ?? [], [locationsQuery.data])
 
   // Group the receiving Locations by their owning Operating Unit so the operator
-  // picks a destination in the right unit at a glance (#572).
+  // picks a destination in the right unit at a glance (#572). Keyed by unit *id*
+  // (not name) — two accessible units may share a display name, and merging them
+  // would let an operator pick a warehouse in the wrong unit.
   const locationGroups = useMemo(() => {
-    const groups = new Map<string, { unitName: string; items: typeof locations }>()
+    const groups = new Map<string, { key: string; unitName: string; items: typeof locations }>()
     for (const location of locations) {
+      const key = location.operating_unit ? `ou:${location.operating_unit.id}` : 'ou:none'
       const unitName = location.operating_unit?.name ?? 'Sin unidad operativa'
-      const group = groups.get(unitName) ?? { unitName, items: [] }
+      const group = groups.get(key) ?? { key, unitName, items: [] }
       group.items.push(location)
-      groups.set(unitName, group)
+      groups.set(key, group)
     }
     return [...groups.values()].sort((a, b) => a.unitName.localeCompare(b.unitName))
   }, [locations])
@@ -101,7 +104,7 @@ export function ReceiptForm({ receipt, onSuccess, onCancel }: Readonly<ReceiptFo
             <option value="">Selecciona una ubicación</option>
             {groupByUnit
               ? locationGroups.map((group) => (
-                  <optgroup key={group.unitName} label={group.unitName}>
+                  <optgroup key={group.key} label={group.unitName}>
                     {group.items.map((location) => (
                       <option key={location.id} value={location.id}>{location.name}</option>
                     ))}

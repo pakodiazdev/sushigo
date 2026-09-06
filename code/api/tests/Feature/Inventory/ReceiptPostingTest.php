@@ -258,4 +258,25 @@ class ReceiptPostingTest extends InventoryTestCase
 
         $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertStatus(409);
     }
+
+    #[Test]
+    public function posting_is_rejected_when_the_variant_was_deactivated_after_the_draft_was_created(): void
+    {
+        // A deactivated (not soft-deleted) variant still resolves through the
+        // presentation relation, but AssignVariantToLocationController refuses to
+        // assign it — receipt posting must not create that assignment through the
+        // back door, so the whole post is a 409 and rolls back (#572).
+        ['id' => $id, 'variant' => $variant] = $this->createDraft();
+
+        $variant->update(['is_active' => false]);
+
+        $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertStatus(409);
+
+        $this->assertSame(Receipt::STATUS_DRAFT, Receipt::where('public_id', $id)->value('status'));
+        $this->assertDatabaseMissing('variant_location_assignments', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+        $this->assertSame(0, Stock::where('item_variant_id', $variant->id)->count());
+    }
 }

@@ -34,8 +34,10 @@ vi.mock('@tanstack/react-query', () => ({
       data = { data: { data: [{ id: 's1', code: 'SUP', name: 'Proveedor Uno' }] } }
     } else if (key[0] === 'inventory' && key[1] === 'locations') {
       data = { data: { data: [
-        { id: 'loc1', name: 'Bodega Central', priority: 2, is_active: true, can_receive_purchases: true, operating_unit: { id: 1, name: 'Unidad Norte', type: 'BRANCH_MAIN' } },
-        { id: 'loc2', name: 'Bodega Sur', priority: 1, is_active: true, can_receive_purchases: true, operating_unit: { id: 2, name: 'Unidad Sur', type: 'BRANCH_MAIN' } },
+        { id: 'loc1', name: 'Bodega Central', priority: 3, is_active: true, can_receive_purchases: true, operating_unit: { id: 1, name: 'Unidad Norte', type: 'BRANCH_MAIN' } },
+        { id: 'loc2', name: 'Bodega Sur', priority: 2, is_active: true, can_receive_purchases: true, operating_unit: { id: 2, name: 'Unidad Sur', type: 'BRANCH_MAIN' } },
+        // Same display name as unit 1, different id — must NOT be merged into unit 1's group.
+        { id: 'loc3', name: 'Bodega Norte 2', priority: 1, is_active: true, can_receive_purchases: true, operating_unit: { id: 3, name: 'Unidad Norte', type: 'BRANCH_MAIN' } },
       ] } }
     } else if (key[0] === 'receipt-form-products') {
       data = { data: { data: [{ id: 'p1', name: 'Arroz' }] } }
@@ -151,14 +153,18 @@ describe('ReceiptForm', () => {
     expect(view.getByText(/no modifica el inventario/i)).toBeDefined()
   })
 
-  it('groups the receiving-location options by their Operating Unit', () => {
+  it('groups the receiving-location options by Operating Unit identity, not display name', () => {
     const view = render(<ReceiptForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
 
     const select = view.getByLabelText(/almacén .* ubicación receptora/i)
-    const groups = select.querySelectorAll('optgroup')
+    const groups = [...select.querySelectorAll('optgroup')]
 
-    expect([...groups].map((group) => group.label)).toEqual(['Unidad Norte', 'Unidad Sur'])
-    expect(view.getByRole('option', { name: 'Bodega Central' })).toBeDefined()
+    // Two distinct units share the name "Unidad Norte" — they stay as two groups.
+    expect(groups.map((group) => group.label)).toEqual(['Unidad Norte', 'Unidad Norte', 'Unidad Sur'])
+
+    const groupOf = (optionText: string) =>
+      groups.find((group) => [...group.querySelectorAll('option')].some((o) => o.textContent === optionText))
+    expect(groupOf('Bodega Central')).not.toBe(groupOf('Bodega Norte 2'))
     expect(view.getByRole('option', { name: 'Bodega Sur' })).toBeDefined()
   })
 })

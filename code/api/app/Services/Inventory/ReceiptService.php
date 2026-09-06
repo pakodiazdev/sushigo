@@ -175,7 +175,12 @@ class ReceiptService
             foreach ($lines as $line) {
                 $itemVariant = $line->presentation->itemVariant;
 
-                if (! $itemVariant) {
+                // A soft-deleted variant resolves to null (the relation excludes
+                // trashed); a *deactivated* one still resolves but is outside the
+                // manageable catalogue. Both must reject posting rather than land
+                // stock — and, crucially, an assignment — for a variant that
+                // `AssignVariantToLocationController` would refuse (#569/#572).
+                if (! $itemVariant || ! $itemVariant->is_active) {
                     throw new ReceiptVariantUnavailableException(
                         "Receipt #{$receipt->id} references a Product Variant that is no longer available."
                     );
