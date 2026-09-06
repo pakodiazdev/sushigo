@@ -22,6 +22,8 @@ class OpeningBalanceService
 {
     use ConvertsUomQuantities;
 
+    private const INACTIVE_DESTINATION_MESSAGE = 'The selected location is inactive and cannot receive an opening balance.';
+
     public function __construct(
         private readonly ApplicationClock $clock,
         private readonly InventoryEntryPostingService $entryPosting,
@@ -56,11 +58,7 @@ class OpeningBalanceService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if (! $location->is_active) {
-                throw ValidationException::withMessages([
-                    'inventory_location_id' => 'The selected location is inactive and cannot receive an opening balance.',
-                ]);
-            }
+            $this->assertDestinationActive($location);
 
             if ($data->userId !== null) {
                 $this->scope->assertCanAccessLocation(User::findOrFail($data->userId), $location);
@@ -102,7 +100,12 @@ class OpeningBalanceService
                     baseQty: $baseQuantity,
                     conversionFactor: $conversionFactor,
                     unitCost: $baseCost,
-                    lineTotal: $baseCost ? $baseQuantity * $baseCost : null,
+                    // Explicit null check, not a truthy one: a supplied cost of 0
+                    // (free stock) records line_total = 0, matching the preview's
+                    // total_value and the weighted-average blend; only a genuinely
+                    // omitted cost leaves it null, so line-level audits can still
+                    // tell "free" from "cost not captured" (#570).
+                    lineTotal: $baseCost === null ? null : $baseQuantity * $baseCost,
                 ),
             ));
 
@@ -152,10 +155,19 @@ class OpeningBalanceService
      *     total_value: float|null,
      * }
      *
-     * @throws ValidationException when no UOM conversion path exists to the Variant's base UOM
+     * @throws ValidationException when the destination Location is inactive, or no
+     *                             UOM conversion path exists to the Variant's base UOM
      */
     public function previewOpeningBalance(RegisterOpeningBalanceData $data): array
     {
+        // Mirror the posting path's active-destination check (#570): the shared
+        // FormRequest only validates existence + Operating Unit access, so
+        // without this the preview would 200 for an inactive Location while
+        // registerOpeningBalance() 422s the identical payload.
+        $this->assertDestinationActive(
+            InventoryLocation::query()->whereKey($data->inventoryLocationId)->firstOrFail()
+        );
+
         $variant = ItemVariant::with(['item', 'unitOfMeasure'])->findOrFail($data->itemVariantId);
         $entryUom = UnitOfMeasure::findOrFail($data->entryUomId);
 
@@ -173,6 +185,23 @@ class OpeningBalanceService
             'base_unit_cost' => $baseCost,
             'total_value' => $baseCost === null ? null : $baseQuantity * $baseCost,
         ];
+    }
+
+    /**
+     * A destination that exists and is accessible but is no longer active
+     * cannot receive an Opening Balance — 422 on `inventory_location_id`, the
+     * same field/message the FormRequest uses for its own destination checks
+     * (#570). Shared by the posting path (under a row lock) and the preview.
+     *
+     * @throws ValidationException
+     */
+    private function assertDestinationActive(InventoryLocation $location): void
+    {
+        if (! $location->is_active) {
+            throw ValidationException::withMessages([
+                'inventory_location_id' => self::INACTIVE_DESTINATION_MESSAGE,
+            ]);
+        }
     }
 
     /**

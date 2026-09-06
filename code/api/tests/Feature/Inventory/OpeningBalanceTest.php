@@ -667,6 +667,49 @@ class OpeningBalanceTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_records_line_total_zero_for_an_explicit_zero_cost_and_null_when_omitted()
+    {
+        // Line-level audit must distinguish free stock (line_total = 0, agreeing
+        // with the preview's total_value and the weighted-average blend) from a
+        // cost that was never captured (line_total = null).
+        $freeItem = $this->createItem(['name' => 'Free Wasabi']);
+        $freeVariant = $this->createItemVariant($freeItem, ['uom_id' => $this->uomKg->id]);
+
+        $freeMovementId = $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $freeVariant->public_id,
+            'quantity' => 8,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 0,
+        ])->assertStatus(201)->json('data.id');
+
+        $this->assertDatabaseHas('stock_movement_lines', [
+            'stock_movement_id' => $freeMovementId,
+            'base_qty' => 8,
+            'unit_cost' => 0,
+            'line_total' => 0,
+        ]);
+
+        $unknownItem = $this->createItem(['name' => 'Uncosted Ginger']);
+        $unknownVariant = $this->createItemVariant($unknownItem, ['uom_id' => $this->uomKg->id]);
+
+        $unknownMovementId = $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $unknownVariant->public_id,
+            'quantity' => 8,
+            'uom_id' => $this->uomKg->public_id,
+            // no unit_cost
+        ])->assertStatus(201)->json('data.id');
+
+        $this->assertDatabaseHas('stock_movement_lines', [
+            'stock_movement_id' => $unknownMovementId,
+            'base_qty' => 8,
+            'unit_cost' => null,
+            'line_total' => null,
+        ]);
+    }
+
+    #[Test]
     public function it_allows_a_missing_unit_cost_and_skips_the_weighted_average_blend()
     {
         $item = $this->createItem(['name' => 'Donated Rice']);

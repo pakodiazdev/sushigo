@@ -122,6 +122,38 @@ class OpeningBalancePreviewTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_a_preview_for_an_inactive_destination_matching_the_posting_path()
+    {
+        $inactiveLocation = InventoryLocation::create([
+            'operating_unit_id' => $this->operatingUnit->id,
+            'name' => 'Decommissioned Warehouse',
+            'type' => 'MAIN',
+            'priority' => 10,
+            'is_active' => false,
+        ]);
+
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $payload = [
+            'inventory_location_id' => $inactiveLocation->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 5,
+        ];
+
+        // The preview must not show a valid-looking summary for a payload the
+        // posting endpoint would reject.
+        $this->postJson('/api/v1/inventory/opening-balance/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['inventory_location_id']);
+        $this->postJson('/api/v1/inventory/opening-balance', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['inventory_location_id']);
+    }
+
+    #[Test]
     public function it_forbids_a_preview_for_a_location_the_caller_cannot_access()
     {
         $otherUnit = OperatingUnit::create([
