@@ -5,6 +5,7 @@ import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { Input } from '@/components/ui/input'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { useInventoryLocationsSelect, useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
+import { fetchAllPages } from '@/lib/fetch-all-pages'
 import { variantAssignmentApi } from '@/features/inventory/assignments'
 import { useStockTransferForm } from '../hooks/use-stock-transfer-form'
 import type { StockTransfer } from '../types'
@@ -37,9 +38,15 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
 
   // The destination scopes which Variants can be moved — an internal move never
   // expands the assortment (#569), so only offer Variants already assigned there.
+  // The assignment list is paginated (ordered by variant code); page through it in
+  // full so a Variant past the first 100 is still selectable, matching the other
+  // catalog selectors.
   const assignedVariantsQuery = useQuery({
     queryKey: ['stock-transfer-form', 'assigned-variants', destinationLocationId],
-    queryFn: () => variantAssignmentApi.list(destinationLocationId, { state: 'assigned', per_page: 100 }),
+    queryFn: () =>
+      fetchAllPages((page) =>
+        variantAssignmentApi.list(destinationLocationId, { state: 'assigned', page, per_page: 100 })
+      ),
     enabled: Boolean(destinationLocationId),
   })
 
