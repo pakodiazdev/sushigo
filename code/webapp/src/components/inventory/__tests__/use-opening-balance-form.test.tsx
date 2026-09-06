@@ -12,10 +12,8 @@ vi.mock('@/components/ui/toast-context', () => ({
   useToast: () => ({ showSuccess, showError }),
 }))
 
-// No debounce delay in tests — return the value straight through.
-vi.mock('@/hooks/use-debounced-value', () => ({
-  useDebouncedValue: <T,>(value: T) => value,
-}))
+// Real 400 ms debounce — the tests below `waitFor` past it. Keeping it real is
+// what lets the "preview goes stale on a live edit" test observe the lag window.
 
 // Stable references — the real hooks are backed by react-query, whose `data`
 // identity is stable across renders. Returning fresh array literals here would
@@ -100,8 +98,36 @@ describe('useOpeningBalanceForm', () => {
     })
     // uom_id is auto-filled from the variant by the hook's effect.
 
-    await waitFor(() => expect(stockMovementApi.openingBalancePreview).toHaveBeenCalled())
-    await waitFor(() => expect(result.current.preview).toEqual(PREVIEW))
+    await waitFor(() => expect(stockMovementApi.openingBalancePreview).toHaveBeenCalled(), {
+      timeout: 2000,
+    })
+    await waitFor(() => expect(result.current.preview).toEqual(PREVIEW), { timeout: 2000 })
+  })
+
+  it('hides the loaded preview and shows loading the instant a live edit outpaces the debounce', async () => {
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useOpeningBalanceForm({ onSuccess: vi.fn() }),
+      { wrapper: Wrapper }
+    )
+
+    act(() => {
+      result.current.setFieldValue('inventory_location_id', 'loc-1')
+      result.current.setFieldValue('item_variant_id', 'var-1')
+      result.current.setFieldValue('quantity', 25000)
+    })
+    await waitFor(() => expect(result.current.preview).toEqual(PREVIEW), { timeout: 2000 })
+
+    // A fresh edit: the previously-loaded preview is immediately withheld (its
+    // total was computed for 25000, not 30000) until the debounce catches up.
+    act(() => {
+      result.current.setFieldValue('quantity', 30000)
+    })
+    expect(result.current.preview).toBeUndefined()
+    expect(result.current.previewLoading).toBe(true)
+
+    // Once the debounce settles, a fresh preview for the new input appears.
+    await waitFor(() => expect(result.current.preview).toEqual(PREVIEW), { timeout: 2000 })
   })
 
   it('posts the opening balance and invalidates the Existencias queries on success', async () => {
@@ -178,7 +204,9 @@ describe('useOpeningBalanceForm', () => {
       result.current.setFieldValue('quantity', 10)
     })
 
-    await waitFor(() => expect(stockMovementApi.openingBalancePreview).toHaveBeenCalled())
+    await waitFor(() => expect(stockMovementApi.openingBalancePreview).toHaveBeenCalled(), {
+      timeout: 2000,
+    })
     expect(stockMovementApi.openingBalancePreview).toHaveBeenLastCalledWith(
       expect.objectContaining({ unit_cost: 0 })
     )
@@ -200,6 +228,6 @@ describe('useOpeningBalanceForm', () => {
       result.current.setFieldValue('quantity', 5)
     })
 
-    await waitFor(() => expect(result.current.previewErrorMessage).toBeTruthy())
+    await waitFor(() => expect(result.current.previewErrorMessage).toBeTruthy(), { timeout: 2000 })
   })
 })

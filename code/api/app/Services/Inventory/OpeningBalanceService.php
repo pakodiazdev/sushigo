@@ -111,12 +111,24 @@ class OpeningBalanceService
             // lock `InventoryEntryPostingService` took on the pair's Stock row
             // (StockMutationService::lockAndGet). That is the exact pair-level
             // serialization point UnassignVariantFromLocationController uses, so a
-            // concurrent unassignment cannot slip its zero-balance check and
-            // soft-delete between the assignment decision and the Stock
-            // increment — the opened balance is always left discoverable in the
-            // Location's assignment list, never a Stock row with no live
-            // assignment behind it. A soft-deleted row from an unassignment that
+            // concurrent unassignment of a pair that *has* a Stock row (a zeroed
+            // one included) cannot slip its zero-balance check and soft-delete
+            // between the assignment decision and the Stock increment — the
+            // opened balance is always left discoverable in the Location's
+            // assignment list, and a soft-deleted row from an unassignment that
             // did win the race is reactivated here.
+            //
+            // The residual window is a *first-ever* opening balance for a pair
+            // that has a live assignment but no Stock row yet: there is nothing
+            // for either side to lock before the row exists, so a concurrent
+            // unassignment can still soft-delete the assignment as this call
+            // creates the first row. #569 explicitly scoped that out
+            // ("enforcing assortment against inbound entries is ... a
+            // consuming-workflow concern (#570–#574)"), and closing sub-
+            // transaction races across the Inventory domain is #572's contract
+            // (see ReceiptService::assertActorMayUseDestination) — a shared
+            // pre-Stock advisory lock spanning this path and the unassign
+            // controller is that issue's call, not a change to slip in here.
             $this->assignmentEnsurer->ensure($location->id, $variant->id);
 
             return $movement->fresh(['lines', 'toLocation', 'itemVariant.item']);

@@ -94,6 +94,13 @@ export function useOpeningBalanceForm({
   const debouncedQuantity = useDebouncedValue(quantity, 400)
   const debouncedUnitCost = useDebouncedValue(unitCost, 400)
 
+  // The preview lags the live form values by up to the debounce window, but a
+  // submit uses the live react-hook-form values immediately. Treat the loaded
+  // preview as stale whenever the live numbers have moved ahead of what it was
+  // computed for, so the operator can never confirm a total for the previous
+  // input while posting the new amount (#570).
+  const previewIsStale = quantity !== debouncedQuantity || unitCost !== debouncedUnitCost
+
   const previewEnabled =
     inventoryLocationId.length > 0 &&
     itemVariantId.length > 0 &&
@@ -170,9 +177,10 @@ export function useOpeningBalanceForm({
     notes: errors.notes?.message || validationErrors.notes,
   }
 
-  const previewErrorMessage = previewQuery.isError
-    ? getApiErrorMessage(previewQuery.error, 'No se pudo calcular la conversión para esta unidad')
-    : undefined
+  const previewErrorMessage =
+    previewQuery.isError && !previewIsStale
+      ? getApiErrorMessage(previewQuery.error, 'No se pudo calcular la conversión para esta unidad')
+      : undefined
 
   const onSubmit = async (data: OpeningBalanceFormValues) => {
     await execute(data)
@@ -189,8 +197,9 @@ export function useOpeningBalanceForm({
     variants,
     units,
     selectedVariant,
-    preview: previewQuery.data,
-    previewLoading: previewQuery.isFetching && previewEnabled,
+    // Never expose a preview computed for superseded input.
+    preview: previewIsStale ? undefined : previewQuery.data,
+    previewLoading: previewEnabled && (previewQuery.isFetching || previewIsStale),
     previewErrorMessage,
     isPending,
   }
