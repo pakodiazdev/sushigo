@@ -130,6 +130,24 @@ class StockTransferTest extends InventoryTestCase
     }
 
     #[Test]
+    public function a_draft_line_rejects_a_quantity_below_the_smallest_storable_step(): void
+    {
+        $this->postJson('/api/v1/inventory/transfers', $this->draftPayload([
+            ['item_variant_id' => $this->variant->public_id, 'entry_uom_id' => $this->uomKg->public_id, 'entry_quantity' => 0.00001],
+        ]))->assertStatus(422)->assertJsonValidationErrors('lines.0.entry_quantity');
+    }
+
+    #[Test]
+    public function a_draft_line_rejects_a_quantity_that_rounds_to_zero_in_the_base_uom(): void
+    {
+        // Base UOM is KG; 0.04 GR converts to 0.00004 KG, which rounds to 0.0000
+        // at decimal(15,4) and would trip the DB `> 0` CHECK as a 500.
+        $this->postJson('/api/v1/inventory/transfers', $this->draftPayload([
+            ['item_variant_id' => $this->variant->public_id, 'entry_uom_id' => $this->uomGr->public_id, 'entry_quantity' => 0.04],
+        ]))->assertStatus(422)->assertJsonValidationErrors('lines.0.entry_quantity');
+    }
+
+    #[Test]
     public function updating_a_draft_replaces_its_lines(): void
     {
         $secondVariant = $this->createItemVariant($this->createItem());

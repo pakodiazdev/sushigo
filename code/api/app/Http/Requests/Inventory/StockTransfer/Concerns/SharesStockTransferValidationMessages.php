@@ -21,7 +21,7 @@ trait SharesStockTransferValidationMessages
         'lines.*.entry_uom_id.required' => 'La unidad de medida es requerida.',
         'lines.*.entry_uom_id.exists' => 'La unidad de medida seleccionada no existe.',
         'lines.*.entry_quantity.required' => 'La cantidad es requerida.',
-        'lines.*.entry_quantity.gt' => 'La cantidad debe ser mayor a 0.',
+        'lines.*.entry_quantity.min' => 'La cantidad debe ser al menos 0.0001.',
     ];
 
     /**

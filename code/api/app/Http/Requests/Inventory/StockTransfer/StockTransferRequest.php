@@ -38,7 +38,12 @@ abstract class StockTransferRequest extends FormRequest
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.item_variant_id' => ['required', 'string', Rule::exists('item_variants', 'public_id')->withoutTrashed()],
             'lines.*.entry_uom_id' => ['required', 'string', Rule::exists('units_of_measure', 'public_id')],
-            'lines.*.entry_quantity' => ['required', 'numeric', 'gt:0'],
+            // `entry_quantity` and the derived `base_quantity` are stored as
+            // decimal(15,4) with a `> 0` CHECK — a value below the smallest
+            // representable positive step (0.0001) would round to 0.0000 and
+            // surface as a 500 from the DB constraint. `min` rejects it as a 422
+            // instead; the base-UOM rounding case is covered in withValidator().
+            'lines.*.entry_quantity' => ['required', 'numeric', 'min:0.0001'],
         ];
     }
 
@@ -96,7 +101,10 @@ abstract class StockTransferRequest extends FormRequest
     /**
      * The line's entry UOM must be convertible to the Variant's base UOM —
      * either it *is* the base UOM, or an active `UomConversion` exists in some
-     * direction between the two.
+     * direction between the two — and the converted base quantity must still be
+     * representable and positive at decimal(15,4). A tiny entry quantity in a
+     * unit much larger than the base (e.g. 0.0001 t → g) can round to 0.0000 and
+     * trip the DB `> 0` CHECK as a 500; reject it here as a 422 instead.
      *
      * @param  array<string, mixed>  $line
      */
@@ -110,6 +118,7 @@ abstract class StockTransferRequest extends FormRequest
             || $uomPublicId === null
             || $validator->errors()->has("lines.{$index}.item_variant_id")
             || $validator->errors()->has("lines.{$index}.entry_uom_id")
+            || $validator->errors()->has("lines.{$index}.entry_quantity")
         ) {
             return;
         }
@@ -117,22 +126,64 @@ abstract class StockTransferRequest extends FormRequest
         $variantBaseUomId = ItemVariant::where('public_id', $variantPublicId)->value('uom_id');
         $entryUomId = UnitOfMeasure::where('public_id', $uomPublicId)->value('id');
 
-        if ($variantBaseUomId === null || $entryUomId === null || (int) $variantBaseUomId === (int) $entryUomId) {
+        if ($variantBaseUomId === null || $entryUomId === null) {
             return;
         }
 
-        $hasConversion = UomConversion::query()
-            ->where('is_active', true)
-            ->where(function ($query) use ($entryUomId, $variantBaseUomId): void {
-                $query->where(fn ($q) => $q->where('from_uom_id', $entryUomId)->where('to_uom_id', $variantBaseUomId))
-                    ->orWhere(fn ($q) => $q->where('from_uom_id', $variantBaseUomId)->where('to_uom_id', $entryUomId));
-            })
-            ->exists();
+        $entryQuantity = (float) ($line['entry_quantity'] ?? 0);
 
-        if (! $hasConversion) {
+        if ((int) $variantBaseUomId === (int) $entryUomId) {
+            $this->assertBaseQuantityRepresentable($validator, $index, $entryQuantity);
+
+            return;
+        }
+
+        $factor = $this->resolveConversionFactor((int) $entryUomId, (int) $variantBaseUomId);
+
+        if ($factor === null) {
             $validator->errors()->add(
                 "lines.{$index}.entry_uom_id",
                 'No existe una conversión activa entre la unidad de medida y la unidad base de la variante.'
+            );
+
+            return;
+        }
+
+        $this->assertBaseQuantityRepresentable($validator, $index, $entryQuantity * $factor);
+    }
+
+    /**
+     * The active entry→base factor: a direct `UomConversion.factor`, or the
+     * reciprocal of an inverse one. Null when neither direction exists. Mirrors
+     * `App\Services\Inventory\Concerns\ConvertsUomQuantities::getConversion()`.
+     */
+    private function resolveConversionFactor(int $fromUomId, int $toUomId): ?float
+    {
+        $direct = UomConversion::query()
+            ->where('is_active', true)
+            ->where('from_uom_id', $fromUomId)
+            ->where('to_uom_id', $toUomId)
+            ->value('factor');
+
+        if ($direct !== null) {
+            return (float) $direct;
+        }
+
+        $inverse = UomConversion::query()
+            ->where('is_active', true)
+            ->where('from_uom_id', $toUomId)
+            ->where('to_uom_id', $fromUomId)
+            ->value('factor');
+
+        return ($inverse !== null && (float) $inverse != 0.0) ? 1 / (float) $inverse : null;
+    }
+
+    private function assertBaseQuantityRepresentable(Validator $validator, string $index, float $baseQuantity): void
+    {
+        if (round($baseQuantity, 4) < 0.0001) {
+            $validator->errors()->add(
+                "lines.{$index}.entry_quantity",
+                'La cantidad convertida a la unidad base es demasiado pequeña para registrarse (mínimo 0.0001).'
             );
         }
     }
