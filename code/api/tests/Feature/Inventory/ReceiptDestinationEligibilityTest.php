@@ -231,6 +231,48 @@ class ReceiptDestinationEligibilityTest extends InventoryTestCase
     }
 
     #[Test]
+    public function posting_tolerates_a_pair_that_has_both_archived_and_live_assignments(): void
+    {
+        ['payload' => $payload, 'variant' => $variant] = $this->draftPayload();
+
+        // Every unassign/reassign cycle leaves an archived row behind next to the
+        // live one — the partial unique index only constrains live rows. Posting
+        // must see the live one and no-op, never restore the archived one (which
+        // would violate the index and abort the whole confirmation).
+        $archived = VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+        $archived->delete();
+
+        $live = VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+
+        $id = $this->postJson('/api/v1/inventory/receipts', $payload)->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertOk();
+
+        $this->assertSame(
+            1,
+            VariantLocationAssignment::query()
+                ->where('inventory_location_id', $this->location->id)
+                ->where('item_variant_id', $variant->id)
+                ->count(),
+            'exactly one live assignment remains'
+        );
+        $this->assertSame(
+            $live->id,
+            VariantLocationAssignment::query()
+                ->where('inventory_location_id', $this->location->id)
+                ->where('item_variant_id', $variant->id)
+                ->value('id'),
+            'the pre-existing live row is the one kept'
+        );
+        $this->assertTrue(VariantLocationAssignment::onlyTrashed()->whereKey($archived->id)->exists());
+    }
+
+    #[Test]
     public function every_line_of_a_multi_line_receipt_gets_its_own_assignment(): void
     {
         $item = $this->createItem();

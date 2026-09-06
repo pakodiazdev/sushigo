@@ -10,17 +10,24 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Idempotently lands a live `VariantLocationAssignment` for a
- * `(inventory_location_id, item_variant_id)` pair (#569), recovering from the
- * partial-unique-index race two concurrent writers for the same unassigned pair
- * would otherwise lose.
+ * `(inventory_location_id, item_variant_id)` pair (#569).
  *
- * It never writes a `Stock` row or a `StockMovement` — an assignment states
- * "this Variant is managed here", nothing about a balance. A pair that already
- * has a live assignment is a no-op; a soft-deleted one is reactivated.
+ * The partial unique index `vla_one_assignment_per_pair` only covers *live* rows
+ * (`deleted_at is null`), so a pair can legitimately have **one live row plus any
+ * number of soft-deleted (archived) rows** — every unassign/reassign cycle
+ * leaves another archived row behind. `ensure()` must therefore:
  *
- * Extracted from `AssignVariantToLocationController` so the Purchase Receipt
- * posting path (#572) can ensure the same assortment assignment inside its own
- * post transaction without duplicating the race-recovery shape.
+ *  - return an already-live row untouched (a no-op) — never restore an archived
+ *    row while a live one exists, which would violate the partial index and, on
+ *    the Receipt posting path, abort the whole confirmation;
+ *  - otherwise restore the most recent archived row, or insert a fresh one;
+ *  - recover from the race where a concurrent writer lands the live row between
+ *    our read and our write (`UniqueConstraintViolationException` → refetch the
+ *    winner) instead of surfacing a raw DB error.
+ *
+ * It never writes a `Stock` row or a `StockMovement`. Extracted from
+ * `AssignVariantToLocationController` so the Purchase Receipt posting path (#572)
+ * can ensure the same assortment assignment inside its own post transaction.
  */
 class VariantLocationAssignmentEnsurer
 {
@@ -30,41 +37,48 @@ class VariantLocationAssignmentEnsurer
      */
     public function ensure(int $inventoryLocationId, int $itemVariantId): array
     {
-        $existing = VariantLocationAssignment::withTrashed()
+        // A live row is the common case — take it under lock so a concurrent
+        // ensure/unassign for the same pair serialises against this one rather
+        // than racing it. `VariantLocationAssignment` (no global soft-delete
+        // scope override) means this query already excludes archived rows.
+        $live = VariantLocationAssignment::query()
             ->where('inventory_location_id', $inventoryLocationId)
             ->where('item_variant_id', $itemVariantId)
+            ->lockForUpdate()
             ->first();
 
-        if ($existing === null) {
-            return $this->insertOrRecoverFromRace($inventoryLocationId, $itemVariantId);
+        if ($live !== null) {
+            return [$live, false];
         }
 
-        $reactivated = $existing->trashed();
-
-        if ($reactivated) {
-            $existing->restore();
-        }
-
-        return [$existing, $reactivated];
-    }
-
-    /**
-     * First live insert for the pair, recovering from the partial-unique-index
-     * race a concurrent writer would otherwise surface as a raw DB error. Same
-     * savepoint/recover shape as `StockMutationService::insertOrRecoverFromRace()`.
-     *
-     * @return array{0: VariantLocationAssignment, 1: bool}
-     */
-    private function insertOrRecoverFromRace(int $inventoryLocationId, int $itemVariantId): array
-    {
         try {
-            $assignment = DB::transaction(fn () => VariantLocationAssignment::create([
-                'inventory_location_id' => $inventoryLocationId,
-                'item_variant_id' => $itemVariantId,
-            ]));
+            return DB::transaction(function () use ($inventoryLocationId, $itemVariantId) {
+                // Restore the most recent archived row for the pair, if any —
+                // `orderByDesc('id')` so a pair with several archived rows
+                // reactivates exactly one, deterministically.
+                $archived = VariantLocationAssignment::onlyTrashed()
+                    ->where('inventory_location_id', $inventoryLocationId)
+                    ->where('item_variant_id', $itemVariantId)
+                    ->orderByDesc('id')
+                    ->first();
 
-            return [$assignment, true];
+                if ($archived !== null) {
+                    $archived->restore();
+
+                    return [$archived, true];
+                }
+
+                return [
+                    VariantLocationAssignment::create([
+                        'inventory_location_id' => $inventoryLocationId,
+                        'item_variant_id' => $itemVariantId,
+                    ]),
+                    true,
+                ];
+            });
         } catch (UniqueConstraintViolationException) {
+            // A concurrent writer won the live row (fresh insert, or restored an
+            // archived one) between our lock-miss above and this write.
             $winner = VariantLocationAssignment::query()
                 ->where('inventory_location_id', $inventoryLocationId)
                 ->where('item_variant_id', $itemVariantId)

@@ -203,6 +203,27 @@ class ReceiptPostingTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_locks_the_referenced_variant_rows_for_update_when_posting(): void
+    {
+        ['id' => $id, 'variant' => $variant] = $this->createDraft();
+        $receipt = Receipt::where('public_id', $id)->first();
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries) {
+            $queries[] = strtolower($query->sql);
+        });
+
+        app(ReceiptService::class)->postReceipt($receipt->id, $this->user->id);
+
+        $variantLock = array_filter(
+            $queries,
+            fn ($sql) => str_contains($sql, 'from "item_variants"') && str_contains($sql, 'for update')
+        );
+
+        $this->assertNotEmpty($variantLock, 'posting must lock the referenced item_variants rows');
+    }
+
+    #[Test]
     public function posting_an_already_posted_receipt_is_rejected(): void
     {
         ['id' => $id] = $this->createDraft();

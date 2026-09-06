@@ -14,6 +14,7 @@ use App\Exceptions\ReceiptNotPostedException;
 use App\Exceptions\ReceiptReversalBoundaryException;
 use App\Exceptions\ReceiptVariantUnavailableException;
 use App\Models\InventoryLocation;
+use App\Models\ItemVariant;
 use App\Models\Receipt;
 use App\Models\ReceiptLine;
 use App\Models\Stock;
@@ -170,15 +171,36 @@ class ReceiptService
                 );
             }
 
-            $lines = $receipt->lines()->with('presentation.itemVariant')->get();
+            $lines = $receipt->lines()->with('presentation')->get();
+
+            // Lock every referenced Variant row up front, ascending by id, so a
+            // concurrent catalogue update deactivating a variant is serialised
+            // against this post (its `is_active` can't flip after the check
+            // below and still let stock/assignment land) and two concurrent
+            // posts sharing variants can't deadlock. A soft-deleted variant is
+            // simply absent from the result and rejected the same as before.
+            $variantIds = $lines->pluck('presentation.item_variant_id')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+
+            $lockedVariants = $variantIds === []
+                ? collect()
+                : ItemVariant::whereIn('id', $variantIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
 
             foreach ($lines as $line) {
-                $itemVariant = $line->presentation->itemVariant;
+                $itemVariant = $lockedVariants->get($line->presentation->item_variant_id);
 
-                // A soft-deleted variant resolves to null (the relation excludes
-                // trashed); a *deactivated* one still resolves but is outside the
-                // manageable catalogue. Both must reject posting rather than land
-                // stock — and, crucially, an assignment — for a variant that
+                // A soft-deleted variant is absent from the locked set; a
+                // *deactivated* one is present but outside the manageable
+                // catalogue. Both must reject posting rather than land stock —
+                // and, crucially, an assignment — for a variant that
                 // `AssignVariantToLocationController` would refuse (#569/#572).
                 if (! $itemVariant || ! $itemVariant->is_active) {
                     throw new ReceiptVariantUnavailableException(
