@@ -399,6 +399,17 @@ class StockTransferService
             );
         }
 
+        // Adding this line to the destination's existing balance must also stay
+        // inside decimal(15,4) — two individually valid balances can sum out of
+        // range. Checked before any write so it is a 409, not an overflow 500 on
+        // the `stock.on_hand` increment.
+        $this->assertResultingBalanceRecordable(
+            $transfer,
+            'destination',
+            (float) ($this->stockMutation->lockAndGet($destination->id, $variantId)?->on_hand ?? 0.0),
+            $baseQty,
+        );
+
         try {
             $this->stockMutation->decreaseOnHand($sourceStock, $baseQty);
         } catch (InvalidStockBalanceException $e) {
@@ -471,6 +482,21 @@ class StockTransferService
             );
         }
 
+        // The reverser restores `qty` to the source via receiveInto(); if the
+        // source was replenished since the transfer, that addition can push
+        // `stock.on_hand` past decimal(15,4). Check the projected balance here so
+        // it is a 409, not an overflow 500 inside StockMovementReverser.
+        $sourceStock = $this->stockMutation->lockAndGet(
+            (int) $movement->from_location_id,
+            (int) $movement->item_variant_id,
+        );
+        $this->assertResultingBalanceRecordable(
+            $transfer,
+            'source',
+            (float) ($sourceStock?->on_hand ?? 0.0),
+            (float) $movement->qty,
+        );
+
         try {
             $this->movementReverser->reverse($movement, $userId, $reason);
         } catch (StockMovementNotReversibleException $e) {
@@ -481,6 +507,23 @@ class StockTransferService
             throw new StockTransferReversalBoundaryException(
                 "Cannot reverse Stock Transfer #{$transfer->id}: the destination stock for line #{$line->id} has fallen "
                 ."below the transferred quantity. {$e->getMessage()}"
+            );
+        }
+    }
+
+    /**
+     * Assert `$currentOnHand + $added` still fits `stock.on_hand`'s
+     * decimal(15,4) column, so a legitimate-but-huge resulting balance is a
+     * controlled 409 rather than a PostgreSQL numeric-overflow 500.
+     *
+     * @throws StockTransferValueOutOfRangeException
+     */
+    private function assertResultingBalanceRecordable(StockTransfer $transfer, string $end, float $currentOnHand, float $added): void
+    {
+        if (round($currentOnHand + $added, 4) > self::MAX_DECIMAL_15_4) {
+            throw new StockTransferValueOutOfRangeException(
+                "Stock Transfer #{$transfer->id}: the resulting {$end} balance "
+                .'exceeds the amount that can be recorded.'
             );
         }
     }

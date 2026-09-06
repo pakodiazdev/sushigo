@@ -346,6 +346,28 @@ class StockTransferTest extends InventoryTestCase
     }
 
     #[Test]
+    public function posting_is_rejected_when_the_resulting_destination_balance_exceeds_the_range(): void
+    {
+        // line_total stays 0 (cost 0), but 6e10 already at the destination plus a
+        // 6e10 transfer would push stock.on_hand past decimal(15,4).
+        $this->seedSourceStock(onHand: 60000000000, cost: 0);
+        Stock::create([
+            'inventory_location_id' => $this->destination->id,
+            'item_variant_id' => $this->variant->id,
+            'on_hand' => 60000000000, 'reserved' => 0, 'weighted_avg_cost' => 0, 'meta' => [],
+        ]);
+
+        $id = $this->createDraft([
+            ['item_variant_id' => $this->variant->public_id, 'entry_uom_id' => $this->uomKg->public_id, 'entry_quantity' => 60000000000],
+        ]);
+
+        $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertStatus(409);
+
+        $this->assertEquals(60000000000.0, (float) Stock::where('inventory_location_id', $this->location->id)->value('on_hand'));
+        $this->assertSame(0, StockMovement::count());
+    }
+
+    #[Test]
     public function a_two_line_transfer_posts_each_line_as_its_own_transfer_movement(): void
     {
         $variantB = $this->createItemVariant($this->createItem(), ['name' => 'Variant B']);
