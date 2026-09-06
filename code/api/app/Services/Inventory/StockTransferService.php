@@ -210,7 +210,16 @@ class StockTransferService
                 throw new StockTransferAlreadyReversedException("Stock Transfer #{$transfer->id} has already been reversed.");
             }
 
-            foreach ($transfer->lines()->orderBy('item_variant_id')->get() as $line) {
+            $lines = $transfer->lines()->orderBy('item_variant_id')->get();
+
+            // Acquire every affected Stock row lock up front in the same
+            // deterministic (location, variant) order posting uses. Without this,
+            // StockMovementReverser locks the original destination before the
+            // source, the opposite order to postTransfer(), so a reversal racing
+            // a concurrent post/reversal on the same pair could deadlock.
+            $this->lockAffectedStockDeterministically($transfer, $lines);
+
+            foreach ($lines as $line) {
                 $this->reverseLine($transfer, $line, $userId, $reason);
             }
 
