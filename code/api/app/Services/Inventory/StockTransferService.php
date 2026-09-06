@@ -352,12 +352,21 @@ class StockTransferService
         $variantId = (int) $line->item_variant_id;
         $baseQty = (float) $line->base_quantity;
 
-        $assigned = VariantLocationAssignment::query()
+        // Lock the live assignment row for the rest of this transaction, not just
+        // read it: two concurrent posts of the same (destination, variant) are
+        // then serialized, and an unassignment's soft-delete blocks behind an
+        // in-flight post instead of racing the `exists()` check. (The narrow
+        // residual window — the very first inbound Stock for a pair racing an
+        // unassignment whose own guard only locks the not-yet-existing Stock row
+        // — is the assignment contract's documented, cross-workflow concern per
+        // #569/#572, shared with the Receipt and Opening Balance inbound paths.)
+        $assignment = VariantLocationAssignment::query()
             ->where('inventory_location_id', $destination->id)
             ->where('item_variant_id', $variantId)
-            ->exists();
+            ->lockForUpdate()
+            ->first();
 
-        if (! $assigned) {
+        if (! $assignment) {
             throw new StockTransferVariantNotAssignedException(
                 "Stock Transfer #{$transfer->id}: variant #{$variantId} is not assigned to the destination location. "
                 .'Assign it to the destination before transferring — an internal move never expands the assortment.'
