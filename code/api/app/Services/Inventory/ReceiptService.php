@@ -210,6 +210,19 @@ class ReceiptService
 
                 $baseUnits = (float) $line->base_units_received;
 
+                // Ensure the assortment assignment (#569/#572) *before* the entry
+                // posting below locks/creates the Stock row, so this transaction's
+                // lock order is **assignment row → Stock row** — the exact order
+                // `UnassignVariantFromLocationController` now takes too. Sharing
+                // the order (a) keeps the two paths deadlock-free and (b) closes
+                // the first-receipt race: a brand-new Stock row is invisible to a
+                // concurrent unassign's balance check, but the assignment-row lock
+                // is not, so whichever grabs it first finishes before the other —
+                // unassign then 409s on the committed positive balance, or the
+                // receipt re-reads no live row here and reactivates the archived
+                // one. Idempotent; writes no Stock row or movement of its own.
+                $this->assignmentEnsurer->ensure($receipt->destination_location_id, $itemVariant->id);
+
                 // One posting primitive per line (#567): locks/creates Stock,
                 // blends the effective unit cost, and appends immutable
                 // evidence. Source identity is explicit via
@@ -247,22 +260,6 @@ class ReceiptService
                         lineTotal: (float) $line->net_acquisition_amount,
                     ),
                 ));
-
-                // Ensure the assortment assignment (#569/#572) *after* the entry
-                // posting above has taken and still holds the (location, variant)
-                // Stock-row lock. `UnassignVariantFromLocationController` guards on
-                // that exact row (by pair, zeroed rows included), so ordering the
-                // ensure after the lock serializes this against a concurrent
-                // unassignment: either it blocks and then 409s on our now-positive
-                // balance, or it won the race first and soft-deleted the
-                // assignment, which this call reactivates. Doing it before the
-                // lock leaves a window where the pair ends up with stock but no
-                // live assignment. Idempotent, transactional, writes no Stock row
-                // or movement of its own. (A genuine first-ever receipt that
-                // creates the Stock row from scratch has no row to lock — that
-                // assortment-vs-inbound race is a consuming-workflow concern,
-                // #570–#574, out of scope here, per the unassign controller.)
-                $this->assignmentEnsurer->ensure($receipt->destination_location_id, $itemVariant->id);
             }
 
             $receipt->update([
