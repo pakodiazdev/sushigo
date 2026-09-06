@@ -7,6 +7,7 @@ use App\Http\Responses\Common\ResponseMessage;
 use App\Models\StockMovementLine;
 use App\Models\StockTransferLine;
 use App\Models\UnitOfMeasure;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -73,12 +74,26 @@ class DeleteUnitOfMeasureController extends Controller
             ], 409);
         }
 
-        // Remove the UOM and its conversions atomically.
-        DB::transaction(function () use ($uom): void {
-            $uom->conversionsFrom()->delete();
-            $uom->conversionsTo()->delete();
-            $uom->delete();
-        });
+        // Remove the UOM and its conversions atomically. The checks above race a
+        // concurrent insert of a new reference, so also translate the RESTRICT
+        // FK violation itself into the same 409 rather than a 500.
+        try {
+            DB::transaction(function () use ($uom): void {
+                $uom->conversionsFrom()->delete();
+                $uom->conversionsTo()->delete();
+                $uom->delete();
+            });
+        } catch (QueryException $e) {
+            if (in_array($e->getCode(), ['23503', '23000'], true)) {
+                return response()->json([
+                    'status' => 409,
+                    'message' => 'Cannot delete a unit of measure that is now referenced by other records',
+                    'errors' => [],
+                ], 409);
+            }
+
+            throw $e;
+        }
 
         return new ResponseMessage(
             message: 'Unit of measure deleted successfully'
