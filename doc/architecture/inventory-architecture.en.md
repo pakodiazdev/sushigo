@@ -1101,7 +1101,7 @@ receiving.
 
 | Route | Purpose |
 | --- | --- |
-| `POST /inventory/opening-balance` | Post the balance. `201` with the normalized movement (base quantity, base cost, resolved `Stock.weighted_avg_cost`). Distinct status codes rather than a blanket `400`: `403` for missing permission or Operating Unit access, `422` for an unknown public ID, a non-positive quantity, an **inactive** destination, or **no UOM conversion path** to the Variant's base unit. |
+| `POST /inventory/opening-balance` | Post the balance. `201` with the normalized movement (base quantity, base cost, resolved `Stock.weighted_avg_cost`). Distinct status codes rather than a blanket `400`: `403` for missing permission or Operating Unit access, `422` for an unknown public ID, a non-positive quantity, a quantity that **converts to zero** in the Variant's base unit (`decimal(15,4)`), an **inactive** destination, or **no UOM conversion path** to the Variant's base unit. `unit_cost` is optional — omitted skips the weighted-average blend, an explicit `0` blends `0`. |
 | `POST /inventory/opening-balance/preview` | Non-mutating. Same payload; returns the base quantity, base unit cost, `conversion_applies`/`conversion_factor`, and `total_value` (null when no cost was given) — the exact numbers the post would record, so the form's pre-submit preview matches the ledger. |
 
 **UI.** The `OpeningBalanceForm` (a `SlidePanel`) is mounted on `/inventario/existencias` behind a

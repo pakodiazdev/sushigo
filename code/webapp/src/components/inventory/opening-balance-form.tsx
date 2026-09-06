@@ -150,7 +150,12 @@ export function OpeningBalanceForm({
           >
             <Input
               type="number"
-              {...register('unit_cost', { valueAsNumber: true })}
+              {...register('unit_cost', {
+                // Optional field: a cleared input registers as undefined (omit
+                // the cost) rather than NaN; an explicit 0 stays 0.
+                setValueAs: (v) =>
+                  v === '' || v === null || Number.isNaN(Number(v)) ? undefined : Number(v),
+              })}
               min="0"
               step="0.01"
               placeholder="0.00"

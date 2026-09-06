@@ -21,7 +21,10 @@ const openingBalanceSchema = z.object({
   item_variant_id: z.string().min(1, 'Selecciona una variante'),
   quantity: z.number().gt(0, 'La cantidad debe ser mayor que 0'),
   uom_id: z.string().min(1, 'Selecciona una unidad de medida'),
-  unit_cost: z.number().min(0, 'El costo no puede ser negativo'),
+  // Optional: a cleared field registers as `undefined` (see the form's
+  // `setValueAs`), which the API accepts as "skip the weighted-average blend".
+  // An explicit numeric 0 (free stock) is preserved and still blends.
+  unit_cost: z.number().min(0, 'El costo no puede ser negativo').optional(),
   notes: z.string(),
 })
 
@@ -73,7 +76,14 @@ export function useOpeningBalanceForm({
   const itemVariantId = watch('item_variant_id')
   const uomId = watch('uom_id')
   const quantity = watch('quantity')
-  const unitCost = watch('unit_cost')
+  const rawUnitCost = watch('unit_cost')
+
+  // The cost is optional: a cleared field is `undefined` (via the form's
+  // `setValueAs`), meaning "omit it" — the API skips the blend. Guard against a
+  // stray NaN too (it would keep the preview permanently stale, NaN !== NaN);
+  // an explicit numeric 0 (free stock) passes through and still blends.
+  const unitCost =
+    typeof rawUnitCost === 'number' && !Number.isNaN(rawUnitCost) ? rawUnitCost : undefined
 
   // Auto-fill the entry UoM from the variant's own base unit when the variant
   // changes (an operator can still override it to an alternate entry unit).

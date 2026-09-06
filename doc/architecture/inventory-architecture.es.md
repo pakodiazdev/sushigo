@@ -1124,7 +1124,7 @@ proveedor.
 
 | Ruta | Propósito |
 | --- | --- |
-| `POST /inventory/opening-balance` | Registra el saldo. `201` con el movimiento normalizado (cantidad base, costo base, `Stock.weighted_avg_cost` resuelto). Códigos de estado diferenciados en lugar de un `400` genérico: `403` por permiso o acceso a la Unidad Operativa faltante, `422` por un ID público inexistente, una cantidad no positiva, un destino **inactivo** o **sin ruta de conversión de UOM** a la unidad base de la Variante. |
+| `POST /inventory/opening-balance` | Registra el saldo. `201` con el movimiento normalizado (cantidad base, costo base, `Stock.weighted_avg_cost` resuelto). Códigos de estado diferenciados en lugar de un `400` genérico: `403` por permiso o acceso a la Unidad Operativa faltante, `422` por un ID público inexistente, una cantidad no positiva, una cantidad que **se convierte a cero** en la unidad base de la Variante (`decimal(15,4)`), un destino **inactivo** o **sin ruta de conversión de UOM** a la unidad base de la Variante. `unit_cost` es opcional: omitido omite la mezcla del promedio ponderado, un `0` explícito mezcla `0`. |
 | `POST /inventory/opening-balance/preview` | Sin efectos. Mismo payload; devuelve la cantidad base, el costo unitario base, `conversion_applies`/`conversion_factor` y `total_value` (null cuando no se dio costo) — los mismos números que registraría el POST, para que la vista previa del formulario coincida con el ledger. |
 
 **UI.** El `OpeningBalanceForm` (un `SlidePanel`) se monta en `/inventario/existencias` detrás de

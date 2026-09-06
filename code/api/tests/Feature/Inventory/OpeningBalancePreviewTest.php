@@ -122,6 +122,34 @@ class OpeningBalancePreviewTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_a_base_quantity_that_rounds_to_zero_on_both_paths()
+    {
+        // 0.01 GR at the 0.001 GR->KG factor is 0.00001 KG, which rounds to
+        // 0.0000 in the ledger's decimal(15,4) and would trip the qty > 0 CHECK
+        // as an uncaught 500. Preview and posting must both reject it as a 422
+        // on `quantity` instead.
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $payload = [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 0.01,
+            'uom_id' => $this->uomGr->public_id,
+            'unit_cost' => 5,
+        ];
+
+        $this->postJson('/api/v1/inventory/opening-balance/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+        $this->postJson('/api/v1/inventory/opening-balance', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    #[Test]
     public function it_rejects_a_preview_for_an_inactive_destination_matching_the_posting_path()
     {
         $inactiveLocation = InventoryLocation::create([

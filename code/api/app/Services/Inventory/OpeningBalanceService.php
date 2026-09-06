@@ -24,6 +24,9 @@ class OpeningBalanceService
 
     private const INACTIVE_DESTINATION_MESSAGE = 'The selected location is inactive and cannot receive an opening balance.';
 
+    /** Decimal places of `stock_movements.qty` / `stock_movement_lines.base_qty` (decimal(15,4)). */
+    private const BASE_QUANTITY_SCALE = 4;
+
     public function __construct(
         private readonly ApplicationClock $clock,
         private readonly InventoryEntryPostingService $entryPosting,
@@ -209,6 +212,14 @@ class OpeningBalanceService
      * `uom_id` instead of an unmapped 500-class exception (#570) — an operator
      * picked an entry UOM the catalog has no route from, which is bad input.
      *
+     * The base quantity is snapped to the ledger's storage precision
+     * (`stock_movements.qty` / `stock_movement_lines.base_qty` are
+     * `decimal(15,4)`) and rejected with a 422 on `quantity` when it rounds to
+     * zero — e.g. `0.01 GR` at a `0.001` GR→KG factor is `0.00001 KG`, which the
+     * FormRequest's entry-unit `gt:0` lets through but the DB's `qty > 0` CHECK
+     * would reject as an uncaught 500. Preview and posting share this, so the
+     * previewed base quantity is exactly what the ledger records.
+     *
      * @return array{0: float, 1: float}
      *
      * @throws ValidationException
@@ -216,10 +227,22 @@ class OpeningBalanceService
     private function convertOrFailValidation(RegisterOpeningBalanceData $data, ItemVariant $variant, UnitOfMeasure $entryUom): array
     {
         try {
-            return $this->convertToBaseQuantity($data->quantity, $data->entryUomId, $variant, $entryUom);
+            [$baseQuantity, $conversionFactor] = $this->convertToBaseQuantity(
+                $data->quantity, $data->entryUomId, $variant, $entryUom
+            );
         } catch (UomConversionNotFoundException $e) {
             throw ValidationException::withMessages(['uom_id' => $e->getMessage()]);
         }
+
+        $baseQuantity = round($baseQuantity, self::BASE_QUANTITY_SCALE);
+
+        if ($baseQuantity <= 0) {
+            throw ValidationException::withMessages([
+                'quantity' => "The quantity converts to zero in {$variant->unitOfMeasure->code}, the item's base unit, and cannot be recorded.",
+            ]);
+        }
+
+        return [$baseQuantity, $conversionFactor];
     }
 
     /**

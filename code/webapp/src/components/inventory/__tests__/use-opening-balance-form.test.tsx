@@ -191,6 +191,30 @@ describe('useOpeningBalanceForm', () => {
     )
   })
 
+  it('normalizes a cleared (NaN) unit cost to omitted, keeping the preview live and unblocked', async () => {
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useOpeningBalanceForm({ onSuccess: vi.fn() }),
+      { wrapper: Wrapper }
+    )
+
+    act(() => {
+      result.current.setFieldValue('inventory_location_id', 'loc-1')
+      result.current.setFieldValue('item_variant_id', 'var-1')
+      result.current.setFieldValue('quantity', 10)
+      // The operator clears the optional cost field — `valueAsNumber` → NaN.
+      result.current.setFieldValue('unit_cost', Number.NaN)
+    })
+
+    // NaN is normalized away, so the preview is not permanently stale...
+    expect(result.current.values.unitCost).toBeUndefined()
+    await waitFor(() => expect(result.current.preview).toEqual(PREVIEW), { timeout: 2000 })
+
+    // ...and the preview request carries no numeric unit_cost (NaN is never sent).
+    const lastCall = vi.mocked(stockMovementApi.openingBalancePreview).mock.lastCall?.[0]
+    expect(lastCall?.unit_cost).toBeUndefined()
+  })
+
   it('sends the debounced unit cost to the preview endpoint verbatim (including 0)', async () => {
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(
