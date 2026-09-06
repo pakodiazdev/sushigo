@@ -1073,10 +1073,13 @@ nunca puede filtrar el surtido de una unidad ajena.
 real: `StockMutationService::receiveInto()` ahora crea (o reactiva) la `VariantLocationAssignment`
 del par en cada primera recepción, así que el "un par de `stock` implica una asignación viva" de
 #569 se mantiene también para los movimientos posteriores al backfill único, no solo para los
-previos; y `baseQuery()` exige que la Ubicación **y** la Variante de la asignación sigan
-resolviendo por su scope de SoftDeletes, de modo que una Variante borrada por
-`DeleteItemVariantController` (o una Ubicación borrada estando vacía) sale de Existencias en vez de
-hidratar una relación nula en un `500`.
+previos; y `baseQuery()` exige que la Variante, la Ubicación **y** la Unidad Operativa de la
+Ubicación sigan resolviendo por su scope de SoftDeletes, de modo que una Variante borrada por
+`DeleteItemVariantController`, una Ubicación borrada estando vacía, o una Unidad Operativa borrada
+por `DeleteOperatingUnitController` (que no cascada a sus Ubicaciones) sacan la asignación de
+Existencias en vez de hidratar una relación nula en un `500` — también para los admins, que
+saltan el scope de Unidad Operativa. `/stock/by-location/{id}` para una Ubicación cuya Unidad
+Operativa fue borrada devuelve `404` por el mismo motivo: su contexto operativo ya no existe.
 
 **UI.** `/inventario/existencias` (copy operativo en español) renderiza la lista con espina en la
 asignación directamente: las Variantes asignadas pero nunca recibidas se muestran en cero,

@@ -390,4 +390,40 @@ class AssignmentAwareExistenciasTest extends InventoryTestCase
 
         $this->getJson('/api/v1/stock/by-location/'.$this->location->public_id)->assertOk();
     }
+
+    #[Test]
+    public function an_assignment_under_a_soft_deleted_operating_unit_is_excluded_not_a_500(): void
+    {
+        // DeleteOperatingUnitController soft-deletes an Operating Unit with no
+        // cascade to its Locations, so a live Location's operatingUnit relation
+        // becomes null. An admin bypasses OU scoping, so the projection must
+        // still exclude the assignment and never dereference the null relation.
+        $unit = OperatingUnit::create([
+            'branch_id' => $this->branch->id,
+            'type' => OperatingUnit::TYPE_EVENT_TEMP,
+            'name' => 'Doomed Unit',
+            'is_active' => true,
+        ]);
+        $location = InventoryLocation::create([
+            'operating_unit_id' => $unit->id,
+            'name' => 'Doomed Warehouse',
+            'type' => 'MAIN',
+            'priority' => 50,
+            'is_active' => true,
+        ]);
+        $this->assignVariantToLocation($location, $this->zeroNoPolicy);
+        $unit->delete();
+
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'api']);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $admin->givePermissionTo('stock.view');
+        Passport::actingAs($admin);
+
+        $rows = $this->getJson('/api/v1/stock')->assertOk()->json('data');
+        $this->assertNull(collect($rows)->first(fn ($r) => $r['inventory_location']['id'] === $location->public_id));
+
+        $this->getJson('/api/v1/stock/by-variant/'.$this->zeroNoPolicy->public_id)->assertOk();
+        $this->getJson('/api/v1/stock/by-location/'.$location->public_id)->assertNotFound();
+    }
 }

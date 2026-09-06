@@ -1050,9 +1050,13 @@ foreign unit's assortment.
 `StockMutationService::receiveInto()` now creates (or reactivates) the pair's
 `VariantLocationAssignment` on every first receipt, so #569's "a `stock` pair implies a live
 assignment" holds for movements posted *after* the one-time backfill, not just before it; and
-`baseQuery()` requires the assignment's Location **and** Variant to still resolve through their
-SoftDeletes scope, so a Variant deleted via `DeleteItemVariantController` (or a Location deleted
-while empty) drops out of Existencias instead of hydrating a null relation into a `500`.
+`baseQuery()` requires the assignment's Variant, Location, **and** the Location's Operating Unit to
+all still resolve through their SoftDeletes scope, so a Variant deleted via
+`DeleteItemVariantController`, a Location deleted while empty, or an Operating Unit deleted via
+`DeleteOperatingUnitController` (which does not cascade to its Locations) drops the assignment out
+of Existencias instead of hydrating a null relation into a `500` — including for admins, who
+bypass Operating-Unit scoping. `/stock/by-location/{id}` for a Location whose Operating Unit was
+deleted returns `404` for the same reason: its operational context is gone.
 
 **UI.** `/inventario/existencias` (Spanish operational copy) renders the assignment-aware list
 directly: assigned-but-never-received Variants show at zero, tagged **"nunca recibido"**, and — when
