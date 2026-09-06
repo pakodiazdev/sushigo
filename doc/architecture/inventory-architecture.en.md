@@ -1046,6 +1046,14 @@ is applied to the assignment query before any filter or pagination
 (`constrainAssignments` / `assertCanAccessLocation`), so a projected zero row can never leak a
 foreign unit's assortment.
 
+**Spine invariants.** Two facts keep the assignment spine from ever hiding a real balance:
+`StockMutationService::receiveInto()` now creates (or reactivates) the pair's
+`VariantLocationAssignment` on every first receipt, so #569's "a `stock` pair implies a live
+assignment" holds for movements posted *after* the one-time backfill, not just before it; and
+`baseQuery()` requires the assignment's Location **and** Variant to still resolve through their
+SoftDeletes scope, so a Variant deleted via `DeleteItemVariantController` (or a Location deleted
+while empty) drops out of Existencias instead of hydrating a null relation into a `500`.
+
 **UI.** `/inventario/existencias` (Spanish operational copy) renders the assignment-aware list
 directly: assigned-but-never-received Variants show at zero, tagged **"nunca recibido"**, and — when
 a policy makes them low — in the low-stock alert table, without implying a database Stock record

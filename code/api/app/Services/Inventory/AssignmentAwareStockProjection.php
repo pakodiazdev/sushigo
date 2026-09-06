@@ -40,6 +40,17 @@ class AssignmentAwareStockProjection
     public function baseQuery(): Builder
     {
         return VariantLocationAssignment::query()
+            // Only assignments whose Location and Variant both still resolve
+            // through their SoftDeletes scope. A Variant deleted via
+            // DeleteItemVariantController (or a Location deleted while empty)
+            // is soft-deleted without cascading to its live assignment, so
+            // without this guard the eager loads below hydrate a null relation
+            // and projectRow() dereferences it — a 500 on the global `/stock`
+            // request for every caller. A soft-deleted Variant is also not an
+            // "active assigned Variant" (Acceptance Criteria), so excluding it
+            // is the intended behaviour, not just crash avoidance.
+            ->whereHas('inventoryLocation')
+            ->whereHas('itemVariant')
             ->leftJoin('stock', function ($join) {
                 $join->on('stock.inventory_location_id', '=', 'variant_location_assignments.inventory_location_id')
                     ->on('stock.item_variant_id', '=', 'variant_location_assignments.item_variant_id');
