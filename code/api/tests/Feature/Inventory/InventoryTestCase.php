@@ -14,6 +14,7 @@ use App\Models\Supplier;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use App\Models\User;
+use App\Models\VariantLocationAssignment;
 use App\Models\VariantPurchasePresentation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -218,6 +219,20 @@ abstract class InventoryTestCase extends TestCase
             'is_active' => true,
             'meta' => [],
         ], $attributes));
+    }
+
+    /**
+     * Mark a Variant as managed at a Location (#569) — the spine the
+     * Existencias read model (#571) queries from. Inventory suites that assert
+     * on `/api/v1/stock*` must assign every (location, variant) pair they seed
+     * Stock for, since a Stock row alone no longer surfaces in those endpoints.
+     */
+    protected function assignVariantToLocation(InventoryLocation $location, ItemVariant $variant): VariantLocationAssignment
+    {
+        return VariantLocationAssignment::create([
+            'inventory_location_id' => $location->id,
+            'item_variant_id' => $variant->id,
+        ]);
     }
 
     protected function createSupplier(array $attributes = []): Supplier

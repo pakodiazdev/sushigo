@@ -219,14 +219,26 @@ export interface UnitOfMeasure {
 }
 
 // Stock Types
+//
+// Existencias is spined on the managed Variant-to-Location assignment (#569),
+// not on Stock (#571): every live assigned pair is a row, and one with no
+// physical Stock row yet projects zero balances with `stock_id: null`. `id` is
+// the assignment's public_id (stable whether or not Stock backs the row);
+// `stock_id` is the nullable physical identity.
 export interface Stock {
-  id: number
+  id: string
+  /** ULID of the managed assignment (#569) — the stable row identity. Equals `id`. */
+  assignment_id: string
+  /** ULID of the physical Stock row, or null when the assigned pair was never received. */
+  stock_id: string | null
   inventory_location_id: string
   item_variant_id: string
   on_hand: number
   reserved: number
   available: number
   weighted_avg_cost: number
+  /** on_hand × weighted_avg_cost, precomputed by the backend; 0 for a projected zero row. */
+  total_value: number
   /** Resolved per-location replenishment reorder point (#439); null when no policy is configured. */
   min_stock: number | null
   /** Resolved per-location replenishment ceiling (#439); null when no policy is configured. */

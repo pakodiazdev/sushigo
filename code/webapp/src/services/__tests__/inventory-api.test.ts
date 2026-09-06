@@ -296,15 +296,47 @@ describe('stockApi', () => {
             expect(result).toEqual(mockResponse)
         })
 
-        it('calls GET /stock with location_id filter', async () => {
+        it('calls GET /stock with the assignment-aware filters (#571)', async () => {
             const mockResponse = { data: { status: 200, data: [], meta: {} } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const params = { location_id: 1 }
+            const params = {
+                inventory_location_id: 'LOC-ULID',
+                item_variant_id: 'VAR-ULID',
+                min_on_hand: 0,
+                low_stock: true,
+                per_page: 50,
+            }
             const result = await stockApi.list(params)
 
             expect(apiClient.get).toHaveBeenCalledWith('/stock', { params })
             expect(result).toEqual(mockResponse)
+        })
+
+        it('passes through a projected zero row with a null stock_id (#571)', async () => {
+            const zeroRow = {
+                id: 'ASSIGN-ULID',
+                assignment_id: 'ASSIGN-ULID',
+                stock_id: null,
+                inventory_location_id: 'LOC-ULID',
+                item_variant_id: 'VAR-ULID',
+                on_hand: 0,
+                reserved: 0,
+                available: 0,
+                weighted_avg_cost: 0,
+                total_value: 0,
+                min_stock: null,
+                max_stock: null,
+                is_low_stock: false,
+            }
+            vi.mocked(apiClient.get).mockResolvedValue({
+                data: { status: 200, data: [zeroRow], meta: { total: 1 } },
+            })
+
+            const result = await stockApi.list()
+
+            expect(result.data.data[0]?.stock_id).toBeNull()
+            expect(result.data.data[0]?.assignment_id).toBe('ASSIGN-ULID')
         })
     })
 

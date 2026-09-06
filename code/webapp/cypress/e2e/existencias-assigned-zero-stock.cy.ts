@@ -1,23 +1,27 @@
 /**
- * Per-Inventory-Location replenishment thresholds — happy path (#439)
+ * Existencias shows an assigned Variant with zero Stock — happy path (#571)
  *
- * Replenishment min/max moved off the global Variant onto the (Inventory Location, Variant)
- * pair. This exercises the management UI where the issue puts it — the Stock Dashboard's
- * per-location detail — end to end: pick a location that has stock for a Variant, set that
- * Variant's reorder point / ceiling for that location, and confirm the resolved threshold and
- * the low-stock badge render from the saved policy.
+ * The Existencias dashboard is spined on the managed Variant-to-Location
+ * assignment (#569), not on Stock: a Variant assigned to a Location but never
+ * received still appears, projected as zero on-hand / value with no database
+ * Stock row, and — when a live replenishment policy exists — as a valid
+ * low-stock alert.
+ *
+ * This exercises that end to end: assign a brand-new Variant to a Location via
+ * the API (no opening balance, no receipt), give it a reorder point of 0, then
+ * open `/inventario/existencias` and confirm the projected zero row renders in
+ * the summary, in the low-stock table, and in the per-location detail —
+ * labelled "nunca recibido", never implying a Stock record exists.
  *
  * DB reset strategy
  * ─────────────────
- * • before() → cy.task('test:reset', null) (core only) — seeds one Branch ("SushiGo Principal")
- *   with three Operating Units including "Inventario Principal", plus the admin user. It does
- *   NOT seed an Inventory Location, a UOM, a Product or any Stock, so those are created here via
- *   the API, mirroring price-lists.cy.ts / product-variant-purchase-presentation.cy.ts.
- * • An opening balance of 5 units is registered so the Variant has stock at the location; the
- *   reorder point set in the test (10) sits above it, so the row must render as "Low".
+ * • before() → cy.task('test:reset', null) (core only) — seeds one Branch with
+ *   three Operating Units including "Inventario Principal" plus the admin user.
+ *   No Inventory Location, UOM, Product or Stock is seeded, so those are created
+ *   here via the API, mirroring variant-location-assignments.cy.ts.
  *
  * Run just this file:
- *   make cypress-spec SPEC=replenishment-thresholds
+ *   make cypress-spec SPEC=existencias-assigned-zero-stock
  */
 
 import users from '../fixtures/users.json'
@@ -27,29 +31,18 @@ const { email: adminEmail, password: adminPassword } = users.admin
 const apiUrl = Cypress.env('apiUrl') ?? 'https://devtest.api.sushigo.local/api/v1'
 
 const OPERATING_UNIT_NAME = 'Inventario Principal'
-const LOCATION_NAME = 'Cypress Replenish Store'
+const LOCATION_NAME = 'Cypress Zero-Stock Store'
 const LOCATION_TYPE = 'MAIN'
 const LOCATION_OPTION_TEXT = `${LOCATION_NAME} (${LOCATION_TYPE})`
 
-const CATEGORY_NAME = 'Cypress Replenish Beverages'
-const PRODUCT_NAME = 'Cypress Replenish Rice'
-const VARIANT_NAME = 'Cypress Replenish Rice 1kg'
-const VARIANT_CODE = 'CYP-REPL-RICE-KG'
-
-const ON_HAND = 5
-const REORDER_POINT = 10
-const CEILING = 100
+const CATEGORY_NAME = 'Cypress Zero-Stock Beverages'
+const PRODUCT_NAME = 'Cypress Zero-Stock Rice'
+const VARIANT_NAME = 'Cypress Zero-Stock Rice 1kg'
+const VARIANT_CODE = 'CYP-ZERO-RICE-KG'
 
 function apiHeaders(token: string) {
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' }
 }
-
-// ⚠️ QUARANTINED per #490 → see #549. Fails against a fresh stack:
-// Happy-path test fails: an <h4> section title "not visible because clipped by a parent element" (overflow/scroll).
-// Remove this guard when #549 is fixed.
-before(function () {
-  this.skip()
-})
 
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
@@ -62,8 +55,8 @@ before(() => {
   }).then((loginRes) => {
     const headers = apiHeaders(loginRes.body.data.token as string)
 
-    cy.request({ method: 'GET', url: `${apiUrl}/operating-units`, headers, failOnStatusCode: true })
-      .then((ouRes) => {
+    cy.request({ method: 'GET', url: `${apiUrl}/operating-units`, headers, failOnStatusCode: true }).then(
+      (ouRes) => {
         const unit = (ouRes.body.data as Array<{ id: number; name: string }>).find(
           (candidate) => candidate.name === OPERATING_UNIT_NAME
         )
@@ -117,17 +110,24 @@ before(() => {
                     body: { name: VARIANT_NAME, code: VARIANT_CODE, uom_id: uom!.id },
                     failOnStatusCode: true,
                   }).then((variantRes) => {
+                    const variantId = variantRes.body.data.id as string
+
+                    // Assign the Variant to the Location — no opening balance,
+                    // no receipt: this must not create a Stock row.
                     cy.request({
-                      method: 'POST',
-                      url: `${apiUrl}/inventory/opening-balance`,
+                      method: 'PUT',
+                      url: `${apiUrl}/inventory-locations/${locationId}/variant-assignments/${variantId}`,
                       headers,
-                      body: {
-                        inventory_location_id: locationId,
-                        item_variant_id: variantRes.body.data.id,
-                        quantity: ON_HAND,
-                        uom_id: uom!.id,
-                        unit_cost: 2,
-                      },
+                      failOnStatusCode: true,
+                    })
+
+                    // A reorder point of 0 makes the never-received row a valid
+                    // low-stock alert (0 <= min_stock).
+                    cy.request({
+                      method: 'PUT',
+                      url: `${apiUrl}/inventory-locations/${locationId}/replenishment-policies/${variantId}`,
+                      headers,
+                      body: { min_stock: 0, max_stock: 20 },
                       failOnStatusCode: true,
                     })
                   })
@@ -136,11 +136,12 @@ before(() => {
             })
           })
         })
-      })
+      }
+    )
   })
 })
 
-describe('Replenishment thresholds (Stock Dashboard)', () => {
+describe('Existencias — assigned Variant with zero Stock (#571)', () => {
   beforeEach(() => {
     cy.loginByApi(adminEmail, adminPassword)
     cy.visitWithAuth('/inventario/existencias')
@@ -148,26 +149,22 @@ describe('Replenishment thresholds (Stock Dashboard)', () => {
     cy.closeDevDebugger()
   })
 
-  it('sets a per-location reorder point for a Variant and shows the resolved threshold and low badge', () => {
-    // Pick the seeded location — this loads its per-location stock + policy detail.
-    cy.get('select').first().select(LOCATION_OPTION_TEXT)
+  it('projects the never-received assigned Variant as a zero low-stock row', () => {
+    // The never-received assigned Variant surfaces as a valid low-stock alert
+    // (a live policy exists and 0 <= min_stock), tagged so it never implies a
+    // Stock record exists. Assert on content, not `be.visible` — sections
+    // deep in this page are clipped by an overflow ancestor (#549).
+    cy.contains('h3', 'Alertas de stock bajo', { timeout: 10_000 }).should('exist')
+    cy.contains('td', VARIANT_CODE, { timeout: 10_000 })
+      .should('exist')
+      .and('contain.text', 'nunca recibido')
 
-    cy.contains('h4', 'Replenishment thresholds', { timeout: 10_000 }).should('be.visible')
-
-    cy.get(`[data-testid="replenishment-row-${VARIANT_CODE}"]`, { timeout: 10_000 })
-      .should('contain.text', 'No threshold set')
-      .within(() => {
-        cy.contains('button', 'Set').click()
-        cy.contains('label', 'Reorder point').parent().find('input').clear().type(String(REORDER_POINT))
-        cy.contains('label', 'Ceiling').parent().find('input').clear().type(String(CEILING))
-        cy.contains('button', 'Save').click()
-      })
-
-    cy.contains('Replenishment threshold saved', { timeout: 10_000 }).should('be.visible')
-
-    cy.get(`[data-testid="replenishment-row-${VARIANT_CODE}"]`)
-      .should('contain.text', `Reorder ${REORDER_POINT} · Ceiling ${CEILING}`)
-      // on_hand (5) sits at/below the reorder point (10), so the row is low.
-      .and('contain.text', 'Low')
+    // The per-location detail lists it at zero, still labelled "nunca recibido".
+    cy.get('select').first().select(LOCATION_OPTION_TEXT, { force: true })
+    cy.contains('h4', 'Variantes en esta Ubicación', { timeout: 10_000 }).should('exist')
+    cy.contains('.max-h-96', VARIANT_CODE, { timeout: 10_000 })
+      .should('exist')
+      .and('contain.text', 'nunca recibido')
+      .and('contain.text', 'Existencia')
   })
 })

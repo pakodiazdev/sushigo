@@ -64,7 +64,12 @@ class OperatingUnitAccessTest extends InventoryTestCase
             'is_active' => true,
         ]);
 
-        // Stock for the same variant in BOTH units.
+        // Assigned + Stock for the same variant in BOTH units — the Existencias
+        // endpoints (#571) spine on the managed assignment (#569), so the pair
+        // must be assigned for its Stock to surface.
+        $this->assignVariantToLocation($this->location, $this->sharedVariant);
+        $this->assignVariantToLocation($this->locationB, $this->sharedVariant);
+
         Stock::create([
             'inventory_location_id' => $this->location->id,
             'item_variant_id' => $this->sharedVariant->id,

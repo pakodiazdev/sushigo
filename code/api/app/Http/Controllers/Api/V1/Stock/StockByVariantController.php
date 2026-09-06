@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers\Api\V1\Stock;
 
-use App\Http\Controllers\Api\V1\Stock\Concerns\SummarizesStock;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\ItemVariant;
-use App\Models\Stock;
-use App\Services\Inventory\ReplenishmentPolicyResolver;
+use App\Models\VariantLocationAssignment;
+use App\Services\Inventory\AssignmentAwareStockProjection;
 use App\Support\Access\OperatingUnitScope;
 
 /**
  * @OA\Get(
  *   path="/api/v1/stock/by-variant/{id}",
- *   summary="Get Stock Summary by Item Variant",
+ *   summary="Get Existencias summary by Item Variant",
+ *   description="Spined on the managed Variant-to-Location assignment (#569), not on Stock (#571): every Location this Variant is assigned to is a row, one with no Stock row projecting zero balances and `stock_id: null`. `summary.total_locations` counts assigned Locations.",
  *   tags={"Stock"},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer"), description="Item Variant ID"),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Item Variant public_id"),
  *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=404, description="Item Variant Not Found"),
@@ -24,42 +24,30 @@ use App\Support\Access\OperatingUnitScope;
  */
 class StockByVariantController extends Controller
 {
-    use SummarizesStock;
-
-    public function __invoke(string $id, ReplenishmentPolicyResolver $resolver, OperatingUnitScope $scope)
+    public function __invoke(string $id, AssignmentAwareStockProjection $projection, OperatingUnitScope $scope)
     {
         $variant = ItemVariant::with(['item'])->where('public_id', $id)->firstOrFail();
 
+        $query = $projection->baseQuery()
+            ->where('variant_location_assignments.item_variant_id', $variant->id)
+            ->orderBy('variant_location_assignments.inventory_location_id');
+
         // Horizontal authorization (#440): the per-location breakdown only
         // includes locations in the caller's accessible Operating Units.
-        $stockRecords = $scope->constrainStock(
-            Stock::where('item_variant_id', $variant->id),
-            request()->user()
-        )
-            ->with([
-                'inventoryLocation.operatingUnit',
-            ])
-            ->get();
+        $scope->constrainAssignments($query, request()->user());
 
-        $policies = $resolver->resolveManyForVariant($variant->id, $stockRecords->pluck('inventory_location_id'));
+        $rows = $query->get();
 
-        $locations = $stockRecords->map(function ($stock) use ($policies) {
-            return [
-                'inventory_location_id' => $stock->inventoryLocation->public_id,
-                'location_name' => $stock->inventoryLocation->name,
-                'location_type' => $stock->inventoryLocation->type,
-                'operating_unit' => $stock->inventoryLocation->operatingUnit->name,
-                ...$this->stockMoneyFields($stock, $policies->get($stock->inventory_location_id)),
-            ];
-        });
+        $locations = $rows->map(fn (VariantLocationAssignment $row) => [
+            'assignment_id' => $row->public_id,
+            'inventory_location_id' => $row->inventoryLocation->public_id,
+            'location_name' => $row->inventoryLocation->name,
+            'location_type' => $row->inventoryLocation->type,
+            'operating_unit' => $row->inventoryLocation->operatingUnit->name,
+            ...$projection->moneyFields($row),
+        ]);
 
-        $summary = [
-            'total_locations' => $stockRecords->count(),
-            ...$this->stockTotals($stockRecords),
-            'low_stock_locations' => $this->countLowStock($stockRecords, $policies, 'inventory_location_id'),
-            'avg_weighted_cost' => (float) $stockRecords->avg('weighted_avg_cost'),
-            'total_inventory_value' => (float) $stockRecords->map(fn ($s) => $s->on_hand * $s->weighted_avg_cost)->sum(),
-        ];
+        $totals = $projection->summarize($rows);
 
         return new ResponseEntity(
             data: [
@@ -70,7 +58,15 @@ class StockByVariantController extends Controller
                     'item_name' => $variant->item->name,
                     'item_sku' => $variant->item->sku,
                 ],
-                'summary' => $summary,
+                'summary' => [
+                    'total_locations' => $totals['assigned_count'],
+                    'total_on_hand' => $totals['total_on_hand'],
+                    'total_reserved' => $totals['total_reserved'],
+                    'total_available' => $totals['total_available'],
+                    'low_stock_locations' => $totals['low_stock_count'],
+                    'avg_weighted_cost' => $totals['avg_weighted_cost'],
+                    'total_inventory_value' => $totals['total_inventory_value'],
+                ],
                 'locations' => $locations,
             ]
         );
