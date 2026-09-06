@@ -67,7 +67,10 @@ class ListInventoryLocationsController extends Controller
         $perPage = $request->input('per_page', 15);
         $locations = $query->paginate($perPage);
 
-        // Transform the data to include all required fields
+        // Transform the data to include all required fields. `operating_unit` is
+        // serialized as a nested object (not just the FK id) so scoped consumers
+        // — e.g. the Purchase Receipt destination picker grouping by unit (#572) —
+        // don't need a second lookup; the relation is already eager-loaded above.
         $locations->getCollection()->transform(function ($location) {
             return [
                 'id' => $location->public_id,
@@ -78,6 +81,16 @@ class ListInventoryLocationsController extends Controller
                 'is_primary' => $location->is_primary,
                 'is_active' => $location->is_active,
                 'can_receive_purchases' => $location->can_receive_purchases,
+                'operating_unit' => $location->operatingUnit ? [
+                    'id' => $location->operatingUnit->id,
+                    'name' => $location->operatingUnit->name,
+                    'type' => $location->operatingUnit->type,
+                    'branch' => $location->operatingUnit->branch ? [
+                        'id' => $location->operatingUnit->branch->id,
+                        'code' => $location->operatingUnit->branch->code,
+                        'name' => $location->operatingUnit->branch->name,
+                    ] : null,
+                ] : null,
             ];
         });
 

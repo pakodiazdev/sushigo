@@ -38,6 +38,20 @@ class InventoryLocationCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_serializes_the_nested_operating_unit_in_the_list()
+    {
+        // Consumers that group locations by Operating Unit (#572's Receipt
+        // destination picker) need the unit object, not just the FK id.
+        $row = collect($this->getJson('/api/v1/inventory-locations')->assertOk()->json('data'))
+            ->firstWhere('id', $this->location->public_id);
+
+        $this->assertSame($this->operatingUnit->id, $row['operating_unit']['id']);
+        $this->assertSame($this->operatingUnit->name, $row['operating_unit']['name']);
+        $this->assertSame($this->operatingUnit->type, $row['operating_unit']['type']);
+        $this->assertSame($this->branch->code, $row['operating_unit']['branch']['code']);
+    }
+
+    #[Test]
     public function it_allows_listing_with_receipts_manage_permission_but_not_inventory_locations_view()
     {
         $this->user->removeRole('inventory-manager');
