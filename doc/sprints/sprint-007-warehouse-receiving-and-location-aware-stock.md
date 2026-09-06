@@ -105,7 +105,7 @@ The thirteen Issues are on **SushiGo Admin**, `Todo`, labeled `sprint-7`, and as
 | ✅ | #568 | Define purchase-receiving capabilities for Inventory Locations | Product | P0 | M | 5h | 9h |
 | ✅ | #569 | Assign managed Variants to Inventory Locations | Product | P1 | L | 8h | 14h |
 | ⏳ | #570 | Expose an auditable Opening Balance workflow | Product | P1 | M | 5h | 9h |
-| ⏳ | #571 | Show assigned Variants with zero Stock in Existencias | Product | P1 | M | 6h | 11h |
+| ✅ | #571 | Show assigned Variants with zero Stock in Existencias | Product | P1 | M | 6h | 11h |
 | ⏳ | #572 | Route confirmed Purchase Receipts into eligible receiving Locations | Product | P0 | M | 5h | 9h |
 | ⏳ | #573 | Implement auditable internal Stock Transfers | Product | P1 | L | 9h | 16h |
 | ⏳ | #574 | Expose an auditable Inventory Stock Movement ledger | Product | P1 | M | 6h | 11h |
