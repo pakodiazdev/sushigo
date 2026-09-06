@@ -8,10 +8,14 @@ use App\Models\OperatingUnit;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockTransfer;
+use App\Models\UnitOfMeasure;
+use App\Models\UomConversion;
 use App\Models\User;
 use App\Models\VariantLocationAssignment;
+use Illuminate\Database\QueryException;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 
 class StockTransferTest extends InventoryTestCase
 {
@@ -571,6 +575,41 @@ class StockTransferTest extends InventoryTestCase
         $this->getJson("/api/v1/inventory/transfers/{$id}")
             ->assertOk()
             ->assertJsonPath('data.can_mutate', true);
+    }
+
+    #[Test]
+    public function a_location_with_transfer_history_cannot_be_permanently_deleted(): void
+    {
+        $this->createDraft();
+
+        $this->expectException(QueryException::class);
+        $this->location->forceDelete();
+    }
+
+    #[Test]
+    public function deleting_a_uom_referenced_only_by_a_transfer_line_is_a_conflict_and_leaves_it_intact(): void
+    {
+        $txUom = UnitOfMeasure::create([
+            'code' => 'TXBOX', 'name' => 'Transfer Box', 'symbol' => 'box',
+            'type' => 'COUNT', 'precision' => 0, 'is_base' => false, 'is_active' => true,
+        ]);
+        $conversion = UomConversion::create([
+            'from_uom_id' => $txUom->id, 'to_uom_id' => $this->uomKg->id,
+            'factor' => 5, 'tolerance_percent' => 0.5, 'is_active' => true,
+        ]);
+
+        // A draft line captured in the new UOM — its only reference.
+        $this->createDraft([
+            ['item_variant_id' => $this->variant->public_id, 'entry_uom_id' => $txUom->public_id, 'entry_quantity' => 2],
+        ]);
+
+        Permission::firstOrCreate(['name' => 'units_of_measure.manage', 'guard_name' => 'api']);
+        $this->user->givePermissionTo('units_of_measure.manage');
+
+        $this->deleteJson("/api/v1/units-of-measure/{$txUom->public_id}")->assertStatus(409);
+
+        $this->assertNotNull(UnitOfMeasure::find($txUom->id));
+        $this->assertDatabaseHas('uom_conversions', ['id' => $conversion->id]);
     }
 
     #[Test]
