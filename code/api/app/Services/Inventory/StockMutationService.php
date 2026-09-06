@@ -50,6 +50,12 @@ class StockMutationService
      * receipt is rejected the same way a repeat receipt already is via
      * increaseOnHand() — otherwise Stock::create() would accept it unchecked.
      *
+     * Once the Stock row is locked/created, ensureManagedAssignment() lands a
+     * live managed assignment (#569) for the pair, so the assignment-spined
+     * Existencias read model (#571) never hides a balance this call just
+     * committed. It runs *after* the Stock lock deliberately — see the inline
+     * note about the unassign TOCTOU window.
+     *
      * @throws InvalidStockBalanceException if $qty is not positive
      */
     public function receiveInto(int $inventoryLocationId, int $itemVariantId, float $qty): Stock
@@ -60,23 +66,26 @@ class StockMutationService
             );
         }
 
-        // Receiving stock into a (Location, Variant) pair means that Variant is
-        // managed there — keep the managed-assortment assignment (#569) in
-        // lockstep so the assignment-spined Existencias read model (#571) never
-        // hides a balance a posted movement just committed. #569's one-time
-        // backfill only covered pairs that had Stock at migration time; this
-        // extends the same "a Stock pair implies a live assignment" invariant
-        // to every subsequent first receipt (Receipts, Opening Balances,
-        // reversals into a source Location).
-        $this->ensureManagedAssignment($inventoryLocationId, $itemVariantId);
-
         $stock = $this->lockAndGet($inventoryLocationId, $itemVariantId);
 
-        if ($stock) {
-            return $this->increaseOnHand($stock, $qty);
+        if ($stock === null) {
+            $stock = $this->insertOrRecoverFromRace($inventoryLocationId, $itemVariantId, $qty);
+            $this->ensureManagedAssignment($inventoryLocationId, $itemVariantId);
+
+            return $stock;
         }
 
-        return $this->insertOrRecoverFromRace($inventoryLocationId, $itemVariantId, $qty);
+        // The Stock row is held FOR UPDATE now, so this is serialized against
+        // #569's UnassignVariantFromLocationController, which locks the same
+        // (Location, Variant) Stock row before it re-checks the zero balance and
+        // soft-deletes the assignment. Ensuring the assignment before acquiring
+        // that lock would leave a TOCTOU window: an unassign could observe our
+        // ensure, delete the assignment, and let the increment below commit
+        // positive Stock with no live assignment — invisible to every
+        // assignment-spined Existencias endpoint.
+        $this->ensureManagedAssignment($inventoryLocationId, $itemVariantId);
+
+        return $this->increaseOnHand($stock, $qty);
     }
 
     /**
