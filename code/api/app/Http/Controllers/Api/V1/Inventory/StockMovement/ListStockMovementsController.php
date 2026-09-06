@@ -28,7 +28,7 @@ use App\Support\Access\OperatingUnitScope;
  *   @OA\Parameter(name="date_from", in="query", @OA\Schema(type="string", format="date"), description="Inclusive lower bound on posted_at"),
  *   @OA\Parameter(name="date_to", in="query", @OA\Schema(type="string", format="date"), description="Inclusive upper bound on posted_at"),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string"), description="Case-insensitive match on reference"),
- *   @OA\Parameter(name="source_type", in="query", @OA\Schema(type="string", enum={"receipt"}), description="Originating source document type"),
+ *   @OA\Parameter(name="source_type", in="query", @OA\Schema(type="string", enum={"receipt", "stock_transfer"}), description="Originating source document type"),
  *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer", minimum=1, maximum=100, default=15)),
  *   @OA\Parameter(name="page", in="query", @OA\Schema(type="integer", minimum=1, default=1)),
  *
