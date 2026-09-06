@@ -21,6 +21,7 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
     isEditing,
     register,
     handleSubmit,
+    watch,
     errors,
     fields,
     addLine,
@@ -124,6 +125,16 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
 
           {fields.map((field, index) => {
             const lineErrors = errors.lines?.[index]
+            // Live registered value — not `field.*` from useFieldArray, which is a
+            // stale snapshot that still holds the previous variant/label after
+            // onDestinationChange clears the value.
+            const currentVariantId = watch(`lines.${index}.item_variant_id`)
+            // Prefer the client (zod) error, fall back to the server's specific
+            // 422 field message so an out-of-range quantity or a UOM with no
+            // conversion isn't reduced to just the generic toast.
+            const variantError = lineErrors?.item_variant_id?.message ?? validationErrors?.[`lines.${index}.item_variant_id`]
+            const uomError = lineErrors?.entry_uom_id?.message ?? validationErrors?.[`lines.${index}.entry_uom_id`]
+            const quantityError = lineErrors?.entry_quantity?.message ?? validationErrors?.[`lines.${index}.entry_quantity`]
             return (
               <div key={field.id} className="space-y-3 rounded-md border border-border p-3">
                 <div className="flex items-center justify-between">
@@ -141,17 +152,19 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
                   )}
                 </div>
 
-                <FormField label="Variante" required error={lineErrors?.item_variant_id?.message}>
+                <FormField label="Variante" required error={variantError}>
                   <Select
                     aria-label={`Variante línea ${index + 1}`}
-                    error={Boolean(lineErrors?.item_variant_id)}
+                    error={Boolean(variantError)}
                     disabled={!destinationLocationId}
                     {...register(`lines.${index}.item_variant_id`)}
                   >
                     <option value="">Selecciona una variante</option>
-                    {field._label && !assignedVariants.some((row) => row.item_variant_id === field.item_variant_id) && (
-                      <option value={field.item_variant_id}>{field._label}</option>
-                    )}
+                    {field._label &&
+                      currentVariantId === field.item_variant_id &&
+                      !assignedVariants.some((row) => row.item_variant_id === currentVariantId) && (
+                        <option value={field.item_variant_id}>{field._label}</option>
+                      )}
                     {assignedVariants.map((row) => (
                       <option key={row.item_variant_id} value={row.item_variant_id}>
                         {row.item_variant_name} ({row.item_variant_code})
@@ -161,10 +174,10 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
                 </FormField>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Unidad" required error={lineErrors?.entry_uom_id?.message}>
+                  <FormField label="Unidad" required error={uomError}>
                     <Select
                       aria-label={`Unidad línea ${index + 1}`}
-                      error={Boolean(lineErrors?.entry_uom_id)}
+                      error={Boolean(uomError)}
                       {...register(`lines.${index}.entry_uom_id`)}
                     >
                       <option value="">Selecciona una unidad</option>
@@ -174,23 +187,17 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
                     </Select>
                   </FormField>
 
-                  <FormField label="Cantidad" required error={lineErrors?.entry_quantity?.message}>
+                  <FormField label="Cantidad" required error={quantityError}>
                     <Input
                       aria-label={`Cantidad línea ${index + 1}`}
                       type="number"
                       step="any"
                       min="0"
-                      error={Boolean(lineErrors?.entry_quantity)}
+                      error={Boolean(quantityError)}
                       {...register(`lines.${index}.entry_quantity`, { valueAsNumber: true })}
                     />
                   </FormField>
                 </div>
-
-                {validationErrors?.[`lines.${index}.item_variant_id`] && (
-                  <p className="text-sm text-destructive">
-                    {validationErrors[`lines.${index}.item_variant_id`]}
-                  </p>
-                )}
               </div>
             )
           })}
