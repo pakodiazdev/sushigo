@@ -238,6 +238,7 @@ export const stockApi = {
     min_on_hand?: number
     low_stock?: boolean
     per_page?: number
+    page?: number
   }) => api.get<PaginatedResponse<Stock>>('/stock', { params }),
 
   byLocation: (locationId: string | number) =>
