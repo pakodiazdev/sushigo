@@ -188,14 +188,6 @@ class ReceiptService
 
                 $baseUnits = (float) $line->base_units_received;
 
-                // Posting a purchase is sufficient evidence that this Variant is
-                // managed at the destination (#569/#572) — ensure the assortment
-                // assignment idempotently, inside this same transaction, so it
-                // rolls back with the rest if any later line fails. Never writes a
-                // Stock row or a movement; a soft-deleted assignment is
-                // reactivated, a live one is a no-op.
-                $this->assignmentEnsurer->ensure($receipt->destination_location_id, $itemVariant->id);
-
                 // One posting primitive per line (#567): locks/creates Stock,
                 // blends the effective unit cost, and appends immutable
                 // evidence. Source identity is explicit via
@@ -233,6 +225,22 @@ class ReceiptService
                         lineTotal: (float) $line->net_acquisition_amount,
                     ),
                 ));
+
+                // Ensure the assortment assignment (#569/#572) *after* the entry
+                // posting above has taken and still holds the (location, variant)
+                // Stock-row lock. `UnassignVariantFromLocationController` guards on
+                // that exact row (by pair, zeroed rows included), so ordering the
+                // ensure after the lock serializes this against a concurrent
+                // unassignment: either it blocks and then 409s on our now-positive
+                // balance, or it won the race first and soft-deleted the
+                // assignment, which this call reactivates. Doing it before the
+                // lock leaves a window where the pair ends up with stock but no
+                // live assignment. Idempotent, transactional, writes no Stock row
+                // or movement of its own. (A genuine first-ever receipt that
+                // creates the Stock row from scratch has no row to lock — that
+                // assortment-vs-inbound race is a consuming-workflow concern,
+                // #570–#574, out of scope here, per the unassign controller.)
+                $this->assignmentEnsurer->ensure($receipt->destination_location_id, $itemVariant->id);
             }
 
             $receipt->update([
