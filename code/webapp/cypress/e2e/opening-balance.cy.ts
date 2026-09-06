@@ -123,7 +123,7 @@ describe('Opening Balance from Existencias', () => {
   beforeEach(() => {
     cy.loginByApi(adminEmail, adminPassword)
     cy.visitWithAuth('/inventario/existencias')
-    cy.contains('h1', 'Stock Dashboard', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h1', 'Existencias', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
   })
 
