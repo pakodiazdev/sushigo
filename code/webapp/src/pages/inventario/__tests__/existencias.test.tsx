@@ -49,7 +49,7 @@ describe('Existencias — Opening Balance entry point (#570)', () => {
   })
   afterEach(() => cleanup())
 
-  it('shows the "Registrar saldo inicial" action for a stock.manage user', () => {
+  it('shows the "Registrar saldo inicial" action when the user has stock.manage + the catalog reads', () => {
     const { getAllByText } = render(<StockDashboardPage />)
     expect(getAllByText('Registrar saldo inicial').length).toBeGreaterThan(0)
   })
@@ -60,6 +60,15 @@ describe('Existencias — Opening Balance entry point (#570)', () => {
     expect(queryByText('Registrar saldo inicial')).toBeNull()
     expect(mocks.can).toHaveBeenCalledWith('stock.manage')
   })
+
+  it.each(['inventory_locations.view', 'items.view'])(
+    'hides the action for a stock.manage user missing %s (the form selects would 403)',
+    (missing) => {
+      mocks.can.mockImplementation((p: string) => p !== missing)
+      const { queryByText } = render(<StockDashboardPage />)
+      expect(queryByText('Registrar saldo inicial')).toBeNull()
+    }
+  )
 
   it('opens the Opening Balance panel when the action is clicked', () => {
     const { getAllByText, getByTestId } = render(<StockDashboardPage />)

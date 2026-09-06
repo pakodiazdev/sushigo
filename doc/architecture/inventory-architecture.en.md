@@ -1105,8 +1105,11 @@ receiving.
 | `POST /inventory/opening-balance/preview` | Non-mutating. Same payload; returns the base quantity, base unit cost, `conversion_applies`/`conversion_factor`, and `total_value` (null when no cost was given) — the exact numbers the post would record, so the form's pre-submit preview matches the ledger. |
 
 **UI.** The `OpeningBalanceForm` (a `SlidePanel`) is mounted on `/inventario/existencias` behind a
-`stock.manage` client check — the route itself stays `stock.view` so read-only users still see
-stock but cannot open or invoke the mutation. The form is Spanish end to end, limits Location
+client check for `stock.manage` **plus** `inventory_locations.view` and `items.view` (admin /
+super-admin bypass) — the route itself stays `stock.view` so read-only users still see stock but
+cannot open or invoke the mutation, and the extra two are required because the form's Location and
+Variant pickers read `/inventory-locations` and `/item-variants`, so a `stock.manage`-only role
+would open a panel whose selects both `403`. The form is Spanish end to end, limits Location
 options to active accessible results and Variant options to the active catalog, shows the
 backend-computed conversion/valuation preview before submit, states plainly that the action
 initializes/adds inventory and writes permanent audit evidence, and on success invalidates the

@@ -67,9 +67,16 @@ export function StockDashboardPage() {
   const [isOpeningBalanceOpen, setIsOpeningBalanceOpen] = useState(false)
   const openingBalanceTriggerRef = useRef<HTMLButtonElement>(null)
 
-  // The route stays stock.view so read-only users still see stock; the posting
-  // action is gated to stock.manage, matching the API (#570).
-  const canManageStock = useAuthStore((s) => s.can('stock.manage'))
+  // The route stays stock.view so read-only users still see stock. The Opening
+  // Balance action needs stock.manage (the posting endpoints authorize on it),
+  // but the form's Location and Variant pickers read /inventory-locations and
+  // /item-variants, which require inventory_locations.view and items.view — so
+  // the trigger is gated on all three, never shown for a role that could open
+  // the panel only to hit 403s on both selects (#570). Admin/super-admin bypass
+  // every check in `can()`.
+  const canOpenOpeningBalance = useAuthStore(
+    (s) => s.can('stock.manage') && s.can('inventory_locations.view') && s.can('items.view')
+  )
 
   const closeOpeningBalance = () => {
     setIsOpeningBalanceOpen(false)
@@ -199,7 +206,7 @@ export function StockDashboardPage() {
         description="Surtido gestionado por Ubicación y valuación del inventario"
         action={
           <div className="flex gap-2">
-            {canManageStock && (
+            {canOpenOpeningBalance && (
               <Button
                 ref={openingBalanceTriggerRef}
                 onClick={() => setIsOpeningBalanceOpen(true)}
@@ -456,7 +463,7 @@ export function StockDashboardPage() {
           <p className="text-gray-500 mb-4">
             Asigna Variantes a una Ubicación para verlas aquí, incluso antes de la primera recepción.
           </p>
-          {canManageStock && (
+          {canOpenOpeningBalance && (
             <Button
               onClick={() => setIsOpeningBalanceOpen(true)}
               className="gap-2"
@@ -468,7 +475,7 @@ export function StockDashboardPage() {
         </div>
       )}
 
-      {canManageStock && (
+      {canOpenOpeningBalance && (
         <SlidePanel
           isOpen={isOpeningBalanceOpen}
           onClose={closeOpeningBalance}

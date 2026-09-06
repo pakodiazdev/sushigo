@@ -1128,9 +1128,13 @@ proveedor.
 | `POST /inventory/opening-balance/preview` | Sin efectos. Mismo payload; devuelve la cantidad base, el costo unitario base, `conversion_applies`/`conversion_factor` y `total_value` (null cuando no se dio costo) — los mismos números que registraría el POST, para que la vista previa del formulario coincida con el ledger. |
 
 **UI.** El `OpeningBalanceForm` (un `SlidePanel`) se monta en `/inventario/existencias` detrás de
-una verificación de `stock.manage` en cliente — la ruta en sí sigue siendo `stock.view`, así que
-usuarios de solo lectura siguen viendo existencias pero no pueden abrir ni invocar la mutación. El
-formulario está en español de principio a fin, limita las opciones de Ubicación a resultados
+una verificación en cliente de `stock.manage` **más** `inventory_locations.view` e `items.view`
+(admin / super-admin la omiten) — la ruta en sí sigue siendo `stock.view`, así que usuarios de solo
+lectura siguen viendo existencias pero no pueden abrir ni invocar la mutación, y las otras dos hacen
+falta porque los selectores de Ubicación y Variante del formulario leen `/inventory-locations` e
+`/item-variants`, de modo que un rol solo con `stock.manage` abriría un panel cuyos selects
+devuelven `403`. El formulario está en español de principio a fin, limita las opciones de Ubicación
+a resultados
 activos y accesibles y las de Variante al catálogo activo, muestra la vista previa de
 conversión/valuación calculada por el backend antes de enviar, indica claramente que la acción
 inicializa/suma inventario y escribe evidencia de auditoría permanente, y al tener éxito invalida
