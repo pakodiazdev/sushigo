@@ -306,6 +306,7 @@ describe('stockApi', () => {
                 min_on_hand: 0,
                 low_stock: true,
                 per_page: 50,
+                page: 3,
             }
             const result = await stockApi.list(params)
 

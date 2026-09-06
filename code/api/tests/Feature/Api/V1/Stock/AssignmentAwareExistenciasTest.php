@@ -197,10 +197,12 @@ class AssignmentAwareExistenciasTest extends InventoryTestCase
     }
 
     #[Test]
-    public function per_page_accepts_the_dashboard_full_page_request(): void
+    public function per_page_bound_covers_a_large_dashboard_page(): void
     {
-        // Existencias loads its whole assortment in one page (`per_page=500`);
-        // the former max:100 silently 422'd that request (#571).
+        // The dashboard pages through the full assortment client-side
+        // (fetchAllPages), but the per-request bound still has to be generous
+        // enough for a realistic single-branch page — the former max:100
+        // silently 422'd the dashboard's request (#571).
         $this->getJson('/api/v1/stock?per_page=500')->assertOk();
         $this->getJson('/api/v1/stock?per_page=501')->assertStatus(422);
     }

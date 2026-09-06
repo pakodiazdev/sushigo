@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { stockApi, inventoryLocationApi } from '@/services/inventory-api'
+import { fetchAllPages } from '@/lib/fetch-all-pages'
 import type { Stock, InventoryLocation } from '@/types/inventory'
 import { ReplenishmentPoliciesPanel } from '@/features/inventory/replenishment'
 
@@ -62,10 +63,13 @@ export function StockDashboardPage() {
 
   // Existencias is spined on the managed Variant-to-Location assignment (#569),
   // not on Stock (#571): this list already includes every assigned Variant,
-  // with a never-received one projected as zero (`stock_id: null`).
+  // with a never-received one projected as zero (`stock_id: null`). The summary
+  // and low-stock alerts are computed client-side over the whole row set, so
+  // every page is fetched up front — a tenant with more assigned pairs than one
+  // page holds must not silently understate its totals.
   const { data: stockData, isLoading: stockLoading, refetch: refetchStock } = useQuery({
     queryKey: ['stock-all'],
-    queryFn: () => stockApi.list({ per_page: 500 }),
+    queryFn: () => fetchAllPages((page) => stockApi.list({ per_page: 200, page })),
   })
 
   // Fetch locations for filter
