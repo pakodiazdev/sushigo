@@ -127,4 +127,32 @@ describe('useStockTransferForm', () => {
     })
     expect(onSuccess).toHaveBeenCalledWith(draftTransfer)
   })
+
+  it('submits an update payload (with a reference and notes) when editing an existing draft', async () => {
+    apiMocks.update.mockResolvedValue({ data: { data: draftTransfer } })
+    const { result } = renderHook(() => useStockTransferForm({ transfer: draftTransfer, onSuccess: vi.fn() }))
+
+    expect(result.current.isEditing).toBe(true)
+
+    await act(async () => {
+      await result.current.onSubmit({
+        source_location_id: 'loc-src',
+        destination_location_id: 'loc-dst',
+        reference: 'TR-EDIT',
+        transfer_date: '2026-09-06',
+        notes: 'ajuste',
+        lines: [{ item_variant_id: 'v1', entry_uom_id: 'u1', entry_quantity: 8 }],
+      })
+    })
+
+    expect(apiMocks.update).toHaveBeenCalledWith('tr1', {
+      source_location_id: 'loc-src',
+      destination_location_id: 'loc-dst',
+      reference: 'TR-EDIT',
+      transfer_date: '2026-09-06',
+      notes: 'ajuste',
+      lines: [{ item_variant_id: 'v1', entry_uom_id: 'u1', entry_quantity: 8 }],
+    })
+    expect(apiMocks.create).not.toHaveBeenCalled()
+  })
 })

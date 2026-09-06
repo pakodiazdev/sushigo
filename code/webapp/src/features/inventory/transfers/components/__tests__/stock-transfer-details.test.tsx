@@ -114,4 +114,59 @@ describe('StockTransferDetails', () => {
     expect(view.getByText(/costo origen:/i)).toBeDefined()
     expect(view.getByText(/por ada/i)).toBeDefined()
   })
+
+  it('calls onEdit and runs the delete confirm flow', () => {
+    const props = baseProps()
+    const view = render(<StockTransferDetails transfer={baseTransfer} {...props} />)
+
+    fireEvent.click(view.getByRole('button', { name: /^editar$/i }))
+    expect(props.onEdit).toHaveBeenCalledOnce()
+
+    fireEvent.click(view.getByRole('button', { name: /eliminar/i }))
+    const dialog = view.getByRole('alertdialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: /^eliminar$/i }))
+    expect(props.onDelete).toHaveBeenCalledOnce()
+  })
+
+  it('cancels the post confirm dialog without calling onPost', () => {
+    const props = baseProps()
+    const view = render(<StockTransferDetails transfer={baseTransfer} {...props} />)
+
+    fireEvent.click(view.getByRole('button', { name: /confirmar traslado/i }))
+    const dialog = view.getByRole('alertdialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: /cancelar/i }))
+
+    expect(props.onPost).not.toHaveBeenCalled()
+  })
+
+  it('runs the reverse flow with a typed reason from the POSTED view', () => {
+    const props = baseProps()
+    const posted: StockTransfer = { ...baseTransfer, status: 'POSTED', posted_at: '2026-09-05T10:00:00Z' }
+    const view = render(<StockTransferDetails transfer={posted} {...props} />)
+
+    fireEvent.click(view.getByRole('button', { name: /revertir/i }))
+    const reason = view.getByPlaceholderText(/registrado por error/i)
+    fireEvent.change(reason, { target: { value: 'Traslado duplicado' } })
+    const dialog = view.getByRole('alertdialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: /^revertir$/i }))
+
+    expect(props.onReverse).toHaveBeenCalledWith('Traslado duplicado')
+  })
+
+  it('renders the reversed-evidence banner with the reversal reason', () => {
+    const reversed: StockTransfer = {
+      ...baseTransfer,
+      status: 'REVERSED',
+      posted_at: '2026-09-05T10:00:00Z',
+      reversed_at: '2026-09-06T09:00:00Z',
+      reversed_by: { id: 2, name: 'Bob' },
+      reversal_reason: 'Error de captura',
+    }
+
+    const view = render(<StockTransferDetails transfer={reversed} {...baseProps()} />)
+
+    expect(view.getByText(/revertido el/i)).toBeDefined()
+    expect(view.getByText(/error de captura/i)).toBeDefined()
+    expect(view.queryByRole('button', { name: /revertir/i })).toBeNull()
+  })
 })
