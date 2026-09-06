@@ -247,6 +247,7 @@ describe('useReceiptsPage', () => {
     )
     expect(invalidatedKeys).toContain(JSON.stringify(['stock-all']))
     expect(invalidatedKeys).toContain(JSON.stringify(['stock-by-location']))
+    expect(invalidatedKeys).toContain(JSON.stringify(['stock-by-variant']))
     expect(invalidatedKeys).toContain(JSON.stringify(['variant-assignments']))
     expect(invalidatedKeys).toContain(JSON.stringify(['stock-movements']))
 

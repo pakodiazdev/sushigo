@@ -105,6 +105,7 @@ export function useReceiptsPage() {
   const invalidateInventoryReadModels = () => {
     queryClient.invalidateQueries({ queryKey: ['stock-all'] })
     queryClient.invalidateQueries({ queryKey: ['stock-by-location'] })
+    queryClient.invalidateQueries({ queryKey: ['stock-by-variant'] })
     queryClient.invalidateQueries({ queryKey: ['variant-assignments'] })
     queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
   }
