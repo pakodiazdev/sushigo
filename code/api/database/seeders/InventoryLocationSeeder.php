@@ -22,7 +22,7 @@ class InventoryLocationSeeder extends Seeder
         }
 
         // Main storage location (primary)
-        InventoryLocation::updateOrCreate(
+        $mainLocation = InventoryLocation::updateOrCreate(
             [
                 'operating_unit_id' => $mainUnit->id,
                 'type' => InventoryLocation::TYPE_MAIN,
@@ -30,17 +30,22 @@ class InventoryLocationSeeder extends Seeder
             [
                 'name' => 'Almacén Principal',
                 'is_primary' => true,
-                // The primary MAIN warehouse is the branch's supplier-receiving
-                // point (#568/#572) — same predicate as the #568 backfill
-                // (active + primary + MAIN). Every other seeded location stays
-                // non-receiving until a user opts it in.
-                'can_receive_purchases' => true,
                 'priority' => 100,
                 'meta' => [
                     'description' => 'Main warehouse storage',
                 ],
             ]
         );
+
+        // The primary MAIN warehouse is the branch's supplier-receiving point
+        // (#568/#572) — same predicate as the #568 backfill (active + primary +
+        // MAIN). Set it **only on first creation**: production startup runs
+        // `db:seed --force` on every restart, so overwriting it here would silently
+        // undo an operator who later disabled purchase receiving for this
+        // warehouse. Every other seeded location stays non-receiving until opted in.
+        if ($mainLocation->wasRecentlyCreated) {
+            $mainLocation->update(['can_receive_purchases' => true]);
+        }
 
         // Kitchen location
         InventoryLocation::updateOrCreate(
