@@ -1086,6 +1086,58 @@ asignación directamente: las Variantes asignadas pero nunca recibidas se muestr
 etiquetadas **"nunca recibido"**, y — cuando una política las marca como bajas — en la tabla de
 alertas de stock bajo, sin sugerir que exista un registro de Stock en la base de datos.
 
+### 3.15 Saldo inicial — inicialización auditable (#570) — implementado
+
+Inicialización de existencias que ya existen físicamente, expuesta a través del flujo canónico
+`/inventario/existencias`. **No** es una recepción de compra y no hay documento borrador: el
+registro es inmediato.
+
+**Semántica.**
+
+- Un Saldo Inicial es un `StockMovement` `OPENING_BALANCE` explícito e inmutable, **sin Ubicación
+  origen** y **sin identidad de documento origen** (la terna `related_*` queda en null). Por lo
+  tanto no tiene contrato de idempotencia: registros repetidos para el mismo par son adiciones
+  legítimas y auditables, no reintentos.
+- El registro pasa por la primitiva de entrada compartida (`InventoryEntryPostingService`, §3.12,
+  #567): crea/incrementa la fila de `Stock` destino con seguridad ante carreras, mezcla
+  `Stock.weighted_avg_cost` (#434 — un costo unitario `null` omite la mezcla, un `0` explícito
+  sí mezcla) y agrega la única línea del movimiento.
+- La **misma transacción** también asegura la `VariantLocationAssignment` del par (§3.13, #569)
+  —creándola o reactivando una con borrado suave— mediante la acción compartida
+  `EnsureVariantLocationAssignment`. A diferencia del endpoint `PUT …/variant-assignments/{variantId}`,
+  la inicialización **no** rechaza una Variante inactiva: registrar existencias que existen
+  físicamente es válido incluso para una Variante desactivada después.
+- La cantidad se convierte a la UOM base de la Variante con el contrato de conversión existente
+  (`ConvertsUomQuantities`). El costo aterriza solo en `Stock.weighted_avg_cost` del destino, nunca
+  en la Variante de catálogo (de solo lectura).
+- **Regla de corrección:** el historial registrado nunca se edita en su lugar. Un registro erróneo
+  se corrige con un movimiento inmutable de reversión / ajuste, la misma regla del contrato de
+  reversión de Recepciones (#438).
+
+**Guarda del destino.** El FormRequest valida `stock.manage`, el `exists` de cada ID público y el
+acceso por `OperatingUnitScope` antes de la transacción; el Service revalida —bajo bloqueo de fila
+sobre el destino— que la Ubicación siga existiendo, siga `is_active` y siga siendo accesible. El
+destino **no** necesita `can_receive_purchases` (#568): la inicialización no es recepción de
+proveedor.
+
+**API.** Bajo el prefijo `inventory`, `stock.manage`:
+
+| Ruta | Propósito |
+| --- | --- |
+| `POST /inventory/opening-balance` | Registra el saldo. `201` con el movimiento normalizado (cantidad base, costo base, `Stock.weighted_avg_cost` resuelto). Códigos de estado diferenciados en lugar de un `400` genérico: `403` por permiso o acceso a la Unidad Operativa faltante, `422` por un ID público inexistente, una cantidad no positiva, un destino **inactivo** o **sin ruta de conversión de UOM** a la unidad base de la Variante. |
+| `POST /inventory/opening-balance/preview` | Sin efectos. Mismo payload; devuelve la cantidad base, el costo unitario base, `conversion_applies`/`conversion_factor` y `total_value` (null cuando no se dio costo) — los mismos números que registraría el POST, para que la vista previa del formulario coincida con el ledger. |
+
+**UI.** El `OpeningBalanceForm` (un `SlidePanel`) se monta en `/inventario/existencias` detrás de
+una verificación de `stock.manage` en cliente — la ruta en sí sigue siendo `stock.view`, así que
+usuarios de solo lectura siguen viendo existencias pero no pueden abrir ni invocar la mutación. El
+formulario está en español de principio a fin, limita las opciones de Ubicación a resultados
+activos y accesibles y las de Variante al catálogo activo, muestra la vista previa de
+conversión/valuación calculada por el backend antes de enviar, indica claramente que la acción
+inicializa/suma inventario y escribe evidencia de auditoría permanente, y al tener éxito invalida
+las consultas de lista de stock, stock por ubicación, stock por variante, asignación y
+reabastecimiento para que Existencias se refresque sin recargar. El foco vuelve al botón que abrió
+el panel cuando este se cierra.
+
 ---
 
 ## 4. Flujos operativos

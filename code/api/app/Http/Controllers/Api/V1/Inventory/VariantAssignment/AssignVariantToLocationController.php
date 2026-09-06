@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Inventory\VariantAssignment;
 
+use App\Actions\Inventory\EnsureVariantLocationAssignment;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\VariantAssignment\AssignVariantToLocationRequest;
 use App\Http\Resources\Inventory\VariantAssignment\VariantLocationAssignmentResource;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
-use App\Models\VariantLocationAssignment;
 use App\Support\Access\OperatingUnitScope;
-use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -52,7 +50,8 @@ class AssignVariantToLocationController extends Controller
         AssignVariantToLocationRequest $request,
         string $id,
         string $variantId,
-        OperatingUnitScope $scope
+        OperatingUnitScope $scope,
+        EnsureVariantLocationAssignment $ensureAssignment
     ): VariantLocationAssignmentResource {
         $location = InventoryLocation::findByPublicIdOrFail($id);
 
@@ -65,73 +64,24 @@ class AssignVariantToLocationController extends Controller
         // Same active-catalog predicate the list endpoint applies: an inactive
         // Variant is outside the manageable catalog, so the write path rejects
         // it too rather than creating an assignment the panel can never show or
-        // remove.
+        // remove. (Opening Balance initialization deliberately skips this guard —
+        // see EnsureVariantLocationAssignment.)
         if (! $variant->is_active) {
             throw ValidationException::withMessages([
                 'variantId' => 'This variant is not active and cannot be managed at a location.',
             ]);
         }
 
-        [$assignment, $created] = $this->assignOrRecover($location->id, $variant->id);
+        // Shared assign-or-recover (#569, extracted in #570): create, reactivate
+        // a soft-deleted row, or recover the winner of a partial-unique-index
+        // race — 201 when this call landed the live row, 200 when it was already
+        // live.
+        [$assignment, $created] = $ensureAssignment->ensure($location->id, $variant->id);
 
         $variant->setAttribute('assignment_public_id', $assignment->public_id);
         $variant->setAttribute('assigned_at', $assignment->created_at?->toIso8601String());
         $variant->setAttribute('location_public_id', $location->public_id);
 
         return (new VariantLocationAssignmentResource($variant))->setStatusCode($created ? 201 : 200);
-    }
-
-    /**
-     * Idempotently land a live assignment for the pair.
-     *
-     * @return array{0: VariantLocationAssignment, 1: bool} the assignment and whether this call created/reactivated it
-     */
-    private function assignOrRecover(int $locationId, int $variantId): array
-    {
-        $existing = VariantLocationAssignment::withTrashed()
-            ->where('inventory_location_id', $locationId)
-            ->where('item_variant_id', $variantId)
-            ->first();
-
-        if ($existing === null) {
-            return $this->insertOrRecoverLive($locationId, $variantId);
-        }
-
-        $reactivated = $existing->trashed();
-
-        if ($reactivated) {
-            $existing->restore();
-        }
-
-        return [$existing, $reactivated];
-    }
-
-    /**
-     * First live insert for the pair, recovering from the partial-unique-index
-     * race two concurrent PUTs for the same unassigned pair would otherwise
-     * lose (one INSERT would surface a raw DB error instead of the promised
-     * 200/201). Same savepoint/recover shape as
-     * StockMutationService::insertOrRecoverFromRace().
-     *
-     * @return array{0: VariantLocationAssignment, 1: bool}
-     */
-    private function insertOrRecoverLive(int $locationId, int $variantId): array
-    {
-        try {
-            $assignment = DB::transaction(fn () => VariantLocationAssignment::create([
-                'inventory_location_id' => $locationId,
-                'item_variant_id' => $variantId,
-            ]));
-
-            return [$assignment, true];
-        } catch (UniqueConstraintViolationException) {
-            // A concurrent PUT won the insert between our read and ours.
-            $winner = VariantLocationAssignment::query()
-                ->where('inventory_location_id', $locationId)
-                ->where('item_variant_id', $variantId)
-                ->firstOrFail();
-
-            return [$winner, false];
-        }
     }
 }
