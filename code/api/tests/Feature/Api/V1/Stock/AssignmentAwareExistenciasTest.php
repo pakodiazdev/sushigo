@@ -8,6 +8,7 @@ use App\Models\OperatingUnit;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Models\VariantLocationAssignment;
 use App\Models\VariantLocationReplenishmentPolicy;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
@@ -341,6 +342,35 @@ class AssignmentAwareExistenciasTest extends InventoryTestCase
         $this->assertNotNull($row, 'received balance must stay visible in Existencias');
         $this->assertNotNull($row['stock_id']);
         $this->assertEquals(30.0, $row['on_hand']);
+    }
+
+    #[Test]
+    public function receiving_into_a_soft_deleted_assignment_reactivates_it(): void
+    {
+        // Assigned, then unassigned while at zero balance (soft-deleted row).
+        $variant = $this->createItemVariant($this->createItem(), ['code' => 'BACK-1']);
+        $this->assignVariantToLocation($this->location, $variant)->delete();
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+        ])->assertStatus(201);
+
+        // Exactly one row, now live again — not a duplicate that would violate
+        // the partial one-live-pair unique index.
+        $this->assertDatabaseHas('variant_location_assignments', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'deleted_at' => null,
+        ]);
+        $this->assertSame(1, VariantLocationAssignment::withTrashed()
+            ->where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->count());
+
+        $this->assertNotNull($this->rowFor($this->listRows(), $variant));
     }
 
     #[Test]
