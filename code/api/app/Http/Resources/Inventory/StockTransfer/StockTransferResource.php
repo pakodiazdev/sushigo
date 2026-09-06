@@ -6,6 +6,7 @@ namespace App\Http\Resources\Inventory\StockTransfer;
 
 use App\Http\Resources\BaseResource;
 use App\Models\StockTransfer;
+use App\Support\Access\OperatingUnitScope;
 
 /** @mixin StockTransfer */
 class StockTransferResource extends BaseResource
@@ -18,6 +19,13 @@ class StockTransferResource extends BaseResource
             'reference' => $this->reference,
             'transfer_date' => $this->transfer_date?->toDateString(),
             'notes' => $this->notes,
+            // Whether *this* caller may run the mutating actions (edit/delete/
+            // post/reverse). The read scope lets a caller who can reach only one
+            // endpoint unit open a cross-unit transfer's detail, but every
+            // mutation requires access to *both* units — the UI reads this flag
+            // rather than the global `stock.manage` permission alone.
+            'can_mutate' => $request->user() !== null
+                && app(OperatingUnitScope::class)->canMutateStockTransfer($request->user(), $this->resource),
             'source_location' => $this->whenLoaded('sourceLocation', fn () => [
                 'id' => $this->sourceLocation->public_id,
                 'name' => $this->sourceLocation->name,

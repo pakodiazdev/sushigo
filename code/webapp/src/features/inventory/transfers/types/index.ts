@@ -42,6 +42,13 @@ export interface StockTransfer {
   reference: string | null
   transfer_date: string
   notes: string | null
+  /**
+   * Whether the current caller may run the mutating actions (edit/delete/post/
+   * reverse). A cross-unit transfer is readable with access to one endpoint, but
+   * every mutation requires access to both — so the detail UI gates its action
+   * buttons on this server-derived flag, not on `stock.manage` alone.
+   */
+  can_mutate: boolean
   source_location: StockTransferLocationRef | null
   destination_location: StockTransferLocationRef | null
   lines: StockTransferLine[]

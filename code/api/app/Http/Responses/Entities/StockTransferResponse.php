@@ -15,6 +15,7 @@ namespace App\Http\Responses\Entities;
  *   @OA\Property(property="reference", type="string", nullable=true, example="TR-2026-0001"),
  *   @OA\Property(property="transfer_date", type="string", format="date"),
  *   @OA\Property(property="notes", type="string", nullable=true),
+ *   @OA\Property(property="can_mutate", type="boolean", description="Whether the current caller may edit/delete/post/reverse this transfer (requires access to both endpoint units)"),
  *   @OA\Property(
  *     property="source_location",
  *     type="object",

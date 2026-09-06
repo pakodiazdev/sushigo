@@ -54,6 +54,11 @@ export function StockTransferDetails({
 
   const isDraft = transfer.status === 'DRAFT'
   const isPosted = transfer.status === 'POSTED'
+  // A cross-unit transfer is readable with access to one endpoint, but every
+  // mutation 403s without access to both — gate the action buttons on the
+  // server flag, not on `stock.manage` alone.
+  const canDelete = isDraft && transfer.can_mutate
+  const canReverse = isPosted && transfer.can_mutate
 
   return (
     <div className="flex h-full flex-col">
@@ -135,7 +140,7 @@ export function StockTransferDetails({
 
       <SlidePanel.Footer>
         <div className="flex justify-between">
-          {isDraft && (
+          {canDelete && (
             <CanAccess permission="stock.manage">
               <Button variant="outline-danger" onClick={() => setShowDeleteConfirm(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -143,7 +148,7 @@ export function StockTransferDetails({
               </Button>
             </CanAccess>
           )}
-          {isPosted && (
+          {canReverse && (
             <CanAccess permission="stock.manage">
               <Button variant="outline" onClick={openReverseConfirm}>
                 <RotateCcw className="mr-2 h-4 w-4" />
@@ -151,7 +156,7 @@ export function StockTransferDetails({
               </Button>
             </CanAccess>
           )}
-          {isDraft && (
+          {canDelete && (
             <div className="flex gap-3">
               <CanAccess permission="stock.manage">
                 <Button variant="outline" onClick={onEdit}>

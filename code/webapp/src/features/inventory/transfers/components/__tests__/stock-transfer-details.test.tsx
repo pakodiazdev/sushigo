@@ -31,6 +31,7 @@ const baseTransfer: StockTransfer = {
   reference: 'TR-0001',
   transfer_date: '2026-09-05',
   notes: null,
+  can_mutate: true,
   source_location: { id: 'loc-src', name: 'Bodega Central' },
   destination_location: { id: 'loc-dst', name: 'Cocina' },
   posted_at: null,
@@ -78,6 +79,22 @@ describe('StockTransferDetails', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: /^confirmar$/i }))
 
     expect(props.onPost).toHaveBeenCalledOnce()
+  })
+
+  it('hides every mutation action when can_mutate is false', () => {
+    const draft: StockTransfer = { ...baseTransfer, can_mutate: false }
+    const posted: StockTransfer = { ...baseTransfer, status: 'POSTED', can_mutate: false, posted_at: '2026-09-05T10:00:00Z' }
+
+    const draftView = render(<StockTransferDetails transfer={draft} {...baseProps()} />)
+    expect(draftView.queryByRole('button', { name: /confirmar traslado/i })).toBeNull()
+    expect(draftView.queryByRole('button', { name: /editar/i })).toBeNull()
+    expect(draftView.queryByRole('button', { name: /eliminar/i })).toBeNull()
+    cleanup()
+
+    const postedView = render(<StockTransferDetails transfer={posted} {...baseProps()} />)
+    expect(postedView.queryByRole('button', { name: /revertir/i })).toBeNull()
+    // The read-only evidence banner is still shown to a partial-unit viewer.
+    expect(postedView.getByText(/no puede editarse/i)).toBeDefined()
   })
 
   it('shows only Revertir once POSTED and hides edit/delete', () => {

@@ -32,6 +32,7 @@ const draftTransfer: StockTransfer = {
   reference: 'TR-0001',
   transfer_date: '2026-09-05',
   notes: null,
+  can_mutate: true,
   source_location: { id: 'loc-src', name: 'Bodega Central' },
   destination_location: { id: 'loc-dst', name: 'Cocina' },
   posted_at: null,
