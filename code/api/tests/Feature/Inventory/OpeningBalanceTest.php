@@ -588,6 +588,85 @@ class OpeningBalanceTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_reactivates_a_pair_whose_zeroed_stock_row_was_just_unassigned()
+    {
+        // Codex P2: the "concurrent unassignment won the race" shape — a live
+        // assignment plus a zeroed Stock row existed, a concurrent unassignment
+        // locked that row, passed its zero-balance check, and soft-deleted the
+        // assignment. The opening balance must still land the pair with a live
+        // assignment (never positive Stock with no assignment behind it), which
+        // holds because the assignment is now ensured after the posting
+        // primitive takes the pair's Stock-row lock.
+        $item = $this->createItem(['name' => 'Crab']);
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        Stock::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 0,
+            'reserved' => 0,
+        ]);
+
+        $assignment = VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+        $assignment->delete();
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 9,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 10,
+        ])->assertStatus(201);
+
+        $stock = Stock::where('item_variant_id', $variant->id)->first();
+        $this->assertEquals(9, (float) $stock->on_hand);
+
+        $this->assertDatabaseHas('variant_location_assignments', [
+            'id' => $assignment->id,
+            'deleted_at' => null,
+        ]);
+        $this->assertEquals(1, VariantLocationAssignment::withTrashed()
+            ->where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->count());
+    }
+
+    #[Test]
+    public function it_blends_a_frontend_style_explicit_zero_unit_cost()
+    {
+        // The Existencias form always sends a numeric unit_cost (its field has
+        // no "omit" affordance), so an operator entering 0 for free stock posts
+        // unit_cost=0 — a real cost that must blend 0 into the weighted average,
+        // not be treated as an omitted null.
+        $item = $this->createItem(['name' => 'Bonus Nori']);
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 100,
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 0,
+        ])->assertStatus(201);
+
+        $stock = Stock::where('item_variant_id', $variant->id)->first();
+        $this->assertEquals(20, (float) $stock->on_hand);
+        // (10*100 + 10*0) / 20 = 50 — the explicit 0 pulled the average down.
+        $this->assertEquals(50, round((float) $stock->weighted_avg_cost, 2));
+    }
+
+    #[Test]
     public function it_allows_a_missing_unit_cost_and_skips_the_weighted_average_blend()
     {
         $item = $this->createItem(['name' => 'Donated Rice']);

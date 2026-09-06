@@ -139,7 +139,7 @@ describe('useOpeningBalanceForm', () => {
     expect(invalidatedKeys).toContain(JSON.stringify(['variant-assignments']))
   })
 
-  it('omits an unset unit cost from the posted payload', async () => {
+  it('forwards an explicit zero unit cost verbatim so the backend blends it', async () => {
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(
       () => useOpeningBalanceForm({ onSuccess: vi.fn() }),
@@ -157,8 +157,30 @@ describe('useOpeningBalanceForm', () => {
       })
     })
 
+    // 0 is a real cost (free stock) that still moves Stock.weighted_avg_cost;
+    // it must not be collapsed to undefined, which the backend reads as "skip
+    // the blend".
     expect(stockMovementApi.openingBalance).toHaveBeenCalledWith(
-      expect.objectContaining({ unit_cost: undefined })
+      expect.objectContaining({ unit_cost: 0 })
+    )
+  })
+
+  it('sends the debounced unit cost to the preview endpoint verbatim (including 0)', async () => {
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useOpeningBalanceForm({ onSuccess: vi.fn() }),
+      { wrapper: Wrapper }
+    )
+
+    act(() => {
+      result.current.setFieldValue('inventory_location_id', 'loc-1')
+      result.current.setFieldValue('item_variant_id', 'var-1')
+      result.current.setFieldValue('quantity', 10)
+    })
+
+    await waitFor(() => expect(stockMovementApi.openingBalancePreview).toHaveBeenCalled())
+    expect(stockMovementApi.openingBalancePreview).toHaveBeenLastCalledWith(
+      expect.objectContaining({ unit_cost: 0 })
     )
   })
 

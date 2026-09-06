@@ -117,7 +117,11 @@ export function useOpeningBalanceForm({
         item_variant_id: itemVariantId,
         quantity: debouncedQuantity,
         uom_id: uomId,
-        unit_cost: debouncedUnitCost > 0 ? debouncedUnitCost : undefined,
+        // Forward the cost verbatim — an explicit 0 is a real cost that still
+        // blends into Stock.weighted_avg_cost (the backend distinguishes 0 from
+        // an omitted null); collapsing 0 to undefined would make the preview
+        // report "Sin costo" and diverge from what the posting records (#570).
+        unit_cost: debouncedUnitCost,
       })
       return response.data.data
     },
@@ -141,7 +145,10 @@ export function useOpeningBalanceForm({
         item_variant_id: data.item_variant_id,
         quantity: data.quantity,
         uom_id: data.uom_id,
-        unit_cost: data.unit_cost > 0 ? data.unit_cost : undefined,
+        // An explicit 0 is a real cost that blends 0 into the weighted average;
+        // only a genuinely omitted cost skips the blend, and this form's numeric
+        // field always denotes an explicit value (#570).
+        unit_cost: data.unit_cost,
         notes: data.notes || undefined,
       }),
     successMessage: 'Saldo inicial registrado correctamente',

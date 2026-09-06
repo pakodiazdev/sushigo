@@ -72,13 +72,6 @@ class OpeningBalanceService
             [$baseQuantity, $conversionFactor] = $this->convertOrFailValidation($data, $variant, $entryUom);
             $baseCost = $this->calculateBaseCost($data->unitCost, $conversionFactor);
 
-            // Initialization establishes the managed-assortment assignment for
-            // the pair (#569) in the same transaction as the entry, so an
-            // opened balance is always discoverable in the Location's assignment
-            // list — never a Stock row with no assignment behind it. Whether it
-            // was newly created or already live doesn't change the posting.
-            $this->assignmentEnsurer->ensure($location->id, $variant->id);
-
             // One posting primitive writes the immutable movement + line,
             // race-safely creates/increments Stock, and blends the
             // weighted-average cost (#567). An Opening Balance has no source
@@ -112,6 +105,19 @@ class OpeningBalanceService
                     lineTotal: $baseCost ? $baseQuantity * $baseCost : null,
                 ),
             ));
+
+            // Ensure the managed-assortment assignment for the pair (#569) *after*
+            // the posting primitive, so it runs while this transaction holds the
+            // lock `InventoryEntryPostingService` took on the pair's Stock row
+            // (StockMutationService::lockAndGet). That is the exact pair-level
+            // serialization point UnassignVariantFromLocationController uses, so a
+            // concurrent unassignment cannot slip its zero-balance check and
+            // soft-delete between the assignment decision and the Stock
+            // increment — the opened balance is always left discoverable in the
+            // Location's assignment list, never a Stock row with no live
+            // assignment behind it. A soft-deleted row from an unassignment that
+            // did win the race is reactivated here.
+            $this->assignmentEnsurer->ensure($location->id, $variant->id);
 
             return $movement->fresh(['lines', 'toLocation', 'itemVariant.item']);
         });
