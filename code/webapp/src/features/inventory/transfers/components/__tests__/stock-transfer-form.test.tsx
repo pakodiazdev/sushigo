@@ -25,6 +25,9 @@ vi.mock('@/components/ui/slide-panel', () => ({
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useQuery: (config: { queryKey: unknown[] }) => {
+    if (config.queryKey[0] === 'stock-transfer-form' && config.queryKey[1] === 'uoms') {
+      return { data: { data: { data: [{ id: 'u-kg', code: 'KG', name: 'Kilogramo' }] } } }
+    }
     // The assigned-variant query for the "dst" destination — variant "v-a" only.
     if (config.queryKey[0] === 'stock-transfer-form' && config.queryKey[2] === 'dst') {
       return {
@@ -51,8 +54,9 @@ vi.mock('@/hooks/use-inventory-queries', () => ({
       { id: 'dst2', name: 'Barra' },
     ],
   }),
-  useUnitsOfMeasureSelect: () => ({ data: [{ id: 'u-kg', code: 'KG', name: 'Kilogramo' }] }),
 }))
+
+vi.mock('@/lib/api-client', () => ({ apiClient: { get: vi.fn() } }))
 
 vi.mock('@/features/inventory/assignments', () => ({
   variantAssignmentApi: { list: vi.fn() },

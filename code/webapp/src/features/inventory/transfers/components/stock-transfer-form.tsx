@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
 import { Input } from '@/components/ui/input'
 import { SlidePanel } from '@/components/ui/slide-panel'
-import { useInventoryLocationsSelect, useUnitsOfMeasureSelect } from '@/hooks/use-inventory-queries'
+import { apiClient } from '@/lib/api-client'
+import { useInventoryLocationsSelect } from '@/hooks/use-inventory-queries'
 import { fetchAllPages } from '@/lib/fetch-all-pages'
 import { variantAssignmentApi } from '@/features/inventory/assignments'
+import type { PaginatedResponse, UnitOfMeasure } from '@/types/inventory'
 import { useStockTransferForm } from '../hooks/use-stock-transfer-form'
 import type { StockTransfer } from '../types'
 
@@ -35,7 +37,19 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
   } = useStockTransferForm({ transfer, onSuccess })
 
   const locationsQuery = useInventoryLocationsSelect()
-  const uomsQuery = useUnitsOfMeasureSelect()
+
+  // `/units-of-measure` is paginated; page through it in full (like the location
+  // and assigned-variant selectors) so a UOM ordered past the first 100 is still
+  // selectable and an existing draft using one can render its selection.
+  const uomsQuery = useQuery({
+    queryKey: ['stock-transfer-form', 'uoms'],
+    queryFn: () =>
+      fetchAllPages((page) =>
+        apiClient.get<PaginatedResponse<UnitOfMeasure>>('/units-of-measure', {
+          params: { is_active: true, page, per_page: 100 },
+        })
+      ),
+  })
 
   // The destination scopes which Variants can be moved — an internal move never
   // expands the assortment (#569), so only offer Variants already assigned there.
@@ -52,7 +66,7 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
   })
 
   const locations = locationsQuery.data ?? []
-  const uoms = uomsQuery.data ?? []
+  const uoms = uomsQuery.data?.data.data ?? []
   const assignedVariants = assignedVariantsQuery.data?.data.data ?? []
 
   return (
