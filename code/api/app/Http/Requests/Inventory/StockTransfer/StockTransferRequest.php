@@ -21,6 +21,17 @@ abstract class StockTransferRequest extends FormRequest
     use ScopesLocationToAccessibleUnits;
     use SharesStockTransferValidationMessages;
 
+    /**
+     * The smallest and largest values `decimal(15,4)` (11 integer digits, 4
+     * fractional) can hold. `entry_quantity` and the derived `base_quantity`
+     * both use that column type with a `> 0` CHECK, so a value outside this
+     * band reaches PostgreSQL as an out-of-range numeric / a zero-rounding
+     * CHECK violation and surfaces as a 500 rather than a 422.
+     */
+    private const MIN_STORABLE_QTY = 0.0001;
+
+    private const MAX_STORABLE_QTY = 99999999999.9999;
+
     public function authorize(): bool
     {
         return true;
@@ -38,12 +49,12 @@ abstract class StockTransferRequest extends FormRequest
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.item_variant_id' => ['required', 'string', Rule::exists('item_variants', 'public_id')->withoutTrashed()],
             'lines.*.entry_uom_id' => ['required', 'string', Rule::exists('units_of_measure', 'public_id')],
-            // `entry_quantity` and the derived `base_quantity` are stored as
-            // decimal(15,4) with a `> 0` CHECK — a value below the smallest
-            // representable positive step (0.0001) would round to 0.0000 and
-            // surface as a 500 from the DB constraint. `min` rejects it as a 422
-            // instead; the base-UOM rounding case is covered in withValidator().
-            'lines.*.entry_quantity' => ['required', 'numeric', 'min:0.0001'],
+            // Keep `entry_quantity` inside the decimal(15,4) band so neither it
+            // nor the converted base quantity reaches PostgreSQL out of range
+            // (500). The lower bound also rejects a value that would round to
+            // 0.0000 and trip the `> 0` CHECK; the *converted* base quantity is
+            // range-checked against both bounds in withValidator().
+            'lines.*.entry_quantity' => ['required', 'numeric', 'min:'.self::MIN_STORABLE_QTY, 'max:'.self::MAX_STORABLE_QTY],
         ];
     }
 
@@ -180,10 +191,21 @@ abstract class StockTransferRequest extends FormRequest
 
     private function assertBaseQuantityRepresentable(Validator $validator, string $index, float $baseQuantity): void
     {
-        if (round($baseQuantity, 4) < 0.0001) {
+        $rounded = round($baseQuantity, 4);
+
+        if ($rounded < self::MIN_STORABLE_QTY) {
             $validator->errors()->add(
                 "lines.{$index}.entry_quantity",
                 'La cantidad convertida a la unidad base es demasiado pequeña para registrarse (mínimo 0.0001).'
+            );
+
+            return;
+        }
+
+        if ($rounded > self::MAX_STORABLE_QTY) {
+            $validator->errors()->add(
+                "lines.{$index}.entry_quantity",
+                'La cantidad convertida a la unidad base excede el máximo que puede registrarse.'
             );
         }
     }

@@ -519,9 +519,43 @@ class StockTransferTest extends InventoryTestCase
             'destination_location_id' => $foreignDestination->public_id,
         ]))->assertCreated()->json('data.id');
 
-        // The scoped base user can only reach the source unit → 403 on mutate.
+        // The scoped base user can only reach the source unit → 403 on mutate,
+        // and the detail resource tells the UI so via can_mutate=false (it can
+        // still read the cross-unit transfer via the source endpoint).
         Passport::actingAs($this->user);
+        $this->getJson("/api/v1/inventory/transfers/{$id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_mutate', false);
         $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertStatus(403);
+
+        Passport::actingAs($admin);
+        $this->getJson("/api/v1/inventory/transfers/{$id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_mutate', true);
+    }
+
+    #[Test]
+    public function a_draft_line_rejects_a_quantity_above_the_storable_range(): void
+    {
+        $this->postJson('/api/v1/inventory/transfers', $this->draftPayload([
+            ['item_variant_id' => $this->variant->public_id, 'entry_uom_id' => $this->uomKg->public_id, 'entry_quantity' => 100000000000],
+        ]))->assertStatus(422)->assertJsonValidationErrors('lines.0.entry_quantity');
+    }
+
+    #[Test]
+    public function a_draft_line_rejects_a_converted_base_quantity_above_the_storable_range(): void
+    {
+        // A GR-based Variant: 1e9 KG entered converts to 1e12 GR — inside the
+        // entry-quantity band but far outside decimal(15,4) in the base UOM.
+        $grVariant = $this->createItemVariant($this->createItem(), ['uom_id' => $this->uomGr->id]);
+        VariantLocationAssignment::create([
+            'inventory_location_id' => $this->destination->id,
+            'item_variant_id' => $grVariant->id,
+        ]);
+
+        $this->postJson('/api/v1/inventory/transfers', $this->draftPayload([
+            ['item_variant_id' => $grVariant->public_id, 'entry_uom_id' => $this->uomKg->public_id, 'entry_quantity' => 1000000000],
+        ]))->assertStatus(422)->assertJsonValidationErrors('lines.0.entry_quantity');
     }
 
     #[Test]
