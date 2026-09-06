@@ -303,9 +303,9 @@ Allí se describe el flujo de asignación, los roles base (`super-admin`, `admin
 -   Los **events** se representan como `OperatingUnit` temporales (`EVENT_TEMP`) asociados a una sucursal origen; poseen `start_date` y `end_date` para delimitar el corte y el retorno de stock.
 -   Las **transferencias** se expresan entre `InventoryLocation`; el `OperatingUnit` de cada extremo
     determina si el movimiento es interno, entre unidades de una sucursal o entre sucursales. El
-    contrato de `StockMovement` ya admite `TRANSFER`, pero al 2026-08-30 el documento/API/UI de
-    transferencias sigue planeado en [#573](https://github.com/pakodiazdev/sushigo/issues/573); no
-    debe interpretarse como un flujo construido todavía.
+    documento `StockTransfer`, su API y la UI en español `/inventario/transferencias` fueron
+    entregados por [#573](https://github.com/pakodiazdev/sushigo/issues/573) — ver §4.5 para el
+    contrato entregado; cada línea posteada agrega un `StockMovement` `TRANSFER` inmutable.
 -   Cuando el sistema aún no expone la gestión de sucursales, se puede inicializar una sucursal por defecto y trabajar con su inventario principal. El diseño soporta activar sucursales adicionales sin refactorizar dominios.
 -   Los reportes de stock y rentabilidad se calculan por `OperatingUnit` y agregan métricas por sucursal para análisis financiero y operativo.
 
@@ -727,12 +727,14 @@ transacción con dos decimales permanece autoritativo; una tasa unitaria redonde
 multiplicarse para reescribir esa evidencia. La firma `float` actual descrita arriba es as-built y
 debe eliminarse mediante el issue #415 de Sprint 8.
 
-**Transferencias (objetivo #573).** Al postear una transferencia, el costo promedio de la ubicación
-origen no cambia: retirar unidades homogéneas no altera el costo de las que permanecen. La línea
-captura una instantánea de ese costo origen y el destino lo combina como costo de entrada mediante el mismo
-calculador. Un reverso no intenta reconstruir promedios históricos después de movimientos
-posteriores; sin capas/lotes esa reconstrucción no sería exacta. El movimiento compensatorio
-restaura cantidades y conserva la evidencia del costo utilizado.
+**Transferencias (#573 — entregado).** Al postear una transferencia, el costo promedio de la
+ubicación origen no cambia: retirar unidades homogéneas no altera el costo de las que permanecen.
+`StockTransferService` captura una instantánea del `Stock.weighted_avg_cost` origen en la línea
+(`source_unit_cost`) y el destino lo combina como costo de entrada mediante el mismo
+`Stock::applyWeightedAverageCost()` que usa toda entrada con costo. Un reverso (vía el
+`StockMovementReverser` compartido) no intenta reconstruir promedios históricos después de
+movimientos posteriores; sin capas/lotes esa reconstrucción no sería exacta. El movimiento
+compensatorio restaura cantidades y conserva la evidencia del costo utilizado.
 
 **Toda lectura pasa por el mismo campo.** `StockOutService` costea un movimiento de salida usando el
 `Stock.weighted_avg_cost` de *esa misma ubicación* (nunca el de la Variante de catálogo);
@@ -933,7 +935,7 @@ erDiagram
 - Registrar un saldo inicial crea/incrementa Stock con evidencia `OPENING_BALANCE`; no simula una
   compra y no exige `can_receive_purchases` (#570).
 - Postear una Transferencia disminuye origen e incrementa destino dentro de una sola transacción y
-  registra `TRANSFER` por línea (#573).
+  registra `TRANSFER` por línea (#573 — entregado; ver §4.5).
 - Toda entrada de ingreso (línea de Recepción, Saldo Inicial) se registra mediante la única
   primitiva `InventoryEntryPostingService` (#567), que agrega el movimiento inmutable, bloquea o crea
   de forma segura ante condiciones de carrera `Stock` y combina el costo promedio ponderado como una
@@ -1092,7 +1094,7 @@ alertas de stock bajo, sin sugerir que exista un registro de Stock en la base de
 
 ### 4.1 Flujo de un evento
 
-> **Objetivo, no as-built completo:** el tramo de Transferencia se habilita con #573. El resto del
+> **Parcialmente as-built:** el tramo de Transferencia ya fue entregado por #573 (ver §4.5). El resto del
 > diagrama conserva la visión de largo plazo de eventos.
 
 ```mermaid
@@ -1220,7 +1222,7 @@ sequenceDiagram
   API-->>UI: Existencia y valuación actualizadas
 ```
 
-### 4.5 Transferencia interna — objetivo Sprint 7
+### 4.5 Transferencia interna (#573 — entregado)
 
 ```mermaid
 sequenceDiagram
@@ -1246,6 +1248,22 @@ sequenceDiagram
   API->>DB: Transferencia = POSTED
   DB-->>API: COMMIT atómico
 ```
+
+**Contrato entregado:**
+
+| Aspecto | Decisión |
+|---|---|
+| Entidades | `StockTransfer` (encabezado del documento) + `StockTransferLine` (una Variante movida por línea); ambos con ULID público. Un `StockMovement` sigue siendo una fila de libro por Variante/cantidad — el encabezado multi-línea es la Transferencia. |
+| Endpoints | `GET /api/v1/inventory/transfers` (lista resumen paginada) · `GET /inventory/transfers/{transfer}` · `POST /inventory/transfers` · `PUT /inventory/transfers/{transfer}` (solo borrador) · `DELETE /inventory/transfers/{transfer}` (solo borrador) · `POST /inventory/transfers/{transfer}/post` · `POST /inventory/transfers/{transfer}/reverse`. Controladores SAC. |
+| Permiso | `stock.view` para lecturas, `stock.manage` para escrituras — sin permiso dedicado, igual que el libro de movimientos y las asignaciones. |
+| Alcance por Unidad Operativa | `OperatingUnitScope::constrainStockTransfers()` limita la lista a Transferencias que tocan *cualquiera* de los extremos accesibles; `assertCanAccessStockTransfer()` protege `show`. Toda mutación (`update`/`delete`/`post`/`reverse`) exige acceso a **ambas** unidades de forma independiente — antes de la transacción sobre el modelo de ruta, y de nuevo bajo el lock de la fila del encabezado. `super-admin`/`admin` pasan. |
+| Ciclo de vida | `DRAFT → POSTED → REVERSED`. Guardar/editar un `DRAFT` no cambia Stock. |
+| Instantánea de línea | Cada línea guarda la UOM de entrada, la cantidad de entrada, el `conversion_factor` entrada→base (resuelto desde un `UomConversion` activo en cualquier dirección, o 1 si la UOM de entrada es la base) y la `base_quantity` resultante. `source_unit_cost` es null en borrador y se rellena con el `Stock.weighted_avg_cost` origen al postear. `UNIQUE(stock_transfer_id, item_variant_id)` — una Variante aparece a lo sumo una vez por Transferencia. |
+| Posteo | Una transacción: lock del encabezado `FOR UPDATE`, luego ambas Ubicaciones extremo (orden por PK), luego cada fila `Stock` afectada en orden determinista `(inventory_location_id, item_variant_id)`. Por línea: verificar que la Variante esté asignada al destino (si no, `409` con mensaje de remediación — un movimiento interno nunca expande el surtido, #569); disminuir `on_hand` origen vía el `StockMutationService` protegido (nunca por debajo de reserved/cero, si no `409`); crear/incrementar el destino; combinar el WAC destino con `source_unit_cost`; agregar un `TRANSFER` `StockMovement` + `StockMovementLine` inmutables con `related_type`/`related_id`/`related_line_id`. |
+| Idempotencia | Una línea cuyo movimiento `TRANSFER` ya existe (mismos `related_*`, `POSTED`) se omite, así un posteo reintentado no la mueve dos veces; el lock del encabezado serializa posteos concurrentes y el segundo recibe `409` ya-posteado. |
+| Política de costo | El WAC origen nunca cambia al postear ni al revertir (ver §3.9). |
+| Reverso | El movimiento `TRANSFER` posteado de cada línea se compensa vía el `StockMovementReverser` compartido (§4.3) — destino deshecho, origen restaurado, original a `REVERSED`, movimiento compensatorio enlazado causalmente. Se rechaza con `409` cuando el Stock destino cayó por debajo de la cantidad trasladada (límite de reverso documentado), o si ya fue revertido / nunca se posteó. |
+| Navegación | `Inventario > Transferencias` → `/inventario/transferencias`, protegido por `stock.view`; crear/editar/postear/revertir por `stock.manage`. |
 
 ---
 
@@ -1282,13 +1300,13 @@ Servicios principales as-built:
 -   `StockMovementReverser` — movimientos compensatorios inmutables.
 -   `OpeningBalanceService` y `StockOutService` — entradas iniciales y salidas actuales.
 -   `ReceiptService` — ciclo de vida y posting/reverso de Recepciones.
+-   `StockTransferService` (#573) — documento de Transferencia interna multi-línea: CRUD de borrador,
+    posteo con locks deterministas entre Ubicaciones y reverso vía `StockMovementReverser`.
+-   `InventoryEntryPostingService` (#567) — entrada idempotente de saldo + costo + evidencia.
 -   `ReplenishmentPolicyResolver` — min/max efectivos por Ubicación + Variante.
 
 Servicios objetivo Sprint 7:
 
--   `InventoryEntryPostingService` (#567) — entrada idempotente de saldo + costo + evidencia.
--   Servicio de Transferencias (#573; nombre final durante implementación) — documento
-    multi-línea, posting y reverso entre ubicaciones.
 -   Límite de consulta del libro de movimientos (#574; nombres finales durante implementación) —
     lista/detalle paginados, filtrables, acotados por Unidad Operativa y sin efectos de escritura.
 

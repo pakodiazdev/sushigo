@@ -5,6 +5,7 @@ namespace App\Support\Access;
 use App\Models\InventoryLocation;
 use App\Models\OperatingUnit;
 use App\Models\StockMovement;
+use App\Models\StockTransfer;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
@@ -193,6 +194,90 @@ class OperatingUnitScope
             'destinationLocation',
             fn (Builder $locationQuery) => $locationQuery->whereIn('operating_unit_id', $unitIds)
         );
+    }
+
+    /**
+     * Constrain a Stock Transfer query to the user's accessible units (#573).
+     * A Transfer is visible when *either* its source or destination Location
+     * belongs to an accessible unit, mirroring the movement ledger — a
+     * cross-unit transfer a caller partly participates in is not hidden.
+     * Applied before filters/count/pagination. A no-op for bypass-role users.
+     * Soft-deleted Locations still resolve to their owning unit.
+     *
+     * @param  Builder<StockTransfer>  $query
+     * @return Builder<StockTransfer>
+     */
+    public function constrainStockTransfers(Builder $query, User $user): Builder
+    {
+        if ($this->hasUnrestrictedAccess($user)) {
+            return $query;
+        }
+
+        $unitIds = $this->accessibleOperatingUnitIds($user);
+
+        $inUnit = fn (Builder $locationQuery) => $locationQuery
+            ->withTrashed()
+            ->whereIn('operating_unit_id', $unitIds);
+
+        return $query->where(fn (Builder $scoped) => $scoped
+            ->whereHas('sourceLocation', $inUnit)
+            ->orWhereHas('destinationLocation', $inUnit));
+    }
+
+    /**
+     * Whether the user may act on both ends of the given Stock Transfer. Unlike
+     * the read scope above, a mutation (edit/delete/post/reverse) requires
+     * access to the source *and* the destination unit independently (#573) —
+     * a partial-access caller cannot move stock they only half-control.
+     */
+    public function canMutateStockTransfer(User $user, StockTransfer $transfer): bool
+    {
+        return $this->canAccessLocation($user, $transfer->sourceLocation)
+            && $this->canAccessLocation($user, $transfer->destinationLocation);
+    }
+
+    /**
+     * Assert the user may act on both ends of the given Stock Transfer,
+     * throwing a 403 otherwise.
+     *
+     * @throws AuthorizationException
+     */
+    public function assertCanMutateStockTransfer(User $user, StockTransfer $transfer): void
+    {
+        if (! $this->canMutateStockTransfer($user, $transfer)) {
+            throw new AuthorizationException(
+                'You do not have access to both operating units this stock transfer moves stock between.'
+            );
+        }
+    }
+
+    /**
+     * Whether the user may read the given Stock Transfer, resolved through
+     * either of its endpoint Locations.
+     */
+    public function canAccessStockTransfer(User $user, StockTransfer $transfer): bool
+    {
+        if ($this->hasUnrestrictedAccess($user)) {
+            return true;
+        }
+
+        return $this->canAccessLocation($user, $transfer->sourceLocation)
+            || $this->canAccessLocation($user, $transfer->destinationLocation);
+    }
+
+    /**
+     * Assert the user may read the given Stock Transfer, throwing a 403
+     * otherwise.
+     *
+     * @throws AuthorizationException
+     */
+    public function assertCanAccessStockTransfer(User $user, StockTransfer $transfer): void
+    {
+        if (! $this->canAccessStockTransfer($user, $transfer)) {
+            throw new AuthorizationException(
+                'You do not have access to the operating unit that owns this stock transfer.'
+            );
+        }
     }
 
     /**
