@@ -150,6 +150,55 @@ class OpeningBalancePreviewTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_an_entry_quantity_that_rounds_to_zero_even_when_conversion_would_make_the_base_quantity_positive()
+    {
+        // 0.00001 KG converts to 0.01 GR, but stock_movement_lines.qty is
+        // decimal(15,4) and would persist the original quantity as zero.
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomGr->id]);
+
+        $payload = [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 0.00001,
+            'uom_id' => $this->uomKg->public_id,
+        ];
+
+        $this->postJson('/api/v1/inventory/opening-balance/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+        $this->postJson('/api/v1/inventory/opening-balance', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    #[Test]
+    public function it_rejects_a_quantity_that_exceeds_the_ledger_decimal_range_on_both_paths()
+    {
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $payload = [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            // decimal(15,4) has eleven integer digits.
+            'quantity' => 100_000_000_000,
+            'uom_id' => $this->uomKg->public_id,
+        ];
+
+        $this->postJson('/api/v1/inventory/opening-balance/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+        $this->postJson('/api/v1/inventory/opening-balance', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    #[Test]
     public function it_rejects_a_preview_for_an_inactive_destination_matching_the_posting_path()
     {
         $inactiveLocation = InventoryLocation::create([

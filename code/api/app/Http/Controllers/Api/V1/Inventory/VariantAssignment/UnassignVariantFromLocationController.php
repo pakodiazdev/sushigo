@@ -47,23 +47,19 @@ class UnassignVariantFromLocationController extends Controller
 
         $variant = ItemVariant::findByPublicIdOrFail($variantId);
 
-        $assignment = VariantLocationAssignment::query()
-            ->where('inventory_location_id', $location->id)
-            ->where('item_variant_id', $variant->id)
-            ->firstOrFail();
-
         // The balance check and the soft-delete run in one transaction, and the
-        // check locks the pair's Stock row itself — by (location, variant) only,
-        // never filtered by quantity — so a *zeroed* row is locked too. That is
-        // the same row the inbound posting path locks
-        // (StockMutationService::lockAndGet), so a concurrent receipt into an
-        // existing row for the pair (zero balance included) is serialized
-        // against this guard and the documented 409 invariant holds. A genuine
-        // first receipt that creates the Stock row from scratch in the same
-        // instant still has no row to lock — enforcing assortment against
-        // inbound entries is explicitly a consuming-workflow concern
-        // (#570–#574), out of scope here.
-        $blocked = DB::transaction(function () use ($location, $variant, $assignment): bool {
+        // assignment row is locked before Stock, matching StockMutationService.
+        // The assignment therefore serializes the pair even when no Stock row
+        // exists yet: after waiting for an overlapping first inbound entry, this
+        // transaction re-reads its newly committed positive balance and returns
+        // 409 instead of hiding it from the managed-assortment list.
+        $blocked = DB::transaction(function () use ($location, $variant): bool {
+            $assignment = VariantLocationAssignment::query()
+                ->where('inventory_location_id', $location->id)
+                ->where('item_variant_id', $variant->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             $stock = Stock::query()
                 ->where('inventory_location_id', $location->id)
                 ->where('item_variant_id', $variant->id)

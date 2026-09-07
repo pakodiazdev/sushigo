@@ -67,7 +67,7 @@ export function useOpeningBalanceForm({
       item_variant_id: preselectedVariantId || '',
       quantity: 0,
       uom_id: '',
-      unit_cost: 0,
+      unit_cost: undefined,
       notes: '',
     },
   })
@@ -163,8 +163,7 @@ export function useOpeningBalanceForm({
         quantity: data.quantity,
         uom_id: data.uom_id,
         // An explicit 0 is a real cost that blends 0 into the weighted average;
-        // only a genuinely omitted cost skips the blend, and this form's numeric
-        // field always denotes an explicit value (#570).
+        // the untouched optional field remains undefined and skips the blend.
         unit_cost: data.unit_cost,
         notes: data.notes || undefined,
       }),

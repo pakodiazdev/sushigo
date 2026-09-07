@@ -258,6 +258,30 @@ class VariantLocationAssignmentCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_locks_the_assignment_before_checking_stock_during_unassignment(): void
+    {
+        $variant = $this->createItemVariant($this->createItem());
+        VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
+
+        $this->deleteJson($this->url($this->location->public_id, $variant->public_id))->assertNoContent();
+
+        $assignmentLock = array_find_key($queries, fn ($sql) => str_contains($sql, 'variant_location_assignments') && str_contains($sql, 'for update'));
+        $stockLock = array_find_key($queries, fn ($sql) => str_contains($sql, 'from "stock"') && str_contains($sql, 'for update'));
+
+        $this->assertNotNull($assignmentLock, 'Expected unassignment to lock the managed pair.');
+        $this->assertNotNull($stockLock, 'Expected unassignment to lock/check Stock.');
+        $this->assertLessThan($stockLock, $assignmentLock, 'Both inbound posting and unassignment must use assignment-then-Stock lock order.');
+    }
+
+    #[Test]
     public function it_blocks_unassignment_while_on_hand_stock_remains_with_409(): void
     {
         $variant = $this->createItemVariant($this->createItem());

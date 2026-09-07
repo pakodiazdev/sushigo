@@ -1106,10 +1106,15 @@ registro es inmediato.
   —creándola o reactivando una con borrado suave— mediante la acción compartida
   `EnsureVariantLocationAssignment`. A diferencia del endpoint `PUT …/variant-assignments/{variantId}`,
   la inicialización **no** rechaza una Variante inactiva: registrar existencias que existen
-  físicamente es válido incluso para una Variante desactivada después.
+  físicamente es válido incluso para una Variante desactivada después. Tanto la entrada como la
+  desasignación bloquean primero esa fila de asignación antes de revisar `Stock`; funciona como el
+  punto de serialización del par aun cuando todavía no existe la primera fila de `Stock`, por lo que
+  una desasignación concurrente no puede ocultar un saldo recién vuelto positivo.
 - La cantidad se convierte a la UOM base de la Variante con el contrato de conversión existente
-  (`ConvertsUomQuantities`). El costo aterriza solo en `Stock.weighted_avg_cost` del destino, nunca
-  en la Variante de catálogo (de solo lectura).
+  (`ConvertsUomQuantities`). Tanto la cantidad original como la convertida deben seguir siendo
+  positivas y caber en el rango `decimal(15,4)` del ledger después de normalizar la escala. El costo
+  aterriza solo en `Stock.weighted_avg_cost` del destino, nunca en la Variante de catálogo (de solo
+  lectura).
 - **Regla de corrección:** el historial registrado nunca se edita en su lugar. Un registro erróneo
   se corrige con un movimiento inmutable de reversión / ajuste, la misma regla del contrato de
   reversión de Recepciones (#438).
@@ -1124,7 +1129,7 @@ proveedor.
 
 | Ruta | Propósito |
 | --- | --- |
-| `POST /inventory/opening-balance` | Registra el saldo. `201` con el movimiento normalizado (cantidad base, costo base, `Stock.weighted_avg_cost` resuelto). Códigos de estado diferenciados en lugar de un `400` genérico: `403` por permiso o acceso a la Unidad Operativa faltante, `422` por un ID público inexistente, una cantidad no positiva, una cantidad que **se convierte a cero** en la unidad base de la Variante (`decimal(15,4)`), un destino **inactivo** o **sin ruta de conversión de UOM** a la unidad base de la Variante. `unit_cost` es opcional: omitido omite la mezcla del promedio ponderado, un `0` explícito mezcla `0`. |
+| `POST /inventory/opening-balance` | Registra el saldo. `201` con el movimiento normalizado (cantidad base, costo base, `Stock.weighted_avg_cost` resuelto). Códigos de estado diferenciados en lugar de un `400` genérico: `403` por permiso o acceso a la Unidad Operativa faltante, `422` por un ID público inexistente, una cantidad original o convertida que redondea a cero o excede `decimal(15,4)`, un destino **inactivo** o **sin ruta de conversión de UOM** a la unidad base de la Variante. `unit_cost` es opcional: omitido omite la mezcla del promedio ponderado, un `0` explícito mezcla `0`. |
 | `POST /inventory/opening-balance/preview` | Sin efectos. Mismo payload; devuelve la cantidad base, el costo unitario base, `conversion_applies`/`conversion_factor` y `total_value` (null cuando no se dio costo) — los mismos números que registraría el POST, para que la vista previa del formulario coincida con el ledger. |
 
 **UI.** El `OpeningBalanceForm` (un `SlidePanel`) se monta en `/inventario/existencias` detrás de

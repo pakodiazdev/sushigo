@@ -2,7 +2,6 @@
 
 namespace App\Services\Inventory;
 
-use App\Actions\Inventory\EnsureVariantLocationAssignment;
 use App\DataTransferObjects\Inventory\InventoryEntryLineData;
 use App\DataTransferObjects\Inventory\InventoryEntryPostingData;
 use App\DataTransferObjects\Inventory\RegisterOpeningBalanceData;
@@ -27,10 +26,12 @@ class OpeningBalanceService
     /** Decimal places of `stock_movements.qty` / `stock_movement_lines.base_qty` (decimal(15,4)). */
     private const BASE_QUANTITY_SCALE = 4;
 
+    /** Largest absolute value representable by a positive `decimal(15,4)`. */
+    private const MAX_LEDGER_QUANTITY = 99_999_999_999.9999;
+
     public function __construct(
         private readonly ApplicationClock $clock,
         private readonly InventoryEntryPostingService $entryPosting,
-        private readonly EnsureVariantLocationAssignment $assignmentEnsurer,
         private readonly OperatingUnitScope $scope,
     ) {}
 
@@ -70,7 +71,7 @@ class OpeningBalanceService
             $variant = ItemVariant::with(['item', 'unitOfMeasure'])->findOrFail($data->itemVariantId);
             $entryUom = UnitOfMeasure::findOrFail($data->entryUomId);
 
-            [$baseQuantity, $conversionFactor] = $this->convertOrFailValidation($data, $variant, $entryUom);
+            [$entryQuantity, $baseQuantity, $conversionFactor] = $this->convertOrFailValidation($data, $variant, $entryUom);
             $baseCost = $this->calculateBaseCost($data->unitCost, $conversionFactor);
 
             // One posting primitive writes the immutable movement + line,
@@ -89,7 +90,7 @@ class OpeningBalanceService
                 reference: $data->reference,
                 notes: $data->notes,
                 movementMeta: [
-                    'original_qty' => $data->quantity,
+                    'original_qty' => $entryQuantity,
                     'original_uom' => $entryUom->code,
                     'original_uom_id' => $data->entryUomId,
                     'conversion_factor' => $conversionFactor,
@@ -99,7 +100,7 @@ class OpeningBalanceService
                 postedAt: $this->clock->nowUtc(),
                 line: new InventoryEntryLineData(
                     uomId: $data->entryUomId,
-                    qty: $data->quantity,
+                    qty: $entryQuantity,
                     baseQty: $baseQuantity,
                     conversionFactor: $conversionFactor,
                     unitCost: $baseCost,
@@ -112,30 +113,10 @@ class OpeningBalanceService
                 ),
             ));
 
-            // Ensure the managed-assortment assignment for the pair (#569) *after*
-            // the posting primitive, so it runs while this transaction holds the
-            // lock `InventoryEntryPostingService` took on the pair's Stock row
-            // (StockMutationService::lockAndGet). That is the exact pair-level
-            // serialization point UnassignVariantFromLocationController uses, so a
-            // concurrent unassignment of a pair that *has* a Stock row (a zeroed
-            // one included) cannot slip its zero-balance check and soft-delete
-            // between the assignment decision and the Stock increment — the
-            // opened balance is always left discoverable in the Location's
-            // assignment list, and a soft-deleted row from an unassignment that
-            // did win the race is reactivated here.
-            //
-            // The residual window is a *first-ever* opening balance for a pair
-            // that has a live assignment but no Stock row yet: there is nothing
-            // for either side to lock before the row exists, so a concurrent
-            // unassignment can still soft-delete the assignment as this call
-            // creates the first row. #569 explicitly scoped that out
-            // ("enforcing assortment against inbound entries is ... a
-            // consuming-workflow concern (#570–#574)"), and closing sub-
-            // transaction races across the Inventory domain is #572's contract
-            // (see ReceiptService::assertActorMayUseDestination) — a shared
-            // pre-Stock advisory lock spanning this path and the unassign
-            // controller is that issue's call, not a change to slip in here.
-            $this->assignmentEnsurer->ensure($location->id, $variant->id);
+            // StockMutationService locks the pair's assignment before touching
+            // Stock and ensures it inside this same transaction. Unassignment
+            // takes those locks in the same order, including for a first-ever
+            // balance where no Stock row existed at transaction start.
 
             return $movement->fresh(['lines', 'toLocation', 'itemVariant.item']);
         });
@@ -174,11 +155,11 @@ class OpeningBalanceService
         $variant = ItemVariant::with(['item', 'unitOfMeasure'])->findOrFail($data->itemVariantId);
         $entryUom = UnitOfMeasure::findOrFail($data->entryUomId);
 
-        [$baseQuantity, $conversionFactor] = $this->convertOrFailValidation($data, $variant, $entryUom);
+        [$entryQuantity, $baseQuantity, $conversionFactor] = $this->convertOrFailValidation($data, $variant, $entryUom);
         $baseCost = $this->calculateBaseCost($data->unitCost, $conversionFactor);
 
         return [
-            'entry_quantity' => $data->quantity,
+            'entry_quantity' => $entryQuantity,
             'entry_uom' => $entryUom->code,
             'base_quantity' => $baseQuantity,
             'base_uom' => $variant->unitOfMeasure->code,
@@ -212,37 +193,55 @@ class OpeningBalanceService
      * `uom_id` instead of an unmapped 500-class exception (#570) — an operator
      * picked an entry UOM the catalog has no route from, which is bad input.
      *
-     * The base quantity is snapped to the ledger's storage precision
-     * (`stock_movements.qty` / `stock_movement_lines.base_qty` are
-     * `decimal(15,4)`) and rejected with a 422 on `quantity` when it rounds to
-     * zero — e.g. `0.01 GR` at a `0.001` GR→KG factor is `0.00001 KG`, which the
-     * FormRequest's entry-unit `gt:0` lets through but the DB's `qty > 0` CHECK
-     * would reject as an uncaught 500. Preview and posting share this, so the
-     * previewed base quantity is exactly what the ledger records.
+     * Both the entry and base quantities are snapped to the ledger's
+     * `decimal(15,4)` storage precision and rejected with a 422 when either
+     * rounds to zero or exceeds eleven integer digits. Preview and posting share
+     * this boundary, so every accepted preview is representable by both the
+     * movement header and line.
      *
-     * @return array{0: float, 1: float}
+     * @return array{0: float, 1: float, 2: float}
      *
      * @throws ValidationException
      */
     private function convertOrFailValidation(RegisterOpeningBalanceData $data, ItemVariant $variant, UnitOfMeasure $entryUom): array
     {
+        $entryQuantity = $this->normalizeLedgerQuantity(
+            $data->quantity,
+            "The quantity cannot be recorded in {$entryUom->code} at the ledger's decimal(15,4) precision."
+        );
+
         try {
             [$baseQuantity, $conversionFactor] = $this->convertToBaseQuantity(
-                $data->quantity, $data->entryUomId, $variant, $entryUom
+                $entryQuantity, $data->entryUomId, $variant, $entryUom
             );
         } catch (UomConversionNotFoundException $e) {
             throw ValidationException::withMessages(['uom_id' => $e->getMessage()]);
         }
 
-        $baseQuantity = round($baseQuantity, self::BASE_QUANTITY_SCALE);
+        $baseQuantity = $this->normalizeLedgerQuantity(
+            $baseQuantity,
+            "The converted quantity cannot be recorded in {$variant->unitOfMeasure->code}, the item's base unit, at the ledger's decimal(15,4) precision."
+        );
 
-        if ($baseQuantity <= 0) {
-            throw ValidationException::withMessages([
-                'quantity' => "The quantity converts to zero in {$variant->unitOfMeasure->code}, the item's base unit, and cannot be recorded.",
-            ]);
+        return [$entryQuantity, $baseQuantity, $conversionFactor];
+    }
+
+    /**
+     * Snap a quantity to the exact scale persisted by every ledger quantity
+     * column, rejecting values that would round to zero or overflow its eleven
+     * integer digits. Preview and posting share this boundary.
+     *
+     * @throws ValidationException
+     */
+    private function normalizeLedgerQuantity(float $quantity, string $message): float
+    {
+        $normalized = round($quantity, self::BASE_QUANTITY_SCALE);
+
+        if (! is_finite($normalized) || $normalized <= 0 || $normalized > self::MAX_LEDGER_QUANTITY) {
+            throw ValidationException::withMessages(['quantity' => $message]);
         }
 
-        return [$baseQuantity, $conversionFactor];
+        return $normalized;
     }
 
     /**

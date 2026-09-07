@@ -191,6 +191,30 @@ describe('useOpeningBalanceForm', () => {
     )
   })
 
+  it('omits an untouched optional unit cost so existing inventory is not devalued', async () => {
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useOpeningBalanceForm({ onSuccess: vi.fn() }),
+      { wrapper: Wrapper }
+    )
+
+    expect(result.current.values.unitCost).toBeUndefined()
+
+    await act(async () => {
+      await result.current.onSubmit({
+        inventory_location_id: 'loc-1',
+        item_variant_id: 'var-1',
+        quantity: 10,
+        uom_id: 'uom-kg',
+        notes: '',
+      })
+    })
+
+    expect(stockMovementApi.openingBalance).toHaveBeenCalledWith(
+      expect.objectContaining({ unit_cost: undefined })
+    )
+  })
+
   it('normalizes a cleared (NaN) unit cost to omitted, keeping the preview live and unblocked', async () => {
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(
@@ -215,7 +239,7 @@ describe('useOpeningBalanceForm', () => {
     expect(lastCall?.unit_cost).toBeUndefined()
   })
 
-  it('sends the debounced unit cost to the preview endpoint verbatim (including 0)', async () => {
+  it('omits the untouched unit cost from the preview request', async () => {
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(
       () => useOpeningBalanceForm({ onSuccess: vi.fn() }),
@@ -232,7 +256,7 @@ describe('useOpeningBalanceForm', () => {
       timeout: 2000,
     })
     expect(stockMovementApi.openingBalancePreview).toHaveBeenLastCalledWith(
-      expect.objectContaining({ unit_cost: 0 })
+      expect.objectContaining({ unit_cost: undefined })
     )
   })
 
