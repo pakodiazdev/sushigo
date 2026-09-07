@@ -38,7 +38,6 @@ class ReceiptService
     public function __construct(
         private readonly InventoryEntryPostingService $entryPosting,
         private readonly OperatingUnitScope $scope,
-        private readonly VariantLocationAssignmentEnsurer $assignmentEnsurer,
     ) {}
 
     public function createDraft(SaveReceiptData $data): Receipt
@@ -210,22 +209,10 @@ class ReceiptService
 
                 $baseUnits = (float) $line->base_units_received;
 
-                // Ensure the assortment assignment (#569/#572) *before* the entry
-                // posting below locks/creates the Stock row, so this transaction's
-                // lock order is **assignment row → Stock row** — the exact order
-                // `UnassignVariantFromLocationController` now takes too. Sharing
-                // the order (a) keeps the two paths deadlock-free and (b) closes
-                // the first-receipt race: a brand-new Stock row is invisible to a
-                // concurrent unassign's balance check, but the assignment-row lock
-                // is not, so whichever grabs it first finishes before the other —
-                // unassign then 409s on the committed positive balance, or the
-                // receipt re-reads no live row here and reactivates the archived
-                // one. Idempotent; writes no Stock row or movement of its own.
-                $this->assignmentEnsurer->ensure($receipt->destination_location_id, $itemVariant->id);
-
                 // One posting primitive per line (#567): locks/creates Stock,
-                // blends the effective unit cost, and appends immutable
-                // evidence. Source identity is explicit via
+                // first establishes the managed assignment using the shared
+                // assignment→Stock lock order, blends the effective unit cost,
+                // and appends immutable evidence. Source identity is explicit via
                 // related_type/related_id/related_line_id — replaying the same
                 // receipt line (queue retry, import) returns the existing
                 // movement instead of incrementing Stock twice.
