@@ -1,0 +1,234 @@
+import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Button } from '@/components/ui/button'
+import { FormField, Select, Textarea } from '@/components/ui/form-fields'
+import { Input } from '@/components/ui/input'
+import { SlidePanel } from '@/components/ui/slide-panel'
+import { apiClient } from '@/lib/api-client'
+import { useInventoryLocationsSelect } from '@/hooks/use-inventory-queries'
+import { fetchAllPages } from '@/lib/fetch-all-pages'
+import { variantAssignmentApi } from '@/features/inventory/assignments'
+import type { PaginatedResponse, UnitOfMeasure } from '@/types/inventory'
+import { useStockTransferForm } from '../hooks/use-stock-transfer-form'
+import type { StockTransfer } from '../types'
+
+interface StockTransferFormProps {
+  transfer?: StockTransfer | null
+  onSuccess: (transfer: StockTransfer) => void
+  onCancel: () => void
+}
+
+export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<StockTransferFormProps>) {
+  const {
+    isEditing,
+    register,
+    handleSubmit,
+    watch,
+    errors,
+    fields,
+    addLine,
+    removeLine,
+    onSubmit,
+    onDestinationChange,
+    validationErrors,
+    isSubmitting,
+    sourceLocationId,
+    destinationLocationId,
+  } = useStockTransferForm({ transfer, onSuccess })
+
+  const locationsQuery = useInventoryLocationsSelect()
+
+  // `/units-of-measure` is paginated; page through it in full (like the location
+  // and assigned-variant selectors) so a UOM ordered past the first 100 is still
+  // selectable and an existing draft using one can render its selection.
+  const uomsQuery = useQuery({
+    queryKey: ['stock-transfer-form', 'uoms'],
+    queryFn: () =>
+      fetchAllPages((page) =>
+        apiClient.get<PaginatedResponse<UnitOfMeasure>>('/units-of-measure', {
+          params: { is_active: true, page, per_page: 100 },
+        })
+      ),
+  })
+
+  // The destination scopes which Variants can be moved — an internal move never
+  // expands the assortment (#569), so only offer Variants already assigned there.
+  // The assignment list is paginated (ordered by variant code); page through it in
+  // full so a Variant past the first 100 is still selectable, matching the other
+  // catalog selectors.
+  const assignedVariantsQuery = useQuery({
+    queryKey: ['stock-transfer-form', 'assigned-variants', destinationLocationId],
+    queryFn: () =>
+      fetchAllPages((page) =>
+        variantAssignmentApi.list(destinationLocationId, { state: 'assigned', page, per_page: 100 })
+      ),
+    enabled: Boolean(destinationLocationId),
+  })
+
+  const locations = locationsQuery.data ?? []
+  const uoms = uomsQuery.data?.data.data ?? []
+  const assignedVariants = assignedVariantsQuery.data?.data.data ?? []
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
+      <SlidePanel.Body className="flex-1 space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="Origen" required error={errors.source_location_id?.message}>
+            <Select
+              aria-label="Origen"
+              error={Boolean(errors.source_location_id)}
+              {...register('source_location_id')}
+            >
+              <option value="">Selecciona una ubicación</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>{location.name}</option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField label="Destino" required error={errors.destination_location_id?.message}>
+            <Select
+              aria-label="Destino"
+              error={Boolean(errors.destination_location_id)}
+              value={destinationLocationId}
+              onChange={(event) => onDestinationChange(event.target.value)}
+            >
+              <option value="">Selecciona una ubicación</option>
+              {locations
+                .filter((location) => location.id !== sourceLocationId)
+                .map((location) => (
+                  <option key={location.id} value={location.id}>{location.name}</option>
+                ))}
+            </Select>
+          </FormField>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="Referencia" error={errors.reference?.message}>
+            <Input aria-label="Referencia" {...register('reference')} error={Boolean(errors.reference)} />
+          </FormField>
+          <FormField label="Fecha del traslado" required error={errors.transfer_date?.message}>
+            <Input
+              aria-label="Fecha del traslado"
+              type="date"
+              error={Boolean(errors.transfer_date)}
+              {...register('transfer_date')}
+            />
+          </FormField>
+        </div>
+
+        <FormField label="Notas" error={errors.notes?.message}>
+          <Textarea aria-label="Notas" rows={2} {...register('notes')} />
+        </FormField>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-foreground">Líneas del traslado</p>
+            <Button type="button" variant="outline" size="sm" onClick={addLine} className="gap-1">
+              <Plus className="h-4 w-4" />
+              Agregar línea
+            </Button>
+          </div>
+
+          {errors.lines?.message && <p className="text-sm text-destructive">{errors.lines.message}</p>}
+          {!destinationLocationId && (
+            <p className="text-sm text-muted-foreground">
+              Selecciona un destino para elegir las variantes que se pueden trasladar.
+            </p>
+          )}
+
+          {fields.map((field, index) => {
+            const lineErrors = errors.lines?.[index]
+            // Live registered value — not `field.*` from useFieldArray, which is a
+            // stale snapshot that still holds the previous variant/label after
+            // onDestinationChange clears the value.
+            const currentVariantId = watch(`lines.${index}.item_variant_id`)
+            // Prefer the client (zod) error, fall back to the server's specific
+            // 422 field message so an out-of-range quantity or a UOM with no
+            // conversion isn't reduced to just the generic toast.
+            const variantError = lineErrors?.item_variant_id?.message ?? validationErrors?.[`lines.${index}.item_variant_id`]
+            const uomError = lineErrors?.entry_uom_id?.message ?? validationErrors?.[`lines.${index}.entry_uom_id`]
+            const quantityError = lineErrors?.entry_quantity?.message ?? validationErrors?.[`lines.${index}.entry_quantity`]
+            return (
+              <div key={field.id} className="space-y-3 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground">Línea {index + 1}</p>
+                  {fields.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Quitar línea ${index + 1}`}
+                      onClick={() => removeLine(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+
+                <FormField label="Variante" required error={variantError}>
+                  <Select
+                    aria-label={`Variante línea ${index + 1}`}
+                    error={Boolean(variantError)}
+                    disabled={!destinationLocationId}
+                    {...register(`lines.${index}.item_variant_id`)}
+                  >
+                    <option value="">Selecciona una variante</option>
+                    {field._label &&
+                      currentVariantId === field.item_variant_id &&
+                      !assignedVariants.some((row) => row.item_variant_id === currentVariantId) && (
+                        <option value={field.item_variant_id}>{field._label}</option>
+                      )}
+                    {assignedVariants.map((row) => (
+                      <option key={row.item_variant_id} value={row.item_variant_id}>
+                        {row.item_variant_name} ({row.item_variant_code})
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField label="Unidad" required error={uomError}>
+                    <Select
+                      aria-label={`Unidad línea ${index + 1}`}
+                      error={Boolean(uomError)}
+                      {...register(`lines.${index}.entry_uom_id`)}
+                    >
+                      <option value="">Selecciona una unidad</option>
+                      {uoms.map((uom) => (
+                        <option key={uom.id} value={uom.id}>{uom.code} — {uom.name}</option>
+                      ))}
+                    </Select>
+                  </FormField>
+
+                  <FormField label="Cantidad" required error={quantityError}>
+                    <Input
+                      aria-label={`Cantidad línea ${index + 1}`}
+                      type="number"
+                      step="any"
+                      min="0"
+                      error={Boolean(quantityError)}
+                      {...register(`lines.${index}.entry_quantity`, { valueAsNumber: true })}
+                    />
+                  </FormField>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </SlidePanel.Body>
+
+      <SlidePanel.Footer>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditing ? 'Actualizar' : 'Crear'} traslado
+          </Button>
+        </div>
+      </SlidePanel.Footer>
+    </form>
+  )
+}

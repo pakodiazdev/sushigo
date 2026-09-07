@@ -288,9 +288,10 @@ It describes the assignment flow, base roles (`super-admin`, `admin`, `user`), a
 -   **Events** are represented as temporary `OperatingUnit` (`EVENT_TEMP`) associated with a source branch; they have `start_date` and `end_date` to delimit cutoff and stock return.
 -   **Transfers** are expressed between `InventoryLocation` records; each endpoint's
     `OperatingUnit` determines whether the move is internal, between a branch's units, or between
-    branches. The `StockMovement` contract already accepts `TRANSFER`, but as of 2026-08-30 the
-    Transfer document/API/UI remains planned in [#573](https://github.com/pakodiazdev/sushigo/issues/573)
-    and must not be read as an already-built workflow.
+    branches. The `StockTransfer` document, its API, and the Spanish
+    `/inventario/transferencias` UI are delivered by
+    [#573](https://github.com/pakodiazdev/sushigo/issues/573) — see §4.5 for the delivered
+    contract; each posted line appends one immutable `TRANSFER` `StockMovement`.
 -   When the system does not yet expose branch management, a default branch can be initialized and work with its main inventory. The design supports activating additional branches without refactoring domains.
 -   Stock and profitability reports are calculated per `OperatingUnit` and aggregate metrics per branch for financial and operational analysis.
 
@@ -707,10 +708,12 @@ where it rounds to scale 2 with `ROUND_HALF_UP`. The original two-decimal transa
 authoritative; a rounded unit rate must never be multiplied back to rewrite that evidence. The
 current float method signature above is as-built and must be removed by Sprint 8 issue #415.
 
-**Transfers (target #573).** Posting a Transfer does not change the source Location's weighted
-average: removing homogeneous units does not change the cost of those that remain. The line
-snapshots that source cost and the destination blends it as an inbound cost through the same
-calculator. A reversal does not attempt to reconstruct historical averages after later movements;
+**Transfers (#573 — delivered).** Posting a Transfer does not change the source Location's weighted
+average: removing homogeneous units does not change the cost of those that remain.
+`StockTransferService` snapshots the source `Stock.weighted_avg_cost` onto the line
+(`source_unit_cost`) and blends it into the destination as an inbound cost through the same
+`Stock::applyWeightedAverageCost()` every other cost-bearing entry uses. A reversal (via the shared
+`StockMovementReverser`) does not attempt to reconstruct historical averages after later movements;
 without lots/cost layers that reconstruction would not be exact. Compensating movements restore
 quantity and retain the cost evidence used at posting.
 
@@ -913,7 +916,7 @@ erDiagram
 - Posting an Opening Balance creates/increments Stock with `OPENING_BALANCE` evidence; it is not a
   purchase and does not require `can_receive_purchases` (#570).
 - Posting a Transfer decrements source and increments destination in one transaction and appends
-  one `TRANSFER` row per line (#573).
+  one `TRANSFER` row per line (#573 — delivered; see §4.5).
 - Every inbound entry (Receipt line, Opening Balance) posts through the one
   `InventoryEntryPostingService` primitive (#567), which appends the immutable movement, locks or
   race-safely creates `Stock`, and blends weighted-average cost as one operation the owning document
@@ -1069,7 +1072,7 @@ exists.
 
 ### 4.1 Event Flow
 
-> **Target, not fully as-built:** #573 delivers the Transfer segment. The remainder keeps the
+> **Partly as-built:** #573 has delivered the Transfer segment (see §4.5). The remainder keeps the
 > long-term Event workflow visible.
 
 ```mermaid
@@ -1196,7 +1199,7 @@ sequenceDiagram
   API-->>UI: Updated balance and valuation
 ```
 
-### 4.5 Internal Transfer — Sprint 7 target
+### 4.5 Internal Transfer (#573 — delivered)
 
 ```mermaid
 sequenceDiagram
@@ -1222,6 +1225,22 @@ sequenceDiagram
   API->>DB: Transfer = POSTED
   DB-->>API: Atomic COMMIT
 ```
+
+**Delivered contract:**
+
+| Concern | Decision |
+|---|---|
+| Entities | `StockTransfer` (document header) + `StockTransferLine` (one moved Variant per line); both carry a public ULID. A `StockMovement` stays a single Variant/quantity ledger row — the Transfer is the multi-line header. |
+| Endpoints | `GET /api/v1/inventory/transfers` (paginated summary list) · `GET /inventory/transfers/{transfer}` · `POST /inventory/transfers` · `PUT /inventory/transfers/{transfer}` (draft only) · `DELETE /inventory/transfers/{transfer}` (draft only) · `POST /inventory/transfers/{transfer}/post` · `POST /inventory/transfers/{transfer}/reverse`. SAC controllers. |
+| Permission | `stock.view` for reads, `stock.manage` for writes — no dedicated permission, mirroring the movement ledger and assignment contracts. |
+| Operating Unit scope | `OperatingUnitScope::constrainStockTransfers()` scopes the list to Transfers touching *either* accessible endpoint; `assertCanAccessStockTransfer()` guards `show`. Every mutation (`update`/`delete`/`post`/`reverse`) asserts access to **both** endpoint units independently — before the transaction on the route-bound model, and again under the header row lock. `super-admin`/`admin` bypass. |
+| Lifecycle | `DRAFT → POSTED → REVERSED`. Saving/editing a `DRAFT` changes no Stock. |
+| Line snapshot | Each line stores the entry UOM, entry quantity, the entry→base `conversion_factor` (resolved from an active `UomConversion` in either direction, or 1 when the entry UOM is the base), and the resulting `base_quantity`. `source_unit_cost` is null on a draft and filled with the source `Stock.weighted_avg_cost` at posting. `UNIQUE(stock_transfer_id, item_variant_id)` — a Variant appears at most once per Transfer. |
+| Posting | One transaction: lock the header `FOR UPDATE`, then both endpoint Locations (PK order), then every affected `Stock` row in deterministic `(inventory_location_id, item_variant_id)` order. Per line: assert the Variant is assigned to the destination (else `409` with a remediation message — an internal move never expands assortment, #569); decrease source `on_hand` through the guarded `StockMutationService` (never below reserved/zero, else `409`); create/increment the destination; blend the destination WAC with `source_unit_cost`; append one immutable `TRANSFER` `StockMovement` + `StockMovementLine` carrying `related_type`/`related_id`/`related_line_id`. |
+| Idempotency | A line whose `TRANSFER` movement already exists (same `related_*`, `POSTED`) is skipped, so a retried/replayed post never moves it twice; the header lock serialises concurrent posts, and a second one gets `409` already-posted. |
+| Cost policy | Source WAC is never changed on post or reversal (see §3.9). |
+| Reversal | Each line's posted `TRANSFER` movement is compensated through the shared `StockMovementReverser` (§4.3) — destination unwound, source restored, original flipped to `REVERSED`, compensating movement causally linked. Rejected with `409` when the destination Stock has fallen below the transferred quantity (the documented reversal boundary), or when already reversed / never posted. |
+| Navigation | `Inventario > Transferencias` → `/inventario/transferencias`, gated by `stock.view`; create/edit/post/reverse gated by `stock.manage`. |
 
 ---
 
@@ -1258,13 +1277,13 @@ As-built main services:
 -   `StockMovementReverser` — immutable compensating movements.
 -   `OpeningBalanceService` and `StockOutService` — current initialization and exit flows.
 -   `ReceiptService` — Receipt lifecycle, posting, and reversal.
+-   `StockTransferService` (#573) — multi-line internal Transfer document: draft CRUD, deterministic
+    locked posting between Locations, and reversal via `StockMovementReverser`.
+-   `InventoryEntryPostingService` (#567) — idempotent balance + cost + evidence entry.
 -   `ReplenishmentPolicyResolver` — effective min/max per Location + Variant.
 
 Sprint 7 target services:
 
--   `InventoryEntryPostingService` (#567) — idempotent balance + cost + evidence entry.
--   Transfer service (#573; final name chosen during implementation) — multi-line document,
-    posting, and reversal between Locations.
 -   Movement ledger query boundary (#574; final class names chosen during implementation) —
     paginated, filterable, Operating-Unit-scoped list/detail reads with no mutation side effects.
 
