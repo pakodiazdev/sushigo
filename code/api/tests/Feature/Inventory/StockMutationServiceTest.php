@@ -6,6 +6,7 @@ use App\Exceptions\InvalidStockBalanceException;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockMovementLine;
+use App\Models\VariantLocationAssignment;
 use App\Services\Inventory\StockMutationService;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
@@ -77,6 +78,59 @@ class StockMutationServiceTest extends InventoryTestCase
             'reserved' => 0,
         ]);
         $this->assertEquals(25, (float) $stock->on_hand);
+    }
+
+    #[Test]
+    public function it_locks_the_assignment_before_stock_for_every_inbound_entry(): void
+    {
+        $variant = $this->createItemVariant($this->createItem());
+        $queries = [];
+
+        DB::listen(function ($query) use (&$queries) {
+            $queries[] = strtolower($query->sql);
+        });
+
+        DB::transaction(fn () => $this->service->receiveInto($this->location->id, $variant->id, 5));
+
+        $assignmentLock = collect($queries)->search(
+            fn (string $sql) => str_contains($sql, 'from "variant_location_assignments"')
+                && str_contains($sql, 'for update')
+        );
+        $stockLock = collect($queries)->search(
+            fn (string $sql) => str_contains($sql, 'from "stock"')
+                && str_contains($sql, 'for update')
+        );
+
+        $this->assertNotFalse($assignmentLock, 'receiveInto() must lock the managed assignment');
+        $this->assertNotFalse($stockLock, 'receiveInto() must lock Stock');
+        $this->assertLessThan($stockLock, $assignmentLock, 'the shared lock order must be assignment then Stock');
+    }
+
+    #[Test]
+    public function it_keeps_the_live_assignment_when_archived_history_exists_for_the_pair(): void
+    {
+        $variant = $this->createItemVariant($this->createItem());
+        $archived = VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+        $archived->delete();
+        $live = VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+
+        DB::transaction(fn () => $this->service->receiveInto($this->location->id, $variant->id, 5));
+
+        $this->assertSame($live->id, VariantLocationAssignment::query()
+            ->where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->value('id'));
+        $this->assertTrue(VariantLocationAssignment::onlyTrashed()->whereKey($archived->id)->exists());
+        $this->assertSame(1, VariantLocationAssignment::query()
+            ->where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->count());
     }
 
     #[Test]

@@ -23,9 +23,23 @@ class ReceiptResource extends BaseResource
                 'code' => $this->supplier->code,
                 'name' => $this->supplier->name,
             ]),
+            // Enough destination context for an unambiguous detail view (#572):
+            // its type, receiving capability, active flag, and owning Operating
+            // Unit — so the UI can show *where* the stock landed and why the
+            // Location was (or was not) eligible, without a second lookup.
             'destination_location' => $this->whenLoaded('destinationLocation', fn () => [
                 'id' => $this->destinationLocation->public_id,
                 'name' => $this->destinationLocation->name,
+                'type' => $this->destinationLocation->type,
+                'is_active' => $this->destinationLocation->is_active,
+                'can_receive_purchases' => $this->destinationLocation->can_receive_purchases,
+                'operating_unit' => $this->destinationLocation->relationLoaded('operatingUnit') && $this->destinationLocation->operatingUnit
+                    ? [
+                        'id' => $this->destinationLocation->operatingUnit->id,
+                        'name' => $this->destinationLocation->operatingUnit->name,
+                        'type' => $this->destinationLocation->operatingUnit->type,
+                    ]
+                    : null,
             ]),
             'lines' => ReceiptLineResource::collection($this->whenLoaded('lines')),
             'posted_at' => $this->posted_at?->toIso8601String(),

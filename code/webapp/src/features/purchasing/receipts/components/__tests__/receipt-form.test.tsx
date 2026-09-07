@@ -33,7 +33,12 @@ vi.mock('@tanstack/react-query', () => ({
     if (key[0] === 'receipt-form-suppliers') {
       data = { data: { data: [{ id: 's1', code: 'SUP', name: 'Proveedor Uno' }] } }
     } else if (key[0] === 'inventory' && key[1] === 'locations') {
-      data = { data: { data: [{ id: 'loc1', name: 'Bodega Central', priority: 1, is_active: true }] } }
+      data = { data: { data: [
+        { id: 'loc1', name: 'Bodega Central', priority: 3, is_active: true, can_receive_purchases: true, operating_unit: { id: 1, name: 'Unidad Norte', type: 'BRANCH_MAIN' } },
+        { id: 'loc2', name: 'Bodega Sur', priority: 2, is_active: true, can_receive_purchases: true, operating_unit: { id: 2, name: 'Unidad Sur', type: 'BRANCH_MAIN' } },
+        // Same display name as unit 1, different id — must NOT be merged into unit 1's group.
+        { id: 'loc3', name: 'Bodega Norte 2', priority: 1, is_active: true, can_receive_purchases: true, operating_unit: { id: 3, name: 'Unidad Norte', type: 'BRANCH_MAIN' } },
+      ] } }
     } else if (key[0] === 'receipt-form-products') {
       data = { data: { data: [{ id: 'p1', name: 'Arroz' }] } }
     } else if (key[0] === 'receipt-form-variants') {
@@ -58,7 +63,7 @@ describe('ReceiptForm', () => {
     const view = render(<ReceiptForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
 
     expect(view.getByLabelText(/^proveedor$/i)).toBeDefined()
-    expect(view.getByLabelText(/ubicación destino/i)).toBeDefined()
+    expect(view.getByLabelText(/almacén .* ubicación receptora/i)).toBeDefined()
     expect(view.getByLabelText(/fecha de recepción/i)).toBeDefined()
     expect(view.getByLabelText(/producto línea 1/i)).toBeDefined()
     expect(view.getByRole('button', { name: /crear recepción/i })).toBeDefined()
@@ -89,7 +94,7 @@ describe('ReceiptForm', () => {
     const view = render(<ReceiptForm onSuccess={onSuccess} onCancel={vi.fn()} />)
 
     fireEvent.change(view.getByLabelText(/^proveedor$/i), { target: { value: 's1' } })
-    fireEvent.change(view.getByLabelText(/ubicación destino/i), { target: { value: 'loc1' } })
+    fireEvent.change(view.getByLabelText(/almacén .* ubicación receptora/i), { target: { value: 'loc1' } })
     fireEvent.change(view.getByLabelText(/fecha de recepción/i), { target: { value: '2026-08-25' } })
 
     fireEvent.change(view.getByLabelText(/producto línea 1/i), { target: { value: 'p1' } })
@@ -118,7 +123,7 @@ describe('ReceiptForm', () => {
     const view = render(<ReceiptForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
 
     fireEvent.change(view.getByLabelText(/^proveedor$/i), { target: { value: 's1' } })
-    fireEvent.change(view.getByLabelText(/ubicación destino/i), { target: { value: 'loc1' } })
+    fireEvent.change(view.getByLabelText(/almacén .* ubicación receptora/i), { target: { value: 'loc1' } })
     fireEvent.change(view.getByLabelText(/fecha de recepción/i), { target: { value: '2026-08-25' } })
     fireEvent.change(view.getByLabelText(/producto línea 1/i), { target: { value: 'p1' } })
     fireEvent.change(view.getByLabelText(/variante línea 1/i), { target: { value: 'v1' } })
@@ -140,5 +145,26 @@ describe('ReceiptForm', () => {
       })],
     })))
     expect(view.queryByText(/monto válido/i)).toBeNull()
+  })
+
+  it('states that a draft does not alter inventory and confirmation applies cost', () => {
+    const view = render(<ReceiptForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
+
+    expect(view.getByText(/no modifica el inventario/i)).toBeDefined()
+  })
+
+  it('groups the receiving-location options by Operating Unit identity, not display name', () => {
+    const view = render(<ReceiptForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
+
+    const select = view.getByLabelText(/almacén .* ubicación receptora/i)
+    const groups = [...select.querySelectorAll('optgroup')]
+
+    // Two distinct units share the name "Unidad Norte" — they stay as two groups.
+    expect(groups.map((group) => group.label)).toEqual(['Unidad Norte', 'Unidad Norte', 'Unidad Sur'])
+
+    const groupOf = (optionText: string) =>
+      groups.find((group) => [...group.querySelectorAll('option')].some((o) => o.textContent === optionText))
+    expect(groupOf('Bodega Central')).not.toBe(groupOf('Bodega Norte 2'))
+    expect(view.getByRole('option', { name: 'Bodega Sur' })).toBeDefined()
   })
 })

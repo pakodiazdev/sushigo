@@ -23,7 +23,12 @@ abstract class ReceiptRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        // Defense in depth (#572): the `receipts.manage` route middleware already
+        // guards create/update, but authorizing here too means the constraint
+        // holds even if the FormRequest is resolved on a path that skipped route
+        // middleware. `receipts.manage` is the one permission that governs every
+        // draft mutation (see doc/architecture/purchasing/purchase-receipts.en.md).
+        return $this->user()?->can('receipts.manage') ?? false;
     }
 
     /** @return array<string, array<int, mixed>> */
@@ -61,6 +66,8 @@ abstract class ReceiptRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            $this->validateDestinationIsReceivingCapable($validator);
+
             $supplierId = $validator->errors()->has('supplier_id')
                 ? null
                 : Supplier::where('public_id', $this->input('supplier_id'))->value('id');
@@ -73,6 +80,40 @@ abstract class ReceiptRequest extends FormRequest
                 $this->validateSupplierOffering($validator, $index, $line, $supplierId);
             }
         });
+    }
+
+    /**
+     * A Receipt destination must be a real, accessible *receiving* Location
+     * (#572): the `exists` rule + `ScopesDestinationLocationToAccessibleUnits`
+     * already reject soft-deleted, unknown, and out-of-scope ULIDs; this adds
+     * the two business constraints from #568 — the Location must be active and
+     * flagged `can_receive_purchases`. Skipped if the field already failed a
+     * prior rule so the caller sees one reason at a time.
+     */
+    private function validateDestinationIsReceivingCapable(Validator $validator): void
+    {
+        if ($validator->errors()->has('destination_location_id')) {
+            return;
+        }
+
+        $publicId = $this->input('destination_location_id');
+
+        if (! is_string($publicId) || $publicId === '') {
+            return;
+        }
+
+        $location = InventoryLocation::where('public_id', $publicId)->first();
+
+        if ($location === null) {
+            return;
+        }
+
+        if (! $location->is_active || ! $location->can_receive_purchases) {
+            $validator->errors()->add(
+                'destination_location_id',
+                'La ubicación de destino no puede recibir compras o está inactiva.'
+            );
+        }
     }
 
     /** @param  array<string, mixed>  $line */

@@ -106,7 +106,7 @@ The thirteen Issues are on **SushiGo Admin**, `Todo`, labeled `sprint-7`, and as
 | ✅ | #569 | Assign managed Variants to Inventory Locations | Product | P1 | L | 8h | 14h |
 | ⏳ | #570 | Expose an auditable Opening Balance workflow | Product | P1 | M | 5h | 9h |
 | ✅ | #571 | Show assigned Variants with zero Stock in Existencias | Product | P1 | M | 6h | 11h |
-| ⏳ | #572 | Route confirmed Purchase Receipts into eligible receiving Locations | Product | P0 | M | 5h | 9h |
+| ✅ | #572 | Route confirmed Purchase Receipts into eligible receiving Locations | Product | P0 | M | 5h | 9h |
 | ⏳ | #573 | Implement auditable internal Stock Transfers | Product | P1 | L | 9h | 16h |
 | ⏳ | #574 | Expose an auditable Inventory Stock Movement ledger | Product | P1 | M | 6h | 11h |
 |  |  | **Total** |  |  |  | **57h** | **115h** |
@@ -211,9 +211,9 @@ the consuming verticals wait for only the foundations they name.
 
 ### Round 2 — Parallel Operational Verticals
 
-| Lane | Issue | Starts after | Primary file ownership | Opt. | Pess. |
-|---|---:|---|---|---:|---:|
-| D | #572 | #567 + #568 + #569 | Receipt requests/service/resource and Receipt feature UI | 5h | 9h |
+| Lane | Issue | Starts after | Primary file ownership | Opt. | Pess. | Status | Tracked | PR / Commit | Notes |
+|---|---:|---|---|---:|---:|---|---:|---|---|
+| D | #572 | #567 + #568 + #569 | Receipt requests/service/resource and Receipt feature UI | 5h | 9h | ✅ | 0.9h | PR #604 | Eligible destinations and idempotent posting now share deterministic assignment-before-stock locking; PR ready, merge pending |
 | E | #570 | #567 + #569 | Opening Balance backend/response/form and minimal page action | 5h | 9h |
 | F | #573 | #567 + #569; adopt #568 | New Transfer vertical and route/navigation | 9h | 16h |
 | G | #571 | #569 | Stock read projection/controllers and broad Existencias rendering | 6h | 11h |
@@ -362,7 +362,13 @@ The planning baseline updates, in English and Spanish:
 Each implementation Issue must replace target/future wording only for the behavior it actually
 ships. Documentation must never report a pending Issue as production behavior.
 
-## 13. Risks and Mitigations
+## 13. Execution Evidence
+
+| Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
+|---|---:|---|---:|---|---:|---|
+| ✅ | #572 | Confirmed Purchase Receipts now enforce eligible receiving Locations at save and post time, mutate inventory only when posted, and establish assignments with deterministic lock ordering. | PR #604 | — | 0.9h | Pint passed; 39 focused tests (131 assertions) and 2,446 API tests (7,148 assertions) passed; 7/7 review threads resolved. |
+
+### Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |---|---|---|
