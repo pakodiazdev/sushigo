@@ -3,9 +3,11 @@
 namespace Tests\Feature\Inventory;
 
 use App\Models\InventoryLocation;
+use App\Models\OperatingUnit;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\UnitOfMeasure;
+use App\Models\VariantLocationAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
@@ -409,11 +411,323 @@ class OpeningBalanceTest extends InventoryTestCase
             'unit_cost' => 50,
         ]);
 
-        // Assert
-        $response->assertStatus(400)
-            ->assertJsonFragment([
-                'status' => 400,
-            ]);
+        // Assert: a bad UOM-to-base combination is a 422 input problem on
+        // `uom_id` (#570) — not a generic 400 that hides whether it was
+        // authorization, validation, or a business conflict.
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['uom_id']);
+    }
+
+    #[Test]
+    public function it_rejects_an_inactive_destination_location()
+    {
+        $inactiveLocation = InventoryLocation::create([
+            'operating_unit_id' => $this->operatingUnit->id,
+            'name' => 'Decommissioned Warehouse',
+            'type' => 'MAIN',
+            'priority' => 10,
+            'is_active' => false,
+        ]);
+
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $response = $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $inactiveLocation->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 100,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['inventory_location_id']);
+
+        $this->assertDatabaseMissing('stock_movements', [
+            'to_location_id' => $inactiveLocation->id,
+            'item_variant_id' => $variant->id,
+        ]);
+        $this->assertDatabaseMissing('variant_location_assignments', [
+            'inventory_location_id' => $inactiveLocation->id,
+            'item_variant_id' => $variant->id,
+        ]);
+    }
+
+    #[Test]
+    public function it_rejects_a_location_in_an_operating_unit_the_caller_cannot_access()
+    {
+        $otherUnit = OperatingUnit::create([
+            'branch_id' => $this->branch->id,
+            'type' => 'BRANCH_MAIN',
+            'name' => 'Unrelated Operating Unit',
+            'is_active' => true,
+        ]);
+
+        $foreignLocation = InventoryLocation::create([
+            'operating_unit_id' => $otherUnit->id,
+            'name' => 'Foreign Warehouse',
+            'type' => 'MAIN',
+            'priority' => 50,
+            'is_active' => true,
+        ]);
+
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $response = $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $foreignLocation->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 100,
+        ]);
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseMissing('stock_movements', [
+            'to_location_id' => $foreignLocation->id,
+            'item_variant_id' => $variant->id,
+        ]);
+    }
+
+    #[Test]
+    public function it_ensures_a_variant_location_assignment_atomically_with_the_entry()
+    {
+        $item = $this->createItem(['name' => 'Eel']);
+        $variant = $this->createItemVariant($item, [
+            'name' => 'Unagi 1kg',
+            'uom_id' => $this->uomKg->id,
+        ]);
+
+        $this->assertDatabaseMissing('variant_location_assignments', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 8,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 40,
+        ])->assertStatus(201);
+
+        $this->assertDatabaseHas('variant_location_assignments', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'deleted_at' => null,
+        ]);
+
+        // Stock, movement, and line evidence all landed in the same call.
+        $this->assertDatabaseHas('stock', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 8,
+        ]);
+        $movement = StockMovement::where('to_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->where('reason', 'OPENING_BALANCE')
+            ->firstOrFail();
+        $this->assertDatabaseHas('stock_movement_lines', [
+            'stock_movement_id' => $movement->id,
+            'item_variant_id' => $variant->id,
+            'base_qty' => 8,
+        ]);
+    }
+
+    #[Test]
+    public function it_keeps_a_single_live_assignment_across_repeated_opening_balances()
+    {
+        $item = $this->createItem(['name' => 'Octopus']);
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        foreach ([5, 7, 3] as $qty) {
+            $this->postJson('/api/v1/inventory/opening-balance', [
+                'inventory_location_id' => $this->location->public_id,
+                'item_variant_id' => $variant->public_id,
+                'quantity' => $qty,
+                'uom_id' => $this->uomKg->public_id,
+                'unit_cost' => 20,
+            ])->assertStatus(201);
+        }
+
+        $this->assertEquals(1, VariantLocationAssignment::where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->count());
+    }
+
+    #[Test]
+    public function it_reactivates_a_soft_deleted_assignment_on_a_new_opening_balance()
+    {
+        $item = $this->createItem(['name' => 'Shrimp']);
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $assignment = VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+        $assignment->delete();
+        $this->assertSoftDeleted('variant_location_assignments', ['id' => $assignment->id]);
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 12,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 15,
+        ])->assertStatus(201);
+
+        $this->assertDatabaseHas('variant_location_assignments', [
+            'id' => $assignment->id,
+            'deleted_at' => null,
+        ]);
+        $this->assertEquals(1, VariantLocationAssignment::withTrashed()
+            ->where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->count());
+    }
+
+    #[Test]
+    public function it_reactivates_a_pair_whose_zeroed_stock_row_was_just_unassigned()
+    {
+        // Codex P2: the "concurrent unassignment won the race" shape — a live
+        // assignment plus a zeroed Stock row existed, a concurrent unassignment
+        // locked that row, passed its zero-balance check, and soft-deleted the
+        // assignment. The opening balance must still land the pair with a live
+        // assignment (never positive Stock with no assignment behind it), which
+        // holds because the assignment is now ensured after the posting
+        // primitive takes the pair's Stock-row lock.
+        $item = $this->createItem(['name' => 'Crab']);
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        Stock::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 0,
+            'reserved' => 0,
+        ]);
+
+        $assignment = VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+        $assignment->delete();
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 9,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 10,
+        ])->assertStatus(201);
+
+        $stock = Stock::where('item_variant_id', $variant->id)->first();
+        $this->assertEquals(9, (float) $stock->on_hand);
+
+        $this->assertDatabaseHas('variant_location_assignments', [
+            'id' => $assignment->id,
+            'deleted_at' => null,
+        ]);
+        $this->assertEquals(1, VariantLocationAssignment::withTrashed()
+            ->where('inventory_location_id', $this->location->id)
+            ->where('item_variant_id', $variant->id)
+            ->count());
+    }
+
+    #[Test]
+    public function it_blends_a_frontend_style_explicit_zero_unit_cost()
+    {
+        // The Existencias form always sends a numeric unit_cost (its field has
+        // no "omit" affordance), so an operator entering 0 for free stock posts
+        // unit_cost=0 — a real cost that must blend 0 into the weighted average,
+        // not be treated as an omitted null.
+        $item = $this->createItem(['name' => 'Bonus Nori']);
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 100,
+        ])->assertStatus(201);
+
+        $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 10,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 0,
+        ])->assertStatus(201);
+
+        $stock = Stock::where('item_variant_id', $variant->id)->first();
+        $this->assertEquals(20, (float) $stock->on_hand);
+        // (10*100 + 10*0) / 20 = 50 — the explicit 0 pulled the average down.
+        $this->assertEquals(50, round((float) $stock->weighted_avg_cost, 2));
+    }
+
+    #[Test]
+    public function it_records_line_total_zero_for_an_explicit_zero_cost_and_null_when_omitted()
+    {
+        // Line-level audit must distinguish free stock (line_total = 0, agreeing
+        // with the preview's total_value and the weighted-average blend) from a
+        // cost that was never captured (line_total = null).
+        $freeItem = $this->createItem(['name' => 'Free Wasabi']);
+        $freeVariant = $this->createItemVariant($freeItem, ['uom_id' => $this->uomKg->id]);
+
+        $freeMovementId = $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $freeVariant->public_id,
+            'quantity' => 8,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 0,
+        ])->assertStatus(201)->json('data.id');
+
+        $this->assertDatabaseHas('stock_movement_lines', [
+            'stock_movement_id' => $freeMovementId,
+            'base_qty' => 8,
+            'unit_cost' => 0,
+            'line_total' => 0,
+        ]);
+
+        $unknownItem = $this->createItem(['name' => 'Uncosted Ginger']);
+        $unknownVariant = $this->createItemVariant($unknownItem, ['uom_id' => $this->uomKg->id]);
+
+        $unknownMovementId = $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $unknownVariant->public_id,
+            'quantity' => 8,
+            'uom_id' => $this->uomKg->public_id,
+            // no unit_cost
+        ])->assertStatus(201)->json('data.id');
+
+        $this->assertDatabaseHas('stock_movement_lines', [
+            'stock_movement_id' => $unknownMovementId,
+            'base_qty' => 8,
+            'unit_cost' => null,
+            'line_total' => null,
+        ]);
+    }
+
+    #[Test]
+    public function it_allows_a_missing_unit_cost_and_skips_the_weighted_average_blend()
+    {
+        $item = $this->createItem(['name' => 'Donated Rice']);
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $response = $this->postJson('/api/v1/inventory/opening-balance', [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 30,
+            'uom_id' => $this->uomKg->public_id,
+            // no unit_cost at all
+        ]);
+
+        $response->assertStatus(201);
+
+        $stock = Stock::where('item_variant_id', $variant->id)->first();
+        $this->assertEquals(30, (float) $stock->on_hand);
+        $this->assertEquals(0, (float) $stock->weighted_avg_cost);
     }
 
     #[Test]

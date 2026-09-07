@@ -6,6 +6,7 @@ use App\Exceptions\InvalidStockBalanceException;
 use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockMovementLine;
+use App\Models\VariantLocationAssignment;
 use App\Services\Inventory\StockMutationService;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
@@ -80,6 +81,30 @@ class StockMutationServiceTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_locks_the_assignment_before_creating_the_first_stock_row(): void
+    {
+        $variant = $this->createItemVariant($this->createItem());
+        VariantLocationAssignment::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
+
+        DB::transaction(fn () => $this->service->receiveInto($this->location->id, $variant->id, 5));
+
+        $assignmentLock = array_find_key($queries, fn ($sql) => str_contains($sql, 'variant_location_assignments') && str_contains($sql, 'for update'));
+        $stockTouch = array_find_key($queries, fn ($sql) => str_contains($sql, 'from "stock"') || str_starts_with($sql, 'insert into "stock"'));
+
+        $this->assertNotNull($assignmentLock, 'Expected the assignment row to be locked FOR UPDATE.');
+        $this->assertNotNull($stockTouch, 'Expected the Stock pair to be read or created.');
+        $this->assertLessThan($stockTouch, $assignmentLock, 'The assignment lock must serialize the pair before Stock is touched.');
+    }
+
+    #[Test]
     public function it_rejects_a_non_positive_quantity_on_first_receipt(): void
     {
         $item = $this->createItem();
@@ -105,6 +130,25 @@ class StockMutationServiceTest extends InventoryTestCase
         $this->expectException(InvalidStockBalanceException::class);
 
         DB::transaction(fn () => $this->service->receiveInto($this->location->id, $variant->id, -5));
+    }
+
+    #[Test]
+    public function it_rejects_an_increment_that_would_overflow_the_stock_quantity_column(): void
+    {
+        $variant = $this->createItemVariant($this->createItem());
+        $stock = Stock::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 99_999_999_999,
+            'reserved' => 0,
+        ]);
+
+        try {
+            DB::transaction(fn () => $this->service->increaseOnHand($stock, 1));
+            $this->fail('Expected the accumulated decimal(15,4) overflow to be rejected.');
+        } catch (InvalidStockBalanceException) {
+            $this->assertEquals(99_999_999_999, (float) $stock->fresh()->on_hand);
+        }
     }
 
     #[Test]

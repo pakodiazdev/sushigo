@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Inventory\PreviewOpeningBalanceController;
 use App\Http\Controllers\Api\V1\Inventory\RegisterOpeningBalanceController;
 use App\Http\Controllers\Api\V1\Inventory\RegisterStockOutController;
 use App\Http\Controllers\Api\V1\Inventory\ReplenishmentPolicy\DeleteVariantReplenishmentPolicyController;
@@ -94,6 +95,7 @@ Route::middleware('auth:api')->prefix('stock')->group(function () {
 
 // Inventory Operations (Protected write — requires stock.manage)
 Route::middleware('auth:api')->prefix('inventory')->group(function () {
+    Route::post('opening-balance/preview', PreviewOpeningBalanceController::class)->name('inventory.opening-balance.preview')->middleware('permission:stock.manage');
     Route::post('opening-balance', RegisterOpeningBalanceController::class)->name('inventory.opening-balance')->middleware('permission:stock.manage');
     Route::post('stock-out', RegisterStockOutController::class)->name('inventory.stock-out')->middleware('permission:stock.manage');
 });

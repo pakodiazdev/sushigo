@@ -13,6 +13,9 @@ class Stock extends Model
 {
     use HasPublicId, SerializesPublicIdAsId;
 
+    /** Maximum positive value representable by the Stock decimal(15,4) quantities. */
+    public const MAX_STORED_QUANTITY = 99_999_999_999.9999;
+
     protected $table = 'stock';
 
     protected $fillable = [
@@ -88,11 +91,19 @@ class Stock extends Model
     /**
      * Increase on_hand quantity
      *
-     * @throws InvalidStockBalanceException if $qty is not positive
+     * @throws InvalidStockBalanceException if $qty is not positive or the accumulated balance would overflow
      */
     public function increaseOnHand(float $qty): void
     {
         $this->assertPositiveQuantity($qty);
+
+        $resultingOnHand = (float) $this->on_hand + $qty;
+
+        if (! is_finite($resultingOnHand) || $resultingOnHand > self::MAX_STORED_QUANTITY) {
+            throw new InvalidStockBalanceException(
+                "Cannot increase on_hand beyond decimal(15,4) for stock #{$this->id}. Current: {$this->on_hand}, Requested: {$qty}"
+            );
+        }
 
         $this->increment('on_hand', $qty);
     }

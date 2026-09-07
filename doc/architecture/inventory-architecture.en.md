@@ -1063,6 +1063,64 @@ directly: assigned-but-never-received Variants show at zero, tagged **"nunca rec
 a policy makes them low — in the low-stock alert table, without implying a database Stock record
 exists.
 
+### 3.15 Opening Balance — auditable initialization (#570) — as built
+
+Initialization of on-hand that already physically exists, exposed through the canonical
+`/inventario/existencias` workflow. It is **not** a supplier receipt and there is no draft
+document — posting is immediate.
+
+**Semantics.**
+
+- An Opening Balance is an explicit, immutable `OPENING_BALANCE` `StockMovement` with **no source
+  Location** and **no source-document identity** (the `related_*` triple stays null). It therefore
+  carries no idempotency contract: repeated entries for the same pair are legitimate, auditable
+  additions, not replays.
+- Posting goes through the one shared inbound primitive (`InventoryEntryPostingService`, §3.12,
+  #567): it race-safely creates/increments the destination `Stock` row, blends
+  `Stock.weighted_avg_cost` (#434 — a `null` unit cost skips the blend, an explicit `0` still
+  blends), and appends the single movement line.
+- The **same transaction** also ensures the `VariantLocationAssignment` for the pair (§3.13, #569) —
+  creating it, or reactivating a soft-deleted one — via the shared `EnsureVariantLocationAssignment`
+  action. Unlike the `PUT …/variant-assignments/{variantId}` endpoint, initialization does **not**
+  reject an inactive Variant: recording stock that physically exists is valid even for a Variant
+  deactivated after the fact. Inbound posting and unassignment both lock that assignment row before
+  checking `Stock`; it is the pair-level serialization point even when the first `Stock` row does
+  not exist yet, so an overlapping unassignment cannot hide a newly-positive balance.
+- Quantity is converted to the Variant's base UOM by the existing conversion contract
+  (`ConvertsUomQuantities`). Both the original and converted quantities must remain positive and fit
+  the ledger's `decimal(15,4)` range after scale normalization; posting also re-checks under the
+  pair's Stock lock that the accumulated on-hand fits that column. Converted base cost and total
+  value are likewise normalized and range-checked before preview or posting. Cost lands only on the
+  destination `Stock.weighted_avg_cost`, never on the read-only catalog Variant.
+- **Correction rule:** posted history is never edited in place. A wrong entry is corrected with an
+  immutable reversal / adjustment movement, the same rule the Receipt reversal contract (#438)
+  follows.
+
+**Destination guard.** The FormRequest checks `stock.manage`, the `exists` of every public ID, and
+`OperatingUnitScope` access before the transaction; the Service re-checks — under a row lock on the
+destination — that the Location still exists, is still `is_active`, and is still accessible. A
+destination does **not** need `can_receive_purchases` (#568): initialization is not supplier
+receiving.
+
+**API.** Under the `inventory` prefix, `stock.manage`:
+
+| Route | Purpose |
+| --- | --- |
+| `POST /inventory/opening-balance` | Post the balance. `201` with the normalized movement (base quantity, base cost, resolved `Stock.weighted_avg_cost`). Distinct status codes rather than a blanket `400`: `403` for missing permission or Operating Unit access, `422` for an unknown public ID; an original, converted, or accumulated quantity outside `decimal(15,4)`; a converted cost or total value outside `decimal(15,4)`; an **inactive** destination; or **no UOM conversion path** to the Variant's base unit. `unit_cost` is optional — omitted skips the weighted-average blend, an explicit `0` blends `0`. |
+| `POST /inventory/opening-balance/preview` | Non-mutating. Same payload; returns the base quantity, base unit cost, `conversion_applies`/`conversion_factor`, and `total_value` (null when no cost was given) — the exact numbers the post would record, so the form's pre-submit preview matches the ledger. |
+
+**UI.** The `OpeningBalanceForm` (a `SlidePanel`) is mounted on `/inventario/existencias` behind a
+client check for `stock.manage` **plus** `inventory_locations.view` and `items.view` (admin /
+super-admin bypass) — the route itself stays `stock.view` so read-only users still see stock but
+cannot open or invoke the mutation, and the extra two are required because the form's Location and
+Variant pickers read `/inventory-locations` and `/item-variants`, so a `stock.manage`-only role
+would open a panel whose selects both `403`. The form is Spanish end to end, limits Location
+options to active accessible results and Variant options to the active catalog, shows the
+backend-computed conversion/valuation preview before submit, states plainly that the action
+initializes/adds inventory and writes permanent audit evidence, and on success invalidates the
+stock-list, stock-by-location, stock-by-variant, assignment, and replenishment queries so
+Existencias refreshes without a reload. Focus returns to the trigger button when the panel closes.
+
 ---
 
 ## 4. Operational Flows

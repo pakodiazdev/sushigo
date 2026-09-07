@@ -7,6 +7,7 @@ import type {
   Item,
   ItemMediaAttachment,
   ItemVariant,
+  OpeningBalancePreview,
   Product,
   ProductMediaAttachment,
   ProductVariant,
@@ -287,9 +288,24 @@ export const stockMovementApi = {
     quantity: number
     uom_id: string
     unit_cost?: number
+    reference?: string
     notes?: string
   }) =>
     api.post<EntityResponse<StockMovement>>('/inventory/opening-balance', data),
+
+  /**
+   * Non-mutating conversion + valuation preview for an opening balance (#570).
+   * Same payload shape as `openingBalance`; returns the normalized base
+   * quantity, base unit cost, and total value the posting would record.
+   */
+  openingBalancePreview: (data: {
+    inventory_location_id: string
+    item_variant_id: string
+    quantity: number
+    uom_id: string
+    unit_cost?: number
+  }) =>
+    api.post<EntityResponse<OpeningBalancePreview>>('/inventory/opening-balance/preview', data),
 
   stockOut: (data: {
     inventory_location_id: string
