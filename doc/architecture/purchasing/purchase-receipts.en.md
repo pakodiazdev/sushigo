@@ -119,6 +119,11 @@ would fail authorization and come back empty.
 Editing or deleting is only allowed while a Receipt is still a draft; posting/reversing a Receipt
 that isn't in the expected state returns `409`, never a silent no-op.
 
+**Permission is enforced twice (`#572`).** `receipts.manage` is applied by the route middleware
+*and* re-asserted in `ReceiptRequest::authorize()` (create/update), so the constraint holds even on
+a code path that reaches the FormRequest without route middleware — defence in depth, not a
+behaviour change.
+
 **Bounded list contract (`#586`).** `GET /inventory/receipts` is a server-side paginated *summary*
 read model — Purchase Receipts are append-only operational history, so the list never returns an
 unbounded match. Response envelope is `ResponsePaginated` (`{ status, data, meta: { current_page,
@@ -145,8 +150,9 @@ too: `ReceiptRequest`'s `destination_location_id` rule
 (`ScopesDestinationLocationToAccessibleUnits`) is constrained to the caller's accessible units for
 non-bypass roles, so a create payload — or an `update` that names a new destination — into a
 foreign unit is a `422`, not a silent cross-unit transfer (`assertReceiptInScope` alone only checks
-the Receipt's *old* destination). `#572` still owns the remaining business constraints on that
-Location (active, purchase-receiving). `AssertsReceiptOperatingUnitAccess` runs before the service
+the Receipt's *old* destination). On top of scope, `ReceiptRequest`'s `withValidator` after-check
+(`#572`) rejects a destination that is **inactive** or not flagged `can_receive_purchases` (`#568`)
+with the same field-level `422`. `AssertsReceiptOperatingUnitAccess` runs before the service
 transaction and is a fast fail, not the last word: every mutating service method (`updateDraft` /
 `deleteDraft` / `postReceipt` / `reverseReceipt`) re-runs `assertCanAccessLocation` under its row
 lock, against the Receipt's current destination, via
@@ -157,15 +163,16 @@ and the lock — a membership revoked, or a bypass-role transfer of a still-draf
 let a scoped caller mutate (or post Stock into) a unit they can no longer reach. The one residual
 gap — those membership reads are not `lockForUpdate` on `operating_unit_users`, so a revocation in
 the *same instant* is not serialized against an in-flight mutation — is a whole-domain
-`OperatingUnitScope` property left to `#572`, not this read model.
+`OperatingUnitScope` property. `#572` hardened the Receipt *destination* contract (see below) but
+deliberately left that membership-lock question open.
 
 The list `search` filter matches `reference` with `ILIKE`; the term is passed through
 `addcslashes(term, '\\%_')` so `%` / `_` in a search string match literally instead of acting as
 LIKE wildcards.
 
-## Sprint 7 target: warehouse receiving
+## Warehouse receiving (Sprint 7)
 
-> Planned by #567–#569, #572, and the read-only audit surface in #574. See
+> Delivered by #567–#569, #572, and the read-only audit surface in #574. See
 > [Sprint 007](../../sprints/planned/sprint-007-warehouse-receiving-and-location-aware-stock.md) and
 > [Inventory Architecture §3.12](../inventory-architecture.en.md).
 
@@ -176,10 +183,25 @@ point; it does not add a `Warehouse` table. A Receipt destination must be:
 - marked `can_receive_purchases = true` (#568);
 - inside the caller's Operating Unit scope (#440/#572).
 
-Eligibility is checked when the draft is saved (field-level `422`) and again under lock when posted
-(`409` if it changed afterward). Posting also ensures the Variant-to-Location assignment (#569)
-and routes every source line through #567. If any line fails, assignments, balance, cost, movements,
-and document state all roll back.
+**As-built (`#572`).** All three constraints are enforced on the create/update payload
+(`ReceiptRequest`: the `exists` rule + `ScopesDestinationLocationToAccessibleUnits` cover
+non-deleted / in-scope, a `withValidator` after-check covers active + `can_receive_purchases`),
+returning one field-level `422` on `destination_location_id`. `ReceiptService::postReceipt()`
+re-reads the destination **under its row lock** and raises `ReceiptDestinationUnavailableException`
+→ `409` if it is soft-deleted, inactive, or no longer purchase-receiving — because the Location's
+state can drift while the Receipt sits as a draft. In the same post transaction, every received
+line's `VariantLocationAssignment` (#569) is ensured idempotently via the shared
+`VariantLocationAssignmentEnsurer` (never a `Stock` row or a movement), then routed through #567's
+`InventoryEntryPostingService`. If any line fails, the assignments, balance, cost, movements and
+`POSTED` state all roll back together. Reversal compensates Stock and movements but **keeps** the
+assortment assignment — a Variant received there once is still managed there.
+
+`ReceiptResource.destination_location` carries `type`, `is_active`, `can_receive_purchases` and the
+owning `operating_unit` (`{id, name, type}`) so the detail view is unambiguous about where the
+stock landed. The webapp Receipt form names the field "Almacén / ubicación receptora", offers only
+active + `can_receive_purchases` Locations (grouped by Operating Unit), states that saving a draft
+does not touch inventory, and — after posting or reversing — invalidates the Stock, assignment and
+Stock Movement (#574) read models alongside the Receipt list.
 
 ```mermaid
 sequenceDiagram

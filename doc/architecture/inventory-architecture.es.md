@@ -841,7 +841,12 @@ Una ubicación gana la capacidad explícita `can_receive_purchases` (#568). Esta
 independiente de `type`, `is_primary`, `is_active` e `is_pickable`: una bodega principal puede ser
 solo almacenamiento y un andén dedicado puede recibir compras sin ser la ubicación primaria. Una
 Recepción solo puede apuntar a una ubicación no eliminada, activa, receptora y dentro del
-`OperatingUnitScope` del usuario (#572).
+`OperatingUnitScope` del usuario — **entregado en #572**: `ReceiptRequest` rechaza un destino no
+elegible en el payload de crear/actualizar con un `422` de campo, y
+`ReceiptService::postReceipt()` vuelve a leer el destino bajo su bloqueo de fila y lanza un `409`
+(revirtiendo todas las líneas) si dejó de estar activa o de recibir compras mientras la Recepción
+seguía en borrador. Confirmar además garantiza la `VariantLocationAssignment` (#569) de cada línea
+en la misma transacción; la reversión conserva esa asignación.
 
 Una entidad `Warehouse` separada se justifica únicamente cuando una misma Unidad Operativa deba
 contener varios almacenes administrativamente independientes. Hasta entonces duplicaría ownership,

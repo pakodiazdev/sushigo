@@ -36,7 +36,7 @@ class ShowReceiptController extends Controller
 
         return new ReceiptResource($receipt->load([
             'supplier',
-            'destinationLocation',
+            'destinationLocation.operatingUnit',
             'lines.presentation.itemVariant',
             'lines.supplierOffering',
             'postedByUser',

@@ -116,6 +116,11 @@ Los endpoints autenticados viven bajo `/api/v1/inventory/receipts`, más los end
 Editar o eliminar solo se permite mientras la Recepción sigue en borrador; registrar/revertir una
 Recepción que no está en el estado esperado responde `409`, nunca un no-op silencioso.
 
+**El permiso se exige dos veces (`#572`).** `receipts.manage` lo aplica el middleware de ruta *y* se
+vuelve a exigir en `ReceiptRequest::authorize()` (crear/actualizar), de modo que la restricción se
+mantiene incluso en un camino que llegue al FormRequest sin middleware de ruta — defensa en
+profundidad, no un cambio de comportamiento.
+
 **Contrato de listado acotado (`#586`).** `GET /inventory/receipts` es un modelo de lectura
 *resumen* paginado en el servidor — las Recepciones de Compra son historia operativa de solo
 adición, así que el listado nunca devuelve una coincidencia sin límite. El sobre de respuesta es
@@ -134,7 +139,8 @@ serializar**: el alcance horizontal por Unidad Operativa (mediante la Ubicación
 `destination_location` y su unidad; los roles con bypass según `#440`) se aplica *antes* de los
 filtros, el conteo y la paginación, para que los metadatos de página (`total`, `last_page`) nunca
 reflejen Recepciones de unidades a las que quien llama no tiene acceso. `#572` añade su contrato de
-enrutamiento de Ubicación de recepción sobre la misma relación sin cambiar este pipeline.
+enrutamiento de Ubicación de recepción (activa + apta para recepción de compras) sobre la misma
+relación sin cambiar este pipeline.
 
 Las rutas por ID (`show` / `update` / `delete` / `post` / `reverse`) aplican el **mismo** alcance de
 unidad (`AssertsReceiptOperatingUnitAccess` → `OperatingUnitScope::assertCanAccessLocation` sobre la
@@ -144,9 +150,10 @@ Recepción de otra unidad recibe `403`, no el registro. Los roles con bypass pas
 `ReceiptRequest` (`ScopesDestinationLocationToAccessibleUnits`) se limita a las unidades accesibles
 del solicitante para los roles sin bypass, así que un payload de creación —o un `update` que nombra
 un destino nuevo— hacia una unidad ajena es `422`, no una transferencia silenciosa entre unidades
-(`assertReceiptInScope` por sí solo solo valida el destino *anterior* de la Recepción). `#572` sigue
-a cargo de las demás restricciones de negocio sobre esa Ubicación (activa, apta para recepción de
-compras). `AssertsReceiptOperatingUnitAccess` corre antes de la transacción del servicio y es un
+(`assertReceiptInScope` por sí solo solo valida el destino *anterior* de la Recepción). Además del
+alcance, el after-check de `withValidator` de `ReceiptRequest` (`#572`) rechaza un destino
+**inactivo** o sin `can_receive_purchases` (`#568`) con el mismo `422` de campo.
+`AssertsReceiptOperatingUnitAccess` corre antes de la transacción del servicio y es un
 fallo rápido, no la última palabra: cada método mutador del servicio (`updateDraft` / `deleteDraft`
 / `postReceipt` / `reverseReceipt`) vuelve a ejecutar `assertCanAccessLocation` bajo su bloqueo de
 fila, contra el destino actual de la Recepción, mediante
@@ -157,16 +164,17 @@ el guard previo al bloqueo y el bloqueo —una membresía revocada, o una transf
 bypass de una Recepción aún en borrador— no puede dejar que quien llama mute (ni deje Stock en) una
 unidad a la que ya no tiene acceso. El único hueco residual —esas lecturas de membresía no usan
 `lockForUpdate` sobre `operating_unit_users`, así que una revocación en el *mismo instante* no queda
-serializada contra una mutación en curso— es una propiedad de todo el `OperatingUnitScope` que
-queda para `#572`, no para este modelo de lectura.
+serializada contra una mutación en curso— es una propiedad de todo el `OperatingUnitScope`. `#572`
+endureció el contrato del *destino* de la Recepción (ver abajo) pero dejó abierta a propósito esa
+cuestión del bloqueo de membresía.
 
 El filtro `search` del listado compara `reference` con `ILIKE`; el término pasa por
 `addcslashes(term, '\\%_')` para que `%` / `_` en la búsqueda se traten como literales y no como
 comodines de LIKE.
 
-## Objetivo Sprint 7: recepción hacia almacén
+## Recepción hacia almacén (Sprint 7)
 
-> Planeado en #567–#569, #572 y la superficie de auditoría de solo lectura de #574. Ver
+> Entregado en #567–#569, #572 y la superficie de auditoría de solo lectura de #574. Ver
 > [Sprint 007](../../sprints/planned/sprint-007-warehouse-receiving-and-location-aware-stock.md) y
 > [Arquitectura de Inventario §3.12](../inventory-architecture.es.md).
 
@@ -177,10 +185,27 @@ no agrega una tabla `Warehouse`. La ubicación destino de una Recepción debe es
 - marcada `can_receive_purchases = true` (#568);
 - dentro del alcance de Unidad Operativa del usuario (#440/#572).
 
-La elegibilidad se valida al guardar el borrador (`422` de campo) y de nuevo bajo bloqueo al
-confirmar (`409` si cambió después). Confirmar garantiza además la asignación Variante–Ubicación
-(#569) y registra cada línea mediante #567. Si cualquier línea falla, se revierten asignaciones,
-saldos, costo, movimientos y estado del documento.
+**Tal como se implementó (`#572`).** Las tres restricciones se exigen en el payload de
+crear/actualizar (`ReceiptRequest`: la regla `exists` + `ScopesDestinationLocationToAccessibleUnits`
+cubren no-eliminada / dentro de alcance; un after-check de `withValidator` cubre activa +
+`can_receive_purchases`), devolviendo un único `422` de campo en `destination_location_id`.
+`ReceiptService::postReceipt()` vuelve a leer el destino **bajo su bloqueo de fila** y lanza
+`ReceiptDestinationUnavailableException` → `409` si está eliminada, inactiva o ya no apta para
+recepción de compras — porque el estado de la Ubicación puede cambiar mientras la Recepción sigue en
+borrador. En la misma transacción de confirmación, la `VariantLocationAssignment` (#569) de cada
+línea recibida se garantiza de forma idempotente mediante el servicio compartido
+`VariantLocationAssignmentEnsurer` (nunca una fila de `Stock` ni un movimiento) y luego se registra
+mediante el `InventoryEntryPostingService` de #567. Si cualquier línea falla, las asignaciones, el
+saldo, el costo, los movimientos y el estado `POSTED` se revierten juntos. La reversión compensa
+Stock y movimientos pero **conserva** la asignación de surtido.
+
+`ReceiptResource.destination_location` incluye `type`, `is_active`, `can_receive_purchases` y la
+`operating_unit` dueña (`{id, name, type}`) para que la vista de detalle sea inequívoca sobre dónde
+entró el inventario. El formulario de Recepción del webapp nombra el campo "Almacén / ubicación
+receptora", ofrece solo Ubicaciones activas + `can_receive_purchases` (agrupadas por Unidad
+Operativa), aclara que guardar un borrador no toca el inventario y —tras confirmar o revertir—
+invalida los modelos de lectura de Stock, de asignaciones y de Movimientos de Stock (#574) junto con
+el listado de Recepciones.
 
 ```mermaid
 sequenceDiagram

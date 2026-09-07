@@ -14,6 +14,7 @@ use App\Exceptions\ReceiptNotPostedException;
 use App\Exceptions\ReceiptReversalBoundaryException;
 use App\Exceptions\ReceiptVariantUnavailableException;
 use App\Models\InventoryLocation;
+use App\Models\ItemVariant;
 use App\Models\Receipt;
 use App\Models\ReceiptLine;
 use App\Models\Stock;
@@ -157,12 +158,50 @@ class ReceiptService
                 );
             }
 
-            $lines = $receipt->lines()->with('presentation.itemVariant')->get();
+            // Destination eligibility is re-checked here, under the row lock,
+            // because the Location's state can change while the Receipt sits as a
+            // draft (#572): a save-time-valid destination that has since been
+            // deactivated or had `can_receive_purchases` cleared must block
+            // posting with a stable 409 and roll back every line, rather than
+            // landing supplier stock in a Location that can no longer receive it.
+            if (! $destination->is_active || ! $destination->can_receive_purchases) {
+                throw new ReceiptDestinationUnavailableException(
+                    "Receipt #{$receipt->id}'s destination location can no longer receive purchases."
+                );
+            }
+
+            $lines = $receipt->lines()->with('presentation')->get();
+
+            // Lock every referenced Variant row up front, ascending by id, so a
+            // concurrent catalogue update deactivating a variant is serialised
+            // against this post (its `is_active` can't flip after the check
+            // below and still let stock/assignment land) and two concurrent
+            // posts sharing variants can't deadlock. A soft-deleted variant is
+            // simply absent from the result and rejected the same as before.
+            $variantIds = $lines->pluck('presentation.item_variant_id')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+
+            $lockedVariants = $variantIds === []
+                ? collect()
+                : ItemVariant::whereIn('id', $variantIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
 
             foreach ($lines as $line) {
-                $itemVariant = $line->presentation->itemVariant;
+                $itemVariant = $lockedVariants->get($line->presentation->item_variant_id);
 
-                if (! $itemVariant) {
+                // A soft-deleted variant is absent from the locked set; a
+                // *deactivated* one is present but outside the manageable
+                // catalogue. Both must reject posting rather than land stock —
+                // and, crucially, an assignment — for a variant that
+                // `AssignVariantToLocationController` would refuse (#569/#572).
+                if (! $itemVariant || ! $itemVariant->is_active) {
                     throw new ReceiptVariantUnavailableException(
                         "Receipt #{$receipt->id} references a Product Variant that is no longer available."
                     );
@@ -171,8 +210,9 @@ class ReceiptService
                 $baseUnits = (float) $line->base_units_received;
 
                 // One posting primitive per line (#567): locks/creates Stock,
-                // blends the effective unit cost, and appends immutable
-                // evidence. Source identity is explicit via
+                // first establishes the managed assignment using the shared
+                // assignment→Stock lock order, blends the effective unit cost,
+                // and appends immutable evidence. Source identity is explicit via
                 // related_type/related_id/related_line_id — replaying the same
                 // receipt line (queue retry, import) returns the existing
                 // movement instead of incrementing Stock twice.
@@ -440,9 +480,11 @@ class ReceiptService
      *
      * Note: like every `OperatingUnitScope` check in the codebase, this reads the
      * `operating_unit_users` membership without locking it, so it is not
-     * serialized against a membership revoked in the same instant — closing that
-     * sub-transaction race across the Inventory domain is #572's contract, not
-     * this read model's.
+     * serialized against a membership revoked in the same instant. #572 hardened
+     * the Receipt *destination* contract (active + purchase-receiving, re-checked
+     * under lock at post time) but deliberately left that whole-domain
+     * membership-lock question open — it is a property of `OperatingUnitScope`
+     * itself, not of this service.
      */
     private function assertActorMayUseDestination(int $destinationLocationId, int $userId): void
     {
@@ -456,7 +498,7 @@ class ReceiptService
             'lines.presentation.template',
             'lines.supplierOffering',
             'supplier',
-            'destinationLocation',
+            'destinationLocation.operatingUnit',
             'createdByUser',
             'postedByUser',
             'reversedByUser',
