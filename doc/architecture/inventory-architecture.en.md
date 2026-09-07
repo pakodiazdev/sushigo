@@ -1088,8 +1088,10 @@ document — posting is immediate.
   not exist yet, so an overlapping unassignment cannot hide a newly-positive balance.
 - Quantity is converted to the Variant's base UOM by the existing conversion contract
   (`ConvertsUomQuantities`). Both the original and converted quantities must remain positive and fit
-  the ledger's `decimal(15,4)` range after scale normalization. Cost lands only on the destination
-  `Stock.weighted_avg_cost`, never on the read-only catalog Variant.
+  the ledger's `decimal(15,4)` range after scale normalization; posting also re-checks under the
+  pair's Stock lock that the accumulated on-hand fits that column. Converted base cost and total
+  value are likewise normalized and range-checked before preview or posting. Cost lands only on the
+  destination `Stock.weighted_avg_cost`, never on the read-only catalog Variant.
 - **Correction rule:** posted history is never edited in place. A wrong entry is corrected with an
   immutable reversal / adjustment movement, the same rule the Receipt reversal contract (#438)
   follows.
@@ -1104,7 +1106,7 @@ receiving.
 
 | Route | Purpose |
 | --- | --- |
-| `POST /inventory/opening-balance` | Post the balance. `201` with the normalized movement (base quantity, base cost, resolved `Stock.weighted_avg_cost`). Distinct status codes rather than a blanket `400`: `403` for missing permission or Operating Unit access, `422` for an unknown public ID, an original or converted quantity that rounds to zero or exceeds `decimal(15,4)`, an **inactive** destination, or **no UOM conversion path** to the Variant's base unit. `unit_cost` is optional — omitted skips the weighted-average blend, an explicit `0` blends `0`. |
+| `POST /inventory/opening-balance` | Post the balance. `201` with the normalized movement (base quantity, base cost, resolved `Stock.weighted_avg_cost`). Distinct status codes rather than a blanket `400`: `403` for missing permission or Operating Unit access, `422` for an unknown public ID; an original, converted, or accumulated quantity outside `decimal(15,4)`; a converted cost or total value outside `decimal(15,4)`; an **inactive** destination; or **no UOM conversion path** to the Variant's base unit. `unit_cost` is optional — omitted skips the weighted-average blend, an explicit `0` blends `0`. |
 | `POST /inventory/opening-balance/preview` | Non-mutating. Same payload; returns the base quantity, base unit cost, `conversion_applies`/`conversion_factor`, and `total_value` (null when no cost was given) — the exact numbers the post would record, so the form's pre-submit preview matches the ledger. |
 
 **UI.** The `OpeningBalanceForm` (a `SlidePanel`) is mounted on `/inventario/existencias` behind a

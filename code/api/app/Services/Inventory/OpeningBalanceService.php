@@ -5,9 +5,11 @@ namespace App\Services\Inventory;
 use App\DataTransferObjects\Inventory\InventoryEntryLineData;
 use App\DataTransferObjects\Inventory\InventoryEntryPostingData;
 use App\DataTransferObjects\Inventory\RegisterOpeningBalanceData;
+use App\Exceptions\InvalidStockBalanceException;
 use App\Exceptions\UomConversionNotFoundException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
+use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
@@ -28,6 +30,11 @@ class OpeningBalanceService
 
     /** Largest absolute value representable by a positive `decimal(15,4)`. */
     private const MAX_LEDGER_QUANTITY = 99_999_999_999.9999;
+
+    private const MONEY_SCALE = 4;
+
+    /** Largest non-negative value representable by the ledger's monetary decimal(15,4) columns. */
+    private const MAX_LEDGER_MONEY = 99_999_999_999.9999;
 
     public function __construct(
         private readonly ApplicationClock $clock,
@@ -72,7 +79,7 @@ class OpeningBalanceService
             $entryUom = UnitOfMeasure::findOrFail($data->entryUomId);
 
             [$entryQuantity, $baseQuantity, $conversionFactor] = $this->convertOrFailValidation($data, $variant, $entryUom);
-            $baseCost = $this->calculateBaseCost($data->unitCost, $conversionFactor);
+            [$baseCost, $totalValue] = $this->calculateValuation($data->unitCost, $conversionFactor, $baseQuantity);
 
             // One posting primitive writes the immutable movement + line,
             // race-safely creates/increments Stock, and blends the
@@ -80,38 +87,44 @@ class OpeningBalanceService
             // document, so it carries no source-line identity — it stays a
             // manual entry with no idempotency contract. A null cost skips the
             // blend; an explicit 0 still blends (e.g. free stock).
-            $movement = $this->entryPosting->post(new InventoryEntryPostingData(
-                inventoryLocationId: $location->id,
-                itemVariantId: $variant->id,
-                baseQuantity: $baseQuantity,
-                reason: StockMovement::REASON_OPENING_BALANCE,
-                userId: $data->userId,
-                unitCost: $baseCost,
-                reference: $data->reference,
-                notes: $data->notes,
-                movementMeta: [
-                    'original_qty' => $entryQuantity,
-                    'original_uom' => $entryUom->code,
-                    'original_uom_id' => $data->entryUomId,
-                    'conversion_factor' => $conversionFactor,
-                    'unit_cost' => $data->unitCost,
-                    'base_cost' => $baseCost,
-                ],
-                postedAt: $this->clock->nowUtc(),
-                line: new InventoryEntryLineData(
-                    uomId: $data->entryUomId,
-                    qty: $entryQuantity,
-                    baseQty: $baseQuantity,
-                    conversionFactor: $conversionFactor,
+            try {
+                $movement = $this->entryPosting->post(new InventoryEntryPostingData(
+                    inventoryLocationId: $location->id,
+                    itemVariantId: $variant->id,
+                    baseQuantity: $baseQuantity,
+                    reason: StockMovement::REASON_OPENING_BALANCE,
+                    userId: $data->userId,
                     unitCost: $baseCost,
-                    // Explicit null check, not a truthy one: a supplied cost of 0
-                    // (free stock) records line_total = 0, matching the preview's
-                    // total_value and the weighted-average blend; only a genuinely
-                    // omitted cost leaves it null, so line-level audits can still
-                    // tell "free" from "cost not captured" (#570).
-                    lineTotal: $baseCost === null ? null : $baseQuantity * $baseCost,
-                ),
-            ));
+                    reference: $data->reference,
+                    notes: $data->notes,
+                    movementMeta: [
+                        'original_qty' => $entryQuantity,
+                        'original_uom' => $entryUom->code,
+                        'original_uom_id' => $data->entryUomId,
+                        'conversion_factor' => $conversionFactor,
+                        'unit_cost' => $data->unitCost,
+                        'base_cost' => $baseCost,
+                    ],
+                    postedAt: $this->clock->nowUtc(),
+                    line: new InventoryEntryLineData(
+                        uomId: $data->entryUomId,
+                        qty: $entryQuantity,
+                        baseQty: $baseQuantity,
+                        conversionFactor: $conversionFactor,
+                        unitCost: $baseCost,
+                        // Explicit null check, not a truthy one: a supplied cost of 0
+                        // (free stock) records line_total = 0, matching the preview's
+                        // total_value and the weighted-average blend; only a genuinely
+                        // omitted cost leaves it null, so line-level audits can still
+                        // tell "free" from "cost not captured" (#570).
+                        lineTotal: $totalValue,
+                    ),
+                ));
+            } catch (InvalidStockBalanceException) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'The quantity would make the accumulated stock exceed decimal(15,4).',
+                ]);
+            }
 
             // StockMutationService locks the pair's assignment before touching
             // Stock and ensures it inside this same transaction. Unassignment
@@ -156,7 +169,8 @@ class OpeningBalanceService
         $entryUom = UnitOfMeasure::findOrFail($data->entryUomId);
 
         [$entryQuantity, $baseQuantity, $conversionFactor] = $this->convertOrFailValidation($data, $variant, $entryUom);
-        $baseCost = $this->calculateBaseCost($data->unitCost, $conversionFactor);
+        [$baseCost, $totalValue] = $this->calculateValuation($data->unitCost, $conversionFactor, $baseQuantity);
+        $this->assertAccumulatedStockFits($data->inventoryLocationId, $data->itemVariantId, $baseQuantity);
 
         return [
             'entry_quantity' => $entryQuantity,
@@ -167,7 +181,7 @@ class OpeningBalanceService
             'conversion_factor' => $conversionFactor,
             'entry_unit_cost' => $data->unitCost,
             'base_unit_cost' => $baseCost,
-            'total_value' => $baseCost === null ? null : $baseQuantity * $baseCost,
+            'total_value' => $totalValue,
         ];
     }
 
@@ -245,14 +259,53 @@ class OpeningBalanceService
     }
 
     /**
-     * Convert an entry-UOM unit cost to base UOM.
+     * Convert and normalize all monetary values that posting persists in
+     * decimal(15,4) columns. Preview shares this exact boundary.
+     *
+     * @return array{0: float|null, 1: float|null}
+     *
+     * @throws ValidationException
      */
-    private function calculateBaseCost(?float $unitCost, float $conversionFactor): ?float
+    private function calculateValuation(?float $unitCost, float $conversionFactor, float $baseQuantity): array
     {
         if ($unitCost === null) {
-            return null;
+            return [null, null];
         }
 
-        return $conversionFactor != 0 ? $unitCost / $conversionFactor : 0;
+        $baseCost = round($conversionFactor != 0 ? $unitCost / $conversionFactor : 0, self::MONEY_SCALE);
+        $this->assertLedgerMoneyFits($baseCost, 'The converted unit cost exceeds the ledger\'s decimal(15,4) range.');
+
+        $totalValue = round($baseQuantity * $baseCost, self::MONEY_SCALE);
+        $this->assertLedgerMoneyFits($totalValue, 'The opening balance total value exceeds the ledger\'s decimal(15,4) range.');
+
+        return [$baseCost, $totalValue];
+    }
+
+    /** @throws ValidationException */
+    private function assertLedgerMoneyFits(float $value, string $message): void
+    {
+        if (! is_finite($value) || $value < 0 || $value > self::MAX_LEDGER_MONEY) {
+            throw ValidationException::withMessages(['unit_cost' => $message]);
+        }
+    }
+
+    /**
+     * Best-effort preview guard for the current balance. Posting repeats the
+     * check authoritatively under Stock's row lock.
+     *
+     * @throws ValidationException
+     */
+    private function assertAccumulatedStockFits(int $locationId, int $variantId, float $baseQuantity): void
+    {
+        $currentOnHand = (float) (Stock::query()
+            ->where('inventory_location_id', $locationId)
+            ->where('item_variant_id', $variantId)
+            ->value('on_hand') ?? 0);
+
+        if (! is_finite($currentOnHand + $baseQuantity) || $currentOnHand + $baseQuantity > Stock::MAX_STORED_QUANTITY) {
+            throw ValidationException::withMessages([
+                'quantity' => 'The quantity would make the accumulated stock exceed decimal(15,4).',
+            ]);
+        }
     }
 }

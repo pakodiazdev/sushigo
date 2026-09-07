@@ -199,6 +199,86 @@ class OpeningBalancePreviewTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_a_quantity_that_would_overflow_the_accumulated_stock_on_both_paths()
+    {
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+        Stock::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 99_999_999_999,
+            'reserved' => 0,
+        ]);
+
+        $payload = [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 1,
+            'uom_id' => $this->uomKg->public_id,
+        ];
+
+        $this->postJson('/api/v1/inventory/opening-balance/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+        $this->postJson('/api/v1/inventory/opening-balance', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['quantity']);
+
+        $this->assertDatabaseCount('stock_movements', 0);
+        $this->assertEquals(99_999_999_999, (float) Stock::first()->on_hand);
+    }
+
+    #[Test]
+    public function it_rejects_a_converted_unit_cost_that_exceeds_the_ledger_range_on_both_paths()
+    {
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $payload = [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 1,
+            'uom_id' => $this->uomGr->public_id,
+            // Dividing by the 0.001 GR -> KG factor produces a base cost of
+            // 100,000,000,000, one unit beyond decimal(15,4).
+            'unit_cost' => 100_000_000,
+        ];
+
+        $this->postJson('/api/v1/inventory/opening-balance/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['unit_cost']);
+        $this->postJson('/api/v1/inventory/opening-balance', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['unit_cost']);
+
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    #[Test]
+    public function it_rejects_a_total_value_that_exceeds_the_ledger_range_on_both_paths()
+    {
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item, ['uom_id' => $this->uomKg->id]);
+
+        $payload = [
+            'inventory_location_id' => $this->location->public_id,
+            'item_variant_id' => $variant->public_id,
+            'quantity' => 60_000_000_000,
+            'uom_id' => $this->uomKg->public_id,
+            'unit_cost' => 2,
+        ];
+
+        $this->postJson('/api/v1/inventory/opening-balance/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['unit_cost']);
+        $this->postJson('/api/v1/inventory/opening-balance', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['unit_cost']);
+
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    #[Test]
     public function it_rejects_a_preview_for_an_inactive_destination_matching_the_posting_path()
     {
         $inactiveLocation = InventoryLocation::create([

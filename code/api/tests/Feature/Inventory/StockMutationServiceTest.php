@@ -133,6 +133,25 @@ class StockMutationServiceTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_an_increment_that_would_overflow_the_stock_quantity_column(): void
+    {
+        $variant = $this->createItemVariant($this->createItem());
+        $stock = Stock::create([
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 99_999_999_999,
+            'reserved' => 0,
+        ]);
+
+        try {
+            DB::transaction(fn () => $this->service->increaseOnHand($stock, 1));
+            $this->fail('Expected the accumulated decimal(15,4) overflow to be rejected.');
+        } catch (InvalidStockBalanceException) {
+            $this->assertEquals(99_999_999_999, (float) $stock->fresh()->on_hand);
+        }
+    }
+
+    #[Test]
     public function it_takes_the_fast_path_without_attempting_an_insert_when_a_row_already_exists(): void
     {
         $item = $this->createItem();
