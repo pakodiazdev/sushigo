@@ -12,7 +12,9 @@ use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use App\Models\User;
 use App\Models\VariantLocationAssignment;
+use App\Services\Inventory\StockTransferService;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -425,6 +427,57 @@ class StockTransferTest extends InventoryTestCase
     }
 
     #[Test]
+    public function posting_is_rejected_when_a_variant_is_deactivated_after_the_draft(): void
+    {
+        $this->seedSourceStock();
+        $id = $this->createDraft();
+
+        $this->variant->update(['is_active' => false]);
+
+        $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertStatus(409);
+
+        $this->assertSame('DRAFT', StockTransfer::where('public_id', $id)->value('status'));
+        $this->assertEquals(100.0, (float) Stock::where('inventory_location_id', $this->location->id)->value('on_hand'));
+        $this->assertSame(0, StockMovement::count());
+    }
+
+    #[Test]
+    public function posting_is_rejected_when_a_variant_is_soft_deleted_after_the_draft(): void
+    {
+        $this->seedSourceStock();
+        $id = $this->createDraft();
+
+        $this->variant->delete();
+
+        $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertStatus(409);
+
+        $this->assertSame('DRAFT', StockTransfer::where('public_id', $id)->value('status'));
+        $this->assertEquals(100.0, (float) Stock::where('inventory_location_id', $this->location->id)->value('on_hand'));
+        $this->assertSame(0, StockMovement::count());
+    }
+
+    #[Test]
+    public function posting_locks_endpoint_locations_in_sql_primary_key_order(): void
+    {
+        $this->seedSourceStock();
+        $id = $this->createDraft();
+        $transfer = StockTransfer::where('public_id', $id)->firstOrFail();
+        $queries = [];
+
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
+
+        app(StockTransferService::class)->postTransfer($transfer->id, $this->user->id);
+
+        $endpointLock = collect($queries)->first(fn (string $sql) => str_contains($sql, 'from "inventory_locations"')
+            && str_contains($sql, 'for update'));
+
+        $this->assertNotNull($endpointLock, 'Expected posting to lock both endpoint Location rows.');
+        $this->assertMatchesRegularExpression('/order by "(?:inventory_locations"\.)?"?id"? asc/', $endpointLock);
+    }
+
+    #[Test]
     public function the_summary_list_row_reports_the_line_count(): void
     {
         $this->createDraft();
@@ -523,12 +576,16 @@ class StockTransferTest extends InventoryTestCase
     #[Test]
     public function reads_require_stock_view_and_writes_require_stock_manage(): void
     {
+        $id = $this->createDraft();
         $viewer = User::factory()->create();
         $viewer->assignRole($this->roleWithPermissions('viewer-only', ['stock.view']));
         $viewer->operatingUnits()->attach($this->operatingUnit->id, ['assignment_role' => 'INVENTORY', 'is_active' => true]);
 
         Passport::actingAs($viewer);
         $this->getJson('/api/v1/inventory/transfers')->assertOk();
+        $this->getJson("/api/v1/inventory/transfers/{$id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_mutate', false);
         $this->postJson('/api/v1/inventory/transfers', $this->draftPayload())->assertStatus(403);
     }
 
@@ -663,6 +720,30 @@ class StockTransferTest extends InventoryTestCase
         $this->postJson('/api/v1/inventory/transfers', $this->draftPayload([
             ['item_variant_id' => $grVariant->public_id, 'entry_uom_id' => $this->uomKg->public_id, 'entry_quantity' => 1000000000],
         ]))->assertStatus(422)->assertJsonValidationErrors('lines.0.entry_quantity');
+    }
+
+    #[Test]
+    public function a_draft_line_rejects_a_conversion_factor_that_would_persist_as_zero(): void
+    {
+        $microUom = UnitOfMeasure::create([
+            'code' => 'MICROKG', 'name' => 'Ten-millionth kilogram', 'symbol' => 'uKg',
+            'type' => 'WEIGHT', 'precision' => 4, 'is_base' => false, 'is_active' => true,
+        ]);
+        UomConversion::create([
+            'from_uom_id' => $this->uomKg->id,
+            'to_uom_id' => $microUom->id,
+            'factor' => 10000000,
+            'tolerance_percent' => 0.5,
+            'is_active' => true,
+        ]);
+
+        // The reciprocal (0.0000001) produces a valid 0.0001 base quantity,
+        // but cannot survive either decimal(15,6) conversion-factor snapshot.
+        $this->postJson('/api/v1/inventory/transfers', $this->draftPayload([
+            ['item_variant_id' => $this->variant->public_id, 'entry_uom_id' => $microUom->public_id, 'entry_quantity' => 1000],
+        ]))->assertStatus(422)->assertJsonValidationErrors('lines.0.entry_uom_id');
+
+        $this->assertDatabaseCount('stock_transfers', 0);
     }
 
     #[Test]

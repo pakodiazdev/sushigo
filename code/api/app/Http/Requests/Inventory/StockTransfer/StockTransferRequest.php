@@ -32,6 +32,9 @@ abstract class StockTransferRequest extends FormRequest
 
     private const MAX_STORABLE_QTY = 99999999999.9999;
 
+    /** Smallest positive value retained by the decimal(15,6) factor snapshots. */
+    private const MIN_STORABLE_CONVERSION_FACTOR = 0.000001;
+
     public function authorize(): bool
     {
         return true;
@@ -155,6 +158,15 @@ abstract class StockTransferRequest extends FormRequest
             $validator->errors()->add(
                 "lines.{$index}.entry_uom_id",
                 'No existe una conversión activa entre la unidad de medida y la unidad base de la variante.'
+            );
+
+            return;
+        }
+
+        if (round($factor, 6) < self::MIN_STORABLE_CONVERSION_FACTOR) {
+            $validator->errors()->add(
+                "lines.{$index}.entry_uom_id",
+                'El factor de conversión es demasiado pequeño para registrarse con la precisión disponible.'
             );
 
             return;

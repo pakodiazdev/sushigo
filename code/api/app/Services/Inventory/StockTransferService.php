@@ -15,6 +15,7 @@ use App\Exceptions\StockTransferNotPostedException;
 use App\Exceptions\StockTransferReversalBoundaryException;
 use App\Exceptions\StockTransferValueOutOfRangeException;
 use App\Exceptions\StockTransferVariantNotAssignedException;
+use App\Exceptions\StockTransferVariantUnavailableException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
 use App\Models\StockMovement;
@@ -150,7 +151,7 @@ class StockTransferService
      * destination Stock, blend the destination weighted-average cost, and write
      * one immutable `TRANSFER` movement + line per line.
      *
-     * @throws StockTransferAlreadyPostedException|StockTransferAlreadyReversedException|StockTransferLocationUnavailableException|StockTransferVariantNotAssignedException|StockTransferInsufficientStockException
+     * @throws StockTransferAlreadyPostedException|StockTransferAlreadyReversedException|StockTransferLocationUnavailableException|StockTransferVariantUnavailableException|StockTransferVariantNotAssignedException|StockTransferInsufficientStockException
      */
     public function postTransfer(int $transferId, int $userId): StockTransfer
     {
@@ -172,10 +173,10 @@ class StockTransferService
             [$source, $destination] = $this->lockEndpoints($transfer);
 
             $lines = $transfer->lines()
-                ->with('itemVariant.unitOfMeasure')
                 ->orderBy('item_variant_id')
                 ->get();
 
+            $this->lockAndAssertVariantsAvailable($transfer, $lines);
             $this->lockAffectedStockDeterministically($transfer, $lines);
 
             foreach ($lines as $line) {
@@ -276,6 +277,7 @@ class StockTransferService
         sort($ids);
 
         $locked = InventoryLocation::whereIn('id', $ids)
+            ->orderBy('id')
             ->lockForUpdate()
             ->get()
             ->keyBy('id');
@@ -304,6 +306,35 @@ class StockTransferService
         }
 
         return [$source, $destination];
+    }
+
+    /**
+     * Lock referenced Variant rows in primary-key order and reject a draft
+     * whose catalog state changed before posting. The lock also serializes a
+     * concurrent deactivate/delete behind the posting decision.
+     *
+     * @param  \Illuminate\Support\Collection<int, StockTransferLine>  $lines
+     *
+     * @throws StockTransferVariantUnavailableException
+     */
+    private function lockAndAssertVariantsAvailable(StockTransfer $transfer, $lines): void
+    {
+        $variantIds = $lines->pluck('item_variant_id')->map(fn ($id) => (int) $id)->unique()->sort()->values();
+
+        $variants = ItemVariant::query()
+            ->whereIn('id', $variantIds)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+
+        foreach ($variantIds as $variantId) {
+            if (! $variants->get($variantId)?->is_active) {
+                throw new StockTransferVariantUnavailableException(
+                    "Stock Transfer #{$transfer->id} references a Product Variant that is no longer available."
+                );
+            }
+        }
     }
 
     /**

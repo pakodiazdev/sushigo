@@ -28,6 +28,7 @@ class StockTransferResource extends BaseResource
             // mutation requires access to *both* units — the UI reads this flag
             // rather than the global `stock.manage` permission alone.
             'can_mutate' => $request->user() !== null
+                && $request->user()->can('stock.manage')
                 && app(OperatingUnitScope::class)->canMutateStockTransfer($request->user(), $this->resource),
             // An endpoint in an Operating Unit this caller cannot access is
             // nulled out — a cross-unit transfer is readable via the *other*

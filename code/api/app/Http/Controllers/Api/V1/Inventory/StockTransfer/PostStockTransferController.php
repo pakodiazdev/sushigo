@@ -10,6 +10,7 @@ use App\Exceptions\StockTransferInsufficientStockException;
 use App\Exceptions\StockTransferLocationUnavailableException;
 use App\Exceptions\StockTransferValueOutOfRangeException;
 use App\Exceptions\StockTransferVariantNotAssignedException;
+use App\Exceptions\StockTransferVariantUnavailableException;
 use App\Http\Controllers\Api\V1\Inventory\StockTransfer\Concerns\AssertsStockTransferOperatingUnitAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\StockTransfer\StockTransferResource;
@@ -32,7 +33,7 @@ use Illuminate\Http\JsonResponse;
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden — requires stock.manage permission and access to both endpoint Operating Units"),
  *   @OA\Response(response=404, description="Stock Transfer not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
- *   @OA\Response(response=409, description="Already posted/reversed, an endpoint Location is unavailable, a Variant is not assigned to the destination, the source has insufficient unreserved stock, or a line's value exceeds the recordable range", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
+ *   @OA\Response(response=409, description="Already posted/reversed, an endpoint Location or Product Variant is unavailable, a Variant is not assigned to the destination, the source has insufficient unreserved stock, or a line's value exceeds the recordable range", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */
 class PostStockTransferController extends Controller
@@ -51,6 +52,7 @@ class PostStockTransferController extends Controller
             StockTransferAlreadyPostedException
             |StockTransferAlreadyReversedException
             |StockTransferLocationUnavailableException
+            |StockTransferVariantUnavailableException
             |StockTransferVariantNotAssignedException
             |StockTransferInsufficientStockException
             |StockTransferValueOutOfRangeException $e
