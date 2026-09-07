@@ -194,6 +194,7 @@ class ReceiptReversalTest extends InventoryTestCase
             'type' => 'MAIN',
             'priority' => 50,
             'is_active' => true,
+            'can_receive_purchases' => true,
         ]);
 
         ['id' => $id] = $this->createPostedReceipt(destination: $destination);

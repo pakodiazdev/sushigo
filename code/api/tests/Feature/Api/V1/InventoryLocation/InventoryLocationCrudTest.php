@@ -38,6 +38,20 @@ class InventoryLocationCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_serializes_the_nested_operating_unit_in_the_list()
+    {
+        // Consumers that group locations by Operating Unit (#572's Receipt
+        // destination picker) need the unit object, not just the FK id.
+        $row = collect($this->getJson('/api/v1/inventory-locations')->assertOk()->json('data'))
+            ->firstWhere('id', $this->location->public_id);
+
+        $this->assertSame($this->operatingUnit->id, $row['operating_unit']['id']);
+        $this->assertSame($this->operatingUnit->name, $row['operating_unit']['name']);
+        $this->assertSame($this->operatingUnit->type, $row['operating_unit']['type']);
+        $this->assertSame($this->branch->code, $row['operating_unit']['branch']['code']);
+    }
+
+    #[Test]
     public function it_allows_listing_with_receipts_manage_permission_but_not_inventory_locations_view()
     {
         $this->user->removeRole('inventory-manager');
@@ -350,6 +364,15 @@ class InventoryLocationCrudTest extends InventoryTestCase
     #[Test]
     public function it_serializes_can_receive_purchases_in_the_list()
     {
+        // A location that never opted in serializes the capability as false — the
+        // shared InventoryTestCase::$location is a receiving warehouse (#572), so
+        // assert against a dedicated non-receiving one instead.
+        $storage = InventoryLocation::factory()->create([
+            'operating_unit_id' => $this->operatingUnit->id,
+            'name' => 'Non-Receiving Storage',
+            'can_receive_purchases' => false,
+        ]);
+
         $response = $this->getJson('/api/v1/inventory-locations');
 
         $response->assertOk()
@@ -359,8 +382,9 @@ class InventoryLocationCrudTest extends InventoryTestCase
                 ],
             ]);
 
-        $row = collect($response->json('data'))->firstWhere('id', $this->location->public_id);
-        $this->assertFalse($row['can_receive_purchases']);
+        $data = collect($response->json('data'));
+        $this->assertFalse($data->firstWhere('id', $storage->public_id)['can_receive_purchases']);
+        $this->assertTrue($data->firstWhere('id', $this->location->public_id)['can_receive_purchases']);
     }
 
     #[Test]

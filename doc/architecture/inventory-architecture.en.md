@@ -821,7 +821,11 @@ default to `false`; the #568 migration backfills only today's active, primary `M
 `GET /api/v1/inventory-locations` accepts an optional `can_receive_purchases` filter that is always
 applied inside the caller's `OperatingUnitScope`. Receipt-destination enforcement itself — a Receipt
 may target only a non-deleted, active, receiving-capable Location inside the caller's
-`OperatingUnitScope` — remains #572's target.
+`OperatingUnitScope` — is **delivered (#572)**: `ReceiptRequest` rejects an ineligible destination
+on the create/update payload with a field-level `422`, and `ReceiptService::postReceipt()` re-reads
+the destination under its row lock and raises a `409` (rolling back every line) if it stopped being
+active or purchase-receiving while the Receipt was a draft. Posting also ensures each received
+line's `VariantLocationAssignment` (#569) in the same transaction; reversal keeps that assignment.
 
 A separate `Warehouse` entity becomes justified only when one Operating Unit must contain multiple
 administratively independent warehouses. Before that requirement exists it would duplicate the

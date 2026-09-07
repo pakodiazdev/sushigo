@@ -314,6 +314,42 @@ class VariantLocationAssignmentCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function unassignment_locks_the_assignment_row_before_it_checks_stock(): void
+    {
+        // Fixed lock order — assignment row first, then the pair's Stock row —
+        // is what serializes unassignment against a concurrent first-receipt
+        // post (whose brand-new Stock row is invisible to the balance check) and
+        // keeps the two paths deadlock-free (#572).
+        $variant = $this->createItemVariant($this->createItem());
+        VariantLocationAssignment::create(['inventory_location_id' => $this->location->id, 'item_variant_id' => $variant->id]);
+
+        $sql = [];
+        DB::listen(function ($query) use (&$sql) {
+            $lower = strtolower($query->sql);
+            if (str_contains($lower, 'for update')) {
+                $sql[] = $lower;
+            }
+        });
+
+        $this->deleteJson($this->url($this->location->public_id, $variant->public_id))->assertNoContent();
+
+        $assignmentLock = null;
+        $stockLock = null;
+        foreach ($sql as $i => $statement) {
+            if ($assignmentLock === null && str_contains($statement, 'from "variant_location_assignments"')) {
+                $assignmentLock = $i;
+            }
+            if ($stockLock === null && str_contains($statement, 'from "stock"')) {
+                $stockLock = $i;
+            }
+        }
+
+        $this->assertNotNull($assignmentLock, 'the assignment row must be locked FOR UPDATE');
+        $this->assertNotNull($stockLock, 'the Stock row must be locked FOR UPDATE');
+        $this->assertLessThan($stockLock, $assignmentLock, 'assignment must be locked before stock');
+    }
+
+    #[Test]
     public function assignments_and_replenishment_policies_stay_independent(): void
     {
         $variant = $this->createItemVariant($this->createItem());

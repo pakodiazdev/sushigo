@@ -4,7 +4,6 @@ namespace App\Services\Inventory;
 
 use App\Exceptions\InvalidStockBalanceException;
 use App\Models\Stock;
-use App\Models\VariantLocationAssignment;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
@@ -22,6 +21,10 @@ use Illuminate\Support\Facades\DB;
  */
 class StockMutationService
 {
+    public function __construct(
+        private readonly VariantLocationAssignmentEnsurer $assignmentEnsurer,
+    ) {}
+
     /**
      * Lock the existing Stock row for update for the remainder of the
      * caller's transaction, or return null if none exists yet. Holding the
@@ -50,11 +53,12 @@ class StockMutationService
      * receipt is rejected the same way a repeat receipt already is via
      * increaseOnHand() — otherwise Stock::create() would accept it unchecked.
      *
-     * Once the Stock row is locked/created, ensureManagedAssignment() lands a
-     * live managed assignment (#569) for the pair, so the assignment-spined
-     * Existencias read model (#571) never hides a balance this call just
-     * committed. It runs *after* the Stock lock deliberately — see the inline
-     * note about the unassign TOCTOU window.
+     * Before touching Stock, the shared assignment ensurer lands or locks the
+     * pair's live managed assignment (#569). Every inbound writer therefore
+     * uses the same assignment→Stock order as unassignment; a Receipt and an
+     * Opening Balance can no longer deadlock by acquiring those rows in opposite
+     * orders. Taking the assignment lock first also serializes first receipt
+     * against unassignment while the not-yet-committed Stock row is invisible.
      *
      * @throws InvalidStockBalanceException if $qty is not positive
      */
@@ -66,24 +70,13 @@ class StockMutationService
             );
         }
 
+        $this->assignmentEnsurer->ensure($inventoryLocationId, $itemVariantId);
+
         $stock = $this->lockAndGet($inventoryLocationId, $itemVariantId);
 
         if ($stock === null) {
-            $stock = $this->insertOrRecoverFromRace($inventoryLocationId, $itemVariantId, $qty);
-            $this->ensureManagedAssignment($inventoryLocationId, $itemVariantId);
-
-            return $stock;
+            return $this->insertOrRecoverFromRace($inventoryLocationId, $itemVariantId, $qty);
         }
-
-        // The Stock row is held FOR UPDATE now, so this is serialized against
-        // #569's UnassignVariantFromLocationController, which locks the same
-        // (Location, Variant) Stock row before it re-checks the zero balance and
-        // soft-deletes the assignment. Ensuring the assignment before acquiring
-        // that lock would leave a TOCTOU window: an unassign could observe our
-        // ensure, delete the assignment, and let the increment below commit
-        // positive Stock with no live assignment — invisible to every
-        // assignment-spined Existencias endpoint.
-        $this->ensureManagedAssignment($inventoryLocationId, $itemVariantId);
 
         return $this->increaseOnHand($stock, $qty);
     }
@@ -142,40 +135,5 @@ class StockMutationService
         $stock->decreaseOnHand($qty);
 
         return $stock->fresh();
-    }
-
-    /**
-     * Idempotently land a live managed assignment (#569) for the pair being
-     * received into. Reactivates a soft-deleted assignment (a receipt into a
-     * pair someone unassigned once its balance hit zero re-manages it, matching
-     * the #569 assign endpoint's "201 on create/reactivate"), and recovers from
-     * the partial-unique-index race two concurrent first receipts would
-     * otherwise lose — the same savepoint shape as insertOrRecoverFromRace()
-     * above, so a lost INSERT never aborts the caller's outer transaction.
-     */
-    private function ensureManagedAssignment(int $inventoryLocationId, int $itemVariantId): void
-    {
-        $existing = VariantLocationAssignment::withTrashed()
-            ->where('inventory_location_id', $inventoryLocationId)
-            ->where('item_variant_id', $itemVariantId)
-            ->first();
-
-        if ($existing !== null) {
-            if ($existing->trashed()) {
-                $existing->restore();
-            }
-
-            return;
-        }
-
-        try {
-            DB::transaction(fn () => VariantLocationAssignment::create([
-                'inventory_location_id' => $inventoryLocationId,
-                'item_variant_id' => $itemVariantId,
-            ]));
-        } catch (UniqueConstraintViolationException) {
-            // A concurrent first receipt created the live assignment between
-            // our read and this insert — the invariant already holds.
-        }
     }
 }

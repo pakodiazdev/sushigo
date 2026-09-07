@@ -27,8 +27,20 @@ namespace App\Http\Responses\Entities;
  *     property="destination_location",
  *     type="object",
  *     nullable=true,
+ *     description="Receiving Location context (#572): type, receiving capability, active flag and owning Operating Unit",
  *     @OA\Property(property="id", type="string"),
- *     @OA\Property(property="name", type="string")
+ *     @OA\Property(property="name", type="string"),
+ *     @OA\Property(property="type", type="string", example="MAIN"),
+ *     @OA\Property(property="is_active", type="boolean"),
+ *     @OA\Property(property="can_receive_purchases", type="boolean"),
+ *     @OA\Property(
+ *       property="operating_unit",
+ *       type="object",
+ *       nullable=true,
+ *       @OA\Property(property="id", type="integer"),
+ *       @OA\Property(property="name", type="string"),
+ *       @OA\Property(property="type", type="string")
+ *     )
  *   ),
  *   @OA\Property(
  *     property="lines",

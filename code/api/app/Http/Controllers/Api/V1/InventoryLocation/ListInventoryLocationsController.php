@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\InventoryLocation\ListInventoryLocationsRequest;
 use App\Http\Responses\Common\ResponsePaginated;
 use App\Models\InventoryLocation;
+use App\Models\OperatingUnit;
 use App\Support\Access\OperatingUnitScope;
 
 /**
@@ -67,20 +68,45 @@ class ListInventoryLocationsController extends Controller
         $perPage = $request->input('per_page', 15);
         $locations = $query->paginate($perPage);
 
-        // Transform the data to include all required fields
-        $locations->getCollection()->transform(function ($location) {
-            return [
-                'id' => $location->public_id,
-                'operating_unit_id' => $location->operating_unit_id,
-                'name' => $location->name,
-                'type' => $location->type,
-                'priority' => $location->priority,
-                'is_primary' => $location->is_primary,
-                'is_active' => $location->is_active,
-                'can_receive_purchases' => $location->can_receive_purchases,
-            ];
-        });
+        // Transform the data to include all required fields. `operating_unit` is
+        // serialized as a nested object (not just the FK id) so scoped consumers
+        // — e.g. the Purchase Receipt destination picker grouping by unit (#572) —
+        // don't need a second lookup; the relation is already eager-loaded above.
+        $locations->getCollection()->transform(fn ($location) => [
+            'id' => $location->public_id,
+            'operating_unit_id' => $location->operating_unit_id,
+            'name' => $location->name,
+            'type' => $location->type,
+            'priority' => $location->priority,
+            'is_primary' => $location->is_primary,
+            'is_active' => $location->is_active,
+            'can_receive_purchases' => $location->can_receive_purchases,
+            'operating_unit' => $this->formatOperatingUnit($location->operatingUnit),
+        ]);
 
         return new ResponsePaginated($locations);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function formatOperatingUnit(?OperatingUnit $unit): ?array
+    {
+        if ($unit === null) {
+            return null;
+        }
+
+        $branch = $unit->branch;
+
+        return [
+            'id' => $unit->id,
+            'name' => $unit->name,
+            'type' => $unit->type,
+            'branch' => $branch === null ? null : [
+                'id' => $branch->id,
+                'code' => $branch->code,
+                'name' => $branch->name,
+            ],
+        ];
     }
 }

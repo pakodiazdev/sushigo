@@ -30,14 +30,27 @@ export interface SelectOption {
 /**
  * Hook to fetch inventory locations for use in select dropdowns.
  * Sorted by priority (descending) then by name.
+ *
+ * `receivingOnly` (#572) narrows the result to Locations that can actually be a
+ * Purchase Receipt destination — active *and* `can_receive_purchases = true`
+ * (#568) — so the Receipt form never offers a destination the API would reject.
  */
-export function useInventoryLocationsSelect(enabled = true) {
+export function useInventoryLocationsSelect(enabled = true, receivingOnly = false) {
+  const listParams = receivingOnly
+    ? { is_active: true, can_receive_purchases: true, for_select: true }
+    : { is_active: true, for_select: true }
+
   return useQuery({
-    queryKey: inventoryQueryKeys.locationsList({ is_active: true, for_select: true }),
+    queryKey: inventoryQueryKeys.locationsList(listParams),
     // /inventory-locations paginates — fetch every page up front so a location ordered past the
     // first 100 is still selectable (same fix already applied to the receipt line's product and
     // variant selects).
-    queryFn: () => fetchAllPages((page) => inventoryLocationApi.list({ is_active: true, page, per_page: 100 })),
+    queryFn: () => fetchAllPages((page) => inventoryLocationApi.list({
+      is_active: true,
+      ...(receivingOnly ? { can_receive_purchases: true } : {}),
+      page,
+      per_page: 100,
+    })),
     enabled,
     select: (response) => {
       const locations = response.data.data || []

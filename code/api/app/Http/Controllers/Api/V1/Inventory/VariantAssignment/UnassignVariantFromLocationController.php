@@ -47,23 +47,42 @@ class UnassignVariantFromLocationController extends Controller
 
         $variant = ItemVariant::findByPublicIdOrFail($variantId);
 
-        $assignment = VariantLocationAssignment::query()
+        VariantLocationAssignment::query()
             ->where('inventory_location_id', $location->id)
             ->where('item_variant_id', $variant->id)
             ->firstOrFail();
 
-        // The balance check and the soft-delete run in one transaction, and the
-        // check locks the pair's Stock row itself — by (location, variant) only,
-        // never filtered by quantity — so a *zeroed* row is locked too. That is
-        // the same row the inbound posting path locks
-        // (StockMutationService::lockAndGet), so a concurrent receipt into an
-        // existing row for the pair (zero balance included) is serialized
-        // against this guard and the documented 409 invariant holds. A genuine
-        // first receipt that creates the Stock row from scratch in the same
-        // instant still has no row to lock — enforcing assortment against
-        // inbound entries is explicitly a consuming-workflow concern
-        // (#570–#574), out of scope here.
-        $blocked = DB::transaction(function () use ($location, $variant, $assignment): bool {
+        // Everything runs in one transaction with a fixed lock order —
+        // **assignment row first, then the pair's Stock row** — the same order
+        // the inbound Receipt posting path takes (`ReceiptService::postReceipt`:
+        // `VariantLocationAssignmentEnsurer::ensure()` locks the assignment,
+        // *then* `StockMutationService` locks/creates the Stock row). Sharing the
+        // order both keeps the two paths deadlock-free and forces whichever grabs
+        // the assignment lock first to finish before the other proceeds:
+        //
+        //  - unassign wins the assignment lock → the receipt's `ensure()` waits;
+        //    unassign soft-deletes, commits, and the receipt then re-reads no
+        //    live row and *reactivates* the assignment, so the confirmed receipt
+        //    still lands inside the managed assortment;
+        //  - the receipt wins → unassign waits until the receipt commits, then
+        //    sees the now-positive Stock row and returns 409.
+        //
+        // This closes the first-receipt race (`#572`): a brand-new Stock row is
+        // invisible to unassign's balance check, but the assignment-row lock is
+        // not, so the two are still serialized.
+        $blocked = DB::transaction(function () use ($location, $variant): bool {
+            $assignment = VariantLocationAssignment::query()
+                ->where('inventory_location_id', $location->id)
+                ->where('item_variant_id', $variant->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($assignment === null) {
+                // A concurrent unassign won between the pre-flight check and this
+                // lock — nothing left to do, the pair is already unassigned.
+                return false;
+            }
+
             $stock = Stock::query()
                 ->where('inventory_location_id', $location->id)
                 ->where('item_variant_id', $variant->id)

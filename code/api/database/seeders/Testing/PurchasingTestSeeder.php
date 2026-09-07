@@ -45,10 +45,13 @@ class PurchasingTestSeeder extends Seeder
         $mainUnit = OperatingUnit::where('branch_id', $branch->id)->where('type', OperatingUnit::TYPE_BRANCH_MAIN)->firstOrFail();
         $admin = User::where('email', 'admin@sushigo.com')->firstOrFail();
 
+        // This seeder posts a Receipt into this location, so it must be a valid
+        // purchase-receiving destination (#568/#572) regardless of seeder order.
         $destination = InventoryLocation::firstOrCreate(
             ['operating_unit_id' => $mainUnit->id, 'type' => InventoryLocation::TYPE_MAIN],
-            ['name' => 'Almacén Principal', 'is_primary' => true, 'priority' => 100],
+            ['name' => 'Almacén Principal', 'is_primary' => true, 'priority' => 100, 'can_receive_purchases' => true],
         );
+        $destination->forceFill(['can_receive_purchases' => true])->save();
 
         $eventUnit = OperatingUnit::create([
             'branch_id' => $branch->id,

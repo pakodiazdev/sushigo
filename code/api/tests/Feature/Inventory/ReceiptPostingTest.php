@@ -203,6 +203,27 @@ class ReceiptPostingTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_locks_the_referenced_variant_rows_for_update_when_posting(): void
+    {
+        ['id' => $id, 'variant' => $variant] = $this->createDraft();
+        $receipt = Receipt::where('public_id', $id)->first();
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries) {
+            $queries[] = strtolower($query->sql);
+        });
+
+        app(ReceiptService::class)->postReceipt($receipt->id, $this->user->id);
+
+        $variantLock = array_filter(
+            $queries,
+            fn ($sql) => str_contains($sql, 'from "item_variants"') && str_contains($sql, 'for update')
+        );
+
+        $this->assertNotEmpty($variantLock, 'posting must lock the referenced item_variants rows');
+    }
+
+    #[Test]
     public function posting_an_already_posted_receipt_is_rejected(): void
     {
         ['id' => $id] = $this->createDraft();
@@ -239,6 +260,7 @@ class ReceiptPostingTest extends InventoryTestCase
             'type' => 'MAIN',
             'priority' => 50,
             'is_active' => true,
+            'can_receive_purchases' => true,
         ]);
 
         ['id' => $id] = $this->createDraft([], ['destination_location_id' => $destination->public_id]);
@@ -256,5 +278,26 @@ class ReceiptPostingTest extends InventoryTestCase
         $variant->delete();
 
         $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertStatus(409);
+    }
+
+    #[Test]
+    public function posting_is_rejected_when_the_variant_was_deactivated_after_the_draft_was_created(): void
+    {
+        // A deactivated (not soft-deleted) variant still resolves through the
+        // presentation relation, but AssignVariantToLocationController refuses to
+        // assign it — receipt posting must not create that assignment through the
+        // back door, so the whole post is a 409 and rolls back (#572).
+        ['id' => $id, 'variant' => $variant] = $this->createDraft();
+
+        $variant->update(['is_active' => false]);
+
+        $this->postJson("/api/v1/inventory/receipts/{$id}/post")->assertStatus(409);
+
+        $this->assertSame(Receipt::STATUS_DRAFT, Receipt::where('public_id', $id)->value('status'));
+        $this->assertDatabaseMissing('variant_location_assignments', [
+            'inventory_location_id' => $this->location->id,
+            'item_variant_id' => $variant->id,
+        ]);
+        $this->assertSame(0, Stock::where('item_variant_id', $variant->id)->count());
     }
 }

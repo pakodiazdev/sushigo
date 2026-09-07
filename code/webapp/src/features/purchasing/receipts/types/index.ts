@@ -14,6 +14,23 @@ export interface ReceiptLocationRef {
   name: string
 }
 
+/**
+ * Richer destination context on the Receipt *detail* resource (#572) — its type,
+ * receiving capability, active flag and owning Operating Unit, so the detail view
+ * shows where the stock landed and why the Location was eligible without a second
+ * lookup. The summary list row still carries only `ReceiptLocationRef`.
+ *
+ * The extra fields are optional in the type (the detail endpoint always populates
+ * them; keeping them optional lets `ReceiptLocationRef` fixtures stand in and
+ * tolerates any older cached payload) — consumers null-check before use.
+ */
+export interface ReceiptDestinationRef extends ReceiptLocationRef {
+  type?: string
+  is_active?: boolean
+  can_receive_purchases?: boolean
+  operating_unit?: { id: number; name: string; type: string } | null
+}
+
 export interface ReceiptUserRef {
   id: string
   name: string
@@ -50,7 +67,7 @@ export interface Receipt {
   receipt_date: string
   notes: string | null
   supplier: ReceiptPartyRef | null
-  destination_location: ReceiptLocationRef | null
+  destination_location: ReceiptDestinationRef | null
   lines: ReceiptLine[]
   posted_at: string | null
   posted_by: ReceiptUserRef | null
