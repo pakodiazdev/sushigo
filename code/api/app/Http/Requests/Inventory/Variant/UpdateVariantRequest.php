@@ -7,6 +7,8 @@ namespace App\Http\Requests\Inventory\Variant;
 use App\Http\Requests\Concerns\ResolvesPublicIdReferences;
 use App\Models\Item;
 use App\Models\ItemVariant;
+use App\Models\StockTransfer;
+use App\Models\StockTransferLine;
 use App\Models\UnitOfMeasure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -85,7 +87,9 @@ class UpdateVariantRequest extends FormRequest
      * guarded the same way — the assignment's compatible_dimension_uom_id
      * was checked against this uom_id when it was created, and changing the
      * base UOM afterward would silently break that invariant even without
-     * any stock or movement history yet.
+     * any stock or movement history yet. Draft Stock Transfer lines also
+     * snapshot their converted base quantity, so changing the base UOM while
+     * one exists would reinterpret that quantity when the Transfer is posted.
      */
     private function validateBaseUomChange(Validator $validator): void
     {
@@ -109,6 +113,17 @@ class UpdateVariantRequest extends FormRequest
 
         if ($variant->purchasePresentations()->exists()) {
             $validator->errors()->add('uom_id', 'The base unit of measure cannot be changed once the variant has a purchase presentation assigned.');
+
+            return;
+        }
+
+        $hasDraftTransfer = StockTransferLine::query()
+            ->where('item_variant_id', $variant->id)
+            ->whereHas('transfer', fn ($query) => $query->where('status', StockTransfer::STATUS_DRAFT))
+            ->exists();
+
+        if ($hasDraftTransfer) {
+            $validator->errors()->add('uom_id', 'The base unit of measure cannot be changed while the variant is referenced by a draft stock transfer.');
         }
     }
 

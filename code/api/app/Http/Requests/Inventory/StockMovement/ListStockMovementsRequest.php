@@ -24,7 +24,7 @@ use Illuminate\Validation\Rule;
  *   @OA\Property(property="date_from", type="string", format="date", description="Inclusive lower bound on posted_at"),
  *   @OA\Property(property="date_to", type="string", format="date", description="Inclusive upper bound on posted_at"),
  *   @OA\Property(property="search", type="string", description="Case-insensitive match on reference"),
- *   @OA\Property(property="source_type", type="string", enum={"receipt"}, description="Originating source document type"),
+ *   @OA\Property(property="source_type", type="string", enum={"receipt", "stock_transfer"}, description="Originating source document type"),
  *   @OA\Property(property="per_page", type="integer", minimum=1, maximum=100, example=15),
  *   @OA\Property(property="page", type="integer", minimum=1, example=1)
  * )

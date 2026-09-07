@@ -92,6 +92,7 @@ const menuItems: MenuItem[] = [
             // resolveItemAccess when a sub-item is independently accessible.
             { label: 'Existencias', path: '/inventario/existencias', requiredPermission: 'stock.view' },
             { label: 'Movimientos', path: '/inventario/movimientos', requiredPermission: 'stock.view' },
+            { label: 'Transferencias', path: '/inventario/transferencias', requiredPermission: 'stock.view' },
             { label: 'Productos', path: '/inventario/productos' },
             { label: 'Insumos', path: '/inventario/insumos' },
             { label: 'Variantes', path: '/inventario/variantes' },

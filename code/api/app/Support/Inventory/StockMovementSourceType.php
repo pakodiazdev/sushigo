@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Inventory;
 
 use App\Models\Receipt;
+use App\Models\StockTransfer;
 use Illuminate\Support\Str;
 
 /**
@@ -23,6 +24,7 @@ final class StockMovementSourceType
     /** @var array<string, class-string> */
     public const KNOWN = [
         'receipt' => Receipt::class,
+        'stock_transfer' => StockTransfer::class,
     ];
 
     public static function tokenFor(?string $relatedType): ?string

@@ -107,7 +107,7 @@ The thirteen Issues are on **SushiGo Admin**, `Todo`, labeled `sprint-7`, and as
 | ✅ | #570 | Expose an auditable Opening Balance workflow | Product | P1 | M | 5h | 9h |
 | ✅ | #571 | Show assigned Variants with zero Stock in Existencias | Product | P1 | M | 6h | 11h |
 | ✅ | #572 | Route confirmed Purchase Receipts into eligible receiving Locations | Product | P0 | M | 5h | 9h |
-| ⏳ | #573 | Implement auditable internal Stock Transfers | Product | P1 | L | 9h | 16h |
+| ✅ | #573 | Implement auditable internal Stock Transfers | Product | P1 | L | 9h | 16h |
 | ⏳ | #574 | Expose an auditable Inventory Stock Movement ledger | Product | P1 | M | 6h | 11h |
 |  |  | **Total** |  |  |  | **57h** | **115h** |
 
@@ -215,7 +215,7 @@ the consuming verticals wait for only the foundations they name.
 |---|---:|---|---|---:|---:|---|---:|---|---|
 | D | #572 | #567 + #568 + #569 | Receipt requests/service/resource and Receipt feature UI | 5h | 9h | ✅ | 0.9h | PR #604 | Eligible destinations and idempotent posting now share deterministic assignment-before-stock locking; PR ready, merge pending |
 | E | #570 | #567 + #569 | Opening Balance backend/response/form and minimal page action | 5h | 9h | ✅ | 3.8h | PR #605 | Auditable preview/posting on the shared #572 assignment ensurer; valuation rounding and decimal(15,4) ledger bounds verified; PR ready, merge pending |
-| F | #573 | #567 + #569; adopt #568 | New Transfer vertical and route/navigation | 9h | 16h |
+| F | #573 | #567 + #569; adopt #568 | New Transfer vertical and route/navigation | 9h | 16h | ✅ | 1.5h | PR #603 | Auditable draft/post/reverse flow with deterministic locking, immutable movement evidence, authorization, numeric bounds, and UI; PR ready, merge pending |
 | G | #571 | #569 | Stock read projection/controllers and broad Existencias rendering | 6h | 11h |
 | H | #574 | #567 | New movement query/resource and ledger/detail UI | 6h | 11h |
 |  |  |  | **Round effort** | **31h** | **56h** |
@@ -382,6 +382,12 @@ ships. Documentation must never report a pending Issue as production behavior.
 | Multi-line transfer deadlock/partial post | Corrupt balances | Deterministic locks + one transaction + concurrency tests (#573) |
 | Round 2 edits shared files too early | Merge conflicts/contract forks | Enforced ownership and dependency gates in §7–9 |
 | `Warehouse` abstraction added prematurely | Duplicate ownership/access hierarchy | Explicitly deferred; revisit only with concrete multi-warehouse requirement |
+
+### 13.1 Execution Evidence
+
+| Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
+|---|---:|---|---:|---:|---:|---|
+| ✅ | #573 | Delivered auditable draft/post/reverse Stock Transfers across API and Spanish Inventory UI, with idempotent movements, deterministic locking, authorization scoping, assignment enforcement, and cost evidence. | PR #603 | — | 1.5h | PHPUnit StockTransfer suite: 38 tests / 185 assertions; Pint passed; full CI passed across 4 API, 4 webapp, and 6 E2E shards; API/webapp SonarCloud gates passed; 16 review threads resolved, including final Devin hardening. |
 
 ## 14. Definition of Ready
 
