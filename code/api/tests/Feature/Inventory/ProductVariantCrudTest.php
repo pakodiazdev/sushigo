@@ -6,6 +6,8 @@ use App\Models\Item;
 use App\Models\ItemVariant;
 use App\Models\Stock;
 use App\Models\StockMovement;
+use App\Models\StockTransfer;
+use App\Models\StockTransferLine;
 use PHPUnit\Framework\Attributes\Test;
 
 class ProductVariantCrudTest extends InventoryTestCase
@@ -521,6 +523,30 @@ class ProductVariantCrudTest extends InventoryTestCase
         $response->assertStatus(200);
         $variant->refresh();
         $this->assertSame($this->uomGr->id, $variant->uom_id);
+    }
+
+    #[Test]
+    public function it_rejects_changing_the_base_uom_while_a_draft_transfer_references_the_variant()
+    {
+        $product = $this->createProduct();
+        $variant = $this->createItemVariant($product, ['uom_id' => $this->uomKg->id]);
+
+        $transfer = StockTransfer::factory()->create();
+        StockTransferLine::create([
+            'stock_transfer_id' => $transfer->id,
+            'item_variant_id' => $variant->id,
+            'entry_uom_id' => $this->uomKg->id,
+            'base_uom_id' => $this->uomKg->id,
+            'entry_quantity' => 2,
+            'conversion_factor' => 1,
+            'base_quantity' => 2,
+        ]);
+
+        $this->putJson("/api/v1/inventory/products/{$product->public_id}/variants/{$variant->public_id}", [
+            'uom_id' => $this->uomGr->public_id,
+        ])->assertStatus(422)->assertJsonValidationErrors(['uom_id']);
+
+        $this->assertSame($this->uomKg->id, $variant->fresh()->uom_id);
     }
 
     #[Test]
