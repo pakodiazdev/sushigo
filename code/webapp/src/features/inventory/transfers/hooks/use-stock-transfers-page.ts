@@ -87,6 +87,20 @@ export function useStockTransfersPage() {
   const invalidateLists = () =>
     queryClient.invalidateQueries({ queryKey: stockTransferQueryKeys.lists() })
 
+  // Posting or reversing a Transfer moves Stock between two locations, blends the
+  // destination weighted-average cost and appends a Stock Movement — every
+  // downstream inventory read model the operator may have open (Existencias,
+  // Movimientos, the per-location / per-variant panels, the assignment rows that
+  // carry on-hand) must refetch, not just the Transfer list. Mirrors
+  // features/purchasing/receipts/hooks/use-receipts-page.ts.
+  const invalidateInventoryReadModels = () => {
+    queryClient.invalidateQueries({ queryKey: ['stock-all'] })
+    queryClient.invalidateQueries({ queryKey: ['stock-by-location'] })
+    queryClient.invalidateQueries({ queryKey: ['stock-by-variant'] })
+    queryClient.invalidateQueries({ queryKey: ['variant-assignments'] })
+    queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
+  }
+
   const closePanel = () => setIsPanelOpen(false)
 
   const applyUpdatedTransfer = (transfer: StockTransfer) => {
@@ -118,6 +132,7 @@ export function useStockTransfersPage() {
     mutationFn: (transferId: string) => stockTransferApi.post(transferId),
     onSuccess: (response) => {
       applyUpdatedTransfer(response.data.data)
+      invalidateInventoryReadModels()
       showSuccess('Traslado confirmado y aplicado al inventario', 'Traslado confirmado')
     },
     onError: (error: unknown) => {
@@ -130,6 +145,7 @@ export function useStockTransfersPage() {
       stockTransferApi.reverse(transferId, { reason: reason || null }),
     onSuccess: (response) => {
       applyUpdatedTransfer(response.data.data)
+      invalidateInventoryReadModels()
       showSuccess('Traslado revertido', 'Traslado revertido')
     },
     onError: (error: unknown) => {

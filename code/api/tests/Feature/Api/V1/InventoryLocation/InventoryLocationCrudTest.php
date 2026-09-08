@@ -354,6 +354,38 @@ class InventoryLocationCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_deletes_a_location_whose_only_stock_rows_are_zeroed()
+    {
+        // The delete guard re-checks `on_hand > 0` under a row lock before
+        // soft-deleting (so a concurrent inbound move can't strand stock under
+        // an archived location); a row that exists but holds nothing must not
+        // block the delete.
+        $location = InventoryLocation::factory()->create([
+            'operating_unit_id' => OperatingUnit::first()->id,
+        ]);
+
+        $uom = UnitOfMeasure::where('code', 'KG')->first();
+        $item = Item::factory()->create();
+        $variant = ItemVariant::factory()->create([
+            'item_id' => $item->id,
+            'uom_id' => $uom->id,
+        ]);
+
+        Stock::create([
+            'inventory_location_id' => $location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 0.0,
+            'reserved' => 0.0,
+            'weighted_avg_cost' => 0.0,
+        ]);
+
+        $response = $this->actingAs($this->user)->deleteJson("/api/v1/inventory-locations/{$location->public_id}");
+
+        $response->assertOk();
+        $this->assertSoftDeleted('inventory_locations', ['id' => $location->id]);
+    }
+
+    #[Test]
     public function it_returns_404_when_location_not_found()
     {
         $response = $this->getJson('/api/v1/inventory-locations/99999');

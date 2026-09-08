@@ -22,14 +22,17 @@ vi.mock('@/components/ui/slide-panel', () => ({
   },
 }))
 
+const locationsQueryState = vi.hoisted(() => ({ isError: false }))
+
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useQuery: (config: { queryKey: unknown[] }) => {
     if (config.queryKey[0] === 'stock-transfer-form' && config.queryKey[1] === 'uoms') {
       return { data: { data: { data: [{ id: 'u-kg', code: 'KG', name: 'Kilogramo' }] } } }
     }
-    // The assigned-variant query for the "dst" destination — variant "v-a" only.
-    if (config.queryKey[0] === 'stock-transfer-form' && config.queryKey[2] === 'dst') {
+    // The assigned-variant picker for the "dst" destination — variant "v-a" only.
+    // Key shape: variantAssignmentQueryKeys.picker('dst').
+    if (config.queryKey[0] === 'variant-assignments' && config.queryKey[2] === 'dst') {
       return {
         data: {
           data: {
@@ -47,19 +50,26 @@ vi.mock('@/lib/fetch-all-pages', () => ({
 }))
 
 vi.mock('@/hooks/use-inventory-queries', () => ({
-  useInventoryLocationsSelect: () => ({
-    data: [
-      { id: 'src', name: 'Bodega' },
-      { id: 'dst', name: 'Cocina' },
-      { id: 'dst2', name: 'Barra' },
-    ],
-  }),
+  useInventoryLocationsSelect: () =>
+    locationsQueryState.isError
+      ? { data: undefined, isError: true }
+      : {
+          data: [
+            { id: 'src', name: 'Bodega' },
+            { id: 'dst', name: 'Cocina' },
+            { id: 'dst2', name: 'Barra' },
+          ],
+          isError: false,
+        },
 }))
 
 vi.mock('@/lib/api-client', () => ({ apiClient: { get: vi.fn() } }))
 
 vi.mock('@/features/inventory/assignments', () => ({
   variantAssignmentApi: { list: vi.fn() },
+  variantAssignmentQueryKeys: {
+    picker: (locationId: string) => ['variant-assignments', 'location', locationId, 'picker'],
+  },
 }))
 
 const draftTransfer = {
@@ -95,10 +105,20 @@ const draftTransfer = {
 describe('StockTransferForm', () => {
   beforeEach(() => {
     formMutation.validationErrors = {}
+    locationsQueryState.isError = false
   })
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  it('shows a permissions banner instead of empty selectors when the location list fails to load', () => {
+    locationsQueryState.isError = true
+
+    const view = render(<StockTransferForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
+
+    expect(view.getByText(/No fue posible cargar las ubicaciones de inventario/i)).toBeDefined()
+    expect(view.getByText('inventory_locations.view')).toBeDefined()
   })
 
   it('drops the stale variant fallback option once the destination changes', () => {
