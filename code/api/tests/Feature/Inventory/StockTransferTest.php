@@ -627,6 +627,63 @@ class StockTransferTest extends InventoryTestCase
     }
 
     #[Test]
+    public function posting_locks_the_managed_assignment_before_the_pair_stock_row(): void
+    {
+        $this->seedSourceStock();
+        $id = $this->createDraft();
+        $transfer = StockTransfer::where('public_id', $id)->firstOrFail();
+        $queries = [];
+
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
+
+        app(StockTransferService::class)->postTransfer($transfer->id, $this->user->id);
+
+        $assignmentLock = collect($queries)->search(fn (string $sql) => str_contains($sql, 'from "variant_location_assignments"')
+            && str_contains($sql, 'for update'));
+        $stockLock = collect($queries)->search(fn (string $sql) => str_contains($sql, 'from "stock"')
+            && str_contains($sql, 'for update'));
+
+        $this->assertNotFalse($assignmentLock, 'Posting must lock the managed assignment.');
+        $this->assertNotFalse($stockLock, 'Posting must lock the pair Stock row.');
+        $this->assertLessThan(
+            $stockLock,
+            $assignmentLock,
+            'Posting must take the assignment lock before any Stock row — the repo-wide assignment→Stock order (#569/#572).'
+        );
+    }
+
+    #[Test]
+    public function reversing_locks_the_managed_assignment_before_the_pair_stock_row(): void
+    {
+        $this->seedSourceStock();
+        $id = $this->createDraft();
+        $transfer = StockTransfer::where('public_id', $id)->firstOrFail();
+        app(StockTransferService::class)->postTransfer($transfer->id, $this->user->id);
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
+
+        app(StockTransferService::class)->reverseTransfer($transfer->id, $this->user->id, 'Registrado por error');
+
+        $assignmentLock = collect($queries)->search(fn (string $sql) => str_contains($sql, 'from "variant_location_assignments"')
+            && str_contains($sql, 'for update'));
+        $stockLock = collect($queries)->search(fn (string $sql) => str_contains($sql, 'from "stock"')
+            && str_contains($sql, 'for update'));
+
+        $this->assertNotFalse($assignmentLock, 'Reversal must lock the managed assignment.');
+        $this->assertNotFalse($stockLock, 'Reversal must lock the pair Stock row.');
+        $this->assertLessThan(
+            $stockLock,
+            $assignmentLock,
+            'Reversal must take the assignment lock before any Stock row — the repo-wide assignment→Stock order (#569/#572).'
+        );
+    }
+
+    #[Test]
     public function the_summary_list_row_reports_the_line_count(): void
     {
         $this->createDraft();

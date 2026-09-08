@@ -46,13 +46,20 @@ use Illuminate\Support\Facades\DB;
  * Reversal delegates each line to the shared `StockMovementReverser` (#438):
  * a `TRANSFER` movement already carries both endpoints, so its compensating
  * movement restores the source and unwinds the destination with no
- * transfer-specific reversal code.
+ * transfer-specific reversal code. As on every other reversal path (Purchase
+ * Receipt, Opening Balance), `weighted_avg_cost` is intentionally left
+ * untouched on reversal: precisely unwinding a blended average needs the
+ * lot-level cost tracking this codebase defers to #434, so re-blending here
+ * would only trade one approximation for another.
  *
  * Concurrency: the Transfer header row is locked for the whole post/reverse
  * transaction, so a duplicate or concurrent request serializes behind it and
- * then finds the status already advanced. Within a post, every affected Stock
- * row is locked in a deterministic `(inventory_location_id, item_variant_id)`
- * order to avoid deadlocks between two transfers touching the same Locations.
+ * then finds the status already advanced. Within a post or reverse, every
+ * affected managed assignment is locked first, then every affected Stock row,
+ * both in a deterministic `(inventory_location_id, item_variant_id)` order:
+ * the assignment→Stock lock order every other inbound writer and unassignment
+ * use (#569/#572), and a stable order that also stops two transfers touching
+ * the same Locations from deadlocking on the Stock rows.
  */
 class StockTransferService
 {
@@ -178,6 +185,7 @@ class StockTransferService
                 ->get();
 
             $this->lockAndAssertVariantsAvailable($transfer, $lines);
+            $this->lockAffectedAssignmentsDeterministically($transfer, $lines);
             $this->lockAffectedStockDeterministically($transfer, $lines);
 
             foreach ($lines as $line) {
@@ -218,11 +226,16 @@ class StockTransferService
 
             $lines = $transfer->lines()->orderBy('item_variant_id')->get();
 
-            // Acquire every affected Stock row lock up front in the same
-            // deterministic (location, variant) order posting uses. Without this,
-            // StockMovementReverser locks the original destination before the
-            // source, the opposite order to postTransfer(), so a reversal racing
-            // a concurrent post/reversal on the same pair could deadlock.
+            // Acquire every affected assignment lock, then every affected Stock
+            // row lock, up front in the same deterministic (location, variant)
+            // order posting uses. Without the Stock pre-lock, StockMovementReverser
+            // locks the original destination before the source, the opposite
+            // order to postTransfer(), so a reversal racing a concurrent
+            // post/reversal on the same pair could deadlock. Without the
+            // assignment pre-lock, the reverser's receiveInto() on the source
+            // takes that pair's Stock row before its assignment, inverting the
+            // repo-wide assignment→Stock order (#569/#572).
+            $this->lockAffectedAssignmentsDeterministically($transfer, $lines);
             $this->lockAffectedStockDeterministically($transfer, $lines);
 
             foreach ($lines as $line) {
@@ -365,14 +378,15 @@ class StockTransferService
     }
 
     /**
-     * Acquire every affected Stock row lock up front, in a deterministic
-     * `(inventory_location_id, item_variant_id)` order, so two transfers moving
-     * overlapping Variants between the same Locations can never deadlock by
-     * grabbing the two rows in opposite orders.
+     * The de-duplicated, deterministically ordered `(location, variant)` pairs
+     * a post/reverse touches — both endpoints × every line Variant — sorted by
+     * `(inventory_location_id, item_variant_id)` so every affected row lock is
+     * acquired in one stable order.
      *
      * @param  \Illuminate\Support\Collection<int, StockTransferLine>  $lines
+     * @return array<int, array{location: int, variant: int}>
      */
-    private function lockAffectedStockDeterministically(StockTransfer $transfer, $lines): void
+    private function affectedLocationVariantPairs(StockTransfer $transfer, $lines): array
     {
         $pairs = [];
 
@@ -388,7 +402,48 @@ class StockTransferService
         $pairs = array_values($pairs);
         usort($pairs, fn ($a, $b) => [$a['location'], $a['variant']] <=> [$b['location'], $b['variant']]);
 
-        foreach ($pairs as $pair) {
+        return $pairs;
+    }
+
+    /**
+     * Pre-acquire the live managed `VariantLocationAssignment` lock for every
+     * affected `(location, variant)` pair, in the shared deterministic order,
+     * *before* any Stock row is locked. Every other inbound writer (Receipt,
+     * Opening Balance) and unassignment take the assignment lock before the
+     * pair's Stock row (#569/#572); the up-front
+     * `lockAffectedStockDeterministically()` would otherwise invert that order
+     * for the transfer post/reverse path and let a transfer deadlock a
+     * concurrent unassignment or inbound entry on the same pair.
+     *
+     * @param  \Illuminate\Support\Collection<int, StockTransferLine>  $lines
+     */
+    private function lockAffectedAssignmentsDeterministically(StockTransfer $transfer, $lines): void
+    {
+        foreach ($this->affectedLocationVariantPairs($transfer, $lines) as $pair) {
+            // Lock the live assignment for the pair if one exists. The return
+            // value is intentionally unused — `postLine` and the reverser's
+            // `receiveInto()` re-lock it under the same transaction. A pair with
+            // no live row yet is the assignment contract's documented residual
+            // window (see `postLine`), shared with every inbound path.
+            VariantLocationAssignment::query()
+                ->where('inventory_location_id', $pair['location'])
+                ->where('item_variant_id', $pair['variant'])
+                ->lockForUpdate()
+                ->first();
+        }
+    }
+
+    /**
+     * Acquire every affected Stock row lock up front, in the shared
+     * deterministic `(inventory_location_id, item_variant_id)` order, so two
+     * transfers moving overlapping Variants between the same Locations can never
+     * deadlock by grabbing the two rows in opposite orders.
+     *
+     * @param  \Illuminate\Support\Collection<int, StockTransferLine>  $lines
+     */
+    private function lockAffectedStockDeterministically(StockTransfer $transfer, $lines): void
+    {
+        foreach ($this->affectedLocationVariantPairs($transfer, $lines) as $pair) {
             // Acquire the lock (or confirm the row does not exist yet). The
             // return value is intentionally unused — `postLine` re-reads each
             // row through StockMutationService under the same transaction.
