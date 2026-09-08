@@ -78,10 +78,14 @@ class VariantLocationAssignmentEnsurer
             });
         } catch (UniqueConstraintViolationException) {
             // A concurrent writer won the live row (fresh insert, or restored an
-            // archived one) between our lock-miss above and this write.
+            // archived one) between our lock-miss above and this write. Refetch it
+            // under lock — same as the happy path above — so a concurrent unassign
+            // cannot soft-delete the winner between here and the caller's Stock
+            // write, which would silently drop the balance we just received (#572).
             $winner = VariantLocationAssignment::query()
                 ->where('inventory_location_id', $inventoryLocationId)
                 ->where('item_variant_id', $itemVariantId)
+                ->lockForUpdate()
                 ->firstOrFail();
 
             return [$winner, false];
