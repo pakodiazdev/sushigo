@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\InventoryLocation;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponseEntity;
 use App\Models\InventoryLocation;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -32,18 +33,33 @@ class DeleteInventoryLocationController extends Controller
         // the user must belong to this location's Operating Unit.
         Gate::authorize('delete', $location);
 
-        // Check if location has stock
-        $hasStock = $location->stock()->where('on_hand', '>', 0)->exists();
+        // Re-check "has stock" under a row lock, then soft-delete in the same
+        // transaction. A Stock Transfer (or any inbound move) posting into this
+        // location takes the same `inventory_locations` row lock via
+        // StockTransferService::lockEndpoints(); without serializing here, a
+        // delete that saw an empty location could still archive it right after a
+        // concurrent post moved stock in, stranding that stock under a
+        // soft-deleted location.
+        $deleted = DB::transaction(function () use ($location): bool {
+            /** @var InventoryLocation $locked */
+            $locked = InventoryLocation::whereKey($location->getKey())->lockForUpdate()->firstOrFail();
 
-        if ($hasStock) {
+            if ($locked->stock()->where('on_hand', '>', 0)->exists()) {
+                return false;
+            }
+
+            $locked->delete();
+
+            return true;
+        });
+
+        if (! $deleted) {
             return response()->json([
                 'status' => 409,
                 'message' => 'Cannot delete location that has stock on hand. Move or consume stock first.',
                 'errors' => [],
             ], 409);
         }
-
-        $location->delete();
 
         return new ResponseEntity(
             data: ['message' => 'Inventory location deleted successfully']

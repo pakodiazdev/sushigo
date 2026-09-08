@@ -7,7 +7,7 @@ import { SlidePanel } from '@/components/ui/slide-panel'
 import { apiClient } from '@/lib/api-client'
 import { useInventoryLocationsSelect } from '@/hooks/use-inventory-queries'
 import { fetchAllPages } from '@/lib/fetch-all-pages'
-import { variantAssignmentApi } from '@/features/inventory/assignments'
+import { variantAssignmentApi, variantAssignmentQueryKeys } from '@/features/inventory/assignments'
 import type { PaginatedResponse, UnitOfMeasure } from '@/types/inventory'
 import { useStockTransferForm } from '../hooks/use-stock-transfer-form'
 import type { StockTransfer } from '../types'
@@ -57,7 +57,11 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
   // full so a Variant past the first 100 is still selectable, matching the other
   // catalog selectors.
   const assignedVariantsQuery = useQuery({
-    queryKey: ['stock-transfer-form', 'assigned-variants', destinationLocationId],
+    // Keyed under the assignments feature's own namespace (not a private
+    // 'stock-transfer-form' key) so assigning/unassigning a variant to this
+    // location invalidates this picker too — otherwise a reopened form serves a
+    // stale variant list for the global staleTime window.
+    queryKey: variantAssignmentQueryKeys.picker(destinationLocationId),
     queryFn: () =>
       fetchAllPages((page) =>
         variantAssignmentApi.list(destinationLocationId, { state: 'assigned', page, per_page: 100 })
@@ -73,6 +77,16 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-5">
+        {locationsQuery.isError && (
+          // The location list needs `inventory_locations.view` (or
+          // `receipts.manage`) server-side. A role with `stock.manage` but
+          // neither gets a 403 here — say so instead of rendering two silently
+          // empty selectors the user can't act on.
+          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            No fue posible cargar las ubicaciones de inventario. Revisa tus permisos
+            (<code>inventory_locations.view</code>) e intenta de nuevo.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="Origen" required error={errors.source_location_id?.message}>
             <Select

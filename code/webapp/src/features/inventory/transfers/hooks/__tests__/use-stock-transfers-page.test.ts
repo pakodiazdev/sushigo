@@ -231,6 +231,36 @@ describe('useStockTransfersPage', () => {
     expect(result.current.panelMode).toBe('detail')
   })
 
+  it('invalidates the Stock, assignment and movement read models after posting', async () => {
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
+
+    vi.mocked(stockTransferApi.list).mockResolvedValue(listResult([summary()]))
+    vi.mocked(stockTransferApi.get).mockResolvedValue(entityResult(fullTransfer()))
+    vi.mocked(stockTransferApi.post).mockResolvedValue(entityResult(fullTransfer({ status: 'POSTED' })))
+
+    const { result } = renderHook(() => useStockTransfersPage(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.transfers).toHaveLength(1))
+
+    act(() => result.current.handleRowClick(summary()))
+    await act(async () => {
+      result.current.handlePost()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(result.current.selectedTransfer?.status).toBe('POSTED'))
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map(([arg]) =>
+      JSON.stringify((arg as { queryKey: unknown[] })?.queryKey)
+    )
+    expect(invalidatedKeys).toContain(JSON.stringify(['stock-all']))
+    expect(invalidatedKeys).toContain(JSON.stringify(['stock-by-location']))
+    expect(invalidatedKeys).toContain(JSON.stringify(['stock-by-variant']))
+    expect(invalidatedKeys).toContain(JSON.stringify(['variant-assignments']))
+    expect(invalidatedKeys).toContain(JSON.stringify(['stock-movements']))
+
+    invalidateSpy.mockRestore()
+  })
+
   it('reverses the selected posted transfer with the given reason', async () => {
     vi.mocked(stockTransferApi.list).mockResolvedValue(listResult([summary({ status: 'POSTED' })]))
     vi.mocked(stockTransferApi.get).mockResolvedValue(entityResult(fullTransfer({ status: 'POSTED' })))
