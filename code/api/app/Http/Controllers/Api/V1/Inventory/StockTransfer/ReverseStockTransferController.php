@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Inventory\StockTransfer;
 
 use App\Exceptions\StockTransferAlreadyReversedException;
+use App\Exceptions\StockTransferLocationUnavailableException;
 use App\Exceptions\StockTransferNotPostedException;
 use App\Exceptions\StockTransferReversalBoundaryException;
 use App\Exceptions\StockTransferValueOutOfRangeException;
@@ -33,7 +34,7 @@ use Illuminate\Http\JsonResponse;
  *   @OA\Response(response=401, description="Unauthenticated"),
  *   @OA\Response(response=403, description="Forbidden — requires stock.manage permission and access to both endpoint Operating Units"),
  *   @OA\Response(response=404, description="Stock Transfer not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
- *   @OA\Response(response=409, description="Not posted, already reversed, the destination stock has fallen below the transferred quantity, or restoring the source balance would exceed the recordable range", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
+ *   @OA\Response(response=409, description="Not posted, already reversed, an endpoint Location was archived after posting, the destination stock has fallen below the transferred quantity, or restoring the source balance would exceed the recordable range", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )
  */
 class ReverseStockTransferController extends Controller
@@ -51,6 +52,7 @@ class ReverseStockTransferController extends Controller
         } catch (
             StockTransferNotPostedException
             |StockTransferAlreadyReversedException
+            |StockTransferLocationUnavailableException
             |StockTransferReversalBoundaryException
             |StockTransferValueOutOfRangeException $e
         ) {

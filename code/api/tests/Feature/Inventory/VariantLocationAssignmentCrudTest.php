@@ -46,6 +46,7 @@ class VariantLocationAssignmentCrudTest extends InventoryTestCase
             ->assertJsonPath('data.inventory_location_id', $this->location->public_id)
             ->assertJsonPath('data.item_variant_id', $variant->public_id)
             ->assertJsonPath('data.item_variant_code', $variant->code)
+            ->assertJsonPath('data.item_variant_is_active', true)
             ->assertJsonPath('data.assignment_id', fn ($v) => is_string($v) && strlen($v) === 26)
             ->assertJsonPath('data.assigned_at', fn ($v) => is_string($v) && str_contains($v, 'T'));
 
@@ -180,6 +181,9 @@ class VariantLocationAssignmentCrudTest extends InventoryTestCase
         $assignedList = $this->getJson($this->url($this->location->public_id));
         $assignedList->assertOk();
         $this->assertContains('AAA-1', collect($assignedList->json('data'))->pluck('item_variant_code')->all());
+        // Flagged inactive so a picker (e.g. the Stock Transfer line selector)
+        // can list it for unassignment without offering it as a valid pick.
+        $this->assertFalse(collect($assignedList->json('data'))->keyBy('item_variant_code')['AAA-1']['item_variant_is_active']);
 
         $allList = $this->getJson($this->url($this->location->public_id).'?state=all');
         $allList->assertOk();

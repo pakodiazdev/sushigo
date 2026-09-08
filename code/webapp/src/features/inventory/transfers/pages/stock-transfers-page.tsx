@@ -3,7 +3,7 @@ import { ArrowRight, Plus } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
-import { CanAccess } from '@/components/auth'
+import { useCanAccess } from '@/hooks/use-can-access'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
@@ -33,6 +33,16 @@ const panelTitles: Record<'create' | 'edit' | 'detail', string> = {
 export function StockTransfersPage() {
   const newTransferButtonRef = useRef<HTMLButtonElement>(null)
   const lastOpenerRef = useRef<HTMLElement | null>(null)
+
+  // The create form needs stock.manage AND a way to read the location list —
+  // inventory_locations.view, or receipts.manage which the list endpoint also
+  // accepts. Gate the button on the whole set so a role missing the location
+  // permission never opens a form with two empty endpoint selectors; the form
+  // still shows a banner if the list 403s for any other reason.
+  const canManageStock = useCanAccess({ permission: 'stock.manage' })
+  const canViewLocations = useCanAccess({ permission: 'inventory_locations.view' })
+  const canManageReceipts = useCanAccess({ permission: 'receipts.manage' })
+  const canCreateTransfer = canManageStock && (canViewLocations || canManageReceipts)
 
   const {
     currentPage,
@@ -129,12 +139,12 @@ export function StockTransfersPage() {
         title="Transferencias de Inventario"
         description="Mueve variantes entre ubicaciones y confirma el movimiento de forma auditable"
         action={
-          <CanAccess permission="stock.manage">
+          canCreateTransfer ? (
             <Button ref={newTransferButtonRef} onClick={handleNewTransferClick} className="gap-2">
               <Plus className="h-4 w-4" />
               Nuevo traslado
             </Button>
-          </CanAccess>
+          ) : null
         }
       />
 

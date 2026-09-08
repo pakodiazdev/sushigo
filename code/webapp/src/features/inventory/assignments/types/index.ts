@@ -14,5 +14,7 @@ export interface VariantAssignmentRow {
   item_variant_id: string
   item_variant_code: string
   item_variant_name: string
+  /** False for a Variant deactivated after assignment — listed so it can be unassigned, but not a valid pick for a new inbound document (e.g. a Stock Transfer line). */
+  item_variant_is_active: boolean
   assigned_at: string | null
 }

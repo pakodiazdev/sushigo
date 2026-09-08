@@ -23,6 +23,11 @@ vi.mock('@/components/ui/slide-panel', () => ({
 }))
 
 const locationsQueryState = vi.hoisted(() => ({ isError: false }))
+const assignedVariantsState = vi.hoisted(() => ({
+  rows: [
+    { item_variant_id: 'v-a', item_variant_name: 'Arroz', item_variant_code: 'RICE', item_variant_is_active: true },
+  ] as Array<Record<string, unknown>>,
+}))
 
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
@@ -30,16 +35,10 @@ vi.mock('@tanstack/react-query', () => ({
     if (config.queryKey[0] === 'stock-transfer-form' && config.queryKey[1] === 'uoms') {
       return { data: { data: { data: [{ id: 'u-kg', code: 'KG', name: 'Kilogramo' }] } } }
     }
-    // The assigned-variant picker for the "dst" destination — variant "v-a" only.
+    // The assigned-variant picker for the "dst" destination.
     // Key shape: variantAssignmentQueryKeys.picker('dst').
     if (config.queryKey[0] === 'variant-assignments' && config.queryKey[2] === 'dst') {
-      return {
-        data: {
-          data: {
-            data: [{ item_variant_id: 'v-a', item_variant_name: 'Arroz', item_variant_code: 'RICE' }],
-          },
-        },
-      }
+      return { data: { data: { data: assignedVariantsState.rows } } }
     }
     return { data: undefined }
   },
@@ -106,6 +105,9 @@ describe('StockTransferForm', () => {
   beforeEach(() => {
     formMutation.validationErrors = {}
     locationsQueryState.isError = false
+    assignedVariantsState.rows = [
+      { item_variant_id: 'v-a', item_variant_name: 'Arroz', item_variant_code: 'RICE', item_variant_is_active: true },
+    ]
   })
   afterEach(() => {
     cleanup()
@@ -119,6 +121,21 @@ describe('StockTransferForm', () => {
 
     expect(view.getByText(/No fue posible cargar las ubicaciones de inventario/i)).toBeDefined()
     expect(view.getByText('inventory_locations.view')).toBeDefined()
+  })
+
+  it('does not offer an assigned-but-inactive variant as a selectable option', () => {
+    assignedVariantsState.rows = [
+      { item_variant_id: 'v-a', item_variant_name: 'Arroz', item_variant_code: 'RICE', item_variant_is_active: true },
+      { item_variant_id: 'v-x', item_variant_name: 'Descontinuado', item_variant_code: 'OLD', item_variant_is_active: false },
+    ]
+
+    const view = render(<StockTransferForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
+    fireEvent.change(view.getByLabelText('Destino'), { target: { value: 'dst' } })
+
+    const variantSelect = view.getByLabelText('Variante línea 1') as HTMLSelectElement
+    const values = [...variantSelect.options].map((o) => o.value)
+    expect(values).toContain('v-a')
+    expect(values).not.toContain('v-x')
   })
 
   it('drops the stale variant fallback option once the destination changes', () => {
