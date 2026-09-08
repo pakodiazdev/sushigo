@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
 import { useQuery } from '@tanstack/react-query'
@@ -10,12 +10,16 @@ import {
   MapPin,
   BarChart3,
   RefreshCw,
+  PackagePlus,
 } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
 import { FilterSelect } from '@/components/ui/filter-select'
+import { SlidePanel } from '@/components/ui/slide-panel'
+import { OpeningBalanceForm } from '@/components/inventory'
+import { useAuthStore } from '@/stores/auth.store'
 import { stockApi, inventoryLocationApi } from '@/services/inventory-api'
 import { fetchAllPages } from '@/lib/fetch-all-pages'
 import type { Stock, InventoryLocation } from '@/types/inventory'
@@ -60,6 +64,25 @@ export function computeStockSummary(allStock: Stock[]): StockSummary {
 
 export function StockDashboardPage() {
   const [selectedLocationId, setSelectedLocationId] = useState('')
+  const [isOpeningBalanceOpen, setIsOpeningBalanceOpen] = useState(false)
+  const openingBalanceTriggerRef = useRef<HTMLButtonElement>(null)
+
+  // The route stays stock.view so read-only users still see stock. The Opening
+  // Balance action needs stock.manage (the posting endpoints authorize on it),
+  // but the form's Location and Variant pickers read /inventory-locations and
+  // /item-variants, which require inventory_locations.view and items.view — so
+  // the trigger is gated on all three, never shown for a role that could open
+  // the panel only to hit 403s on both selects (#570). Admin/super-admin bypass
+  // every check in `can()`.
+  const canOpenOpeningBalance = useAuthStore(
+    (s) => s.can('stock.manage') && s.can('inventory_locations.view') && s.can('items.view')
+  )
+
+  const closeOpeningBalance = () => {
+    setIsOpeningBalanceOpen(false)
+    // Restore focus to the button that opened the panel (accessibility).
+    openingBalanceTriggerRef.current?.focus()
+  }
 
   // Existencias is spined on the managed Variant-to-Location assignment (#569),
   // not on Stock (#571): this list already includes every assigned Variant,
@@ -182,14 +205,26 @@ export function StockDashboardPage() {
         title="Existencias"
         description="Surtido gestionado por Ubicación y valuación del inventario"
         action={
-          <Button
-            onClick={() => refetchStock()}
-            variant="outline"
-            className="gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Actualizar
-          </Button>
+          <div className="flex gap-2">
+            {canOpenOpeningBalance && (
+              <Button
+                ref={openingBalanceTriggerRef}
+                onClick={() => setIsOpeningBalanceOpen(true)}
+                className="gap-2"
+              >
+                <PackagePlus className="h-4 w-4" />
+                Registrar saldo inicial
+              </Button>
+            )}
+            <Button
+              onClick={() => refetchStock()}
+              variant="outline"
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Actualizar
+            </Button>
+          </div>
         }
       />
 
@@ -428,7 +463,31 @@ export function StockDashboardPage() {
           <p className="text-gray-500 mb-4">
             Asigna Variantes a una Ubicación para verlas aquí, incluso antes de la primera recepción.
           </p>
+          {canOpenOpeningBalance && (
+            <Button
+              onClick={() => setIsOpeningBalanceOpen(true)}
+              className="gap-2"
+            >
+              <PackagePlus className="h-4 w-4" />
+              Registrar saldo inicial
+            </Button>
+          )}
         </div>
+      )}
+
+      {canOpenOpeningBalance && (
+        <SlidePanel
+          isOpen={isOpeningBalanceOpen}
+          onClose={closeOpeningBalance}
+          title="Registrar saldo inicial"
+          size="md"
+        >
+          <OpeningBalanceForm
+            preselectedLocationId={selectedLocationId || undefined}
+            onSuccess={closeOpeningBalance}
+            onCancel={closeOpeningBalance}
+          />
+        </SlidePanel>
       )}
     </PageContainer>
   )

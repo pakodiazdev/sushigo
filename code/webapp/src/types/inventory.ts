@@ -316,6 +316,25 @@ export interface StockMovement {
   updated_at?: string
 }
 
+/**
+ * Non-mutating normalization of an opening-balance payload (#570), returned by
+ * `POST /inventory/opening-balance/preview`. Computed by the same conversion
+ * contract the real posting uses, so the form's pre-submit numbers match what
+ * the ledger will record. `base_unit_cost` / `total_value` are null when no
+ * unit cost was supplied.
+ */
+export interface OpeningBalancePreview {
+  entry_quantity: number
+  entry_uom: string
+  base_quantity: number
+  base_uom: string
+  conversion_applies: boolean
+  conversion_factor: number
+  entry_unit_cost: number | null
+  base_unit_cost: number | null
+  total_value: number | null
+}
+
 export interface StockMovementLine {
   /** ULID public identifier (SerializesPublicIdAsId). */
   id: number
