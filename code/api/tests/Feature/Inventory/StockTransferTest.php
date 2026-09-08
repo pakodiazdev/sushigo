@@ -776,6 +776,47 @@ class StockTransferTest extends InventoryTestCase
     }
 
     #[Test]
+    public function reversal_is_rejected_when_an_endpoint_location_was_soft_deleted_after_posting(): void
+    {
+        $this->seedSourceStock(onHand: 100);
+        $id = $this->createDraft();
+        $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertOk();
+
+        // The transfer emptied the source; it can now be archived. Reversal must
+        // not resurrect stock under a soft-deleted location.
+        $this->location->delete();
+
+        $this->postJson("/api/v1/inventory/transfers/{$id}/reverse")->assertStatus(409);
+
+        $this->assertSame('POSTED', StockTransfer::where('public_id', $id)->value('status'));
+        // Source stays at the post-transfer balance (100 - 12); nothing was
+        // restored into the archived location.
+        $this->assertEquals(
+            88.0,
+            (float) Stock::where('inventory_location_id', $this->location->id)
+                ->where('item_variant_id', $this->variant->id)
+                ->value('on_hand'),
+        );
+        $this->assertSame(1, StockMovement::count());
+    }
+
+    #[Test]
+    public function reversal_still_succeeds_when_an_endpoint_location_was_only_deactivated_after_posting(): void
+    {
+        $this->seedSourceStock(onHand: 100);
+        $id = $this->createDraft();
+        $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertOk();
+
+        // Deactivating (not deleting) a location must not block returning its
+        // own stock — requireActive is false on the reverse path.
+        $this->destination->update(['is_active' => false]);
+
+        $this->postJson("/api/v1/inventory/transfers/{$id}/reverse")->assertOk();
+        $this->assertSame('REVERSED', StockTransfer::where('public_id', $id)->value('status'));
+        $this->assertEquals(100.0, (float) Stock::where('inventory_location_id', $this->location->id)->value('on_hand'));
+    }
+
+    #[Test]
     public function reversal_is_blocked_when_the_destination_stock_fell_below_the_transferred_quantity(): void
     {
         $this->seedSourceStock(onHand: 100);

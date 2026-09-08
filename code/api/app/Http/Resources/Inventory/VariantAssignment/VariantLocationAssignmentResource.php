@@ -34,6 +34,7 @@ use App\Models\ItemVariant;
  *     @OA\Property(property="item_variant_id", type="string", example="01JKVAR1234567890ABCDEFGH"),
  *     @OA\Property(property="item_variant_code", type="string", example="RICE-1KG"),
  *     @OA\Property(property="item_variant_name", type="string", example="Sushi Rice 1kg"),
+ *     @OA\Property(property="item_variant_is_active", type="boolean", example=true, description="False for a Variant deactivated after it was assigned — still listed (in `assigned`/`all`) so it can be unassigned, but not a valid pick for a new inbound document"),
  *     @OA\Property(property="assigned_at", type="string", format="date-time", nullable=true)
  * )
  */
@@ -51,6 +52,7 @@ class VariantLocationAssignmentResource extends BaseResource
             'item_variant_id' => $this->public_id,
             'item_variant_code' => $this->code,
             'item_variant_name' => $this->name,
+            'item_variant_is_active' => (bool) $this->is_active,
             'assigned_at' => $this->assigned_at,
         ];
     }

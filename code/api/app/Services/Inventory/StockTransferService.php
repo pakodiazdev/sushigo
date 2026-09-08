@@ -224,6 +224,15 @@ class StockTransferService
                 throw new StockTransferAlreadyReversedException("Stock Transfer #{$transfer->id} has already been reversed.");
             }
 
+            // Lock both endpoint Location rows (asserting they still exist)
+            // before the reverser's receiveInto() restores stock into them. A
+            // source the transfer emptied can be soft-deleted between post and
+            // reverse; without this lock+assert the reverser would strand the
+            // restored stock under an archived location. `requireActive: false`
+            // — a Location merely deactivated after posting may still take its
+            // own stock back.
+            $this->lockEndpoints($transfer, requireActive: false);
+
             $lines = $transfer->lines()->orderBy('item_variant_id')->get();
 
             // Acquire every affected assignment lock, then every affected Stock
@@ -281,13 +290,17 @@ class StockTransferService
 
     /**
      * Lock both endpoint Location rows (in primary-key order for a stable lock
-     * sequence) and assert each is a live, active stock-holding Location.
+     * sequence) and assert each still exists, sits in a live Operating Unit, and
+     * is distinct from the other. With `$requireActive` (the post path) each
+     * must also be currently active; the reverse path passes `false` because a
+     * Location deactivated after the transfer posted may still take its own
+     * stock back — it just must not have been deleted out from under it.
      *
      * @return array{0: InventoryLocation, 1: InventoryLocation}
      *
      * @throws StockTransferLocationUnavailableException
      */
-    private function lockEndpoints(StockTransfer $transfer): array
+    private function lockEndpoints(StockTransfer $transfer, bool $requireActive = true): array
     {
         $ids = [$transfer->source_location_id, $transfer->destination_location_id];
         sort($ids);
@@ -308,7 +321,7 @@ class StockTransferService
                 );
             }
 
-            if (! $location->is_active) {
+            if ($requireActive && ! $location->is_active) {
                 throw new StockTransferLocationUnavailableException(
                     "Stock Transfer #{$transfer->id}'s {$role} location is inactive and cannot move stock."
                 );

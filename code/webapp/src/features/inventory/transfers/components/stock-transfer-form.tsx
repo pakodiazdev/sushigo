@@ -71,7 +71,14 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
 
   const locations = locationsQuery.data ?? []
   const uoms = uomsQuery.data?.data.data ?? []
-  const assignedVariants = assignedVariantsQuery.data?.data.data ?? []
+  // The assigned-variant endpoint intentionally still lists a Variant that was
+  // deactivated after being assigned (so it can be unassigned), but the create
+  // and update requests reject an inactive Variant (422). Only offer active ones
+  // as fresh picks; an existing draft line pointing at a now-inactive Variant is
+  // still shown via the per-line `_label` fallback below.
+  const selectableVariants = (assignedVariantsQuery.data?.data.data ?? []).filter(
+    (row) => row.item_variant_is_active
+  )
   const referenceError = errors.reference?.message ?? validationErrors?.reference
 
   return (
@@ -191,10 +198,10 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
                     <option value="">Selecciona una variante</option>
                     {field._label &&
                       currentVariantId === field.item_variant_id &&
-                      !assignedVariants.some((row) => row.item_variant_id === currentVariantId) && (
+                      !selectableVariants.some((row) => row.item_variant_id === currentVariantId) && (
                         <option value={field.item_variant_id}>{field._label}</option>
                       )}
-                    {assignedVariants.map((row) => (
+                    {selectableVariants.map((row) => (
                       <option key={row.item_variant_id} value={row.item_variant_id}>
                         {row.item_variant_name} ({row.item_variant_code})
                       </option>

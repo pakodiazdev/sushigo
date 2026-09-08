@@ -51,6 +51,7 @@ const assignedRow: VariantAssignmentRow = {
   item_variant_id: 'v-1',
   item_variant_code: 'COLA-355',
   item_variant_name: 'Cola 355ml',
+  item_variant_is_active: true,
   assigned_at: '2026-09-01T00:00:00+00:00',
 }
 const freeRow: VariantAssignmentRow = {
@@ -60,6 +61,7 @@ const freeRow: VariantAssignmentRow = {
   item_variant_id: 'v-2',
   item_variant_code: 'WATER-500',
   item_variant_name: 'Water 500ml',
+  item_variant_is_active: true,
   assigned_at: null,
 }
 

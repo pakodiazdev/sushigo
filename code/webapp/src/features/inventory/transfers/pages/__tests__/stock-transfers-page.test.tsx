@@ -75,7 +75,8 @@ vi.mock('@/components/ui/toast-context', () => ({
 vi.mock('../../api/stock-transfer-api', () => ({
   stockTransferApi: { list: vi.fn(), get: vi.fn(), delete: vi.fn(), post: vi.fn(), reverse: vi.fn() },
 }))
-vi.mock('@/components/auth', () => ({ CanAccess: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
+const canAccessState = vi.hoisted(() => ({ value: true }))
+vi.mock('@/hooks/use-can-access', () => ({ useCanAccess: () => canAccessState.value }))
 interface FakeColumn {
   key: string
   render?: (row: StockTransferSummary) => React.ReactNode
@@ -158,6 +159,13 @@ describe('StockTransfersPage', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    canAccessState.value = true
+  })
+
+  it('hides the "Nuevo traslado" button when the user cannot read the location list', () => {
+    canAccessState.value = false
+    const view = render(<StockTransfersPage />)
+    expect(view.queryByRole('button', { name: /nuevo traslado/i })).toBeNull()
   })
 
   it('renders the list and opens the detail panel for a clicked row', () => {
