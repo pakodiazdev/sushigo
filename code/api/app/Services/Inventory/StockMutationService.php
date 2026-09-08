@@ -49,9 +49,11 @@ class StockMutationService
      * concurrent callers racing to create the same first row are kept from
      * duplicating it.
      *
-     * The positive-quantity check is done here, before branching, so a first
-     * receipt is rejected the same way a repeat receipt already is via
-     * increaseOnHand() — otherwise Stock::create() would accept it unchecked.
+     * The positive-quantity and decimal(15,4) range checks are done here,
+     * before branching, so a first receipt is rejected the same way a repeat
+     * receipt already is via increaseOnHand() — otherwise the first-receipt
+     * Stock::create() would send an out-of-range qty straight to PostgreSQL
+     * and fail outside the application boundary.
      *
      * Before touching Stock, the shared assignment ensurer lands or locks the
      * pair's live managed assignment (#569). Every inbound writer therefore
@@ -67,6 +69,12 @@ class StockMutationService
         if ($qty <= 0) {
             throw new InvalidStockBalanceException(
                 "Quantity must be positive to receive stock. Requested: {$qty}"
+            );
+        }
+
+        if (! is_finite($qty) || $qty > Stock::MAX_STORED_QUANTITY) {
+            throw new InvalidStockBalanceException(
+                "Cannot receive stock beyond decimal(15,4). Requested: {$qty}"
             );
         }
 

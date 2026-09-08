@@ -7,6 +7,10 @@ interface VariantSelectFieldProps {
   hint: string
   variants: ItemVariant[]
   onChange: (value: string) => void
+  /** Field label. Defaults to English; pass a localized string per call site. */
+  label?: string
+  /** Empty-option text. Defaults to English. */
+  placeholder?: string
 }
 
 export function VariantSelectField({
@@ -15,11 +19,13 @@ export function VariantSelectField({
   hint,
   variants,
   onChange,
+  label = 'Item Variant',
+  placeholder = 'Select variant...',
 }: Readonly<VariantSelectFieldProps>) {
   return (
-    <FormField label="Item Variant" required error={error} hint={hint}>
-      <Select value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">Select variant...</option>
+    <FormField label={label} required error={error} hint={hint}>
+      <Select value={value} onChange={(event) => onChange(event.target.value)} error={!!error}>
+        <option value="">{placeholder}</option>
         {variants.map((variant) => (
           <option key={variant.id} value={variant.id}>
             {variant.code} - {variant.name}
@@ -36,6 +42,12 @@ interface UnitOfMeasureSelectFieldProps {
   error?: string
   units: UnitOfMeasure[]
   onChange: (value: string) => void
+  /** Field label. Defaults to English; pass a localized string per call site. */
+  label?: string
+  /** Empty-option text. Defaults to English. */
+  placeholder?: string
+  /** Helper text under the field. Defaults to English. */
+  hint?: string
 }
 
 export function UnitOfMeasureSelectField({
@@ -43,16 +55,14 @@ export function UnitOfMeasureSelectField({
   error,
   units,
   onChange,
+  label = 'Unit of Measure',
+  placeholder = 'Select unit...',
+  hint = "Auto-filled from variant's default UoM",
 }: Readonly<UnitOfMeasureSelectFieldProps>) {
   return (
-    <FormField
-      label="Unit of Measure"
-      required
-      error={error}
-      hint="Auto-filled from variant's default UoM"
-    >
-      <Select value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">Select unit...</option>
+    <FormField label={label} required error={error} hint={hint}>
+      <Select value={value} onChange={(event) => onChange(event.target.value)} error={!!error}>
+        <option value="">{placeholder}</option>
         {units.map((uom) => (
           <option key={uom.id} value={uom.id}>
             {uom.name} ({uom.symbol}) - {uom.type}

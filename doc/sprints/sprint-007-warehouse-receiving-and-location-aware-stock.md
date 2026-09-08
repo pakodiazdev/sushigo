@@ -104,7 +104,7 @@ The thirteen Issues are on **SushiGo Admin**, `Todo`, labeled `sprint-7`, and as
 | ✅ | #567 | Centralize idempotent Inventory entry posting | Product engineering | P0 | L | 7h | 12h |
 | ✅ | #568 | Define purchase-receiving capabilities for Inventory Locations | Product | P0 | M | 5h | 9h |
 | ✅ | #569 | Assign managed Variants to Inventory Locations | Product | P1 | L | 8h | 14h |
-| ⏳ | #570 | Expose an auditable Opening Balance workflow | Product | P1 | M | 5h | 9h |
+| ✅ | #570 | Expose an auditable Opening Balance workflow | Product | P1 | M | 5h | 9h |
 | ✅ | #571 | Show assigned Variants with zero Stock in Existencias | Product | P1 | M | 6h | 11h |
 | ✅ | #572 | Route confirmed Purchase Receipts into eligible receiving Locations | Product | P0 | M | 5h | 9h |
 | ⏳ | #573 | Implement auditable internal Stock Transfers | Product | P1 | L | 9h | 16h |
@@ -214,7 +214,7 @@ the consuming verticals wait for only the foundations they name.
 | Lane | Issue | Starts after | Primary file ownership | Opt. | Pess. | Status | Tracked | PR / Commit | Notes |
 |---|---:|---|---|---:|---:|---|---:|---|---|
 | D | #572 | #567 + #568 + #569 | Receipt requests/service/resource and Receipt feature UI | 5h | 9h | ✅ | 0.9h | PR #604 | Eligible destinations and idempotent posting now share deterministic assignment-before-stock locking; PR ready, merge pending |
-| E | #570 | #567 + #569 | Opening Balance backend/response/form and minimal page action | 5h | 9h |
+| E | #570 | #567 + #569 | Opening Balance backend/response/form and minimal page action | 5h | 9h | ✅ | 3.8h | PR #605 | Auditable preview/posting on the shared #572 assignment ensurer; valuation rounding and decimal(15,4) ledger bounds verified; PR ready, merge pending |
 | F | #573 | #567 + #569; adopt #568 | New Transfer vertical and route/navigation | 9h | 16h |
 | G | #571 | #569 | Stock read projection/controllers and broad Existencias rendering | 6h | 11h |
 | H | #574 | #567 | New movement query/resource and ledger/detail UI | 6h | 11h |
@@ -367,6 +367,7 @@ ships. Documentation must never report a pending Issue as production behavior.
 | Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
 |---|---:|---|---:|---|---:|---|
 | ✅ | #572 | Confirmed Purchase Receipts now enforce eligible receiving Locations at save and post time, mutate inventory only when posted, and establish assignments with deterministic lock ordering. | PR #604 | — | 0.9h | Pint passed; 39 focused tests (131 assertions) and 2,446 API tests (7,148 assertions) passed; 7/7 review threads resolved. |
+| ✅ | #570 | Opening Balance is now posted from the Spanish Existencias panel through a non-mutating preview that shares conversion, cost, destination, and ledger-bound validation with posting; initialization ensures the Variant-to-Location assignment atomically without pretending a purchase occurred. | PR #605 | — | 3.8h | Pint passed; webapp lint/typecheck clean; 762 Inventory + 106 Receipt + 23 opening-balance Vitest + StockTest boundary cases passed. Rebased onto #572 and reconciled onto its shared `VariantLocationAssignmentEnsurer`. 14/14 review threads resolved (2 Codex: valuation double-rounding, decimal(15,4) float-boundary). |
 
 ### Risks and Mitigations
 

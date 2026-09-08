@@ -65,7 +65,11 @@ class AssignVariantToLocationController extends Controller
         // Same active-catalog predicate the list endpoint applies: an inactive
         // Variant is outside the manageable catalog, so the write path rejects
         // it too rather than creating an assignment the panel can never show or
-        // remove.
+        // remove. Opening Balance initialization (#570) deliberately skips this
+        // guard — recording on-hand that physically exists is legitimate even
+        // for a Variant deactivated after the stock was acquired — reaching
+        // VariantLocationAssignmentEnsurer through its own posting path rather
+        // than this endpoint.
         if (! $variant->is_active) {
             throw ValidationException::withMessages([
                 'variantId' => 'This variant is not active and cannot be managed at a location.',

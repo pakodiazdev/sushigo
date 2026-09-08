@@ -24,7 +24,7 @@ class StockTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeStock(float $onHand, float $reserved): Stock
+    private function makeStock(float|string $onHand, float|string $reserved): Stock
     {
         $branch = Branch::create([
             'code' => 'TEST', 'name' => 'Test Branch', 'address' => '123 Test St',
@@ -73,6 +73,30 @@ class StockTest extends TestCase
         $stock->increaseOnHand(5);
 
         $this->assertEquals(15, (float) $stock->fresh()->on_hand);
+    }
+
+    #[Test]
+    public function it_accepts_an_increment_that_lands_exactly_on_the_decimal_ceiling(): void
+    {
+        // 99999999999.9998 + 0.0001 is exactly MAX_STORED_QUANTITY, but the raw
+        // binary-float sum sits a fraction of a ULP above it — the guard must
+        // compare at the column's decimal(15,4) scale, not on the raw float.
+        // Seed the boundary values as strings so the ceiling is stored exactly.
+        $stock = $this->makeStock('99999999999.9998', '0');
+
+        $stock->increaseOnHand(0.0001);
+
+        $this->assertSame('99999999999.9999', $stock->fresh()->on_hand);
+    }
+
+    #[Test]
+    public function it_rejects_an_increment_that_would_cross_the_decimal_ceiling(): void
+    {
+        $stock = $this->makeStock('99999999999.9999', '0');
+
+        $this->expectException(InvalidStockBalanceException::class);
+
+        $stock->increaseOnHand(0.0001);
     }
 
     #[Test]
