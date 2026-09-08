@@ -148,27 +148,7 @@ class ReceiptService
                 throw new ReceiptAlreadyReversedException("Receipt #{$receipt->id} has been reversed and cannot be posted again.");
             }
 
-            $destination = InventoryLocation::where('id', $receipt->destination_location_id)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $destination) {
-                throw new ReceiptDestinationUnavailableException(
-                    "Receipt #{$receipt->id}'s destination location is no longer available."
-                );
-            }
-
-            // Destination eligibility is re-checked here, under the row lock,
-            // because the Location's state can change while the Receipt sits as a
-            // draft (#572): a save-time-valid destination that has since been
-            // deactivated or had `can_receive_purchases` cleared must block
-            // posting with a stable 409 and roll back every line, rather than
-            // landing supplier stock in a Location that can no longer receive it.
-            if (! $destination->is_active || ! $destination->can_receive_purchases) {
-                throw new ReceiptDestinationUnavailableException(
-                    "Receipt #{$receipt->id}'s destination location can no longer receive purchases."
-                );
-            }
+            $this->lockEligibleDestination($receipt);
 
             $lines = $receipt->lines()->with('presentation')->get();
 
@@ -257,6 +237,40 @@ class ReceiptService
 
             return $this->freshReceipt($receipt);
         });
+    }
+
+    /**
+     * Lock the Receipt's destination Location row and re-assert it can still
+     * receive purchases, *inside* the post transaction.
+     *
+     * The Location's state can change while the Receipt sits as a draft (#572):
+     * a save-time-valid destination that has since been soft-deleted, deactivated
+     * or had `can_receive_purchases` cleared must block posting with a stable 409
+     * and roll back every line, rather than landing supplier stock in a Location
+     * that can no longer receive it. Checked here under the row lock, it can't be
+     * raced by a concurrent Location update.
+     *
+     * @throws ReceiptDestinationUnavailableException
+     */
+    private function lockEligibleDestination(Receipt $receipt): InventoryLocation
+    {
+        $destination = InventoryLocation::where('id', $receipt->destination_location_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $destination) {
+            throw new ReceiptDestinationUnavailableException(
+                "Receipt #{$receipt->id}'s destination location is no longer available."
+            );
+        }
+
+        if (! $destination->is_active || ! $destination->can_receive_purchases) {
+            throw new ReceiptDestinationUnavailableException(
+                "Receipt #{$receipt->id}'s destination location can no longer receive purchases."
+            );
+        }
+
+        return $destination;
     }
 
     /**
