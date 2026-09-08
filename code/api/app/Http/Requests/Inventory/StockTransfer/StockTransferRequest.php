@@ -152,7 +152,28 @@ abstract class StockTransferRequest extends FormRequest
             return;
         }
 
-        $factor = $this->resolveConversionFactor((int) $entryUomId, (int) $variantBaseUomId);
+        $this->validateConvertedBaseQuantity(
+            $validator,
+            $index,
+            $entryQuantity,
+            (int) $entryUomId,
+            (int) $variantBaseUomId,
+        );
+    }
+
+    /**
+     * Resolve the entry→base conversion factor and, when it exists and is large
+     * enough to store, assert the converted base quantity is still representable
+     * and positive at decimal(15,4). Adds a 422 error otherwise.
+     */
+    private function validateConvertedBaseQuantity(
+        Validator $validator,
+        string $index,
+        float $entryQuantity,
+        int $entryUomId,
+        int $variantBaseUomId,
+    ): void {
+        $factor = $this->resolveConversionFactor($entryUomId, $variantBaseUomId);
 
         if ($factor === null) {
             $validator->errors()->add(

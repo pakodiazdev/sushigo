@@ -105,16 +105,26 @@ class UpdateVariantRequest extends FormRequest
             return;
         }
 
-        if ($variant->stock()->exists() || $variant->stockMovements()->exists()) {
-            $validator->errors()->add('uom_id', 'The base unit of measure cannot be changed once the variant has stock or movement history.');
+        $blocker = $this->firstBaseUomChangeBlocker($variant);
 
-            return;
+        if ($blocker !== null) {
+            $validator->errors()->add('uom_id', $blocker);
+        }
+    }
+
+    /**
+     * The first reason (if any) the variant's base UOM is locked against change,
+     * in priority order: existing stock or movement history, then a purchase
+     * presentation, then a draft stock transfer line referencing the variant.
+     */
+    private function firstBaseUomChangeBlocker(ItemVariant $variant): ?string
+    {
+        if ($variant->stock()->exists() || $variant->stockMovements()->exists()) {
+            return 'The base unit of measure cannot be changed once the variant has stock or movement history.';
         }
 
         if ($variant->purchasePresentations()->exists()) {
-            $validator->errors()->add('uom_id', 'The base unit of measure cannot be changed once the variant has a purchase presentation assigned.');
-
-            return;
+            return 'The base unit of measure cannot be changed once the variant has a purchase presentation assigned.';
         }
 
         $hasDraftTransfer = StockTransferLine::query()
@@ -122,9 +132,9 @@ class UpdateVariantRequest extends FormRequest
             ->whereHas('transfer', fn ($query) => $query->where('status', StockTransfer::STATUS_DRAFT))
             ->exists();
 
-        if ($hasDraftTransfer) {
-            $validator->errors()->add('uom_id', 'The base unit of measure cannot be changed while the variant is referenced by a draft stock transfer.');
-        }
+        return $hasDraftTransfer
+            ? 'The base unit of measure cannot be changed while the variant is referenced by a draft stock transfer.'
+            : null;
     }
 
     /**
