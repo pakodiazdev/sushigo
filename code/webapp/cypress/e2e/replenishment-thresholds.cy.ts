@@ -44,13 +44,6 @@ function apiHeaders(token: string) {
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' }
 }
 
-// ⚠️ QUARANTINED per #490 → see #549. Fails against a fresh stack:
-// Happy-path test fails: an <h4> section title "not visible because clipped by a parent element" (overflow/scroll).
-// Remove this guard when #549 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 
@@ -152,7 +145,11 @@ describe('Replenishment thresholds (Stock Dashboard)', () => {
     // Pick the seeded location — this loads its per-location stock + policy detail.
     cy.get('select').first().select(LOCATION_OPTION_TEXT)
 
-    cy.contains('h4', 'Replenishment thresholds', { timeout: 10_000 }).should('be.visible')
+    // The panel sits low on a long page inside <main class="overflow-y-auto"> (Layout.tsx),
+    // so the section title is clipped by that scroll parent until scrolled into view.
+    cy.contains('h4', 'Replenishment thresholds', { timeout: 10_000 })
+      .scrollIntoView()
+      .should('be.visible')
 
     cy.get(`[data-testid="replenishment-row-${VARIANT_CODE}"]`, { timeout: 10_000 })
       .should('contain.text', 'No threshold set')

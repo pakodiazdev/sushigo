@@ -100,7 +100,7 @@ The thirteen Issues are on **SushiGo Admin**, `Todo`, labeled `sprint-7`, and as
 | ⏳ | #544 | Fix quarantined Cypress spec: inventory-navigation | Dev platform | P1 | S | 0.5h | 3h |
 | ⏳ | #547 | Fix quarantined Cypress spec: Variant Purchase Presentation | Dev platform | P0 | S | 0.5h | 3h |
 | ⏳ | #548 | Fix quarantined Cypress spec: Purchase Receipts | Dev platform | P0 | S | 0.5h | 3h |
-| ⏳ | #549 | Fix quarantined Cypress spec: replenishment thresholds | Dev platform | P1 | S | 0.5h | 3h |
+| ✅ | #549 | Fix quarantined Cypress spec: replenishment thresholds | Dev platform | P1 | S | 0.5h | 3h |
 | ✅ | #567 | Centralize idempotent Inventory entry posting | Product engineering | P0 | L | 7h | 12h |
 | ✅ | #568 | Define purchase-receiving capabilities for Inventory Locations | Product | P0 | M | 5h | 9h |
 | ✅ | #569 | Assign managed Variants to Inventory Locations | Product | P1 | L | 8h | 14h |
@@ -388,6 +388,7 @@ ships. Documentation must never report a pending Issue as production behavior.
 | Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
 |---|---:|---|---:|---:|---:|---|
 | ✅ | #573 | Delivered auditable draft/post/reverse Stock Transfers across API and Spanish Inventory UI, with idempotent movements, deterministic locking, authorization scoping, assignment enforcement, and cost evidence. | PR #603 | — | 1.5h | PHPUnit StockTransfer suite: 38 tests / 185 assertions; Pint passed; full CI passed across 4 API, 4 webapp, and 6 E2E shards; API/webapp SonarCloud gates passed; 16 review threads resolved, including final Devin hardening. |
+| ✅ | #549 | Removed the #490 `this.skip()` quarantine guard from `replenishment-thresholds.cy.ts` and scrolled the clipped `<h4>` section title into view before asserting visibility; the per-location replenishment happy path runs green again. | PR #608 | — | 0.2h | Cypress `replenishment-thresholds.cy.ts`: 1 passing against a fresh dev-lab E2E stack; original clip failure reproduced without the fix; CI `e2e-ci` shard ran the un-quarantined spec green; ESLint (spec files eslint-ignored by repo config) + tsc clean; no product code changed. |
 
 ## 14. Definition of Ready
 
