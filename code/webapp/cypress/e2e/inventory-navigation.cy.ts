@@ -19,13 +19,6 @@ import users from '../fixtures/users.json'
 
 const { email: adminEmail, password: adminPassword } = users.admin
 
-// ⚠️ QUARANTINED per #490 → see #544. Fails against a fresh stack:
-// 1 of 15 tests fails: a sidebar <a> "not visible" — the consolidated-IA assertion; the 6 nav sub-tests pass.
-// Remove this guard when #544 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 })
@@ -56,8 +49,18 @@ describe('Inventory navigation — consolidated Spanish IA', () => {
 
     // Select by href, not link text: `Productos` also names the unrelated
     // top-level Dishes link (`/productos`), so a text match would be ambiguous.
+    //
+    // The <nav> is `overflow-y-auto` (Sidebar.tsx): with "Inventario" expanded,
+    // the lower sub-items (Proveedores, Recepciones de Compra, Listas de
+    // Precios) sit below the scroll viewport at 1280×720. `.should('be.visible')`
+    // does not auto-scroll inside a scroll container — only action commands like
+    // `.click()` do, which is why the per-link nav specs below already pass — so
+    // scroll each target into view before asserting it renders.
     sidebarTargets.forEach(([, path]) => {
-      cy.get(`nav a[href="${path}"]`).should('have.length', 1).and('be.visible')
+      cy.get(`nav a[href="${path}"]`)
+        .should('have.length', 1)
+        .scrollIntoView()
+        .should('be.visible')
     })
   })
 
