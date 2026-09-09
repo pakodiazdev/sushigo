@@ -35,12 +35,15 @@ const TEMPLATE_NAME = 'Cypress Box x24'
 const TEMPLATE_CODE = 'CYP_BOX_24'
 const PACKAGE_BARCODE = '7501234567913'
 
-// ⚠️ QUARANTINED per #490 → see #547. Fails against a fresh stack:
-// Happy-path test fails: content 'Cypress Presentation Rice 1kg Bag' never appears (seed/flow).
-// Remove this guard when #547 is fixed.
-before(function () {
-  this.skip()
-})
+// Accept: application/json so a request that 422s surfaces as a hard failure
+// instead of Laravel's browser-style 302 redirect, which cy.request silently
+// follows to a 200 (how this spec's original seed failure went unnoticed — #547).
+const authHeaders = (token: string) => ({ Authorization: `Bearer ${token}`, Accept: 'application/json' })
+
+// Captured in before() and reused by beforeEach()'s per-attempt presentation purge.
+let authToken = ''
+let seededProductId = ''
+let seededVariantId = ''
 
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
@@ -52,7 +55,8 @@ before(() => {
     failOnStatusCode: true,
   }).then((loginRes) => {
     const token = loginRes.body.data.token as string
-    const headers = { Authorization: `Bearer ${token}` }
+    authToken = token
+    const headers = authHeaders(token)
 
     cy.request({
       method: 'POST',
@@ -69,47 +73,89 @@ before(() => {
         headers,
         body: { code: 'KG', name: UOM_NAME, symbol: UOM_SYMBOL },
         failOnStatusCode: true,
-      }).then((uomRes) => {
-        const uomId = uomRes.body.data.id as number
-
-        cy.request({
-          method: 'POST',
-          url: `${apiUrl}/inventory/purchase-presentation-templates`,
-          headers,
-          body: {
-            code: TEMPLATE_CODE,
-            name: TEMPLATE_NAME,
-            package_type: 'BOX',
-            base_unit_quantity: 24,
-            compatible_dimension_uom_id: uomId,
-          },
-          failOnStatusCode: true,
-        })
-
-        cy.request({
-          method: 'POST',
-          url: `${apiUrl}/inventory/products`,
-          headers,
-          body: { name: PRODUCT_NAME, inventory_category_id: categoryId },
-          failOnStatusCode: true,
-        }).then((productRes) => {
-          const productId = productRes.body.data.id as number
+      })
+        // POST /units-of-measure returns the numeric primary key as `id`, but
+        // every consumer (`uom_id`, `compatible_dimension_uom_id`) resolves the
+        // UOM by its public_id string. Read it back from the list endpoint,
+        // which serializes public_id as `id` like the rest of the API.
+        .then(() =>
+          cy.request({
+            method: 'GET',
+            url: `${apiUrl}/units-of-measure`,
+            headers,
+            failOnStatusCode: true,
+          })
+        )
+        .then((uomListRes) => {
+          const uom = (uomListRes.body.data as Array<{ id: string; code: string }>).find(
+            (u) => u.code === 'KG'
+          )
+          expect(uom, 'seeded KG unit of measure is listed').to.not.be.undefined
+          const uomId = (uom as { id: string }).id
 
           cy.request({
             method: 'POST',
-            url: `${apiUrl}/inventory/products/${productId}/variants`,
+            url: `${apiUrl}/inventory/purchase-presentation-templates`,
             headers,
-            body: { name: VARIANT_NAME, code: VARIANT_CODE, uom_id: uomId },
+            body: {
+              code: TEMPLATE_CODE,
+              name: TEMPLATE_NAME,
+              package_type: 'BOX',
+              base_unit_quantity: 24,
+              compatible_dimension_uom_id: uomId,
+            },
             failOnStatusCode: true,
           })
+
+          cy.request({
+            method: 'POST',
+            url: `${apiUrl}/inventory/products`,
+            headers,
+            body: { name: PRODUCT_NAME, inventory_category_id: categoryId },
+            failOnStatusCode: true,
+          }).then((productRes) => {
+            const productId = productRes.body.data.id as string
+            seededProductId = productId
+
+            cy.request({
+              method: 'POST',
+              url: `${apiUrl}/inventory/products/${productId}/variants`,
+              headers,
+              body: { name: VARIANT_NAME, code: VARIANT_CODE, uom_id: uomId },
+              failOnStatusCode: true,
+            }).then((variantRes) => {
+              seededVariantId = variantRes.body.data.id as string
+            })
+          })
         })
-      })
     })
   })
 })
 
 describe('Variant detail — Purchase Presentation lifecycle', () => {
   beforeEach(() => {
+    // Cypress `retries` re-runs the `it` and this beforeEach, but NOT before().
+    // Without this purge, a retry that starts after the "Assign Presentation"
+    // step would hit the leftover assignment and fail deterministically at
+    // "No purchase presentations yet" instead of retrying the real failure
+    // (CI runs `cypress run --config retries=2` — see .github/workflows/_e2e-ci.yml).
+    cy.request({
+      method: 'GET',
+      url: `${apiUrl}/inventory/products/${seededProductId}/variants/${seededVariantId}/purchase-presentations`,
+      headers: authHeaders(authToken),
+      failOnStatusCode: true,
+    }).then((listRes) => {
+      const presentations = listRes.body.data as Array<{ id: string }>
+      presentations.forEach((presentation) => {
+        cy.request({
+          method: 'DELETE',
+          url: `${apiUrl}/inventory/products/${seededProductId}/variants/${seededVariantId}/purchase-presentations/${presentation.id}`,
+          headers: authHeaders(authToken),
+          failOnStatusCode: true,
+        })
+      })
+    })
+
     cy.login(adminEmail, adminPassword)
     cy.url().should('not.include', '/login', { timeout: 10_000 })
     cy.visit('/inventario/productos')
