@@ -55,8 +55,9 @@ Implementation ran 2026-08-31 → 2026-09-09 for **33h17m tracked** — 58% of t
 29% of the pessimistic — over ~28h55m wall-clock (~1.15× parallelization overall; ~1.31× excluding
 the #560 CI outlier), peak concurrency 4. Two opportunistic Issues were picked up during the window
 (#582 sprint promotion, #598 draft-based PR lifecycle). The planned Round 0 → 0B → 1 → 2 execution
-route held. Remaining valuation work (exact-money contract, Receipt-reversal value reconciliation)
-and the deferred #560/#571/#573 items carry to Sprint 008.
+route held. Remaining valuation work (exact-money contract #415, Receipt-reversal value
+reconciliation #579) and #571's residual state/copy items (#576) are in Sprint 008 scope; #560's
+and #573's deferred items (#612, #613) are filed to the backlog. See §20.
 
 ## 2. Context
 
