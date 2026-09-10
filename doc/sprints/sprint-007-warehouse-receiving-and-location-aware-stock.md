@@ -57,7 +57,7 @@ the #560 CI outlier), peak concurrency 4. Two opportunistic Issues were picked u
 (#582 sprint promotion, #598 draft-based PR lifecycle). The planned Round 0 → 0B → 1 → 2 execution
 route held. Remaining valuation work (exact-money contract #415, Receipt-reversal value
 reconciliation #579) and #571's residual state/copy items (#576) are in Sprint 008 scope; #560's
-and #573's deferred items (#612, #613) are filed to the backlog. See §20.
+and #573's deferred items (#612, #613) are filed to the backlog. See §17.
 
 ## 2. Context
 
@@ -303,122 +303,7 @@ without forcing multiple agents to edit the same feature concurrently.
 | Movement queries/resources | #574 only | Keep the ledger read-only; mutation services remain owned by #567/#570/#572/#573 |
 | Architecture docs | Sprint planning baseline + each Issue | Issue PRs update only behavior actually delivered; do not claim planned code is already built |
 
-## 10. API and Persistence Plan
-
-### Additive migrations first
-
-1. `inventory_locations.can_receive_purchases`, default false, conservative MAIN-primary backfill.
-2. Stock Movement source-line identity and uniqueness for idempotent document-line posting.
-3. `variant_location_assignments`, backfilled from Stock and replenishment policies.
-4. Transfer header/line tables only after shared contracts are merged.
-
-Every migration must support populated PostgreSQL databases, use database constraints as a
-backstop, and prove `up()`/`down()` behavior. No Issue removes existing Stock/Receipt columns.
-
-### Error semantics
-
-| Condition | HTTP behavior |
-|---|---|
-| Unknown public ID / invalid field | `422` validation response |
-| Functional permission or Operating Unit access denied | `403` |
-| Draft destination became inactive/ineligible before post | `409` |
-| Duplicate/already posted or reversed lifecycle action | `409` |
-| Insufficient/reserved Stock or reversal boundary | `409` |
-| Unexpected failure | standard `500`; transaction fully rolled back |
-
-## 11. Test Strategy
-
-### API
-
-- Feature tests for every new/changed endpoint and lifecycle transition.
-- Unit/service tests for posting idempotency, assignment invariants, deterministic transfer locking,
-  balance boundaries, cost behavior, and side-effect-free projections.
-- Concurrency tests for duplicate Receipt/Transfer posting and first destination Stock creation.
-- Migration tests for backfill, uniqueness, rollback, and zero data loss.
-- Full Inventory regression plus Pint for every backend Issue.
-
-### Webapp
-
-- Service contract tests for filters and response shapes.
-- Component/page tests for permissions, forms, confirmation, zero rows, feedback, focus, and query
-  invalidation.
-- Focused Cypress paths for Receipt posting, Opening Balance, Transfers, and assigned zero Stock.
-- Previously quarantined #544/#547/#548/#549 specs run without skip guards before their related
-  functional paths are extended.
-- ESLint and TypeScript clean for every frontend Issue.
-
-### Required invariants
-
-- Reads and assignments never create physical Stock or movements.
-- Draft documents never alter Stock.
-- One source document line affects balance at most once.
-- Every successful balance change has immutable movement evidence.
-- Failed multi-line posting leaves all balances, costs, movements, assignments, and document state
-  unchanged.
-- Every Location read/mutation remains constrained by active Operating Unit membership or the
-  documented admin bypass.
-
-## 12. Documentation Deliverables
-
-The planning baseline updates, in English and Spanish:
-
-- `doc/architecture/inventory-architecture.*.md`
-  - explicit OperatingUnit/InventoryLocation boundary;
-  - assignment vs ledger vs balance projection;
-  - Sprint 7 target ER diagram;
-  - Receipt and Transfer sequence diagrams;
-  - as-built vs planned status.
-- `doc/architecture/purchasing/purchase-receipts.*.md`
-  - `DRAFT` non-mutating / `POSTED` inventory boundary;
-  - receiving-Location eligibility;
-  - idempotent source-line posting;
-  - assignment behavior and failure semantics.
-
-Each implementation Issue must replace target/future wording only for the behavior it actually
-ships. Documentation must never report a pending Issue as production behavior.
-
-## 13. Execution Evidence
-
-Thirteen scoped Issues, all merged to `main` and Done. Two opportunistic Issues (§5.4) are listed
-below the divider. `Tracked` is each Issue's finalized session total (`#574` synced from its
-recorded session during this close-out).
-
-| Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
-|---|---:|---|---:|---|---:|---|
-| ✅ | #560 | Replaced the six independent PR-validation workflows with one `ci.yml` orchestrator: a single `analyze-pr` job (dorny change detection for `api`/`webapp`/`infra`/`scripts` + PR-title mode parse) feeding reusable `api-ci`/`webapp-ci`/`e2e-ci`/`scripts-tests` branches and one stable non-matrix `ci-gate`. Three PR execution modes (`[e2e-test]` Cypress-only diagnostic, `[wip]` targeted, final full regression). | PR #589 | `0e53f35f` | 15h 0m | `.github/scripts/ci-analyze` `node --test` suite grown to 44 cases across 8 review cycles; per-mode behavior verified on live CI (empty-`[e2e-test]` guard fails; `[wip]` never merge-eligible; final full DAG green → `ci-gate` success); six legacy workflows deleted; `main` branch protection cut over to the single `ci-gate` context (`strict: true`); `HolidayFactory` monotonic-date flake fix. Two Codex rounds (infra-path detection, `[wip]` fallback), plus review passes 2–8. Deferred: cross-mode wall-clock comparison artifact (#612). |
-| ✅ | #544 | Repaired `inventory-navigation.cy.ts`: the consolidated-IA test now scrolls each `Inventario` sidebar link into view before asserting visibility (the `<nav>` is `overflow-y-auto`, so lower links sat outside the viewport and Cypress does not auto-scroll for `.should('be.visible')`); the #490 `this.skip()` quarantine guard is removed. | PR #610 | `4fc9e1b4` | 0h 32m | Local 15/15 green under CI config (`retries=2` + extended timeouts) on a fresh `sushigo-d` E2E stack, 0 retried attempts; CI `e2e-ci / cypress-e2e-run` passed with the spec re-included; webapp lint + tests green; no product code changed; `/issue-no-review`. |
-| ✅ | #547 | Removed the #490 `this.skip()` guard from `product-variant-purchase-presentation.cy.ts`; the seed hook used the numeric PK `POST /units-of-measure` returns as `id`, but the variant/template create endpoints resolve the UOM by `public_id`, so the seed silently 422'd (followed to a 200) and the Variant never rendered. Now reads `public_id` from `GET /units-of-measure`, sends `Accept: application/json`, and purges leftover presentations per attempt so CI's `retries=2` is retry-safe. | PR #609 | `6c5a0353` | 0h 53m | 1 passing over 3 consecutive fresh-stack runs; retry-safety verified with a forced post-Assign failure; CI `e2e-ci` shard green; `cypress/tsconfig.json` typecheck clean; Codex P2 (retry state) resolved; no product code changed. API `id`/`public_id` inconsistency noted as out-of-scope. |
-| ✅ | #548 | Removed the #490 `this.skip()` guard from `purchase-receipts.cy.ts` and repaired six independent staleness/flake defects — destination `aria-label` renamed by #568/#572, missing `can_receive_purchases` seed flag, a 404 route in the #586 pagination test, the `<option>` covered-element flake (assertions scoped to the SlidePanel), toast overlap, and two Cypress-retry hazards. Both specs (DRAFT→POSTED→REVERSED lifecycle + page-2 browse) run green. | PR #611 | `cc41bdac` | 2h 31m | 2 passing against a fresh dev-lab E2E stack (green ≥4× locally); CI `e2e-ci` shard green on the merge-ready commit; retry safety verified by a simulated `retries=2` first-attempt failure; ESLint + tsc clean; 2/2 Codex review threads (retry determinism) resolved; no product code changed. |
-| ✅ | #549 | Removed the #490 `this.skip()` guard from `replenishment-thresholds.cy.ts` and scrolled the clipped `<h4>` section title into view before asserting visibility (`<main>` is `overflow-y-auto`); the per-location replenishment happy path runs green again. | PR #608 | `5fc10b7c` | 0h 13m | 1 passing against a fresh dev-lab E2E stack; original clip failure reproduced without the fix; CI `e2e-ci` shard ran the un-quarantined spec green; ESLint + tsc clean; no product code changed. |
-| ✅ | #567 | Added `InventoryEntryPostingService` under `app/Services/Inventory` — one atomic inbound posting primitive accepting a normalized base quantity + explicit source-line identity (`related_line_id`), locking/creating destination Stock, blending weighted-average cost when supplied, and appending one immutable `StockMovement` (+ optional single line) per #438. Adopted by `OpeningBalanceService` and `ReceiptService::postReceipt`. | PR #595 | `3c899a79` | 1h 21m | Source-line-identity migration with a partial unique index as the idempotency backstop (reversible `up()`/`down()`); unit tests for first entry, repeat entry, zero/null cost, sequential + concurrent duplicate replay; Opening Balance / Receipt posting / reversal / Stock-mutation-concurrency suites extended; bilingual arch docs updated. Three Codex findings over two rounds (savepoint isolation of the duplicate INSERT `SQLSTATE 25P02`; all-or-nothing source triple to close a partial-NULL index bypass; `down()` restoring `meta.receipt_line_id`) — all fixed with tests. |
-| ✅ | #568 | Made an Inventory Location's ability to receive supplier purchases an explicit `inventory_locations.can_receive_purchases` capability (default false; active+primary `MAIN` rows backfilled true), independent of `type`/`is_primary`/`is_active`. Exposed on the API with an OU-scoped optional filter and manageable in the Location UI ("Puede recibir compras"). No `Warehouse` table. | PR #599 | `de191179` | 2h 13m | Reversible migration with deterministic backfill + index; `$fillable`/casts/factories/resource updated; create/update boolean validation; feature tests for CRUD, list serialization, true/false filtering, defaults, OU scoping, and the "only active+primary+`MAIN`" backfill; frontend read/write tests; OpenAPI + bilingual arch docs. |
-| ✅ | #569 | Added `variant_location_assignments` as the managed-assortment source of truth (backfilled from existing Stock + live replenishment policies), a model + API, and a focused Location assignment panel. A Variant can be "expected/managed at a Location" before its first movement, without creating Stock. | PR #600 | `8c77ac59` | 0h 44m | Backfill reconciliation (union Stock + policies) with counts; assignment CRUD + soft-delete; race-recovery `assignOrRecover` extracted as `VariantLocationAssignmentEnsurer` (later shared with #572); OU scope on assignment queries; bilingual arch `§3.13`. Single recorded session; review-response commits folded into the rebase-merge. |
-| ✅ | #570 | Opening Balance is now posted from the Spanish Existencias panel through a non-mutating preview that shares conversion, cost, destination, and ledger-bound validation with posting; initialization ensures the Variant-to-Location assignment atomically without pretending a purchase occurred. | PR #605 | `d54ca690` | 3h 50m | Pint + webapp lint/typecheck clean; 762 Inventory + 106 Receipt + 23 opening-balance Vitest + `StockTest` boundary cases; rebased onto #572 and reconciled onto its shared `VariantLocationAssignmentEnsurer`; 14/14 review threads resolved (2 Codex: valuation double-rounding, `decimal(15,4)` float boundary). |
-| ✅ | #571 | Re-spined `GET /stock`, `/stock/by-location/{id}`, `/stock/by-variant/{id}` and the Existencias page on the managed assignment (`LEFT JOIN` stock + live policy), so assigned pairs with no Stock row project as zero on-hand/reserved/available/cost/value and expose `stock_id: null` without persisting a zero Stock row. Summaries count assigned Variants. | PR #606 | `8ff65ae0` | 2h 1m | `AssignmentAwareStockProjection` + `AssignmentAwareExistenciasTest` (14 cases: assigned-with/without-Stock, unassigned, zero/no policy, soft-deleted assignment, cross-unit); proves reads create no `stock`/`stock_movements`; bilingual arch `§3.14`. Rebase-merged with 5 review-response commits (4 Codex P1: first-receipt assignment ensure under the Stock `FOR UPDATE` lock; soft-deleted-relation guard; `fetchAllPages` before summary; OU-gone `404`). Residual state/copy/filter items → #576. |
-| ✅ | #572 | Confirmed Purchase Receipts now enforce eligible receiving Locations at save time (field-level `422`) and again under lock at post time (stable `409`), mutate inventory only on post, route each line through #567's posting service, and ensure the Variant-to-Location assignment in the same transaction via the shared `VariantLocationAssignmentEnsurer`. UI field renamed "Almacén / ubicación receptora". | PR #604 | `eb6705b1` | 0h 52m | Pint passed; 39 focused tests (131 assertions) + 2,446 API tests (7,148 assertions); draft-never-mutates and inactive/non-receiving/soft-deleted/cross-unit/became-ineligible destination cases covered; 7/7 review threads resolved. `purchase-receipts.cy.ts` stayed quarantined under #548 (its stability precondition unmet); happy path covered by Vitest. |
-| ✅ | #573 | Delivered auditable draft/post/reverse internal Stock Transfers — `stock_transfers` + `stock_transfer_lines` with public ULIDs, SAC endpoints, `stock.view`/`stock.manage` + both-end OU access, deterministic Location/Variant lock ordering, one immutable `TRANSFER` movement/line per line, idempotent retries, compensating reversal, and the Spanish `/inventario/transferencias` UI. | PR #603 | `14469bd1` | 1h 30m | PHPUnit StockTransfer suite 38 tests / 185 assertions; Pint passed; full CI green across 4 API + 4 webapp + 6 E2E shards; both SonarCloud gates passed; 16 review threads resolved incl. final Devin hardening (deterministic locks, numeric bounds, authorization metadata, pagination, historical FKs). Non-authoritative availability preview left out of scope → #613. |
-| ✅ | #574 | Added a paginated, OU-scoped Inventory Stock Movement list + detail API under `/api/v1/inventory` (public IDs only, validated Location/Variant/reason/status/date/source filters, deterministic newest-first ordering, no N+1) and a permission-aware `Inventario > Movimientos` ledger page with filters, detail view, and reversal linkage. Reads have no Stock/ledger write side effects. | PR #601 | `37c2c430` | 1h 37m | Feature tests for pagination, ordering, every filter, permission denial, active-unit isolation, admin bypass, reversal linkage, missing optional relations; query-count regression; webapp service + component/page + navigation tests; Cypress happy path; bilingual arch + OpenAPI. `Tracked` synced from the recorded session during this close-out (`/finish-pr` had not finalized it). |
-| — | — | **Formal scope tracked** | | | **33h 17m** | 13 / 13 merged · Investment mix: product 7 · product-engineering 1 · dev-platform 5 |
-| ✅ | #582 | Promoted Sprint 007 from `planned/`, formally closed Sprint 006, synchronized both sprint indexes, corrected the GitHub Project `Iteration` dates (85 items reassigned + verified), and refreshed the `iteration-progress.svg` badge to "Sprint 7". | PR #583 | (merged 2026-08-31) | — | Opportunistic (§5.4). Issue body was not finalized by `/finish-pr` — `Tracked` left `_in progress_`, no `## 📅 Sessions` entries — so it contributes no measured time (data gap, §16). Missing `sprint-7` label (closure-audit WARN, disclosed). |
-| ✅ | #598 | Adopted native GitHub *draft* status as the merge-blocker (drafts skip `ci-gate`), retired the `[wip]` bracket, and added the optional `[skip-ci]`/`[ci-check]`/`[ci-check-all]` third-bracket CI-cost modifier; `/issue*` + `/start-issue` open PRs with `--draft`, `/finish-pr` promotes with `gh pr ready`. Amends [TD-06](../decisions/td-06-unified-ci-dag.md). | PR #602 | (merged 2026-09-06) | 4h 53m | Opportunistic (§5.4), picked up while iterating on Sprint 7 PRs. Carries a `sprint-7` label but is not formal scope (closure-audit orphan WARN, disclosed and recorded here). 2 sessions 2026-09-03 (10:08–10:34, 10:50–15:17). |
-
-### Risks and Mitigations
-
-Every planned risk held; the mitigation column records how.
-
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Unified CI migration hides or skips a required check | False-green PR or blocked merges | Fail-closed analysis, stable non-matrix `ci-gate`, and staged retirement of old workflows (#560) |
-| Quarantined baseline masks a functional regression | False confidence while changing the same flows | Restore #544/#547/#548/#549 in Round 0B before related feature work |
-| Duplicate source-line posting | Inflated Stock/cost | DB uniqueness + document lock + replay tests (#567) |
-| Location disabled after draft save | Inventory enters invalid destination | Revalidate under lock at post (#572) |
-| Assignment backfill misses historical Stock | Existing inventory disappears from new reads | Union Stock + live policies, reconciliation counts (#569) |
-| Zero rows distort summaries | False valuation/alerts | Dedicated projection tests and no fake Stock models (#571) |
-| Multi-line transfer deadlock/partial post | Corrupt balances | Deterministic locks + one transaction + concurrency tests (#573) |
-| Round 2 edits shared files too early | Merge conflicts/contract forks | Enforced ownership and dependency gates in §7–9 |
-| `Warehouse` abstraction added prematurely | Duplicate ownership/access hierarchy | Explicitly deferred; revisit only with concrete multi-warehouse requirement |
-
-## 14. Estimate Tracking by Round
+## 10. Estimate Tracking by Round
 
 | Round | Issues | Opt. | Pess. | Tracked | vs Opt. | vs Pess. |
 |---|---:|---:|---:|---:|---:|---:|
@@ -433,13 +318,13 @@ vs Opt.  = Tracked total − Optimistic total
 vs Pess. = Tracked total − Pessimistic total
 ```
 
-Round 0 is the only round that exceeded its estimate — see §16 for why #560's "15h" is almost
+Round 0 is the only round that exceeded its estimate — see §12 for why #560's "15h" is almost
 entirely unattended CI wall-clock. Rounds 1 and 2 landed at ~21% and ~32% of their optimistic
 estimates because each Issue composed an already-merged contract (#567 posting service,
 `OperatingUnitScope`, the #569 assignment model, the `/inventario/*` route tree) rather than
 designing one.
 
-## 15. Consolidated Time Tracking
+## 11. Consolidated Time Tracking
 
 | Category | Estimated | Tracked | Variance |
 |---|---:|---:|---:|
@@ -452,7 +337,7 @@ designing one.
 | **Grand total** | — | **38h 10m** | — |
 
 The category split is a qualitative allocation from each Issue's retrospective — Issues track total
-session time, not per-category time (§16). "Code review and validation" is the only category over
+session time, not per-category time (§12). "Code review and validation" is the only category over
 its estimate: #560 alone contributes ~11h of CI-driven review-cycle wall-clock across 8 passes,
 and #570/#573/#567 each resolved 14–16 review threads or multiple Codex correctness findings.
 
@@ -493,7 +378,7 @@ are reported: **formal scope** (the 13 Issues) and **full sprint** (formal scope
 Formal-scope wall-clock drops the two 2026-09-03 daytime blocks' #598 contribution (those blocks
 become #568-only, 30 m + 20 m), giving 28h 55m.
 
-## 16. Notes on Estimate Confidence
+## 12. Notes on Estimate Confidence
 
 The 57h/115h range was **preliminary planning**, set from Issue-body sizing before the Round 1
 foundations existed. It proved conservative by ~2.4× against the optimistic bound, for the same
@@ -516,7 +401,48 @@ Confidence caveats in the recorded numbers:
   tracked issue sessions, so its 2h 1m understates real delivery effort (its retrospective says the
   full cycle would still have sat near the optimistic end).
 
-## 17. Quality Results
+## 13. Execution Evidence
+
+Thirteen scoped Issues, all merged to `main` and Done. Two opportunistic Issues (§5.4) are listed
+below the divider. `Tracked` is each Issue's finalized session total (`#574` synced from its
+recorded session during this close-out).
+
+| Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
+|---|---:|---|---:|---|---:|---|
+| ✅ | #560 | Replaced the six independent PR-validation workflows with one `ci.yml` orchestrator: a single `analyze-pr` job (dorny change detection for `api`/`webapp`/`infra`/`scripts` + PR-title mode parse) feeding reusable `api-ci`/`webapp-ci`/`e2e-ci`/`scripts-tests` branches and one stable non-matrix `ci-gate`. Three PR execution modes (`[e2e-test]` Cypress-only diagnostic, `[wip]` targeted, final full regression). | PR #589 | `0e53f35f` | 15h 0m | `.github/scripts/ci-analyze` `node --test` suite grown to 44 cases across 8 review cycles; per-mode behavior verified on live CI (empty-`[e2e-test]` guard fails; `[wip]` never merge-eligible; final full DAG green → `ci-gate` success); six legacy workflows deleted; `main` branch protection cut over to the single `ci-gate` context (`strict: true`); `HolidayFactory` monotonic-date flake fix. Two Codex rounds (infra-path detection, `[wip]` fallback), plus review passes 2–8. Deferred: cross-mode wall-clock comparison artifact (#612). |
+| ✅ | #544 | Repaired `inventory-navigation.cy.ts`: the consolidated-IA test now scrolls each `Inventario` sidebar link into view before asserting visibility (the `<nav>` is `overflow-y-auto`, so lower links sat outside the viewport and Cypress does not auto-scroll for `.should('be.visible')`); the #490 `this.skip()` quarantine guard is removed. | PR #610 | `4fc9e1b4` | 0h 32m | Local 15/15 green under CI config (`retries=2` + extended timeouts) on a fresh `sushigo-d` E2E stack, 0 retried attempts; CI `e2e-ci / cypress-e2e-run` passed with the spec re-included; webapp lint + tests green; no product code changed; `/issue-no-review`. |
+| ✅ | #547 | Removed the #490 `this.skip()` guard from `product-variant-purchase-presentation.cy.ts`; the seed hook used the numeric PK `POST /units-of-measure` returns as `id`, but the variant/template create endpoints resolve the UOM by `public_id`, so the seed silently 422'd (followed to a 200) and the Variant never rendered. Now reads `public_id` from `GET /units-of-measure`, sends `Accept: application/json`, and purges leftover presentations per attempt so CI's `retries=2` is retry-safe. | PR #609 | `6c5a0353` | 0h 53m | 1 passing over 3 consecutive fresh-stack runs; retry-safety verified with a forced post-Assign failure; CI `e2e-ci` shard green; `cypress/tsconfig.json` typecheck clean; Codex P2 (retry state) resolved; no product code changed. API `id`/`public_id` inconsistency noted as out-of-scope. |
+| ✅ | #548 | Removed the #490 `this.skip()` guard from `purchase-receipts.cy.ts` and repaired six independent staleness/flake defects — destination `aria-label` renamed by #568/#572, missing `can_receive_purchases` seed flag, a 404 route in the #586 pagination test, the `<option>` covered-element flake (assertions scoped to the SlidePanel), toast overlap, and two Cypress-retry hazards. Both specs (DRAFT→POSTED→REVERSED lifecycle + page-2 browse) run green. | PR #611 | `cc41bdac` | 2h 31m | 2 passing against a fresh dev-lab E2E stack (green ≥4× locally); CI `e2e-ci` shard green on the merge-ready commit; retry safety verified by a simulated `retries=2` first-attempt failure; ESLint + tsc clean; 2/2 Codex review threads (retry determinism) resolved; no product code changed. |
+| ✅ | #549 | Removed the #490 `this.skip()` guard from `replenishment-thresholds.cy.ts` and scrolled the clipped `<h4>` section title into view before asserting visibility (`<main>` is `overflow-y-auto`); the per-location replenishment happy path runs green again. | PR #608 | `5fc10b7c` | 0h 13m | 1 passing against a fresh dev-lab E2E stack; original clip failure reproduced without the fix; CI `e2e-ci` shard ran the un-quarantined spec green; ESLint + tsc clean; no product code changed. |
+| ✅ | #567 | Added `InventoryEntryPostingService` under `app/Services/Inventory` — one atomic inbound posting primitive accepting a normalized base quantity + explicit source-line identity (`related_line_id`), locking/creating destination Stock, blending weighted-average cost when supplied, and appending one immutable `StockMovement` (+ optional single line) per #438. Adopted by `OpeningBalanceService` and `ReceiptService::postReceipt`. | PR #595 | `3c899a79` | 1h 21m | Source-line-identity migration with a partial unique index as the idempotency backstop (reversible `up()`/`down()`); unit tests for first entry, repeat entry, zero/null cost, sequential + concurrent duplicate replay; Opening Balance / Receipt posting / reversal / Stock-mutation-concurrency suites extended; bilingual arch docs updated. Three Codex findings over two rounds (savepoint isolation of the duplicate INSERT `SQLSTATE 25P02`; all-or-nothing source triple to close a partial-NULL index bypass; `down()` restoring `meta.receipt_line_id`) — all fixed with tests. |
+| ✅ | #568 | Made an Inventory Location's ability to receive supplier purchases an explicit `inventory_locations.can_receive_purchases` capability (default false; active+primary `MAIN` rows backfilled true), independent of `type`/`is_primary`/`is_active`. Exposed on the API with an OU-scoped optional filter and manageable in the Location UI ("Puede recibir compras"). No `Warehouse` table. | PR #599 | `de191179` | 2h 13m | Reversible migration with deterministic backfill + index; `$fillable`/casts/factories/resource updated; create/update boolean validation; feature tests for CRUD, list serialization, true/false filtering, defaults, OU scoping, and the "only active+primary+`MAIN`" backfill; frontend read/write tests; OpenAPI + bilingual arch docs. |
+| ✅ | #569 | Added `variant_location_assignments` as the managed-assortment source of truth (backfilled from existing Stock + live replenishment policies), a model + API, and a focused Location assignment panel. A Variant can be "expected/managed at a Location" before its first movement, without creating Stock. | PR #600 | `8c77ac59` | 0h 44m | Backfill reconciliation (union Stock + policies) with counts; assignment CRUD + soft-delete; race-recovery `assignOrRecover` extracted as `VariantLocationAssignmentEnsurer` (later shared with #572); OU scope on assignment queries; bilingual arch `§3.13`. Single recorded session; review-response commits folded into the rebase-merge. |
+| ✅ | #570 | Opening Balance is now posted from the Spanish Existencias panel through a non-mutating preview that shares conversion, cost, destination, and ledger-bound validation with posting; initialization ensures the Variant-to-Location assignment atomically without pretending a purchase occurred. | PR #605 | `d54ca690` | 3h 50m | Pint + webapp lint/typecheck clean; 762 Inventory + 106 Receipt + 23 opening-balance Vitest + `StockTest` boundary cases; rebased onto #572 and reconciled onto its shared `VariantLocationAssignmentEnsurer`; 14/14 review threads resolved (2 Codex: valuation double-rounding, `decimal(15,4)` float boundary). |
+| ✅ | #571 | Re-spined `GET /stock`, `/stock/by-location/{id}`, `/stock/by-variant/{id}` and the Existencias page on the managed assignment (`LEFT JOIN` stock + live policy), so assigned pairs with no Stock row project as zero on-hand/reserved/available/cost/value and expose `stock_id: null` without persisting a zero Stock row. Summaries count assigned Variants. | PR #606 | `8ff65ae0` | 2h 1m | `AssignmentAwareStockProjection` + `AssignmentAwareExistenciasTest` (14 cases: assigned-with/without-Stock, unassigned, zero/no policy, soft-deleted assignment, cross-unit); proves reads create no `stock`/`stock_movements`; bilingual arch `§3.14`. Rebase-merged with 5 review-response commits (4 Codex P1: first-receipt assignment ensure under the Stock `FOR UPDATE` lock; soft-deleted-relation guard; `fetchAllPages` before summary; OU-gone `404`). Residual state/copy/filter items → #576. |
+| ✅ | #572 | Confirmed Purchase Receipts now enforce eligible receiving Locations at save time (field-level `422`) and again under lock at post time (stable `409`), mutate inventory only on post, route each line through #567's posting service, and ensure the Variant-to-Location assignment in the same transaction via the shared `VariantLocationAssignmentEnsurer`. UI field renamed "Almacén / ubicación receptora". | PR #604 | `eb6705b1` | 0h 52m | Pint passed; 39 focused tests (131 assertions) + 2,446 API tests (7,148 assertions); draft-never-mutates and inactive/non-receiving/soft-deleted/cross-unit/became-ineligible destination cases covered; 7/7 review threads resolved. `purchase-receipts.cy.ts` stayed quarantined under #548 (its stability precondition unmet); happy path covered by Vitest. |
+| ✅ | #573 | Delivered auditable draft/post/reverse internal Stock Transfers — `stock_transfers` + `stock_transfer_lines` with public ULIDs, SAC endpoints, `stock.view`/`stock.manage` + both-end OU access, deterministic Location/Variant lock ordering, one immutable `TRANSFER` movement/line per line, idempotent retries, compensating reversal, and the Spanish `/inventario/transferencias` UI. | PR #603 | `14469bd1` | 1h 30m | PHPUnit StockTransfer suite 38 tests / 185 assertions; Pint passed; full CI green across 4 API + 4 webapp + 6 E2E shards; both SonarCloud gates passed; 16 review threads resolved incl. final Devin hardening (deterministic locks, numeric bounds, authorization metadata, pagination, historical FKs). Non-authoritative availability preview left out of scope → #613. |
+| ✅ | #574 | Added a paginated, OU-scoped Inventory Stock Movement list + detail API under `/api/v1/inventory` (public IDs only, validated Location/Variant/reason/status/date/source filters, deterministic newest-first ordering, no N+1) and a permission-aware `Inventario > Movimientos` ledger page with filters, detail view, and reversal linkage. Reads have no Stock/ledger write side effects. | PR #601 | `37c2c430` | 1h 37m | Feature tests for pagination, ordering, every filter, permission denial, active-unit isolation, admin bypass, reversal linkage, missing optional relations; query-count regression; webapp service + component/page + navigation tests; Cypress happy path; bilingual arch + OpenAPI. `Tracked` synced from the recorded session during this close-out (`/finish-pr` had not finalized it). |
+| — | — | **Formal scope tracked** | | | **33h 17m** | 13 / 13 merged · Investment mix: product 7 · product-engineering 1 · dev-platform 5 |
+| ✅ | #582 | Promoted Sprint 007 from `planned/`, formally closed Sprint 006, synchronized both sprint indexes, corrected the GitHub Project `Iteration` dates (85 items reassigned + verified), and refreshed the `iteration-progress.svg` badge to "Sprint 7". | PR #583 | (merged 2026-08-31) | — | Opportunistic (§5.4). Issue body was not finalized by `/finish-pr` — `Tracked` left `_in progress_`, no `## 📅 Sessions` entries — so it contributes no measured time (data gap, §12). Missing `sprint-7` label (closure-audit WARN, disclosed). |
+| ✅ | #598 | Adopted native GitHub *draft* status as the merge-blocker (drafts skip `ci-gate`), retired the `[wip]` bracket, and added the optional `[skip-ci]`/`[ci-check]`/`[ci-check-all]` third-bracket CI-cost modifier; `/issue*` + `/start-issue` open PRs with `--draft`, `/finish-pr` promotes with `gh pr ready`. Amends [TD-06](../decisions/td-06-unified-ci-dag.md). | PR #602 | (merged 2026-09-06) | 4h 53m | Opportunistic (§5.4), picked up while iterating on Sprint 7 PRs. Carries a `sprint-7` label but is not formal scope (closure-audit orphan WARN, disclosed and recorded here). 2 sessions 2026-09-03 (10:08–10:34, 10:50–15:17). |
+
+### Risks and Mitigations
+
+Every planned risk held; the mitigation column records how.
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Unified CI migration hides or skips a required check | False-green PR or blocked merges | Fail-closed analysis, stable non-matrix `ci-gate`, and staged retirement of old workflows (#560) |
+| Quarantined baseline masks a functional regression | False confidence while changing the same flows | Restore #544/#547/#548/#549 in Round 0B before related feature work |
+| Duplicate source-line posting | Inflated Stock/cost | DB uniqueness + document lock + replay tests (#567) |
+| Location disabled after draft save | Inventory enters invalid destination | Revalidate under lock at post (#572) |
+| Assignment backfill misses historical Stock | Existing inventory disappears from new reads | Union Stock + live policies, reconciliation counts (#569) |
+| Zero rows distort summaries | False valuation/alerts | Dedicated projection tests and no fake Stock models (#571) |
+| Multi-line transfer deadlock/partial post | Corrupt balances | Deterministic locks + one transaction + concurrency tests (#573) |
+| Round 2 edits shared files too early | Merge conflicts/contract forks | Enforced ownership and dependency gates in §7–9 |
+| `Warehouse` abstraction added prematurely | Duplicate ownership/access hierarchy | Explicitly deferred; revisit only with concrete multi-warehouse requirement |
+
+## 14. Quality Results
 
 | Metric | Before | Target | After | Result |
 |---|---:|---:|---:|---|
@@ -530,9 +456,9 @@ Confidence caveats in the recorded numbers:
 | Tests passing | `main` green | 100% | 100% — full CI green on every merged PR; `ci-gate` required | ✅ |
 | SonarCloud new-code coverage | ≥ 80% | ≥ 80% | Met on every scoped PR (api + webapp gates passed) | ✅ |
 
-## 18. Results
+## 15. Results
 
-### 18.1 Delivered Value
+### 15.1 Delivered Value
 
 Sprint 7 turned the Sprints 4–6 purchasing and Stock foundations into an explicit, auditable
 warehouse workflow. A Purchase Receipt now enters a validated receiving Location (checked at save
@@ -549,7 +475,7 @@ This completes the "explicit warehouse workflow" increment. It does **not** clos
 valuation: Receipt reversal is still quantity-only, and monetary arithmetic still crosses PHP
 `float` boundaries — both owned by Sprint 8 (#579, #415).
 
-### 18.2 Planned vs. Actual
+### 15.2 Planned vs. Actual
 
 - **Planned:** 13 Issues, 57h optimistic / 115h pessimistic.
 - **Completed:** 13 / 13 — all merged to `main`, all Done (#560, #544, #547, #548, #549, #567,
@@ -566,7 +492,7 @@ valuation: Receipt reversal is still quantity-only, and monetary arithmetic stil
   the fan-out; the four spec fixes ran concurrently; the three foundations merged before the five
   verticals; no cross-Issue merge conflict materialized.
 
-### 18.3 Known Limitations
+### 15.3 Known Limitations
 
 - **Inventory valuation after a Purchase Receipt reversal is still quantity-only**
   (`Stock.weighted_avg_cost` left unchanged). Sprint 8 **#579** owns the fix; Sprint 8 **#415**
@@ -581,9 +507,9 @@ valuation: Receipt reversal is still quantity-only, and monetary arithmetic stil
 - **Three more quarantined Cypress specs remain** (`item-media-gallery-uploader`, `price-lists`,
   `suppliers-catalog`) under the #490 guard — Sprint 8 #545/#546/#550.
 - The **#560 "15h" tracked figure** is dominated by unattended CI wall-clock; recorded as-is per
-  §7 (see §16).
+  §7 (see §12).
 
-## 19. Lessons Learned
+## 16. Lessons Learned
 
 - **Estimation:** for the fourth sprint running, Issues that reuse an established contract land far
   under the optimistic estimate — Round 1 came in at 4h 18m against 20h optimistic, Round 2 at
@@ -605,7 +531,7 @@ valuation: Receipt reversal is still quantity-only, and monetary arithmetic stil
   a concurrency/rollback/authorization edge. Budget review-response time explicitly for
   shared-contract Issues instead of treating it as overrun.
 
-## 20. Follow-up Work
+## 17. Follow-up Work
 
 | Status | Issue | Title | Reason | Candidate Sprint |
 |---|---:|---|---|---|
@@ -616,7 +542,105 @@ valuation: Receipt reversal is still quantity-only, and monetary arithmetic stil
 | ⏳ | #415 | Adopt an exact monetary value contract across API and webapp | Prerequisite for #579's final valuation arithmetic; Receipt amounts still cross PHP `float` boundaries | Sprint 008 |
 | ✅ | #614 | Promote Sprint 008, formally close Sprint 007 | Sprint lifecycle per `doc/conventions/sprints.md` §4 — this sprint is only `Completed` once its checklist is done and the next sprint is promoted | Sprint 008 |
 
-## 21. Definition of Ready (historical — planning record)
+## 18. Sprint Closure Checklist
+
+- [x] All 13 work items have a final status marker. (§5.1, §13 — all ✅, all merged and Done.)
+- [x] Completed items include Pull Request and merge-commit evidence. (§13 — 13 scoped + 2 opportunistic rows with PR + SHA.)
+- [x] Deprecated / cancelled items identify their replacement / reason. (None this sprint.)
+- [x] Scope changes are recorded. (§15.2 — none after start; #574 `Tracked` synced during close-out.)
+- [x] Tracked time was synchronized from Issue sessions. (§13, §10 — per-Issue from each finalized `## 📅 Sessions`; #574 recovered during close-out; #560/#574/#582 confidence caveats in §12.)
+- [x] Round totals and sprint totals were recalculated. (§10 — 33h 17m formal; §11 — 38h 10m grand total.)
+- [x] Estimate variance was calculated per round and for the sprint. (§10 — vs Opt. / vs Pess. per round + total.)
+- [x] Consolidated effort was completed. (§11.)
+- [x] Wall-clock time, parallelization factor, and peak concurrency were computed. (§11 — 28h 55m / 1.15× / peak 4 formal; 33h 29m / 1.14× full sprint; `doc/conventions/sprints.md` §7.)
+- [x] The sprint closure audit reports `PASS` (`node .github/scripts/sprint-audit/generate.js` — see `doc/conventions/sprint-closure-audit.md`). _(Undisposed tasks on #560/#571/#573/#574 dispositioned to #612 / #576 / #613; all 13 §13 evidence rows present; #582 label + #598 orphan disclosed in §13/§15.2.)_
+- [x] Dependencies reflect actual execution. (§8 — the #560 → foundations → verticals chain held.)
+- [x] Conflict notes reflect actual execution. (§9 — no cross-Issue merge conflict materialized.)
+- [x] Tests and relevant quality metrics were recorded. (§14.)
+- [x] Delivered value and known limitations were documented. (§15.1, §15.3.)
+- [x] Follow-up work was created or recorded. (§17 — #612, #613, #576/#579/#415, #614.)
+- [x] Lessons learned were captured. (§16.)
+- [x] Metadata dates and status were updated. (Frontmatter — `status: Completed`, `completed: 2026-09-09`, `next: sprint-008-…`.)
+- [x] The next sprint was promoted. (Sprint 008 promoted from `planned/` by #614 on 2026-09-09; both indexes and the Project `Iteration` field updated.)
+
+
+---
+
+## Appendix A — API & Persistence Plan
+
+### Additive migrations first
+
+1. `inventory_locations.can_receive_purchases`, default false, conservative MAIN-primary backfill.
+2. Stock Movement source-line identity and uniqueness for idempotent document-line posting.
+3. `variant_location_assignments`, backfilled from Stock and replenishment policies.
+4. Transfer header/line tables only after shared contracts are merged.
+
+Every migration must support populated PostgreSQL databases, use database constraints as a
+backstop, and prove `up()`/`down()` behavior. No Issue removes existing Stock/Receipt columns.
+
+### Error semantics
+
+| Condition | HTTP behavior |
+|---|---|
+| Unknown public ID / invalid field | `422` validation response |
+| Functional permission or Operating Unit access denied | `403` |
+| Draft destination became inactive/ineligible before post | `409` |
+| Duplicate/already posted or reversed lifecycle action | `409` |
+| Insufficient/reserved Stock or reversal boundary | `409` |
+| Unexpected failure | standard `500`; transaction fully rolled back |
+
+## Appendix B — Test Strategy
+
+### API
+
+- Feature tests for every new/changed endpoint and lifecycle transition.
+- Unit/service tests for posting idempotency, assignment invariants, deterministic transfer locking,
+  balance boundaries, cost behavior, and side-effect-free projections.
+- Concurrency tests for duplicate Receipt/Transfer posting and first destination Stock creation.
+- Migration tests for backfill, uniqueness, rollback, and zero data loss.
+- Full Inventory regression plus Pint for every backend Issue.
+
+### Webapp
+
+- Service contract tests for filters and response shapes.
+- Component/page tests for permissions, forms, confirmation, zero rows, feedback, focus, and query
+  invalidation.
+- Focused Cypress paths for Receipt posting, Opening Balance, Transfers, and assigned zero Stock.
+- Previously quarantined #544/#547/#548/#549 specs run without skip guards before their related
+  functional paths are extended.
+- ESLint and TypeScript clean for every frontend Issue.
+
+### Required invariants
+
+- Reads and assignments never create physical Stock or movements.
+- Draft documents never alter Stock.
+- One source document line affects balance at most once.
+- Every successful balance change has immutable movement evidence.
+- Failed multi-line posting leaves all balances, costs, movements, assignments, and document state
+  unchanged.
+- Every Location read/mutation remains constrained by active Operating Unit membership or the
+  documented admin bypass.
+
+## Appendix C — Documentation Deliverables
+
+The planning baseline updates, in English and Spanish:
+
+- `doc/architecture/inventory-architecture.*.md`
+  - explicit OperatingUnit/InventoryLocation boundary;
+  - assignment vs ledger vs balance projection;
+  - Sprint 7 target ER diagram;
+  - Receipt and Transfer sequence diagrams;
+  - as-built vs planned status.
+- `doc/architecture/purchasing/purchase-receipts.*.md`
+  - `DRAFT` non-mutating / `POSTED` inventory boundary;
+  - receiving-Location eligibility;
+  - idempotent source-line posting;
+  - assignment behavior and failure semantics.
+
+Each implementation Issue must replace target/future wording only for the behavior it actually
+ships. Documentation must never report a pending Issue as production behavior.
+
+## Appendix D — Definition of Ready (historical planning record)
 
 An Issue could start when:
 
@@ -627,7 +651,7 @@ An Issue could start when:
   during promotion;
 - its tests could run against the workspace-isolated database.
 
-## 22. Definition of Done (historical — planning record)
+## Appendix E — Definition of Done (historical planning record)
 
 Each Issue was done only when:
 
@@ -639,7 +663,7 @@ Each Issue was done only when:
 - PR review findings were resolved and CI was green;
 - tracked time and retrospective were finalized on the GitHub Issue.
 
-## 23. Promotion Checklist (into Sprint 7 — completed by #582)
+## Appendix F — Promotion Checklist into Sprint 7 (completed by #582)
 
 - [x] Sprint 006 closure checklist is complete and its final metrics are recorded.
 - [x] Move this document from `doc/sprints/planned/` to `doc/sprints/` without renaming it.
@@ -651,24 +675,3 @@ Each Issue was done only when:
 - [x] Verify every Issue has `sprint-7` and exactly one canonical `investment:` label.
 - [x] Complete #560, prove the canonical CI gate, repair #544/#547/#548/#549 in parallel, then
       rebase Round 1 workspaces and begin #567/#568/#569 in parallel. _(All 13 completed — see §13.)_
-
-## 24. Sprint Closure Checklist
-
-- [x] All 13 work items have a final status marker. (§5.1, §13 — all ✅, all merged and Done.)
-- [x] Completed items include Pull Request and merge-commit evidence. (§13 — 13 scoped + 2 opportunistic rows with PR + SHA.)
-- [x] Deprecated / cancelled items identify their replacement / reason. (None this sprint.)
-- [x] Scope changes are recorded. (§18.2 — none after start; #574 `Tracked` synced during close-out.)
-- [x] Tracked time was synchronized from Issue sessions. (§13, §14 — per-Issue from each finalized `## 📅 Sessions`; #574 recovered during close-out; #560/#574/#582 confidence caveats in §16.)
-- [x] Round totals and sprint totals were recalculated. (§14 — 33h 17m formal; §15 — 38h 10m grand total.)
-- [x] Estimate variance was calculated per round and for the sprint. (§14 — vs Opt. / vs Pess. per round + total.)
-- [x] Consolidated effort was completed. (§15.)
-- [x] Wall-clock time, parallelization factor, and peak concurrency were computed. (§15 — 28h 55m / 1.15× / peak 4 formal; 33h 29m / 1.14× full sprint; `doc/conventions/sprints.md` §7.)
-- [x] The sprint closure audit reports `PASS` (`node .github/scripts/sprint-audit/generate.js` — see `doc/conventions/sprint-closure-audit.md`). _(Undisposed tasks on #560/#571/#573/#574 dispositioned to #612 / #576 / #613; all 13 §13 evidence rows present; #582 label + #598 orphan disclosed in §13/§18.2.)_
-- [x] Dependencies reflect actual execution. (§8 — the #560 → foundations → verticals chain held.)
-- [x] Conflict notes reflect actual execution. (§9 — no cross-Issue merge conflict materialized.)
-- [x] Tests and relevant quality metrics were recorded. (§17.)
-- [x] Delivered value and known limitations were documented. (§18.1, §18.3.)
-- [x] Follow-up work was created or recorded. (§20 — #612, #613, #576/#579/#415, #614.)
-- [x] Lessons learned were captured. (§19.)
-- [x] Metadata dates and status were updated. (Frontmatter — `status: Completed`, `completed: 2026-09-09`, `next: sprint-008-…`.)
-- [x] The next sprint was promoted. (Sprint 008 promoted from `planned/` by #614 on 2026-09-09; both indexes and the Project `Iteration` field updated.)
