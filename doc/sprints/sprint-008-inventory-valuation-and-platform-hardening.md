@@ -243,8 +243,11 @@ Each in-scope monetary table has a single migration writer at a time.
 
 ### Round 2 — Valuation + independent hardening (parallel)
 
-All four Issues start from `main` after Round 1's primitive is available (only #579 hard-depends on
-it) and own disjoint file surfaces.
+The round number is dependency/value ordering, not a start barrier. Only **lane B (#579)** waits for
+Round 1 — it hard-depends on #415's merged primitive. **Lanes C, D, E (#575, #580, #581)** depend
+only on already-merged Sprint 7 contracts, so they start from `main` immediately and run
+concurrently with Round 0 and Round 1 (this is exactly what the §8 critical-path calculation
+assumes). All four lanes own disjoint file surfaces.
 
 | Lane | Issue | Starts after | Primary file ownership | Opt. | Pess. |
 |---|---:|---|---|---:|---:|
