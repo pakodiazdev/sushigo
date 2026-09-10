@@ -42,7 +42,7 @@ Two Issues form the financial foundation and are the sprint's critical path:
   reversed — the highest-priority unresolved finding from the Sprint 5 review — with append-only
   value evidence and deterministic semantics for intervening consumption, receipts, and transfers.
 
-The remaining seven Issues harden the module the Inventory roadmap (Sprints 4–7) delivered:
+The remaining eight Issues harden the module the Inventory roadmap (Sprints 4–7) delivered:
 **#575** prunes the `StockMovementLine` columns made redundant by the #438 single-line contract,
 with reconciliation and lossless rollback; **#580** replaces the growing per-workflow OR-permission
 lists on lookup routes with an explicit reference-data access contract that preserves least
@@ -140,7 +140,7 @@ Project iteration created during promotion.
 | ⏳ | #550 | Fix quarantined Cypress spec: suppliers-catalog.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
 |  |  | **Total** |  |  |  | **39.5h** | **87h** |
 
-### 5.2 Included Capabilities
+**Capabilities this scope delivers:**
 
 - One exact Money/Decimal contract (integer minor units + currency at scale 2; unit/weighted-average
   cost at scale 4; quantities scale 4; conversion factors scale 6; rates scale 4; intermediate
@@ -168,7 +168,7 @@ Project iteration created during promotion.
 - Restored `item-media-gallery-uploader`, `price-lists`, and `suppliers-catalog` Cypress coverage
   with their `#490` quarantine guards removed and green in CI.
 
-### 5.3 Excluded
+### 5.2 Excluded
 
 - Multi-currency conversion, exchange rates, taxation policy, or accounting-ledger / general-ledger
   functionality; supplier credit notes, payables, or tax filing.
@@ -184,6 +184,12 @@ Project iteration created during promotion.
 - Changing database primary keys or URL shapes unrelated to identifier type.
 - The remaining quarantined specs outside this sprint's three (`#535`–`#543`, `#551`–`#558`,
   `#561`) and unrelated deferred debt (`#85`, `#276`, `#450`).
+
+### 5.3 Scope Changes
+
+| Date | Status | Item | Change | Reason |
+|---|---|---|---|---|
+| — | — | — | None | Sprint not started; no additions, removals, deprecations, or cancellations yet |
 
 ### 5.4 Opportunistic Work
 
@@ -349,106 +355,70 @@ each Issue cites, and the Sprint 7 contracts (`#567` posting service, `#574` led
 they modify the same file or when one changes a contract the other consumes; the round sequencing
 keeps every shared surface single-writer within a round.
 
-## 10. API and Persistence Plan
+## 10. Estimate Tracking by Round
 
-### Additive / reversible migrations first
+Placeholder until execution starts. `Tracked` and variance columns are filled at each round
+boundary (`doc/conventions/sprints.md` §10) — not held to closure.
 
-1. **#415** — introduce Money/Decimal columns or representation alongside the existing exact
-   `DECIMAL` values, backfilled losslessly; prove `up()`/`down()` round-trips every existing
-   monetary value with no precision loss on a populated database; migrate consumers in bounded,
-   individually documented phases.
-2. **#579** — add the authoritative valuation evidence (value accumulator, immutable valuation
-   movements, or cost layers — the design chosen and justified in the Issue/ADR) as append-only
-   tables/columns; never edit posted quantity/value history.
-3. **#575** — additive reconciliation/archive step that proves each candidate duplicate
-   (`stock_movement_lines.item_variant_id`, `base_qty`) agrees with its parent header on real data,
-   with an actionable failure on disagreement, before the destructive column drop; `down()`
-   restores the columns and values verbatim.
-4. **#580** — idempotent permission seed/migration for the new reference-data capability/policy;
-   documented role implications; existing roles authorized through Suppliers or Receipts keep
-   lookup access and gain no mutation capability.
+| Round | Issue count | Opt. total | Pess. total | Tracked total | vs Opt. | vs Pess. |
+|---|---:|---:|---:|---:|---:|---:|
+| 0 — Restore E2E baseline | 3 | 1.5h | 9h | — | — | — |
+| 1 — Financial foundation | 1 | 12h | 24h | — | — | — |
+| 2 — Valuation + independent hardening | 4 | 18h | 37h | — | — | — |
+| 3 — Inventory UX | 2 | 8h | 17h | — | — | — |
+| **Grand total** | **10** | **39.5h** | **87h** | **—** | **—** | **—** |
 
-Every migration must support a populated PostgreSQL database, use database constraints as a
-backstop, and prove forward/backward behavior. No Issue removes an existing Stock, Receipt, or
-Movement column without reconciliation evidence.
+```text
+vs Opt.  = Tracked total − Optimistic total
+vs Pess. = Tracked total − Pessimistic total
+```
 
-### Error semantics
+## 11. Consolidated Time Tracking
 
-| Condition | HTTP behavior |
-|---|---|
-| Unknown public ID / invalid field / malformed money value | `422` validation response |
-| Lookup or workflow permission / Operating Unit access denied | `403` |
-| Receipt reversal that cannot be reconciled exactly (intervening operation past the documented boundary) | `409` with an actionable message, or an explicit posted valuation adjustment — never a silent approximation |
-| Duplicate / already-reversed lifecycle action, or concurrent reversal retry | `409`; compensation applied at most once |
-| Unexpected failure | standard `500`; transaction fully rolled back (Stock, Receipt state, quantity movement, value evidence together) |
+Placeholder until closure.
 
-## 11. Test Strategy
+| Category | Estimated | Tracked | Variance |
+|---|---:|---:|---:|
+| Planning and issue scoping | — | — | — |
+| Implementation | — | — | — |
+| Code review and validation | — | — | — |
+| Documentation | — | — | — |
+| Rework and corrections | — | — | — |
+| **Total** | **—** | **—** | **—** |
 
-### API
+### Wall-Clock Time & Parallelism
 
-- Feature tests for every new/changed endpoint and every reversal-valuation scenario (immediate
-  full reversal, partial remaining quantity, intervening consumption, later receipt, transfer,
-  concurrent/double reversal, zero/free goods, fractional unit cost).
-- Unit tests for the Money/Decimal primitive (fractional-cent unit costs, large values,
-  discounts/taxes, zero/negative-where-allowed, repeated blends) and for the boundary rejection of
-  raw floats.
-- Migration tests: monetary round-trip preserves every existing value (#415); movement-line
-  reconciliation on a populated DB plus a deliberately inconsistent fixture that fails safely
-  (#575); permission seed idempotency and role implications (#580).
-- Permission-matrix tests for the reference-data contract: catalog viewer, supplier manager,
-  receipt manager, future Inventory operator, unauthorized user, inactive membership, admin bypass,
-  and direct public-ID/filter bypass attempts (#580).
-- A contract test/linter that compares public-ID route parameters and serialized resource IDs
-  against generated OpenAPI types and fails on a reintroduced integer-ID schema (#581).
-- Full Inventory API regression plus Pint for every backend Issue.
+Cross-file pointer to `doc/conventions/sprints.md` §7 for the definitions and computation rules.
+Computed once at closure from every Issue's `## 📅 Sessions` array.
 
-### Webapp
+- **Person-hours:** —
+- **Wall-clock time:** —
+- **Parallelization factor:** —
+- **Peak concurrency:** —
 
-- TypeScript money-helper tests: serialization and arithmetic never coerce exact values to unsafe
-  JS floating point; purchase preview and backend persistence produce identical results (#415).
-- Shared component tests for every Inventory state × action/permission combination, plus
-  representative route tests proving query state is wired correctly and stale data is not shown for
-  a changed Operating Unit or filter (#576).
-- Route tests proving every canonical and legacy Inventory URL resolves to the same authorized
-  destination, plus lazy-load / chunk-load-failure-and-retry / permission-denial / deep-link
-  coverage (#577).
-- Restored `item-media-gallery-uploader` / `price-lists` / `suppliers-catalog` specs run without
-  skip guards and green in CI (#545, #546, #550).
-- ESLint and TypeScript clean for every frontend Issue.
+| Wall-clock block | Duration | Issues active in this block |
+|---|---:|---|
+| — | — | — |
 
-### Required invariants
+## 12. Notes on Estimate Confidence
 
-- No domain-relevant monetary calculation depends on binary floating-point arithmetic; database,
-  API, PHP, and TypeScript agree on scale and representation.
-- `sum(on_hand × valuation basis)` and immutable value evidence reconcile after every supported
-  Receipt-reversal scenario; no reversal changes quantity while leaving unexplained residual value.
-- Posted movement and value history remains append-only and causally linked; concurrency/retry
-  cannot apply compensation twice.
-- Movement Variant + base quantity has exactly one persisted source of truth; existing movements
-  remain readable and reversible after the #575 migration; rollback is exact.
-- Lookup access never implies catalog create/update/delete; every lookup read remains constrained
-  by active Operating Unit membership or the documented admin bypass.
-- Every reads-only Inventory screen (ledger, Existencias, lists) has no Stock or ledger write side
-  effect.
+Confidence is rated **medium**. The estimates are Issue-body sizing, not fresh technical scoping,
+but every Issue is a well-understood review follow-up with a named target contract:
 
-## 12. Documentation Deliverables
-
-In English and Spanish, updated only for behavior actually shipped:
-
-- [`TD-05`](../decisions/td-05-monetary-precision-and-rounding.md) implementation status plus a
-  complete inventory of monetary fields classified against it (#415).
-- `doc/architecture/` financial/monetary contract: representation, scale, rounding, serialization,
-  and migration behavior across DB / PHP / API / TypeScript (#415).
-- `doc/architecture/inventory-architecture.*.md` and
-  `doc/architecture/purchasing/purchase-receipts.*.md`: the reversal valuation model, its
-  intervening-operation semantics and failure boundaries, and the movement-line contract after the
-  #575 prune (#579, #575).
-- The reference-data access contract documented separately from catalog management, with role
-  implications (#580).
-- OpenAPI regenerated and corrected for ULID identifiers, with the regression check documented
-  (#581).
-- `doc/conventions/frontend/` : the shared Inventory state contract and the reusable lazy-route
-  convention (#576, #577).
+- **Higher confidence** — #575, #580, #581, #545, #546, #550: each has a bounded, already-mapped
+  surface (movement-line schema, lookup-route middleware, the generated OpenAPI document, one
+  Cypress file). The Inventory series (Sprints 4–7) has consistently landed this class of Issue at
+  ~40–60% of its optimistic estimate because the contract already exists to modify.
+- **Lower confidence** — #415 (`12h`/`24h`) and #579 (`8h`/`16h`): #415's cost is dominated by the
+  breadth of the monetary-field migration (Receipt DTO, weighted-average cost, Opening Balance,
+  Stock Out, movement evidence, price lists, dishes/extras, cash, payroll, reports) and by
+  API-compatibility risk for existing clients; #579 still has an open architecture decision (value
+  accumulator vs. immutable valuation movements vs. cost layers) and its intervening-operation
+  semantics are genuinely new design, not adaptation. These two carry the critical path and the
+  widest estimate band on purpose.
+- **Sequencing risk** — #579 cannot finalize its arithmetic until #415's primitive and
+  Receipt-path migration merge; if #415 runs long, #579's usable window compresses. The rounds are
+  arranged so the parallel lanes (Round 0, Round 2 C/D/E, Round 3) absorb that slack.
 
 ## 13. Execution Evidence
 
@@ -532,3 +502,111 @@ _To be completed at closure._
 - [ ] Follow-up work was created or recorded (§17).
 - [ ] Metadata dates and status were updated.
 - [ ] The next sprint was promoted or created, or Sprint 008 remains current per the lifecycle convention.
+
+---
+
+## Appendix A — API & Persistence Plan
+
+Supplementary planning detail (not one of the mandatory `doc/conventions/sprints.md` §8 headings).
+
+### Additive / reversible migrations first
+
+1. **#415** — introduce Money/Decimal columns or representation alongside the existing exact
+   `DECIMAL` values, backfilled losslessly; prove `up()`/`down()` round-trips every existing
+   monetary value with no precision loss on a populated database; migrate consumers in bounded,
+   individually documented phases.
+2. **#579** — add the authoritative valuation evidence (value accumulator, immutable valuation
+   movements, or cost layers — the design chosen and justified in the Issue/ADR) as append-only
+   tables/columns; never edit posted quantity/value history.
+3. **#575** — additive reconciliation/archive step that proves each candidate duplicate
+   (`stock_movement_lines.item_variant_id`, `base_qty`) agrees with its parent header on real data,
+   with an actionable failure on disagreement, before the destructive column drop; `down()`
+   restores the columns and values verbatim.
+4. **#580** — idempotent permission seed/migration for the new reference-data capability/policy;
+   documented role implications; existing roles authorized through Suppliers or Receipts keep
+   lookup access and gain no mutation capability.
+
+Every migration must support a populated PostgreSQL database, use database constraints as a
+backstop, and prove forward/backward behavior. No Issue removes an existing Stock, Receipt, or
+Movement column without reconciliation evidence.
+
+### Error semantics
+
+| Condition | HTTP behavior |
+|---|---|
+| Unknown public ID / invalid field / malformed money value | `422` validation response |
+| Lookup or workflow permission / Operating Unit access denied | `403` |
+| Receipt reversal that cannot be reconciled exactly (intervening operation past the documented boundary) | `409` with an actionable message, or an explicit posted valuation adjustment — never a silent approximation |
+| Duplicate / already-reversed lifecycle action, or concurrent reversal retry | `409`; compensation applied at most once |
+| Unexpected failure | standard `500`; transaction fully rolled back (Stock, Receipt state, quantity movement, value evidence together) |
+
+## Appendix B — Test Strategy
+
+Supplementary planning detail. Per-Issue test requirements are the source of truth; this is the
+cross-Issue summary.
+
+### API
+
+- Feature tests for every new/changed endpoint and every reversal-valuation scenario (immediate
+  full reversal, partial remaining quantity, intervening consumption, later receipt, transfer,
+  concurrent/double reversal, zero/free goods, fractional unit cost).
+- Unit tests for the Money/Decimal primitive (fractional-cent unit costs, large values,
+  discounts/taxes, zero/negative-where-allowed, repeated blends) and for the boundary rejection of
+  raw floats.
+- Migration tests: monetary round-trip preserves every existing value (#415); movement-line
+  reconciliation on a populated DB plus a deliberately inconsistent fixture that fails safely
+  (#575); permission seed idempotency and role implications (#580).
+- Permission-matrix tests for the reference-data contract: catalog viewer, supplier manager,
+  receipt manager, future Inventory operator, unauthorized user, inactive membership, admin bypass,
+  and direct public-ID/filter bypass attempts (#580).
+- A contract test/linter that compares public-ID route parameters and serialized resource IDs
+  against generated OpenAPI types and fails on a reintroduced integer-ID schema (#581).
+- Full Inventory API regression plus Pint for every backend Issue.
+
+### Webapp
+
+- TypeScript money-helper tests: serialization and arithmetic never coerce exact values to unsafe
+  JS floating point; purchase preview and backend persistence produce identical results (#415).
+- Shared component tests for every Inventory state × action/permission combination, plus
+  representative route tests proving query state is wired correctly and stale data is not shown for
+  a changed Operating Unit or filter (#576).
+- Route tests proving every canonical and legacy Inventory URL resolves to the same authorized
+  destination, plus lazy-load / chunk-load-failure-and-retry / permission-denial / deep-link
+  coverage (#577).
+- Restored `item-media-gallery-uploader` / `price-lists` / `suppliers-catalog` specs run without
+  skip guards and green in CI (#545, #546, #550).
+- ESLint and TypeScript clean for every frontend Issue.
+
+### Required invariants
+
+- No domain-relevant monetary calculation depends on binary floating-point arithmetic; database,
+  API, PHP, and TypeScript agree on scale and representation.
+- `sum(on_hand × valuation basis)` and immutable value evidence reconcile after every supported
+  Receipt-reversal scenario; no reversal changes quantity while leaving unexplained residual value.
+- Posted movement and value history remains append-only and causally linked; concurrency/retry
+  cannot apply compensation twice.
+- Movement Variant + base quantity has exactly one persisted source of truth; existing movements
+  remain readable and reversible after the #575 migration; rollback is exact.
+- Lookup access never implies catalog create/update/delete; every lookup read remains constrained
+  by active Operating Unit membership or the documented admin bypass.
+- Every reads-only Inventory screen (ledger, Existencias, lists) has no Stock or ledger write side
+  effect.
+
+## Appendix C — Documentation Deliverables
+
+Supplementary planning detail. In English and Spanish, updated only for behavior actually shipped:
+
+- [`TD-05`](../decisions/td-05-monetary-precision-and-rounding.md) implementation status plus a
+  complete inventory of monetary fields classified against it (#415).
+- `doc/architecture/` financial/monetary contract: representation, scale, rounding, serialization,
+  and migration behavior across DB / PHP / API / TypeScript (#415).
+- `doc/architecture/inventory-architecture.*.md` and
+  `doc/architecture/purchasing/purchase-receipts.*.md`: the reversal valuation model, its
+  intervening-operation semantics and failure boundaries, and the movement-line contract after the
+  #575 prune (#579, #575).
+- The reference-data access contract documented separately from catalog management, with role
+  implications (#580).
+- OpenAPI regenerated and corrected for ULID identifiers, with the regression check documented
+  (#581).
+- `doc/conventions/frontend/` : the shared Inventory state contract and the reusable lazy-route
+  convention (#576, #577).
