@@ -23,6 +23,10 @@
  * • Assignment effective_from is hardcoded to a fixed past date ('2020-01-01') with no
  *   effective_to, so resolution against "today" never depends on computing today's date in the
  *   test itself.
+ * • Price Lists created inside the `it()` are purged (soft-deleted, PriceList uses SoftDeletes)
+ *   in beforeEach() before every attempt, so a Cypress retry (CI runs `retries=2`) doesn't hit
+ *   leftover records — see the comments on beforeEach() and inside the `it()` for why their
+ *   `code` is additionally suffixed with a per-attempt timestamp.
  *
  * Para correr solo este archivo:
  *   make cypress-spec SPEC=price-lists
@@ -45,15 +49,20 @@ const VARIANT_OPTION_TEXT = `${PRODUCT_NAME} — ${VARIANT_NAME} (${VARIANT_CODE
 const BRANCH_NAME = 'SushiGo Principal'
 const OPERATING_UNIT_NAME = 'Inventario Principal'
 
-const BRANCH_PRICE_LIST_CODE = 'CYP-BRANCH-PL'
+// `code` is suffixed per attempt inside the `it()` below — see the comment there for why a
+// fixed code can't be reused across a Cypress retry.
+const BRANCH_PRICE_LIST_CODE_PREFIX = 'CYP-BRANCH-PL'
 const BRANCH_PRICE_LIST_NAME = 'Cypress Branch Pricing'
 const BRANCH_PRICE = '100.0000'
 
-const UNIT_PRICE_LIST_CODE = 'CYP-UNIT-PL'
+const UNIT_PRICE_LIST_CODE_PREFIX = 'CYP-UNIT-PL'
 const UNIT_PRICE_LIST_NAME = 'Cypress Unit Pricing'
 const UNIT_PRICE = '150.0000'
 
 const EFFECTIVE_FROM = '2020-01-01'
+
+// Captured in before() and reused by beforeEach()'s per-attempt price-list purge.
+let authToken = ''
 
 /** Every panel/card lives inside a scrollable SlidePanel body — scroll before clicking,
  *  mirroring product-variant-purchase-presentation.cy.ts's own submit-button pattern. An exact
@@ -63,13 +72,6 @@ const EFFECTIVE_FROM = '2020-01-01'
 function clickButton(text: string | RegExp) {
   cy.contains('button', text).scrollIntoView().click({ force: true })
 }
-
-// ⚠️ QUARANTINED per #490 → see #546. Fails against a fresh stack:
-// Happy-path test fails: `cy.select()` on a <select> "covered by another element" (overlay).
-// Remove this guard when #546 is fixed.
-before(function () {
-  this.skip()
-})
 
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
@@ -81,6 +83,7 @@ before(() => {
     failOnStatusCode: true,
   }).then((loginRes) => {
     const token = loginRes.body.data.token as string
+    authToken = token
     // Force Laravel validation failures to remain JSON 422 responses. Without Accept,
     // FormRequest redirects to `/` and cy.request follows the 302, which can disguise a
     // failed setup write as a successful 200 response.
@@ -142,6 +145,34 @@ before(() => {
 
 describe('Price Lists management', () => {
   beforeEach(() => {
+    // Cypress `retries` re-runs the `it` and this beforeEach, but NOT before(). Without this
+    // purge, a retry that starts after the first Price List is created would hit the leftover
+    // records and fail deterministically at the "No data available" assertion below instead of
+    // retrying the real transient failure (CI runs `cypress run --config retries=2` — see
+    // .github/workflows/_e2e-ci.yml). PriceList uses SoftDeletes, so this only *hides* prior
+    // records from the list (satisfying "No data available") — it does not remove the row, so
+    // it does NOT free up `code` for reuse (Assignments/Variant Prices cascadeOnDelete never
+    // fires either, since the FK only triggers on an actual DELETE, not a soft-delete UPDATE).
+    // The `it()` below works around that separately by suffixing each Price List's `code` with
+    // a per-attempt timestamp, so recreating one on retry never collides with the soft-deleted
+    // row's still-unique `code` value.
+    cy.request({
+      method: 'GET',
+      url: `${apiUrl}/pricing/price-lists?per_page=100`,
+      headers: { Authorization: `Bearer ${authToken}`, Accept: 'application/json' },
+      failOnStatusCode: true,
+    }).then((listRes) => {
+      const priceLists = listRes.body.data as Array<{ id: string }>
+      priceLists.forEach((priceList) => {
+        cy.request({
+          method: 'DELETE',
+          url: `${apiUrl}/pricing/price-lists/${priceList.id}`,
+          headers: { Authorization: `Bearer ${authToken}`, Accept: 'application/json' },
+          failOnStatusCode: true,
+        })
+      })
+    })
+
     cy.loginByApi(adminEmail, adminPassword)
     cy.visitWithAuth('/inventario/listas-de-precios')
     cy.url().should('include', '/inventario/listas-de-precios', { timeout: 10_000 })
@@ -151,12 +182,21 @@ describe('Price Lists management', () => {
   })
 
   it('creates two context-scoped prices for one Variant, previews the resolved price for each context, and surfaces an overlap conflict instead of silently saving it', () => {
+    // A retry (CI runs `retries=2`) re-enters this `it()` after beforeEach()'s purge only
+    // soft-deleted the previous attempt's Price Lists — their `code` values are still taken
+    // per the unique index (StorePriceListRequest's `unique:price_lists,code` rule checks the
+    // raw table, soft-deleted rows included). Suffixing with a per-attempt timestamp sidesteps
+    // that entirely, same pattern as purchase-receipts.cy.ts's `prefix = Date.now()`.
+    const runSuffix = Date.now()
+    const branchPriceListCode = `${BRANCH_PRICE_LIST_CODE_PREFIX}-${runSuffix}`
+    const unitPriceListCode = `${UNIT_PRICE_LIST_CODE_PREFIX}-${runSuffix}`
+
     // ── 1. Create the branch-level Price List ──────────────────────────────
     clickButton('New Price List')
     cy.contains('h2', 'New Price List', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., STANDARD"]').type(BRANCH_PRICE_LIST_CODE)
+      cy.get('input[placeholder="e.g., STANDARD"]').type(branchPriceListCode)
       cy.get('input[placeholder="e.g., Standard Pricing"]').type(BRANCH_PRICE_LIST_NAME)
     })
     clickButton('Create Price List')
@@ -221,13 +261,13 @@ describe('Price Lists management', () => {
     cy.contains('button', 'Edit Price List').scrollIntoView().should('be.visible')
     cy.get('body').type('{esc}')
     cy.contains('h2', 'Price List Detail').should('not.exist')
-    cy.contains(BRANCH_PRICE_LIST_CODE, { timeout: 10_000 }).should('be.visible')
+    cy.contains(branchPriceListCode, { timeout: 10_000 }).should('be.visible')
 
     clickButton('New Price List')
     cy.contains('h2', 'New Price List', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., STANDARD"]').type(UNIT_PRICE_LIST_CODE)
+      cy.get('input[placeholder="e.g., STANDARD"]').type(unitPriceListCode)
       cy.get('input[placeholder="e.g., Standard Pricing"]').type(UNIT_PRICE_LIST_NAME)
       cy.get('input[type="number"]').clear().type('10')
     })
