@@ -435,7 +435,7 @@ but every Issue is a well-understood review follow-up with a named target contra
 | ⏳ | #576 | — | — | — | — | Not started |
 | ⏳ | #577 | — | — | — | — | Not started |
 | ⏳ | #545 | — | — | — | — | Not started |
-| ⏳ | #546 | — | — | — | — | Not started |
+| ✅ | #546 | Removed the #490 `this.skip()` guard from `price-lists.cy.ts` and hardened its Cypress-retry safety — a per-attempt Price List purge plus a per-attempt `code` suffix (PriceList uses SoftDeletes, so the purge alone left the `code` unique index still claimed) — found and fixed across two Codex review rounds. | PR #616 | — | 1h 30m | 4/4 headless runs green against a fresh dev-lab E2E stack; no product code changed; the covered-`<select>` overlay flake no longer reproduces; 2/2 Codex review threads (retry-state purge, soft-delete/unique-code interaction) resolved; ESLint + `npm run typecheck` clean. |
 | ⏳ | #550 | — | — | — | — | Not started |
 
 ### Risks and Mitigations
