@@ -15,7 +15,7 @@ use App\Models\Item;
  *   tags={"Products"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Product public_id (ULID)"),
  *
  *   @OA\Response(
  *       response=200,

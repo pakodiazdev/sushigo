@@ -64,6 +64,18 @@ class OpeningBalanceTest extends InventoryTestCase
                 ],
             ]);
 
+        // Assert: every identifier in the response is the public ULID, never
+        // the internal numeric primary key (#581) — the response is built by
+        // hand in this controller rather than through a Resource, so it must
+        // be checked explicitly.
+        $body = $response->json('data');
+        $this->assertSame($this->location->public_id, $body['inventory_location_id']);
+        $this->assertSame($variant->public_id, $body['item_variant_id']);
+        $this->assertSame($this->location->public_id, $body['location']['id']);
+        $this->assertSame($variant->public_id, $body['variant']['id']);
+        $movement = StockMovement::where('reference', 'INV-2024-001')->firstOrFail();
+        $this->assertSame($movement->public_id, $body['id']);
+
         // Assert: Stock movement created
         $this->assertDatabaseHas('stock_movements', [
             'to_location_id' => $this->location->id,
@@ -676,7 +688,7 @@ class OpeningBalanceTest extends InventoryTestCase
         $freeItem = $this->createItem(['name' => 'Free Wasabi']);
         $freeVariant = $this->createItemVariant($freeItem, ['uom_id' => $this->uomKg->id]);
 
-        $freeMovementId = $this->postJson('/api/v1/inventory/opening-balance', [
+        $freeMovementPublicId = $this->postJson('/api/v1/inventory/opening-balance', [
             'inventory_location_id' => $this->location->public_id,
             'item_variant_id' => $freeVariant->public_id,
             'quantity' => 8,
@@ -684,9 +696,9 @@ class OpeningBalanceTest extends InventoryTestCase
             'unit_cost' => 0,
         ])->assertStatus(201)->json('data.id');
 
-        $this->assertDatabaseHas('stock_movements', ['id' => $freeMovementId, 'qty' => 8]);
+        $this->assertDatabaseHas('stock_movements', ['public_id' => $freeMovementPublicId, 'qty' => 8]);
         $this->assertDatabaseHas('stock_movement_lines', [
-            'stock_movement_id' => $freeMovementId,
+            'stock_movement_id' => StockMovement::where('public_id', $freeMovementPublicId)->value('id'),
             'unit_cost' => 0,
             'line_total' => 0,
         ]);
@@ -694,7 +706,7 @@ class OpeningBalanceTest extends InventoryTestCase
         $unknownItem = $this->createItem(['name' => 'Uncosted Ginger']);
         $unknownVariant = $this->createItemVariant($unknownItem, ['uom_id' => $this->uomKg->id]);
 
-        $unknownMovementId = $this->postJson('/api/v1/inventory/opening-balance', [
+        $unknownMovementPublicId = $this->postJson('/api/v1/inventory/opening-balance', [
             'inventory_location_id' => $this->location->public_id,
             'item_variant_id' => $unknownVariant->public_id,
             'quantity' => 8,
@@ -702,9 +714,9 @@ class OpeningBalanceTest extends InventoryTestCase
             // no unit_cost
         ])->assertStatus(201)->json('data.id');
 
-        $this->assertDatabaseHas('stock_movements', ['id' => $unknownMovementId, 'qty' => 8]);
+        $this->assertDatabaseHas('stock_movements', ['public_id' => $unknownMovementPublicId, 'qty' => 8]);
         $this->assertDatabaseHas('stock_movement_lines', [
-            'stock_movement_id' => $unknownMovementId,
+            'stock_movement_id' => StockMovement::where('public_id', $unknownMovementPublicId)->value('id'),
             'unit_cost' => null,
             'line_total' => null,
         ]);
@@ -752,9 +764,9 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // 100000 packs * 100 each = exactly 10,000,000 — computing the line
         // total from the rounded 14.2857 would instead record 9,999,990.
-        $this->assertDatabaseHas('stock_movements', ['id' => $data['id'], 'qty' => 700000]);
+        $this->assertDatabaseHas('stock_movements', ['public_id' => $data['id'], 'qty' => 700000]);
         $this->assertDatabaseHas('stock_movement_lines', [
-            'stock_movement_id' => $data['id'],
+            'stock_movement_id' => StockMovement::where('public_id', $data['id'])->value('id'),
             'line_total' => 10000000,
         ]);
     }

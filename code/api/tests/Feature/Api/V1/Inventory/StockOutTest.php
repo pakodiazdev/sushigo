@@ -94,6 +94,23 @@ class StockOutTest extends InventoryTestCase
         $this->assertEquals('POSTED', $response->json('data.status'));
         $this->assertEquals('10.0000', $response->json('data.qty'));
 
+        // #581: every identifier in the response must be the public ULID,
+        // never the internal numeric primary key.
+        $movement = \App\Models\StockMovement::where('reference', 'SALE-001')->firstOrFail();
+        $this->assertSame($movement->public_id, $response->json('data.id'));
+        $this->assertSame($this->location->public_id, $response->json('data.from_location_id'));
+        $this->assertSame($this->variant->public_id, $response->json('data.item_variant_id'));
+
+        // #581 (Codex follow-up): the nested line and meta.original_uom_id
+        // also carried raw internal FKs that were never part of the
+        // documented contract — dropped, not translated, since nothing reads
+        // them back.
+        $this->assertArrayNotHasKey('original_uom_id', $response->json('data.meta'));
+        $responseLine = $response->json('data.lines.0');
+        $this->assertArrayNotHasKey('stock_movement_id', $responseLine);
+        $this->assertArrayNotHasKey('item_variant_id', $responseLine);
+        $this->assertArrayNotHasKey('uom_id', $responseLine);
+
         // Verify profit calculation in line
         $line = StockMovementLine::first();
         $this->assertEquals(75.0000, (float) $line->sale_price);

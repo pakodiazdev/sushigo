@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\V1\UnitsOfMeasure;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UnitsOfMeasure\UomConversionResource;
 use App\Http\Responses\Common\ResponsePaginated;
+use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use Illuminate\Http\Request;
 
@@ -16,19 +18,19 @@ use Illuminate\Http\Request;
  *   @OA\Parameter(
  *       name="from_uom_id",
  *       in="query",
- *       description="Filter by source UOM ID",
+ *       description="Filter by source Unit of Measure public_id (ULID)",
  *       required=false,
  *
- *       @OA\Schema(type="integer")
+ *       @OA\Schema(type="string")
  *   ),
  *
  *   @OA\Parameter(
  *       name="to_uom_id",
  *       in="query",
- *       description="Filter by target UOM ID",
+ *       description="Filter by target Unit of Measure public_id (ULID)",
  *       required=false,
  *
- *       @OA\Schema(type="integer")
+ *       @OA\Schema(type="string")
  *   ),
  *
  *   @OA\Parameter(
@@ -78,11 +80,11 @@ class ListUomConversionsController extends Controller
         $query = UomConversion::with(['fromUom', 'toUom']);
 
         if ($request->filled('from_uom_id')) {
-            $query->where('from_uom_id', $request->from_uom_id);
+            $query->where('from_uom_id', UnitOfMeasure::where('public_id', $request->from_uom_id)->value('id'));
         }
 
         if ($request->filled('to_uom_id')) {
-            $query->where('to_uom_id', $request->to_uom_id);
+            $query->where('to_uom_id', UnitOfMeasure::where('public_id', $request->to_uom_id)->value('id'));
         }
 
         if ($request->filled('is_active')) {
@@ -91,6 +93,10 @@ class ListUomConversionsController extends Controller
 
         $perPage = $request->input('per_page', 15);
         $conversions = $query->paginate($perPage);
+
+        $conversions->getCollection()->transform(
+            fn ($conversion) => (new UomConversionResource($conversion))->resolve()
+        );
 
         return new ResponsePaginated(
             paginator: $conversions

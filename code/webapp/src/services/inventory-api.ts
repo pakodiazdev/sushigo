@@ -66,7 +66,7 @@ export const itemApi = {
 
 // Item Variants
 export const itemVariantApi = {
-  list: (params?: { item_id?: number; item_type?: string; is_active?: boolean; page?: number; per_page?: number; search?: string }) =>
+  list: (params?: { item_id?: string; item_type?: string; is_active?: boolean; page?: number; per_page?: number; search?: string }) =>
     api.get<PaginatedResponse<ItemVariant>>('/item-variants', { params }),
 
   get: (id: string | number) =>

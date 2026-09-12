@@ -83,11 +83,19 @@ class UnitOfMeasurePermissionsTest extends TestCase
     {
         Passport::actingAs($this->inventoryManager);
 
-        $this->postJson('/api/v1/units-of-measure', [
+        $response = $this->postJson('/api/v1/units-of-measure', [
             'code' => 'LT',
             'name' => 'Litro',
             'symbol' => 'l',
-        ])->assertStatus(201);
+        ]);
+
+        $response->assertStatus(201);
+
+        // #581: the response must expose the public_id (ULID), never the
+        // internal numeric primary key.
+        $created = UnitOfMeasure::where('code', 'LT')->firstOrFail();
+        $this->assertSame($created->public_id, $response->json('data.id'));
+        $this->assertNotSame($created->id, $response->json('data.id'));
     }
 
     #[Test]
@@ -191,8 +199,8 @@ class UnitOfMeasurePermissionsTest extends TestCase
         $to = UnitOfMeasure::create(['code' => 'GR', 'name' => 'Gramo', 'symbol' => 'g']);
 
         $this->postJson('/api/v1/uom-conversions', [
-            'from_uom_id' => $from->id,
-            'to_uom_id' => $to->id,
+            'from_uom_id' => $from->public_id,
+            'to_uom_id' => $to->public_id,
             'factor' => 1000,
         ])->assertStatus(201);
     }
@@ -206,8 +214,8 @@ class UnitOfMeasurePermissionsTest extends TestCase
         $to = UnitOfMeasure::create(['code' => 'GR', 'name' => 'Gramo', 'symbol' => 'g']);
 
         $createResponse = $this->postJson('/api/v1/uom-conversions', [
-            'from_uom_id' => $from->id,
-            'to_uom_id' => $to->id,
+            'from_uom_id' => $from->public_id,
+            'to_uom_id' => $to->public_id,
             'factor' => 1000,
         ]);
 
@@ -227,8 +235,8 @@ class UnitOfMeasurePermissionsTest extends TestCase
         $to = UnitOfMeasure::create(['code' => 'GR', 'name' => 'Gramo', 'symbol' => 'g']);
 
         $this->postJson('/api/v1/uom-conversions', [
-            'from_uom_id' => $from->id,
-            'to_uom_id' => $to->id,
+            'from_uom_id' => $from->public_id,
+            'to_uom_id' => $to->public_id,
             'factor' => 1000,
         ])->assertStatus(403);
     }
@@ -271,8 +279,8 @@ class UnitOfMeasurePermissionsTest extends TestCase
         $to = UnitOfMeasure::create(['code' => 'GR', 'name' => 'Gramo', 'symbol' => 'g']);
 
         $this->postJson('/api/v1/uom-conversions', [
-            'from_uom_id' => $from->id,
-            'to_uom_id' => $to->id,
+            'from_uom_id' => $from->public_id,
+            'to_uom_id' => $to->public_id,
             'factor' => 1000,
         ])->assertStatus(401);
     }

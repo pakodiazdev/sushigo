@@ -8,7 +8,7 @@ namespace App\Http\Responses\Entities;
  *     title="Item Response",
  *     description="Item entity representation",
  *
- *     @OA\Property(property="id", type="integer", example=1, description="Item ID"),
+ *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="Item public_id (ULID)"),
  *     @OA\Property(property="sku", type="string", example="INS-001", description="Unique SKU code"),
  *     @OA\Property(property="name", type="string", example="Arroz Sushi Premium", description="Item name"),
  *     @OA\Property(property="description", type="string", example="Arroz japonés para sushi", description="Item description"),

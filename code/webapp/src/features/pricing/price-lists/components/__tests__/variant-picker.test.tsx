@@ -19,19 +19,19 @@ vi.mock('../../hooks/use-variant-search', () => ({
 
 const variant1: ItemVariant = {
   id: 'iv-1',
-  item_id: 1,
+  item_id: '01JKITM1234567890ABCDEFG1',
   code: 'V1',
   name: 'Variant One',
-  uom_id: 1,
+  uom_id: '01JKUOM1234567890ABCDEFGH',
   is_active: true,
-  item: { id: 1, sku: null, name: 'Product One', type: 'PRODUCTO', is_stocked: false, is_perishable: false, is_active: true },
+  item: { id: '01JKITM1234567890ABCDEFG1', sku: null, name: 'Product One', type: 'PRODUCTO', is_stocked: false, is_perishable: false, is_active: true },
 }
 const variant2: ItemVariant = {
   id: 'iv-2',
-  item_id: 2,
+  item_id: '01JKITM1234567890ABCDEFG2',
   code: 'V2',
   name: 'Variant Two',
-  uom_id: 1,
+  uom_id: '01JKUOM1234567890ABCDEFGH',
   is_active: true,
 }
 

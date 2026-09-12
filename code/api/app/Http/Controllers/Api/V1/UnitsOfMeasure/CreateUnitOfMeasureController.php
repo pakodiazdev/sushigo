@@ -60,7 +60,7 @@ class CreateUnitOfMeasureController extends Controller
 
         return new ResponseEntity(
             data: [
-                'id' => $uom->id,
+                'id' => $uom->public_id,
                 'code' => $uom->code,
                 'name' => $uom->name,
                 'symbol' => $uom->symbol,

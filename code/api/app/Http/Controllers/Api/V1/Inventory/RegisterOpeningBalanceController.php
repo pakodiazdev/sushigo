@@ -27,9 +27,9 @@ use App\Services\Inventory\OpeningBalanceService;
  *
  *           @OA\Property(property="status", type="integer", example=201),
  *           @OA\Property(property="data", type="object",
- *               @OA\Property(property="id", type="integer", example=42),
- *               @OA\Property(property="inventory_location_id", type="integer", example=7),
- *               @OA\Property(property="item_variant_id", type="integer", example=13),
+ *               @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="Stock movement public_id (ULID)"),
+ *               @OA\Property(property="inventory_location_id", type="string", example="01JKLOC1234567890ABCDEFGH", description="Inventory Location public_id (ULID)"),
+ *               @OA\Property(property="item_variant_id", type="string", example="01JKVAR1234567890ABCDEFGH", description="Item Variant public_id (ULID)"),
  *               @OA\Property(property="quantity", type="number", example=25000),
  *               @OA\Property(property="uom", type="string", example="GR"),
  *               @OA\Property(property="base_quantity", type="number", example=25),
@@ -41,12 +41,12 @@ use App\Services\Inventory\OpeningBalanceService;
  *               @OA\Property(property="status", type="string", example="POSTED"),
  *               @OA\Property(property="posted_at", type="string", format="date-time"),
  *               @OA\Property(property="location", type="object",
- *                   @OA\Property(property="id", type="integer", example=7),
+ *                   @OA\Property(property="id", type="string", example="01JKLOC1234567890ABCDEFGH", description="Inventory Location public_id (ULID)"),
  *                   @OA\Property(property="name", type="string", example="Main Warehouse"),
  *                   @OA\Property(property="type", type="string", example="MAIN")
  *               ),
  *               @OA\Property(property="variant", type="object",
- *                   @OA\Property(property="id", type="integer", example=13),
+ *                   @OA\Property(property="id", type="string", example="01JKVAR1234567890ABCDEFGH", description="Item Variant public_id (ULID)"),
  *                   @OA\Property(property="code", type="string", example="VAR-013"),
  *                   @OA\Property(property="name", type="string", example="Rice White 1kg"),
  *                   @OA\Property(property="item_name", type="string", example="Rice"),
@@ -90,9 +90,9 @@ class RegisterOpeningBalanceController extends Controller
 
         return new ResponseEntity(
             data: [
-                'id' => $movement->id,
-                'inventory_location_id' => $movement->to_location_id,
-                'item_variant_id' => $movement->item_variant_id,
+                'id' => $movement->public_id,
+                'inventory_location_id' => $movement->toLocation->public_id,
+                'item_variant_id' => $movement->itemVariant->public_id,
                 'quantity' => (float) $movement->meta['original_qty'],
                 'uom' => $movement->meta['original_uom'],
                 'base_quantity' => (float) $movement->qty,
@@ -104,12 +104,12 @@ class RegisterOpeningBalanceController extends Controller
                 'status' => $movement->status,
                 'posted_at' => $movement->posted_at,
                 'location' => [
-                    'id' => $movement->toLocation->id,
+                    'id' => $movement->toLocation->public_id,
                     'name' => $movement->toLocation->name,
                     'type' => $movement->toLocation->type,
                 ],
                 'variant' => [
-                    'id' => $movement->itemVariant->id,
+                    'id' => $movement->itemVariant->public_id,
                     'code' => $movement->itemVariant->code,
                     'name' => $movement->itemVariant->name,
                     'item_name' => $movement->itemVariant->item->name,

@@ -16,10 +16,10 @@ import { itemVariantApi } from '@/services/inventory-api'
 
 const variant: ItemVariant = {
   id: 'iv-1',
-  item_id: 1,
+  item_id: '01JKITM1234567890ABCDEFG1',
   code: 'V1',
   name: 'Variant One',
-  uom_id: 1,
+  uom_id: '01JKUOM1234567890ABCDEFGH',
   is_active: true,
 }
 

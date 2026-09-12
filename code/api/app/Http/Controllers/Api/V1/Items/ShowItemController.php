@@ -12,7 +12,7 @@ use App\Models\Item;
  *   summary="Get Item by ID",
  *   tags={"Items"},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Item public_id (ULID)"),
  *
  *   @OA\Response(
  *       response=200,

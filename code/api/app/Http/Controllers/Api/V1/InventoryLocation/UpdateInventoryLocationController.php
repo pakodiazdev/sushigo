@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Gate;
  *   tags={"Inventory Locations"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Inventory Location public_id (ULID)"),
  *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/UpdateInventoryLocationRequest")),
  *

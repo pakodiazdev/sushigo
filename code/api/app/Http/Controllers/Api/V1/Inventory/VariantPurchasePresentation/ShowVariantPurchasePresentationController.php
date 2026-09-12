@@ -17,8 +17,8 @@ use App\Models\VariantPurchasePresentation;
  *   tags={"Variant Purchase Presentations"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *   @OA\Parameter(name="variantId", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Product public_id (ULID)"),
+ *   @OA\Parameter(name="variantId", in="path", required=true, @OA\Schema(type="string"), description="Item Variant public_id (ULID)"),
  *   @OA\Parameter(name="presentationId", in="path", required=true, @OA\Schema(type="string"), description="Assignment public_id (ULID)"),
  *
  *   @OA\Response(
@@ -48,7 +48,7 @@ class ShowVariantPurchasePresentationController extends Controller
 
         $presentation = VariantPurchasePresentation::where('item_variant_id', $variant->id)
             ->where('public_id', $presentationId)
-            ->with('template')
+            ->with(['template', 'itemVariant'])
             ->firstOrFail();
 
         return new VariantPurchasePresentationResource($presentation);

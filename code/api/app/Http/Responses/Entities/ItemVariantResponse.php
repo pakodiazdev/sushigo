@@ -8,9 +8,9 @@ namespace App\Http\Responses\Entities;
  *     title="Item Variant Response",
  *     description="Item variant entity representation",
  *
- *     @OA\Property(property="id", type="integer", example=1, description="Variant ID"),
- *     @OA\Property(property="item_id", type="integer", example=1, description="Parent item ID"),
- *     @OA\Property(property="uom_id", type="integer", example=1, description="Base unit of measure ID"),
+ *     @OA\Property(property="id", type="string", example="01JKVAR1234567890ABCDEFGH", description="Item Variant public_id (ULID)"),
+ *     @OA\Property(property="item_id", type="string", example="01JKITM1234567890ABCDEFGH", description="Parent Item public_id (ULID)"),
+ *     @OA\Property(property="uom_id", type="string", example="01JKUOM1234567890ABCDEFGH", description="Base Unit of Measure public_id (ULID)"),
  *     @OA\Property(property="code", type="string", example="ARR-KG", description="Unique variant code"),
  *     @OA\Property(property="name", type="string", example="Arroz Premium 1kg", description="Variant name"),
  *     @OA\Property(property="description", type="string", example="Presentación de 1 kilogramo", description="Variant description"),

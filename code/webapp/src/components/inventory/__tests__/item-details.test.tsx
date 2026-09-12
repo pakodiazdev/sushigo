@@ -32,7 +32,7 @@ const createWrapper = () => {
 
 describe('ItemDetails', () => {
     const mockItem: Item = {
-        id: 1,
+        id: '01JKITM1234567890ABCDEFGH',
         sku: 'SKU-001',
         name: 'Test Item',
         description: 'Test description',

@@ -219,7 +219,7 @@ describe('itemVariantApi', () => {
             const mockResponse = { data: { status: 200, data: [], meta: {} } }
             vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
 
-            const params = { item_id: 5 }
+            const params = { item_id: '01JKITM1234567890ABCDEFGH' }
             const result = await itemVariantApi.list(params)
 
             expect(apiClient.get).toHaveBeenCalledWith('/item-variants', { params })

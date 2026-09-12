@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  *   tags={"Products"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Product public_id (ULID)"),
  *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/UpdateProductRequest")),
  *

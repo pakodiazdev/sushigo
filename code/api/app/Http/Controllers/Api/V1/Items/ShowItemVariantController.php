@@ -13,7 +13,7 @@ use App\Models\ItemVariant;
  *   summary="Get Item Variant by ID",
  *   tags={"Item Variants"},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Item Variant public_id (ULID)"),
  *
  *   @OA\Response(
  *       response=200,

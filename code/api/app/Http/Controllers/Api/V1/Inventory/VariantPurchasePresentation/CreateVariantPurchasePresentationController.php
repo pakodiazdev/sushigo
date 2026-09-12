@@ -19,8 +19,8 @@ use App\Services\Inventory\VariantPurchasePresentationService;
  *   tags={"Variant Purchase Presentations"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *   @OA\Parameter(name="variantId", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Product public_id (ULID)"),
+ *   @OA\Parameter(name="variantId", in="path", required=true, @OA\Schema(type="string"), description="Item Variant public_id (ULID)"),
  *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/StoreVariantPurchasePresentationRequest")),
  *
@@ -50,7 +50,7 @@ class CreateVariantPurchasePresentationController extends Controller
         $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
         $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $variantId)->firstOrFail();
         $presentation = $service->create($variant->id, $request->presentationData());
-        $presentation->load('template');
+        $presentation->load(['template', 'itemVariant']);
 
         return (new VariantPurchasePresentationResource($presentation))->setStatusCode(201);
     }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Models\Item;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -116,6 +117,13 @@ class ItemCrudTest extends InventoryTestCase
             'type' => 'INSUMO',
             'is_perishable' => true,
         ]);
+
+        // #581: the create response must return the public_id (ULID), never
+        // the internal numeric primary key — otherwise the id it hands back
+        // can't be used against the show/update/delete routes, which all
+        // resolve by public_id.
+        $item = Item::where('sku', 'SALM-001')->firstOrFail();
+        $this->assertSame($item->public_id, $response->json('data.id'));
     }
 
     #[Test]

@@ -399,6 +399,16 @@ is written as a `public_id`, so `#422`/`#424` need `#399`'s migration and trait 
 when this vertical shipped, so `/inventory/products` binds on `Item`'s existing numeric `id` for now
 — `Brand`/`InventoryCategory` do use `public_id` as designed, since `#422`'s own text calls for it
 directly. Switch `/inventory/products` over once `#399` lands.
+
+**As-built note (`#399`/`#495`):** `#399` has since landed (`#495`) — `Item`, `ItemVariant`,
+`InventoryLocation`, `UnitOfMeasure`, `Stock`, `StockMovement`, `StockMovementLine`,
+`PurchasePresentationTemplate` and `VariantPurchasePresentation` all adopted `HasPublicId` +
+`SerializesPublicIdAsId`. `/inventory/products` and every nested route below (`{product}`,
+`{variant}`, `{template}`, `{assignment}`) now bind and serialize on `public_id` as this section
+originally designed — the numeric-`id` interim state the `#422` note above describes no longer
+applies. See [#581](https://github.com/pakodiazdev/sushigo/issues/581) for the follow-up audit that
+corrected the OpenAPI documentation (Swagger schemas still described some of these identifiers as
+integers after the migration landed).
 Permissions follow the existing granular `resource.action` convention rather than the coarser
 per-domain style used by Dishes, to stay consistent with the current `items.*` mapping `#400`
 already codifies.
@@ -437,7 +447,7 @@ and a fresh `suggested_code`, and requires explicit resubmission.
 **As-built (`#426`) — §3.3 addenda:**
 - The one-active-default-per-Variant partial unique index and the unique-active-pair index both add `and deleted_at is null` on top of the rule as originally written here, so a soft-deleted former default/assignment doesn't block a new one — the same reasoning already applied to `brands_name_unique` in `create_brands_table`. Enforcement is a `VariantPurchasePresentationService` that locks the Variant's existing presentation rows (mirroring `StockMutationService::lockAndGet()`) and clears the previous default inside the same transaction before writing the new one; the partial index remains the DB-level backstop for a genuine race.
 - `VariantPurchasePresentation.package_barcode` ended up with a plain DB-level `unique()` (allowing multiple `NULL`s, like `ItemVariant.barcode`) rather than a partial index — package barcodes aren't expected to be reused the way a deactivated template's `code` or a deleted Brand's `name` are.
-- Routes nest `purchase-presentations` under the existing numeric `{id}`/`{variantId}` Product/Variant path (unchanged, since `#399` still hasn't landed — see the note at the top of this section), but the assignment resource itself is addressed by its own `public_id` (`{presentationId}`), consistent with Design Principle "Public IDs, one strategy" — a compromise between the parent chain's current numeric convention and every new table getting a `public_id`.
+- Routes nest `purchase-presentations` under the Product/Variant path (`{id}`/`{variantId}` — both now `public_id` since `#399`/`#495` landed, see the as-built note at the top of this section), and the assignment resource itself is addressed by its own `public_id` (`{presentationId}`), consistent with Design Principle "Public IDs, one strategy".
 | GET | `/brands` | — | `brands.view` | **As-built (`#422`):** top-level, not `/inventory/brands` as originally drafted here — Brand is a standalone catalog, not nested under the Product/Item `inventory/` namespace like `/inventory/products` is. |
 | POST / PUT / DELETE | `/brands[/{brand}]` | `name, is_active?` | `brands.create` / `brands.update` / `brands.delete` | **As-built (`#422`):** `PUT`, not `PATCH` — same verb correction as `/inventory/products` above. |
 | GET | `/inventory-categories` | — | `inventory_categories.view` | **As-built (`#422`):** same top-level rationale as `/brands` above. |

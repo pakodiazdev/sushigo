@@ -8,9 +8,8 @@ use App\Http\Resources\BaseResource;
 use App\Models\ItemVariant;
 
 /**
- * Catalog identity only — no cost, price, or stock fields. Uses
- * ItemVariant's numeric id (not public_id) — see this PR's Assumptions note:
- * #399 (public_id rollout for the Inventory domain) hasn't landed yet.
+ * Catalog identity only — no cost, price, or stock fields. Serializes
+ * ItemVariant's public_id (ULID) — see #399/#581.
  *
  * @mixin ItemVariant
  *
@@ -18,14 +17,14 @@ use App\Models\ItemVariant;
  *     schema="VariantResponse",
  *     title="Variant Response",
  *
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="item_id", type="integer", example=42),
+ *     @OA\Property(property="id", type="string", example="01JKVAR1234567890ABCDEFGH", description="Item Variant public_id (ULID)"),
+ *     @OA\Property(property="item_id", type="string", example="01JKITM1234567890ABCDEFGH", description="Parent Item public_id (ULID)"),
  *     @OA\Property(property="code", type="string", example="ARR-KG"),
  *     @OA\Property(property="barcode", type="string", nullable=true, example="7501234567890"),
  *     @OA\Property(property="name", type="string", example="Arroz Premium 1kg"),
  *     @OA\Property(property="description", type="string", nullable=true),
  *     @OA\Property(property="uom", type="object",
- *         @OA\Property(property="id", type="integer"),
+ *         @OA\Property(property="id", type="string", example="01JKUOM1234567890ABCDEFGH", description="Unit of Measure public_id (ULID)"),
  *         @OA\Property(property="code", type="string"),
  *         @OA\Property(property="name", type="string"),
  *         @OA\Property(property="symbol", type="string")

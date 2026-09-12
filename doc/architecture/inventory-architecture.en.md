@@ -1312,6 +1312,13 @@ sequenceDiagram
 > (`Brand`, `InventoryCategory`, `PurchasePresentationTemplate`, `VariantPurchasePresentation`) adopt
 > it from the start — see
 > [Product Catalog — Target Architecture](product-catalog/product-catalog-architecture.en.md) §2.
+>
+> **As-built note (`#399`/`#495`, superseding the above):** `#399` has landed — `Item`,
+> `ItemVariant`, `InventoryLocation`, `UnitOfMeasure`, `Stock`, `StockMovement`,
+> `StockMovementLine`, `StockTransfer`, `StockTransferLine` and the rest of this domain now use
+> `public_id` (ULID) the same way `Dish`/`MediaGallery`/`CashAdjustment` do. See
+> [#581](https://github.com/pakodiazdev/sushigo/issues/581) for the follow-up audit that corrected
+> the OpenAPI documentation drift left behind by that migration.
 
 -   No incremental ID is exposed in APIs; internal auto-increment IDs stay internal, external IDs are
     ULIDs (`public_id`).

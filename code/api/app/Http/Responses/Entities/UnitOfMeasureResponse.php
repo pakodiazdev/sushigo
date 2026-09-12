@@ -8,7 +8,7 @@ namespace App\Http\Responses\Entities;
  *     title="Unit of Measure Response",
  *     description="Unit of measure entity representation",
  *
- *     @OA\Property(property="id", type="integer", example=1, description="UOM ID"),
+ *     @OA\Property(property="id", type="string", example="01JKUOM1234567890ABCDEFGH", description="Unit of Measure public_id (ULID)"),
  *     @OA\Property(property="code", type="string", example="KG", description="Unique UOM code"),
  *     @OA\Property(property="name", type="string", example="Kilogramo", description="UOM display name"),
  *     @OA\Property(property="symbol", type="string", example="kg", description="UOM symbol"),

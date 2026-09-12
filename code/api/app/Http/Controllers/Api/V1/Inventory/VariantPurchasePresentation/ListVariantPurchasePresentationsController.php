@@ -18,8 +18,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *   tags={"Variant Purchase Presentations"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *   @OA\Parameter(name="variantId", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Product public_id (ULID)"),
+ *   @OA\Parameter(name="variantId", in="path", required=true, @OA\Schema(type="string"), description="Item Variant public_id (ULID)"),
  *
  *   @OA\Response(
  *       response=200,
@@ -47,7 +47,7 @@ class ListVariantPurchasePresentationsController extends Controller
         $variant = ItemVariant::where('item_id', $product->id)->where('public_id', $variantId)->firstOrFail();
 
         $presentations = $variant->purchasePresentations()
-            ->with('template')
+            ->with(['template', 'itemVariant'])
             ->orderByDesc('is_default')
             ->orderBy('id')
             ->get();
