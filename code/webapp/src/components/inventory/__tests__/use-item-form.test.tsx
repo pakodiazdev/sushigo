@@ -100,7 +100,7 @@ describe('useItemForm', () => {
   it('does not fetch a suggestion in edit mode', async () => {
     apiMocks.update.mockResolvedValue({})
     const item = {
-      id: 7,
+      id: '01JKITM1234567890ABCDEFG7',
       sku: 'REF-004',
       name: 'Refrigerador',
       description: '',
@@ -119,7 +119,7 @@ describe('useItemForm', () => {
       await result.current.onSubmit({ ...baseValues, sku: 'ref-004', name: 'Refrigerador nuevo', type: 'ACTIVO' })
     })
 
-    expect(apiMocks.update).toHaveBeenCalledWith(7, expect.objectContaining({ sku: 'REF-004' }))
+    expect(apiMocks.update).toHaveBeenCalledWith('01JKITM1234567890ABCDEFG7', expect.objectContaining({ sku: 'REF-004' }))
     expect(apiMocks.nextSku).not.toHaveBeenCalled()
   })
 

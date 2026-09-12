@@ -15,7 +15,7 @@ use App\Models\VariantPurchasePresentation;
  *     title="Variant Purchase Presentation Response",
  *
  *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="ULID public identifier"),
- *     @OA\Property(property="item_variant_id", type="integer", example=42),
+ *     @OA\Property(property="item_variant_id", type="string", example="01JKVAR1234567890ABCDEFGH", description="Item Variant public_id (ULID)"),
  *     @OA\Property(property="template", type="object", description="Lean template summary — id, code, name, package_type, base_unit_quantity only. Fetch /inventory/purchase-presentation-templates/{template} for the full resource.",
  *         @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH"),
  *         @OA\Property(property="code", type="string", example="BOX_24"),
@@ -36,7 +36,7 @@ class VariantPurchasePresentationResource extends BaseResource
     {
         return [
             'id' => $this->public_id,
-            'item_variant_id' => $this->item_variant_id,
+            'item_variant_id' => $this->itemVariant->public_id,
             'template' => $this->whenLoaded('template', fn () => $this->template ? [
                 'id' => $this->template->public_id,
                 'code' => $this->template->code,

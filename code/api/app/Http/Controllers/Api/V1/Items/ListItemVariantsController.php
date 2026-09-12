@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Items;
 use App\Http\Controllers\Api\V1\Items\Concerns\FiltersItemListing;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\Common\ResponsePaginated;
+use App\Models\Item;
 use App\Models\ItemVariant;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,7 @@ use Illuminate\Http\Request;
  *   summary="List Item Variants",
  *   tags={"Item Variants"},
  *
- *   @OA\Parameter(name="item_id", in="query", @OA\Schema(type="integer"), description="Filter by item ID"),
+ *   @OA\Parameter(name="item_id", in="query", @OA\Schema(type="string"), description="Filter by Item public_id (ULID)"),
  *   @OA\Parameter(name="item_type", in="query", @OA\Schema(type="string", example="INSUMO,ACTIVO"), description="Filter by parent item type — one type, or a comma-separated list (e.g. the legacy Variants grid always passes INSUMO,ACTIVO to exclude Product variants)"),
  *   @OA\Parameter(name="is_active", in="query", @OA\Schema(type="boolean"), description="Filter by active status"),
  *   @OA\Parameter(name="search", in="query", @OA\Schema(type="string"), description="Search in code and name"),
@@ -43,7 +44,7 @@ class ListItemVariantsController extends Controller
         $query = ItemVariant::with(['item', 'unitOfMeasure']);
 
         if ($request->filled('item_id')) {
-            $query->where('item_id', $request->item_id);
+            $query->where('item_id', Item::where('public_id', $request->item_id)->value('id'));
         }
 
         if ($request->filled('item_type')) {
@@ -61,6 +62,17 @@ class ListItemVariantsController extends Controller
         $this->applySearchFilter($query, $request, ['code', 'name']);
 
         $variants = $query->orderBy('code')->paginate($this->resolvePerPage($request));
+
+        // SerializesPublicIdAsId only replaces the model's own `id` — it doesn't
+        // touch foreign-key columns, so item_id/uom_id must be mapped to the
+        // loaded relations' public_id by hand (#581).
+        $variants->getCollection()->transform(function (ItemVariant $variant) {
+            $array = $variant->toArray();
+            $array['item_id'] = $variant->item?->public_id;
+            $array['uom_id'] = $variant->unitOfMeasure?->public_id;
+
+            return $array;
+        });
 
         return new ResponsePaginated(paginator: $variants);
     }

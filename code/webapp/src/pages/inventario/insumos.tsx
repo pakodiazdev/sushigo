@@ -45,7 +45,7 @@ export function InventoryItemsPage() {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => itemApi.delete(id),
+    mutationFn: (id: string) => itemApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] })
       setIsDetailsPanelOpen(false)
@@ -149,7 +149,7 @@ export function InventoryItemsPage() {
     setIsFormPanelOpen(true)
   }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     if (confirm('¿Estás seguro de eliminar este item?')) {
       deleteMutation.mutate(id)
     }

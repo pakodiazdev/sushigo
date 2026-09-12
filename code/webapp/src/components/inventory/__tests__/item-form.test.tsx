@@ -111,7 +111,7 @@ const renderForm = (props: Partial<ComponentProps<typeof ItemForm>> = {}) =>
     render(<ItemForm {...defaultProps} {...props} />, { wrapper })
 
 const editingItem = {
-    id: 1,
+    id: '01JKITM1234567890ABCDEFGH',
     sku: 'SAL-001',
     name: 'Salt',
     description: '',

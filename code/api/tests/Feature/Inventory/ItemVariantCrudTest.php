@@ -15,7 +15,7 @@ class ItemVariantCrudTest extends InventoryTestCase
     {
         // Arrange
         $item = $this->createItem();
-        $this->createItemVariant($item, ['name' => 'Variant 1']);
+        $variant = $this->createItemVariant($item, ['name' => 'Variant 1']);
         $this->createItemVariant($item, ['name' => 'Variant 2']);
 
         // Act
@@ -26,12 +26,18 @@ class ItemVariantCrudTest extends InventoryTestCase
             ->assertJsonStructure([
                 'status',
                 'data' => [
-                    '*' => ['id', 'code', 'name', 'item', 'unit_of_measure'],
+                    '*' => ['id', 'item_id', 'uom_id', 'code', 'name', 'item', 'unit_of_measure'],
                 ],
                 'meta',
             ]);
 
         $this->assertCount(2, $response->json('data'));
+
+        // #581: item_id/uom_id must serialize as public_id (ULID), never the
+        // raw internal foreign key.
+        $row = collect($response->json('data'))->firstWhere('id', $variant->public_id);
+        $this->assertSame($item->public_id, $row['item_id']);
+        $this->assertSame($variant->unitOfMeasure->public_id, $row['uom_id']);
     }
 
     #[Test]
@@ -46,11 +52,18 @@ class ItemVariantCrudTest extends InventoryTestCase
         $this->createItemVariant($item2);
 
         // Act
-        $response = $this->getJson("/api/v1/item-variants?item_id={$item1->id}");
+        $response = $this->getJson("/api/v1/item-variants?item_id={$item1->public_id}");
 
         // Assert
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
+
+        // #581: item_id/uom_id must serialize as public_id (ULID), never the
+        // raw internal foreign key — SerializesPublicIdAsId only rewrites a
+        // model's own `id`, not its FK columns.
+        foreach ($response->json('data') as $row) {
+            $this->assertSame($item1->public_id, $row['item_id']);
+        }
     }
 
     #[Test]

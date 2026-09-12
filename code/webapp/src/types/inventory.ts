@@ -22,7 +22,8 @@ export interface InventoryLocation {
 
 // Item Types
 export interface Item {
-  id: number
+  /** ULID public identifier. */
+  id: string
   /** Nullable since #422: new Product-type Items (see `/inventory/products`) never populate it. */
   sku: string | null
   name: string
@@ -49,10 +50,12 @@ export interface ItemMediaAttachment {
 // Item Variant Types
 export interface ItemVariant {
   id: string
-  item_id: number
+  /** Parent Item public_id (ULID). */
+  item_id: string
   code: string
   name: string
-  uom_id: number
+  /** Base Unit of Measure public_id (ULID). */
+  uom_id: string
   // Replenishment thresholds moved to the per-Inventory-Location policy (#439);
   // per-Variant acquisition cost / sale price were dropped in #442 (Stock.weighted_avg_cost
   // and effective-dated price lists are the sources of truth). See ReplenishmentPolicy,
@@ -286,10 +289,13 @@ export type StockMovementStatus = 'DRAFT' | 'POSTED' | 'REVERSED'
 
 export interface StockMovement {
   /** ULID public identifier — the numeric primary key is never serialized (SerializesPublicIdAsId). */
-  id: number
-  from_location_id: number | null
-  to_location_id: number | null
-  item_variant_id: number | null
+  id: string
+  /** Inventory Location public_id (ULID). */
+  from_location_id: string | null
+  /** Inventory Location public_id (ULID). */
+  to_location_id: string | null
+  /** Item Variant public_id (ULID). */
+  item_variant_id: string | null
   user_id: number | null
   qty: number
   reason: StockMovementReason

@@ -85,7 +85,7 @@ class CreateItemController extends Controller
 
         return new ResponseEntity(
             data: [
-                'id' => $item->id,
+                'id' => $item->public_id,
                 'sku' => $item->sku,
                 'name' => $item->name,
                 'description' => $item->description,

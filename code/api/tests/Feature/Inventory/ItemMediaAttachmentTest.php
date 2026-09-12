@@ -64,12 +64,17 @@ class ItemMediaAttachmentTest extends InventoryTestCase
         ]);
 
         $response->assertCreated();
-        $itemId = $response->json('data.id');
+
+        // #581: the create response now correctly returns the item's
+        // public_id (ULID) — media_attachments.attachable_id is still the
+        // internal numeric FK (a standard Eloquent morphs() column), so it
+        // must be resolved back rather than used directly.
+        $item = Item::where('public_id', $response->json('data.id'))->firstOrFail();
 
         $this->assertDatabaseHas('media_attachments', [
             'media_gallery_id' => $this->galleryNumericId($gallery['gallery_id']),
             'attachable_type' => Item::class,
-            'attachable_id' => $itemId,
+            'attachable_id' => $item->id,
             'is_primary' => true,
         ]);
     }

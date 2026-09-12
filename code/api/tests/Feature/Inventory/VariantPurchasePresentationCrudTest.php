@@ -24,6 +24,10 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
             ]);
 
         $this->assertCount(1, $response->json('data'));
+
+        // #581: item_variant_id must be the Variant's public_id (ULID), never
+        // the internal numeric FK.
+        $this->assertSame($variant->public_id, $response->json('data.0.item_variant_id'));
     }
 
     #[Test]
@@ -58,6 +62,10 @@ class VariantPurchasePresentationCrudTest extends InventoryTestCase
             'item_variant_id' => $variant->id,
             'template_id' => $template->id,
         ]);
+
+        // #581: item_variant_id must be the Variant's public_id (ULID), never
+        // the internal numeric FK.
+        $this->assertSame($variant->public_id, $response->json('data.item_variant_id'));
     }
 
     #[Test]

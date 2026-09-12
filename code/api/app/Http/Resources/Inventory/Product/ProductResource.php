@@ -10,8 +10,7 @@ use App\Models\Item;
 /**
  * Item scoped to type=PRODUCTO — see
  * doc/architecture/product-catalog/product-catalog-architecture.en.md §6.
- * Uses Item's numeric id (not public_id) — see this PR's Assumptions note:
- * #399 (public_id rollout for the Inventory domain) hasn't landed yet.
+ * Serializes Item's public_id (ULID) — see #399/#581.
  *
  * @mixin Item
  *
@@ -19,7 +18,7 @@ use App\Models\Item;
  *     schema="ProductResponse",
  *     title="Product Response",
  *
- *     @OA\Property(property="id", type="integer", example=42),
+ *     @OA\Property(property="id", type="string", example="01JKXYZ1234567890ABCDEFGH", description="Item public_id (ULID)"),
  *     @OA\Property(property="name", type="string", example="Coca-Cola Original 600 ml"),
  *     @OA\Property(property="description", type="string", nullable=true),
  *     @OA\Property(property="is_active", type="boolean"),

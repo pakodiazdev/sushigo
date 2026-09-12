@@ -77,7 +77,7 @@ describe('Inventory Types', () => {
     describe('Item type', () => {
         it('can create an INSUMO item', () => {
             const item: Item = {
-                id: 1,
+                id: '01JKITM1234567890ABCDEFG1',
                 sku: 'INS-001',
                 name: 'Flour',
                 type: 'INSUMO',
@@ -91,7 +91,7 @@ describe('Inventory Types', () => {
 
         it('can create a PRODUCTO item', () => {
             const item: Item = {
-                id: 2,
+                id: '01JKITM1234567890ABCDEFG2',
                 sku: 'PRD-001',
                 name: 'Sushi Roll',
                 type: 'PRODUCTO',
@@ -104,7 +104,7 @@ describe('Inventory Types', () => {
 
         it('can create an ACTIVO item', () => {
             const item: Item = {
-                id: 3,
+                id: '01JKITM1234567890ABCDEFG3',
                 sku: 'ACT-001',
                 name: 'Rice Cooker',
                 type: 'ACTIVO',
@@ -120,10 +120,10 @@ describe('Inventory Types', () => {
         it('can create a valid variant', () => {
             const variant: ItemVariant = {
                 id: 'variant-01',
-                item_id: 1,
+                item_id: '01JKITM1234567890ABCDEFG1',
                 code: 'VAR-001',
                 name: '1kg Bag',
-                uom_id: 1,
+                uom_id: '01JKUOM1234567890ABCDEFGH',
                 is_active: true,
             }
             expect(variant.code).toBe('VAR-001')
@@ -179,10 +179,10 @@ describe('Inventory Types', () => {
     describe('StockMovement type (aligned with backend App\\Models\\StockMovement, #438)', () => {
         it('can create a posted purchase-receipt movement with reversal-linkage fields', () => {
             const movement: StockMovement = {
-                id: 1,
+                id: '01JKMOV1234567890ABCDEFGH',
                 from_location_id: null,
-                to_location_id: 5,
-                item_variant_id: 12,
+                to_location_id: '01JKLOC1234567890ABCDEFG5',
+                item_variant_id: '01JKVAR1234567890ABCDEFG2',
                 user_id: 3,
                 qty: 100.5,
                 reason: 'PURCHASE_RECEIPT',
@@ -205,10 +205,10 @@ describe('Inventory Types', () => {
 
         it('can create a compensating reversal movement', () => {
             const reversal: StockMovement = {
-                id: 2,
-                from_location_id: 5,
+                id: '01JKMOV0987654321ABCDEFGH',
+                from_location_id: '01JKLOC1234567890ABCDEFG5',
                 to_location_id: null,
-                item_variant_id: 12,
+                item_variant_id: '01JKVAR1234567890ABCDEFG2',
                 user_id: 3,
                 qty: 100.5,
                 reason: 'PURCHASE_RECEIPT_REVERSAL',
@@ -242,10 +242,10 @@ describe('Inventory Types', () => {
             ]
             reasons.forEach((reason) => {
                 const movement: StockMovement = {
-                    id: 1,
-                    from_location_id: 1,
-                    to_location_id: 2,
-                    item_variant_id: 1,
+                    id: '01JKMOV1234567890ABCDEFGH',
+                    from_location_id: '01JKLOC1234567890ABCDEFG1',
+                    to_location_id: '01JKLOC1234567890ABCDEFG2',
+                    item_variant_id: '01JKVAR1234567890ABCDEFG1',
                     user_id: 1,
                     qty: 1,
                     reason,

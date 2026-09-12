@@ -145,10 +145,10 @@ describe('VariantForm', () => {
     it('renders header with edit variant title when editing', () => {
       const variant = {
         id: 'variant-01',
-        item_id: 1,
+        item_id: '01JKITM1234567890ABCDEFGH',
         code: 'VAR-001',
         name: 'Salt 1kg',
-        uom_id: 1,
+        uom_id: '01JKUOM1234567890ABCDEFGH',
         min_stock: 10,
         max_stock: 100,
         is_active: true,
@@ -192,10 +192,10 @@ describe('VariantForm', () => {
     it('renders update button when editing', () => {
       const variant = {
         id: 'variant-01',
-        item_id: 1,
+        item_id: '01JKITM1234567890ABCDEFGH',
         code: 'VAR-001',
         name: 'Salt 1kg',
-        uom_id: 1,
+        uom_id: '01JKUOM1234567890ABCDEFGH',
         min_stock: 10,
         max_stock: 100,
         is_active: true,
@@ -312,10 +312,10 @@ describe('VariantForm', () => {
     it('calls execute on valid submission (update)', async () => {
       const variant = {
         id: 'variant-01',
-        item_id: 1,
+        item_id: '01JKITM1234567890ABCDEFGH',
         code: 'PR-001',
         name: 'Salt 1kg',
-        uom_id: 1,
+        uom_id: '01JKUOM1234567890ABCDEFGH',
         min_stock: 0,
         max_stock: 100,
         is_active: true,

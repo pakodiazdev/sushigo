@@ -17,10 +17,10 @@ use App\Models\UnitOfMeasure;
  *   @OA\Parameter(
  *       name="id",
  *       in="path",
- *       description="Unit of Measure ID",
+ *       description="Unit of Measure public_id (ULID)",
  *       required=true,
  *
- *       @OA\Schema(type="integer")
+ *       @OA\Schema(type="string")
  *   ),
  *
  *   @OA\RequestBody(

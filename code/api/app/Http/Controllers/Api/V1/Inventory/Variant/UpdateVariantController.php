@@ -18,8 +18,8 @@ use App\Models\ItemVariant;
  *   tags={"Product Variants"},
  *   security={{"passport": {}}},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *   @OA\Parameter(name="variantId", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Product public_id (ULID)"),
+ *   @OA\Parameter(name="variantId", in="path", required=true, @OA\Schema(type="string"), description="Item Variant public_id (ULID)"),
  *
  *   @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/UpdateVariantRequest")),
  *

@@ -34,13 +34,13 @@ const createWrapper = () => {
 describe('VariantDetails', () => {
     const mockVariant: ItemVariant = {
         id: 'variant-01',
-        item_id: 1,
+        item_id: '01JKITM1234567890ABCDEFGH',
         code: 'VAR-001',
         name: 'Test Variant',
-        uom_id: 1,
+        uom_id: '01JKUOM1234567890ABCDEFGH',
         is_active: true,
         item: {
-            id: 1,
+            id: '01JKITM1234567890ABCDEFGH',
             sku: 'SKU-001',
             name: 'Test Item',
             type: 'PRODUCTO',

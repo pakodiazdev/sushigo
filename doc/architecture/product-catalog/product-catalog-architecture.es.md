@@ -371,6 +371,16 @@ interno. Los permisos siguen la convención granular `resource.action` existente
 más grueso por dominio usado por Platillos, para mantener consistencia con el mapeo `items.*` que
 `#400` ya codifica.
 
+**Nota as-built (`#399`/`#495`):** `#399` ya aterrizó (`#495`) — `Item`, `ItemVariant`,
+`InventoryLocation`, `UnitOfMeasure`, `Stock`, `StockMovement`, `StockMovementLine`,
+`PurchasePresentationTemplate` y `VariantPurchasePresentation` adoptaron `HasPublicId` +
+`SerializesPublicIdAsId`. `/inventory/products` y cada ruta anidada abajo (`{product}`, `{variant}`,
+`{template}`, `{assignment}`) ahora hacen binding y serializan sobre `public_id` tal como este
+diseño lo planteó originalmente — el ID numérico interno mencionado arriba ya no aplica. Ver
+[#581](https://github.com/pakodiazdev/sushigo/issues/581) para la auditoría posterior que corrigió
+la documentación OpenAPI (el Swagger seguía describiendo algunos de estos identificadores como
+enteros después de que la migración aterrizó).
+
 | Método | Ruta | Petición (crear/editar) | Permiso | Notas |
 |---|---|---|---|---|
 | GET | `/inventory/products` | — (query: `search, brand_id, inventory_category_id, is_active, page`) | `items.view` | Filtra a `type = PRODUCTO` en el servidor; devuelve el conteo de variantes por fila en el listado. |

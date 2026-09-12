@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Gate;
  *   summary="Show Inventory Location",
  *   tags={"Inventory Locations"},
  *
- *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string"), description="Inventory Location public_id (ULID)"),
  *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponseEntity")),
  *   @OA\Response(response=403, description="Forbidden — caller is not an active member of the location's Operating Unit"),
