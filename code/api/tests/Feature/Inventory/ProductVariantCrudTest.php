@@ -38,6 +38,18 @@ class ProductVariantCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_returns_not_found_for_an_unknown_product_even_with_an_invalid_filter()
+    {
+        // The product lookup must still win over query validation when both are invalid —
+        // ListVariantsRequest resolves it in authorize(), which the FormRequest lifecycle
+        // runs before rules(), preserving the ordering the endpoint's old manual
+        // $request->validate() call had (PR #617 review).
+        $response = $this->getJson('/api/v1/inventory/products/UNKNOWN/variants?per_page=0');
+
+        $response->assertStatus(404);
+    }
+
+    #[Test]
     public function it_rejects_a_zero_per_page_on_list_instead_of_crashing()
     {
         $product = $this->createProduct();
@@ -123,6 +135,38 @@ class ProductVariantCrudTest extends InventoryTestCase
 
         $active->assertStatus(200);
         $this->assertSame(['ACT-1'], collect($active->json('data'))->pluck('code')->all());
+    }
+
+    #[Test]
+    public function it_accepts_the_boolean_string_true_and_false_for_the_is_active_filter()
+    {
+        $product = $this->createProduct();
+        $this->createItemVariant($product, ['code' => 'ACT-1', 'name' => 'Active one', 'is_active' => true]);
+        $this->createItemVariant($product, ['code' => 'INA-1', 'name' => 'Inactive one', 'is_active' => false]);
+
+        // The webapp sends is_active=true / is_active=false (axios serializes a JS boolean that
+        // way), matching the ListProductsRequest contract. The variant listing must not 422 on it.
+        $active = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?is_active=true");
+        $active->assertStatus(200);
+        $this->assertSame(['ACT-1'], collect($active->json('data'))->pluck('code')->all());
+
+        $inactive = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?is_active=false");
+        $inactive->assertStatus(200);
+        $this->assertSame(['INA-1'], collect($inactive->json('data'))->pluck('code')->all());
+    }
+
+    #[Test]
+    public function it_rejects_an_unsupported_is_active_value_with_a_422()
+    {
+        $product = $this->createProduct();
+
+        // "garbage" isn't a recognized boolean literal — it must fail validation instead of
+        // FILTER_NULL_ON_FAILURE silently turning it into null and returning an unfiltered list
+        // (PR #617 review).
+        $response = $this->getJson("/api/v1/inventory/products/{$product->public_id}/variants?is_active=garbage");
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('is_active');
     }
 
     #[Test]
