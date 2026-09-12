@@ -111,6 +111,8 @@ class CoreTestSeeder extends Seeder
         'dishes.manage-media',
         'inventory_locations.view',
         'inventory_locations.manage',
+        // Reference-data lookup access contract (#580) — see App\Support\InventoryCatalogLookup.
+        'inventory_catalog.lookup',
         'units_of_measure.manage',
         'stock.view',
         'stock.manage',

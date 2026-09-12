@@ -176,6 +176,33 @@ flowchart LR
 
 ---
 
+## 8a. Consulta de catálogo de referencia entre flujos (#580)
+
+Algunos endpoints de solo lectura (listados de Producto/Variante/Presentación de Compra de
+Variante, Ubicación de Inventario, Proveedor y Oferta de Proveedor) son consultados por más de un
+flujo que no gestiona ese dominio — p. ej. el formulario de creación de Oferta de Proveedor necesita
+buscar Productos aunque quien gestiona proveedores no tenga `items.view`, y el formulario de
+Recepción de Compra necesita buscar Productos, Ubicaciones y Proveedores aunque quien gestiona
+recepciones no tenga ninguno de esos permisos `.view`.
+
+Antes de #580, cada una de esas rutas hacía crecer su propia cadena OR de permisos
+(`items.view|suppliers.manage|receipts.manage`, `suppliers.view|receipts.manage`, …) cada vez que
+llegaba un nuevo consumidor — un patrón que no escala y es fácil de dejar inconsistente entre rutas.
+
+`App\Support\InventoryCatalogLookup` (`code/api/app/Support/InventoryCatalogLookup.php`) es el
+contrato único y documentado para esto: define una lista OR por dominio de consulta (`PRODUCTS`,
+`LOCATIONS`, `SUPPLIERS`), cada una incluyendo siempre el permiso genérico
+`inventory_catalog.lookup`. Un flujo **nuevo** que solo necesita acceso de solo lectura a datos de
+referencia recibe `inventory_catalog.lookup` directamente (sembrado junto a su propio permiso, o
+asignado a un usuario vía el endpoint de sincronización de permisos directos) — nunca requiere tocar
+una ruta ni esta clase. Las dos excepciones nombradas (`suppliers.manage`, `receipts.manage`) son
+anteriores a este contrato (#505, #433) y se conservan por compatibilidad; no agregar un tercer
+permiso de flujo nombrado a estas listas — otorgar `inventory_catalog.lookup` en su lugar. El acceso
+de consulta nunca implica acceso de escritura: solo las seis rutas `*.list` mencionadas usan estas
+constantes — `show`/`create`/`update`/`delete` conservan su propio permiso específico de dominio.
+
+---
+
 ## 9. Lineamientos prácticos
 
 - **Roles siempre en User**: nunca asignar roles o permisos directamente al `Employee`.

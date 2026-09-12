@@ -172,6 +172,33 @@ flowchart LR
 
 ---
 
+## 8a. Cross-Workflow Reference-Data Lookup (#580)
+
+Some read-only endpoints (Product/Variant/Variant Purchase Presentation, Inventory Location,
+Supplier, and Supplier Offering listings) are consulted by more than one workflow that does not
+otherwise manage that domain — e.g. the Supplier Offering create form needs to browse Products even
+though a supplier manager may not hold `items.view`, and the Purchase Receipt form needs to browse
+Products, Locations, and Suppliers even though a receipt manager may not hold any of their `.view`
+permissions.
+
+Before #580, every such route grew its own `permission:a|b|c` OR-string as a new consumer arrived
+(`items.view|suppliers.manage|receipts.manage`, `suppliers.view|receipts.manage`, …) — a pattern
+that does not scale and is easy to leave inconsistent across routes.
+
+`App\Support\InventoryCatalogLookup` (`code/api/app/Support/InventoryCatalogLookup.php`) is the one
+documented contract for this: it defines one OR-list per lookup domain (`PRODUCTS`, `LOCATIONS`,
+`SUPPLIERS`), each of which always includes the generic `inventory_catalog.lookup` permission. A
+**new** workflow that only needs read-only reference-data access is granted `inventory_catalog.lookup`
+directly (seeded alongside its own permission, or assigned to a user via the direct-permission-sync
+endpoint) — it never requires touching a route or this class. The two named exceptions
+(`suppliers.manage`, `receipts.manage`) predate this contract (#505, #433) and are kept for backward
+compatibility; do not add a third named workflow permission to these lists — grant
+`inventory_catalog.lookup` instead. Lookup access never implies write access: only the six `*.list`
+routes named above use these constants — `show`/`create`/`update`/`delete` keep their own
+domain-specific permission untouched.
+
+---
+
 ## 9. Practical Guidelines
 
 - **Roles always on User**: never assign roles or permissions directly to `Employee`.
