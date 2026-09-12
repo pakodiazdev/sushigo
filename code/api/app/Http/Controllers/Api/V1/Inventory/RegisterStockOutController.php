@@ -63,7 +63,6 @@ const STOCK_OUT_EXAMPLE_QTY = '10.0000';
                                     properties: [
                                         new OA\Property(property: 'id', type: 'integer', example: 1),
                                         new OA\Property(property: 'qty', type: 'number', example: STOCK_OUT_EXAMPLE_QTY),
-                                        new OA\Property(property: 'base_qty', type: 'number', example: STOCK_OUT_EXAMPLE_QTY),
                                         new OA\Property(property: 'unit_cost', type: 'number', example: '50.0000'),
                                         new OA\Property(property: 'line_total', type: 'number', example: '500.0000'),
                                         new OA\Property(property: 'sale_price', type: 'number', example: '75.0000'),

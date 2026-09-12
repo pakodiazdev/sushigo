@@ -58,10 +58,8 @@ class StockMovementReverserTest extends InventoryTestCase
 
         StockMovementLine::create([
             'stock_movement_id' => $movement->id,
-            'item_variant_id' => $this->variant->id,
             'uom_id' => $this->uomKg->id,
             'qty' => $qty,
-            'base_qty' => $qty,
             'conversion_factor' => 1,
             'unit_cost' => 0,
             'line_total' => 0,

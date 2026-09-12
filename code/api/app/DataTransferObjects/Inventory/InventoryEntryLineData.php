@@ -15,7 +15,6 @@ final readonly class InventoryEntryLineData
     public function __construct(
         public int $uomId,
         public float $qty,
-        public float $baseQty,
         public float $conversionFactor,
         public ?float $unitCost = null,
         public ?float $lineTotal = null,

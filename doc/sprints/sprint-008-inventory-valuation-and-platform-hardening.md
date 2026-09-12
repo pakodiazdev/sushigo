@@ -130,7 +130,7 @@ Project iteration created during promotion.
 |---|---:|---|---|---|---|---:|---:|
 | ⏳ | #415 | Adopt an exact monetary value contract across API and webapp | Product engineering | P0 | XL | 12h | 24h |
 | ⏳ | #579 | Reconcile inventory valuation when reversing Purchase Receipts | Product engineering | P0 | L | 8h | 16h |
-| ⏳ | #575 | Prune redundant StockMovementLine columns with reconciliation | Product engineering | P1 | M | 4h | 8h |
+| ✅ | #575 | Prune redundant StockMovementLine columns with reconciliation | Product engineering | P1 | M | 4h | 8h |
 | ⏳ | #580 | Decouple reference-data lookup access from workflow OR permissions | Product engineering | P1 | M | 4h | 8h |
 | ⏳ | #581 | Align Inventory OpenAPI identifiers with public ULID contracts | Product engineering | P2 | S | 2h | 5h |
 | ⏳ | #576 | Standardize Inventory loading, empty, error states and Spanish copy | Product engineering | P2 | M | 5h | 10h |
@@ -429,7 +429,7 @@ but every Issue is a well-understood review follow-up with a named target contra
 |---|---:|---|---:|---|---:|---|
 | ⏳ | #415 | — | — | — | — | Not started |
 | ⏳ | #579 | — | — | — | — | Not started |
-| ⏳ | #575 | — | — | — | — | Not started |
+| ✅ | #575 | Dropped the now-redundant `stock_movement_lines.item_variant_id`/`base_qty` — the header's own `item_variant_id`/`qty` is the single persisted source now. A reconciliation-then-drop migration aborts with the disagreeing line ids (exact SQL equality, no float tolerance) if any row disputes its header before dropping the FK/index/CHECK/columns; `down()` backfills losslessly from the header. Updated the four line writers, the model, tests, webapp types, and EN/ES architecture docs to match. | PR #619 | — | 38m | Full `Feature/Inventory` PHPUnit suite (788/788) and Vitest inventory-type suite passing; new `StockMovementLineColumnRemovalMigrationTest` (reconciliation abort incl. a one-representable-unit boundary case, happy-path drop, `down()`/`up()` round trip); Pint/ESLint/TypeScript clean; 2 Codex review threads resolved (a pre-existing preview-deploy migration gap correctly identified as out of scope, and a real float-tolerance precision bug fixed with a regression test); a rolling-deployment column-drop risk was raised and explicitly confirmed with the user (kept as a single-step drop, logged on the PR). |
 | ✅ | #580 | Replaced the growing `permission:a\|b\|c` OR-strings on six reference-data lookup routes (Products, Variants, Variant Purchase Presentations, Inventory Locations, Suppliers, Supplier Offerings) with `App\Support\InventoryCatalogLookup` — one documented OR-list per domain, each including a new generic `inventory_catalog.lookup` permission a future workflow can be granted directly, without touching any route. Preserved the existing `suppliers.manage` (#505) and `receipts.manage` (#433) exceptions verbatim. Also extracted one shared frontend query hook for the Supplier Offering/Purchase Receipt Presentation-lookup cascade they duplicated identically. | PR #620 | — | 55m | Full `Feature/Inventory` PHPUnit suite (793/793) and full Vitest suite (4618/4618) passing unchanged; new `InventoryCatalogLookupPermissionTest` covers catalog viewer, supplier manager, receipt manager, the new generic-permission-only operator, unauthorized users, inactive Operating Unit membership, and admin bypass; Pint/ESLint/TypeScript clean. |
 | ⏳ | #581 | — | — | — | — | Not started |
 | ⏳ | #576 | — | — | — | — | Not started |

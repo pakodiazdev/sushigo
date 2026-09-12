@@ -7,6 +7,7 @@ use App\Exceptions\InvalidStockOutReasonException;
 use App\Models\Item;
 use App\Models\ItemVariant;
 use App\Models\Stock;
+use App\Models\StockMovement;
 use App\Models\StockMovementLine;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
@@ -183,10 +184,11 @@ class StockOutTest extends InventoryTestCase
 
         $response->assertStatus(201);
 
-        // Verify conversion
+        // Verify conversion — base quantity is the header's sole source of truth (#575)
         $line = StockMovementLine::first();
+        $movement = StockMovement::first();
         $this->assertEquals(5000.0000, (float) $line->qty); // Original qty in GR
-        $this->assertEquals(5.0000, (float) $line->base_qty); // Converted to KG
+        $this->assertEquals(5.0000, (float) $movement->qty); // Converted to KG
         $this->assertEquals(0.001, (float) $line->conversion_factor);
 
         // Profit: sale_price per GR = 0.075 → per KG = 75 → margin = 75-50 = 25 → total = 5*25 = 125

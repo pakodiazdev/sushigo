@@ -212,10 +212,8 @@ erDiagram
   STOCK_MOVEMENT_LINE {
     bigint id PK
     bigint stock_movement_id FK
-    bigint item_variant_id FK
     bigint uom_id FK
     decimal qty
-    decimal base_qty
     decimal conversion_factor
     json meta
   }
@@ -285,7 +283,7 @@ erDiagram
 -   Cada variante posee una **unidad base** (`ITEM_VARIANT.uom_id`).
 -   Las conversiones (`UOM_CONVERSION`) definen factores dirigidos `from_uom → to_uom` con tolerancias.
 -   Solo los `INSUMO` habilitan conversiones múltiples; `PRODUCTO` y `ACTIVO` operan 1:1 (misma unidad de entrada y salida).
--   `StockMovementLine` registra tanto la cantidad operada (`qty`, `uom_id`) como la cantidad normalizada (`base_qty`) y el factor aplicado.
+-   `StockMovementLine` registra la cantidad operada (`qty`, `uom_id`) y el `conversion_factor` aplicado; la cantidad normalizada (en unidad base) tiene una única fuente persistida — el propio `qty` del encabezado `StockMovement` (#575).
 -   `meta.original_qty` y `meta.original_uom` en `StockMovement` preservan la transacción original para auditoría y costing.
 -   Los conteos físicos (`StockCountLine`) aceptan cualquier unidad y se convierten con las mismas reglas.
 
@@ -435,10 +433,8 @@ classDiagram
   class StockMovementLine {
     +id: bigint
     +stock_movement_id: bigint
-    +item_variant_id: bigint
     +uom_id: bigint
     +qty: decimal
-    +base_qty: decimal
     +conversion_factor: decimal
     +meta: json
   }
@@ -596,7 +592,6 @@ classDiagram
   Item --o ItemVariant
   ItemVariant --o Stock
   ItemVariant --o StockMovement
-  ItemVariant --o StockMovementLine
   ItemVariant --o StockCountLine
   ItemVariant --o SaleLine
   UnitOfMeasure --o ItemVariant
@@ -659,14 +654,15 @@ classDiagram
         que el saldo se restaura **exactamente una vez**. Un reverso imposible (stock ya consumido por
         debajo del monto movido) lanza `StockMovementReversalBoundaryException` y no persiste nada.
 -   **StockMovementLine** — el desglose opcional de UOM/costo/precio de ese único movimiento.
-    -   Propiedades: `id`, `stock_movement_id`, `item_variant_id`, `uom_id`, `qty`, `base_qty`,
-        `conversion_factor`, `unit_cost`, `line_total`, campos de precio, `meta`.
-    -   A lo sumo **una** línea por movimiento (UNIQUE `stock_movement_id`); no puede expresar una
-        Variante ni un `base_qty` distintos del encabezado. Eliminar las columnas
-        `item_variant_id`/cantidad ahora redundantes de esta tabla quedó fuera del alcance de #442
-        (cuyas Tareas Técnicas enumeran solo el SKU de Item y los campos de costo/precio por
-        Variante) y se deja para un follow-up dedicado, dado el riesgo de un cambio de esquema en
-        una tabla transaccional con escritura activa.
+    -   Propiedades: `id`, `stock_movement_id`, `uom_id`, `qty`, `conversion_factor`, `unit_cost`,
+        `line_total`, campos de precio, `meta`.
+    -   A lo sumo **una** línea por movimiento (UNIQUE `stock_movement_id`). Las columnas
+        `item_variant_id` y `base_qty`, ahora redundantes — que duplicaban el propio
+        `item_variant_id`/`qty` del encabezado y se guardaban a nivel de modelo para que siempre
+        coincidieran con él — se eliminaron en #575, tras confirmar mediante una reconciliación en
+        tiempo de migración que cada fila existente coincidía con su encabezado; la Variante y la
+        cantidad base tienen ahora una única fuente de verdad persistida, el encabezado
+        `StockMovement`.
 -   **StockCount / StockCountLine**
     -   Propiedades principales: `inventory_location_id`, `counted_at`, `status` y líneas con `qty`, `uom_id`, `base_qty`.
     -   Acciones: `finalize()` procesa diferencias contra `Stock`.
