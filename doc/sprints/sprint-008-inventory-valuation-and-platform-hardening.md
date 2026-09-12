@@ -434,7 +434,7 @@ but every Issue is a well-understood review follow-up with a named target contra
 | ⏳ | #581 | — | — | — | — | Not started |
 | ⏳ | #576 | — | — | — | — | Not started |
 | ⏳ | #577 | — | — | — | — | Not started |
-| ⏳ | #545 | — | — | — | — | Not started |
+| ✅ | #545 | Un-quarantined `item-media-gallery-uploader.cy.ts`; fixed the submit-button busy-state race, made the spec's SKU retry-safe, and fixed a shared CI-only `crypto.randomUUID` secure-context failure (also unblocks #552/#556) | PR #618 | — | 0.6h | 11/11 green on dev-lab E2E (6× default + 5× CI config, 0 retries); `e2e-ci / cypress-e2e-run` green; ESLint/TypeScript clean; 2 Codex findings addressed |
 | ✅ | #546 | Removed the #490 `this.skip()` guard from `price-lists.cy.ts` and hardened its Cypress-retry safety — a per-attempt Price List purge plus a per-attempt `code` suffix (PriceList uses SoftDeletes, so the purge alone left the `code` unique index still claimed) — found and fixed across two Codex review rounds. | PR #616 | — | 1h 30m | 4/4 headless runs green against a fresh dev-lab E2E stack; no product code changed; the covered-`<select>` overlay flake no longer reproduces; 2/2 Codex review threads (retry-state purge, soft-delete/unique-code interaction) resolved; ESLint + `npm run typecheck` clean. |
 | ⏳ | #550 | — | — | — | — | Not started |
 

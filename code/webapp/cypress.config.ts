@@ -28,6 +28,18 @@ export default defineConfig({
           launchOptions.args.push('--allow-insecure-localhost')
           launchOptions.args.push('--allow-running-insecure-content')
         }
+        // e2e-ci serves the webapp from a non-localhost plain-HTTP origin
+        // (http://test_e2e:5173), which Chromium does not treat as a secure context, so
+        // crypto.randomUUID() — used by generateOwnerToken() in src/lib/media-validation.ts
+        // for the media-upload owner_token — throws there even though the real threat model
+        // (a throwaway CI container) doesn't call for TLS. Grant that one origin an explicit
+        // secure-context exemption instead of weakening the token generator itself (#407
+        // deliberately made owner_token fail loudly rather than degrade to a guessable
+        // fallback). Cypress launches Chrome with its own isolated --user-data-dir, which is
+        // what lets this flag take effect at all. No-op for an https:// baseUrl (devtest/dev-lab).
+        if (browser.family === 'chromium' && config.baseUrl && !config.baseUrl.startsWith('https://')) {
+          launchOptions.args.push(`--unsafely-treat-insecure-origin-as-secure=${config.baseUrl}`)
+        }
         return launchOptions
       })
 

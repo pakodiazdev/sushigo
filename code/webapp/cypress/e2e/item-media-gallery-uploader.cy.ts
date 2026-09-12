@@ -14,19 +14,20 @@ import users from '../fixtures/users.json'
 
 const { email: adminEmail, password: adminPassword } = users.admin
 
-// ⚠️ QUARANTINED per #490 → see #545. Fails against a fresh stack:
-// Happy-path test fails: toast 'Item created successfully' never appears — the create+media-gallery flow does not complete.
-// Remove this guard when #545 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task('test:reset', null, { timeout: 60_000 })
 })
 
+// Regenerated in beforeEach (not module scope) so a Cypress `retries` rerun — which reruns
+// beforeEach but not the suite-level before() — gets a fresh SKU instead of resubmitting the
+// one the prior attempt already persisted (CI runs `cypress run --config retries=2`, see
+// .github/workflows/_e2e-ci.yml:329; same hazard documented in
+// product-variant-purchase-presentation.cy.ts:137-141).
+let sku = ''
+
 describe('Item Rápido — Media Gallery Uploader', () => {
   beforeEach(() => {
+    sku = `CYP-MEDIA-${Date.now()}`
     cy.login(adminEmail, adminPassword)
     cy.url().should('not.include', '/login', { timeout: 10_000 })
     cy.visit('/inventario/insumos')
@@ -43,7 +44,7 @@ describe('Item Rápido — Media Gallery Uploader', () => {
     cy.contains('button', 'Item Rápido').click()
 
     // ── 2. Fill in the basic item fields ─────────────────────────────────
-    cy.get('input[placeholder="e.g., SAL-001"]').type('CYP-MEDIA-001', { force: true })
+    cy.get('input[placeholder="e.g., SAL-001"]').type(sku, { force: true })
     cy.get('input[placeholder="e.g., Fresh Salmon"]').type('Cypress Media Item', { force: true })
 
     // ── 3. Upload a photo via the MediaGalleryUploader ───────────────────
@@ -56,10 +57,16 @@ describe('Item Rápido — Media Gallery Uploader', () => {
     cy.contains('Primary').should('be.visible')
 
     // ── 4. Save the item ──────────────────────────────────────────────────
-    cy.contains('button', 'Create Item').scrollIntoView().click({ force: true })
+    // "Create Item" is disabled (isSubmitDisabled) while MediaGalleryUploader reports itself
+    // busy. onBusyChange(false) only fires from an effect that runs a render *after* the
+    // thumbnail + "Primary" badge mount, so clicking the instant the badge shows raced that
+    // still-disabled window — onSubmit's `if (isSubmitDisabled) return` guard then silently
+    // dropped the submit (no POST /items, "Item created successfully" never appeared). Assert
+    // the button is actually enabled and let Cypress's own actionability retry wait it out.
+    cy.contains('button', 'Create Item').scrollIntoView().should('not.be.disabled').click()
 
     // ── 5. Confirm the item was created ───────────────────────────────────
     cy.contains('Item created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('CYP-MEDIA-001', { timeout: 10_000 }).should('be.visible')
+    cy.contains(sku, { timeout: 10_000 }).should('be.visible')
   })
 })
