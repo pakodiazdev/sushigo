@@ -221,7 +221,6 @@ class ReceiptService
                         // still snapshots the package factor for traceability.
                         uomId: $itemVariant->uom_id,
                         qty: $baseUnits,
-                        baseQty: $baseUnits,
                         conversionFactor: (float) $line->presentation_factor,
                         unitCost: (float) $line->effective_unit_cost,
                         lineTotal: (float) $line->net_acquisition_amount,
@@ -387,10 +386,8 @@ class ReceiptService
 
         StockMovementLine::create([
             'stock_movement_id' => $movement->id,
-            'item_variant_id' => $itemVariant->id,
             'uom_id' => $itemVariant->uom_id,
             'qty' => $baseUnits,
-            'base_qty' => $baseUnits,
             'conversion_factor' => $line->presentation_factor,
             'unit_cost' => $line->effective_unit_cost,
             'line_total' => $line->net_acquisition_amount,

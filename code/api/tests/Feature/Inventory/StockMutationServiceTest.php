@@ -333,10 +333,8 @@ class StockMutationServiceTest extends InventoryTestCase
 
                 StockMovementLine::create([
                     'stock_movement_id' => $movement->id,
-                    'item_variant_id' => $variant->id,
                     'uom_id' => $this->uomKg->id,
                     'qty' => 4,
-                    'base_qty' => 4,
                     'conversion_factor' => 1,
                     'unit_cost' => 0,
                     'line_total' => 0,

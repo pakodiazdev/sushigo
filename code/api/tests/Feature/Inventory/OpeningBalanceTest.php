@@ -529,10 +529,10 @@ class OpeningBalanceTest extends InventoryTestCase
             ->where('item_variant_id', $variant->id)
             ->where('reason', 'OPENING_BALANCE')
             ->firstOrFail();
+        // Variant + base quantity have exactly one persisted source of truth: the header (#575).
+        $this->assertEquals(8, (float) $movement->qty);
         $this->assertDatabaseHas('stock_movement_lines', [
             'stock_movement_id' => $movement->id,
-            'item_variant_id' => $variant->id,
-            'base_qty' => 8,
         ]);
     }
 
@@ -684,9 +684,9 @@ class OpeningBalanceTest extends InventoryTestCase
             'unit_cost' => 0,
         ])->assertStatus(201)->json('data.id');
 
+        $this->assertDatabaseHas('stock_movements', ['id' => $freeMovementId, 'qty' => 8]);
         $this->assertDatabaseHas('stock_movement_lines', [
             'stock_movement_id' => $freeMovementId,
-            'base_qty' => 8,
             'unit_cost' => 0,
             'line_total' => 0,
         ]);
@@ -702,9 +702,9 @@ class OpeningBalanceTest extends InventoryTestCase
             // no unit_cost
         ])->assertStatus(201)->json('data.id');
 
+        $this->assertDatabaseHas('stock_movements', ['id' => $unknownMovementId, 'qty' => 8]);
         $this->assertDatabaseHas('stock_movement_lines', [
             'stock_movement_id' => $unknownMovementId,
-            'base_qty' => 8,
             'unit_cost' => null,
             'line_total' => null,
         ]);
@@ -752,9 +752,9 @@ class OpeningBalanceTest extends InventoryTestCase
 
         // 100000 packs * 100 each = exactly 10,000,000 — computing the line
         // total from the rounded 14.2857 would instead record 9,999,990.
+        $this->assertDatabaseHas('stock_movements', ['id' => $data['id'], 'qty' => 700000]);
         $this->assertDatabaseHas('stock_movement_lines', [
             'stock_movement_id' => $data['id'],
-            'base_qty' => 700000,
             'line_total' => 10000000,
         ]);
     }

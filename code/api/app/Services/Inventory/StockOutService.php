@@ -118,10 +118,8 @@ class StockOutService
             // Create movement line
             StockMovementLine::create([
                 'stock_movement_id' => $movement->id,
-                'item_variant_id' => $itemVariantId,
                 'uom_id' => $transactionUomId,
                 'qty' => $quantity,
-                'base_qty' => $baseQuantity,
                 'conversion_factor' => $conversionFactor,
                 'unit_cost' => $unitCost,
                 'line_total' => $baseQuantity * $unitCost,

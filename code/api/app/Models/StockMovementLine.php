@@ -13,15 +13,10 @@ class StockMovementLine extends Model
 {
     use HasPublicId, SerializesPublicIdAsId;
 
-    /** Base-unit quantities within this tolerance are treated as equal. */
-    private const QTY_EPSILON = 0.0001;
-
     protected $fillable = [
         'stock_movement_id',
-        'item_variant_id',
         'uom_id',
         'qty',
-        'base_qty',
         'conversion_factor',
         'unit_cost',
         'line_total',
@@ -34,7 +29,6 @@ class StockMovementLine extends Model
 
     protected $casts = [
         'qty' => 'decimal:4',
-        'base_qty' => 'decimal:4',
         'conversion_factor' => 'decimal:6',
         'unit_cost' => 'decimal:4',
         'line_total' => 'decimal:4',
@@ -56,8 +50,6 @@ class StockMovementLine extends Model
             } else {
                 $line->assertMovementHasNoOtherLine();
             }
-
-            $line->assertAgreesWithHeader();
         });
 
         static::deleting(function (self $line) {
@@ -121,53 +113,11 @@ class StockMovementLine extends Model
     }
 
     /**
-     * A movement's line cannot express a different variant or a different
-     * moved quantity than its header — the single-line contract.
-     *
-     * @throws InvalidStockMovementContractException
-     */
-    public function assertAgreesWithHeader(): void
-    {
-        $movement = $this->stockMovement()->first();
-
-        if (! $movement) {
-            return;
-        }
-
-        if ($movement->item_variant_id !== null
-            && (int) $this->item_variant_id !== (int) $movement->item_variant_id) {
-            throw new InvalidStockMovementContractException(
-                "StockMovementLine variant #{$this->item_variant_id} does not match movement #{$movement->id} "
-                ."header variant #{$movement->item_variant_id}."
-            );
-        }
-
-        if ((float) $this->base_qty <= 0) {
-            throw new InvalidStockMovementContractException('StockMovementLine.base_qty must be greater than zero.');
-        }
-
-        if (abs((float) $this->base_qty - (float) $movement->qty) > self::QTY_EPSILON) {
-            throw new InvalidStockMovementContractException(
-                "StockMovementLine.base_qty ({$this->base_qty}) does not match movement #{$movement->id} "
-                ."header qty ({$movement->qty})."
-            );
-        }
-    }
-
-    /**
      * Get the stock movement
      */
     public function stockMovement(): BelongsTo
     {
         return $this->belongsTo(StockMovement::class);
-    }
-
-    /**
-     * Get the item variant
-     */
-    public function itemVariant(): BelongsTo
-    {
-        return $this->belongsTo(ItemVariant::class);
     }
 
     /**

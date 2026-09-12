@@ -73,10 +73,8 @@ class InventoryEntryPostingService
         if ($data->line !== null) {
             StockMovementLine::create([
                 'stock_movement_id' => $movement->id,
-                'item_variant_id' => $data->itemVariantId,
                 'uom_id' => $data->line->uomId,
                 'qty' => $data->line->qty,
-                'base_qty' => $data->line->baseQty,
                 'conversion_factor' => $data->line->conversionFactor,
                 'unit_cost' => $data->line->unitCost,
                 'line_total' => $data->line->lineTotal,

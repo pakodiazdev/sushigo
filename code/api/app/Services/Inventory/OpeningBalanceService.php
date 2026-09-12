@@ -25,7 +25,7 @@ class OpeningBalanceService
 
     private const INACTIVE_DESTINATION_MESSAGE = 'The selected location is inactive and cannot receive an opening balance.';
 
-    /** Decimal places of `stock_movements.qty` / `stock_movement_lines.base_qty` (decimal(15,4)). */
+    /** Decimal places of `stock_movements.qty` (decimal(15,4)). */
     private const BASE_QUANTITY_SCALE = 4;
 
     /** Largest absolute value representable by a positive `decimal(15,4)`. */
@@ -109,7 +109,6 @@ class OpeningBalanceService
                     line: new InventoryEntryLineData(
                         uomId: $data->entryUomId,
                         qty: $entryQuantity,
-                        baseQty: $baseQuantity,
                         conversionFactor: $conversionFactor,
                         unitCost: $baseCost,
                         // Explicit null check, not a truthy one: a supplied cost of 0

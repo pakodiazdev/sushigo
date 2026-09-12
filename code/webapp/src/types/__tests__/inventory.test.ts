@@ -274,15 +274,13 @@ describe('Inventory Types', () => {
         })
     })
 
-    describe('StockMovementLine type (aligned with backend App\\Models\\StockMovementLine, #438)', () => {
-        it('carries qty/base_qty/conversion_factor/line_total, not the legacy quantity/total_cost', () => {
+    describe('StockMovementLine type (aligned with backend App\\Models\\StockMovementLine, #438/#575)', () => {
+        it('carries qty/conversion_factor/line_total, not the legacy quantity/total_cost or the header-owned item_variant_id/base_qty', () => {
             const line: StockMovementLine = {
                 id: 1,
                 stock_movement_id: 1,
-                item_variant_id: 12,
                 uom_id: 4,
                 qty: 10,
-                base_qty: 10,
                 conversion_factor: 1,
                 unit_cost: 50,
                 line_total: 500,
@@ -292,7 +290,7 @@ describe('Inventory Types', () => {
                 profit_total: null,
                 meta: null,
             }
-            expect(line.base_qty).toBe(10)
+            expect(line.qty).toBe(10)
             expect(line.line_total).toBe(500)
         })
     })

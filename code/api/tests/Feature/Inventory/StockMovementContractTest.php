@@ -41,10 +41,8 @@ class StockMovementContractTest extends InventoryTestCase
         if ($withLine) {
             StockMovementLine::create([
                 'stock_movement_id' => $movement->id,
-                'item_variant_id' => $this->variant->id,
                 'uom_id' => $this->uomKg->id,
                 'qty' => $qty,
-                'base_qty' => $qty,
                 'conversion_factor' => 1,
                 'unit_cost' => 0,
                 'line_total' => 0,
@@ -55,40 +53,7 @@ class StockMovementContractTest extends InventoryTestCase
         return $movement->fresh('lines');
     }
 
-    // ---- AC1: header and lines cannot disagree ------------------------------
-
-    #[Test]
-    public function a_line_cannot_name_a_different_variant_than_its_header(): void
-    {
-        $movement = $this->postedEntry(withLine: false);
-        $otherVariant = $this->createItemVariant($this->createItem());
-
-        $this->expectException(InvalidStockMovementContractException::class);
-
-        StockMovementLine::create([
-            'stock_movement_id' => $movement->id,
-            'item_variant_id' => $otherVariant->id,
-            'uom_id' => $this->uomKg->id,
-            'qty' => 10, 'base_qty' => 10, 'conversion_factor' => 1,
-            'unit_cost' => 0, 'line_total' => 0, 'meta' => [],
-        ]);
-    }
-
-    #[Test]
-    public function a_line_cannot_move_a_different_base_quantity_than_its_header(): void
-    {
-        $movement = $this->postedEntry(qty: 10, withLine: false);
-
-        $this->expectException(InvalidStockMovementContractException::class);
-
-        StockMovementLine::create([
-            'stock_movement_id' => $movement->id,
-            'item_variant_id' => $this->variant->id,
-            'uom_id' => $this->uomKg->id,
-            'qty' => 7, 'base_qty' => 7, 'conversion_factor' => 1,
-            'unit_cost' => 0, 'line_total' => 0, 'meta' => [],
-        ]);
-    }
+    // ---- AC1: a movement carries at most one line --------------------------
 
     #[Test]
     public function a_movement_carries_at_most_one_line(): void
@@ -99,9 +64,8 @@ class StockMovementContractTest extends InventoryTestCase
 
         StockMovementLine::create([
             'stock_movement_id' => $movement->id,
-            'item_variant_id' => $this->variant->id,
             'uom_id' => $this->uomKg->id,
-            'qty' => 10, 'base_qty' => 10, 'conversion_factor' => 1,
+            'qty' => 10, 'conversion_factor' => 1,
             'unit_cost' => 0, 'line_total' => 0, 'meta' => [],
         ]);
     }
@@ -336,18 +300,16 @@ class StockMovementContractTest extends InventoryTestCase
         // The single-line contract still holds with a source line present.
         StockMovementLine::create([
             'stock_movement_id' => $movement->id,
-            'item_variant_id' => $this->variant->id,
             'uom_id' => $this->uomKg->id,
-            'qty' => 6, 'base_qty' => 6, 'conversion_factor' => 1,
+            'qty' => 6, 'conversion_factor' => 1,
             'unit_cost' => 0, 'line_total' => 0, 'meta' => [],
         ]);
 
         $this->expectException(InvalidStockMovementContractException::class);
         StockMovementLine::create([
             'stock_movement_id' => $movement->id,
-            'item_variant_id' => $this->variant->id,
             'uom_id' => $this->uomKg->id,
-            'qty' => 6, 'base_qty' => 6, 'conversion_factor' => 1,
+            'qty' => 6, 'conversion_factor' => 1,
             'unit_cost' => 0, 'line_total' => 0, 'meta' => [],
         ]);
     }

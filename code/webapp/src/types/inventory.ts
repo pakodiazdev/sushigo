@@ -339,12 +339,9 @@ export interface StockMovementLine {
   /** ULID public identifier (SerializesPublicIdAsId). */
   id: number
   stock_movement_id: number
-  item_variant_id: number
   uom_id: number
   /** Quantity in the transaction UOM. */
   qty: number
-  /** Quantity converted to the variant's base UOM — must match the header `qty`. */
-  base_qty: number
   conversion_factor: number
   unit_cost: number | null
   line_total: number | null
@@ -353,7 +350,6 @@ export interface StockMovementLine {
   profit_margin: number | null
   profit_total: number | null
   meta: Record<string, unknown> | null
-  item_variant?: ItemVariant
   uom?: UnitOfMeasure
 }
 

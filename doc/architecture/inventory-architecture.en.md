@@ -197,10 +197,8 @@ erDiagram
   STOCK_MOVEMENT_LINE {
     bigint id PK
     bigint stock_movement_id FK
-    bigint item_variant_id FK
     bigint uom_id FK
     decimal qty
-    decimal base_qty
     decimal conversion_factor
     json meta
   }
@@ -270,7 +268,7 @@ erDiagram
 -   Each variant has a **base unit** (`ITEM_VARIANT.uom_id`).
 -   Conversions (`UOM_CONVERSION`) define directed factors `from_uom → to_uom` with tolerances.
 -   Only `INSUMO` enables multiple conversions; `PRODUCTO` and `ACTIVO` operate 1:1 (same input and output unit).
--   `StockMovementLine` records both the operated quantity (`qty`, `uom_id`) and the normalized quantity (`base_qty`) and the applied factor.
+-   `StockMovementLine` records the operated quantity (`qty`, `uom_id`) and the applied `conversion_factor`; the normalized (base-UOM) quantity has exactly one persisted source — the `StockMovement` header's own `qty` (#575).
 -   `meta.original_qty` and `meta.original_uom` in `StockMovement` preserve the original transaction for auditing and costing.
 -   Physical counts (`StockCountLine`) accept any unit and are converted with the same rules.
 
@@ -421,10 +419,8 @@ classDiagram
   class StockMovementLine {
     +id: bigint
     +stock_movement_id: bigint
-    +item_variant_id: bigint
     +uom_id: bigint
     +qty: decimal
-    +base_qty: decimal
     +conversion_factor: decimal
     +meta: json
   }
@@ -582,7 +578,6 @@ classDiagram
   Item --o ItemVariant
   ItemVariant --o Stock
   ItemVariant --o StockMovement
-  ItemVariant --o StockMovementLine
   ItemVariant --o StockCountLine
   ItemVariant --o SaleLine
   UnitOfMeasure --o ItemVariant
@@ -645,14 +640,14 @@ classDiagram
         restored **exactly once**. An impossible reversal (stock already consumed past the moved
         amount) raises `StockMovementReversalBoundaryException` and persists nothing.
 -   **StockMovementLine** — the optional UOM/cost/pricing breakdown of that one movement.
-    -   Properties: `id`, `stock_movement_id`, `item_variant_id`, `uom_id`, `qty`, `base_qty`,
-        `conversion_factor`, `unit_cost`, `line_total`, pricing fields, `meta`.
-    -   At most **one** line per movement (UNIQUE `stock_movement_id`); it cannot express a
-        different Variant or a different `base_qty` than its header (guarded at the model layer).
-        Removing the now-redundant `item_variant_id` / quantity columns from this table was scoped
-        out of #442 (whose Technical Tasks enumerate only Item SKU and per-Variant cost/price
-        fields) and is left for a dedicated follow-up, given the risk of a schema change on an
-        actively-written transactional table.
+    -   Properties: `id`, `stock_movement_id`, `uom_id`, `qty`, `conversion_factor`, `unit_cost`,
+        `line_total`, pricing fields, `meta`.
+    -   At most **one** line per movement (UNIQUE `stock_movement_id`). The now-redundant
+        `item_variant_id` and `base_qty` columns — which used to duplicate the header's own
+        `item_variant_id`/`qty` and were guarded at the model layer to always agree with it — were
+        dropped in #575, after a migration-time reconciliation confirmed every existing row agreed
+        with its header; Variant and base quantity now have exactly one persisted source of truth,
+        the `StockMovement` header.
 -   **StockCount / StockCountLine**
     -   Main properties: `inventory_location_id`, `counted_at`, `status` and lines with `qty`, `uom_id`, `base_qty`.
     -   Actions: `finalize()` processes differences against `Stock`.

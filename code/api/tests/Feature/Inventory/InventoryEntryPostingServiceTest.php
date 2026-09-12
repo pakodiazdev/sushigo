@@ -48,7 +48,6 @@ class InventoryEntryPostingServiceTest extends InventoryTestCase
             'line' => new InventoryEntryLineData(
                 uomId: $this->uomKg->id,
                 qty: 10.0,
-                baseQty: 10.0,
                 conversionFactor: 1.0,
                 unitCost: 5.0,
                 lineTotal: 50.0,

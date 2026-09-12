@@ -577,10 +577,8 @@ class StockTransferService
 
         StockMovementLine::create([
             'stock_movement_id' => $movement->id,
-            'item_variant_id' => $variantId,
             'uom_id' => (int) $line->entry_uom_id,
             'qty' => (float) $line->entry_quantity,
-            'base_qty' => $baseQty,
             'conversion_factor' => (float) $line->conversion_factor,
             'unit_cost' => $sourceCost,
             'line_total' => $lineTotal,
