@@ -6,10 +6,9 @@ namespace App\Http\Controllers\Api\V1\Inventory\Variant;
 
 use App\Http\Controllers\Api\V1\Items\Concerns\FiltersItemListing;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Inventory\Variant\ListVariantsRequest;
 use App\Http\Resources\Inventory\Variant\VariantResource;
 use App\Http\Responses\Common\ResponsePaginated;
-use App\Models\Item;
-use Illuminate\Http\Request;
 
 /**
  * @OA\Get(
@@ -47,15 +46,11 @@ class ListVariantsController extends Controller
 {
     use FiltersItemListing;
 
-    public function __invoke(Request $request, string $id): ResponsePaginated
+    public function __invoke(ListVariantsRequest $request): ResponsePaginated
     {
-        $product = Item::where('type', Item::TYPE_PRODUCTO)->where('public_id', $id)->firstOrFail();
+        $product = $request->product();
 
-        $perPage = $request->validate([
-            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
-            'search' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'is_active' => ['sometimes', 'boolean'],
-        ])['per_page'] ?? 15;
+        $perPage = $request->validated('per_page') ?? 15;
 
         $query = $product->variants()->with('unitOfMeasure')->getQuery();
 
