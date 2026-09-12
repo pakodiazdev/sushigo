@@ -53,7 +53,7 @@ asymmetry is what makes bonus packages lower `effective_unit_cost` without touch
 `presentation_factor`. These fields are computed once, while the Receipt is a draft, and are never
 recomputed after posting — the stored values *are* the audit evidence.
 
-### Precision contract (Sprint 8 target)
+### Precision contract
 
 Per [TD-05](../../decisions/td-05-monetary-precision-and-rounding.md), receipt totals and their
 components are Money at scale 2; quantities use scale 4, presentation factors scale 6, effective
@@ -62,8 +62,15 @@ unit cost scale 4, and intermediate arithmetic at least scale 8. The final monet
 
 The transaction total is authoritative monetary evidence and the unit cost is a higher-precision
 derived rate. Thus MXN 100.00 / 24 units yields `4.1667` per unit without changing the immutable
-MXN 100.00 receipt total. This is the target of #415, not current as-built compliance: existing
-Receipt DTOs still contain PHP `float` boundaries until that Sprint 8 issue is delivered.
+MXN 100.00 receipt total.
+
+**As-built (#415 Phase 1):** `gross_amount`, `discounts`, `allocated_expenses`,
+`non_recoverable_taxes`, and the derived `net_acquisition_amount` are `Money`
+(`App\Support\Money\Money`); `effective_unit_cost` is derived via `Decimal`. No PHP `float`
+crosses the arithmetic in `ReceiptRequest`/`ReceiptService::createLine()` anymore — see
+[the monetary value contract](../finance/monetary-value-contract.en.md) for the full field
+inventory and what's still deferred (quantities, `WeightedAverageCostCalculator`, and every
+other domain besides Receipts remain a later bounded phase).
 
 ## Posting
 

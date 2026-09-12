@@ -23,6 +23,7 @@ use App\Models\StockMovementLine;
 use App\Models\User;
 use App\Models\VariantPurchasePresentation;
 use App\Support\Access\OperatingUnitScope;
+use App\Support\Money\Decimal;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -439,8 +440,29 @@ class ReceiptService
         $factor = (float) $presentation->template->base_unit_quantity;
 
         $baseUnitsReceived = $lineData->receivedPackages * $factor;
-        $netAcquisitionAmount = $lineData->grossAmount - $lineData->discounts + $lineData->allocatedExpenses + $lineData->nonRecoverableTaxes;
-        $effectiveUnitCost = $baseUnitsReceived > 0 ? $netAcquisitionAmount / $baseUnitsReceived : 0.0;
+
+        // #415 (TD-05): the net acquisition amount is exact Money arithmetic — no PHP
+        // float ever holds this total, which is the concrete cross-boundary finding the
+        // Issue cites. Unit cost is a *derived rate*, computed once here at higher
+        // precision (Decimal, scale 8 intermediate → 4 final) and never multiplied back
+        // to recreate the total; the total itself remains the authoritative evidence.
+        $netAcquisitionAmount = $lineData->grossAmount
+            ->subtract($lineData->discounts)
+            ->add($lineData->allocatedExpenses)
+            ->add($lineData->nonRecoverableTaxes);
+
+        // `ReceiptRequest`'s `decimal:0,4` rule keeps `receivedPackages` at the same
+        // precision as the presentation factor, so their product can't underflow the
+        // scale-8 divisor below — but this service method has no such guarantee for a
+        // caller that bypasses the FormRequest (a seeder, a future internal caller), so
+        // guard the formatted divisor itself rather than trust the raw float's sign check
+        // alone. An immeasurable quantity gets the same "no meaningful unit cost" fallback
+        // as a literal zero, not an uncaught divide-by-zero exception.
+        $baseUnitsDivisor = Decimal::of(self::toFixedPointString($baseUnitsReceived), 8);
+
+        $effectiveUnitCost = $baseUnitsReceived > 0 && ! $baseUnitsDivisor->isZero()
+            ? Decimal::of($netAcquisitionAmount->toDecimalString(), 8)->divide($baseUnitsDivisor, 4)
+            : Decimal::zero(4);
 
         return ReceiptLine::create([
             'receipt_id' => $receipt->id,
@@ -450,15 +472,32 @@ class ReceiptService
             'received_packages' => $lineData->receivedPackages,
             'bonus_packages' => $lineData->bonusPackages,
             'presentation_factor' => $factor,
-            'gross_amount' => $lineData->grossAmount,
-            'discounts' => $lineData->discounts,
-            'allocated_expenses' => $lineData->allocatedExpenses,
-            'non_recoverable_taxes' => $lineData->nonRecoverableTaxes,
-            'net_acquisition_amount' => $netAcquisitionAmount,
+            'gross_amount' => $lineData->grossAmount->toDecimalString(),
+            'discounts' => $lineData->discounts->toDecimalString(),
+            'allocated_expenses' => $lineData->allocatedExpenses->toDecimalString(),
+            'non_recoverable_taxes' => $lineData->nonRecoverableTaxes->toDecimalString(),
+            'net_acquisition_amount' => $netAcquisitionAmount->toDecimalString(),
             'base_units_received' => $baseUnitsReceived,
-            'effective_unit_cost' => $effectiveUnitCost,
+            'effective_unit_cost' => $effectiveUnitCost->__toString(),
             'meta' => [],
         ]);
+    }
+
+    /**
+     * Formats a float as a plain fixed-point decimal string, never scientific notation.
+     *
+     * `(string) $float` switches to exponent notation (e.g. `'1.0E-8'`) for a sufficiently
+     * small magnitude — `receivedPackages * $factor` can legitimately land there for a tiny
+     * package count against a tiny presentation factor — and `Decimal::of()` rejects
+     * exponent notation outright (it would otherwise have to expand it through an unsafe
+     * `(float)` cast, exactly the boundary this class exists to avoid). 8 fractional digits
+     * matches the scale `createLine()` already computes `effective_unit_cost` at, and is
+     * exact for this product: both `receivedPackages` and the presentation factor carry at
+     * most 4 decimal digits of business precision, so their product needs at most 8.
+     */
+    private static function toFixedPointString(float $value): string
+    {
+        return sprintf('%.8F', $value);
     }
 
     /**

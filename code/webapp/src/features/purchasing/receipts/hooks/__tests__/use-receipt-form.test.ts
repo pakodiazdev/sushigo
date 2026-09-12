@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { act, cleanup, renderHook } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useReceiptForm } from '../use-receipt-form'
 import type { Receipt } from '../../types'
@@ -114,6 +114,47 @@ describe('useReceiptForm', () => {
     expect(result.current.watch('supplier_id')).toBe('new-supplier-id')
     expect(result.current.watch('lines.0.supplier_offering_id')).toBe('')
     expect(result.current.watch('lines.1.supplier_offering_id')).toBe('')
+  })
+
+  it('rejects a money field with more than 2 decimal digits, matching the backend decimal:0,2 rule (#415)', async () => {
+    const { result } = renderHook(() => useReceiptForm({ onSuccess: vi.fn() }))
+
+    act(() => {
+      result.current.setValue('lines.0.gross_amount', '4800.123', { shouldValidate: true })
+    })
+
+    await waitFor(() => {
+      expect(result.current.errors.lines?.[0]?.gross_amount).toBeTruthy()
+    })
+
+    act(() => {
+      result.current.setValue('lines.0.gross_amount', '4800.12', { shouldValidate: true })
+    })
+
+    await waitFor(() => {
+      expect(result.current.errors.lines?.[0]?.gross_amount).toBeUndefined()
+    })
+  })
+
+  it('rejects a money field with more than 11 integer digits, matching the backend max:99999999999.99 rule (#415)', async () => {
+    const { result } = renderHook(() => useReceiptForm({ onSuccess: vi.fn() }))
+
+    act(() => {
+      // 12 digits — one past the backend's decimal(15,4) column ceiling.
+      result.current.setValue('lines.0.gross_amount', '999999999999', { shouldValidate: true })
+    })
+
+    await waitFor(() => {
+      expect(result.current.errors.lines?.[0]?.gross_amount).toBeTruthy()
+    })
+
+    act(() => {
+      result.current.setValue('lines.0.gross_amount', '99999999999.99', { shouldValidate: true })
+    })
+
+    await waitFor(() => {
+      expect(result.current.errors.lines?.[0]?.gross_amount).toBeUndefined()
+    })
   })
 
   it('sends null for blank optional cost fields instead of an empty string', async () => {

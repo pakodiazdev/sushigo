@@ -2,8 +2,12 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\DataTransferObjects\Inventory\ReceiptLineData;
+use App\DataTransferObjects\Inventory\SaveReceiptData;
 use App\Models\Receipt;
 use App\Models\SupplierOffering;
+use App\Services\Inventory\ReceiptService;
+use App\Support\Money\Money;
 use PHPUnit\Framework\Attributes\Test;
 
 class ReceiptCrudTest extends InventoryTestCase
@@ -87,6 +91,20 @@ class ReceiptCrudTest extends InventoryTestCase
     {
         ['payload' => $payload] = $this->validPayload();
         $payload['lines'][0]['received_packages'] = 0;
+
+        $this->postJson('/api/v1/inventory/receipts', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['lines.0.received_packages']);
+    }
+
+    #[Test]
+    public function it_rejects_received_packages_with_more_than_four_decimal_digits(): void
+    {
+        // A 5th decimal digit here (0.00004) could otherwise make base_units_received
+        // underflow to an effectively-zero divisor once formatted at scale 8, crashing
+        // effective_unit_cost's derivation with an uncaught divide-by-zero instead of a 422.
+        ['payload' => $payload] = $this->validPayload();
+        $payload['lines'][0]['received_packages'] = 0.00004;
 
         $this->postJson('/api/v1/inventory/receipts', $payload)
             ->assertUnprocessable()
@@ -183,6 +201,115 @@ class ReceiptCrudTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_more_than_two_fractional_digits_on_a_money_field(): void
+    {
+        // #415 (TD-05): Money is scale 2 — a third fractional digit must be rejected at
+        // validation, before it ever reaches Money::fromDecimalString().
+        ['payload' => $payload] = $this->validPayload();
+        $payload['lines'][0]['gross_amount'] = 4800.005;
+
+        $this->postJson('/api/v1/inventory/receipts', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['lines.0.gross_amount']);
+    }
+
+    #[Test]
+    public function it_rejects_a_money_component_larger_than_the_column_can_hold(): void
+    {
+        // receipt_lines' decimal(15,4) columns cap out at 99999999999.9999; with decimal:0,2
+        // already limiting input to 2 fractional digits, 99999999999.99 is the practical max.
+        ['payload' => $payload] = $this->validPayload();
+        $payload['lines'][0]['gross_amount'] = 100000000000.00;
+
+        $this->postJson('/api/v1/inventory/receipts', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['lines.0.gross_amount']);
+    }
+
+    #[Test]
+    public function it_rejects_a_net_acquisition_amount_that_would_overflow_its_column(): void
+    {
+        // Each component individually fits the column max, but their sum does not — this
+        // must be caught by the derived net-amount check, not just the per-field `max` rule.
+        ['payload' => $payload] = $this->validPayload();
+        $payload['lines'][0]['gross_amount'] = 99999999999.99;
+        $payload['lines'][0]['discounts'] = 0;
+        $payload['lines'][0]['allocated_expenses'] = 1.00;
+        $payload['lines'][0]['non_recoverable_taxes'] = 0;
+
+        $this->postJson('/api/v1/inventory/receipts', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['lines.0.gross_amount']);
+    }
+
+    #[Test]
+    public function it_creates_a_receipt_with_a_tiny_base_units_received_without_crashing(): void
+    {
+        // received_packages * presentation_factor === 0.0001 * 0.0001 == 1.0E-8 as a PHP
+        // float — its (string) cast is scientific notation, which Decimal::of() rejects.
+        // effective_unit_cost's derivation must format that product as fixed-point instead
+        // of crashing with a 500.
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item);
+        $template = $this->createPurchasePresentationTemplate(['base_unit_quantity' => 0.0001]);
+        $presentation = $this->createVariantPurchasePresentation($variant, $template);
+        $supplier = $this->createSupplier();
+
+        $response = $this->postJson('/api/v1/inventory/receipts', [
+            'supplier_id' => $supplier->public_id,
+            'destination_location_id' => $this->location->public_id,
+            'reference' => 'FAC-TINY',
+            'receipt_date' => '2026-08-25',
+            'notes' => 'Tiny quantity receipt',
+            'lines' => [
+                [
+                    'variant_purchase_presentation_id' => $presentation->public_id,
+                    'ordered_packages' => 0.0001,
+                    'received_packages' => 0.0001,
+                    'bonus_packages' => 0,
+                    'gross_amount' => 1,
+                    'discounts' => 0,
+                    'allocated_expenses' => 0,
+                    'non_recoverable_taxes' => 0,
+                ],
+            ],
+        ]);
+
+        // base_units_received itself rounds away to 0 at the column's scale-4 precision —
+        // quantities stay float/scale-4 in this phase (see #621) — but the request must
+        // still succeed (not 500) and effective_unit_cost must compute from the exact
+        // (unrounded) 1.0E-8 product: 1.00 / 0.00000001 = 100000000.
+        $response->assertCreated()
+            ->assertJsonPath('data.lines.0.base_units_received', 0)
+            ->assertJsonPath('data.lines.0.effective_unit_cost', 100000000);
+    }
+
+    #[Test]
+    public function it_computes_net_acquisition_amount_with_exact_money_arithmetic(): void
+    {
+        // 0 - 0 + 0.10 + 0.20 is 0.30000000000000004 under raw PHP `float` arithmetic (the
+        // same class of drift as the canonical 0.1 + 0.2 example) — it must land on exactly
+        // 0.30 once Money arithmetic replaces the raw float subtraction/addition.
+        $this->assertNotEquals(0.3, 0 - 0 + 0.10 + 0.20);
+
+        ['payload' => $payload] = $this->validPayload();
+        $payload['lines'][0]['gross_amount'] = 0;
+        $payload['lines'][0]['discounts'] = 0;
+        $payload['lines'][0]['allocated_expenses'] = 0.10;
+        $payload['lines'][0]['non_recoverable_taxes'] = 0.20;
+
+        $response = $this->postJson('/api/v1/inventory/receipts', $payload);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.lines.0.net_acquisition_amount', 0.3);
+
+        $this->assertDatabaseHas('receipt_lines', [
+            'gross_amount' => '0.0000',
+            'net_acquisition_amount' => '0.3000',
+        ]);
+    }
+
+    #[Test]
     public function it_rejects_a_soft_deleted_supplier(): void
     {
         ['payload' => $payload] = $this->validPayload();
@@ -238,5 +365,40 @@ class ReceiptCrudTest extends InventoryTestCase
 
         $response->assertJsonPath('errors.supplier_id.0', 'El proveedor seleccionado no existe.')
             ->assertJsonPath('errors.receipt_date.0', 'La fecha de recepción es requerida.');
+    }
+
+    #[Test]
+    public function service_falls_back_to_zero_unit_cost_instead_of_crashing_on_an_immeasurable_quantity(): void
+    {
+        // ReceiptRequest's decimal:0,4 rule closes this off through the API, but
+        // ReceiptService::createLine() has no such guarantee for a caller that bypasses
+        // the FormRequest — this exercises that defensive guard directly.
+        ['supplier' => $supplier, 'presentation' => $presentation] = $this->validPayload();
+
+        $data = new SaveReceiptData(
+            supplierId: $supplier->id,
+            destinationLocationId: $this->location->id,
+            reference: 'FAC-IMMEASURABLE',
+            receiptDate: '2026-08-25',
+            notes: null,
+            actingUserId: $this->user->id,
+            lines: [
+                new ReceiptLineData(
+                    variantPurchasePresentationId: $presentation->id,
+                    supplierOfferingId: null,
+                    orderedPackages: 0,
+                    receivedPackages: 0.0000000001,
+                    bonusPackages: 0,
+                    grossAmount: Money::fromDecimalString('1.00'),
+                    discounts: Money::zero(),
+                    allocatedExpenses: Money::zero(),
+                    nonRecoverableTaxes: Money::zero(),
+                ),
+            ],
+        );
+
+        $receipt = app(ReceiptService::class)->createDraft($data);
+
+        $this->assertSame('0.0000', $receipt->lines->first()->effective_unit_cost);
     }
 }

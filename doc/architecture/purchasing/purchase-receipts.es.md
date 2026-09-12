@@ -55,7 +55,7 @@ bonificadas se reciben físicamente (incrementan `base_units_received`) pero nun
 mientras la Recepción es borrador, y nunca se recalculan después de registrarse — los valores
 almacenados **son** la evidencia de auditoría.
 
-### Contrato de precisión (objetivo Sprint 8)
+### Contrato de precisión
 
 Según [TD-05](../../decisions/td-05-monetary-precision-and-rounding.md), los totales de Recepción y
 sus componentes son Money con escala 2; las cantidades usan escala 4, los factores de presentación
@@ -65,9 +65,15 @@ binario.
 
 El total de la transacción es la evidencia monetaria autoritativa y el costo unitario es una tasa
 derivada con mayor precisión. Por ello, MXN 100.00 / 24 unidades produce `4.1667` por unidad sin
-cambiar el total inmutable de MXN 100.00. Este es el objetivo de #415, no cumplimiento as-built:
-los DTO de Recepción existentes todavía contienen fronteras PHP `float` hasta entregar ese issue
-de Sprint 8.
+cambiar el total inmutable de MXN 100.00.
+
+**As-built (#415 Fase 1):** `gross_amount`, `discounts`, `allocated_expenses`,
+`non_recoverable_taxes` y el `net_acquisition_amount` derivado son `Money`
+(`App\Support\Money\Money`); `effective_unit_cost` se deriva vía `Decimal`. Ningún `float` de PHP
+cruza la aritmética en `ReceiptRequest`/`ReceiptService::createLine()` — ver
+[el contrato de valor monetario](../finance/monetary-value-contract.es.md) para el inventario
+completo de campos y lo que sigue diferido (cantidades, `WeightedAverageCostCalculator` y todo
+dominio distinto de Recepciones sigue como una fase acotada posterior).
 
 ## Registro (posting)
 

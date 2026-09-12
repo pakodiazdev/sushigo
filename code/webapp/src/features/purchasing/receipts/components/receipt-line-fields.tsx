@@ -169,7 +169,7 @@ export function ReceiptLineFields({
             aria-label={`Monto bruto línea ${index + 1}`}
             type="text"
             inputMode="decimal"
-            placeholder="p. ej. 4800.0000"
+            placeholder="p. ej. 4800.00"
             error={Boolean(fieldError('gross_amount'))}
             {...register(`lines.${index}.gross_amount`)}
           />
@@ -179,7 +179,7 @@ export function ReceiptLineFields({
             aria-label={`Descuentos línea ${index + 1}`}
             type="text"
             inputMode="decimal"
-            placeholder="0.0000"
+            placeholder="0.00"
             error={Boolean(fieldError('discounts'))}
             {...register(`lines.${index}.discounts`)}
           />
@@ -191,7 +191,7 @@ export function ReceiptLineFields({
             aria-label={`Gastos asignados línea ${index + 1}`}
             type="text"
             inputMode="decimal"
-            placeholder="0.0000"
+            placeholder="0.00"
             error={Boolean(fieldError('allocated_expenses'))}
             {...register(`lines.${index}.allocated_expenses`)}
           />
@@ -201,7 +201,7 @@ export function ReceiptLineFields({
             aria-label={`Impuestos no recuperables línea ${index + 1}`}
             type="text"
             inputMode="decimal"
-            placeholder="0.0000"
+            placeholder="0.00"
             error={Boolean(fieldError('non_recoverable_taxes'))}
             {...register(`lines.${index}.non_recoverable_taxes`)}
           />

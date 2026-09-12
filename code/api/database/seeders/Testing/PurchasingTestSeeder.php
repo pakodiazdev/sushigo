@@ -18,6 +18,7 @@ use App\Models\VariantPrice;
 use App\Models\VariantPurchasePresentation;
 use App\Services\Inventory\ReceiptService;
 use App\Support\Clock\ApplicationClock;
+use App\Support\Money\Money;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
@@ -104,10 +105,10 @@ class PurchasingTestSeeder extends Seeder
                     orderedPackages: 8,
                     receivedPackages: 10,
                     bonusPackages: 2,
-                    grossAmount: 3840.00,
-                    discounts: 0,
-                    allocatedExpenses: 150.00,
-                    nonRecoverableTaxes: 0,
+                    grossAmount: Money::fromDecimalString('3840.00'),
+                    discounts: Money::zero(),
+                    allocatedExpenses: Money::fromDecimalString('150.00'),
+                    nonRecoverableTaxes: Money::zero(),
                 ),
             ],
         ));
