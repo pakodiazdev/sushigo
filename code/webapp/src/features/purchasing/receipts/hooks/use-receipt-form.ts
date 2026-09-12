@@ -7,24 +7,35 @@ import { receiptApi, type ReceiptPayload } from '../api/receipt-api'
 import { receiptQueryKeys } from '../api/query-keys'
 import type { Receipt } from '../types'
 
-// Money fields follow the string-decimal(15,4) convention from #436 (VariantPrice) — the form
-// sends gross_amount/discounts/allocated_expenses/non_recoverable_taxes as decimal strings so the
-// value the user typed reaches the backend's decimal(15,4) validation unchanged, without an
+// Money fields send gross_amount/discounts/allocated_expenses/non_recoverable_taxes as decimal
+// strings so the value the user typed reaches the backend validation unchanged, without an
 // intermediate JS-number parse/reformat step. Floats are still fine for display and for the live
 // preview math (compute-receipt-line-totals.ts) and are what the API actually returns — this
 // convention only protects the outgoing payload. Package quantities follow #431's plain-number
 // convention instead, since they're counts, not currency.
+//
+// At most 2 fractional digits (#415, per TD-05: Money is scale 2) — matches the backend's
+// `decimal:0,2` rule on these same fields (ReceiptRequest::receiptRules()). A 3rd/4th digit here
+// must be rejected client-side too, not just server-side with a 422, and a legacy draft persisted
+// with more precision (from before #415) still displays fine since this only validates on submit.
+//
+// At most 11 integer digits matches the backend's `max:99999999999.99` bound (the practical
+// ceiling of receipt_lines' decimal(15,4) columns). Without it, a pasted all-digit amount large
+// enough for `Number(...)` to become `Infinity` still structurally matched `^\d+...` and reached
+// the live preview's money arithmetic before this rule (or the backend) ever rejected it.
+const MONEY_PATTERN = /^\d{1,11}(\.\d{1,2})?$/
+
 const moneyString = z
   .string()
   .min(1, 'Ingresa un monto')
-  .regex(/^\d+(\.\d{1,4})?$/, 'Usa un monto válido con hasta 4 decimales')
+  .regex(MONEY_PATTERN, 'Usa un monto válido con hasta 2 decimales y máximo 11 dígitos enteros')
 
 // discounts/allocated_expenses/non_recoverable_taxes are optional on the backend
 // (ReceiptRequest: 'nullable') — unlike gross_amount, clearing the field entirely must be a
 // valid, submittable state, not a validation error.
 const optionalMoneyString = z
   .string()
-  .regex(/^$|^\d+(\.\d{1,4})?$/, 'Usa un monto válido con hasta 4 decimales')
+  .regex(new RegExp(`^$|${MONEY_PATTERN.source}`), 'Usa un monto válido con hasta 2 decimales y máximo 11 dígitos enteros')
 
 const receiptLineSchema = z
   .object({

@@ -25,10 +25,10 @@ namespace App\Http\Requests\Inventory\Receipt;
  *       @OA\Property(property="ordered_packages", type="number", format="float", minimum=0, example=10),
  *       @OA\Property(property="received_packages", type="number", format="float", minimum=0.0001, example=10),
  *       @OA\Property(property="bonus_packages", type="number", format="float", minimum=0, example=1),
- *       @OA\Property(property="gross_amount", type="number", format="float", minimum=0, example=4800),
- *       @OA\Property(property="discounts", type="number", format="float", minimum=0, example=0),
- *       @OA\Property(property="allocated_expenses", type="number", format="float", minimum=0, example=150),
- *       @OA\Property(property="non_recoverable_taxes", type="number", format="float", minimum=0, example=0)
+ *       @OA\Property(property="gross_amount", type="number", format="float", minimum=0, maximum=99999999999.99, example=4800, description="Money at scale 2 (TD-05) — at most 2 fractional digits, capped at the decimal(15,4) column max"),
+ *       @OA\Property(property="discounts", type="number", format="float", minimum=0, maximum=99999999999.99, example=0, description="Money at scale 2 (TD-05) — at most 2 fractional digits, capped at the decimal(15,4) column max"),
+ *       @OA\Property(property="allocated_expenses", type="number", format="float", minimum=0, maximum=99999999999.99, example=150, description="Money at scale 2 (TD-05) — at most 2 fractional digits, capped at the decimal(15,4) column max"),
+ *       @OA\Property(property="non_recoverable_taxes", type="number", format="float", minimum=0, maximum=99999999999.99, example=0, description="Money at scale 2 (TD-05) — at most 2 fractional digits, capped at the decimal(15,4) column max")
  *     )
  *   )
  * )

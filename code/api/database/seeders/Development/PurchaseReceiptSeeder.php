@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Models\VariantPurchasePresentation;
 use App\Services\Inventory\ReceiptService;
 use App\Support\Clock\ApplicationClock;
+use App\Support\Money\Money;
 use Database\Seeders\Base\RepeatableSeeder;
 
 /**
@@ -142,10 +143,10 @@ class PurchaseReceiptSeeder extends RepeatableSeeder
                 orderedPackages: $lineConfig['ordered_packages'],
                 receivedPackages: $lineConfig['received_packages'],
                 bonusPackages: $lineConfig['bonus_packages'],
-                grossAmount: $lineConfig['gross_amount'],
-                discounts: $lineConfig['discounts'],
-                allocatedExpenses: $lineConfig['allocated_expenses'],
-                nonRecoverableTaxes: $lineConfig['non_recoverable_taxes'],
+                grossAmount: Money::fromDecimalString((string) $lineConfig['gross_amount']),
+                discounts: Money::fromDecimalString((string) $lineConfig['discounts']),
+                allocatedExpenses: Money::fromDecimalString((string) $lineConfig['allocated_expenses']),
+                nonRecoverableTaxes: Money::fromDecimalString((string) $lineConfig['non_recoverable_taxes']),
             );
         }
 

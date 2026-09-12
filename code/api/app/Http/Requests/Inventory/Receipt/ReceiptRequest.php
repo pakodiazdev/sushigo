@@ -12,6 +12,7 @@ use App\Models\InventoryLocation;
 use App\Models\Supplier;
 use App\Models\SupplierOffering;
 use App\Models\VariantPurchasePresentation;
+use App\Support\Money\Money;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -20,6 +21,15 @@ abstract class ReceiptRequest extends FormRequest
 {
     use ScopesDestinationLocationToAccessibleUnits;
     use SharesReceiptValidationMessages;
+
+    /**
+     * The largest amount `receipt_lines`' `decimal(15,4)` money columns can hold, expressed
+     * with `Money::SCALE` (2) fractional digits — the practical ceiling once `decimal:0,2`
+     * (below) has already ruled out a 3rd/4th digit. Kept as a decimal string, never a float,
+     * so bounding a component or the derived net amount never introduces its own float
+     * comparison boundary alongside the ones #415 already removed.
+     */
+    private const MAX_COLUMN_AMOUNT = '99999999999.99';
 
     public function authorize(): bool
     {
@@ -47,13 +57,29 @@ abstract class ReceiptRequest extends FormRequest
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.variant_purchase_presentation_id' => ['required', 'string', Rule::exists('variant_purchase_presentations', 'public_id')->withoutTrashed()],
             'lines.*.supplier_offering_id' => ['nullable', 'string', Rule::exists('supplier_offerings', 'public_id')->withoutTrashed()],
-            'lines.*.ordered_packages' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.received_packages' => ['required', 'numeric', 'gt:0'],
-            'lines.*.bonus_packages' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.gross_amount' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.discounts' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.allocated_expenses' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.non_recoverable_taxes' => ['nullable', 'numeric', 'min:0'],
+            // `decimal:0,4` matches the quantity precision already enforced on
+            // PurchasePresentationTemplate::base_unit_quantity (both columns are
+            // decimal(15,4)) — without it, `received_packages` could carry more precision
+            // than `base_units_received = received_packages * presentation_factor` can
+            // ever expose, and a sub-scale-4 value could make that product round to an
+            // effectively-zero divisor (see `createLine()`'s own defensive guard for the
+            // case this still doesn't rule out: a presentation factor at its own 0.0001
+            // floor multiplied by a `received_packages` also at its floor is exactly
+            // representable, but this bounds the *request* input to the same precision).
+            'lines.*.ordered_packages' => ['nullable', 'numeric', 'min:0', 'decimal:0,4'],
+            'lines.*.received_packages' => ['required', 'numeric', 'min:0.0001', 'decimal:0,4'],
+            'lines.*.bonus_packages' => ['nullable', 'numeric', 'min:0', 'decimal:0,4'],
+            // `decimal:0,2` enforces TD-05's Money scale (#415) at the boundary: a client
+            // cannot submit more than 2 fractional digits, so `Money::fromDecimalString()`
+            // downstream never sees an amount it would have to reject. `max` bounds each
+            // component to what `receipt_lines`' decimal(15,4) columns can actually hold —
+            // without it, an individually-storable component could still combine into a net
+            // total that overflows the column and fails at insert instead of returning 422
+            // (see `validateNetAcquisitionAmount()` for the net-total half of this check).
+            'lines.*.gross_amount' => ['nullable', 'numeric', 'min:0', 'max:'.self::MAX_COLUMN_AMOUNT, 'decimal:0,2'],
+            'lines.*.discounts' => ['nullable', 'numeric', 'min:0', 'max:'.self::MAX_COLUMN_AMOUNT, 'decimal:0,2'],
+            'lines.*.allocated_expenses' => ['nullable', 'numeric', 'min:0', 'max:'.self::MAX_COLUMN_AMOUNT, 'decimal:0,2'],
+            'lines.*.non_recoverable_taxes' => ['nullable', 'numeric', 'min:0', 'max:'.self::MAX_COLUMN_AMOUNT, 'decimal:0,2'],
         ];
     }
 
@@ -130,20 +156,52 @@ abstract class ReceiptRequest extends FormRequest
         }
     }
 
-    /** @param  array<string, mixed>  $line */
+    /**
+     * @param  array<string, mixed>  $line
+     */
     private function validateNetAcquisitionAmount(Validator $validator, int|string $index, array $line): void
     {
-        $netAcquisitionAmount = (float) ($line['gross_amount'] ?? 0)
-            - (float) ($line['discounts'] ?? 0)
-            + (float) ($line['allocated_expenses'] ?? 0)
-            + (float) ($line['non_recoverable_taxes'] ?? 0);
+        $moneyFields = ['gross_amount', 'discounts', 'allocated_expenses', 'non_recoverable_taxes'];
 
-        if ($netAcquisitionAmount < 0) {
+        foreach ($moneyFields as $field) {
+            // The 'numeric'/'decimal:0,2' rules already reported this field — skip the
+            // derived check rather than risk Money::fromDecimalString() rejecting input
+            // the primary rule has already flagged.
+            if ($validator->errors()->has("lines.{$index}.{$field}")) {
+                return;
+            }
+        }
+
+        $netAcquisitionAmount = $this->lineMoney($line, 'gross_amount')
+            ->subtract($this->lineMoney($line, 'discounts'))
+            ->add($this->lineMoney($line, 'allocated_expenses'))
+            ->add($this->lineMoney($line, 'non_recoverable_taxes'));
+
+        if ($netAcquisitionAmount->isNegative()) {
             $validator->errors()->add(
                 "lines.{$index}.discounts",
                 'Los descuentos no pueden exceder el monto bruto más los gastos asignados y los impuestos no recuperables.'
             );
+
+            return;
         }
+
+        // Each component already fits `receipt_lines`' decimal(15,4) columns individually
+        // (the `max` rule above), but their sum can still overflow the same column on
+        // `net_acquisition_amount` — e.g. gross_amount at the column max plus any positive
+        // allocated_expenses. Catch that here so it's a 422, not a failed INSERT.
+        if ($netAcquisitionAmount->compareTo(Money::fromDecimalString(self::MAX_COLUMN_AMOUNT)) > 0) {
+            $validator->errors()->add(
+                "lines.{$index}.gross_amount",
+                'El monto bruto más los gastos asignados y los impuestos no recuperables, menos los descuentos, excede el máximo permitido.'
+            );
+        }
+    }
+
+    /** @param  array<string, mixed>  $line */
+    private function lineMoney(array $line, string $field): Money
+    {
+        return Money::fromDecimalString((string) ($line[$field] ?? 0));
     }
 
     /** @param  array<string, mixed>  $line */
@@ -190,10 +248,10 @@ abstract class ReceiptRequest extends FormRequest
                 orderedPackages: (float) ($line['ordered_packages'] ?? 0),
                 receivedPackages: (float) $line['received_packages'],
                 bonusPackages: (float) ($line['bonus_packages'] ?? 0),
-                grossAmount: (float) ($line['gross_amount'] ?? 0),
-                discounts: (float) ($line['discounts'] ?? 0),
-                allocatedExpenses: (float) ($line['allocated_expenses'] ?? 0),
-                nonRecoverableTaxes: (float) ($line['non_recoverable_taxes'] ?? 0),
+                grossAmount: $this->lineMoney($line, 'gross_amount'),
+                discounts: $this->lineMoney($line, 'discounts'),
+                allocatedExpenses: $this->lineMoney($line, 'allocated_expenses'),
+                nonRecoverableTaxes: $this->lineMoney($line, 'non_recoverable_taxes'),
             );
         }, $data['lines']);
 

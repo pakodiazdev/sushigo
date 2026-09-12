@@ -67,4 +67,51 @@ describe('computeReceiptLineTotals', () => {
     expect(totals.baseUnitsReceived).toBe(50)
     expect(totals.effectiveUnitCost).toBe(19.5)
   })
+
+  it('computes the net amount exactly for values that drift under raw binary-float arithmetic (#415)', () => {
+    // `0 - 0 + 0.1 + 0.2` is `0.30000000000000004` under raw JS `number` arithmetic — the
+    // same class of drift as the canonical `0.1 + 0.2` example.
+    expect(0 - 0 + 0.1 + 0.2).not.toBe(0.3)
+
+    const totals = computeReceiptLineTotals({
+      receivedPackages: 1,
+      presentationFactor: 1,
+      grossAmount: 0,
+      discounts: 0,
+      allocatedExpenses: 0.1,
+      nonRecoverableTaxes: 0.2,
+    })
+
+    expect(totals.netAcquisitionAmount).toBe(0.3)
+  })
+
+  it('does not crash when a transiently-typed amount becomes Infinity (#415 review)', () => {
+    // Number('9'.repeat(400)) is Infinity — addMoney()/moneyToMinorUnits() intentionally throw
+    // on a non-finite amount for their normal callers, but this live preview runs on every
+    // keystroke, ahead of the form's own validation settling, so it must not crash the render.
+    const hugeAmount = Number('9'.repeat(400))
+    expect(hugeAmount).toBe(Number.POSITIVE_INFINITY)
+
+    expect(() =>
+      computeReceiptLineTotals({
+        receivedPackages: 1,
+        presentationFactor: 1,
+        grossAmount: hugeAmount,
+        discounts: 0,
+        allocatedExpenses: 0,
+        nonRecoverableTaxes: 0,
+      })
+    ).not.toThrow()
+
+    const totals = computeReceiptLineTotals({
+      receivedPackages: 1,
+      presentationFactor: 1,
+      grossAmount: hugeAmount,
+      discounts: 0,
+      allocatedExpenses: 0,
+      nonRecoverableTaxes: 0,
+    })
+
+    expect(totals.netAcquisitionAmount).toBe(0)
+  })
 })
