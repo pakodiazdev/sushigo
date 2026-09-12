@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { fetchAllPages } from '@/lib/fetch-all-pages'
-import { inventoryLocationApi, itemVariantApi, itemApi, purchasePresentationTemplateApi } from '@/services/inventory-api'
+import {
+  inventoryLocationApi,
+  itemVariantApi,
+  itemApi,
+  purchasePresentationTemplateApi,
+  variantPurchasePresentationApi,
+} from '@/services/inventory-api'
 import type { InventoryLocation, PurchasePresentationTemplate, UnitOfMeasure } from '@/types/inventory'
 import type { OperatingUnit } from '@/types/auth'
 
@@ -20,6 +26,8 @@ export const inventoryQueryKeys = {
   unitsOfMeasure: () => [...inventoryQueryKeys.all, 'units-of-measure'] as const,
   operatingUnits: () => ['operating-units'] as const,
   purchasePresentationTemplates: () => [...inventoryQueryKeys.all, 'purchase-presentation-templates'] as const,
+  variantPurchasePresentations: (productId: string, variantId: string) =>
+    [...inventoryQueryKeys.all, 'variant-purchase-presentations', productId, variantId] as const,
 }
 
 export interface SelectOption {
@@ -166,6 +174,21 @@ export function usePurchasePresentationTemplatesSelect(enabled = true) {
     queryFn: () => purchasePresentationTemplateApi.list({ is_active: true }),
     enabled,
     select: (response) => (response.data.data || []) as PurchasePresentationTemplate[],
+  })
+}
+
+/**
+ * Hook to fetch a Variant's Purchase Presentations for use in workflow selectors (#580) — the
+ * Supplier Offering create form and the Purchase Receipt line's Product→Variant→Presentation
+ * cascade both need this exact same query (only active presentations, scoped to one Product +
+ * Variant pair), so it is defined once here instead of duplicated in each feature's hook.
+ */
+export function useVariantPurchasePresentationsSelect(productId: string, variantId: string, enabled = true) {
+  return useQuery({
+    queryKey: inventoryQueryKeys.variantPurchasePresentations(productId, variantId),
+    queryFn: () => variantPurchasePresentationApi.list(productId, variantId),
+    enabled: Boolean(productId && variantId) && enabled,
+    select: (response) => (response.data.data || []).filter((presentation) => presentation.is_active),
   })
 }
 

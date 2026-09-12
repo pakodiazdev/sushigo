@@ -23,7 +23,7 @@ use App\Support\Access\OperatingUnitScope;
  *
  *   @OA\Response(response=200, description="Success", @OA\JsonContent(ref="#/components/schemas/ResponsePaginated")),
  *   @OA\Response(response=401, description="Unauthenticated"),
- *   @OA\Response(response=403, description="Forbidden — requires inventory_locations.view or receipts.manage permission")
+ *   @OA\Response(response=403, description="Forbidden — requires inventory_locations.view, receipts.manage, or inventory_catalog.lookup permission")
  * )
  */
 class ListInventoryLocationsController extends Controller

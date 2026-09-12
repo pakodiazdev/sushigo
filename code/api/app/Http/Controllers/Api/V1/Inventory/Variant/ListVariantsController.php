@@ -37,7 +37,7 @@ use App\Http\Responses\Common\ResponsePaginated;
  *   ),
  *
  *   @OA\Response(response=401, description="Unauthenticated"),
- *   @OA\Response(response=403, description="Forbidden — requires items.view, suppliers.manage, or receipts.manage permission"),
+ *   @OA\Response(response=403, description="Forbidden — requires items.view, suppliers.manage, receipts.manage, or inventory_catalog.lookup permission"),
  *   @OA\Response(response=404, description="Product not found", @OA\JsonContent(ref="#/components/schemas/ResponseError")),
  *   @OA\Response(response=422, description="Validation Error — invalid per_page, search or is_active", @OA\JsonContent(ref="#/components/schemas/ResponseError"))
  * )

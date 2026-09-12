@@ -40,7 +40,7 @@ use Illuminate\Database\Eloquent\Builder;
  *   ),
  *
  *   @OA\Response(response=401, description="Unauthenticated"),
- *   @OA\Response(response=403, description="Forbidden — requires items.view, suppliers.manage, or receipts.manage permission")
+ *   @OA\Response(response=403, description="Forbidden — requires items.view, suppliers.manage, receipts.manage, or inventory_catalog.lookup permission")
  * )
  */
 class ListProductsController extends Controller

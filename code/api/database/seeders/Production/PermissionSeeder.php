@@ -163,6 +163,12 @@ class PermissionSeeder extends LockedSeeder
             'inventory_locations.view',
             'inventory_locations.manage',
 
+            // Inventario — Consulta de catálogo de referencia entre flujos (#580). Grant this to a
+            // workflow's role (or directly to a user) that needs read-only Product/Variant/
+            // Purchase Presentation/Location/Supplier lookup without that domain's own .view
+            // permission — see App\Support\InventoryCatalogLookup for the full contract.
+            'inventory_catalog.lookup',
+
             // Inventario — Unidades de medida
             'units_of_measure.manage',
 

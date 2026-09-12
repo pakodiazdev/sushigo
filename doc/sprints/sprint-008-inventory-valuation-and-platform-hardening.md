@@ -430,7 +430,7 @@ but every Issue is a well-understood review follow-up with a named target contra
 | ⏳ | #415 | — | — | — | — | Not started |
 | ⏳ | #579 | — | — | — | — | Not started |
 | ⏳ | #575 | — | — | — | — | Not started |
-| ⏳ | #580 | — | — | — | — | Not started |
+| ✅ | #580 | Replaced the growing `permission:a\|b\|c` OR-strings on six reference-data lookup routes (Products, Variants, Variant Purchase Presentations, Inventory Locations, Suppliers, Supplier Offerings) with `App\Support\InventoryCatalogLookup` — one documented OR-list per domain, each including a new generic `inventory_catalog.lookup` permission a future workflow can be granted directly, without touching any route. Preserved the existing `suppliers.manage` (#505) and `receipts.manage` (#433) exceptions verbatim. Also extracted one shared frontend query hook for the Supplier Offering/Purchase Receipt Presentation-lookup cascade they duplicated identically. | PR #620 | — | 55m | Full `Feature/Inventory` PHPUnit suite (793/793) and full Vitest suite (4618/4618) passing unchanged; new `InventoryCatalogLookupPermissionTest` covers catalog viewer, supplier manager, receipt manager, the new generic-permission-only operator, unauthorized users, inactive Operating Unit membership, and admin bypass; Pint/ESLint/TypeScript clean. |
 | ⏳ | #581 | — | — | — | — | Not started |
 | ⏳ | #576 | — | — | — | — | Not started |
 | ⏳ | #577 | — | — | — | — | Not started |

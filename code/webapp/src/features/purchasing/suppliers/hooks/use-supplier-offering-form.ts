@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useFormMutation } from '@/hooks/use-form-mutation'
-import { productApi, productVariantApi, variantPurchasePresentationApi } from '@/services/inventory-api'
+import { useVariantPurchasePresentationsSelect } from '@/hooks/use-inventory-queries'
+import { productApi, productVariantApi } from '@/services/inventory-api'
 import { supplierOfferingApi } from '../api/supplier-api'
 import type { SupplierOffering } from '../types'
 
@@ -91,15 +92,11 @@ export function useSupplierOfferingForm({
     queryFn: () => productVariantApi.list(productId, { search: variantSearch || undefined, is_active: true, per_page: 20 }),
     enabled: Boolean(productId) && !isEditing,
   })
-  const presentationsQuery = useQuery({
-    queryKey: ['supplier-form-presentations', productId, variantId],
-    queryFn: () => variantPurchasePresentationApi.list(productId, variantId),
-    enabled: Boolean(productId && variantId) && !isEditing,
-  })
+  const presentationsQuery = useVariantPurchasePresentationsSelect(productId, variantId, !isEditing)
 
   const products = productsQuery.data?.data.data ?? []
   const variants = (variantsQuery.data?.data.data ?? []).filter((variant) => variant.is_active)
-  const presentations = (presentationsQuery.data?.data.data ?? []).filter((presentation) => presentation.is_active)
+  const presentations = presentationsQuery.data ?? []
 
   const { execute, validationErrors, isPending } = useFormMutation({
     mutationFn: (values: SupplierOfferingFormValues) => {

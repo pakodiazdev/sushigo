@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { UseFormSetValue } from 'react-hook-form'
+import { useVariantPurchasePresentationsSelect } from '@/hooks/use-inventory-queries'
 import { fetchAllPages } from '@/lib/fetch-all-pages'
-import { productApi, productVariantApi, variantPurchasePresentationApi } from '@/services/inventory-api'
+import { productApi, productVariantApi } from '@/services/inventory-api'
 import { supplierOfferingApi } from '@/features/purchasing/suppliers/api/supplier-api'
 import type { ReceiptFormValues } from './use-receipt-form'
 
@@ -32,11 +33,7 @@ export function useReceiptLineFields({ index, supplierId, setValue }: UseReceipt
     queryFn: () => fetchAllPages((page) => productVariantApi.list(productId, { page, per_page: 100 })),
     enabled: Boolean(productId),
   })
-  const presentationsQuery = useQuery({
-    queryKey: ['receipt-form-presentations', productId, variantId],
-    queryFn: () => variantPurchasePresentationApi.list(productId, variantId),
-    enabled: Boolean(productId && variantId),
-  })
+  const presentationsQuery = useVariantPurchasePresentationsSelect(productId, variantId)
   const offeringsQuery = useQuery({
     queryKey: ['receipt-form-offerings', supplierId],
     queryFn: () => supplierOfferingApi.list(supplierId, { is_active: true }),
@@ -45,7 +42,7 @@ export function useReceiptLineFields({ index, supplierId, setValue }: UseReceipt
 
   const products = productsQuery.data?.data.data ?? []
   const variants = (variantsQuery.data?.data.data ?? []).filter((variant) => variant.is_active)
-  const presentations = (presentationsQuery.data?.data.data ?? []).filter((presentation) => presentation.is_active)
+  const presentations = presentationsQuery.data ?? []
   const offerings = offeringsQuery.data?.data.data ?? []
 
   const onProductChange = (nextProductId: string) => {

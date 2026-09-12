@@ -43,7 +43,8 @@ vi.mock('@tanstack/react-query', () => ({
       data = { data: { data: [{ id: 'p1', name: 'Arroz' }] } }
     } else if (key[0] === 'receipt-form-variants') {
       data = { data: { data: [{ id: 'v1', name: 'Arroz 20kg', code: 'RICE-20', is_active: true }] } }
-    } else if (key[0] === 'receipt-form-presentations') {
+    } else if (key.includes('variant-purchase-presentations')) {
+      // Mirrors useVariantPurchasePresentationsSelect (#580).
       data = { data: { data: [{ id: 'pp1', is_active: true, template: { name: 'Caja x24', base_unit_quantity: 24 } }] } }
     } else if (key[0] === 'receipt-form-offerings') {
       data = { data: { data: [{ id: 'off1', presentation: { id: 'pp1' }, quoted_price: 480, supplier_code: 'ARROZ' }] } }

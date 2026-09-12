@@ -10,6 +10,7 @@ import {
   useItemVariantsSelect,
   useUnitsOfMeasureSelect,
   useOperatingUnitsSelect,
+  useVariantPurchasePresentationsSelect,
   inventoryQueryKeys,
   toSelectOptions,
   findById,
@@ -26,6 +27,9 @@ vi.mock('@/services/inventory-api', () => ({
     list: vi.fn(),
   },
   itemVariantApi: {
+    list: vi.fn(),
+  },
+  variantPurchasePresentationApi: {
     list: vi.fn(),
   },
 }))
@@ -131,6 +135,42 @@ describe('Inventory Query Hooks', () => {
 
       const params = vi.mocked(inventoryApi.inventoryLocationApi.list).mock.calls[0]![0] as Record<string, unknown>
       expect(params).not.toHaveProperty('can_receive_purchases')
+    })
+  })
+
+  describe('useVariantPurchasePresentationsSelect', () => {
+    it('fetches presentations for the given product/variant pair and filters out inactive ones (#580)', async () => {
+      const mockPresentations = [
+        { id: 1, item_variant_id: 1, is_active: true },
+        { id: 2, item_variant_id: 1, is_active: false },
+      ]
+
+      vi.mocked(inventoryApi.variantPurchasePresentationApi.list).mockResolvedValue({
+        data: { data: mockPresentations },
+      } as unknown as Awaited<ReturnType<typeof inventoryApi.variantPurchasePresentationApi.list>>)
+
+      const { result } = renderHook(() => useVariantPurchasePresentationsSelect('prod-1', 'var-1'), { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(inventoryApi.variantPurchasePresentationApi.list).toHaveBeenCalledWith('prod-1', 'var-1')
+      expect(result.current.data).toEqual([mockPresentations[0]])
+    })
+
+    it('does not fetch when either id is missing', () => {
+      const { result } = renderHook(() => useVariantPurchasePresentationsSelect('', 'var-1'), { wrapper })
+
+      expect(result.current.isFetching).toBe(false)
+      expect(inventoryApi.variantPurchasePresentationApi.list).not.toHaveBeenCalled()
+    })
+
+    it('does not fetch when the caller explicitly disables it (e.g. an editing form)', () => {
+      const { result } = renderHook(() => useVariantPurchasePresentationsSelect('prod-1', 'var-1', false), { wrapper })
+
+      expect(result.current.isFetching).toBe(false)
+      expect(inventoryApi.variantPurchasePresentationApi.list).not.toHaveBeenCalled()
     })
   })
 

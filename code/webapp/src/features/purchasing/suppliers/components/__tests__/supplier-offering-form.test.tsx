@@ -26,7 +26,7 @@ const settled = <T,>(rows: T[]) => ({
 })
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
+  useQuery: ({ queryKey, select }: { queryKey: unknown[]; select?: (raw: unknown) => unknown }) => {
     if (queryKey[0] === 'supplier-form-products') {
       const search = String(queryKey[1] ?? '')
       return settled(
@@ -38,7 +38,10 @@ vi.mock('@tanstack/react-query', () => ({
     if (queryKey[0] === 'supplier-form-variants') {
       return settled([{ id: 'v1', name: 'Entero', code: 'SAL-1', is_active: true }])
     }
-    return settled([{ id: 'pp1', is_active: true, template: { name: 'Caja', package_type: 'BOX', base_unit_quantity: 12 } }])
+    // useVariantPurchasePresentationsSelect (#580) applies its own `select`, unlike the two
+    // branches above which still unwrap `.data.data` manually in the consuming hook.
+    const raw = { data: { data: [{ id: 'pp1', is_active: true, template: { name: 'Caja', package_type: 'BOX', base_unit_quantity: 12 } }] } }
+    return { data: select ? select(raw) : raw, isLoading: false, isSuccess: true, isError: false }
   },
 }))
 

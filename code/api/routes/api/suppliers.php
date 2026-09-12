@@ -11,17 +11,18 @@ use App\Http\Controllers\Api\V1\Inventory\SupplierOffering\DeleteSupplierOfferin
 use App\Http\Controllers\Api\V1\Inventory\SupplierOffering\ListSupplierOfferingsController;
 use App\Http\Controllers\Api\V1\Inventory\SupplierOffering\ShowSupplierOfferingController;
 use App\Http\Controllers\Api\V1\Inventory\SupplierOffering\UpdateSupplierOfferingController;
+use App\Support\InventoryCatalogLookup;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:api')
     ->prefix('inventory/suppliers')
     ->scopeBindings()
     ->group(function () {
-        // List also accepts receipts.manage (#433) — the Purchase Receipt form needs to populate
-        // its Supplier selector for a user authorized to create Receipts but not the Supplier
-        // catalog itself; show/create/update/delete stay suppliers.*-only since the Receipt form
-        // never calls them.
-        Route::get('/', ListSuppliersController::class)->name('suppliers.list')->middleware('permission:suppliers.view|receipts.manage');
+        // List uses the reference-data lookup contract (#580, App\Support\InventoryCatalogLookup)
+        // — the Purchase Receipt form needs to populate its Supplier selector for a user authorized
+        // to create Receipts but not the Supplier catalog itself (#433); show/create/update/delete
+        // stay suppliers.*-only since the Receipt form never calls them.
+        Route::get('/', ListSuppliersController::class)->name('suppliers.list')->middleware(InventoryCatalogLookup::middleware(InventoryCatalogLookup::SUPPLIERS));
         // Declared before the {supplier} routes below so "next-code" is not captured as a binding.
         Route::get('/next-code', SuggestSupplierCodeController::class)->name('suppliers.next-code')->middleware('permission:suppliers.manage');
         Route::post('/', CreateSupplierController::class)->name('suppliers.create')->middleware('permission:suppliers.manage');
@@ -29,7 +30,7 @@ Route::middleware('auth:api')
         Route::prefix('{supplier}/offerings')->group(function () {
             // Same reasoning as the Suppliers list above — the Receipt form's per-line Supplier
             // Offering selector needs this.
-            Route::get('/', ListSupplierOfferingsController::class)->name('suppliers.offerings.list')->middleware('permission:suppliers.view|receipts.manage');
+            Route::get('/', ListSupplierOfferingsController::class)->name('suppliers.offerings.list')->middleware(InventoryCatalogLookup::middleware(InventoryCatalogLookup::SUPPLIERS));
             Route::post('/', CreateSupplierOfferingController::class)->name('suppliers.offerings.create')->middleware('permission:suppliers.manage');
 
             Route::prefix('{offering}')->group(function () {

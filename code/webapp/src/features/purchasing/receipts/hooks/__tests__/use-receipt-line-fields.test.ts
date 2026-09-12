@@ -4,44 +4,44 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useReceiptLineFields } from '../use-receipt-line-fields'
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: ({ queryKey }: { queryKey: string[] }) => {
+  useQuery: ({ queryKey, select }: { queryKey: readonly unknown[]; select?: (raw: unknown) => unknown }) => {
+    let raw: unknown
+
     if (queryKey[0] === 'receipt-form-products') {
-      return { data: { data: { data: [{ id: 'p1', name: 'Arroz' }] } } }
-    }
-    if (queryKey[0] === 'receipt-form-variants') {
-      return {
+      raw = { data: { data: [{ id: 'p1', name: 'Arroz' }] } }
+    } else if (queryKey[0] === 'receipt-form-variants') {
+      raw = {
         data: {
-          data: {
-            data: [
-              { id: 'v1', name: 'Arroz 20kg', code: 'RICE-20', is_active: true },
-              { id: 'v2', name: 'Descontinuado', code: 'RICE-OLD', is_active: false },
-            ],
-          },
+          data: [
+            { id: 'v1', name: 'Arroz 20kg', code: 'RICE-20', is_active: true },
+            { id: 'v2', name: 'Descontinuado', code: 'RICE-OLD', is_active: false },
+          ],
         },
       }
-    }
-    if (queryKey[0] === 'receipt-form-presentations') {
-      return {
+    } else if (queryKey.includes('variant-purchase-presentations')) {
+      // Mirrors useVariantPurchasePresentationsSelect (#580) — its `select` filters to active
+      // presentations, so the raw shape here is the axios response it receives, not the
+      // already-filtered array.
+      raw = {
         data: {
-          data: {
-            data: [
-              { id: 'pp1', is_active: true, template: { name: 'Caja x24', base_unit_quantity: 24 } },
-              { id: 'pp2', is_active: false, template: { name: 'Costal', base_unit_quantity: 50 } },
-            ],
-          },
+          data: [
+            { id: 'pp1', is_active: true, template: { name: 'Caja x24', base_unit_quantity: 24 } },
+            { id: 'pp2', is_active: false, template: { name: 'Costal', base_unit_quantity: 50 } },
+          ],
         },
       }
-    }
-    return {
-      data: {
+    } else {
+      raw = {
         data: {
           data: [
             { id: 'off1', presentation: { id: 'pp1' }, quoted_price: 480 },
             { id: 'off2', presentation: { id: 'pp2' }, quoted_price: 900 },
           ],
         },
-      },
+      }
     }
+
+    return { data: select ? select(raw) : raw }
   },
 }))
 

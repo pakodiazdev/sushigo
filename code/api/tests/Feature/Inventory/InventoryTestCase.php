@@ -56,6 +56,7 @@ abstract class InventoryTestCase extends TestCase
             'purchase_presentation_templates.view', 'purchase_presentation_templates.manage',
             'suppliers.view', 'suppliers.manage',
             'receipts.view', 'receipts.manage',
+            'inventory_catalog.lookup',
         ];
 
         foreach ($inventoryPermissions as $name) {
