@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { getApiErrorMessage, isForbiddenError, isNotFoundError } from '@/lib/api-error'
 import { receiptApi } from '../api/receipt-api'
 import { receiptQueryKeys } from '../api/query-keys'
 import type { Receipt, ReceiptStatus, ReceiptSummary } from '../types'
@@ -53,6 +53,7 @@ export function useReceiptsPage() {
   const receiptsQuery = useQuery({
     queryKey: receiptQueryKeys.list(listParams),
     queryFn: () => receiptApi.list(listParams),
+    placeholderData: keepPreviousData,
   })
 
   const receipts = receiptsQuery.data?.data.data ?? []
@@ -203,12 +204,35 @@ export function useReceiptsPage() {
     setSearchQuery,
     receipts,
     isLoading: receiptsQuery.isLoading,
-    isError: receiptsQuery.isError,
+    // A 403 (access revoked mid-session) must never be treated as a retryable refresh
+    // failure that leaves cached rows visible — DataGrid's `forbidden` state blocks them
+    // unconditionally, unlike its plain `error` state, which now keeps stale rows on screen.
+    isError: receiptsQuery.isError && !isForbiddenError(receiptsQuery.error),
+    isForbidden: isForbiddenError(receiptsQuery.error),
+    isRefetching: receiptsQuery.isRefetching,
+    refetch: receiptsQuery.refetch,
+    hasActiveFilters: Boolean(searchQueryState || statusFilterState),
+    clearFilters: () => {
+      setSearchQuery('')
+      setStatusFilter('')
+    },
     isPanelOpen,
     panelMode,
     selectedReceipt,
     selectedSummary,
     isDetailLoading: receiptDetailQuery.isLoading && panelMode !== 'create',
+    // Same reasoning as the list's `isForbidden` above: a same-key refetch that comes back
+    // 403 must not be masked by the cached `selectedReceipt` still sitting in the query cache.
+    // A 404 (deleted by another user while the panel was open) is equally non-retryable, so
+    // it's carved out into its own state rather than the generic retryable `isDetailError`.
+    isDetailError:
+      receiptDetailQuery.isError &&
+      panelMode !== 'create' &&
+      !isForbiddenError(receiptDetailQuery.error) &&
+      !isNotFoundError(receiptDetailQuery.error),
+    isDetailForbidden: panelMode !== 'create' && isForbiddenError(receiptDetailQuery.error),
+    isDetailNotFound: panelMode !== 'create' && isNotFoundError(receiptDetailQuery.error),
+    refetchDetail: receiptDetailQuery.refetch,
     handleRowClick,
     handleNewReceipt,
     handleEdit,

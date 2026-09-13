@@ -33,7 +33,7 @@ describe('Item Rápido — Media Gallery Uploader', () => {
     cy.visit('/inventario/insumos')
     cy.url().should('include', '/inventario/insumos', { timeout: 10_000 })
     // A fresh `test:reset` (core only) leaves the items list empty, so the
-    // DataGrid renders its "No data available" state instead of a <table> —
+    // DataGrid renders its "Aún no hay registros" empty state instead of a <table> —
     // wait for the quick-create button instead, which is always present.
     cy.contains('button', 'Item Rápido', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()

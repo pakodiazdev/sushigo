@@ -6,6 +6,7 @@ import {
     getApiFieldError,
     getApiValidationErrors,
     hasApiValidationErrors,
+    isForbiddenError,
 } from '@/lib/api-error'
 
 /**
@@ -218,5 +219,28 @@ describe('hasApiValidationErrors', () => {
         expect(hasApiValidationErrors('string error')).toBe(false)
         expect(hasApiValidationErrors(null)).toBe(false)
         expect(hasApiValidationErrors(undefined)).toBe(false)
+    })
+})
+
+describe('isForbiddenError', () => {
+    it('returns true for a 403 API response', () => {
+        const error = createAxiosError('Forbidden', undefined, 403)
+        expect(isForbiddenError(error)).toBe(true)
+    })
+
+    it('returns false for a non-403 API response', () => {
+        const error = createAxiosError('Server error', undefined, 500)
+        expect(isForbiddenError(error)).toBe(false)
+    })
+
+    it('returns false when response is missing', () => {
+        const error = new AxiosError('Network error')
+        expect(isForbiddenError(error)).toBe(false)
+    })
+
+    it('returns false for non-error values', () => {
+        expect(isForbiddenError('string error')).toBe(false)
+        expect(isForbiddenError(null)).toBe(false)
+        expect(isForbiddenError(undefined)).toBe(false)
     })
 })

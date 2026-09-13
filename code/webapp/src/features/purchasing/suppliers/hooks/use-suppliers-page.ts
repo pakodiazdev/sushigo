@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-context'
+import { isForbiddenError } from '@/lib/api-error'
 import { useAuthStore } from '@/stores/auth.store'
 import { supplierApi, supplierOfferingApi } from '../api/supplier-api'
 import type { Supplier, SupplierOffering } from '../types'
@@ -22,6 +23,7 @@ export function useSuppliersPage() {
       search: search || undefined,
       is_active: status ? status === 'active' : undefined,
     }),
+    placeholderData: keepPreviousData,
   })
   const offeringsQuery = useQuery({
     queryKey: ['supplier-offerings', selectedSupplier?.id],
@@ -84,8 +86,22 @@ export function useSuppliersPage() {
     offeringFormOpen,
     suppliers: suppliersQuery.data?.data.data ?? [],
     suppliersLoading: suppliersQuery.isLoading,
+    // A 403 (access revoked mid-session) must never be treated as a retryable refresh
+    // failure that leaves cached rows visible — DataGrid's `forbidden` state blocks them
+    // unconditionally, unlike its plain `error` state, which now keeps stale rows on screen.
+    suppliersError: suppliersQuery.isError && !isForbiddenError(suppliersQuery.error),
+    suppliersForbidden: isForbiddenError(suppliersQuery.error),
+    suppliersRefetching: suppliersQuery.isRefetching,
+    refetchSuppliers: suppliersQuery.refetch,
+    hasActiveFilters: Boolean(search || status),
+    clearFilters: () => {
+      setSearch('')
+      setStatus('')
+    },
     offerings: offeringsQuery.data?.data.data ?? [],
     offeringsLoading: offeringsQuery.isLoading,
+    offeringsError: offeringsQuery.isError,
+    refetchOfferingsList: offeringsQuery.refetch,
     openNewSupplier,
     openSupplier,
     closeSupplier,

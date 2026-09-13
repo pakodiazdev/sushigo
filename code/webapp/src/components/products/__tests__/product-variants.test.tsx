@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, fireEvent, cleanup } from '@testing-library/react'
+import { render, fireEvent, cleanup, screen } from '@testing-library/react'
 import { ProductVariants } from '../product-variants'
 import type { ProductVariant } from '@/types/inventory'
 
@@ -80,8 +80,24 @@ describe('ProductVariants', () => {
         onVariantClick={vi.fn()}
       />
     )
-    expect(getByText(/Failed to load variants/)).toBeDefined()
-    expect(queryByText(/No variants yet/)).toBeNull()
+    expect(getByText(/No se pudieron cargar las variantes/)).toBeDefined()
+    expect(queryByText(/Aún no hay variantes/)).toBeNull()
+  })
+
+  it('calls onRetry when the retry action is clicked on error', () => {
+    const onRetry = vi.fn()
+    render(
+      <ProductVariants
+        variants={[]}
+        isLoading={false}
+        isError={true}
+        onNewVariant={vi.fn()}
+        onVariantClick={vi.fn()}
+        onRetry={onRetry}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(onRetry).toHaveBeenCalledOnce()
   })
 
   it('shows a placeholder instead of "0" for the count on error', () => {
@@ -108,7 +124,7 @@ describe('ProductVariants', () => {
         onVariantClick={vi.fn()}
       />
     )
-    expect(getByText(/No variants yet/)).toBeDefined()
+    expect(getByText(/Aún no hay variantes/)).toBeDefined()
   })
 
   it('renders SKU, barcode, base UOM and status for each variant', () => {
@@ -125,10 +141,10 @@ describe('ProductVariants', () => {
     expect(getByText('ARR-KG')).toBeDefined()
     expect(getByText('7501234567890')).toBeDefined()
     expect(getByText('kg')).toBeDefined()
-    expect(getByText('Active')).toBeDefined()
+    expect(getByText('Activa')).toBeDefined()
   })
 
-  it('shows Inactive for a deactivated variant', () => {
+  it('shows Inactiva for a deactivated variant', () => {
     const { getByText } = render(
       <ProductVariants
         variants={[inactiveVariant]}
@@ -138,7 +154,7 @@ describe('ProductVariants', () => {
         onVariantClick={vi.fn()}
       />
     )
-    expect(getByText('Inactive')).toBeDefined()
+    expect(getByText('Inactiva')).toBeDefined()
   })
 
   it('calls onVariantClick with the clicked variant', () => {
@@ -156,7 +172,7 @@ describe('ProductVariants', () => {
     expect(onVariantClick).toHaveBeenCalledWith(riceVariant)
   })
 
-  it('calls onNewVariant when New Variant is clicked', () => {
+  it('calls onNewVariant when Nueva variante is clicked', () => {
     const onNewVariant = vi.fn()
     const { getByText } = render(
       <ProductVariants
@@ -167,11 +183,11 @@ describe('ProductVariants', () => {
         onVariantClick={vi.fn()}
       />
     )
-    fireEvent.click(getByText('New Variant'))
+    fireEvent.click(getByText('Nueva variante'))
     expect(onNewVariant).toHaveBeenCalledTimes(1)
   })
 
-  it('hides New Variant when the user lacks items.create', () => {
+  it('hides Nueva variante when the user lacks items.create', () => {
     mockAuthState.can.mockImplementation((permission: string) => permission !== 'items.create')
     const { queryByText } = render(
       <ProductVariants
@@ -182,6 +198,6 @@ describe('ProductVariants', () => {
         onVariantClick={vi.fn()}
       />
     )
-    expect(queryByText('New Variant')).toBeNull()
+    expect(queryByText('Nueva variante')).toBeNull()
   })
 })

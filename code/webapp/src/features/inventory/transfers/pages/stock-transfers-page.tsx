@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { useCanAccess } from '@/hooks/use-can-access'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
+import { DetailStatus } from '@/components/ui/detail-status'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
@@ -55,10 +56,19 @@ export function StockTransfersPage() {
     transfers,
     isLoading,
     isError,
+    isForbidden,
+    isRefetching,
+    refetch,
+    hasActiveFilters,
+    clearFilters,
     isPanelOpen,
     panelMode,
     selectedTransfer,
     isDetailLoading,
+    isDetailError,
+    isDetailForbidden,
+    isDetailNotFound,
+    refetchDetail,
     handleRowClick,
     handleNewTransfer,
     handleEdit,
@@ -160,6 +170,7 @@ export function StockTransfersPage() {
           label="Estado"
           value={statusFilter}
           onChange={(value) => setStatusFilter(value as StockTransferStatus | '')}
+          placeholder="Todos"
           options={[
             { value: 'DRAFT', label: 'Borrador' },
             { value: 'POSTED', label: 'Confirmado' },
@@ -173,7 +184,24 @@ export function StockTransfersPage() {
         columns={columns}
         onRowClick={handleRowClickTracked}
         loading={isLoading}
-        emptyMessage={isError ? 'No fue posible cargar los traslados. Intenta de nuevo.' : undefined}
+        error={isError}
+        forbidden={isForbidden}
+        onRetry={() => refetch()}
+        isRefetching={isRefetching}
+        emptyTitle={hasActiveFilters ? 'Sin resultados que coincidan con los filtros' : 'Aún no hay traslados'}
+        emptyDescription={hasActiveFilters ? 'Intenta con otros filtros o términos de búsqueda.' : 'Registra un traslado para verlo aquí.'}
+        emptyAction={
+          hasActiveFilters ? (
+            <button type="button" onClick={clearFilters} className="text-sm font-medium text-primary hover:underline">
+              Limpiar filtros
+            </button>
+          ) : canCreateTransfer ? (
+            <Button variant="outline" size="sm" onClick={handleNewTransferClick} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Crear el primer traslado
+            </Button>
+          ) : undefined
+        }
         getRowId={(transfer) => transfer.id}
         pagination={{
           currentPage,
@@ -186,10 +214,10 @@ export function StockTransfersPage() {
         {panelMode === 'create' && (
           <StockTransferForm onSuccess={handleCreated} onCancel={handleClosePanel} />
         )}
-        {panelMode === 'edit' && selectedTransfer && (
+        {panelMode === 'edit' && selectedTransfer && !isDetailForbidden && !isDetailNotFound && (
           <StockTransferForm transfer={selectedTransfer} onSuccess={handleUpdated} onCancel={cancelEdit} />
         )}
-        {panelMode === 'detail' && selectedTransfer && (
+        {panelMode === 'detail' && selectedTransfer && !isDetailForbidden && !isDetailNotFound && (
           <StockTransferDetails
             transfer={selectedTransfer}
             onEdit={handleEdit}
@@ -201,9 +229,29 @@ export function StockTransfersPage() {
             isReversing={isReversing}
           />
         )}
-        {panelMode !== 'create' && !selectedTransfer && isDetailLoading && (
-          <p className="p-6 text-sm text-muted-foreground">Cargando traslado…</p>
+        {/* A 403/404 on the detail query must block unconditionally, even when a cached
+            `selectedTransfer` from before access was revoked/the row was deleted is still
+            sitting in the query cache — never fall through to the populated views above. */}
+        {panelMode !== 'create' && isDetailForbidden && <DetailStatus kind="forbidden" />}
+        {panelMode !== 'create' && !isDetailForbidden && isDetailNotFound && (
+          <DetailStatus kind="not-found" />
         )}
+        {panelMode !== 'create' && !selectedTransfer && !isDetailForbidden && !isDetailNotFound && isDetailLoading && (
+          <DetailStatus kind="loading" title="Cargando traslado…" />
+        )}
+        {panelMode !== 'create' &&
+          !selectedTransfer &&
+          !isDetailForbidden &&
+          !isDetailNotFound &&
+          !isDetailLoading &&
+          isDetailError && (
+            <DetailStatus
+              kind="error"
+              title="No se pudo cargar el traslado"
+              description="Ocurrió un problema al obtenerlo. Intenta de nuevo."
+              onRetry={() => refetchDetail()}
+            />
+          )}
       </SlidePanel>
     </PageContainer>
   )

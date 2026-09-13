@@ -17,12 +17,14 @@ interface PriceListDetailsProps {
   assignmentsError: boolean
   onNewAssignment: () => void
   onAssignmentClick: (assignment: PriceListAssignment) => void
+  onRetryAssignments?: () => void
   variantPrices: VariantPrice[]
   variantDetailsById: Record<string, ItemVariant>
   variantPricesLoading: boolean
   variantPricesError: boolean
   onNewVariantPrice: () => void
   onVariantPriceClick: (variantPrice: VariantPrice) => void
+  onRetryVariantPrices?: () => void
 }
 
 export function PriceListDetails({
@@ -34,12 +36,14 @@ export function PriceListDetails({
   assignmentsError,
   onNewAssignment,
   onAssignmentClick,
+  onRetryAssignments,
   variantPrices,
   variantDetailsById,
   variantPricesLoading,
   variantPricesError,
   onNewVariantPrice,
   onVariantPriceClick,
+  onRetryVariantPrices,
 }: Readonly<PriceListDetailsProps>) {
   return (
     <div className="flex h-full flex-col">
@@ -54,13 +58,13 @@ export function PriceListDetails({
               : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
               }`}
           >
-            {priceList.is_active ? 'Active' : 'Inactive'}
+            {priceList.is_active ? 'Activa' : 'Inactiva'}
           </span>
         </div>
 
         <div>
           <h2 className="text-xl font-semibold text-foreground">{priceList.name}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Priority {priceList.priority}</p>
+          <p className="mt-1 text-sm text-muted-foreground">Prioridad {priceList.priority}</p>
           {priceList.description && (
             <p className="mt-2 text-sm text-muted-foreground">{priceList.description}</p>
           )}
@@ -72,6 +76,7 @@ export function PriceListDetails({
           isError={assignmentsError}
           onNewAssignment={onNewAssignment}
           onAssignmentClick={onAssignmentClick}
+          onRetry={onRetryAssignments}
         />
 
         <VariantPricesSection
@@ -81,6 +86,7 @@ export function PriceListDetails({
           isError={variantPricesError}
           onNewVariantPrice={onNewVariantPrice}
           onVariantPriceClick={onVariantPriceClick}
+          onRetry={onRetryVariantPrices}
         />
 
         <CanAccess permission="items.view">
@@ -93,13 +99,13 @@ export function PriceListDetails({
           <CanAccess permission="price_lists.delete">
             <Button variant="outline-danger" onClick={onDelete}>
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              Eliminar
             </Button>
           </CanAccess>
           <CanAccess permission="price_lists.update">
             <Button onClick={onEdit}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit Price List
+              Editar lista de precios
             </Button>
           </CanAccess>
         </div>

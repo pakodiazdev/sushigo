@@ -1,7 +1,8 @@
-import { Barcode, Boxes, Loader2, Plus, Settings } from 'lucide-react'
+import { Barcode, Boxes, Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CanAccess } from '@/components/auth'
+import { DetailStatus } from '@/components/ui/detail-status'
 import { useCanAccess } from '@/hooks/use-can-access'
 import type { VariantPurchasePresentation } from '@/types/inventory'
 
@@ -12,6 +13,7 @@ interface PurchasePresentationsProps {
   onAssignPresentation: () => void
   onPresentationClick: (presentation: VariantPurchasePresentation) => void
   onManageTemplates: () => void
+  onRetry?: () => void
 }
 
 /**
@@ -29,6 +31,7 @@ export function PurchasePresentations({
   onAssignPresentation,
   onPresentationClick,
   onManageTemplates,
+  onRetry,
 }: Readonly<PurchasePresentationsProps>) {
   // The assign/edit form always fetches the global template catalog via
   // usePurchasePresentationTemplatesSelect() — to populate the picker when assigning, and to
@@ -50,7 +53,7 @@ export function PurchasePresentations({
             <Boxes className="h-5 w-5 text-primary" />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-muted-foreground">Purchase Presentations</p>
+            <p className="text-sm font-medium text-muted-foreground">Presentaciones de compra</p>
             <p className="text-lg font-semibold text-foreground">
               {isLoading || isError ? '—' : presentations.length}
             </p>
@@ -70,27 +73,29 @@ export function PurchasePresentations({
           {canEditPresentation && (
             <Button type="button" variant="outline" size="sm" onClick={onAssignPresentation} className="gap-1">
               <Plus className="h-4 w-4" />
-              Assign template
+              Asignar plantilla
             </Button>
           )}
         </div>
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-6 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
+        <DetailStatus kind="loading" title="Cargando presentaciones de compra…" className="py-6" />
       )}
 
       {!isLoading && isError && (
-        <p className="text-sm text-muted-foreground">
-          Failed to load purchase presentations. Please try again.
-        </p>
+        <DetailStatus
+          kind="error"
+          title="No se pudieron cargar las presentaciones de compra"
+          description="Ocurrió un problema al obtenerlas. Intenta de nuevo."
+          onRetry={onRetry}
+          className="py-6"
+        />
       )}
 
       {!isLoading && !isError && presentations.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No purchase presentations yet. Assign a template to define how this Variant is bought.
+          Aún no hay presentaciones de compra. Asigna una plantilla para definir cómo se compra esta variante.
         </p>
       )}
 
@@ -101,7 +106,7 @@ export function PurchasePresentations({
               <>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">
-                    {presentation.template?.name ?? 'Unknown template'}
+                    {presentation.template?.name ?? 'Plantilla desconocida'}
                   </p>
                   <p className="flex flex-wrap items-center gap-2 truncate text-xs text-muted-foreground">
                     {presentation.template && (
@@ -120,7 +125,7 @@ export function PurchasePresentations({
                 <div className="ml-2 flex flex-shrink-0 items-center gap-1.5">
                   {presentation.is_default && (
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                      Default
+                      Predeterminada
                     </span>
                   )}
                   <span
@@ -129,7 +134,7 @@ export function PurchasePresentations({
                       : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
                       }`}
                   >
-                    {presentation.is_active ? 'Active' : 'Inactive'}
+                    {presentation.is_active ? 'Activa' : 'Inactiva'}
                   </span>
                 </div>
               </>

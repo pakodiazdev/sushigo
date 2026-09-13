@@ -15,6 +15,7 @@ interface VariantDetailsProps {
   onAssignPresentation: () => void
   onPresentationClick: (presentation: VariantPurchasePresentation) => void
   onManageTemplates: () => void
+  onRetryPresentations?: () => void
 }
 
 // No Delete action here — the catalog's own design principle is "deactivate, don't delete"
@@ -31,13 +32,14 @@ export function VariantDetails({
   onAssignPresentation,
   onPresentationClick,
   onManageTemplates,
+  onRetryPresentations,
 }: Readonly<VariantDetailsProps>) {
   return (
     <div className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-6">
         <Button variant="ghost" onClick={onBack} className="-ml-2 gap-2">
           <ArrowLeft className="h-4 w-4" />
-          Back to Product
+          Volver al producto
         </Button>
 
         <div className="flex items-center justify-between">
@@ -51,7 +53,7 @@ export function VariantDetails({
               : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
               }`}
           >
-            {variant.is_active ? 'Active' : 'Inactive'}
+            {variant.is_active ? 'Activa' : 'Inactiva'}
           </span>
         </div>
 
@@ -80,10 +82,10 @@ export function VariantDetails({
         {(variant.track_lot || variant.track_serial) && (
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             {variant.track_lot && (
-              <span className="rounded-md bg-muted px-2 py-1">Tracks lot numbers</span>
+              <span className="rounded-md bg-muted px-2 py-1">Rastrea números de lote</span>
             )}
             {variant.track_serial && (
-              <span className="rounded-md bg-muted px-2 py-1">Tracks serial numbers</span>
+              <span className="rounded-md bg-muted px-2 py-1">Rastrea números de serie</span>
             )}
           </div>
         )}
@@ -95,6 +97,7 @@ export function VariantDetails({
           onAssignPresentation={onAssignPresentation}
           onPresentationClick={onPresentationClick}
           onManageTemplates={onManageTemplates}
+          onRetry={onRetryPresentations}
         />
       </SlidePanel.Body>
 
@@ -106,7 +109,7 @@ export function VariantDetails({
           <CanAccess permission="items.update">
             <Button onClick={onEdit}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit Variant
+              Editar variante
             </Button>
           </CanAccess>
         </div>

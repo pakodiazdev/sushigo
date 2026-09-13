@@ -83,7 +83,7 @@ export function useProductVariants(productId: string | null, isPanelOpen: boolea
   // not render identically to "this Product has no Variants yet".
   useEffect(() => {
     if (variantsQuery.isError) {
-      showError(getApiErrorMessage(variantsQuery.error, 'Failed to load variants'))
+      showError(getApiErrorMessage(variantsQuery.error, 'No se pudieron cargar las variantes'))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantsQuery.isError])
@@ -138,6 +138,7 @@ export function useProductVariants(productId: string | null, isPanelOpen: boolea
     variants,
     isLoading: variantsQuery.isLoading,
     isError: variantsQuery.isError,
+    refetch: variantsQuery.refetch,
     variantMode,
     selectedVariant,
     handleNewVariant,

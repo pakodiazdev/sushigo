@@ -85,7 +85,24 @@ describe('VariantPricesSection', () => {
         onVariantPriceClick={vi.fn()}
       />
     )
-    expect(getByText(/Failed to load variant prices/)).toBeDefined()
+    expect(getByText(/No se pudieron cargar los precios de variantes/)).toBeDefined()
+  })
+
+  it('calls onRetry when the retry action is clicked on error', () => {
+    const onRetry = vi.fn()
+    const { getByRole } = render(
+      <VariantPricesSection
+        variantPrices={[]}
+        variantDetailsById={{}}
+        isLoading={false}
+        isError
+        onNewVariantPrice={vi.fn()}
+        onVariantPriceClick={vi.fn()}
+        onRetry={onRetry}
+      />
+    )
+    fireEvent.click(getByRole('button', { name: 'Reintentar' }))
+    expect(onRetry).toHaveBeenCalledOnce()
   })
 
   it('shows an empty state', () => {
@@ -99,7 +116,7 @@ describe('VariantPricesSection', () => {
         onVariantPriceClick={vi.fn()}
       />
     )
-    expect(getByText(/No prices yet/)).toBeDefined()
+    expect(getByText(/Aún no hay precios/)).toBeDefined()
   })
 
   it('shows the enriched Variant name when known, and the bare id otherwise', () => {
@@ -166,7 +183,7 @@ describe('VariantPricesSection', () => {
         onVariantPriceClick={vi.fn()}
       />
     )
-    fireEvent.click(getByText('New Price'))
+    fireEvent.click(getByText('Nuevo precio'))
     expect(onNewVariantPrice).toHaveBeenCalledTimes(1)
   })
 
@@ -184,7 +201,7 @@ describe('VariantPricesSection', () => {
       />
     )
 
-    expect(queryByText('New Price')).toBeNull()
+    expect(queryByText('Nuevo precio')).toBeNull()
     expect(getByText('iv-1').closest('button')).toBeNull()
   })
 })

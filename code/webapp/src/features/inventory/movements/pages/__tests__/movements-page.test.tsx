@@ -65,6 +65,8 @@ function buildDefault() {
     isLoading: false,
     isError: false,
     isForbidden: false,
+    isRefetching: false,
+    refetch: vi.fn(),
     page: 1,
     totalPages: 1,
     totalResults: 1,
@@ -115,16 +117,25 @@ describe('MovementsPage', () => {
     expect(screen.getByText(/No tienes permiso/)).toBeDefined()
   })
 
-  it('shows a generic error message on a non-permission failure', () => {
-    mocks.hook.mockReturnValue(hookState({ movements: [], isError: true }))
+  it('shows a generic error message with a working retry action on a non-permission failure', () => {
+    const refetch = vi.fn()
+    mocks.hook.mockReturnValue(hookState({ movements: [], isError: true, refetch }))
     render(<MovementsPage />)
     expect(screen.getByText(/No fue posible cargar los movimientos/)).toBeDefined()
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(refetch).toHaveBeenCalledOnce()
   })
 
-  it('shows the empty-filter message when there are no rows', () => {
-    mocks.hook.mockReturnValue(hookState({ movements: [] }))
+  it('shows the unfiltered-empty message when there are no rows and no filter is active', () => {
+    mocks.hook.mockReturnValue(hookState({ movements: [], hasActiveFilters: false }))
     render(<MovementsPage />)
-    expect(screen.getByText(/No hay movimientos que coincidan/)).toBeDefined()
+    expect(screen.getByText('Aún no hay movimientos')).toBeDefined()
+  })
+
+  it('shows the filtered-empty message when there are no rows and a filter is active', () => {
+    mocks.hook.mockReturnValue(hookState({ movements: [], hasActiveFilters: true }))
+    render(<MovementsPage />)
+    expect(screen.getByText('Sin resultados que coincidan con los filtros')).toBeDefined()
   })
 
   it('renders the detail panel when a movement is selected', () => {

@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { Plus, Grid3x3, CheckCircle2, XCircle } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
+import { CanAccess } from '@/components/auth'
 import { type Column } from '@/components/ui/data-grid'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { getApiErrorMessage, isForbiddenError } from '@/lib/api-error'
 import { itemVariantApi } from '@/services/inventory-api'
 import type { ItemVariant } from '@/types/inventory'
 import { VariantForm, VariantDetails, CrudSlidePanels, InventoryListLayout } from '@/components/inventory'
@@ -25,13 +26,25 @@ export function ItemVariantsPage() {
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [searchQuery, setSearchQueryState] = useState('')
+  const [statusFilter, setStatusFilterState] = useState('')
+
+  // Changing a filter narrows/widens the result set, so the page the user was on may no
+  // longer exist — reset to page 1 alongside every setter instead of leaving currentPage stale
+  // (mirrors use-products-list.ts).
+  const setSearchQuery = (value: string) => {
+    setSearchQueryState(value)
+    setCurrentPage(1)
+  }
+  const setStatusFilter = (value: string) => {
+    setStatusFilterState(value)
+    setCurrentPage(1)
+  }
 
   // Always excludes Product-linked variants (comma-separated `item_type`), since this page
   // manages only Insumo/Activo variants; Product variants are managed exclusively via
   // /inventory/products/{id}/variants.
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError: isErrorRaw, isRefetching, refetch, error } = useQuery({
     queryKey: ['item-variants', currentPage, searchQuery, statusFilter],
     queryFn: () =>
       itemVariantApi.list({
@@ -40,7 +53,13 @@ export function ItemVariantsPage() {
         search: searchQuery || undefined,
         is_active: statusFilter ? statusFilter === 'active' : undefined,
       }),
+    placeholderData: keepPreviousData,
   })
+  // A 403 (access revoked mid-session) must never be treated as a retryable refresh
+  // failure that leaves cached rows visible — DataGrid's `forbidden` state blocks them
+  // unconditionally, unlike its plain `error` state, which now keeps stale rows on screen.
+  const isForbidden = isForbiddenError(error)
+  const isError = isErrorRaw && !isForbidden
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => itemVariantApi.delete(id),
@@ -48,12 +67,12 @@ export function ItemVariantsPage() {
       queryClient.invalidateQueries({ queryKey: ['item-variants'] })
       setIsDetailsPanelOpen(false)
       setSelectedVariant(null)
-      showSuccess('Variant deleted successfully', 'Variant Deleted')
+      showSuccess('Variante eliminada correctamente', 'Variante eliminada')
     },
     onError: (error: unknown) => {
       showError(
-        getApiErrorMessage(error, 'Failed to delete variant. It may have existing stock.'),
-        'Delete Error'
+        getApiErrorMessage(error, 'No se pudo eliminar la variante. Puede tener existencia registrada.'),
+        'Error al eliminar'
       )
     },
   })
@@ -61,7 +80,7 @@ export function ItemVariantsPage() {
   const columns: Column<ItemVariant>[] = [
     {
       key: 'code',
-      header: 'Code',
+      header: 'Código',
       render: (variant) => (
         <div className="flex items-center gap-2">
           <Grid3x3 className="h-4 w-4 text-muted-foreground" />
@@ -71,7 +90,7 @@ export function ItemVariantsPage() {
     },
     {
       key: 'name',
-      header: 'Name',
+      header: 'Nombre',
       render: (variant) => (
         <div>
           <div className="font-medium">{variant.name}</div>
@@ -85,7 +104,7 @@ export function ItemVariantsPage() {
     },
     {
       key: 'uom',
-      header: 'UoM',
+      header: 'UdM',
       render: (variant) => (
         <span className="text-sm font-medium">
           {variant.uom?.symbol || variant.uom?.name || '-'}
@@ -94,7 +113,7 @@ export function ItemVariantsPage() {
     },
     {
       key: 'is_active',
-      header: 'Status',
+      header: 'Estado',
       render: (variant) => (
         <span
           className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${variant.is_active
@@ -105,12 +124,12 @@ export function ItemVariantsPage() {
           {variant.is_active ? (
             <>
               <CheckCircle2 className="h-3 w-3 mr-1" />
-              Active
+              Activa
             </>
           ) : (
             <>
               <XCircle className="h-3 w-3 mr-1" />
-              Inactive
+              Inactiva
             </>
           )}
         </span>
@@ -156,16 +175,23 @@ export function ItemVariantsPage() {
     setSelectedVariant(null)
   }
 
+  const clearFilters = () => {
+    setSearchQuery('')
+    setStatusFilter('')
+  }
+
   return (
     <PageContainer>
       <PageHeader
         title="Variantes de Items"
         description="Gestiona las variantes de insumos y activos"
         action={
-          <Button onClick={handleNewVariant} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nueva Variante
-          </Button>
+          <CanAccess permission="items.create">
+            <Button onClick={handleNewVariant} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nueva Variante
+            </Button>
+          </CanAccess>
         }
       />
 
@@ -175,10 +201,25 @@ export function ItemVariantsPage() {
         searchPlaceholder="Buscar por código o nombre..."
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
+        hasActiveFilters={Boolean(searchQuery || statusFilter)}
+        onClearFilters={clearFilters}
         rows={data?.data.data || []}
         columns={columns}
         onRowClick={handleRowClick}
         loading={isLoading}
+        error={isError}
+        forbidden={isForbidden}
+        onRetry={() => refetch()}
+        isRefetching={isRefetching}
+        emptyDescription="Registra una variante para verla aquí."
+        emptyAction={
+          <CanAccess permission="items.create">
+            <Button variant="outline" size="sm" onClick={handleNewVariant} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Crear la primera variante
+            </Button>
+          </CanAccess>
+        }
         currentPage={currentPage}
         totalPages={data?.data.meta.last_page || 1}
         onPageChange={setCurrentPage}
