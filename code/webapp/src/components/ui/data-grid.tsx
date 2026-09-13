@@ -106,6 +106,38 @@ function getPageNumbers(current: number, total: number, maxVisible: number): (nu
   return pages
 }
 
+function handleSortClick(sorting: SortSpec[], onSortChange: ((sorts: SortSpec[]) => void) | undefined, sortKey: string) {
+  if (!onSortChange) return
+  const idx = sorting.findIndex(s => s.key === sortKey)
+  if (idx === -1) {
+    onSortChange([...sorting, { key: sortKey, direction: 'asc' }])
+  } else if (sorting[idx]!.direction === 'asc') {
+    const next = [...sorting]
+    next[idx] = { key: sortKey, direction: 'desc' }
+    onSortChange(next)
+  } else {
+    onSortChange(sorting.filter((_, i) => i !== idx))
+  }
+}
+
+function getSortIcon(sorting: SortSpec[], sortKey: string) {
+  const spec = sorting.find(s => s.key === sortKey)
+  if (!spec) return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+  if (spec.direction === 'asc') return <ArrowUp className="h-3.5 w-3.5" />
+  return <ArrowDown className="h-3.5 w-3.5" />
+}
+
+function getSortBadge(sorting: SortSpec[], sortKey: string) {
+  if (sorting.length <= 1) return null
+  const idx = sorting.findIndex(s => s.key === sortKey)
+  if (idx === -1) return null
+  return (
+    <span className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+      {idx + 1}
+    </span>
+  )
+}
+
 const defaultSkeleton = () => (
   <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
 )
@@ -213,38 +245,6 @@ export function DataGrid<T extends { id: string | number }>({
       statusRef.current?.focus()
     }
   }, [error, forbidden, loading])
-
-  function handleSortClick(sortKey: string) {
-    if (!onSortChange) return
-    const idx = sorting.findIndex(s => s.key === sortKey)
-    if (idx === -1) {
-      onSortChange([...sorting, { key: sortKey, direction: 'asc' }])
-    } else if (sorting[idx]!.direction === 'asc') {
-      const next = [...sorting]
-      next[idx] = { key: sortKey, direction: 'desc' }
-      onSortChange(next)
-    } else {
-      onSortChange(sorting.filter((_, i) => i !== idx))
-    }
-  }
-
-  function getSortIcon(sortKey: string) {
-    const spec = sorting.find(s => s.key === sortKey)
-    if (!spec) return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-    if (spec.direction === 'asc') return <ArrowUp className="h-3.5 w-3.5" />
-    return <ArrowDown className="h-3.5 w-3.5" />
-  }
-
-  function getSortBadge(sortKey: string) {
-    if (sorting.length <= 1) return null
-    const idx = sorting.findIndex(s => s.key === sortKey)
-    if (idx === -1) return null
-    return (
-      <span className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
-        {idx + 1}
-      </span>
-    )
-  }
 
   const hasSkeleton = columns.some(col => col.skeleton)
 
@@ -424,7 +424,7 @@ export function DataGrid<T extends { id: string | number }>({
                         key={column.key}
                         scope="col"
                         style={{ width: column.width }}
-                        onClick={isSortable ? () => handleSortClick(column.sortKey!) : undefined}
+                        onClick={isSortable ? () => handleSortClick(sorting, onSortChange, column.sortKey!) : undefined}
                         className={cn(
                           'px-6 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground',
                           column.align === 'center' && 'text-center',
@@ -436,8 +436,8 @@ export function DataGrid<T extends { id: string | number }>({
                       >
                         <span className="inline-flex items-center gap-1">
                           {column.header}
-                          {isSortable && getSortIcon(column.sortKey!)}
-                          {isSortable && getSortBadge(column.sortKey!)}
+                          {isSortable && getSortIcon(sorting, column.sortKey!)}
+                          {isSortable && getSortBadge(sorting, column.sortKey!)}
                         </span>
                       </th>
                     )
