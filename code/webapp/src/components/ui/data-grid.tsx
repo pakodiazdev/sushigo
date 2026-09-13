@@ -142,6 +142,37 @@ const defaultSkeleton = () => (
   <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
 )
 
+interface ResultsInfoPagination { currentPage: number; totalPages: number }
+
+function getResultsInfo(pagination: ResultsInfoPagination | undefined, perPage: number | undefined, totalResults: number | undefined) {
+  if (totalResults != null && pagination && perPage) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Mostrando{' '}
+        <span className="font-medium text-foreground">
+          {(pagination.currentPage - 1) * perPage + 1}
+        </span>
+        {' '}-{' '}
+        <span className="font-medium text-foreground">
+          {Math.min(pagination.currentPage * perPage, totalResults)}
+        </span>
+        {' '}de{' '}
+        <span className="font-medium text-foreground">{totalResults}</span>
+        {' '}resultados
+      </p>
+    )
+  }
+  if (pagination) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Page <span className="font-medium text-foreground">{pagination.currentPage}</span>{' '}
+        of <span className="font-medium text-foreground">{pagination.totalPages}</span>
+      </p>
+    )
+  }
+  return null
+}
+
 function LoadingSpinner() {
   return (
     <div role="status" aria-live="polite" className="flex h-64 items-center justify-center">
@@ -353,32 +384,7 @@ export function DataGrid<T extends { id: string | number }>({
   }
 
   const showFooter = pagination || (totalResults != null) || onPerPageChange
-
-  let resultsInfo: React.ReactNode = null
-  if (totalResults != null && pagination && perPage) {
-    resultsInfo = (
-      <p className="text-sm text-muted-foreground">
-        Mostrando{' '}
-        <span className="font-medium text-foreground">
-          {(pagination.currentPage - 1) * perPage + 1}
-        </span>
-        {' '}-{' '}
-        <span className="font-medium text-foreground">
-          {Math.min(pagination.currentPage * perPage, totalResults)}
-        </span>
-        {' '}de{' '}
-        <span className="font-medium text-foreground">{totalResults}</span>
-        {' '}resultados
-      </p>
-    )
-  } else if (pagination) {
-    resultsInfo = (
-      <p className="text-sm text-muted-foreground">
-        Page <span className="font-medium text-foreground">{pagination.currentPage}</span>{' '}
-        of <span className="font-medium text-foreground">{pagination.totalPages}</span>
-      </p>
-    )
-  }
+  const resultsInfo = getResultsInfo(pagination, perPage, totalResults)
 
   return (
     <div className={cn('flex flex-col', className)}>
