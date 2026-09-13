@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Building2, Edit, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
@@ -34,6 +35,22 @@ export function SuppliersPage() {
     },
   ]
 
+  let emptyAction: ReactNode
+  if (page.hasActiveFilters) {
+    emptyAction = (
+      <button type="button" onClick={page.clearFilters} className="text-sm font-medium text-primary hover:underline">
+        Limpiar filtros
+      </button>
+    )
+  } else if (page.canManage) {
+    emptyAction = (
+      <Button variant="outline" size="sm" onClick={page.openNewSupplier} className="gap-2">
+        <Plus className="h-4 w-4" />
+        Crear el primer proveedor
+      </Button>
+    )
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -56,18 +73,7 @@ export function SuppliersPage() {
         isRefetching={page.suppliersRefetching}
         emptyTitle={page.hasActiveFilters ? 'Sin resultados que coincidan con los filtros' : 'Aún no hay proveedores'}
         emptyDescription={page.hasActiveFilters ? 'Intenta con otros filtros o términos de búsqueda.' : 'Registra un proveedor para verlo aquí.'}
-        emptyAction={
-          page.hasActiveFilters ? (
-            <button type="button" onClick={page.clearFilters} className="text-sm font-medium text-primary hover:underline">
-              Limpiar filtros
-            </button>
-          ) : page.canManage ? (
-            <Button variant="outline" size="sm" onClick={page.openNewSupplier} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Crear el primer proveedor
-            </Button>
-          ) : undefined
-        }
+        emptyAction={emptyAction}
       />
 
       <SlidePanel isOpen={Boolean(page.selectedSupplier) && !page.supplierFormOpen} onClose={page.closeSupplier} title="Detalle del proveedor">

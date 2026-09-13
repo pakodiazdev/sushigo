@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
 import { AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Lock, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -110,6 +110,66 @@ const defaultSkeleton = () => (
   <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
 )
 
+function LoadingSpinner() {
+  return (
+    <div role="status" aria-live="polite" className="flex h-64 items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+      <span className="sr-only">Cargando…</span>
+    </div>
+  )
+}
+
+interface ErrorOrForbiddenStateProps {
+  forbidden: boolean
+  title: string
+  description?: string
+  onRetry?: () => void
+  statusRef: RefObject<HTMLDivElement | null>
+}
+
+function ErrorOrForbiddenState({ forbidden, title, description, onRetry, statusRef }: Readonly<ErrorOrForbiddenStateProps>) {
+  return (
+    <div
+      ref={statusRef}
+      role="alert"
+      aria-live="assertive"
+      tabIndex={-1}
+      className="flex h-64 flex-col items-center justify-center gap-2 text-center focus:outline-none"
+    >
+      {forbidden
+        ? <Lock className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+        : <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />}
+      <p className="font-medium text-foreground">{title}</p>
+      {description && <p className="max-w-sm text-sm text-muted-foreground">{description}</p>}
+      {!forbidden && onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Reintentar
+        </button>
+      )}
+    </div>
+  )
+}
+
+interface EmptyStateProps {
+  title?: string
+  description?: string
+  action?: ReactNode
+}
+
+function EmptyState({ title, description, action }: Readonly<EmptyStateProps>) {
+  return (
+    <output className="flex h-64 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+      {title && <p className="font-medium">{title}</p>}
+      {description && <p className="max-w-sm text-sm">{description}</p>}
+      {action && <div className="mt-2">{action}</div>}
+    </output>
+  )
+}
+
 const PAGE_BTN_BASE = 'relative inline-flex items-center px-3 py-2 text-sm ring-1 ring-inset ring-input focus:z-20'
 const PAGE_BTN_INACTIVE = 'text-foreground hover:bg-accent hover:text-accent-foreground'
 const PAGE_BTN_ACTIVE = 'bg-primary text-primary-foreground font-semibold z-10'
@@ -190,12 +250,7 @@ export function DataGrid<T extends { id: string | number }>({
 
   // Legacy loading: no columns define skeleton → show spinner
   if (loading && !hasSkeleton) {
-    return (
-      <div role="status" aria-live="polite" className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
-        <span className="sr-only">Cargando…</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   // A background refetch failure (e.g. a same-key refetch on window focus, or a retry after a
@@ -218,40 +273,18 @@ export function DataGrid<T extends { id: string | number }>({
       ? 'Solicita acceso a un administrador si crees que esto es un error.'
       : errorDescription
     return (
-      <div
-        ref={statusRef}
-        role="alert"
-        aria-live="assertive"
-        tabIndex={-1}
-        className="flex h-64 flex-col items-center justify-center gap-2 text-center focus:outline-none"
-      >
-        {forbidden
-          ? <Lock className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-          : <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />}
-        <p className="font-medium text-foreground">{title}</p>
-        <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
-        {!forbidden && onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="mt-2 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Reintentar
-          </button>
-        )}
-      </div>
+      <ErrorOrForbiddenState
+        forbidden={forbidden}
+        title={title}
+        description={description}
+        onRetry={onRetry}
+        statusRef={statusRef}
+      />
     )
   }
 
   if (!loading && (!data || data.length === 0)) {
-    const title = emptyTitle ?? emptyMessage
-    return (
-      <div role="status" className="flex h-64 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
-        {title && <p className="font-medium">{title}</p>}
-        {emptyDescription && <p className="max-w-sm text-sm">{emptyDescription}</p>}
-        {emptyAction && <div className="mt-2">{emptyAction}</div>}
-      </div>
-    )
+    return <EmptyState title={emptyTitle ?? emptyMessage} description={emptyDescription} action={emptyAction} />
   }
 
   function renderEdgeButton(Icon: LucideIcon, iconCls: string, onClick: () => void, disabled: boolean, roundedCls: string | undefined, key: string, label: string) {

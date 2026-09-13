@@ -304,15 +304,14 @@ export function StockDashboardPage() {
       {/* Initial load — no cached numbers to show yet, so a plain placeholder instead of the
           real cards (which would otherwise flash "0" before the first response arrives). */}
       {!hasStock && stockLoading && (
-        <div
-          role="status"
+        <output
           aria-label="Cargando resumen de existencias…"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="h-24 animate-pulse rounded-lg border border-gray-200 bg-gray-100" />
           ))}
-        </div>
+        </output>
       )}
 
       {/* A refetch failed but we still have the last successful snapshot — say so instead of

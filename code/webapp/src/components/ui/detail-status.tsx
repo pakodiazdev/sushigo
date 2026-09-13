@@ -52,7 +52,9 @@ export function DetailStatus({ kind, title, description, onRetry, className }: R
     )
   }
 
-  const Icon = kind === 'forbidden' ? Lock : kind === 'not-found' ? PackageX : AlertTriangle
+  let Icon = AlertTriangle
+  if (kind === 'forbidden') Icon = Lock
+  else if (kind === 'not-found') Icon = PackageX
 
   return (
     <div
