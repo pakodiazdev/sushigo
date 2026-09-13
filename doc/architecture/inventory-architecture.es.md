@@ -737,9 +737,73 @@ compensatorio restaura cantidades y conserva la evidencia del costo utilizado.
 `SummarizesStock`, `StockByLocationController` y `StockByVariantController` ya lo leen
 directamente para los reportes de valuación.
 
-Revertir una Recepción registrada deja `weighted_avg_cost` intencionalmente sin tocar — deshacer un
-promedio combinado con exactitud requeriría rastreo de costo a nivel de lote, algo que este código
-todavía no tiene.
+**El acumulador `Stock.total_value` y la reversión de una Recepción de compra (#579 —
+implementado).** `weighted_avg_cost` por sí solo no se puede revertir con exactitud: es un valor de
+visualización *redondeado* a escala 4, y reconstruir el "valor previo" como `cantidad *
+weighted_avg_cost` al momento de revertir acumula un nuevo error de redondeo en cada reversión
+sucesiva. Concretamente, mezclar 1 unidad @ 0.1 con 2 unidades @ 0.2 guarda un promedio redondeado de
+0.1667 — reconstruir desde ahí ya llega a 0.2001 tras una reversión (no el 0.2 exacto), y una
+segunda reversión, totalmente válida, justo después vería entonces un residuo distinto de cero
+espurio en un saldo completamente vaciado y rechazaría incorrectamente con un 409, aunque cada
+unidad original sigue perfectamente contabilizada.
+
+`Stock.total_value` (decimal(26,4) — más ancho que el propio decimal(15,4) de
+`on_hand`/`weighted_avg_cost`; su producto puede necesitar hasta 22 dígitos enteros incluso cuando
+cada factor por separado cabe en los 11 de su propia columna) es la solución: un acumulador de valor
+*exacto*, mantenido de forma
+puramente aditiva junto al `weighted_avg_cost` redondeado, nunca él mismo redondeado y luego
+reconstruido:
+
+-   `Stock::applyWeightedAverageCost()` (mezcla de entrada) llama a
+    `WeightedAverageCostCalculator::addValue()` para sumar el valor evidenciado exacto de la cantidad
+    recién recibida, y luego deriva `weighted_avg_cost` de forma fresca vía `averageCost()` — **no**
+    `blend()`, que toma el promedio previo *redondeado* como entrada y reintroduciría el mismo modo
+    de falla por redondeo acumulado para la recepción normal hacia adelante que el docblock de
+    `subtractValue()` describe para la reversión (p. ej., dos lotes de 10,000 unidades a 0.0001 y
+    luego a 0.0002 redondean el promedio guardado a 0.0002; mezclar un tercer lote de 10,000 unidades
+    a 0.0001 desde ese 0.0002 redondeado da 0.0002 otra vez, mientras que la proporción real, 4.0000
+    ÷ 30,000, redondea a 0.0001). `blend()` en sí se mantiene como utilidad independiente, todavía
+    correcta — simplemente ya no es cómo `Stock` calcula su propio promedio.
+-   `Stock::decreaseOnHand()` (consumo, salida por transferencia, una reversión genérica de
+    movimiento) resta `cantidad * el promedio actual` de `total_value` — correcto porque ninguno de
+    estos llamadores cambia jamás el promedio en sí, así que el promedio siempre representa la
+    proporción real valor/cantidad de lo que queda en pie. Ese producto se limita para no exceder
+    nunca lo que queda: `weighted_avg_cost` es una tasa *redondeada* mientras que `total_value` es
+    exacto, así que en un agotamiento total en particular la tasa redondeada multiplicada por la
+    cantidad total no necesariamente iguala al acumulador exacto — el límite absorbe la diferencia
+    (a lo sumo medio centavo por unidad) como una pérdida de redondeo en vez de llevar `total_value`
+    a negativo transitoriamente y violar `stock_total_value_nonnegative`.
+-   `Stock::restoreValueAtCurrentAverage()` es la contraparte simétrica para una restauración simple
+    de cantidad que no es una nueva recepción con costo (`StockMovementReverser` deshaciendo la
+    disminución del lado origen de una Transferencia — el promedio sigue intencionalmente sin
+    tocarse ahí, según el párrafo anterior).
+-   `Stock::reverseWeightedAverageCost()` (reversión de Recepción de compra) llama a
+    `WeightedAverageCostCalculator::subtractValue()` — la contraparte de reversión de `addValue()` —
+    directamente contra el acumulador exacto, usando el mismo par cantidad/costo unitario que usó la
+    llamada de entrada original, leído de vuelta desde la evidencia inmutable de `StockMovementLine`
+    del movimiento registrado, nunca vuelto a derivar del promedio redondeado. `weighted_avg_cost` se
+    recalcula entonces de forma fresca vía `averageCost()`, un único paso de redondeo desde el
+    acumulador exacto, nunca desde un número ya redondeado antes.
+
+Un llamador que crea una fila de `Stock` directamente (seeders, factories, tests) con un
+`weighted_avg_cost` explícito pero sin `total_value` lo recibe por defecto como `on_hand *
+weighted_avg_cost` mediante un listener `saving` del modelo — en `saving`, no en `creating`, porque
+el propio listener `creating` de `HasPublicId` devuelve un valor verdadero que detiene ese evento
+(que detiene por defecto) antes de que un segundo listener llegue a ejecutarse (ver
+`StockMovementLine::booted()` para la misma trampa ya documentada).
+
+`subtractValue()` devuelve `null` — expuesto como `ReceiptReversalBoundaryException` (409) — para
+los dos casos que no se pueden reconciliar sin aproximar: la remoción dejaría un valor residual
+distinto de cero detrás de un saldo completamente vaciado, o llevaría el acumulador a negativo. Ambos
+ocurren solo cuando el consumo intermedio ya "gastó" más del valor evidenciado de esta recepción del
+que su propia porción de cantidad restante justificaría bajo un promedio sin rastreo de lotes — el
+sistema rechaza en vez de descartar o inventar valor silenciosamente. Ver
+`doc/architecture/purchasing/purchase-receipts.es.md` § "Registro" y
+`WeightedAverageCostCalculatorTest`/`ReceiptReversalTest` para los escenarios exactos (reversión
+inmediata total, reversión después de una segunda Recepción, reversión que sobrevive o es bloqueada
+por consumo parcial, reversión después de una Transferencia, costos cero/fraccionarios, y una cadena
+de reversiones secuenciales que una reconstrucción desde el promedio redondeado habría rechazado
+incorrectamente).
 
 ### 3.10 Umbrales de reabastecimiento, por Ubicación de Inventario (#439)
 

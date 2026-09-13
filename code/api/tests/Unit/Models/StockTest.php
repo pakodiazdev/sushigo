@@ -11,6 +11,7 @@ use App\Models\OperatingUnit;
 use App\Models\Stock;
 use App\Models\UnitOfMeasure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -24,7 +25,7 @@ class StockTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeStock(float|string $onHand, float|string $reserved): Stock
+    private function makeStock(float|string $onHand, float|string $reserved, float|string|null $weightedAvgCost = null): Stock
     {
         $branch = Branch::create([
             'code' => 'TEST', 'name' => 'Test Branch', 'address' => '123 Test St',
@@ -57,12 +58,13 @@ class StockTest extends TestCase
             'uom_id' => $uom->id, 'is_active' => true,
         ]);
 
-        return Stock::create([
+        return Stock::create(array_filter([
             'inventory_location_id' => $location->id,
             'item_variant_id' => $variant->id,
             'on_hand' => $onHand,
             'reserved' => $reserved,
-        ]);
+            'weighted_avg_cost' => $weightedAvgCost,
+        ], fn ($value) => $value !== null));
     }
 
     #[Test]
@@ -179,5 +181,83 @@ class StockTest extends TestCase
 
         $this->assertTrue($stock->hasAvailable(6));
         $this->assertFalse($stock->hasAvailable(7));
+    }
+
+    #[Test]
+    public function total_value_column_holds_the_full_on_hand_times_cost_product_at_the_decimal_15_4_ceiling(): void
+    {
+        // Code review finding (#579 PR #626): on_hand and weighted_avg_cost are
+        // each decimal(15,4) (11 integer digits), so their product can need up
+        // to 22 integer digits even when each factor individually fits its own
+        // column — total_value (decimal(26,4)) must hold that product exactly.
+        // Written via a raw DB update (not Eloquent/PHP float arithmetic,
+        // which cannot represent a 22-digit integer exactly regardless of
+        // column width — a separate, pre-existing float-precision limitation
+        // this Issue does not extend to) to isolate exactly what the Postgres
+        // column itself can and cannot store.
+        $stock = $this->makeStock(0, 0);
+
+        $exactProduct = bcmul('99999999999.9999', '99999999999.9999', 4);
+
+        DB::table('stock')->where('id', $stock->id)->update([
+            'total_value' => $exactProduct,
+        ]);
+
+        $this->assertSame($exactProduct, $stock->fresh()->total_value);
+    }
+
+    #[Test]
+    public function it_fully_depletes_on_hand_without_driving_total_value_negative_despite_rounding(): void
+    {
+        // Code review finding (#579 PR #626): weighted_avg_cost is a *rounded*
+        // scale-4 rate while total_value is exact, so qty * weighted_avg_cost
+        // can exceed what is actually left on a full depletion. Blending
+        // 1 unit @ 0.1 with 2 units @ 0.2 stores a rounded average of 0.1667
+        // (true value/qty ratio is 0.5/3 = 0.16666...), so depleting all 3
+        // units at that rounded rate computes 3 * 0.1667 = 0.5001 — 0.0001
+        // more than the exact total_value of 0.5000.
+        $stock = $this->makeStock(0, 0);
+        $stock->increaseOnHand(1);
+        $stock->applyWeightedAverageCost(1, 0.1);
+        $stock->increaseOnHand(2);
+        $stock->applyWeightedAverageCost(2, 0.2);
+        $stock->refresh();
+
+        $this->assertEquals(0.5, (float) $stock->total_value);
+        $this->assertEquals(0.1667, (float) $stock->weighted_avg_cost);
+
+        $stock->decreaseOnHand(3);
+
+        $stock->refresh();
+        $this->assertEquals(0.0, (float) $stock->on_hand);
+        $this->assertEquals(0.0, (float) $stock->total_value);
+    }
+
+    #[Test]
+    public function a_third_blend_reconciles_from_the_exact_accumulator_not_a_rounded_prior_average(): void
+    {
+        // Code review finding (#579 PR #626): 10,000 units @ 0.0001 then
+        // 10,000 @ 0.0002 accumulate an exact value/qty ratio of 0.00015,
+        // which itself rounds to a stored average of 0.0002 (no drift yet).
+        // A third batch of 10,000 @ 0.0001 blended from that *rounded* 0.0002
+        // (instead of the exact accumulator) would land on 0.0002 again,
+        // while the true ratio (4.0000 / 30,000) rounds to 0.0001.
+        $stock = $this->makeStock(0, 0);
+
+        $stock->increaseOnHand(10000);
+        $stock->applyWeightedAverageCost(10000, 0.0001);
+        $stock->increaseOnHand(10000);
+        $stock->applyWeightedAverageCost(10000, 0.0002);
+        $stock->refresh();
+
+        $this->assertEquals(3.0, (float) $stock->total_value);
+        $this->assertEquals(0.0002, (float) $stock->weighted_avg_cost);
+
+        $stock->increaseOnHand(10000);
+        $stock->applyWeightedAverageCost(10000, 0.0001);
+        $stock->refresh();
+
+        $this->assertEquals(4.0, (float) $stock->total_value);
+        $this->assertEquals(0.0001, (float) $stock->weighted_avg_cost);
     }
 }

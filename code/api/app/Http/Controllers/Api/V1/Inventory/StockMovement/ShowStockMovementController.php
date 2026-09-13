@@ -15,7 +15,7 @@ use App\Support\Access\OperatingUnitScope;
  *   path="/api/v1/inventory/movements/{movement}",
  *   operationId="showStockMovement",
  *   summary="Get a single immutable Stock Movement by its public ID",
- *   description="Full audit evidence for one movement: derived direction, quantity and base UOM, source/destination Locations, actor, originating source document identity, lifecycle status, and the two-way link between an original movement and its compensating reversal. A read has no Stock or ledger write side effect. Returns 403 when none of the movement's touched Locations belong to the caller's accessible Operating Units.",
+ *   description="Full audit evidence for one movement: derived direction, quantity and base UOM, source/destination Locations, actor, originating source document identity, lifecycle status, the two-way link between an original movement and its compensating reversal, and the movement's own valuation evidence (unit cost, line total). A read has no Stock or ledger write side effect. Returns 403 when none of the movement's touched Locations belong to the caller's accessible Operating Units.",
  *   tags={"Stock Movements"},
  *   security={{"passport": {}}},
  *
@@ -45,6 +45,7 @@ class ShowStockMovementController extends Controller
             'related',
             'reverses',
             'reversal',
+            'lines',
         ]);
 
         // Visible via one accessible end — hide the foreign end's Location (#574).

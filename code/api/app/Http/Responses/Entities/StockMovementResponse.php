@@ -35,7 +35,15 @@ namespace App\Http\Responses\Entities;
  *         @OA\Property(property="posted_at", type="string", format="date-time", nullable=true)
  *       ),
  *       @OA\Property(property="reversed_at", type="string", format="date-time", nullable=true),
- *       @OA\Property(property="reversal_reason", type="string", nullable=true)
+ *       @OA\Property(property="reversal_reason", type="string", nullable=true),
+ *       @OA\Property(
+ *         property="valuation",
+ *         type="object",
+ *         nullable=true,
+ *         description="This movement's own valuation evidence (#579) — the exact unit cost and line total it recorded. Null when the movement carries no line (e.g. a legacy row with no cost evidence). unit_cost/line_total are independently nullable — e.g. an Opening Balance registered with no unit cost — distinct from an explicit 0 (free/bonus stock).",
+ *         @OA\Property(property="unit_cost", type="number", format="float", nullable=true),
+ *         @OA\Property(property="line_total", type="number", format="float", nullable=true)
+ *       )
  *     )
  *   }
  * )

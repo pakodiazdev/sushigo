@@ -30,7 +30,8 @@ class StockMovementReverser
     ) {}
 
     /**
-     * @throws StockMovementNotReversibleException if the movement is not a POSTED, not-yet-reversed original
+     * @throws StockMovementNotReversibleException if the movement is not a POSTED, not-yet-reversed original,
+     *                                             or is a PURCHASE_RECEIPT movement (#579)
      * @throws StockMovementReversalBoundaryException if the balance the movement added has since been consumed
      */
     public function reverse(StockMovement $movement, ?int $userId = null, ?string $reason = null): StockMovement
@@ -38,6 +39,24 @@ class StockMovementReverser
         return DB::transaction(function () use ($movement, $userId, $reason) {
             /** @var StockMovement $original */
             $original = StockMovement::whereKey($movement->getKey())->lockForUpdate()->firstOrFail();
+
+            // #579: a PURCHASE_RECEIPT movement carries weighted-average-cost
+            // evidence that only ReceiptService::reverseReceipt() knows how to
+            // reconcile (Stock::reverseWeightedAverageCost(), reading the
+            // line's own evidenced unit cost). This generic reverser only
+            // ever restores/removes quantity at the *current* average — the
+            // correct, and only available, approximation for a TRANSFER (its
+            // only production caller, via StockTransferService), but silently
+            // wrong for a Receipt: it would flip the movement to REVERSED
+            // without reconciling weighted_avg_cost/total_value, and then
+            // permanently block the real reversal path (which requires the
+            // movement to still be POSTED).
+            if ($original->reason === StockMovement::REASON_PURCHASE_RECEIPT) {
+                throw new StockMovementNotReversibleException(
+                    "StockMovement #{$original->id} is a PURCHASE_RECEIPT movement; reverse it via "
+                    .'ReceiptService::reverseReceipt() (which reconciles valuation), not this generic reverser.'
+                );
+            }
 
             if ($original->isReversal()) {
                 throw new StockMovementNotReversibleException(
@@ -121,7 +140,12 @@ class StockMovementReverser
         }
 
         if ($original->from_location_id !== null) {
-            $this->stockMutation->receiveInto($original->from_location_id, $variantId, $qty);
+            // #579: restore the value this quantity carried away too, at the
+            // (unchanged) current average — decreaseOnHand() above already
+            // keeps total_value reconciled on the removal side; this keeps
+            // it reconciled on the restore side too.
+            $restored = $this->stockMutation->receiveInto($original->from_location_id, $variantId, $qty);
+            $restored->restoreValueAtCurrentAverage($qty);
         }
     }
 }

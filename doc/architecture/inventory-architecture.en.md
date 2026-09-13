@@ -717,8 +717,67 @@ quantity and retain the cost evidence used at posting.
 `StockByLocationController`, and `StockByVariantController` already read it directly for valuation
 reports.
 
-Reversing a posted Receipt intentionally leaves `weighted_avg_cost` untouched — unwinding a blended
-average exactly would need lot-level cost tracking this codebase doesn't have.
+**The `Stock.total_value` accumulator and Purchase Receipt reversal (#579 — delivered).**
+`weighted_avg_cost` alone cannot be exactly reversed: it is a *rounded*, scale-4 display value, and
+reconstructing "prior value" as `qty * weighted_avg_cost` at reversal time compounds a fresh rounding
+error into every successive reversal. Concretely, blending 1 unit @ 0.1 with 2 units @ 0.2 stores a
+rounded average of 0.1667 — reconstructing from that already lands on 0.2001 after one reversal
+(not the exact 0.2), and a second, fully-valid reversal right after would then see a spurious
+non-zero residual on an otherwise fully-emptied balance and wrongly refuse with a 409, even though
+every original unit is still fully accounted for.
+
+`Stock.total_value` (decimal(26,4) — wider than `on_hand`/`weighted_avg_cost`'s own decimal(15,4);
+their product can need up to 22 integer digits even when each factor individually fits its own
+column's 11) is the fix: an *exact*
+running value accumulator, maintained purely additively alongside the rounded `weighted_avg_cost`,
+never itself rounded-then-reconstructed:
+
+-   `Stock::applyWeightedAverageCost()` (inbound blend) calls
+    `WeightedAverageCostCalculator::addValue()` to add the newly received quantity's exact evidenced
+    value, then derives `weighted_avg_cost` fresh via `averageCost()` — **not** `blend()`, which
+    takes the *rounded* prior average as an input and would reintroduce the same compounding-rounding
+    failure mode for ordinary forward receiving that `subtractValue()`'s docblock describes for
+    reversal (e.g. two 10,000-unit batches at 0.0001 then 0.0002 round the stored average to 0.0002;
+    blending a third 10,000-unit batch at 0.0001 from that rounded 0.0002 lands on 0.0002 again, while
+    the true ratio, 4.0000 ÷ 30,000, rounds to 0.0001). `blend()` itself remains as a standalone,
+    still-correct utility — it is simply no longer how `Stock` computes its own average.
+-   `Stock::decreaseOnHand()` (consumption, transfer-out, a generic movement reversal) removes
+    `qty * the current average` from `total_value` — correct because none of these callers ever
+    change the average itself, so the average always represents the true value/quantity ratio of
+    whatever is left standing. That product is clamped to never exceed what remains: `weighted_avg_cost`
+    is a *rounded* rate while `total_value` is exact, so on a full depletion in particular the rounded
+    rate times the full quantity does not necessarily equal the exact accumulator — clamping absorbs
+    the (at most half-a-cent-per-unit) difference as a rounding write-off instead of driving
+    `total_value` transiently negative and tripping `stock_total_value_nonnegative`.
+-   `Stock::restoreValueAtCurrentAverage()` is the symmetric counterpart for a plain quantity
+    *restore* that isn't a new cost-bearing receipt (`StockMovementReverser` undoing a Transfer's
+    source-side decrease — the average is still intentionally left untouched there, per the
+    paragraph above).
+-   `Stock::reverseWeightedAverageCost()` (Purchase Receipt reversal) calls
+    `WeightedAverageCostCalculator::subtractValue()` — the reversal counterpart to `addValue()` —
+    directly against the exact accumulator, using the *same* quantity/unit-cost pair the original
+    inbound call used, read back from the posted movement's own immutable `StockMovementLine`
+    evidence, never re-derived from the rounded average. `weighted_avg_cost` is then recomputed
+    fresh via `averageCost()`, a single rounding step from the exact accumulator, never a
+    previously-rounded number.
+
+A caller creating a `Stock` row directly (seeders, factories, tests) with an explicit
+`weighted_avg_cost` but no `total_value` gets it defaulted to `on_hand * weighted_avg_cost` by a
+model `saving` listener — on `saving`, not `creating`, because `HasPublicId`'s own `creating`
+listener returns a truthy value that halts that halting-by-default event before a second listener
+would run (see `StockMovementLine::booted()` for the same documented gotcha).
+
+`subtractValue()` returns `null` — surfaced as `ReceiptReversalBoundaryException` (409) — for the two
+cases that cannot be reconciled without approximating: the removal would leave non-zero residual
+value behind a fully-emptied balance, or it would drive the accumulator negative. Both happen only
+when intervening consumption already "spent" more of this receipt's own evidenced value than the
+receipt's own remaining quantity share would account for under a non-lot-tracked average — the
+system refuses rather than silently drops or invents value. See
+`doc/architecture/purchasing/purchase-receipts.en.md` § "Posting" and
+`WeightedAverageCostCalculatorTest`/`ReceiptReversalTest` for the exact worked scenarios (immediate
+full reversal, reversal after a second Receipt, reversal surviving vs. blocked by partial
+consumption, reversal after a Transfer, zero/fractional costs, and a sequential-reversal chain that a
+rounded-average reconstruction would have wrongly refused).
 
 ### 3.10 Replenishment thresholds, per Inventory Location (#439)
 
