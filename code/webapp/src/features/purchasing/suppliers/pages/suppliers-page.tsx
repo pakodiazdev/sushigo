@@ -1,6 +1,7 @@
 import { Building2, Edit, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
+import { DetailStatus } from '@/components/ui/detail-status'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
@@ -44,7 +45,30 @@ export function SuppliersPage() {
         <SearchInput value={page.search} onChange={page.setSearch} placeholder="Buscar por nombre o código..." className="flex-1" />
         <FilterSelect label="Estado" value={page.status} onChange={page.setStatus} placeholder="Todos" options={[{ value: 'active', label: 'Activos' }, { value: 'inactive', label: 'Inactivos' }]} />
       </div>
-      <DataGrid data={page.suppliers} columns={columns} loading={page.suppliersLoading} onRowClick={page.openSupplier} />
+      <DataGrid
+        data={page.suppliers}
+        columns={columns}
+        loading={page.suppliersLoading}
+        onRowClick={page.openSupplier}
+        error={page.suppliersError}
+        forbidden={page.suppliersForbidden}
+        onRetry={() => page.refetchSuppliers()}
+        isRefetching={page.suppliersRefetching}
+        emptyTitle={page.hasActiveFilters ? 'Sin resultados que coincidan con los filtros' : 'Aún no hay proveedores'}
+        emptyDescription={page.hasActiveFilters ? 'Intenta con otros filtros o términos de búsqueda.' : 'Registra un proveedor para verlo aquí.'}
+        emptyAction={
+          page.hasActiveFilters ? (
+            <button type="button" onClick={page.clearFilters} className="text-sm font-medium text-primary hover:underline">
+              Limpiar filtros
+            </button>
+          ) : page.canManage ? (
+            <Button variant="outline" size="sm" onClick={page.openNewSupplier} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Crear el primer proveedor
+            </Button>
+          ) : undefined
+        }
+      />
 
       <SlidePanel isOpen={Boolean(page.selectedSupplier) && !page.supplierFormOpen} onClose={page.closeSupplier} title="Detalle del proveedor">
         {page.selectedSupplier && (
@@ -63,16 +87,27 @@ export function SuppliersPage() {
                   <div><h4 className="font-semibold">Ofertas de compra</h4><p className="text-xs text-muted-foreground">Precios de referencia; el costo real se registra en la recepción.</p></div>
                   {page.canManage && page.selectedSupplier.is_active && <Button size="sm" onClick={page.openNewOffering}><Plus className="mr-1 h-4 w-4" />Oferta</Button>}
                 </div>
-                {page.offeringsLoading && <p className="text-sm text-muted-foreground">Cargando ofertas…</p>}
-                <div className="space-y-2">
-                  {page.offerings.map((offering) => (
-                    <button key={offering.id} type="button" onClick={() => page.openOffering(offering)} className="w-full rounded-md border p-3 text-left hover:bg-muted/50">
-                      <div className="flex justify-between gap-3"><span className="font-medium">{offering.presentation.variant?.product?.name ?? 'Producto no disponible'} · {offering.presentation.variant?.name ?? 'Variante no disponible'}</span><StatusBadge active={offering.is_active} /></div>
-                      <p className="mt-1 text-sm text-muted-foreground">{offering.presentation.template?.name ?? 'Presentación no disponible'} · {offering.currency} {offering.quoted_price.toLocaleString('es-MX')} · mín. {offering.minimum_order_quantity}</p>
-                    </button>
-                  ))}
-                  {!page.offeringsLoading && page.offerings.length === 0 && <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay ofertas registradas.</p>}
-                </div>
+                {page.offeringsLoading && <DetailStatus kind="loading" title="Cargando ofertas…" className="py-4" />}
+                {!page.offeringsLoading && page.offeringsError && (
+                  <DetailStatus
+                    kind="error"
+                    title="No se pudieron cargar las ofertas"
+                    description="Ocurrió un problema al obtenerlas. Intenta de nuevo."
+                    onRetry={() => page.refetchOfferingsList()}
+                    className="py-4"
+                  />
+                )}
+                {!page.offeringsLoading && !page.offeringsError && (
+                  <div className="space-y-2">
+                    {page.offerings.map((offering) => (
+                      <button key={offering.id} type="button" onClick={() => page.openOffering(offering)} className="w-full rounded-md border p-3 text-left hover:bg-muted/50">
+                        <div className="flex justify-between gap-3"><span className="font-medium">{offering.presentation.variant?.product?.name ?? 'Producto no disponible'} · {offering.presentation.variant?.name ?? 'Variante no disponible'}</span><StatusBadge active={offering.is_active} /></div>
+                        <p className="mt-1 text-sm text-muted-foreground">{offering.presentation.template?.name ?? 'Presentación no disponible'} · {offering.currency} {offering.quoted_price.toLocaleString('es-MX')} · mín. {offering.minimum_order_quantity}</p>
+                      </button>
+                    ))}
+                    {page.offerings.length === 0 && <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">Aún no hay ofertas registradas.</p>}
+                  </div>
+                )}
               </section>
             </SlidePanel.Body>
             {page.canManage && <SlidePanel.Footer><div className="flex justify-between"><Button variant="outline" onClick={page.openSupplierEdit}><Edit className="mr-2 h-4 w-4" />Editar</Button>{page.selectedSupplier.is_active && <Button variant="destructive" onClick={page.deactivateSelectedSupplier}>Desactivar</Button>}</div></SlidePanel.Footer>}

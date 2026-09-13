@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { forbiddenError, notFoundError } from '@/lib/__tests__/axios-error-fixtures'
 import type { StockTransfer, StockTransferSummary } from '../../types'
 
 const draftTransfer: StockTransfer = {
@@ -43,6 +44,7 @@ const mocks = vi.hoisted(() => ({
   removeQueries: vi.fn(),
   showSuccess: vi.fn(),
   showError: vi.fn(),
+  detailState: { isError: false, error: undefined as unknown },
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -53,7 +55,12 @@ vi.mock('@tanstack/react-query', () => ({
   }),
   useQuery: ({ queryKey }: { queryKey: unknown[] }) =>
     queryKey.includes('detail')
-      ? { data: { data: { data: draftTransfer } }, isLoading: false, isError: false }
+      ? {
+          data: { data: { data: draftTransfer } },
+          isLoading: false,
+          isError: mocks.detailState.isError,
+          error: mocks.detailState.error,
+        }
       : {
           data: {
             data: { data: [draftSummary], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } },
@@ -68,6 +75,7 @@ vi.mock('@tanstack/react-query', () => ({
     },
     isPending: false,
   }),
+  keepPreviousData: Symbol('keepPreviousData'),
 }))
 vi.mock('@/components/ui/toast-context', () => ({
   useToast: () => ({ showSuccess: mocks.showSuccess, showError: mocks.showError }),
@@ -160,6 +168,8 @@ describe('StockTransfersPage', () => {
     cleanup()
     vi.clearAllMocks()
     canAccessState.value = true
+    mocks.detailState.isError = false
+    mocks.detailState.error = undefined
   })
 
   it('hides the "Nuevo traslado" button when the user cannot read the location list', () => {
@@ -197,5 +207,27 @@ describe('StockTransfersPage', () => {
     fireEvent.click(view.getByRole('button', { name: 'Guardar traslado' }))
 
     expect(view.getByRole('heading', { name: 'Detalle del traslado', level: 2 })).toBeDefined()
+  })
+
+  it('blocks the panel on a 403 detail error instead of showing the cached transfer (review finding)', () => {
+    mocks.detailState.isError = true
+    mocks.detailState.error = forbiddenError()
+
+    const view = render(<StockTransfersPage />)
+    fireEvent.click(view.getByRole('button', { name: 'TR-0001' }))
+
+    expect(view.getByText('No tienes permiso para ver esta información')).toBeDefined()
+    expect(view.queryByText('Detalle de TR-0001')).toBeNull()
+  })
+
+  it('shows a not-found state on a 404 detail error instead of the cached transfer', () => {
+    mocks.detailState.isError = true
+    mocks.detailState.error = notFoundError()
+
+    const view = render(<StockTransfersPage />)
+    fireEvent.click(view.getByRole('button', { name: 'TR-0001' }))
+
+    expect(view.getByText('Este registro ya no está disponible')).toBeDefined()
+    expect(view.queryByText('Detalle de TR-0001')).toBeNull()
   })
 })

@@ -72,6 +72,146 @@ describe('DataGrid', () => {
             )
             expect(getByText('No items found')).toBeDefined()
         })
+
+        it('renders emptyTitle, emptyDescription and emptyAction together', () => {
+            const { getByText, getByRole } = render(
+                <DataGrid
+                    data={[]}
+                    columns={testColumns}
+                    emptyTitle="Aún no hay elementos"
+                    emptyDescription="Crea el primero para empezar."
+                    emptyAction={<button type="button">Crear</button>}
+                />
+            )
+            expect(getByText('Aún no hay elementos')).toBeDefined()
+            expect(getByText('Crea el primero para empezar.')).toBeDefined()
+            expect(getByRole('button', { name: 'Crear' })).toBeDefined()
+        })
+
+        it('exposes the empty state as an accessible status region', () => {
+            const { getByRole } = render(<DataGrid data={[]} columns={testColumns} />)
+            expect(getByRole('status')).toBeDefined()
+        })
+    })
+
+    describe('error state', () => {
+        it('renders a generic error message instead of the empty message', () => {
+            const { getByText, queryByText } = render(
+                <DataGrid data={[]} columns={testColumns} error emptyMessage="No data available" />
+            )
+            expect(getByText('No se pudieron cargar los datos')).toBeDefined()
+            expect(queryByText('No data available')).toBeNull()
+        })
+
+        it('renders a custom error title and description', () => {
+            const { getByText } = render(
+                <DataGrid
+                    data={[]}
+                    columns={testColumns}
+                    error
+                    errorTitle="Algo salió mal"
+                    errorDescription="Vuelve a intentarlo más tarde."
+                />
+            )
+            expect(getByText('Algo salió mal')).toBeDefined()
+            expect(getByText('Vuelve a intentarlo más tarde.')).toBeDefined()
+        })
+
+        it('renders a Reintentar button that calls onRetry when clicked', () => {
+            const onRetry = vi.fn()
+            const { getByRole } = render(
+                <DataGrid data={[]} columns={testColumns} error onRetry={onRetry} />
+            )
+            fireEvent.click(getByRole('button', { name: 'Reintentar' }))
+            expect(onRetry).toHaveBeenCalledTimes(1)
+        })
+
+        it('does not render a retry button without onRetry', () => {
+            const { queryByRole } = render(<DataGrid data={[]} columns={testColumns} error />)
+            expect(queryByRole('button', { name: 'Reintentar' })).toBeNull()
+        })
+
+        it('exposes the error state as an assertive alert region', () => {
+            const { getByRole } = render(<DataGrid data={[]} columns={testColumns} error />)
+            expect(getByRole('alert')).toBeDefined()
+        })
+
+        it('renders a forbidden-specific message with no retry action even when onRetry is passed', () => {
+            const onRetry = vi.fn()
+            const { getByText, queryByRole } = render(
+                <DataGrid data={[]} columns={testColumns} error forbidden onRetry={onRetry} />
+            )
+            expect(getByText('No tienes permiso para ver esta información')).toBeDefined()
+            expect(queryByRole('button', { name: 'Reintentar' })).toBeNull()
+        })
+
+        it('never lets a custom errorTitle leak into the forbidden message', () => {
+            const { getByText, queryByText } = render(
+                <DataGrid
+                    data={[]}
+                    columns={testColumns}
+                    error
+                    forbidden
+                    errorTitle="No fue posible cargar los movimientos"
+                />
+            )
+            expect(getByText('No tienes permiso para ver esta información')).toBeDefined()
+            expect(queryByText('No fue posible cargar los movimientos')).toBeNull()
+        })
+
+        it('prefers the error/forbidden state over an empty rows check', () => {
+            const { queryByText } = render(
+                <DataGrid data={[]} columns={testColumns} error emptyTitle="Sin resultados" />
+            )
+            expect(queryByText('Sin resultados')).toBeNull()
+        })
+
+        it('does not block the table on error when rows from a prior successful fetch are still cached', () => {
+            // Regression: a background refetch failure (e.g. TanStack Query's `isError` flipping
+            // true while `data` still holds the last successful result) must not replace still-
+            // usable rows with the full-screen error state.
+            const { getByText, queryByRole } = render(
+                <DataGrid data={testData} columns={testColumns} error />
+            )
+            expect(getByText('Item 1')).toBeDefined()
+            expect(queryByRole('alert', { name: /no tienes permiso/i })).toBeNull()
+        })
+
+        it('shows a non-blocking stale-data banner with retry when error and rows coexist', () => {
+            const onRetry = vi.fn()
+            const { getByText, getByRole } = render(
+                <DataGrid data={testData} columns={testColumns} error onRetry={onRetry} />
+            )
+            expect(getByText('Item 1')).toBeDefined()
+            expect(getByText(/Mostrando los últimos datos disponibles/)).toBeDefined()
+            fireEvent.click(getByRole('button', { name: 'Reintentar' }))
+            expect(onRetry).toHaveBeenCalledOnce()
+        })
+
+        it('still blocks the whole grid on forbidden even when rows are cached', () => {
+            const { queryByText, getByText } = render(
+                <DataGrid data={testData} columns={testColumns} error forbidden />
+            )
+            expect(queryByText('Item 1')).toBeNull()
+            expect(getByText('No tienes permiso para ver esta información')).toBeDefined()
+        })
+    })
+
+    describe('refetching indicator', () => {
+        it('shows an "Actualizando…" indicator while keeping existing rows visible', () => {
+            const { getByText } = render(
+                <DataGrid data={testData} columns={testColumns} isRefetching />
+            )
+            expect(getByText('Actualizando…')).toBeDefined()
+            expect(getByText('Item 1')).toBeDefined()
+        })
+
+        it('does not show the indicator when not refetching', () => {
+            const { queryByText } = render(
+                <DataGrid data={testData} columns={testColumns} />
+            )
+            expect(queryByText('Actualizando…')).toBeNull()
+        })
     })
 
     describe('row click', () => {

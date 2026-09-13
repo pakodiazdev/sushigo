@@ -41,6 +41,7 @@ vi.mock('@tanstack/react-query', () => ({
       config.onSuccess()
     },
   }),
+  keepPreviousData: Symbol('keepPreviousData'),
 }))
 vi.mock('@/stores/auth.store', () => ({ useAuthStore: (selector: (state: { can: () => boolean }) => boolean) => selector({ can: () => true }) }))
 vi.mock('@/components/ui/toast-context', () => ({ useToast: () => ({ showSuccess: mocks.showSuccess, showError: mocks.showError }) }))

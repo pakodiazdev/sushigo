@@ -60,13 +60,20 @@ describe('PurchasePresentations', () => {
 
   it('shows an error message instead of implying there are no presentations', () => {
     const { getByText, queryByText } = renderComponent({ isError: true })
-    expect(getByText(/Failed to load purchase presentations/)).toBeDefined()
-    expect(queryByText(/No purchase presentations yet/)).toBeNull()
+    expect(getByText(/No se pudieron cargar las presentaciones de compra/)).toBeDefined()
+    expect(queryByText(/Aún no hay presentaciones de compra/)).toBeNull()
+  })
+
+  it('calls onRetry when the retry action is clicked on error', () => {
+    const onRetry = vi.fn()
+    const { getByRole } = renderComponent({ isError: true, onRetry })
+    fireEvent.click(getByRole('button', { name: 'Reintentar' }))
+    expect(onRetry).toHaveBeenCalledOnce()
   })
 
   it('shows an empty-state message when there are no presentations', () => {
     const { getByText } = renderComponent()
-    expect(getByText(/No purchase presentations yet/)).toBeDefined()
+    expect(getByText(/Aún no hay presentaciones de compra/)).toBeDefined()
   })
 
   it('renders template name, package type, factor, barcode, default and status', () => {
@@ -74,14 +81,14 @@ describe('PurchasePresentations', () => {
     expect(getByText('Box x24')).toBeDefined()
     expect(getByText(/BOX · ×24/)).toBeDefined()
     expect(getByText('7501234567913')).toBeDefined()
-    expect(getByText('Default')).toBeDefined()
-    expect(getByText('Active')).toBeDefined()
+    expect(getByText('Predeterminada')).toBeDefined()
+    expect(getByText('Activa')).toBeDefined()
   })
 
   it('shows Inactive for a deactivated presentation, and no Default badge', () => {
     const { getByText, queryByText } = renderComponent({ presentations: [inactivePresentation] })
-    expect(getByText('Inactive')).toBeDefined()
-    expect(queryByText('Default')).toBeNull()
+    expect(getByText('Inactiva')).toBeDefined()
+    expect(queryByText('Predeterminada')).toBeNull()
   })
 
   it('calls onPresentationClick with the clicked presentation', () => {
@@ -94,7 +101,7 @@ describe('PurchasePresentations', () => {
   it('calls onAssignPresentation when Assign template is clicked', () => {
     const onAssignPresentation = vi.fn()
     const { getByText } = renderComponent({ onAssignPresentation })
-    fireEvent.click(getByText('Assign template'))
+    fireEvent.click(getByText('Asignar plantilla'))
     expect(onAssignPresentation).toHaveBeenCalledTimes(1)
   })
 
@@ -108,7 +115,7 @@ describe('PurchasePresentations', () => {
   it('hides Assign template when the user lacks items.update', () => {
     mockAuthState.can.mockImplementation((permission: string) => permission !== 'items.update')
     const { queryByText } = renderComponent()
-    expect(queryByText('Assign template')).toBeNull()
+    expect(queryByText('Asignar plantilla')).toBeNull()
   })
 
   it('hides Gestionar plantillas when the user lacks purchase_presentation_templates.view', () => {
@@ -133,7 +140,7 @@ describe('PurchasePresentations', () => {
   it('hides Assign template when the user has items.update but lacks purchase_presentation_templates.view', () => {
     mockAuthState.can.mockImplementation((permission: string) => permission !== 'purchase_presentation_templates.view')
     const { queryByText } = renderComponent()
-    expect(queryByText('Assign template')).toBeNull()
+    expect(queryByText('Asignar plantilla')).toBeNull()
   })
 
   it('renders a non-interactive row when the user has items.update but lacks purchase_presentation_templates.view', () => {

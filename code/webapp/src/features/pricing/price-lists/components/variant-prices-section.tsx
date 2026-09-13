@@ -1,6 +1,7 @@
-import { Loader2, Plus, Tag } from 'lucide-react'
+import { Plus, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { DetailStatus } from '@/components/ui/detail-status'
 import { useCanAccess } from '@/hooks/use-can-access'
 import type { ItemVariant } from '@/types/inventory'
 import type { VariantPrice } from '../types'
@@ -12,6 +13,7 @@ interface VariantPricesSectionProps {
   isError: boolean
   onNewVariantPrice: () => void
   onVariantPriceClick: (variantPrice: VariantPrice) => void
+  onRetry?: () => void
 }
 
 /** "ItemName — VariantName" when the parent Item's name is known, else just "VariantName". */
@@ -32,6 +34,7 @@ export function VariantPricesSection({
   isError,
   onNewVariantPrice,
   onVariantPriceClick,
+  onRetry,
 }: Readonly<VariantPricesSectionProps>) {
   const canUpdatePriceList = useCanAccess({ permission: 'price_lists.update' })
   const canViewItems = useCanAccess({ permission: 'items.view' })
@@ -45,7 +48,7 @@ export function VariantPricesSection({
             <Tag className="h-5 w-5 text-primary" />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-muted-foreground">Variant Prices</p>
+            <p className="text-sm font-medium text-muted-foreground">Precios de variantes</p>
             <p className="text-lg font-semibold text-foreground">
               {isLoading || isError ? '—' : variantPrices.length}
             </p>
@@ -54,24 +57,28 @@ export function VariantPricesSection({
         {canEditVariantPrice && (
           <Button type="button" variant="outline" size="sm" onClick={onNewVariantPrice} className="gap-1">
             <Plus className="h-4 w-4" />
-            New Price
+            Nuevo precio
           </Button>
         )}
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-6 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
+        <DetailStatus kind="loading" title="Cargando precios de variantes…" className="py-6" />
       )}
 
       {!isLoading && isError && (
-        <p className="text-sm text-muted-foreground">Failed to load variant prices. Please try again.</p>
+        <DetailStatus
+          kind="error"
+          title="No se pudieron cargar los precios de variantes"
+          description="Ocurrió un problema al obtenerlos. Intenta de nuevo."
+          onRetry={onRetry}
+          className="py-6"
+        />
       )}
 
       {!isLoading && !isError && variantPrices.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No prices yet. Add a Variant price so this list can resolve to something.
+          Aún no hay precios. Agrega un precio de variante para que esta lista pueda resolverse.
         </p>
       )}
 
@@ -86,7 +93,7 @@ export function VariantPricesSection({
                     {variant ? variantLabel(variant) : variantPrice.item_variant_id}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {variantPrice.price} · {variantPrice.effective_from} → {variantPrice.effective_to ?? 'no end date'}
+                    {variantPrice.price} · {variantPrice.effective_from} → {variantPrice.effective_to ?? 'sin fecha de término'}
                   </p>
                 </div>
                 <span
@@ -95,7 +102,7 @@ export function VariantPricesSection({
                     : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
                     }`}
                 >
-                  {variantPrice.is_active ? 'Active' : 'Inactive'}
+                  {variantPrice.is_active ? 'Activo' : 'Inactivo'}
                 </span>
               </>
             )

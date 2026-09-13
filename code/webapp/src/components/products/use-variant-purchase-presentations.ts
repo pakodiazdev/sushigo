@@ -55,7 +55,7 @@ export function useVariantPurchasePresentations(
 
   useEffect(() => {
     if (presentationsQuery.isError) {
-      showError(getApiErrorMessage(presentationsQuery.error, 'Failed to load purchase presentations'))
+      showError(getApiErrorMessage(presentationsQuery.error, 'No se pudieron cargar las presentaciones de compra'))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presentationsQuery.isError])
@@ -91,6 +91,7 @@ export function useVariantPurchasePresentations(
     presentations,
     isLoading: presentationsQuery.isLoading,
     isError: presentationsQuery.isError,
+    refetch: presentationsQuery.refetch,
     presentationMode,
     selectedPresentation,
     handleAssignPresentation,

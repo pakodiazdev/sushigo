@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   supplierUpdate: vi.fn().mockResolvedValue({}),
   showSuccess: vi.fn(),
   showError: vi.fn(),
+  suppliersError: false,
 }))
 
 const supplier = {
@@ -25,10 +26,12 @@ const offering = {
   },
 } satisfies SupplierOffering
 
+const refetchSuppliers = vi.fn()
+
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
   useQuery: ({ queryKey }: { queryKey: string[] }) => queryKey[0] === 'suppliers'
-    ? { data: { data: { data: [supplier] } }, isLoading: false }
+    ? { data: { data: { data: [supplier] } }, isLoading: false, isError: mocks.suppliersError, refetch: refetchSuppliers }
     : { data: { data: { data: [offering] } }, isLoading: false },
   useMutation: (config: { mutationFn: (value: Supplier) => Promise<unknown>; onSuccess: () => void }) => ({
     mutate: async (value: Supplier) => {
@@ -36,6 +39,7 @@ vi.mock('@tanstack/react-query', () => ({
       config.onSuccess()
     },
   }),
+  keepPreviousData: Symbol('keepPreviousData'),
 }))
 vi.mock('@/stores/auth.store', () => ({
   useAuthStore: (selector: (state: { can: () => boolean }) => boolean) => selector({ can: () => true }),
@@ -51,7 +55,31 @@ vi.mock('../../api/supplier-api', () => ({
 import { useSuppliersPage } from '../use-suppliers-page'
 
 describe('useSuppliersPage', () => {
-  afterEach(() => vi.clearAllMocks())
+  afterEach(() => {
+    vi.clearAllMocks()
+    mocks.suppliersError = false
+  })
+
+  it('exposes suppliersError from the query and lets the page retry it', () => {
+    mocks.suppliersError = true
+    const { result } = renderHook(() => useSuppliersPage())
+
+    expect(result.current.suppliersError).toBe(true)
+    result.current.refetchSuppliers()
+    expect(refetchSuppliers).toHaveBeenCalledOnce()
+  })
+
+  it('reports hasActiveFilters and clears search/status together', () => {
+    const { result } = renderHook(() => useSuppliersPage())
+    expect(result.current.hasActiveFilters).toBe(false)
+
+    act(() => result.current.setSearch('Mar'))
+    expect(result.current.hasActiveFilters).toBe(true)
+
+    act(() => result.current.clearFilters())
+    expect(result.current.hasActiveFilters).toBe(false)
+    expect(result.current.search).toBe('')
+  })
 
   it('owns supplier and offering panel state', () => {
     const { result } = renderHook(() => useSuppliersPage())

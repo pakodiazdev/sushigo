@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { getApiErrorMessage, isForbiddenError } from '@/lib/api-error'
 import { priceListApi } from '../api/pricing-api'
 import { priceListQueryKeys } from '../api/query-keys'
 import type { PriceList } from '../types'
@@ -73,6 +73,7 @@ export function usePriceLists({ onDeleted }: UsePriceListsOptions = {}) {
         },
       }
     },
+    placeholderData: keepPreviousData,
   })
   const allPriceLists = priceListsQuery.data?.data.data ?? []
   const filteredPriceLists = searchQueryState
@@ -87,10 +88,16 @@ export function usePriceLists({ onDeleted }: UsePriceListsOptions = {}) {
 
   useEffect(() => {
     if (priceListsQuery.isError) {
-      showError(getApiErrorMessage(priceListsQuery.error, 'Failed to load price lists'))
+      showError(getApiErrorMessage(priceListsQuery.error, 'No se pudieron cargar las listas de precios'))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceListsQuery.isError])
+
+  const hasActiveFilters = Boolean(searchQueryState || statusFilterState)
+  const clearFilters = () => {
+    setSearchQuery('')
+    setStatusFilter('')
+  }
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => priceListApi.delete(id),
@@ -105,12 +112,12 @@ export function usePriceLists({ onDeleted }: UsePriceListsOptions = {}) {
       })
       closePanel()
       onDeleted?.()
-      showSuccess('Price list deleted successfully', 'Price List Deleted')
+      showSuccess('Lista de precios eliminada correctamente', 'Lista de precios eliminada')
     },
     onError: (error: unknown) => {
       showError(
-        getApiErrorMessage(error, 'Failed to delete price list. It may have existing assignments or prices.'),
-        'Delete Error'
+        getApiErrorMessage(error, 'No se pudo eliminar la lista de precios. Puede tener asignaciones o precios existentes.'),
+        'Error al eliminar'
       )
     },
   })
@@ -162,7 +169,15 @@ export function usePriceLists({ onDeleted }: UsePriceListsOptions = {}) {
     priceLists,
     totalPages,
     isLoading: priceListsQuery.isLoading,
-    isError: priceListsQuery.isError,
+    // A 403 (access revoked mid-session) must never be treated as a retryable refresh
+    // failure that leaves cached rows visible — DataGrid's `forbidden` state blocks them
+    // unconditionally, unlike its plain `error` state, which now keeps stale rows on screen.
+    isError: priceListsQuery.isError && !isForbiddenError(priceListsQuery.error),
+    isForbidden: isForbiddenError(priceListsQuery.error),
+    isRefetching: priceListsQuery.isRefetching,
+    refetch: priceListsQuery.refetch,
+    hasActiveFilters,
+    clearFilters,
     isPanelOpen,
     panelMode,
     selectedPriceList,

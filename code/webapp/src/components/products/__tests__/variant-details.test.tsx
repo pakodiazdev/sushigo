@@ -89,7 +89,7 @@ describe('VariantDetails', () => {
     const { getAllByText } = render(
       <VariantDetails variant={riceVariant} onEdit={vi.fn()} onBack={vi.fn()} {...defaultPresentationProps} />
     )
-    expect(getAllByText('Active').length).toBeGreaterThan(0)
+    expect(getAllByText('Activa').length).toBeGreaterThan(0)
   })
 
   it('shows Inactive status for a deactivated variant', () => {
@@ -101,15 +101,15 @@ describe('VariantDetails', () => {
         {...defaultPresentationProps}
       />
     )
-    expect(getByText('Inactive')).toBeDefined()
+    expect(getByText('Inactiva')).toBeDefined()
   })
 
   it('shows the lot/serial tracking badges when enabled', () => {
     const { getByText, queryByText } = render(
       <VariantDetails variant={riceVariant} onEdit={vi.fn()} onBack={vi.fn()} {...defaultPresentationProps} />
     )
-    expect(getByText('Tracks lot numbers')).toBeDefined()
-    expect(queryByText('Tracks serial numbers')).toBeNull()
+    expect(getByText('Rastrea números de lote')).toBeDefined()
+    expect(queryByText('Rastrea números de serie')).toBeNull()
   })
 
   it('calls onEdit when Edit Variant is clicked', () => {
@@ -117,7 +117,7 @@ describe('VariantDetails', () => {
     const { getByText } = render(
       <VariantDetails variant={riceVariant} onEdit={onEdit} onBack={vi.fn()} {...defaultPresentationProps} />
     )
-    fireEvent.click(getByText('Edit Variant'))
+    fireEvent.click(getByText('Editar variante'))
     expect(onEdit).toHaveBeenCalledTimes(1)
   })
 
@@ -126,7 +126,7 @@ describe('VariantDetails', () => {
     const { getByText } = render(
       <VariantDetails variant={riceVariant} onEdit={vi.fn()} onBack={onBack} {...defaultPresentationProps} />
     )
-    fireEvent.click(getByText('Back to Product'))
+    fireEvent.click(getByText('Volver al producto'))
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 
@@ -135,7 +135,7 @@ describe('VariantDetails', () => {
     const { queryByText } = render(
       <VariantDetails variant={riceVariant} onEdit={vi.fn()} onBack={vi.fn()} {...defaultPresentationProps} />
     )
-    expect(queryByText('Edit Variant')).toBeNull()
+    expect(queryByText('Editar variante')).toBeNull()
   })
 
   it('does not render a Delete action — deactivate happens through Edit', () => {
@@ -155,7 +155,7 @@ describe('VariantDetails', () => {
         presentations={[boxPresentation]}
       />
     )
-    expect(getByText('Purchase Presentations')).toBeDefined()
+    expect(getByText('Presentaciones de compra')).toBeDefined()
     expect(getByText('Box x24')).toBeDefined()
   })
 
@@ -170,7 +170,7 @@ describe('VariantDetails', () => {
         onAssignPresentation={onAssignPresentation}
       />
     )
-    fireEvent.click(getByText('Assign template'))
+    fireEvent.click(getByText('Asignar plantilla'))
     expect(onAssignPresentation).toHaveBeenCalledTimes(1)
   })
 

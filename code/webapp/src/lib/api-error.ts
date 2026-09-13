@@ -74,3 +74,22 @@ export function getApiValidationErrors(error: unknown): Record<string, string> {
 export function hasApiValidationErrors(error: unknown): boolean {
     return isApiError(error) && Object.keys(error.response?.data?.errors || {}).length > 0
 }
+
+/**
+ * Check if an error is a 403 (authorization denied) response, distinct from a
+ * transient failure — a "retry" action never resolves this one, so callers use
+ * it to show a permission-specific message instead of a generic error/retry state.
+ */
+export function isForbiddenError(error: unknown): boolean {
+    return isApiError(error) && error.response?.status === 403
+}
+
+/**
+ * Check if an error is a 404 (record not found) response, distinct from a
+ * transient failure — a "retry" action never resolves this one either, since
+ * the record itself is gone (deleted by another user, e.g. while a detail
+ * panel was open on it).
+ */
+export function isNotFoundError(error: unknown): boolean {
+    return isApiError(error) && error.response?.status === 404
+}

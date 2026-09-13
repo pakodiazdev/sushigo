@@ -96,12 +96,12 @@ describe('ProductDetails', () => {
 
   it('shows Active status for an active product', () => {
     const { getByText } = renderProductDetails()
-    expect(getByText('Active')).toBeDefined()
+    expect(getByText('Activo')).toBeDefined()
   })
 
   it('shows Inactive status for an inactive product', () => {
     const { getByText } = renderProductDetails({ product: { ...baseProduct, is_active: false } })
-    expect(getByText('Inactive')).toBeDefined()
+    expect(getByText('Inactivo')).toBeDefined()
   })
 
   it('shows Inactive status when the flag is active but a warning is present', () => {
@@ -111,8 +111,8 @@ describe('ProductDetails', () => {
         warnings: ['The assigned category "Beverages" is inactive; this product will not appear as active until it is reactivated.'],
       },
     })
-    expect(getByText('Inactive')).toBeDefined()
-    expect(queryByText('Active')).toBeNull()
+    expect(getByText('Inactivo')).toBeDefined()
+    expect(queryByText('Activo')).toBeNull()
   })
 
   it('renders a photo when photo_url is set', () => {
@@ -136,14 +136,14 @@ describe('ProductDetails', () => {
   it('shows the variant count and an empty-state message when there are none', () => {
     const { getByText } = renderProductDetails({ variants: [] })
     expect(getByText('0')).toBeDefined()
-    expect(getByText(/No variants yet/)).toBeDefined()
+    expect(getByText(/Aún no hay variantes/)).toBeDefined()
   })
 
   it('shows the variant count without the empty-state message when there are variants', () => {
     const { getByText, queryByText } = renderProductDetails({ variants: [cocaColaVariant] })
     expect(getByText('1')).toBeDefined()
     expect(getByText('Coca-Cola 600 ml Single')).toBeDefined()
-    expect(queryByText(/No variants yet/)).toBeNull()
+    expect(queryByText(/Aún no hay variantes/)).toBeNull()
   })
 
   it('calls onVariantClick when a variant card is clicked', () => {
@@ -156,7 +156,7 @@ describe('ProductDetails', () => {
   it('calls onNewVariant when New Variant is clicked', () => {
     const onNewVariant = vi.fn()
     const { getByText } = renderProductDetails({ onNewVariant })
-    fireEvent.click(getByText('New Variant'))
+    fireEvent.click(getByText('Nueva variante'))
     expect(onNewVariant).toHaveBeenCalledTimes(1)
   })
 
@@ -178,40 +178,40 @@ describe('ProductDetails', () => {
   it('calls onEdit when the Edit button is clicked', () => {
     const onEdit = vi.fn()
     const { getByText } = renderProductDetails({ onEdit })
-    fireEvent.click(getByText('Edit Product'))
+    fireEvent.click(getByText('Editar producto'))
     expect(onEdit).toHaveBeenCalledTimes(1)
   })
 
   it('calls onDelete when the Delete button is clicked', () => {
     const onDelete = vi.fn()
     const { getByText } = renderProductDetails({ onDelete })
-    fireEvent.click(getByText('Delete'))
+    fireEvent.click(getByText('Eliminar'))
     expect(onDelete).toHaveBeenCalledTimes(1)
   })
 
   it('hides Edit Product when the user lacks items.update', () => {
     mockAuthState.can.mockImplementation((permission: string) => permission !== 'items.update')
     const { queryByText } = renderProductDetails()
-    expect(queryByText('Edit Product')).toBeNull()
+    expect(queryByText('Editar producto')).toBeNull()
   })
 
   it('hides Delete when the user lacks items.delete', () => {
     mockAuthState.can.mockImplementation((permission: string) => permission !== 'items.delete')
     const { queryByText } = renderProductDetails()
-    expect(queryByText('Delete')).toBeNull()
+    expect(queryByText('Eliminar')).toBeNull()
   })
 
   it('hides New Variant when the user lacks items.create', () => {
     mockAuthState.can.mockImplementation((permission: string) => permission !== 'items.create')
     const { queryByText } = renderProductDetails()
-    expect(queryByText('New Variant')).toBeNull()
+    expect(queryByText('Nueva variante')).toBeNull()
   })
 
   it('hides all controls for a read-only user (items.view only)', () => {
     mockAuthState.can.mockReturnValue(false)
     const { queryByText } = renderProductDetails()
-    expect(queryByText('Edit Product')).toBeNull()
-    expect(queryByText('Delete')).toBeNull()
-    expect(queryByText('New Variant')).toBeNull()
+    expect(queryByText('Editar producto')).toBeNull()
+    expect(queryByText('Eliminar')).toBeNull()
+    expect(queryByText('Nueva variante')).toBeNull()
   })
 })

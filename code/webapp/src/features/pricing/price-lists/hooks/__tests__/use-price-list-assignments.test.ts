@@ -117,4 +117,21 @@ describe('usePriceListAssignments', () => {
     expect(result.current.assignmentMode).toBe('list')
     expect(result.current.selectedAssignment).toBeNull()
   })
+
+  it('exposes a working refetch', async () => {
+    vi.mocked(priceListAssignmentApi.list).mockResolvedValue({
+      data: { status: 200, data: [forPl1], meta: { current_page: 1, total: 1, last_page: 1 } },
+    } as never)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePriceListAssignments('pl-1', true), { wrapper })
+
+    await waitFor(() => expect(result.current.assignments).toHaveLength(1))
+    const callsBefore = vi.mocked(priceListAssignmentApi.list).mock.calls.length
+
+    await act(async () => {
+      await result.current.refetch()
+    })
+
+    expect(vi.mocked(priceListAssignmentApi.list).mock.calls.length).toBeGreaterThan(callsBefore)
+  })
 })
