@@ -107,7 +107,23 @@ describe('AssignmentsSection', () => {
         onAssignmentClick={vi.fn()}
       />
     )
-    expect(getByText(/Failed to load assignments/)).toBeDefined()
+    expect(getByText(/No se pudieron cargar las asignaciones/)).toBeDefined()
+  })
+
+  it('calls onRetry when the retry action is clicked on error', () => {
+    const onRetry = vi.fn()
+    const { getByRole } = render(
+      <AssignmentsSection
+        assignments={[]}
+        isLoading={false}
+        isError
+        onNewAssignment={vi.fn()}
+        onAssignmentClick={vi.fn()}
+        onRetry={onRetry}
+      />
+    )
+    fireEvent.click(getByRole('button', { name: 'Reintentar' }))
+    expect(onRetry).toHaveBeenCalledOnce()
   })
 
   it('shows an empty state', () => {
@@ -120,7 +136,7 @@ describe('AssignmentsSection', () => {
         onAssignmentClick={vi.fn()}
       />
     )
-    expect(getByText(/No assignments yet/)).toBeDefined()
+    expect(getByText(/Aún no hay asignaciones/)).toBeDefined()
   })
 
   it('resolves branch and operating unit names, and shows the effective range', () => {
@@ -137,7 +153,7 @@ describe('AssignmentsSection', () => {
     )
     expect(getAllByText('Downtown')).toHaveLength(2)
     expect(getByText(/Summer Event/)).toBeDefined()
-    expect(getByText('2026-01-01 → no end date')).toBeDefined()
+    expect(getByText('2026-01-01 → sin fecha de término')).toBeDefined()
     expect(getByText('2026-02-01 → 2026-03-01')).toBeDefined()
   })
 
@@ -151,8 +167,8 @@ describe('AssignmentsSection', () => {
         onAssignmentClick={vi.fn()}
       />
     )
-    expect(getByText(/Branch #1/)).toBeDefined()
-    expect(getByText(/Unit #5/)).toBeDefined()
+    expect(getByText(/Sucursal #1/)).toBeDefined()
+    expect(getByText(/Unidad #5/)).toBeDefined()
   })
 
   it('calls onAssignmentClick when a row is clicked', () => {
@@ -166,7 +182,7 @@ describe('AssignmentsSection', () => {
         onAssignmentClick={onAssignmentClick}
       />
     )
-    fireEvent.click(getByText(/Branch #1/))
+    fireEvent.click(getByText(/Sucursal #1/))
     expect(onAssignmentClick).toHaveBeenCalledWith(branchOnlyAssignment)
   })
 
@@ -183,8 +199,8 @@ describe('AssignmentsSection', () => {
       />
     )
 
-    expect(getByText(/Branch #1/).closest('button')).toBeNull()
-    fireEvent.click(getByText(/Branch #1/))
+    expect(getByText(/Sucursal #1/).closest('button')).toBeNull()
+    fireEvent.click(getByText(/Sucursal #1/))
     expect(onAssignmentClick).not.toHaveBeenCalled()
   })
 
@@ -199,7 +215,7 @@ describe('AssignmentsSection', () => {
         onAssignmentClick={vi.fn()}
       />
     )
-    fireEvent.click(getByText('New Assignment'))
+    fireEvent.click(getByText('Nueva asignación'))
     expect(onNewAssignment).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { forbiddenError, notFoundError } from '@/lib/__tests__/axios-error-fixtures'
 import type { Receipt, ReceiptSummary } from '../../types'
 
 const draftReceipt: Receipt = {
@@ -36,13 +37,24 @@ const draftSummary: ReceiptSummary = {
   updated_at: '2026-08-25T00:00:00Z',
 }
 
-const mocks = vi.hoisted(() => ({ invalidateQueries: vi.fn(), setQueryData: vi.fn(), showSuccess: vi.fn(), showError: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  invalidateQueries: vi.fn(),
+  setQueryData: vi.fn(),
+  showSuccess: vi.fn(),
+  showError: vi.fn(),
+  detailState: { isError: false, error: undefined as unknown },
+}))
 
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries, setQueryData: mocks.setQueryData }),
   useQuery: ({ queryKey }: { queryKey: unknown[] }) =>
     queryKey.includes('detail')
-      ? { data: { data: { data: draftReceipt } }, isLoading: false, isError: false }
+      ? {
+          data: { data: { data: draftReceipt } },
+          isLoading: false,
+          isError: mocks.detailState.isError,
+          error: mocks.detailState.error,
+        }
       : {
           data: { data: { data: [draftSummary], meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 } } },
           isLoading: false,
@@ -55,6 +67,7 @@ vi.mock('@tanstack/react-query', () => ({
     },
     isPending: false,
   }),
+  keepPreviousData: Symbol('keepPreviousData'),
 }))
 vi.mock('@/components/ui/toast-context', () => ({ useToast: () => ({ showSuccess: mocks.showSuccess, showError: mocks.showError }) }))
 vi.mock('../../api/receipt-api', () => ({ receiptApi: { list: vi.fn(), get: vi.fn(), delete: vi.fn(), post: vi.fn(), reverse: vi.fn() } }))
@@ -96,6 +109,8 @@ describe('ReceiptsPage', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    mocks.detailState.isError = false
+    mocks.detailState.error = undefined
   })
 
   it('opens the detail panel for a clicked receipt row', () => {
@@ -125,5 +140,27 @@ describe('ReceiptsPage', () => {
     fireEvent.click(view.getByRole('button', { name: 'Guardar recepción' }))
 
     expect(view.getByRole('heading', { name: 'Detalle de la recepción', level: 2 })).toBeDefined()
+  })
+
+  it('blocks the panel on a 403 detail error instead of showing the cached receipt (review finding)', () => {
+    mocks.detailState.isError = true
+    mocks.detailState.error = forbiddenError()
+
+    const view = render(<ReceiptsPage />)
+    fireEvent.click(view.getByRole('button', { name: 'FAC-0001' }))
+
+    expect(view.getByText('No tienes permiso para ver esta información')).toBeDefined()
+    expect(view.queryByText('Detalle de FAC-0001')).toBeNull()
+  })
+
+  it('shows a not-found state on a 404 detail error instead of the cached receipt', () => {
+    mocks.detailState.isError = true
+    mocks.detailState.error = notFoundError()
+
+    const view = render(<ReceiptsPage />)
+    fireEvent.click(view.getByRole('button', { name: 'FAC-0001' }))
+
+    expect(view.getByText('Este registro ya no está disponible')).toBeDefined()
+    expect(view.queryByText('Detalle de FAC-0001')).toBeNull()
   })
 })

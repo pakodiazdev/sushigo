@@ -3,6 +3,7 @@ import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { forbiddenError, notFoundError } from '@/lib/__tests__/axios-error-fixtures'
 import type { StockTransfer, StockTransferSummary } from '../../types'
 
 const mockShowSuccess = vi.fn()
@@ -305,5 +306,72 @@ describe('useStockTransfersPage', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     await waitFor(() => expect(mockShowError).toHaveBeenCalled())
+  })
+
+  it('exposes a working refetch that clears isError once the list succeeds', async () => {
+    vi.mocked(stockTransferApi.list).mockRejectedValueOnce(new Error('Network Error'))
+    const { result } = renderHook(() => useStockTransfersPage(), { wrapper: makeWrapper() })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    vi.mocked(stockTransferApi.list).mockResolvedValue(listResult([summary()]))
+    await act(async () => {
+      await result.current.refetch()
+    })
+
+    await waitFor(() => expect(result.current.isError).toBe(false))
+    expect(result.current.transfers).toHaveLength(1)
+  })
+
+  it('reports hasActiveFilters and clears search/status together', async () => {
+    vi.mocked(stockTransferApi.list).mockResolvedValue(listResult([summary()]))
+    const { result } = renderHook(() => useStockTransfersPage(), { wrapper: makeWrapper() })
+
+    await waitFor(() => expect(result.current.transfers).toHaveLength(1))
+    expect(result.current.hasActiveFilters).toBe(false)
+
+    act(() => result.current.setSearchQuery('TR'))
+    expect(result.current.hasActiveFilters).toBe(true)
+
+    act(() => result.current.clearFilters())
+    expect(result.current.hasActiveFilters).toBe(false)
+    expect(result.current.searchQuery).toBe('')
+    expect(result.current.statusFilter).toBe('')
+  })
+
+  it('classifies a 403 on the detail query as isDetailForbidden even with a cached selectedTransfer (review finding)', async () => {
+    vi.mocked(stockTransferApi.list).mockResolvedValue(listResult([summary()]))
+    vi.mocked(stockTransferApi.get).mockResolvedValueOnce(entityResult(fullTransfer()))
+
+    const { result } = renderHook(() => useStockTransfersPage(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.transfers).toHaveLength(1))
+
+    act(() => result.current.handleRowClick(summary()))
+    await waitFor(() => expect(result.current.selectedTransfer?.id).toBe('tr1'))
+
+    // A same-key refetch (e.g. access revoked mid-session) comes back 403 — TanStack
+    // Query retains the last successful `data`, so `selectedTransfer` stays populated.
+    vi.mocked(stockTransferApi.get).mockRejectedValueOnce(forbiddenError())
+    await act(async () => {
+      await result.current.refetchDetail()
+    })
+
+    await waitFor(() => expect(result.current.isDetailForbidden).toBe(true))
+    expect(result.current.isDetailError).toBe(false)
+    expect(result.current.selectedTransfer?.id).toBe('tr1')
+  })
+
+  it('classifies a 404 on the detail query as isDetailNotFound, not a retryable error', async () => {
+    vi.mocked(stockTransferApi.list).mockResolvedValue(listResult([summary()]))
+    vi.mocked(stockTransferApi.get).mockRejectedValueOnce(notFoundError())
+
+    const { result } = renderHook(() => useStockTransfersPage(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.transfers).toHaveLength(1))
+
+    act(() => result.current.handleRowClick(summary()))
+
+    await waitFor(() => expect(result.current.isDetailNotFound).toBe(true))
+    expect(result.current.isDetailError).toBe(false)
+    expect(result.current.isDetailForbidden).toBe(false)
   })
 })

@@ -15,6 +15,7 @@ interface ProductDetailsProps {
   variantsError: boolean
   onNewVariant: () => void
   onVariantClick: (variant: ProductVariant) => void
+  onRetryVariants?: () => void
 }
 
 export function ProductDetails({
@@ -26,6 +27,7 @@ export function ProductDetails({
   variantsError,
   onNewVariant,
   onVariantClick,
+  onRetryVariants,
 }: Readonly<ProductDetailsProps>) {
   const effectivelyActive = isEffectivelyActive(product)
 
@@ -45,7 +47,7 @@ export function ProductDetails({
               : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
               }`}
           >
-            {effectivelyActive ? 'Active' : 'Inactive'}
+            {effectivelyActive ? 'Activo' : 'Inactivo'}
           </span>
         </div>
 
@@ -95,6 +97,7 @@ export function ProductDetails({
           isError={variantsError}
           onNewVariant={onNewVariant}
           onVariantClick={onVariantClick}
+          onRetry={onRetryVariants}
         />
       </SlidePanel.Body>
 
@@ -106,13 +109,13 @@ export function ProductDetails({
           <CanAccess permission="items.delete">
             <Button variant="outline-danger" onClick={onDelete}>
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              Eliminar
             </Button>
           </CanAccess>
           <CanAccess permission="items.update">
             <Button onClick={onEdit}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit Product
+              Editar producto
             </Button>
           </CanAccess>
         </div>

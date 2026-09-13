@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { getApiErrorMessage, isForbiddenError, isNotFoundError } from '@/lib/api-error'
 import { stockTransferApi } from '../api/stock-transfer-api'
 import { stockTransferQueryKeys } from '../api/query-keys'
 import type { StockTransfer, StockTransferStatus, StockTransferSummary } from '../types'
@@ -49,6 +49,7 @@ export function useStockTransfersPage() {
   const transfersQuery = useQuery({
     queryKey: stockTransferQueryKeys.list(listParams),
     queryFn: () => stockTransferApi.list(listParams),
+    placeholderData: keepPreviousData,
   })
 
   const transfers = transfersQuery.data?.data.data ?? []
@@ -189,11 +190,34 @@ export function useStockTransfersPage() {
     setSearchQuery,
     transfers,
     isLoading: transfersQuery.isLoading,
-    isError: transfersQuery.isError,
+    // A 403 (access revoked mid-session) must never be treated as a retryable refresh
+    // failure that leaves cached rows visible — DataGrid's `forbidden` state blocks them
+    // unconditionally, unlike its plain `error` state, which now keeps stale rows on screen.
+    isError: transfersQuery.isError && !isForbiddenError(transfersQuery.error),
+    isForbidden: isForbiddenError(transfersQuery.error),
+    isRefetching: transfersQuery.isRefetching,
+    refetch: transfersQuery.refetch,
+    hasActiveFilters: Boolean(searchQueryState || statusFilterState),
+    clearFilters: () => {
+      setSearchQuery('')
+      setStatusFilter('')
+    },
     isPanelOpen,
     panelMode,
     selectedTransfer,
     isDetailLoading: transferDetailQuery.isLoading && panelMode !== 'create',
+    // Same reasoning as the list's `isForbidden` above: a same-key refetch that comes back
+    // 403 must not be masked by the cached `selectedTransfer` still sitting in the query cache.
+    // A 404 (deleted by another user while the panel was open) is equally non-retryable, so
+    // it's carved out into its own state rather than the generic retryable `isDetailError`.
+    isDetailError:
+      transferDetailQuery.isError &&
+      panelMode !== 'create' &&
+      !isForbiddenError(transferDetailQuery.error) &&
+      !isNotFoundError(transferDetailQuery.error),
+    isDetailForbidden: panelMode !== 'create' && isForbiddenError(transferDetailQuery.error),
+    isDetailNotFound: panelMode !== 'create' && isNotFoundError(transferDetailQuery.error),
+    refetchDetail: transferDetailQuery.refetch,
     handleRowClick,
     handleNewTransfer,
     handleEdit,

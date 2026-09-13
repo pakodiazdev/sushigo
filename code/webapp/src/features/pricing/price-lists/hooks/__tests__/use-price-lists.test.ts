@@ -150,4 +150,38 @@ describe('usePriceLists', () => {
 
     vi.unstubAllGlobals()
   })
+
+  it('exposes isError and a working refetch for the list query', async () => {
+    vi.mocked(priceListApi.list).mockRejectedValueOnce(new Error('Network Error'))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePriceLists(), { wrapper })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    vi.mocked(priceListApi.list).mockResolvedValue({
+      data: { status: 200, data: [standard], meta: { current_page: 1, total: 1, last_page: 1 } },
+    } as never)
+    await act(async () => {
+      await result.current.refetch()
+    })
+
+    await waitFor(() => expect(result.current.isError).toBe(false))
+    expect(result.current.priceLists).toHaveLength(1)
+  })
+
+  it('reports hasActiveFilters and clears search/status together', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePriceLists(), { wrapper })
+
+    await waitFor(() => expect(result.current.priceLists).toHaveLength(2))
+    expect(result.current.hasActiveFilters).toBe(false)
+
+    act(() => result.current.setSearchQuery('Standard'))
+    expect(result.current.hasActiveFilters).toBe(true)
+
+    act(() => result.current.clearFilters())
+    expect(result.current.hasActiveFilters).toBe(false)
+    expect(result.current.searchQuery).toBe('')
+    expect(result.current.statusFilter).toBe('')
+  })
 })

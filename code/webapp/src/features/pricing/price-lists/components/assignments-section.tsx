@@ -1,7 +1,8 @@
-import { Building2, Loader2, Plus } from 'lucide-react'
+import { Building2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CanAccess } from '@/components/auth'
+import { DetailStatus } from '@/components/ui/detail-status'
 import { useCanAccess } from '@/hooks/use-can-access'
 import { useAuthStore } from '@/stores/auth.store'
 import { useOperatingUnitsSelect } from '@/hooks/use-inventory-queries'
@@ -13,6 +14,7 @@ interface AssignmentsSectionProps {
   isError: boolean
   onNewAssignment: () => void
   onAssignmentClick: (assignment: PriceListAssignment) => void
+  onRetry?: () => void
 }
 
 /**
@@ -28,18 +30,19 @@ export function AssignmentsSection({
   isError,
   onNewAssignment,
   onAssignmentClick,
+  onRetry,
 }: Readonly<AssignmentsSectionProps>) {
   const { availableBranches } = useAuthStore()
   const { data: operatingUnits = [] } = useOperatingUnitsSelect()
   const canEditAssignment = useCanAccess({ permission: 'price_list_assignments.update' })
 
   const branchName = (branchId: number) =>
-    availableBranches.find((branch) => branch.id === branchId)?.name ?? `Branch #${branchId}`
+    availableBranches.find((branch) => branch.id === branchId)?.name ?? `Sucursal #${branchId}`
 
   const operatingUnitName = (operatingUnitId: number | null) =>
     operatingUnitId == null
       ? null
-      : (operatingUnits.find((unit) => unit.id === operatingUnitId)?.name ?? `Unit #${operatingUnitId}`)
+      : (operatingUnits.find((unit) => unit.id === operatingUnitId)?.name ?? `Unidad #${operatingUnitId}`)
 
   return (
     <Card className="p-4">
@@ -49,7 +52,7 @@ export function AssignmentsSection({
             <Building2 className="h-5 w-5 text-primary" />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-muted-foreground">Assignments</p>
+            <p className="text-sm font-medium text-muted-foreground">Asignaciones</p>
             <p className="text-lg font-semibold text-foreground">
               {isLoading || isError ? '—' : assignments.length}
             </p>
@@ -58,24 +61,28 @@ export function AssignmentsSection({
         <CanAccess permission="price_list_assignments.create">
           <Button type="button" variant="outline" size="sm" onClick={onNewAssignment} className="gap-1">
             <Plus className="h-4 w-4" />
-            New Assignment
+            Nueva asignación
           </Button>
         </CanAccess>
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-6 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
+        <DetailStatus kind="loading" title="Cargando asignaciones…" className="py-6" />
       )}
 
       {!isLoading && isError && (
-        <p className="text-sm text-muted-foreground">Failed to load assignments. Please try again.</p>
+        <DetailStatus
+          kind="error"
+          title="No se pudieron cargar las asignaciones"
+          description="Ocurrió un problema al obtenerlas. Intenta de nuevo."
+          onRetry={onRetry}
+          className="py-6"
+        />
       )}
 
       {!isLoading && !isError && assignments.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No assignments yet. Assign this list to a branch to make it resolvable.
+          Aún no hay asignaciones. Asigna esta lista a una sucursal para que sea resoluble.
         </p>
       )}
 
@@ -92,7 +99,7 @@ export function AssignmentsSection({
                     )}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {assignment.effective_from} → {assignment.effective_to ?? 'no end date'}
+                    {assignment.effective_from} → {assignment.effective_to ?? 'sin fecha de término'}
                   </p>
                 </div>
                 <span
@@ -101,7 +108,7 @@ export function AssignmentsSection({
                     : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
                     }`}
                 >
-                  {assignment.is_active ? 'Active' : 'Inactive'}
+                  {assignment.is_active ? 'Activa' : 'Inactiva'}
                 </span>
               </>
             )

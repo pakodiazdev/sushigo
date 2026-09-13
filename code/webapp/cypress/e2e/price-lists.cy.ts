@@ -66,9 +66,8 @@ let authToken = ''
 
 /** Every panel/card lives inside a scrollable SlidePanel body — scroll before clicking,
  *  mirroring product-variant-purchase-presentation.cy.ts's own submit-button pattern. An exact
- *  match (regex) is required for 'New Price', since `cy.contains` substring-matches by default
- *  and the page header's own 'New Price List' button (behind the panel, earlier in the DOM)
- *  would otherwise be matched first. */
+ *  match (regex) is required for 'Nuevo precio', since `cy.contains` substring-matches by default
+ *  and would otherwise also match 'Nuevo precio de variante'-style copy elsewhere in the panel. */
 function clickButton(text: string | RegExp) {
   cy.contains('button', text).scrollIntoView().click({ force: true })
 }
@@ -147,10 +146,10 @@ describe('Price Lists management', () => {
   beforeEach(() => {
     // Cypress `retries` re-runs the `it` and this beforeEach, but NOT before(). Without this
     // purge, a retry that starts after the first Price List is created would hit the leftover
-    // records and fail deterministically at the "No data available" assertion below instead of
-    // retrying the real transient failure (CI runs `cypress run --config retries=2` — see
-    // .github/workflows/_e2e-ci.yml). PriceList uses SoftDeletes, so this only *hides* prior
-    // records from the list (satisfying "No data available") — it does not remove the row, so
+    // records and fail deterministically at the "Aún no hay listas de precios" assertion below
+    // instead of retrying the real transient failure (CI runs `cypress run --config retries=2` —
+    // see .github/workflows/_e2e-ci.yml). PriceList uses SoftDeletes, so this only *hides* prior
+    // records from the list (satisfying "Aún no hay listas de precios") — it does not remove the row, so
     // it does NOT free up `code` for reuse (Assignments/Variant Prices cascadeOnDelete never
     // fires either, since the FK only triggers on an actual DELETE, not a soft-delete UPDATE).
     // The `it()` below works around that separately by suffixing each Price List's `code` with
@@ -176,8 +175,8 @@ describe('Price Lists management', () => {
     cy.loginByApi(adminEmail, adminPassword)
     cy.visitWithAuth('/inventario/listas-de-precios')
     cy.url().should('include', '/inventario/listas-de-precios', { timeout: 10_000 })
-    cy.contains('h1', 'Price Lists', { timeout: 10_000 }).should('be.visible')
-    cy.contains('No data available', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h1', 'Listas de precios', { timeout: 10_000 }).should('be.visible')
+    cy.contains('Aún no hay listas de precios', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
   })
 
@@ -192,8 +191,8 @@ describe('Price Lists management', () => {
     const unitPriceListCode = `${UNIT_PRICE_LIST_CODE_PREFIX}-${runSuffix}`
 
     // ── 1. Create the branch-level Price List ──────────────────────────────
-    clickButton('New Price List')
-    cy.contains('h2', 'New Price List', { timeout: 10_000 }).should('be.visible')
+    clickButton('Nueva lista de precios')
+    cy.contains('h2', 'Nueva lista de precios', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       cy.get('input[placeholder="e.g., STANDARD"]').type(branchPriceListCode)
@@ -202,12 +201,12 @@ describe('Price Lists management', () => {
     clickButton('Create Price List')
 
     cy.contains('Price List created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Price List Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
     cy.contains(BRANCH_PRICE_LIST_NAME).should('be.visible')
 
     // ── 2. Assign it to the Branch (no Operating Unit override) ────────────
-    clickButton('New Assignment')
-    cy.contains('h2', 'Price List Assignment', { timeout: 10_000 }).should('be.visible')
+    clickButton('Nueva asignación')
+    cy.contains('h2', 'Asignación de lista de precios', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       cy.get('select').eq(0).select(BRANCH_NAME)
@@ -216,12 +215,12 @@ describe('Price Lists management', () => {
     clickButton('Create Assignment')
 
     cy.contains('Assignment created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Price List Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
     cy.contains(BRANCH_NAME).should('be.visible')
 
     // ── 3. Price the Variant on this list ───────────────────────────────────
-    clickButton(/^New Price$/)
-    cy.contains('h2', 'Variant Price', { timeout: 10_000 }).should('be.visible')
+    clickButton(/^Nuevo precio$/)
+    cy.contains('h2', 'Precio de variante', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       // The Variant <select> is populated by a debounced API search (see VariantPicker) —
@@ -234,12 +233,12 @@ describe('Price Lists management', () => {
     clickButton('Create Price')
 
     cy.contains('Variant Price created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Price List Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
     cy.contains(BRANCH_PRICE).should('be.visible')
 
     // ── 4. Overlap conflict: a second price for the same Variant, same list, same range ──
-    clickButton(/^New Price$/)
-    cy.contains('h2', 'Variant Price', { timeout: 10_000 }).should('be.visible')
+    clickButton(/^Nuevo precio$/)
+    cy.contains('h2', 'Precio de variante', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       cy.get('select', { timeout: 10_000 }).should('contain.text', VARIANT_OPTION_TEXT)
@@ -251,20 +250,20 @@ describe('Price Lists management', () => {
 
     // Rejected, not silently saved — the create form stays open with the conflict visible.
     cy.contains(/Ya existe un precio activo/, { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Variant Price', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Precio de variante', { timeout: 10_000 }).should('be.visible')
     clickButton('Cancel')
-    cy.contains('h2', 'Price List Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
     // Only the original price is on the list — the rejected 999.0000 never landed.
     cy.contains('999.0000').should('not.exist')
 
     // ── 5. Back to the list, create the Operating-Unit-level Price List ────
-    cy.contains('button', 'Edit Price List').scrollIntoView().should('be.visible')
+    cy.contains('button', 'Editar lista de precios').scrollIntoView().should('be.visible')
     cy.get('body').type('{esc}')
-    cy.contains('h2', 'Price List Detail').should('not.exist')
+    cy.contains('h2', 'Detalle de la lista de precios').should('not.exist')
     cy.contains(branchPriceListCode, { timeout: 10_000 }).should('be.visible')
 
-    clickButton('New Price List')
-    cy.contains('h2', 'New Price List', { timeout: 10_000 }).should('be.visible')
+    clickButton('Nueva lista de precios')
+    cy.contains('h2', 'Nueva lista de precios', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       cy.get('input[placeholder="e.g., STANDARD"]').type(unitPriceListCode)
@@ -274,11 +273,11 @@ describe('Price Lists management', () => {
     clickButton('Create Price List')
 
     cy.contains('Price List created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Price List Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
 
     // ── 6. Assign it to the more specific Operating Unit within the same Branch ──
-    clickButton('New Assignment')
-    cy.contains('h2', 'Price List Assignment', { timeout: 10_000 }).should('be.visible')
+    clickButton('Nueva asignación')
+    cy.contains('h2', 'Asignación de lista de precios', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       cy.get('select').eq(0).select(BRANCH_NAME)
@@ -288,12 +287,12 @@ describe('Price Lists management', () => {
     clickButton('Create Assignment')
 
     cy.contains('Assignment created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Price List Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
     cy.contains(OPERATING_UNIT_NAME).should('be.visible')
 
     // ── 7. Price the same Variant differently on this second list ──────────
-    clickButton(/^New Price$/)
-    cy.contains('h2', 'Variant Price', { timeout: 10_000 }).should('be.visible')
+    clickButton(/^Nuevo precio$/)
+    cy.contains('h2', 'Precio de variante', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       cy.get('select', { timeout: 10_000 }).should('contain.text', VARIANT_OPTION_TEXT)
@@ -304,7 +303,7 @@ describe('Price Lists management', () => {
     clickButton('Create Price')
 
     cy.contains('Variant Price created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Price List Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
     cy.contains(UNIT_PRICE).should('be.visible')
 
     // ── 8. Resolved-price preview: branch-only context falls back to the branch-level list ──

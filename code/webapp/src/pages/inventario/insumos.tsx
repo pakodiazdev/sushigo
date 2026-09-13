@@ -1,18 +1,25 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { Plus, Package, Box, AlertCircle } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
+import { CanAccess } from '@/components/auth'
 import { type Column } from '@/components/ui/data-grid'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { getApiErrorMessage, isForbiddenError } from '@/lib/api-error'
 import { itemApi } from '@/services/inventory-api'
 import type { Item } from '@/types/inventory'
-import { ItemForm, ItemDetails, CrudSlidePanels, InventoryListLayout } from '@/components/inventory'
+import {
+  ItemForm,
+  ItemDetails,
+  CrudSlidePanels,
+  InventoryListLayout,
+  useTypeStatusListFilters,
+} from '@/components/inventory'
 
 export const Route = createFileRoute('/inventario/insumos')({
   beforeLoad: requirePermission('items.view'),
@@ -25,14 +32,22 @@ export function InventoryItemsPage() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const {
+    currentPage,
+    setCurrentPage,
+    searchQuery,
+    setSearchQuery,
+    typeFilter,
+    setTypeFilter,
+    statusFilter,
+    setStatusFilter,
+    hasActiveFilters,
+    clearFilters,
+  } = useTypeStatusListFilters()
 
   // Fetch items with filters — always excludes PRODUCTO (comma-separated `type`), since this
   // page manages only Insumos/Activos; Products are managed exclusively via /inventario/productos.
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError: isErrorRaw, isRefetching, refetch, error } = useQuery({
     queryKey: ['items', currentPage, searchQuery, typeFilter, statusFilter],
     queryFn: () =>
       itemApi.list({
@@ -41,7 +56,15 @@ export function InventoryItemsPage() {
         type: typeFilter || 'INSUMO,ACTIVO',
         is_active: statusFilter ? statusFilter === 'active' : undefined,
       }),
+    // Keep the current page visible while a filter/page change refetches in the
+    // background instead of blanking the grid to a full-page skeleton.
+    placeholderData: keepPreviousData,
   })
+  // A 403 (access revoked mid-session) must never be treated as a retryable refresh
+  // failure that leaves cached rows visible — DataGrid's `forbidden` state blocks them
+  // unconditionally, unlike its plain `error` state, which now keeps stale rows on screen.
+  const isForbidden = isForbiddenError(error)
+  const isError = isErrorRaw && !isForbidden
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -50,12 +73,12 @@ export function InventoryItemsPage() {
       queryClient.invalidateQueries({ queryKey: ['items'] })
       setIsDetailsPanelOpen(false)
       setSelectedItem(null)
-      showSuccess('Item deleted successfully', 'Item Deleted')
+      showSuccess('Item eliminado correctamente', 'Item eliminado')
     },
     onError: (error: unknown) => {
       showError(
-        getApiErrorMessage(error, 'Failed to delete item. It may have existing variants.'),
-        'Delete Error'
+        getApiErrorMessage(error, 'No se pudo eliminar el item. Puede tener variantes existentes.'),
+        'Error al eliminar'
       )
     },
   })
@@ -73,7 +96,7 @@ export function InventoryItemsPage() {
     },
     {
       key: 'name',
-      header: 'Name',
+      header: 'Nombre',
       render: (item) => (
         <div>
           <div className="font-medium">{item.name}</div>
@@ -87,7 +110,7 @@ export function InventoryItemsPage() {
     },
     {
       key: 'type',
-      header: 'Type',
+      header: 'Tipo',
       render: (item) => {
         const colors = {
           INSUMO: 'bg-blue-50 text-blue-700 ring-blue-700/10 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-800/50',
@@ -106,7 +129,7 @@ export function InventoryItemsPage() {
     },
     {
       key: 'is_stocked',
-      header: 'Stocked',
+      header: 'Con existencia',
       render: (item) => (
         <span className="text-sm">
           {item.is_stocked ? (
@@ -119,7 +142,7 @@ export function InventoryItemsPage() {
     },
     {
       key: 'is_active',
-      header: 'Status',
+      header: 'Estado',
       render: (item) => (
         <span
           className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${item.is_active
@@ -127,7 +150,7 @@ export function InventoryItemsPage() {
             : 'bg-muted text-muted-foreground ring-border'
             }`}
         >
-          {item.is_active ? 'Active' : 'Inactive'}
+          {item.is_active ? 'Activo' : 'Inactivo'}
         </span>
       ),
     },
@@ -177,10 +200,14 @@ export function InventoryItemsPage() {
         title="Items de Inventario"
         description="Gestiona insumos y activos"
         action={
-          <Button onClick={handleNewItem} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Item Rápido
-          </Button>
+          // A view-only role (items.view without items.create) can reach this page —
+          // hide the control rather than offer an action that would only 403.
+          <CanAccess permission="items.create">
+            <Button onClick={handleNewItem} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Item Rápido
+            </Button>
+          </CanAccess>
         }
       />
 
@@ -193,6 +220,7 @@ export function InventoryItemsPage() {
             label="Tipo"
             value={typeFilter}
             onChange={setTypeFilter}
+            placeholder="Todos"
             options={[
               { value: 'INSUMO', label: 'Insumo' },
               { value: 'ACTIVO', label: 'Activo' },
@@ -201,10 +229,25 @@ export function InventoryItemsPage() {
         }
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
         rows={data?.data.data || []}
         columns={columns}
         onRowClick={handleRowClick}
         loading={isLoading}
+        error={isError}
+        forbidden={isForbidden}
+        onRetry={() => refetch()}
+        isRefetching={isRefetching}
+        emptyDescription="Registra un item para verlo aquí."
+        emptyAction={
+          <CanAccess permission="items.create">
+            <Button variant="outline" size="sm" onClick={handleNewItem} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Crear el primer item
+            </Button>
+          </CanAccess>
+        }
         currentPage={currentPage}
         totalPages={data?.data.meta.last_page || 1}
         onPageChange={setCurrentPage}

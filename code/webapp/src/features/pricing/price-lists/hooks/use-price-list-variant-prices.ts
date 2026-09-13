@@ -66,7 +66,7 @@ export function usePriceListVariantPrices(priceListId: string | null, isPanelOpe
 
   useEffect(() => {
     if (variantPricesQuery.isError) {
-      showError(getApiErrorMessage(variantPricesQuery.error, 'Failed to load variant prices'))
+      showError(getApiErrorMessage(variantPricesQuery.error, 'No se pudieron cargar los precios de variantes'))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantPricesQuery.isError])
@@ -124,6 +124,7 @@ export function usePriceListVariantPrices(priceListId: string | null, isPanelOpe
     variantDetailsById,
     isLoading: variantPricesQuery.isLoading,
     isError: variantPricesQuery.isError,
+    refetch: variantPricesQuery.refetch,
     variantPriceMode,
     selectedVariantPrice,
     handleNewVariantPrice,

@@ -32,20 +32,20 @@ export const Route = createFileRoute('/inventario/productos')({
 })
 
 const PANEL_TITLE_BY_MODE: Record<ProductPanelMode, string> = {
-  create: 'New Product',
-  edit: 'Edit Product',
-  detail: 'Product Detail',
+  create: 'Nuevo producto',
+  edit: 'Editar producto',
+  detail: 'Detalle del producto',
 }
 
 const VARIANT_PANEL_TITLE_BY_MODE: Record<Exclude<VariantPanelMode, 'list'>, string> = {
-  create: 'New Variant',
-  edit: 'Edit Variant',
-  detail: 'Variant Detail',
+  create: 'Nueva variante',
+  edit: 'Editar variante',
+  detail: 'Detalle de la variante',
 }
 
 const PRESENTATION_PANEL_TITLE_BY_MODE: Record<Exclude<PresentationPanelMode, 'list'>, string> = {
-  assign: 'Assign Purchase Presentation',
-  edit: 'Edit Purchase Presentation',
+  assign: 'Asignar presentación de compra',
+  edit: 'Editar presentación de compra',
 }
 
 // A nested Variant (or, one level deeper, Presentation) screen takes over the whole panel
@@ -85,12 +85,17 @@ export function ProductsPage() {
     setCategoryFilter,
     statusFilter,
     setStatusFilter,
+    hasActiveFilters,
+    clearFilters,
     brands,
     categories,
     products,
     totalPages,
     isLoading,
     isError,
+    isForbidden,
+    isRefetching,
+    refetch,
     isPanelOpen,
     panelMode,
     selectedProduct,
@@ -113,6 +118,7 @@ export function ProductsPage() {
     variants,
     isLoading: variantsLoading,
     isError: variantsError,
+    refetch: refetchVariants,
     variantMode,
     selectedVariant,
     handleNewVariant,
@@ -128,6 +134,7 @@ export function ProductsPage() {
     presentations,
     isLoading: presentationsLoading,
     isError: presentationsError,
+    refetch: refetchPresentations,
     presentationMode,
     selectedPresentation,
     handleAssignPresentation,
@@ -177,7 +184,7 @@ export function ProductsPage() {
     },
     {
       key: 'name',
-      header: 'Name',
+      header: 'Nombre',
       render: (product) => (
         <div>
           <div className="font-medium">{product.name}</div>
@@ -189,18 +196,18 @@ export function ProductsPage() {
     },
     {
       key: 'inventory_category',
-      header: 'Category',
+      header: 'Categoría',
       render: (product) => product.inventory_category?.name ?? '—',
     },
     {
       key: 'variants_count',
-      header: 'Variants',
+      header: 'Variantes',
       align: 'center',
       render: (product) => product.variants_count,
     },
     {
       key: 'is_active',
-      header: 'Status',
+      header: 'Estado',
       render: (product) => (
         <span
           className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${isEffectivelyActive(product)
@@ -208,7 +215,7 @@ export function ProductsPage() {
             : 'bg-muted text-muted-foreground ring-border'
             }`}
         >
-          {isEffectivelyActive(product) ? 'Active' : 'Inactive'}
+          {isEffectivelyActive(product) ? 'Activo' : 'Inactivo'}
         </span>
       ),
     },
@@ -219,8 +226,8 @@ export function ProductsPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Products"
-        description="Manage your resale product catalog"
+        title="Productos"
+        description="Gestiona tu catálogo de productos para reventa"
         action={
           // manager (items.view + items.manage-media only, no items.create) can reach
           // this page but its POST would only ever return 403 — hide the control
@@ -228,7 +235,7 @@ export function ProductsPage() {
           <CanAccess permission="items.create">
             <Button ref={newProductButtonRef} onClick={handleNewProductClick} className="gap-2">
               <Plus className="h-4 w-4" />
-              New Product
+              Nuevo producto
             </Button>
           </CanAccess>
         }
@@ -238,31 +245,34 @@ export function ProductsPage() {
         <SearchInput
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search products…"
+          placeholder="Buscar productos…"
           className="flex-1"
         />
 
         <FilterSelect
-          label="Brand"
+          label="Marca"
           value={brandFilter}
           onChange={setBrandFilter}
+          placeholder="Todas"
           options={brands.map((brand) => ({ value: brand.id, label: brand.name }))}
         />
 
         <FilterSelect
-          label="Category"
+          label="Categoría"
           value={categoryFilter}
           onChange={setCategoryFilter}
+          placeholder="Todas"
           options={categories.map((category) => ({ value: category.id, label: category.name }))}
         />
 
         <FilterSelect
-          label="Status"
+          label="Estado"
           value={statusFilter}
           onChange={setStatusFilter}
+          placeholder="Todos"
           options={[
-            { value: 'active', label: 'Active' },
-            { value: 'inactive', label: 'Inactive' },
+            { value: 'active', label: 'Activo' },
+            { value: 'inactive', label: 'Inactivo' },
           ]}
         />
       </div>
@@ -272,10 +282,30 @@ export function ProductsPage() {
         columns={columns}
         onRowClick={handleRowClickTracked}
         loading={isLoading}
-        // Distinguishes "the request failed" from "the catalog has no matching rows" —
-        // useProductsList already toasts the error, this keeps the grid itself from
-        // implying the catalog is empty when it's actually unreachable.
-        emptyMessage={isError ? 'Failed to load products. Please try again.' : undefined}
+        error={isError}
+        forbidden={isForbidden}
+        onRetry={() => refetch()}
+        isRefetching={isRefetching}
+        emptyTitle={hasActiveFilters ? 'Sin resultados que coincidan con los filtros' : 'Aún no hay productos'}
+        emptyDescription={
+          hasActiveFilters
+            ? 'Intenta con otros filtros o términos de búsqueda.'
+            : 'Registra un producto para verlo aquí.'
+        }
+        emptyAction={
+          hasActiveFilters ? (
+            <button type="button" onClick={clearFilters} className="text-sm font-medium text-primary hover:underline">
+              Limpiar filtros
+            </button>
+          ) : (
+            <CanAccess permission="items.create">
+              <Button variant="outline" size="sm" onClick={handleNewProductClick} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Crear el primer producto
+              </Button>
+            </CanAccess>
+          )
+        }
         getRowId={(product) => product.id}
         pagination={{
           currentPage,
@@ -303,6 +333,7 @@ export function ProductsPage() {
             variantsError={variantsError}
             onNewVariant={handleNewVariant}
             onVariantClick={handleVariantClick}
+            onRetryVariants={() => refetchVariants()}
           />
         )}
         {panelMode === 'detail' && selectedProduct && variantMode === 'create' && (
@@ -331,6 +362,7 @@ export function ProductsPage() {
             onAssignPresentation={handleAssignPresentation}
             onPresentationClick={handlePresentationClick}
             onManageTemplates={() => setIsTemplateManagerOpen(true)}
+            onRetryPresentations={() => refetchPresentations()}
           />
         )}
         {panelMode === 'detail' && selectedProduct && variantMode === 'detail' && selectedVariant && presentationMode === 'assign' && (

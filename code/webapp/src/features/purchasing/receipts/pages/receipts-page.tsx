@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { CanAccess } from '@/components/auth'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
+import { DetailStatus } from '@/components/ui/detail-status'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { SearchInput } from '@/components/ui/search-input'
 import { FilterSelect } from '@/components/ui/filter-select'
@@ -46,10 +47,19 @@ export function ReceiptsPage() {
     receipts,
     isLoading,
     isError,
+    isForbidden,
+    isRefetching,
+    refetch,
+    hasActiveFilters,
+    clearFilters,
     isPanelOpen,
     panelMode,
     selectedReceipt,
     isDetailLoading,
+    isDetailError,
+    isDetailForbidden,
+    isDetailNotFound,
+    refetchDetail,
     handleRowClick,
     handleNewReceipt,
     handleEdit,
@@ -152,6 +162,7 @@ export function ReceiptsPage() {
           label="Estado"
           value={statusFilter}
           onChange={(value) => setStatusFilter(value as ReceiptStatus | '')}
+          placeholder="Todos"
           options={[
             { value: 'DRAFT', label: 'Borrador' },
             { value: 'POSTED', label: 'Confirmada' },
@@ -165,7 +176,26 @@ export function ReceiptsPage() {
         columns={columns}
         onRowClick={handleRowClickTracked}
         loading={isLoading}
-        emptyMessage={isError ? 'No fue posible cargar las recepciones. Intenta de nuevo.' : undefined}
+        error={isError}
+        forbidden={isForbidden}
+        onRetry={() => refetch()}
+        isRefetching={isRefetching}
+        emptyTitle={hasActiveFilters ? 'Sin resultados que coincidan con los filtros' : 'Aún no hay recepciones'}
+        emptyDescription={hasActiveFilters ? 'Intenta con otros filtros o términos de búsqueda.' : 'Registra una recepción para verla aquí.'}
+        emptyAction={
+          hasActiveFilters ? (
+            <button type="button" onClick={clearFilters} className="text-sm font-medium text-primary hover:underline">
+              Limpiar filtros
+            </button>
+          ) : (
+            <CanAccess permission="receipts.manage">
+              <Button variant="outline" size="sm" onClick={handleNewReceiptClick} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Crear la primera recepción
+              </Button>
+            </CanAccess>
+          )
+        }
         getRowId={(receipt) => receipt.id}
         pagination={{
           currentPage,
@@ -178,10 +208,10 @@ export function ReceiptsPage() {
         {panelMode === 'create' && (
           <ReceiptForm onSuccess={handleCreated} onCancel={handleClosePanel} />
         )}
-        {panelMode === 'edit' && selectedReceipt && (
+        {panelMode === 'edit' && selectedReceipt && !isDetailForbidden && !isDetailNotFound && (
           <ReceiptForm receipt={selectedReceipt} onSuccess={handleUpdated} onCancel={cancelEdit} />
         )}
-        {panelMode === 'detail' && selectedReceipt && (
+        {panelMode === 'detail' && selectedReceipt && !isDetailForbidden && !isDetailNotFound && (
           <ReceiptDetails
             receipt={selectedReceipt}
             onEdit={handleEdit}
@@ -193,9 +223,29 @@ export function ReceiptsPage() {
             isReversing={isReversing}
           />
         )}
-        {panelMode !== 'create' && !selectedReceipt && isDetailLoading && (
-          <p className="p-6 text-sm text-muted-foreground">Cargando recepción…</p>
+        {/* A 403/404 on the detail query must block unconditionally, even when a cached
+            `selectedReceipt` from before access was revoked/the row was deleted is still
+            sitting in the query cache — never fall through to the populated views above. */}
+        {panelMode !== 'create' && isDetailForbidden && <DetailStatus kind="forbidden" />}
+        {panelMode !== 'create' && !isDetailForbidden && isDetailNotFound && (
+          <DetailStatus kind="not-found" />
         )}
+        {panelMode !== 'create' && !selectedReceipt && !isDetailForbidden && !isDetailNotFound && isDetailLoading && (
+          <DetailStatus kind="loading" title="Cargando recepción…" />
+        )}
+        {panelMode !== 'create' &&
+          !selectedReceipt &&
+          !isDetailForbidden &&
+          !isDetailNotFound &&
+          !isDetailLoading &&
+          isDetailError && (
+            <DetailStatus
+              kind="error"
+              title="No se pudo cargar la recepción"
+              description="Ocurrió un problema al obtenerla. Intenta de nuevo."
+              onRetry={() => refetchDetail()}
+            />
+          )}
       </SlidePanel>
     </PageContainer>
   )

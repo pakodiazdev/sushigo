@@ -1,7 +1,8 @@
-import { Barcode, Loader2, Package, Plus } from 'lucide-react'
+import { Barcode, Package, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CanAccess } from '@/components/auth'
+import { DetailStatus } from '@/components/ui/detail-status'
 import type { ProductVariant } from '@/types/inventory'
 
 interface ProductVariantsProps {
@@ -10,6 +11,7 @@ interface ProductVariantsProps {
   isError: boolean
   onNewVariant: () => void
   onVariantClick: (variant: ProductVariant) => void
+  onRetry?: () => void
 }
 
 /**
@@ -24,6 +26,7 @@ export function ProductVariants({
   isError,
   onNewVariant,
   onVariantClick,
+  onRetry,
 }: Readonly<ProductVariantsProps>) {
   return (
     <Card className="p-4">
@@ -33,7 +36,7 @@ export function ProductVariants({
             <Package className="h-5 w-5 text-primary" />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-muted-foreground">Variants</p>
+            <p className="text-sm font-medium text-muted-foreground">Variantes</p>
             <p className="text-lg font-semibold text-foreground">
               {isLoading || isError ? '—' : variants.length}
             </p>
@@ -44,26 +47,28 @@ export function ProductVariants({
         <CanAccess permission="items.create">
           <Button type="button" variant="outline" size="sm" onClick={onNewVariant} className="gap-1">
             <Plus className="h-4 w-4" />
-            New Variant
+            Nueva variante
           </Button>
         </CanAccess>
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-6 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
+        <DetailStatus kind="loading" title="Cargando variantes…" className="py-6" />
       )}
 
       {!isLoading && isError && (
-        <p className="text-sm text-muted-foreground">
-          Failed to load variants. Please try again.
-        </p>
+        <DetailStatus
+          kind="error"
+          title="No se pudieron cargar las variantes"
+          description="Ocurrió un problema al obtenerlas. Intenta de nuevo."
+          onRetry={onRetry}
+          className="py-6"
+        />
       )}
 
       {!isLoading && !isError && variants.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No variants yet. Add the first one to make this product sellable.
+          Aún no hay variantes. Agrega la primera para que este producto sea vendible.
         </p>
       )}
 
@@ -95,7 +100,7 @@ export function ProductVariants({
                     : 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300'
                     }`}
                 >
-                  {variant.is_active ? 'Active' : 'Inactive'}
+                  {variant.is_active ? 'Activa' : 'Inactiva'}
                 </span>
               </button>
             </li>

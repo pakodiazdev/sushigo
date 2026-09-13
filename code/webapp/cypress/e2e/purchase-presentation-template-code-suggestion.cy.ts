@@ -29,14 +29,14 @@ describe('Código semántico de plantilla de presentación', () => {
 
     // Create the parent context through the UI. Creating Variants directly via API is
     // currently quarantined by #547 because they do not appear in this embedded list.
-    cy.contains('button', 'New Product', { timeout: 10_000 }).click({ force: true })
+    cy.contains('button', 'Nuevo producto', { timeout: 10_000 }).click({ force: true })
     cy.get('form').within(() => {
       cy.get('input[placeholder="e.g., Coca-Cola Original 600 ml"]').type(productName, { force: true })
       cy.get('select').first().select('Categoría Código Semántico', { force: true })
       cy.contains('button', 'Create Product').scrollIntoView().click({ force: true })
     })
     cy.contains('Product created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('button', 'New Variant').click({ force: true })
+    cy.contains('button', 'Nueva variante').click({ force: true })
     cy.get('form').within(() => {
       cy.get('input[placeholder="Ej. 1 kg"]').type(variantName, { force: true })
       cy.get('input[placeholder="Ej. ARR-KG"]').type('CYP-SEM-499', { force: true })

@@ -63,14 +63,14 @@ describe('Product detail — embedded Variant catalog', () => {
     cy.url().should('not.include', '/login', { timeout: 10_000 })
     cy.visit('/inventario/productos')
     cy.url().should('include', '/inventario/productos', { timeout: 10_000 })
-    cy.contains('button', 'New Product', { timeout: 10_000 }).should('be.visible')
+    cy.contains('button', 'Nuevo producto', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
   })
 
   it('creates a Product, accepts its contextual Variant SKU suggestion, and shows it back in the list', () => {
     // ── 1. Create the Product (same flow as #423) ──────────────────────────
-    cy.contains('button', 'New Product').click()
-    cy.contains('h2', 'New Product', { timeout: 10_000 }).should('be.visible')
+    cy.contains('button', 'Nuevo producto').click()
+    cy.contains('h2', 'Nuevo producto', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       cy.get('input[placeholder="e.g., Coca-Cola Original 600 ml"]').type('Cypress Rice 1kg', {
@@ -82,11 +82,11 @@ describe('Product detail — embedded Variant catalog', () => {
 
     cy.contains('Product created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Cypress Rice 1kg', { timeout: 10_000 }).should('be.visible')
-    cy.contains('No variants yet').should('be.visible')
+    cy.contains('Aún no hay variantes').should('be.visible')
 
     // ── 2. Open the nested Variant create screen — same panel, no navigation ──
-    cy.contains('button', 'New Variant').click()
-    cy.contains('h2', 'New Variant', { timeout: 10_000 }).should('be.visible')
+    cy.contains('button', 'Nueva variante').click()
+    cy.contains('h2', 'Nueva variante', { timeout: 10_000 }).should('be.visible')
 
     // No Product/Item selector — the parent Product is fixed by the route, not the form.
     cy.get('form').should('not.contain.text', 'Product')
@@ -100,15 +100,15 @@ describe('Product detail — embedded Variant catalog', () => {
 
     // ── 3. Confirm the same panel transitioned to the saved Variant's detail ──
     cy.contains('Variante creada', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Variant Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la variante', { timeout: 10_000 }).should('be.visible')
     cy.contains('1 kg').should('be.visible')
     cy.contains('CYP-KG').should('be.visible')
 
     // ── 4. Back to the Product — the catalog now shows the new Variant ───────
-    cy.contains('button', 'Back to Product').click()
+    cy.contains('button', 'Volver al producto').click()
     cy.contains('h2', 'Cypress Rice 1kg', { timeout: 10_000 }).should('be.visible')
     cy.contains('1 kg').should('be.visible')
-    cy.contains('No variants yet').should('not.exist')
+    cy.contains('Aún no hay variantes').should('not.exist')
 
     // ── 5. Close the panel — the outer list's own Variants column also reflects it ──
     cy.contains('Close panel').parent().click({ force: true })

@@ -160,4 +160,23 @@ describe('usePriceListVariantPrices', () => {
     expect(result.current.variantPriceMode).toBe('list')
     expect(result.current.selectedVariantPrice).toBeNull()
   })
+
+  it('exposes a working refetch', async () => {
+    vi.mocked(variantPriceApi.list).mockResolvedValue({
+      data: { status: 200, data: [vp1], meta: { current_page: 1, total: 1, last_page: 1 } },
+    } as never)
+    vi.mocked(itemVariantApi.get).mockResolvedValue({ data: { status: 200, data: variant1 } } as never)
+
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => usePriceListVariantPrices('pl-1', true), { wrapper })
+
+    await waitFor(() => expect(result.current.variantPrices).toHaveLength(1))
+    const callsBefore = vi.mocked(variantPriceApi.list).mock.calls.length
+
+    await act(async () => {
+      await result.current.refetch()
+    })
+
+    expect(vi.mocked(variantPriceApi.list).mock.calls.length).toBeGreaterThan(callsBefore)
+  })
 })

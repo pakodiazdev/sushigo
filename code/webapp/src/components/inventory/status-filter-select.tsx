@@ -10,5 +10,5 @@ export function StatusFilterSelect({
   value,
   onChange,
 }: Readonly<{ value: string; onChange: (value: string) => void }>) {
-  return <FilterSelect label="Estado" value={value} onChange={onChange} options={STATUS_OPTIONS} />
+  return <FilterSelect label="Estado" value={value} onChange={onChange} options={STATUS_OPTIONS} placeholder="Todos" />
 }

@@ -3,9 +3,9 @@ import type { PriceListPanelMode } from '../hooks/use-price-lists'
 import type { VariantPricePanelMode } from '../hooks/use-price-list-variant-prices'
 
 const PANEL_TITLE_BY_MODE: Record<PriceListPanelMode, string> = {
-  create: 'New Price List',
-  edit: 'Edit Price List',
-  detail: 'Price List Detail',
+  create: 'Nueva lista de precios',
+  edit: 'Editar lista de precios',
+  detail: 'Detalle de la lista de precios',
 }
 
 // Assignments and Variant Prices are sibling sections sharing the same top-level SlidePanel.
@@ -17,10 +17,10 @@ export function resolvePanelTitle(
   variantPriceMode: VariantPricePanelMode
 ): string {
   if (panelMode === 'detail' && assignmentMode !== 'list') {
-    return 'Price List Assignment'
+    return 'Asignación de lista de precios'
   }
   if (panelMode === 'detail' && variantPriceMode !== 'list') {
-    return 'Variant Price'
+    return 'Precio de variante'
   }
   return PANEL_TITLE_BY_MODE[panelMode]
 }

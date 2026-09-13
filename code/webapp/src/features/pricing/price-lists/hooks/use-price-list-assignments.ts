@@ -69,7 +69,7 @@ export function usePriceListAssignments(priceListId: string | null, isPanelOpen:
 
   useEffect(() => {
     if (assignmentsQuery.isError) {
-      showError(getApiErrorMessage(assignmentsQuery.error, 'Failed to load assignments'))
+      showError(getApiErrorMessage(assignmentsQuery.error, 'No se pudieron cargar las asignaciones'))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentsQuery.isError])
@@ -103,6 +103,7 @@ export function usePriceListAssignments(priceListId: string | null, isPanelOpen:
     assignments,
     isLoading: assignmentsQuery.isLoading,
     isError: assignmentsQuery.isError,
+    refetch: assignmentsQuery.refetch,
     assignmentMode,
     selectedAssignment,
     handleNewAssignment,

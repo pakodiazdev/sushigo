@@ -35,6 +35,11 @@ export function PriceListsPage() {
     totalPages,
     isLoading,
     isError,
+    isForbidden,
+    isRefetching,
+    refetch,
+    hasActiveFilters,
+    clearFilters,
     isPanelOpen,
     panelMode,
     selectedPriceList,
@@ -54,6 +59,7 @@ export function PriceListsPage() {
     assignments,
     isLoading: assignmentsLoading,
     isError: assignmentsError,
+    refetch: refetchAssignments,
     assignmentMode,
     selectedAssignment,
     handleNewAssignment,
@@ -67,6 +73,7 @@ export function PriceListsPage() {
     variantDetailsById,
     isLoading: variantPricesLoading,
     isError: variantPricesError,
+    refetch: refetchVariantPrices,
     variantPriceMode,
     selectedVariantPrice,
     handleNewVariantPrice,
@@ -115,23 +122,23 @@ export function PriceListsPage() {
   const columns: Column<PriceList>[] = [
     {
       key: 'code',
-      header: 'Code',
+      header: 'Código',
       render: (priceList) => <span className="font-medium">{priceList.code}</span>,
     },
     {
       key: 'name',
-      header: 'Name',
+      header: 'Nombre',
       render: (priceList) => priceList.name,
     },
     {
       key: 'priority',
-      header: 'Priority',
+      header: 'Prioridad',
       align: 'center',
       render: (priceList) => priceList.priority,
     },
     {
       key: 'is_active',
-      header: 'Status',
+      header: 'Estado',
       render: (priceList) => (
         <span
           className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${priceList.is_active
@@ -139,7 +146,7 @@ export function PriceListsPage() {
             : 'bg-muted text-muted-foreground ring-border'
             }`}
         >
-          {priceList.is_active ? 'Active' : 'Inactive'}
+          {priceList.is_active ? 'Activa' : 'Inactiva'}
         </span>
       ),
     },
@@ -151,13 +158,13 @@ export function PriceListsPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Price Lists"
-        description="Manage branch-aware Product Variant prices, outside the Product catalog"
+        title="Listas de precios"
+        description="Gestiona precios de variantes por sucursal, fuera del catálogo de productos"
         action={
           <CanAccess permission="price_lists.create">
             <Button ref={newPriceListButtonRef} onClick={handleNewPriceListClick} className="gap-2">
               <Plus className="h-4 w-4" />
-              New Price List
+              Nueva lista de precios
             </Button>
           </CanAccess>
         }
@@ -167,17 +174,18 @@ export function PriceListsPage() {
         <SearchInput
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search price lists…"
+          placeholder="Buscar listas de precios…"
           className="flex-1"
         />
 
         <FilterSelect
-          label="Status"
+          label="Estado"
           value={statusFilter}
           onChange={setStatusFilter}
+          placeholder="Todos"
           options={[
-            { value: 'active', label: 'Active' },
-            { value: 'inactive', label: 'Inactive' },
+            { value: 'active', label: 'Activa' },
+            { value: 'inactive', label: 'Inactiva' },
           ]}
         />
       </div>
@@ -187,7 +195,26 @@ export function PriceListsPage() {
         columns={columns}
         onRowClick={handleRowClickTracked}
         loading={isLoading}
-        emptyMessage={isError ? 'Failed to load price lists. Please try again.' : undefined}
+        error={isError}
+        forbidden={isForbidden}
+        onRetry={() => refetch()}
+        isRefetching={isRefetching}
+        emptyTitle={hasActiveFilters ? 'Sin resultados que coincidan con los filtros' : 'Aún no hay listas de precios'}
+        emptyDescription={hasActiveFilters ? 'Intenta con otros filtros o términos de búsqueda.' : 'Registra una lista de precios para verla aquí.'}
+        emptyAction={
+          hasActiveFilters ? (
+            <button type="button" onClick={clearFilters} className="text-sm font-medium text-primary hover:underline">
+              Limpiar filtros
+            </button>
+          ) : (
+            <CanAccess permission="price_lists.create">
+              <Button variant="outline" size="sm" onClick={handleNewPriceListClick} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Crear la primera lista de precios
+              </Button>
+            </CanAccess>
+          )
+        }
         getRowId={(priceList) => priceList.id}
         pagination={{
           currentPage,
@@ -215,12 +242,14 @@ export function PriceListsPage() {
             assignmentsError={assignmentsError}
             onNewAssignment={handleNewAssignmentTracked}
             onAssignmentClick={handleAssignmentClickTracked}
+            onRetryAssignments={() => refetchAssignments()}
             variantPrices={variantPrices}
             variantDetailsById={variantDetailsById}
             variantPricesLoading={variantPricesLoading}
             variantPricesError={variantPricesError}
             onNewVariantPrice={handleNewVariantPriceTracked}
             onVariantPriceClick={handleVariantPriceClickTracked}
+            onRetryVariantPrices={() => refetchVariantPrices()}
           />
         )}
         {panelMode === 'detail' && selectedPriceList && assignmentMode !== 'list' && (

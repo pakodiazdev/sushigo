@@ -16,9 +16,11 @@ import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { DataGrid, type Column } from '@/components/ui/data-grid'
+import { DetailStatus } from '@/components/ui/detail-status'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { SlidePanel } from '@/components/ui/slide-panel'
 import { OpeningBalanceForm } from '@/components/inventory'
+import { isForbiddenError } from '@/lib/api-error'
 import { useAuthStore } from '@/stores/auth.store'
 import { stockApi, inventoryLocationApi } from '@/services/inventory-api'
 import { fetchAllPages } from '@/lib/fetch-all-pages'
@@ -90,10 +92,22 @@ export function StockDashboardPage() {
   // and low-stock alerts are computed client-side over the whole row set, so
   // every page is fetched up front — a tenant with more assigned pairs than one
   // page holds must not silently understate its totals.
-  const { data: stockData, isLoading: stockLoading, refetch: refetchStock } = useQuery({
+  const {
+    data: stockData,
+    isLoading: stockLoading,
+    isError: stockErrorRaw,
+    isRefetching: stockRefetching,
+    refetch: refetchStock,
+    error: stockErrorValue,
+  } = useQuery({
     queryKey: ['stock-all'],
     queryFn: () => fetchAllPages((page) => stockApi.list({ per_page: 200, page })),
   })
+  // A 403 (access revoked mid-session) must never be treated as a transient refresh
+  // failure that keeps cached rows visible — unlike a real retryable error, continuing to
+  // show data the server just denied is the wrong default, cached or not.
+  const stockForbidden = isForbiddenError(stockErrorValue)
+  const stockError = stockErrorRaw && !stockForbidden
 
   // Fetch locations for filter
   const { data: locationsData } = useQuery({
@@ -102,14 +116,33 @@ export function StockDashboardPage() {
   })
 
   // Fetch selected location details if one is selected
-  const { data: locationStockData, isLoading: locationLoading } = useQuery({
+  const {
+    data: locationStockData,
+    isLoading: locationLoading,
+    isError: locationErrorRaw,
+    refetch: refetchLocationStock,
+    error: locationErrorValue,
+  } = useQuery({
     queryKey: ['stock-by-location', selectedLocationId],
     queryFn: () => stockApi.byLocation(selectedLocationId),
     enabled: selectedLocationId.length > 0,
   })
+  // Same reasoning as `hasStock` above: a background refetch failure on this same
+  // queryKey leaves `locationStockData` holding the last successful snapshot while
+  // `locationError` flips true — don't let that hide an otherwise-still-usable card.
+  const hasLocationStock = locationStockData !== undefined
+  // Same 403-vs-retryable distinction as the top-level stock query above.
+  const locationForbidden = isForbiddenError(locationErrorValue)
+  const locationError = locationErrorRaw && !locationForbidden
 
   const locations = locationsData?.data.data || []
   const allStock = stockData?.data.data || []
+  // A background refetch failure (e.g. clicking "Actualizar" while offline) leaves `stockData`
+  // holding the last successful snapshot while `isError` still flips true — TanStack Query never
+  // clears `data` just because the *next* attempt failed. `hasStock` distinguishes that ("we have
+  // real numbers, just possibly stale") from a genuine first-load failure (`stockData` is still
+  // `undefined`), so a mere refetch error never wipes/hides already-good totals.
+  const hasStock = stockData !== undefined
 
   // Summary — one row per assigned Variant, so `total_variants` is the managed
   // assortment size, not just the count of materialized Stock rows. Low-stock
@@ -228,40 +261,67 @@ export function StockDashboardPage() {
         }
       />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <SummaryCard
-          title="Variantes asignadas"
-          value={summary.total_variants.toString()}
-          icon={Package}
-          iconColor="text-blue-600"
-          bgColor="bg-blue-50"
-        />
-        <SummaryCard
-          title="Unidades disponibles"
-          value={summary.total_items_available.toLocaleString('es-MX')}
-          subtitle={`${summary.total_items_on_hand.toLocaleString('es-MX')} en existencia, ${summary.total_items_reserved.toLocaleString('es-MX')} reservadas`}
-          icon={TrendingUp}
-          iconColor="text-green-600"
-          bgColor="bg-green-50"
-        />
-        <SummaryCard
-          title="Valor del inventario"
-          value={currency(summary.total_inventory_value)}
-          subtitle="Costo promedio ponderado"
-          icon={DollarSign}
-          iconColor="text-purple-600"
-          bgColor="bg-purple-50"
-        />
-        <SummaryCard
-          title="Alertas de stock bajo"
-          value={summary.low_stock_items.toString()}
-          subtitle="Por debajo del mínimo configurado"
-          icon={AlertTriangle}
-          iconColor="text-red-600"
-          bgColor="bg-red-50"
-        />
-      </div>
+      {/* Summary Cards — gated on hasStock so a first-load failure never presents fabricated
+          zero totals as real inventory facts (a background refetch failure, by contrast, leaves
+          `hasStock` true and these keep showing the last good numbers, flagged stale below).
+          Also gated on !stockForbidden: a 403 always blocks below, even with cached rows. */}
+      {hasStock && !stockForbidden && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <SummaryCard
+            title="Variantes asignadas"
+            value={summary.total_variants.toString()}
+            icon={Package}
+            iconColor="text-blue-600"
+            bgColor="bg-blue-50"
+          />
+          <SummaryCard
+            title="Unidades disponibles"
+            value={summary.total_items_available.toLocaleString('es-MX')}
+            subtitle={`${summary.total_items_on_hand.toLocaleString('es-MX')} en existencia, ${summary.total_items_reserved.toLocaleString('es-MX')} reservadas`}
+            icon={TrendingUp}
+            iconColor="text-green-600"
+            bgColor="bg-green-50"
+          />
+          <SummaryCard
+            title="Valor del inventario"
+            value={currency(summary.total_inventory_value)}
+            subtitle="Costo promedio ponderado"
+            icon={DollarSign}
+            iconColor="text-purple-600"
+            bgColor="bg-purple-50"
+          />
+          <SummaryCard
+            title="Alertas de stock bajo"
+            value={summary.low_stock_items.toString()}
+            subtitle="Por debajo del mínimo configurado"
+            icon={AlertTriangle}
+            iconColor="text-red-600"
+            bgColor="bg-red-50"
+          />
+        </div>
+      )}
+
+      {/* Initial load — no cached numbers to show yet, so a plain placeholder instead of the
+          real cards (which would otherwise flash "0" before the first response arrives). */}
+      {!hasStock && stockLoading && (
+        <div
+          role="status"
+          aria-label="Cargando resumen de existencias…"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="h-24 animate-pulse rounded-lg border border-gray-200 bg-gray-100" />
+          ))}
+        </div>
+      )}
+
+      {/* A refetch failed but we still have the last successful snapshot — say so instead of
+          silently presenting increasingly-stale numbers as current. */}
+      {hasStock && stockError && (
+        <div role="alert" className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          No se pudo actualizar. Mostrando los últimos datos disponibles.
+        </div>
+      )}
 
       {/* Location Filter */}
       <div className="mb-6">
@@ -278,8 +338,34 @@ export function StockDashboardPage() {
       </div>
 
       {/* Location Detail View */}
-      {selectedLocationId.length > 0 && locationStockData?.data.data && (
+      {selectedLocationId.length > 0 && locationLoading && (
         <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
+          <DetailStatus kind="loading" title="Cargando ubicación…" />
+        </div>
+      )}
+
+      {/* Blocking error only for a genuine first-load failure — a background refetch
+          failure with the previous snapshot still cached uses the non-blocking stale
+          banner inside the card below instead (mirrors the top-level stock query). A 403
+          always blocks here, cached data or not. */}
+      {selectedLocationId.length > 0 && !locationLoading && (locationForbidden || (locationError && !hasLocationStock)) && (
+        <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
+          <DetailStatus
+            kind={locationForbidden ? 'forbidden' : 'error'}
+            title={locationForbidden ? undefined : 'No se pudo cargar esta ubicación'}
+            description={locationForbidden ? undefined : 'Ocurrió un problema al obtener sus existencias. Intenta de nuevo.'}
+            onRetry={() => refetchLocationStock()}
+          />
+        </div>
+      )}
+
+      {selectedLocationId.length > 0 && !locationLoading && !locationForbidden && hasLocationStock && locationStockData?.data.data && (
+        <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
+          {locationError && (
+            <div role="alert" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              No se pudo actualizar esta ubicación. Mostrando los últimos datos disponibles.
+            </div>
+          )}
           <div className="flex items-start justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -393,8 +479,10 @@ export function StockDashboardPage() {
         </div>
       )}
 
-      {/* Location Summary Cards (when no filter selected) */}
-      {selectedLocationId.length === 0 && locationSummaryCards.length > 0 && (
+      {/* Location Summary Cards (when no filter selected) — also gated on hasStock: each card's
+          totals are computed from allStock, so without it every location would show fabricated
+          zeros the same way the top summary cards would. */}
+      {hasStock && !stockForbidden && selectedLocationId.length === 0 && locationSummaryCards.length > 0 && (
         <div className="mb-8">
           <h3 className="text-lg font-semibold mb-4">Existencias por Ubicación</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -436,8 +524,26 @@ export function StockDashboardPage() {
         </div>
       )}
 
-      {/* Low Stock Alerts */}
-      {lowStockItems.length > 0 && (
+      {/* Load failure — must not render identically to "the assortment is empty" (below),
+          or a real outage looks like there's simply nothing to see. Only the true first-load
+          failure (no cached data at all) gets this full blocking state; a refetch failure with
+          data already on hand uses the non-blocking stale banner above instead. A 403 always
+          blocks here, cached data or not — access was just denied, not merely unreachable. */}
+      {!isLoading && (stockForbidden || (stockError && !hasStock)) && (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <DetailStatus
+            kind={stockForbidden ? 'forbidden' : 'error'}
+            title={stockForbidden ? undefined : 'No se pudieron cargar las existencias'}
+            description={stockForbidden ? undefined : 'Ocurrió un problema al obtenerlas. Intenta de nuevo.'}
+            onRetry={() => refetchStock()}
+          />
+        </div>
+      )}
+
+      {/* Low Stock Alerts — gated on hasStock, not on the absence of an error: a refetch failure
+          must not hide alerts computed from the still-valid last successful snapshot. Still
+          blocked on stockForbidden, same as the summary cards above. */}
+      {hasStock && !stockForbidden && lowStockItems.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -448,13 +554,14 @@ export function StockDashboardPage() {
             columns={lowStockColumns}
             getRowId={(stock) => stock.assignment_id}
             loading={isLoading}
+            isRefetching={stockRefetching}
             emptyMessage="Sin alertas de stock bajo"
           />
         </div>
       )}
 
-      {/* Empty assortment message */}
-      {!isLoading && allStock.length === 0 && (
+      {/* Empty assortment message — only once a fetch actually succeeded with zero rows */}
+      {!isLoading && hasStock && !stockForbidden && allStock.length === 0 && (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">

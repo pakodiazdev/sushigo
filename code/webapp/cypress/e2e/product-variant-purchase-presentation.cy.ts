@@ -137,7 +137,7 @@ describe('Variant detail — Purchase Presentation lifecycle', () => {
     // Cypress `retries` re-runs the `it` and this beforeEach, but NOT before().
     // Without this purge, a retry that starts after the "Assign Presentation"
     // step would hit the leftover assignment and fail deterministically at
-    // "No purchase presentations yet" instead of retrying the real failure
+    // "Aún no hay presentaciones de compra" instead of retrying the real failure
     // (CI runs `cypress run --config retries=2` — see .github/workflows/_e2e-ci.yml).
     cy.request({
       method: 'GET',
@@ -170,14 +170,14 @@ describe('Variant detail — Purchase Presentation lifecycle', () => {
     cy.contains('h2', PRODUCT_NAME, { timeout: 10_000 }).should('be.visible')
 
     cy.contains(VARIANT_NAME).click()
-    cy.contains('h2', 'Variant Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la variante', { timeout: 10_000 }).should('be.visible')
 
-    cy.contains('Purchase Presentations').should('be.visible')
-    cy.contains('No purchase presentations yet').should('be.visible')
+    cy.contains('Presentaciones de compra').should('be.visible')
+    cy.contains('Aún no hay presentaciones de compra').should('be.visible')
 
     // ── 2. Assign the seeded template ──────────────────────────────────────
-    cy.contains('button', 'Assign template').click()
-    cy.contains('h2', 'Assign Purchase Presentation', { timeout: 10_000 }).should('be.visible')
+    cy.contains('button', 'Asignar plantilla').click()
+    cy.contains('h2', 'Asignar presentación de compra', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
       cy.get('select').select(`${TEMPLATE_NAME} (BOX · ×24)`)
@@ -188,39 +188,39 @@ describe('Variant detail — Purchase Presentation lifecycle', () => {
 
     // ── 3. Confirm the panel transitioned back to Variant detail, showing it ──
     cy.contains('Purchase Presentation created successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Variant Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la variante', { timeout: 10_000 }).should('be.visible')
     cy.contains(TEMPLATE_NAME).should('be.visible')
     cy.contains(PACKAGE_BARCODE).should('be.visible')
-    cy.contains('Default').should('be.visible')
+    cy.contains('Predeterminada').should('be.visible')
 
     // ── 4. Deactivate the assignment ────────────────────────────────────────
     cy.contains(TEMPLATE_NAME).click()
-    cy.contains('h2', 'Edit Purchase Presentation', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Editar presentación de compra', { timeout: 10_000 }).should('be.visible')
     // Template is read-only in edit mode — no selector for it.
     cy.get('form').find('select').should('not.exist')
     cy.contains('label', 'Active').click()
     cy.contains('button', 'Save Presentation').scrollIntoView().click({ force: true })
 
     cy.contains('Purchase Presentation updated successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Variant Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la variante', { timeout: 10_000 }).should('be.visible')
     cy.contains(TEMPLATE_NAME).parent().parent().within(() => {
-      cy.contains('Inactive').should('be.visible')
+      cy.contains('Inactiva').should('be.visible')
     })
 
     // ── 5. Reactivate it ─────────────────────────────────────────────────────
     cy.contains(TEMPLATE_NAME).click()
-    cy.contains('h2', 'Edit Purchase Presentation', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Editar presentación de compra', { timeout: 10_000 }).should('be.visible')
     cy.contains('label', 'Active').click()
     cy.contains('button', 'Save Presentation').scrollIntoView().click({ force: true })
 
     cy.contains('Purchase Presentation updated successfully', { timeout: 10_000 }).should('be.visible')
-    cy.contains('h2', 'Variant Detail', { timeout: 10_000 }).should('be.visible')
+    cy.contains('h2', 'Detalle de la variante', { timeout: 10_000 }).should('be.visible')
     cy.contains(TEMPLATE_NAME).parent().parent().within(() => {
-      cy.contains('Active').should('be.visible')
+      cy.contains('Activa').should('be.visible')
     })
 
     // ── 6. Back out — no leftover nested state ────────────────────────────────
-    cy.contains('button', 'Back to Product').click()
+    cy.contains('button', 'Volver al producto').click()
     cy.contains('h2', PRODUCT_NAME, { timeout: 10_000 }).should('be.visible')
   })
 })

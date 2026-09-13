@@ -34,6 +34,8 @@ export function MovementsPage() {
     isLoading,
     isError,
     isForbidden,
+    isRefetching,
+    refetch,
     page,
     totalPages,
     totalResults,
@@ -104,14 +106,9 @@ export function MovementsPage() {
     },
   ]
 
-  let emptyMessage: string | undefined
-  if (isForbidden) {
-    emptyMessage = 'No tienes permiso para consultar el historial de movimientos.'
-  } else if (isError) {
-    emptyMessage = 'No fue posible cargar los movimientos. Intenta de nuevo.'
-  } else {
-    emptyMessage = 'No hay movimientos que coincidan con los filtros.'
-  }
+  const emptyTitle = hasActiveFilters
+    ? 'Sin resultados que coincidan con los filtros'
+    : 'Aún no hay movimientos'
 
   return (
     <PageContainer>
@@ -192,7 +189,13 @@ export function MovementsPage() {
         columns={columns}
         onRowClick={(m) => openMovement(m.id)}
         loading={isLoading}
-        emptyMessage={emptyMessage}
+        error={isError && !isForbidden}
+        forbidden={isForbidden}
+        errorTitle="No fue posible cargar los movimientos"
+        errorDescription="Intenta de nuevo."
+        onRetry={() => refetch()}
+        isRefetching={isRefetching}
+        emptyTitle={emptyTitle}
         getRowId={(m) => m.id}
         totalResults={totalResults}
         pagination={{

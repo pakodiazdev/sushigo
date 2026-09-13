@@ -1,5 +1,5 @@
-import { useId } from 'react'
-import { ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, type LucideIcon } from 'lucide-react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Lock, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type Breakpoint = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
@@ -39,6 +39,29 @@ interface DataGridProps<T> {
   onPerPageChange?: (perPage: number) => void
   totalResults?: number
   skeletonRows?: number
+  /**
+   * The query failed (as opposed to succeeding with zero rows) — renders a
+   * distinct, retry-offering state instead of `emptyMessage` so a caller never
+   * has to smuggle "failed to load" text through the empty-state string.
+   */
+  error?: boolean
+  /** 403 — a subtype of `error` with no retry action, since retrying can't fix it. */
+  forbidden?: boolean
+  errorTitle?: string
+  errorDescription?: string
+  /** Renders a "Reintentar" button in the error state; omitted for `forbidden`. */
+  onRetry?: () => void
+  /** Richer empty-state heading, replacing the plain `emptyMessage` string. */
+  emptyTitle?: string
+  emptyDescription?: string
+  /** e.g. a "Crear el primero" button — caller decides if/when to render it (permission-gated). */
+  emptyAction?: ReactNode
+  /**
+   * A background refetch is in flight while previously-loaded rows are still
+   * shown (e.g. after a filter change with `placeholderData: keepPreviousData`).
+   * Renders a small non-blocking indicator instead of replacing the table.
+   */
+  isRefetching?: boolean
 }
 
 const HIDE_BELOW_CLASSES: Record<Breakpoint, string> = {
@@ -109,8 +132,27 @@ export function DataGrid<T extends { id: string | number }>({
   onPerPageChange,
   totalResults,
   skeletonRows = 5,
+  error = false,
+  forbidden = false,
+  errorTitle,
+  errorDescription = 'No se pudieron cargar los datos. Intenta de nuevo.',
+  onRetry,
+  emptyTitle,
+  emptyDescription,
+  emptyAction,
+  isRefetching = false,
 }: Readonly<DataGridProps<T>>) {
   const perPageId = useId()
+  // Focus the error/forbidden banner itself (not just its retry button, which
+  // doesn't exist in the `forbidden` case) so a screen reader announces the
+  // failure the moment it replaces the grid, without requiring a click first.
+  const statusRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if ((error || forbidden) && !loading) {
+      statusRef.current?.focus()
+    }
+  }, [error, forbidden, loading])
 
   function handleSortClick(sortKey: string) {
     if (!onSortChange) return
@@ -149,16 +191,65 @@ export function DataGrid<T extends { id: string | number }>({
   // Legacy loading: no columns define skeleton → show spinner
   if (loading && !hasSkeleton) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div role="status" aria-live="polite" className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+        <span className="sr-only">Cargando…</span>
+      </div>
+    )
+  }
+
+  // A background refetch failure (e.g. a same-key refetch on window focus, or a retry after a
+  // filter change) leaves TanStack Query's `data` holding the last successful rows while `error`
+  // flips true — it does not clear `data` just because the *next* attempt failed. Blocking the
+  // whole grid in that case would replace still-usable rows with a full error screen for no
+  // reason; only block when there is truly nothing to show. `forbidden` (403) still blocks
+  // unconditionally even with cached rows on hand — the user's access may have just been revoked,
+  // so continuing to display that data is the wrong default.
+  const hasRows = Boolean(data && data.length > 0)
+  const blockingError = forbidden || (error && !hasRows)
+
+  if (!loading && blockingError) {
+    // `errorTitle`/`errorDescription` only customize the plain-error message — a
+    // caller setting a domain-specific error string (e.g. "No fue posible cargar
+    // los movimientos") must never leak into the unrelated 403 copy below, which
+    // always uses its own fixed, non-overridable message.
+    const title = forbidden ? 'No tienes permiso para ver esta información' : (errorTitle ?? 'No se pudieron cargar los datos')
+    const description = forbidden
+      ? 'Solicita acceso a un administrador si crees que esto es un error.'
+      : errorDescription
+    return (
+      <div
+        ref={statusRef}
+        role="alert"
+        aria-live="assertive"
+        tabIndex={-1}
+        className="flex h-64 flex-col items-center justify-center gap-2 text-center focus:outline-none"
+      >
+        {forbidden
+          ? <Lock className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+          : <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />}
+        <p className="font-medium text-foreground">{title}</p>
+        <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
+        {!forbidden && onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-2 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Reintentar
+          </button>
+        )}
       </div>
     )
   }
 
   if (!loading && (!data || data.length === 0)) {
+    const title = emptyTitle ?? emptyMessage
     return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        {emptyMessage}
+      <div role="status" className="flex h-64 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+        {title && <p className="font-medium">{title}</p>}
+        {emptyDescription && <p className="max-w-sm text-sm">{emptyDescription}</p>}
+        {emptyAction && <div className="mt-2">{emptyAction}</div>}
       </div>
     )
   }
@@ -258,6 +349,33 @@ export function DataGrid<T extends { id: string | number }>({
 
   return (
     <div className={cn('flex flex-col', className)}>
+      {isRefetching && (
+        <div role="status" aria-live="polite" className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+          Actualizando…
+        </div>
+      )}
+      {/* Non-blocking counterpart to the full-screen error state above: a background refetch
+          failed, but the rows on screen are still the last successful result — say so instead of
+          silently going stale, without hiding data the user can still act on. */}
+      {error && !forbidden && hasRows && (
+        <div
+          role="alert"
+          className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+        >
+          <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+          <span>{errorTitle ?? 'No se pudo actualizar.'} Mostrando los últimos datos disponibles.</span>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="ml-auto font-medium underline hover:no-underline"
+            >
+              Reintentar
+            </button>
+          )}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <div className="inline-block min-w-full align-middle">
           <div className="overflow-hidden border border-border shadow sm:rounded-lg">

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
+import { AxiosError, AxiosHeaders } from 'axios'
 import { useProductsList } from '../use-products-list'
 import { useProductVariants } from '@/components/products/use-product-variants'
 import type { Brand, InventoryCategory, Product } from '@/types/inventory'
@@ -488,5 +489,62 @@ describe('useProductsList', () => {
     act(() => result.current.setCurrentPage(3))
     act(() => result.current.setStatusFilter('active'))
     expect(result.current.currentPage).toBe(1)
+  })
+
+  it('reports hasActiveFilters false until a filter or search is set, then clearFilters resets everything', async () => {
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useProductsList(), { wrapper })
+
+    await waitFor(() => expect(result.current.products).toHaveLength(1))
+    expect(result.current.hasActiveFilters).toBe(false)
+
+    act(() => result.current.setSearchQuery('Coca'))
+    expect(result.current.hasActiveFilters).toBe(true)
+
+    act(() => result.current.clearFilters())
+    expect(result.current.hasActiveFilters).toBe(false)
+    expect(result.current.searchQuery).toBe('')
+    expect(result.current.brandFilter).toBe('')
+    expect(result.current.categoryFilter).toBe('')
+    expect(result.current.statusFilter).toBe('')
+  })
+
+  it('exposes refetch so the list screen can offer a retry action on failure', async () => {
+    vi.mocked(productApi.list).mockRejectedValueOnce(new Error('Network Error'))
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useProductsList(), { wrapper })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    vi.mocked(productApi.list).mockResolvedValue({
+      data: { status: 200, data: [cocaColaProduct], meta: { current_page: 1, total: 1, last_page: 1 } },
+    } as never)
+
+    await act(async () => {
+      await result.current.refetch()
+    })
+
+    await waitFor(() => expect(result.current.isError).toBe(false))
+    expect(result.current.products).toHaveLength(1)
+  })
+
+  it('classifies a 403 as isForbidden, not the retryable isError (Codex review finding)', async () => {
+    const forbidden = new AxiosError('Forbidden')
+    forbidden.response = {
+      status: 403,
+      statusText: 'Forbidden',
+      data: {},
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    }
+    vi.mocked(productApi.list).mockRejectedValue(forbidden)
+    const { wrapper } = makeWrapper()
+    const { result } = renderHook(() => useProductsList(), { wrapper })
+
+    await waitFor(() => expect(result.current.isForbidden).toBe(true))
+    // A 403 must never be surfaced as the retryable error state — DataGrid's `forbidden`
+    // blocks unconditionally, but `error` would (correctly, for a real transient failure)
+    // keep any cached rows visible, which is the wrong default once access is revoked.
+    expect(result.current.isError).toBe(false)
   })
 })

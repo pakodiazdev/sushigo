@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { getApiErrorMessage, isForbiddenError } from '@/lib/api-error'
 import { brandApi, inventoryCategoryApi, productApi } from '@/services/inventory-api'
 import type { Product } from '@/types/inventory'
 
@@ -98,9 +98,16 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
         inventory_category_id: categoryFilterState || undefined,
         is_active: statusFilterState ? statusFilterState === 'active' : undefined,
       }),
+    // Keep the current page's rows visible while a filter/page change refetches in
+    // the background instead of blanking the grid to a full-page skeleton.
+    placeholderData: keepPreviousData,
   })
   const products = productsQuery.data?.data.data ?? []
   const totalPages = productsQuery.data?.data.meta.last_page ?? 1
+  // A 403 (access revoked mid-session) must never be treated as a retryable refresh
+  // failure that leaves cached rows visible — DataGrid's `forbidden` state blocks them
+  // unconditionally, unlike its plain `error` state, which now keeps stale rows on screen.
+  const isProductsForbidden = isForbiddenError(productsQuery.error)
 
   // Once retries are exhausted, `products` above quietly falls back to [] — without
   // this, a genuine fetch failure renders identically to "the catalog has no rows",
@@ -109,10 +116,21 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
   // errors are surfaced in use-dishes-list.ts.
   useEffect(() => {
     if (productsQuery.isError) {
-      showError(getApiErrorMessage(productsQuery.error, 'Failed to load products'))
+      showError(getApiErrorMessage(productsQuery.error, 'No se pudieron cargar los productos'))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productsQuery.isError])
+
+  const hasActiveFilters = Boolean(
+    searchQueryState || brandFilterState || categoryFilterState || statusFilterState
+  )
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setBrandFilter('')
+    setCategoryFilter('')
+    setStatusFilter('')
+  }
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => productApi.delete(id),
@@ -139,7 +157,7 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
       })
       closePanel()
       onDeleted?.()
-      showSuccess('Product deleted successfully', 'Product Deleted')
+      showSuccess('Producto eliminado correctamente', 'Producto eliminado')
     },
     onError: (error: unknown, deletedProductId: string) => {
       // handleDelete cancels this same query before the delete request goes out (see below) so a
@@ -148,8 +166,8 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
       // with no data and no pending fetch — refetch it so the still-open panel recovers.
       queryClient.invalidateQueries({ queryKey: ['products', deletedProductId, 'variants'] })
       showError(
-        getApiErrorMessage(error, 'Failed to delete product. It may have existing variants.'),
-        'Delete Error'
+        getApiErrorMessage(error, 'No se pudo eliminar el producto. Puede tener variantes existentes.'),
+        'Error al eliminar'
       )
     },
   })
@@ -222,12 +240,17 @@ export function useProductsList({ onDeleted }: UseProductsListOptions = {}) {
     setCategoryFilter,
     statusFilter: statusFilterState,
     setStatusFilter,
+    hasActiveFilters,
+    clearFilters,
     brands,
     categories,
     products,
     totalPages,
     isLoading: productsQuery.isLoading,
-    isError: productsQuery.isError,
+    isError: productsQuery.isError && !isProductsForbidden,
+    isForbidden: isProductsForbidden,
+    isRefetching: productsQuery.isRefetching,
+    refetch: productsQuery.refetch,
     isPanelOpen,
     panelMode,
     selectedProduct,

@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiErrorMessage, isApiError } from '@/lib/api-error'
+import { getApiErrorMessage, isForbiddenError } from '@/lib/api-error'
 import { useInventoryLocationsSelect, useItemVariantsSelect } from '@/hooks/use-inventory-queries'
 import { useAuthStore } from '@/stores/auth.store'
 import { movementApi } from '../api/movement-api'
@@ -96,13 +96,18 @@ export function useMovementsPage() {
     // always reflects the current history.
     staleTime: 0,
     refetchOnWindowFocus: true,
+    // Keep the current page visible while a filter/page change refetches in the
+    // background instead of blanking the grid to a full-page skeleton — this
+    // doesn't weaken the staleTime: 0 freshness guarantee above, it only avoids
+    // discarding rows the user can still usefully see while that refetch runs.
+    placeholderData: keepPreviousData,
   })
 
   const movements = movementsQuery.data?.data.data ?? []
   const totalPages = movementsQuery.data?.data.meta.last_page ?? 1
   const totalResults = movementsQuery.data?.data.meta.total ?? 0
 
-  const isForbidden = isApiError(movementsQuery.error) && movementsQuery.error.response?.status === 403
+  const isForbidden = isForbiddenError(movementsQuery.error)
 
   // A filter change can shrink the result set below the page the user was on —
   // clamp back to page 1. Gate on `isSuccess` (not merely "done fetching"): a
@@ -232,6 +237,8 @@ export function useMovementsPage() {
     isLoading: movementsQuery.isLoading,
     isError: movementsQuery.isError,
     isForbidden,
+    isRefetching: movementsQuery.isRefetching,
+    refetch: movementsQuery.refetch,
     page,
     totalPages,
     totalResults,

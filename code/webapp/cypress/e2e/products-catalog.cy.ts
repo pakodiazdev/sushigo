@@ -54,14 +54,14 @@ describe('Products — Progressive create → detail SlidePanel', () => {
     // A fresh `test:reset` (core only) leaves the Products list empty, so the
     // DataGrid renders its empty state instead of a <table> — wait for the
     // create button instead, which is always present.
-    cy.contains('button', 'New Product', { timeout: 10_000 }).should('be.visible')
+    cy.contains('button', 'Nuevo producto', { timeout: 10_000 }).should('be.visible')
     cy.closeDevDebugger()
   })
 
   it('creates a Product and transitions the same panel to its saved detail view', () => {
     // ── 1. Open the create panel ──────────────────────────────────────────
-    cy.contains('button', 'New Product').click()
-    cy.contains('h2', 'New Product', { timeout: 10_000 }).should('be.visible')
+    cy.contains('button', 'Nuevo producto').click()
+    cy.contains('h2', 'Nuevo producto', { timeout: 10_000 }).should('be.visible')
 
     // ── 2. Fill in catalog-identity-only fields — never Variant/cost/price/UOM/stock ──
     // Scoped to the form — the page behind the SlidePanel also has Brand/Category
@@ -78,8 +78,8 @@ describe('Products — Progressive create → detail SlidePanel', () => {
     //      no navigation, no second panel opening ──────────────────────────────────
     cy.contains('Product created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Cypress Soda 600 ml', { timeout: 10_000 }).should('be.visible')
-    cy.contains('Edit Product').should('be.visible')
-    cy.contains('No variants yet').should('be.visible')
+    cy.contains('Editar producto').should('be.visible')
+    cy.contains('Aún no hay variantes').should('be.visible')
 
     // ── 4. Confirm the list refreshes from canonical API data after create ─────────
     cy.contains('Close panel').parent().click({ force: true })

@@ -1,18 +1,25 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { requirePermission } from '@/lib/route-guards'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { Plus, MapPin } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
+import { CanAccess } from '@/components/auth'
 import { type Column } from '@/components/ui/data-grid'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { useToast } from '@/components/ui/toast-context'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { getApiErrorMessage, isForbiddenError } from '@/lib/api-error'
 import { inventoryLocationApi } from '@/services/inventory-api'
 import type { InventoryLocation } from '@/types/inventory'
-import { LocationForm, LocationDetails, CrudSlidePanels, InventoryListLayout } from '@/components/inventory'
+import {
+  LocationForm,
+  LocationDetails,
+  CrudSlidePanels,
+  InventoryListLayout,
+  useTypeStatusListFilters,
+} from '@/components/inventory'
 
 export const Route = createFileRoute('/inventario/ubicaciones')({
   // stock.view alone must reach this page too (#569): the Location detail
@@ -29,13 +36,21 @@ export function InventoryLocationsPage() {
   const [selectedLocation, setSelectedLocation] = useState<InventoryLocation | null>(null)
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const {
+    currentPage,
+    setCurrentPage,
+    searchQuery,
+    setSearchQuery,
+    typeFilter,
+    setTypeFilter,
+    statusFilter,
+    setStatusFilter,
+    hasActiveFilters,
+    clearFilters,
+  } = useTypeStatusListFilters()
 
   // Fetch locations with filters
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError: isErrorRaw, isRefetching, refetch, error } = useQuery({
     queryKey: ['inventory-locations', currentPage, searchQuery, typeFilter, statusFilter],
     queryFn: () =>
       inventoryLocationApi.list({
@@ -44,7 +59,13 @@ export function InventoryLocationsPage() {
         type: typeFilter || undefined,
         is_active: statusFilter ? statusFilter === 'active' : undefined,
       }),
+    placeholderData: keepPreviousData,
   })
+  // A 403 (access revoked mid-session) must never be treated as a retryable refresh
+  // failure that leaves cached rows visible — DataGrid's `forbidden` state blocks them
+  // unconditionally, unlike its plain `error` state, which now keeps stale rows on screen.
+  const isForbidden = isForbiddenError(error)
+  const isError = isErrorRaw && !isForbidden
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -53,12 +74,12 @@ export function InventoryLocationsPage() {
       queryClient.invalidateQueries({ queryKey: ['inventory-locations'] })
       setIsDetailsPanelOpen(false)
       setSelectedLocation(null)
-      showSuccess('Location deleted successfully', 'Location Deleted')
+      showSuccess('Ubicación eliminada correctamente', 'Ubicación eliminada')
     },
     onError: (error: unknown) => {
       showError(
-        getApiErrorMessage(error, 'Failed to delete location. It may have existing stock.'),
-        'Delete Error'
+        getApiErrorMessage(error, 'No se pudo eliminar la ubicación. Puede tener existencia registrada.'),
+        'Error al eliminar'
       )
     },
   })
@@ -66,7 +87,7 @@ export function InventoryLocationsPage() {
   const columns: Column<InventoryLocation>[] = [
     {
       key: 'name',
-      header: 'Name',
+      header: 'Nombre',
       render: (location) => (
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -76,7 +97,7 @@ export function InventoryLocationsPage() {
     },
     {
       key: 'type',
-      header: 'Type',
+      header: 'Tipo',
       render: (location) => {
         const typeColors: Record<string, string> = {
           MAIN: 'bg-blue-50 text-blue-700 ring-blue-700/10',
@@ -101,14 +122,14 @@ export function InventoryLocationsPage() {
     },
     {
       key: 'priority',
-      header: 'Priority',
+      header: 'Prioridad',
       render: (location) => (
         <span className="text-sm font-medium">{location.priority}</span>
       ),
     },
     {
       key: 'is_active',
-      header: 'Status',
+      header: 'Estado',
       render: (location) => (
         <span
           className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${location.is_active
@@ -166,10 +187,12 @@ export function InventoryLocationsPage() {
         title="Ubicaciones de Inventario"
         description="Gestiona las ubicaciones de almacenamiento"
         action={
-          <Button onClick={handleNewLocation} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nueva Ubicación
-          </Button>
+          <CanAccess permission="inventory_locations.manage">
+            <Button onClick={handleNewLocation} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nueva Ubicación
+            </Button>
+          </CanAccess>
         }
       />
 
@@ -182,6 +205,7 @@ export function InventoryLocationsPage() {
             label="Tipo"
             value={typeFilter}
             onChange={setTypeFilter}
+            placeholder="Todos"
             options={[
               { value: 'MAIN', label: 'Almacén Principal' },
               { value: 'KITCHEN', label: 'Cocina' },
@@ -193,10 +217,25 @@ export function InventoryLocationsPage() {
         }
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
         rows={data?.data.data || []}
         columns={columns}
         onRowClick={handleRowClick}
         loading={isLoading}
+        error={isError}
+        forbidden={isForbidden}
+        onRetry={() => refetch()}
+        isRefetching={isRefetching}
+        emptyDescription="Registra una ubicación para verla aquí."
+        emptyAction={
+          <CanAccess permission="inventory_locations.manage">
+            <Button variant="outline" size="sm" onClick={handleNewLocation} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Crear la primera ubicación
+            </Button>
+          </CanAccess>
+        }
         currentPage={currentPage}
         totalPages={data?.data.meta.last_page || 1}
         onPageChange={setCurrentPage}
