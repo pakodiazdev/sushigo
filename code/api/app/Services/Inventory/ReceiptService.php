@@ -275,15 +275,12 @@ class ReceiptService
 
     /**
      * Reverse a posted Receipt: for every line, decrease Stock.on_hand by
-     * the base units it received (reusing Stock's own guarded
-     * decreaseOnHand() — the #430 invariant), and write mirroring
-     * StockMovement evidence. Blocked once on-hand has fallen below what
-     * the receipt added — the "reversal boundary" #432 asks for.
-     *
-     * Weighted-average cost is intentionally left untouched on reversal:
-     * unwinding a weighted average precisely requires lot-level tracking
-     * this codebase doesn't have yet (see #434), so adjusting it here would
-     * just trade one approximation for another.
+     * the base units it received and reconcile Stock.weighted_avg_cost to
+     * exactly remove the value this line contributed (#579 —
+     * Stock::reverseWeightedAverageCost()), and write mirroring StockMovement
+     * evidence. Blocked once on-hand has fallen below what the receipt added
+     * — the "reversal boundary" #432 asks for — or once the value this line
+     * added can no longer be exactly attributed to what remains (#579).
      *
      * @throws ReceiptNotPostedException|ReceiptAlreadyReversedException|ReceiptReversalBoundaryException|ReceiptVariantUnavailableException
      */
@@ -340,6 +337,11 @@ class ReceiptService
 
         $originalMovement = $this->lockReversibleReceiptMovement($receipt, $line, $itemVariant->id);
 
+        $originalUnitCost = (float) ($originalMovement->lines->first()?->unit_cost
+            ?? throw new ReceiptReversalBoundaryException(
+                "Cannot reverse receipt #{$receipt->id}: its posted stock movement for line #{$line->id} is missing its value evidence."
+            ));
+
         $stock = Stock::where('inventory_location_id', $receipt->destination_location_id)
             ->where('item_variant_id', $itemVariant->id)
             ->lockForUpdate()
@@ -352,10 +354,17 @@ class ReceiptService
         }
 
         try {
-            $stock->decreaseOnHand($baseUnits);
+            // #579: unwinds both the quantity and the exact value this line
+            // contributed to the weighted-average cost in one step, using the
+            // immutable unit cost the original posting recorded — never a
+            // recomputed approximation. Refuses (409) rather than silently
+            // dropping value when intervening operations make the removal
+            // unreconcilable — see WeightedAverageCostCalculator::subtractValue().
+            $stock->reverseWeightedAverageCost($baseUnits, $originalUnitCost);
         } catch (InvalidStockBalanceException $e) {
             throw new ReceiptReversalBoundaryException(
-                "Cannot reverse receipt #{$receipt->id}: stock has already been consumed below the received amount. {$e->getMessage()}"
+                "Cannot reverse receipt #{$receipt->id}: stock has already been consumed below the received amount, "
+                ."or the received value can no longer be exactly reconciled. {$e->getMessage()}"
             );
         }
 
@@ -415,6 +424,7 @@ class ReceiptService
             ->where('item_variant_id', $itemVariantId)
             ->where('reason', StockMovement::REASON_PURCHASE_RECEIPT)
             ->lockForUpdate()
+            ->with('lines')
             ->first();
 
         if (! $originalMovement) {

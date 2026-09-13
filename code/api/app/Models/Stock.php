@@ -24,6 +24,7 @@ class Stock extends Model
         'on_hand',
         'reserved',
         'weighted_avg_cost',
+        'total_value',
         'meta',
     ];
 
@@ -32,10 +33,47 @@ class Stock extends Model
         'reserved' => 'decimal:4',
         'available' => 'decimal:4',
         'weighted_avg_cost' => 'decimal:4',
+        'total_value' => 'decimal:4',
         'meta' => 'array',
     ];
 
     // available is a computed column in the database
+
+    protected static function booted(): void
+    {
+        // #579: a caller creating a Stock row directly (seeders, factories,
+        // tests, or a future writer) with an explicit `weighted_avg_cost` but
+        // no `total_value` would otherwise leave the new accumulator at its
+        // column default (0) — inconsistent with on_hand * weighted_avg_cost
+        // from the first write, and rejected outright by the
+        // stock_total_value_nonnegative check constraint the moment anything
+        // (e.g. a Transfer moving stock out) tries to decrement it below
+        // zero. Every writer that goes through applyWeightedAverageCost() /
+        // reverseWeightedAverageCost() / decreaseOnHand() already sets
+        // total_value explicitly and is unaffected by this default.
+        //
+        // On `saving`, not `creating`: HasPublicId's own `creating` listener
+        // returns a truthy value (the assigned public_id), which halts that
+        // halting-by-default event before a second listener would run — the
+        // same gotcha StockMovementLine::booted() documents. `! $stock->exists`
+        // limits this to the insert path, mirroring that same pattern.
+        static::saving(function (self $stock) {
+            if (! $stock->exists && ! array_key_exists('total_value', $stock->getAttributes())) {
+                // bcmath (via addValue()'s own exact multiplication), not a
+                // raw float product: on_hand/weighted_avg_cost can each carry
+                // up to 11 integer digits, and PHP float64 only holds ~15-17
+                // significant digits — a raw `(float) $a * (float) $b` at that
+                // magnitude silently loses precision (and can round to
+                // exactly the decimal(26,4) ceiling, tripping a spurious
+                // overflow on an otherwise-representable value).
+                $stock->total_value = WeightedAverageCostCalculator::addValue(
+                    priorTotalValue: 0.0,
+                    addedQty: (float) $stock->on_hand,
+                    addedUnitCost: (float) $stock->weighted_avg_cost,
+                );
+            }
+        });
+    }
 
     /**
      * Get the inventory location
@@ -120,6 +158,46 @@ class Stock extends Model
      */
     public function decreaseOnHand(float $qty): void
     {
+        $resultingOnHand = $this->assertDecreaseIsWithinBounds($qty);
+
+        // #579: keep the exact value accumulator in lockstep with every
+        // quantity-only decrease (consumption, transfer-out, a generic
+        // movement reversal) — removed at the *current* average, since none
+        // of these callers ever change the average itself
+        // (applyWeightedAverageCost() and reverseWeightedAverageCost() are
+        // the only writers of weighted_avg_cost). This is what keeps
+        // total_value exactly reconcilable without every outbound caller
+        // having to maintain it itself.
+        //
+        // weighted_avg_cost is a *rounded* scale-4 rate while total_value is
+        // exact, so qty * weighted_avg_cost can exceed what's actually left
+        // — most visibly on a full depletion (qty === on_hand), where the
+        // rounded rate times the full quantity does not necessarily equal
+        // the exact accumulator. Clamping to what remains guarantees this
+        // never drives total_value negative and trips the
+        // stock_total_value_nonnegative constraint; the (negligible, at most
+        // half a cent per unit) difference is absorbed as a rounding
+        // write-off, the same accepted approximation this codebase already
+        // makes by leaving weighted_avg_cost untouched on a plain decrease.
+        $valueRemoved = min(round($qty * (float) $this->weighted_avg_cost, 4), (float) $this->total_value);
+
+        $this->update([
+            'on_hand' => $resultingOnHand,
+            'total_value' => round((float) $this->total_value - $valueRemoved, 4),
+        ]);
+    }
+
+    /**
+     * Shared on_hand/reserved boundary guard for decreaseOnHand() and
+     * reverseWeightedAverageCost() — both decrease on_hand by the same rules,
+     * they only differ in how they account for value afterward.
+     *
+     * @return float the resulting on_hand, if within bounds
+     *
+     * @throws InvalidStockBalanceException if $qty is not positive, or the result would be negative or leave on_hand below reserved
+     */
+    private function assertDecreaseIsWithinBounds(float $qty): float
+    {
         $this->assertPositiveQuantity($qty);
 
         $resultingOnHand = (float) $this->on_hand - $qty;
@@ -136,7 +214,7 @@ class Stock extends Model
             );
         }
 
-        $this->decrement('on_hand', $qty);
+        return $resultingOnHand;
     }
 
     /**
@@ -145,9 +223,23 @@ class Stock extends Model
      * cost-bearing inbound flow (Receipts, Opening Balance) must call
      * instead of re-deriving the formula itself. `on_hand` must already
      * reflect $qtyAdded (i.e. call this after incrementing on_hand, not
-     * before) — the prior quantity is derived by subtracting it back out,
-     * so this doubles as an idempotent read of "on_hand as of the moment
-     * before this receipt" without a second locked query.
+     * before).
+     *
+     * Maintains `total_value` (#579) — the exact running value accumulator
+     * kept alongside the rounded, display-only `weighted_avg_cost` — purely
+     * additively via `addValue()`, then derives `weighted_avg_cost` fresh
+     * from that exact accumulator via `averageCost()`. This deliberately
+     * does **not** use `WeightedAverageCostCalculator::blend()` (which takes
+     * the *rounded* prior average as an input): reconstructing from a
+     * rounded prior average compounds a fresh rounding error into every
+     * subsequent receipt the same way it did for reversal (see
+     * `subtractValue()`'s docblock) — e.g. two batches of 10,000 units each
+     * (@0.0001 then @0.0002) round the stored average to 0.0002, and
+     * blending a third batch (10,000 @0.0001) from that rounded 0.0002
+     * lands on 0.0002 again, while the true value/quantity ratio
+     * (4.0000 / 30,000) rounds to 0.0001. Deriving from the exact
+     * accumulator every time keeps `weighted_avg_cost` always exactly
+     * `averageCost(total_value, on_hand)`, never a compounded approximation.
      */
     public function applyWeightedAverageCost(float $qtyAdded, float $unitCost): void
     {
@@ -155,16 +247,82 @@ class Stock extends Model
             return;
         }
 
-        $priorOnHand = max(0.0, (float) $this->on_hand - $qtyAdded);
+        $newTotalValue = WeightedAverageCostCalculator::addValue((float) $this->total_value, $qtyAdded, $unitCost);
 
-        $newAvg = WeightedAverageCostCalculator::blend(
-            priorQty: $priorOnHand,
-            priorAvgCost: (float) $this->weighted_avg_cost,
-            addedQty: $qtyAdded,
-            addedUnitCost: $unitCost,
+        $this->update([
+            'total_value' => $newTotalValue,
+            'weighted_avg_cost' => WeightedAverageCostCalculator::averageCost($newTotalValue, (float) $this->on_hand),
+        ]);
+    }
+
+    /**
+     * Reverse a previously-applied weighted-average cost contribution and its
+     * matching quantity in one atomic step (#579) — the reversal counterpart
+     * to applyWeightedAverageCost(): where that method blends a newly added
+     * quantity+cost in, this one removes a previously added quantity+cost
+     * back out of the exact `total_value` accumulator, using the *exact*
+     * immutable unit cost the original posting recorded (from the posted
+     * movement's own line evidence), never a re-derived approximation.
+     *
+     * Deliberately does not delegate to decreaseOnHand(): that method removes
+     * value at the *current* average (correct for consumption/transfer-out,
+     * which never change the average), whereas a reversal must remove the
+     * *original* evidenced value, which can differ from the current average
+     * once other receipts have blended in. See
+     * WeightedAverageCostCalculator::subtractValue() for why this reads
+     * `total_value` directly instead of reconstructing prior value from the
+     * rounded `weighted_avg_cost` column, and for exactly which conditions
+     * cannot be reconciled without approximating.
+     *
+     * @throws InvalidStockBalanceException if $qtyRemoved is not positive, if it would drive on_hand
+     *                                      negative or below reserved, or if the value this quantity originally contributed can no
+     *                                      longer be exactly attributed to what remains
+     */
+    public function reverseWeightedAverageCost(float $qtyRemoved, float $originalUnitCost): void
+    {
+        $resultingOnHand = $this->assertDecreaseIsWithinBounds($qtyRemoved);
+
+        $newTotalValue = WeightedAverageCostCalculator::subtractValue(
+            priorTotalValue: (float) $this->total_value,
+            remainingQty: $resultingOnHand,
+            removedQty: $qtyRemoved,
+            removedUnitCost: $originalUnitCost,
         );
 
-        $this->update(['weighted_avg_cost' => $newAvg]);
+        if ($newTotalValue === null) {
+            throw new InvalidStockBalanceException(
+                "Cannot reconcile weighted-average cost for stock #{$this->id}: removing {$qtyRemoved} units "
+                ."originally received at {$originalUnitCost} would leave unexplained residual inventory value."
+            );
+        }
+
+        $this->update([
+            'on_hand' => $resultingOnHand,
+            'total_value' => $newTotalValue,
+            'weighted_avg_cost' => WeightedAverageCostCalculator::averageCost($newTotalValue, $resultingOnHand),
+        ]);
+    }
+
+    /**
+     * Restore value for a quantity being added back at this row's *current*
+     * weighted-average cost, without changing the average itself (#579) —
+     * the counterpart to decreaseOnHand()'s automatic value removal, for a
+     * plain quantity restore that is not itself a new cost-bearing receipt
+     * (e.g. StockMovementReverser undoing a Transfer's source-side decrease,
+     * where — like the rest of Transfer reversal — the average is
+     * intentionally left untouched; see inventory-architecture.en.md
+     * §3.9). Keeps `total_value` exactly reconciled through that path too,
+     * instead of only through applyWeightedAverageCost()/decreaseOnHand().
+     */
+    public function restoreValueAtCurrentAverage(float $qtyRestored): void
+    {
+        if ($qtyRestored <= 0) {
+            return;
+        }
+
+        $valueRestored = round($qtyRestored * (float) $this->weighted_avg_cost, 4);
+
+        $this->increment('total_value', $valueRestored);
     }
 
     /**

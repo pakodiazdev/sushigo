@@ -7,6 +7,7 @@ use App\Models\ItemVariant;
 use App\Models\OperatingUnit;
 use App\Models\Receipt;
 use App\Models\StockMovement;
+use App\Models\StockMovementLine;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Passport;
@@ -471,6 +472,16 @@ class StockMovementLedgerTest extends InventoryTestCase
             'related_line_id' => 7,
         ]);
 
+        StockMovementLine::create([
+            'stock_movement_id' => $movement->id,
+            'uom_id' => $this->uomKg->id,
+            'qty' => 5,
+            'conversion_factor' => 1,
+            'unit_cost' => 12.5,
+            'line_total' => 62.5,
+            'meta' => [],
+        ]);
+
         $this->getJson("/api/v1/inventory/movements/{$movement->public_id}")
             ->assertOk()
             ->assertJsonPath('data.id', $movement->public_id)
@@ -482,7 +493,47 @@ class StockMovementLedgerTest extends InventoryTestCase
             ->assertJsonPath('data.source.id', $receipt->public_id)
             ->assertJsonMissingPath('data.source.line_id')
             ->assertJsonPath('data.variant.base_uom.code', 'KG')
-            ->assertJsonPath('data.posted_at', $movement->posted_at->toIso8601String());
+            ->assertJsonPath('data.posted_at', $movement->posted_at->toIso8601String())
+            // #579: valuation evidence exposed without leaking the line's own internal ID.
+            ->assertJsonPath('data.valuation.unit_cost', 12.5)
+            ->assertJsonPath('data.valuation.line_total', 62.5)
+            ->assertJsonMissingPath('data.valuation.id');
+    }
+
+    #[Test]
+    public function it_nulls_the_valuation_when_the_movement_carries_no_line(): void
+    {
+        $movement = $this->makeMovement();
+
+        $this->getJson("/api/v1/inventory/movements/{$movement->public_id}")
+            ->assertOk()
+            ->assertJsonPath('data.valuation', null);
+    }
+
+    #[Test]
+    public function it_preserves_null_unit_cost_and_line_total_distinct_from_an_explicit_zero(): void
+    {
+        // Code review finding (#579 PR #626): OpeningBalanceService
+        // intentionally records both fields as null when no unit cost was
+        // supplied — that must survive serialization as null, not collapse
+        // to 0, which already has a distinct, real meaning (an explicit
+        // free/bonus cost).
+        $movement = $this->makeMovement();
+
+        StockMovementLine::create([
+            'stock_movement_id' => $movement->id,
+            'uom_id' => $this->uomKg->id,
+            'qty' => 5,
+            'conversion_factor' => 1,
+            'unit_cost' => null,
+            'line_total' => null,
+            'meta' => [],
+        ]);
+
+        $this->getJson("/api/v1/inventory/movements/{$movement->public_id}")
+            ->assertOk()
+            ->assertJsonPath('data.valuation.unit_cost', null)
+            ->assertJsonPath('data.valuation.line_total', null);
     }
 
     #[Test]

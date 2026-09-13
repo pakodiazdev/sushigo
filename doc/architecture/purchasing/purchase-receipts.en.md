@@ -81,9 +81,15 @@ the one inbound posting primitive that locks or race-safely creates the destinat
 `#430` lock/recovery pattern), blends the effective unit cost (`#434`), and appends immutable
 `StockMovement`/`StockMovementLine` evidence (`reason: PURCHASE_RECEIPT`, linked back to the Receipt
 via `related_type`/`related_id`/`related_line_id`) as one transactionally consistent operation.
-Reversing a posted Receipt (`reverseReceipt`) decreases Stock by the same base units through Stock's
-own guarded `decreaseOnHand()`; if consumption has since dropped on-hand below what the receipt
-added, reversal is rejected (`ReceiptReversalBoundaryException`) rather than driving Stock negative.
+Reversing a posted Receipt (`reverseReceipt`) decreases Stock by the same base units **and**
+reconciles `Stock.weighted_avg_cost` to exactly remove the value that line contributed (`#579`, via
+`Stock::reverseWeightedAverageCost()` — see `inventory-architecture.en.md` § "Weighted-average cost"
+for the `Stock.total_value` accumulator and `subtractValue()` mechanics). Reversal is rejected (`ReceiptReversalBoundaryException`, 409)
+rather than approximating whenever either boundary is hit: consumption has since dropped on-hand
+below what the receipt added (the original `#432` quantity boundary), or the value this line
+contributed can no longer be exactly attributed to what remains (the `#579` valuation boundary —
+e.g. intervening consumption already "spent" more of this receipt's value than its remaining
+quantity share would account for).
 
 ### Source-line identity and idempotency (#567)
 
