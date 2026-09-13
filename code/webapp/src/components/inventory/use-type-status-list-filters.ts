@@ -9,39 +9,39 @@ import { useState } from 'react'
  */
 export function useTypeStatusListFilters() {
   const [currentPage, setCurrentPage] = useState(1)
-  const [searchQuery, setSearchQueryState] = useState('')
-  const [typeFilter, setTypeFilterState] = useState('')
-  const [statusFilter, setStatusFilterState] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
-  const setSearchQuery = (value: string) => {
-    setSearchQueryState(value)
+  const handleSearchQueryChange = (value: string) => {
+    setSearchQuery(value)
     setCurrentPage(1)
   }
-  const setTypeFilter = (value: string) => {
-    setTypeFilterState(value)
+  const handleTypeFilterChange = (value: string) => {
+    setTypeFilter(value)
     setCurrentPage(1)
   }
-  const setStatusFilter = (value: string) => {
-    setStatusFilterState(value)
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value)
     setCurrentPage(1)
   }
 
   const hasActiveFilters = Boolean(searchQuery || typeFilter || statusFilter)
   const clearFilters = () => {
-    setSearchQuery('')
-    setTypeFilter('')
-    setStatusFilter('')
+    handleSearchQueryChange('')
+    handleTypeFilterChange('')
+    handleStatusFilterChange('')
   }
 
   return {
     currentPage,
     setCurrentPage,
     searchQuery,
-    setSearchQuery,
+    setSearchQuery: handleSearchQueryChange,
     typeFilter,
-    setTypeFilter,
+    setTypeFilter: handleTypeFilterChange,
     statusFilter,
-    setStatusFilter,
+    setStatusFilter: handleStatusFilterChange,
     hasActiveFilters,
     clearFilters,
   }

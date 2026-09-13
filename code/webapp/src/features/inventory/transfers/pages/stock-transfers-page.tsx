@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
 import { PageContainer } from '@/components/ui/page-container'
 import { PageHeader } from '@/components/ui/page-header'
@@ -143,6 +143,22 @@ export function StockTransfersPage() {
     },
   ]
 
+  let emptyAction: ReactNode
+  if (hasActiveFilters) {
+    emptyAction = (
+      <button type="button" onClick={clearFilters} className="text-sm font-medium text-primary hover:underline">
+        Limpiar filtros
+      </button>
+    )
+  } else if (canCreateTransfer) {
+    emptyAction = (
+      <Button variant="outline" size="sm" onClick={handleNewTransferClick} className="gap-2">
+        <Plus className="h-4 w-4" />
+        Crear el primer traslado
+      </Button>
+    )
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -190,18 +206,7 @@ export function StockTransfersPage() {
         isRefetching={isRefetching}
         emptyTitle={hasActiveFilters ? 'Sin resultados que coincidan con los filtros' : 'Aún no hay traslados'}
         emptyDescription={hasActiveFilters ? 'Intenta con otros filtros o términos de búsqueda.' : 'Registra un traslado para verlo aquí.'}
-        emptyAction={
-          hasActiveFilters ? (
-            <button type="button" onClick={clearFilters} className="text-sm font-medium text-primary hover:underline">
-              Limpiar filtros
-            </button>
-          ) : canCreateTransfer ? (
-            <Button variant="outline" size="sm" onClick={handleNewTransferClick} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Crear el primer traslado
-            </Button>
-          ) : undefined
-        }
+        emptyAction={emptyAction}
         getRowId={(transfer) => transfer.id}
         pagination={{
           currentPage,

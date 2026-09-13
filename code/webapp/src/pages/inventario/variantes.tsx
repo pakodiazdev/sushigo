@@ -26,18 +26,18 @@ export function ItemVariantsPage() {
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false)
   const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [searchQuery, setSearchQueryState] = useState('')
-  const [statusFilter, setStatusFilterState] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   // Changing a filter narrows/widens the result set, so the page the user was on may no
   // longer exist — reset to page 1 alongside every setter instead of leaving currentPage stale
   // (mirrors use-products-list.ts).
-  const setSearchQuery = (value: string) => {
-    setSearchQueryState(value)
+  const handleSearchQueryChange = (value: string) => {
+    setSearchQuery(value)
     setCurrentPage(1)
   }
-  const setStatusFilter = (value: string) => {
-    setStatusFilterState(value)
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value)
     setCurrentPage(1)
   }
 
@@ -176,8 +176,8 @@ export function ItemVariantsPage() {
   }
 
   const clearFilters = () => {
-    setSearchQuery('')
-    setStatusFilter('')
+    handleSearchQueryChange('')
+    handleStatusFilterChange('')
   }
 
   return (
@@ -197,10 +197,10 @@ export function ItemVariantsPage() {
 
       <InventoryListLayout
         searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={handleSearchQueryChange}
         searchPlaceholder="Buscar por código o nombre..."
         statusValue={statusFilter}
-        onStatusChange={setStatusFilter}
+        onStatusChange={handleStatusFilterChange}
         hasActiveFilters={Boolean(searchQuery || statusFilter)}
         onClearFilters={clearFilters}
         rows={data?.data.data || []}
