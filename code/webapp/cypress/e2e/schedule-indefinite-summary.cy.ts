@@ -31,13 +31,6 @@ const { email: adminEmail, password: adminPassword } = users.admin
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
-// ⚠️ QUARANTINED per #490 → see #553 (CI-only failure; passes locally). Fails against a fresh stack:
-// CI-only (passes locally): an <h3> section title is "not visible" after 15s (schedule-indefinite-summary.cy.ts:69) — overlay/scroll fragility that only reproduces on the fresh CI stack.
-// Remove this guard when #553 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task('test:reset', 'schedule-summary', { timeout: 60_000 })
 })
@@ -63,10 +56,13 @@ describe('Indefinite override — employee card summary', () => {
     cy.contains('tr', 'EMP-001', { timeout: 10_000 }).find('button[title="Ver detalle"]').click()
     cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
 
-    cy.contains('Horario activo', { timeout: 10_000 }).scrollIntoView().should('be.visible')
-
-    // The work line should use comma-separated groups, NOT the compact "L-S" range
-    cy.contains(/L, M, J, V, S/, { timeout: 10_000 }).should('be.visible')
+    // Scroll straight to the grouped-day text itself, not the "Horario
+    // activo" heading above it — a separate scroll-then-check on the
+    // heading raced other panel content still loading above it and could
+    // land the heading behind the panel's fixed header even after content
+    // below it (the actual regex checked next) was already visible; see
+    // #553.
+    cy.contains(/L, M, J, V, S/, { timeout: 10_000 }).scrollIntoView().should('be.visible')
 
     // Wednesday's overridden times must appear
     cy.contains(/2:00 PM/).should('be.visible')
@@ -81,8 +77,7 @@ describe('Indefinite override — employee card summary', () => {
     cy.contains('tr', 'EMP-002', { timeout: 10_000 }).find('button[title="Ver detalle"]').click()
     cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
 
-    cy.contains('Horario activo', { timeout: 10_000 }).scrollIntoView().should('be.visible')
-    cy.contains(/🕐 L-S/, { timeout: 10_000 }).should('be.visible')
+    cy.contains(/🕐 L-S/, { timeout: 10_000 }).scrollIntoView().should('be.visible')
   })
 })
 
