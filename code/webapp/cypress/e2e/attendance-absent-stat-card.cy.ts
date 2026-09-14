@@ -9,12 +9,18 @@
  *
  * Test date: 2026-04-09 (Thursday, a work day for all seeded employees)
  *
- * Employees used (seeded by AttendanceAbsentStatCardSeeder):
+ * Employees used — AttendanceTestSeeder creates all 10 (EMP-001..EMP-008 plus
+ * ADM-001/ADM-002), then AttendanceAbsentStatCardSeeder adds attendance
+ * records on top of a subset:
  *   EMP-001  Mendoza, Carlos   → no attendance record (pending)      — bucket: pending
  *   EMP-002  García, María     → checked in, no check-out            — bucket: checkedIn
  *   EMP-003  López, Pedro      → day_status VACATION                 — bucket: absent (hidden outside Ausentes/Total)
  *   EMP-004  Ramírez, Ana      → day_status ABSENCE ("Marcar falta") — bucket: absent (hidden outside Ausentes/Total, even though "Justificar falta" lives on this card)
  *   EMP-005  Sánchez, Roberto  → day_status DAY_OFF (scheduled rest) — bucket: absent (hidden outside Ausentes/Total)
+ *   EMP-006, EMP-007, EMP-008, ADM-001, ADM-002 → no attendance record (pending, same as Mendoza)
+ *
+ * Because "Total" and the broad default view render all or most of these 10
+ * cards, they overflow the viewport — see the scrollIntoView() calls below.
  *
  * Since EMP-001 is pending, the page is expected to land on the "Pendientes"
  * tab by default.
@@ -28,13 +34,6 @@ import users from "../fixtures/users.json";
 const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
-
-// ⚠️ QUARANTINED per #490 → see #535. Fails against a fresh stack:
-// Two "Stat cards as tabs" tests fail: employee name <p> "not visible because its content is being clipped by a parent" (overflow/scroll).
-// Remove this guard when #535 is fixed.
-before(function () {
-  this.skip()
-})
 
 before(() => {
   cy.task("test:reset", "attendance-absent-stat-card", { timeout: 60_000 });
@@ -117,11 +116,27 @@ describe("Stat cards as tabs", () => {
   it("clicking 'Total empleados' shows literally everyone, including López and Sánchez", () => {
     clickTab("total");
 
-    cy.contains("Mendoza", { timeout: 10_000 }).should("be.visible");
-    cy.contains("García").should("be.visible");
-    cy.contains("López").should("be.visible");
-    cy.contains("Ramírez").should("be.visible");
-    cy.contains("Sánchez").should("be.visible");
+    // "Total" renders all 10 employees AttendanceTestSeeder creates (this
+    // seeder only adds attendance records on top of them — see the file
+    // header), which overflows the viewport and pushes later cards below
+    // the fold inside the scrollable `<main>` panel. scrollIntoView() is
+    // required before each visibility check, same as every other attendance
+    // spec that can render a full-grid view (see attendance-checkin.cy.ts,
+    // attendance-lunch-start.cy.ts, etc.).
+    cy.contains("Mendoza", { timeout: 10_000 }).scrollIntoView().should("be.visible");
+    cy.contains("García").scrollIntoView().should("be.visible");
+    cy.contains("López").scrollIntoView().should("be.visible");
+    cy.contains("Ramírez").scrollIntoView().should("be.visible");
+    cy.contains("Sánchez").scrollIntoView().should("be.visible");
+    // The remaining 5 employees AttendanceTestSeeder creates but this seeder
+    // never touches (EMP-006/007/008, ADM-001/002) — asserted too so this
+    // test actually exercises the full 10-card grid it's named for, instead
+    // of silently passing if the API or grid dropped one of them.
+    cy.contains("Torres").scrollIntoView().should("be.visible");
+    cy.contains("Flores").scrollIntoView().should("be.visible");
+    cy.contains("Vargas").scrollIntoView().should("be.visible");
+    cy.contains("User, Admin").scrollIntoView().should("be.visible");
+    cy.contains("Manager, Inventory").scrollIntoView().should("be.visible");
   });
 
   it("clicking the active tab again toggles off, returning to the broad default view (VACATION/DAY_OFF hidden, ABSENCE stays)", () => {
@@ -131,9 +146,12 @@ describe("Stat cards as tabs", () => {
     cy.get("[data-testid='stat-pending']", { timeout: 10_000 }).should("have.attr", "aria-pressed", "true");
     clickTab("pending");
 
-    cy.contains("Mendoza", { timeout: 10_000 }).should("be.visible");
-    cy.contains("García").should("be.visible");
-    cy.contains("Ramírez").should("be.visible");
+    // The broad default view still renders 8 employees (everyone except the
+    // VACATION/DAY_OFF pair), which can overflow the viewport the same way
+    // the "Total" tab does — see the scrollIntoView() note above.
+    cy.contains("Mendoza", { timeout: 10_000 }).scrollIntoView().should("be.visible");
+    cy.contains("García").scrollIntoView().should("be.visible");
+    cy.contains("Ramírez").scrollIntoView().should("be.visible");
     cy.contains("López").should("not.exist");
     cy.contains("Sánchez").should("not.exist");
   });
