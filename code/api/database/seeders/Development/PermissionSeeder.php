@@ -50,6 +50,12 @@ class PermissionSeeder extends LockedSeeder
     // own, see PriceListPolicy/PriceListAssignmentPolicy.
     private const PRICING_PATTERN = 'price_list%';
 
+    // Matches cash_registers.%, cash_terminals.%, cash_sessions.%,
+    // cash_adjustments.% and cash_expenses.% — the Cash Adjustments module.
+    private const CASH_ADJUSTMENTS_PATTERN = 'cash_%';
+
+    private const BANK_ACCOUNTS_PATTERN = 'bank_accounts.%';
+
     private const GROUP_INVENTARIO = 'Inventario';
 
     private const GROUP_PLATILLOS = 'Platillos';
@@ -318,6 +324,8 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', self::REPORTS_PATTERN)
                             ->orWhere('name', 'like', self::PAYROLL_PATTERN)
                             ->orWhere('name', 'like', self::ATTENDANCES_PATTERN)
+                            ->orWhere('name', 'like', self::CASH_ADJUSTMENTS_PATTERN)
+                            ->orWhere('name', 'like', self::BANK_ACCOUNTS_PATTERN)
                             ->orWhere('name', 'like', 'audit-logs.%')
                             ->orWhereIn('name', ['units_of_measure.manage', 'punctuality.manage', 'holidays.manage', 'settings.manage', 'overtime.manage', 'vacation-policy.manage']);
                     })

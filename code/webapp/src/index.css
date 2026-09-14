@@ -349,6 +349,19 @@
     }
 }
 
+/* Below the `lg` breakpoint the top-left corner is the mobile header's menu
+   toggle (Header.tsx) — React Query Devtools' floating button would sit on
+   top of it and block navigation, so hide it below `lg` instead of picking
+   a corner that's clear on every viewport (there isn't one). !important is
+   required: the devtools library injects its own <style> tag at runtime,
+   after this stylesheet, so an equal-specificity rule here would lose the
+   cascade tie. */
+@media (max-width: 1023px) {
+    .tsqd-open-btn-container {
+        display: none !important;
+    }
+}
+
 @container (min-width: 1490px) {
     .attendance-card-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));

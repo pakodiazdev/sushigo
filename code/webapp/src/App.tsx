@@ -43,7 +43,7 @@ function App() {
           <ToastProvider>
             <RouterProvider router={router} />
             <BranchSelectionDialog />
-            <ReactQueryDevtools initialIsOpen={false} />
+            <ReactQueryDevtools initialIsOpen={false} buttonPosition="top-left" />
           </ToastProvider>
         </SidebarProvider>
       </ThemeProvider>
