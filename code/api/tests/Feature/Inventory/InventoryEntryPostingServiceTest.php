@@ -115,6 +115,13 @@ class InventoryEntryPostingServiceTest extends InventoryTestCase
         $stock = Stock::where('item_variant_id', $this->variant->id)->first();
         $this->assertEquals(20.0, (float) $stock->on_hand);
         $this->assertEquals(4.0, (float) $stock->weighted_avg_cost);
+        // Code review finding (#579 PR #626): an uncosted inbound still
+        // increases on_hand, so total_value must grow at the retained
+        // average (10 * 4 = 40) to stay reconciled with on_hand *
+        // weighted_avg_cost — leaving it untouched would silently diverge
+        // the accumulator from the read model the moment this quantity
+        // arrived.
+        $this->assertEquals(80.0, (float) $stock->total_value);
     }
 
     #[Test]

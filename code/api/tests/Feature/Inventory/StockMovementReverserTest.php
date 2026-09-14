@@ -171,6 +171,21 @@ class StockMovementReverserTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_refuses_to_reverse_a_purchase_receipt_movement(): void
+    {
+        // Code review finding (#579 PR #626): this generic reverser only ever
+        // restores/removes quantity at the *current* average — correct for a
+        // TRANSFER (its only production caller), but silently wrong for a
+        // Purchase Receipt, which needs ReceiptService::reverseReceipt()'s
+        // valuation-aware reversal (Stock::reverseWeightedAverageCost()).
+        $this->stockRow(10);
+        $movement = $this->postedMovement(['reason' => StockMovement::REASON_PURCHASE_RECEIPT]);
+
+        $this->expectException(StockMovementNotReversibleException::class);
+        $this->reverser->reverse($movement, $this->user->id, null);
+    }
+
+    #[Test]
     public function it_refuses_to_reverse_a_draft_movement(): void
     {
         $movement = StockMovement::create([

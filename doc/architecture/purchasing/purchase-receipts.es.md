@@ -86,9 +86,15 @@ bloqueo/recuperación de `#430`), combina el costo unitario efectivo (`#434`) y 
 inmutable de `StockMovement`/`StockMovementLine` (`reason: PURCHASE_RECEIPT`, vinculada a la
 Recepción mediante `related_type`/`related_id`/`related_line_id`) como una sola operación
 transaccionalmente consistente—. Revertir una Recepción registrada (`reverseReceipt`) disminuye
-Stock en las mismas unidades base mediante el propio `decreaseOnHand()` protegido de Stock; si el
-consumo ya redujo el disponible por debajo de lo que aportó la recepción, la reversión se rechaza
-(`ReceiptReversalBoundaryException`) en vez de dejar Stock en negativo.
+Stock en las mismas unidades base **y** reconcilia `Stock.weighted_avg_cost` para remover
+exactamente el valor que esa línea aportó (`#579`, mediante `Stock::reverseWeightedAverageCost()` —
+ver `inventory-architecture.es.md` § "Costo promedio ponderado" para el mecanismo del acumulador
+`Stock.total_value` y `subtractValue()`). La reversión se rechaza (`ReceiptReversalBoundaryException`, 409) en vez de aproximar
+cuando se topa cualquiera de los dos límites: el consumo ya redujo el disponible por debajo de lo
+que aportó la recepción (el límite de cantidad original de `#432`), o el valor que esa línea aportó
+ya no se puede atribuir exactamente a lo que queda (el límite de valuación de `#579` — p. ej. cuando
+el consumo intermedio ya "gastó" más del valor de esta recepción del que su propia porción de
+cantidad restante justificaría).
 
 ### Identidad de línea origen e idempotencia (#567)
 

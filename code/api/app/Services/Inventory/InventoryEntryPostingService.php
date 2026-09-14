@@ -65,9 +65,26 @@ class InventoryEntryPostingService
         );
 
         // A null cost means "no blend"; an explicit 0.0 is a real cost that
-        // still moves the weighted average (e.g. free/bonus stock).
+        // still moves the weighted average (e.g. free/bonus stock). When the
+        // line carries its own authoritative exact total (#579 — a Purchase
+        // Receipt's net_acquisition_amount, an Opening Balance's computed
+        // total), pass it through so total_value accumulates that exact
+        // value instead of reconstructing qty * unitCost from the already
+        // scale-4-rounded rate (see Stock::applyWeightedAverageCost()'s
+        // $lineValue parameter).
         if ($data->unitCost !== null) {
-            $stock->applyWeightedAverageCost($data->baseQuantity, $data->unitCost);
+            $stock->applyWeightedAverageCost($data->baseQuantity, $data->unitCost, $data->line?->lineTotal);
+        } else {
+            // An uncosted inbound (e.g. an Opening Balance with no known
+            // cost) still increases on_hand above, so total_value must grow
+            // to match at the retained current average (#579) — otherwise
+            // the accumulator silently diverges from on_hand *
+            // weighted_avg_cost the moment this quantity arrives.
+            // restoreValueAtCurrentAverage() adds value proportional to the
+            // already-stored average, so weighted_avg_cost itself stays
+            // untouched, matching this path's documented "null cost leaves
+            // the WAC untouched" behavior.
+            $stock->restoreValueAtCurrentAverage($data->baseQuantity);
         }
 
         if ($data->line !== null) {

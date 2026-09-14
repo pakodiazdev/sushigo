@@ -290,4 +290,39 @@ class StockQueryTest extends InventoryTestCase
         $this->assertGreaterThan(0, $summary['total_inventory_value']);
         $this->assertEquals($expectedValue, $summary['total_inventory_value']);
     }
+
+    public function test_by_variant_reports_the_exact_persisted_accumulator_not_on_hand_times_rate()
+    {
+        // Code review finding (#579 PR #626): three 10,000-unit batches
+        // (@0.0001, @0.0002, @0.0001) accumulate an exact value of 4.0000,
+        // but the stored weighted_avg_cost rounds to 0.0001 — reconstructing
+        // 30,000 * 0.0001 = 3.0000 would silently under-report the report by
+        // a full unit of value despite the accumulator holding the truth.
+        $item = $this->createItem();
+        $variant = $this->createItemVariant($item);
+        $location = InventoryLocation::first();
+        $this->assignVariantToLocation($location, $variant);
+
+        $stock = Stock::create([
+            'inventory_location_id' => $location->id,
+            'item_variant_id' => $variant->id,
+            'on_hand' => 0,
+            'reserved' => 0,
+        ]);
+        $stock->increaseOnHand(10000);
+        $stock->applyWeightedAverageCost(10000, 0.0001);
+        $stock->increaseOnHand(10000);
+        $stock->applyWeightedAverageCost(10000, 0.0002);
+        $stock->increaseOnHand(10000);
+        $stock->applyWeightedAverageCost(10000, 0.0001);
+        $stock->refresh();
+
+        $this->assertEquals(0.0001, (float) $stock->weighted_avg_cost);
+        $this->assertEquals(4.0, (float) $stock->total_value);
+
+        $response = $this->getJson("/api/v1/stock/by-variant/{$variant->public_id}")->assertOk();
+
+        $this->assertEquals(4.0, $response->json('data.locations.0.total_value'));
+        $this->assertEquals(4.0, $response->json('data.summary.total_inventory_value'));
+    }
 }

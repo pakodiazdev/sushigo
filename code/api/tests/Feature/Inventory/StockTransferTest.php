@@ -763,6 +763,48 @@ class StockTransferTest extends InventoryTestCase
     }
 
     #[Test]
+    public function reversing_a_transfer_restores_the_exact_transferred_value_at_both_ends(): void
+    {
+        // Code review finding (#579 PR #626): source 10 @ 10 (value 100),
+        // destination already 10 @ 20 (value 200) — moving 5 units blends the
+        // destination to 10 @ ~16.6667 (value 250) while the source stays at
+        // 10 (its own average is never touched by removing homogeneous
+        // units). Reversing immediately afterward must restore *exactly* the
+        // pre-transfer state at both ends — not remove/restore at each end's
+        // own (now-different) current average, which would silently destroy
+        // value on a pure post-then-reverse round trip.
+        $this->seedSourceStock(onHand: 10, cost: 10);
+        Stock::create([
+            'inventory_location_id' => $this->destination->id,
+            'item_variant_id' => $this->variant->id,
+            'on_hand' => 10, 'reserved' => 0, 'weighted_avg_cost' => 20, 'meta' => [],
+        ]);
+
+        $id = $this->createDraft([
+            ['item_variant_id' => $this->variant->public_id, 'entry_uom_id' => $this->uomKg->public_id, 'entry_quantity' => 5],
+        ]);
+        $this->postJson("/api/v1/inventory/transfers/{$id}/post")->assertOk();
+
+        $source = Stock::where('inventory_location_id', $this->location->id)->where('item_variant_id', $this->variant->id)->first();
+        $destination = Stock::where('inventory_location_id', $this->destination->id)->where('item_variant_id', $this->variant->id)->first();
+        $this->assertEquals(5.0, (float) $source->on_hand);
+        $this->assertEquals(50.0, (float) $source->total_value);
+        $this->assertEquals(15.0, (float) $destination->on_hand);
+        $this->assertEquals(250.0, (float) $destination->total_value);
+
+        $this->postJson("/api/v1/inventory/transfers/{$id}/reverse")->assertOk();
+
+        $source->refresh();
+        $destination->refresh();
+        $this->assertEquals(10.0, (float) $source->on_hand);
+        $this->assertEquals(10.0, (float) $source->weighted_avg_cost);
+        $this->assertEquals(100.0, (float) $source->total_value);
+        $this->assertEquals(10.0, (float) $destination->on_hand);
+        $this->assertEquals(20.0, (float) $destination->weighted_avg_cost);
+        $this->assertEquals(200.0, (float) $destination->total_value);
+    }
+
+    #[Test]
     public function reversing_a_draft_or_an_already_reversed_transfer_is_a_conflict(): void
     {
         $this->seedSourceStock();
