@@ -10,7 +10,7 @@ last_updated: 2026-09-13
 
 base_branch: main
 base_commit: 6c5a0353
-scope_issues: 11
+scope_issues: 10
 
 github_project: SushiGo Admin (#7)
 github_milestone:
@@ -28,9 +28,11 @@ next:
 
 ## 1. Executive Summary
 
-Sprint 008 contains **eleven Issues** estimated at **40h optimistic / 90h pessimistic**. It is a
-consolidation sprint: every Issue is a follow-up from the Sprint 5 or Sprint 6 engineering review
-or from a Sprint 7 closure disposition, and none introduces a new user-facing capability.
+Sprint 008 contains **ten Issues** estimated at **39.5h optimistic / 87h pessimistic**, plus one
+scope addition made after the sprint started (**#535**, §5.3, `0.5h`/`3h` — a fourth quarantined
+Cypress spec restored alongside the other three). It is a consolidation sprint: every confirmed
+Issue is a follow-up from the Sprint 5 or Sprint 6 engineering review or from a Sprint 7 closure
+disposition, and none introduces a new user-facing capability.
 
 Two Issues form the financial foundation and are the sprint's critical path:
 
@@ -49,13 +51,15 @@ lists on lookup routes with an explicit reference-data access contract that pres
 privilege; **#581** corrects Inventory OpenAPI so generated clients describe the ULID identifiers
 the application actually accepts and emits; **#576** and **#577** finish the two Technical Tasks
 #441 deferred (shared loading/empty/error/permission states plus a Spanish-copy sweep, and
-evidence-backed route-level lazy loading); and **#535 / #545 / #546 / #550** restore four more
-quarantined Cypress specs and remove their `this.skip()` guards.
+evidence-backed route-level lazy loading); and **#545 / #546 / #550** restore three more quarantined
+Cypress specs and remove their `this.skip()` guards. **#535** — the scope addition above — restores
+a fourth.
 
-Execution runs in four rounds so at most one writer owns each shared surface: the four quarantined
-specs and the #415 field inventory start immediately, #415's primitive lands before #579's final
-arithmetic, and the independent hardening lanes (#575, #580, #581) plus the Inventory UX lanes
-(#576, #577) proceed in parallel on non-overlapping file surfaces.
+Execution runs in four rounds so at most one writer owns each shared surface: the three originally
+quarantined specs and the #415 field inventory start immediately, #415's primitive lands before
+#579's final arithmetic, and the independent hardening lanes (#575, #580, #581) plus the Inventory
+UX lanes (#576, #577) proceed in parallel on non-overlapping file surfaces; #535 (added later, no
+file-conflict surface with the rest of the sprint) is picked up opportunistically alongside them.
 
 ## 2. Context
 
@@ -104,7 +108,8 @@ Repository base for planning: `main` at `6c5a0353`.
 **Sprint Goal:** Make every domain-relevant monetary and inventory-valuation calculation exact and
 reconcilable — including after a Purchase Receipt reversal — and pay down the highest-value
 Inventory engineering-review debt (movement-line duplication, lookup authorization, OpenAPI
-identifier accuracy, UX state consistency) and four quarantined Cypress specs, without adding a
+identifier accuracy, UX state consistency) and three quarantined Cypress specs (plus the #535 scope
+addition, a fourth), without adding a
 new business capability or changing any business price or cost.
 
 ## 4. Sprint Timeline
@@ -119,8 +124,9 @@ new business capability or changing any business price or cost.
 | Completed | — |
 | Active workdays | — |
 
-The eleven Issues are on **SushiGo Admin**, labeled `sprint-8`, and are assigned to the **Sprint 8**
-Project iteration created during promotion.
+The ten Issues are on **SushiGo Admin**, labeled `sprint-8`, and are assigned to the **Sprint 8**
+Project iteration created during promotion; the `#535` scope addition (§5.3) carries the same label
+and iteration.
 
 ## 5. Scope
 
@@ -135,11 +141,14 @@ Project iteration created during promotion.
 | ⏳ | #581 | Align Inventory OpenAPI identifiers with public ULID contracts | Product engineering | P2 | S | 2h | 5h |
 | ✅ | #576 | Standardize Inventory loading, empty, error states and Spanish copy | Product engineering | P2 | M | 5h | 10h |
 | ✅ | #577 | Introduce route-level lazy loading starting with Inventory | Product engineering | P2 | M | 3h | 7h |
-| ✅ | #535 | Fix quarantined Cypress spec: attendance-absent-stat-card.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
 | ⏳ | #545 | Fix quarantined Cypress spec: item-media-gallery-uploader.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
 | ⏳ | #546 | Fix quarantined Cypress spec: price-lists.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
 | ⏳ | #550 | Fix quarantined Cypress spec: suppliers-catalog.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
-|  |  | **Total** |  |  |  | **40h** | **90h** |
+|  |  | **Total** |  |  |  | **39.5h** | **87h** |
+
+`#535` (§5.3, `0.5h`/`3h`) is a later scope addition and intentionally excluded from this table and
+total — it is not part of the initially-selected scope `scope_issues` reconciles against
+(`doc/conventions/sprints.md` §6); see §5.3 for the addition record and §13 for its result.
 
 **Capabilities this scope delivers:**
 
@@ -496,7 +505,7 @@ _To be completed at closure._
 
 ## 18. Sprint Closure Checklist
 
-- [ ] All eleven Issues (`#415`, `#535`, `#545`, `#546`, `#550`, `#575`, `#576`, `#577`, `#579`, `#580`, `#581`) are merged and Done.
+- [ ] All ten Issues (`#415`, `#545`, `#546`, `#550`, `#575`, `#576`, `#577`, `#579`, `#580`, `#581`) are merged and Done, plus the scope addition `#535` (§5.3).
 - [ ] No domain-relevant monetary calculation depends on binary floating point; DB/API/PHP/TS agree on scale and representation, and existing data migrated and rolled back without precision loss.
 - [ ] Quantity and inventory value reconcile after every supported Purchase Receipt reversal scenario, with append-only evidence and explicit intervening-operation boundaries.
 - [ ] Movement Variant + base quantity has one persisted source of truth; existing movements remain readable and reversible; rollback is exact.
