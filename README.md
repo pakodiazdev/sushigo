@@ -278,7 +278,7 @@ Development is organized into documented sprints — see [`doc/conventions/sprin
 | 005 | Purchasing, Cost & Pricing | Completed | 2026-08-22 | 2026-08-26 | 2026-10-03 | 1.41× (34.3h → 24.4h) | [sprint-005-purchasing-cost-and-pricing.md](doc/sprints/sprint-005-purchasing-cost-and-pricing.md) |
 | 006 | Stock Integrity & Inventory Completion | Completed | 2026-08-26 | 2026-08-30 (impl. finished 2026-08-29) | 2026-10-17 | 1.32× (15.3h → 11.6h, scoped + opportunistic issues) | [sprint-006-stock-integrity-and-inventory-completion.md](doc/sprints/sprint-006-stock-integrity-and-inventory-completion.md) |
 | 007 | Warehouse Receiving & Location-Aware Stock | Completed | 2026-08-30 | 2026-09-09 | 2026-09-22 | 1.14× (38.2h → 33.5h, scoped + opportunistic issues) | [sprint-007-warehouse-receiving-and-location-aware-stock.md](doc/sprints/sprint-007-warehouse-receiving-and-location-aware-stock.md) |
-| 008 | Inventory Valuation Integrity & Platform Hardening | In Progress | 2026-09-09 | — | 2026-09-23 | — | [sprint-008-inventory-valuation-and-platform-hardening.md](doc/sprints/sprint-008-inventory-valuation-and-platform-hardening.md) |
+| 008 | Inventory Valuation Integrity & Platform Hardening | In Progress | 2026-09-09 | 100% (10/10) | 2026-09-23 | — | [sprint-008-inventory-valuation-and-platform-hardening.md](doc/sprints/sprint-008-inventory-valuation-and-platform-hardening.md) |
 
 ## Development tips
 
