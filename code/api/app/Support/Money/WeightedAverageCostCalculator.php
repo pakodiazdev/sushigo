@@ -17,6 +17,17 @@ namespace App\Support\Money;
  * decimal(15,4) column + Eloquent `decimal:N` cast convention — see #432's
  * PR assumptions) since the drift this guards against happens inside the
  * blend calculation itself, not in a single float cast at the boundary.
+ *
+ * addValue()/subtractValue()/averageCost() (#579) maintain `Stock.total_value`
+ * — an exact running value accumulator kept *alongside* the rounded
+ * `weighted_avg_cost` column, additively, at every quantity-changing
+ * operation (Stock::increaseOnHand()/decreaseOnHand() and this class's own
+ * blend()). Reversing a Purchase Receipt reads that accumulator directly
+ * instead of reconstructing "prior value" as `qty * weighted_avg_cost` —
+ * the rounded column would otherwise compound a fresh rounding error into
+ * every successive reversal, occasionally rejecting an exactly-reversible
+ * chain with a spurious "residual value" 409 (see subtractValue()'s
+ * docblock for the exact failure mode this replaced).
  */
 final class WeightedAverageCostCalculator
 {
@@ -56,6 +67,135 @@ final class WeightedAverageCostCalculator
         $totalValue = bcadd($priorValue, $addedValue, self::CALC_SCALE);
 
         return round((float) bcdiv($totalValue, $totalQty, self::CALC_SCALE), self::RESULT_SCALE);
+    }
+
+    /**
+     * Tolerance, in money terms, below which a residual value is treated as a
+     * rounding artifact rather than real unattributed value — half of the
+     * smallest unit the `decimal(15,4)`-scale result can represent.
+     */
+    private const RESIDUAL_TOLERANCE = '0.00005';
+
+    /**
+     * Add a newly received quantity+cost's exact evidenced value to the
+     * running value accumulator (#579) — the additive counterpart to
+     * blend(), called alongside it so `Stock.total_value` never has to be
+     * reconstructed from the (rounded, display-only) `weighted_avg_cost`
+     * column later.
+     *
+     * `$addedQty * $addedUnitCost` is only an *approximation* of the value a
+     * document actually recorded when that document derives `$addedUnitCost`
+     * as a scale-4 rate from its own authoritative exact total (e.g. a
+     * Purchase Receipt's `net_acquisition_amount` divided by base units) —
+     * multiplying the already-rounded rate back by quantity does not recover
+     * that exact total (a 240-unit, exactly-1,000 receipt derives a rate of
+     * 4.1667, and `240 * 4.1667 = 1000.0080`). Callers that hold that
+     * authoritative exact value must use addExactValue() with it directly
+     * instead of this qty/rate form.
+     */
+    public static function addValue(float $priorTotalValue, float $addedQty, float $addedUnitCost): float
+    {
+        $added = bcmul(self::toDecimalString($addedQty), self::toDecimalString($addedUnitCost), self::CALC_SCALE);
+
+        return self::addExactValue($priorTotalValue, (float) $added);
+    }
+
+    /**
+     * Add an already-exact evidenced value to the running value accumulator
+     * (#579) — the counterpart to addValue() for a caller that holds the
+     * authoritative total directly (a Purchase Receipt's
+     * `net_acquisition_amount`, an Opening Balance's computed total, a
+     * Transfer's `qty * source_unit_cost` line total) instead of only a
+     * quantity/rate pair.
+     */
+    public static function addExactValue(float $priorTotalValue, float $addedValue): float
+    {
+        $total = bcadd(self::toDecimalString($priorTotalValue), self::toDecimalString($addedValue), self::CALC_SCALE);
+
+        return round((float) $total, self::RESULT_SCALE);
+    }
+
+    /**
+     * Subtract a previously-added quantity+cost's exact evidenced value from
+     * the running value accumulator (#579), given the resulting quantity the
+     * removal leaves behind (`Stock::decreaseOnHand()`'s own on_hand/reserved
+     * guard has already validated this quantity separately).
+     *
+     * This operates on the accumulator directly instead of reconstructing
+     * "prior value" as `qty * weighted_avg_cost`: reconstructing from the
+     * rounded column compounds a fresh rounding error into every successive
+     * reversal. Concretely, blending 1 unit @ 0.1 with 2 units @ 0.2 stores a
+     * rounded average of 0.1667; reversing the first receipt by reconstructing
+     * `3 * 0.1667 - 1 * 0.1 = 0.4001` over 2 remaining units already drifts to
+     * 0.2001 (not the exact 0.2), and reversing the *second* receipt next
+     * would then see a 0.0002 residual on an otherwise fully-emptied balance
+     * and wrongly refuse with a 409 — even though every original unit is
+     * still fully accounted for. Operating on the accumulator instead keeps
+     * every step exact: 0.5 - 0.1 = 0.4 - 0.4 = 0.0.
+     *
+     * Returns null when the removal cannot be reconciled without
+     * approximating: it would leave non-zero residual value behind a
+     * fully-emptied balance, or it would drive the accumulator negative.
+     * Both are the "reversal boundary" #579 asks for — the caller must
+     * refuse the operation (409) rather than silently approximate.
+     */
+    public static function subtractValue(float $priorTotalValue, float $remainingQty, float $removedQty, float $removedUnitCost): ?float
+    {
+        $removed = (float) bcmul(self::toDecimalString($removedQty), self::toDecimalString($removedUnitCost), self::CALC_SCALE);
+
+        return self::subtractExactValue($priorTotalValue, $remainingQty, $removed);
+    }
+
+    /**
+     * Subtract an already-exact evidenced value from the running value
+     * accumulator (#579) — the counterpart to subtractValue() for a caller
+     * reversing a document that recorded its own authoritative exact total
+     * at posting time (read back from that posted movement's own immutable
+     * `StockMovementLine.line_total`, never re-derived as `qty * unit_cost`,
+     * which — like addExactValue()'s own docblock — does not recover the
+     * original exact value once the rate has been rounded). Same null-return
+     * boundary semantics as subtractValue().
+     */
+    public static function subtractExactValue(float $priorTotalValue, float $remainingQty, float $removedValue): ?float
+    {
+        $remaining = bcsub(self::toDecimalString($priorTotalValue), self::toDecimalString($removedValue), self::CALC_SCALE);
+
+        if (bccomp(self::toDecimalString($remainingQty), '0', self::CALC_SCALE) <= 0) {
+            return self::isReconcilableToZero($remaining) ? 0.0 : null;
+        }
+
+        if (bccomp($remaining, '0', self::CALC_SCALE) < 0) {
+            return null;
+        }
+
+        return round((float) $remaining, self::RESULT_SCALE);
+    }
+
+    /**
+     * The display-only weighted-average unit cost implied by the exact value
+     * accumulator and the current on-hand quantity — rounded once, fresh,
+     * from the accumulator itself, never by reusing a previously-rounded
+     * average as an input to a later calculation.
+     */
+    public static function averageCost(float $totalValue, float $onHand): float
+    {
+        if (bccomp(self::toDecimalString($onHand), '0', self::CALC_SCALE) <= 0) {
+            return 0.0;
+        }
+
+        return round((float) bcdiv(self::toDecimalString($totalValue), self::toDecimalString($onHand), self::CALC_SCALE), self::RESULT_SCALE);
+    }
+
+    /**
+     * Whether a residual money value is small enough to be a rounding
+     * artifact rather than real unattributed value left behind a
+     * fully-emptied balance.
+     */
+    private static function isReconcilableToZero(string $value): bool
+    {
+        $abs = bccomp($value, '0', self::CALC_SCALE) < 0 ? bcmul($value, '-1', self::CALC_SCALE) : $value;
+
+        return bccomp($abs, self::RESIDUAL_TOLERANCE, self::CALC_SCALE) < 0;
     }
 
     private static function toDecimalString(float $value): string

@@ -69,6 +69,7 @@ class AssignmentAwareStockProjection
                 'stock.on_hand as stock_on_hand',
                 'stock.reserved as stock_reserved',
                 'stock.weighted_avg_cost as stock_weighted_avg_cost',
+                'stock.total_value as stock_total_value',
                 'vlrp.min_stock as policy_min_stock',
                 'vlrp.max_stock as policy_max_stock',
             ])
@@ -129,6 +130,14 @@ class AssignmentAwareStockProjection
      * Balance / cost / value / policy fields, with every numeric field zeroed
      * when no `stock` row backs the assignment and `stock_id` null.
      *
+     * `total_value` reads the persisted `stock.total_value` accumulator
+     * directly (#579) rather than recomputing `on_hand * weighted_avg_cost`
+     * here: `weighted_avg_cost` is a rounded, display-only rate, so
+     * multiplying it back can disagree with the exact accumulator by the
+     * same rounding this column exists to avoid (e.g. 30,000 units at an
+     * exact accumulated value of 4.0000 report a rounded rate of 0.0001,
+     * whose product — 3.0000 — is not the true value).
+     *
      * @return array<string, mixed>
      */
     public function moneyFields(VariantLocationAssignment $row): array
@@ -136,6 +145,7 @@ class AssignmentAwareStockProjection
         $onHand = (float) ($row->stock_on_hand ?? 0);
         $reserved = (float) ($row->stock_reserved ?? 0);
         $weightedAvgCost = (float) ($row->stock_weighted_avg_cost ?? 0);
+        $totalValue = (float) ($row->stock_total_value ?? 0);
         $minStock = $row->policy_min_stock !== null ? (float) $row->policy_min_stock : null;
 
         return [
@@ -144,7 +154,7 @@ class AssignmentAwareStockProjection
             'reserved' => $reserved,
             'available' => $onHand - $reserved,
             'weighted_avg_cost' => $weightedAvgCost,
-            'total_value' => $onHand * $weightedAvgCost,
+            'total_value' => $totalValue,
             'min_stock' => $minStock,
             'max_stock' => $row->policy_max_stock !== null ? (float) $row->policy_max_stock : null,
             'is_low_stock' => $minStock !== null && $onHand <= $minStock,
@@ -190,8 +200,10 @@ class AssignmentAwareStockProjection
             'total_on_hand' => (float) $onHand,
             'total_reserved' => (float) $reserved,
             'total_available' => (float) ($onHand - $reserved),
+            // Sums the persisted total_value accumulator directly (#579), not
+            // on_hand * weighted_avg_cost — see moneyFields()'s own docblock.
             'total_inventory_value' => (float) $rows->sum(
-                fn (VariantLocationAssignment $r) => (float) ($r->stock_on_hand ?? 0) * (float) ($r->stock_weighted_avg_cost ?? 0)
+                fn (VariantLocationAssignment $r) => (float) ($r->stock_total_value ?? 0)
             ),
             'low_stock_count' => $rows->filter(function (VariantLocationAssignment $r) {
                 $min = $r->policy_min_stock;

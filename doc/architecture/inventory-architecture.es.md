@@ -737,9 +737,154 @@ compensatorio restaura cantidades y conserva la evidencia del costo utilizado.
 `SummarizesStock`, `StockByLocationController` y `StockByVariantController` ya lo leen
 directamente para los reportes de valuación.
 
-Revertir una Recepción registrada deja `weighted_avg_cost` intencionalmente sin tocar — deshacer un
-promedio combinado con exactitud requeriría rastreo de costo a nivel de lote, algo que este código
-todavía no tiene.
+**El acumulador `Stock.total_value` y la reversión de una Recepción de compra (#579 —
+implementado).** `weighted_avg_cost` por sí solo no se puede revertir con exactitud: es un valor de
+visualización *redondeado* a escala 4, y reconstruir el "valor previo" como `cantidad *
+weighted_avg_cost` al momento de revertir acumula un nuevo error de redondeo en cada reversión
+sucesiva. Concretamente, mezclar 1 unidad @ 0.1 con 2 unidades @ 0.2 guarda un promedio redondeado de
+0.1667 — reconstruir desde ahí ya llega a 0.2001 tras una reversión (no el 0.2 exacto), y una
+segunda reversión, totalmente válida, justo después vería entonces un residuo distinto de cero
+espurio en un saldo completamente vaciado y rechazaría incorrectamente con un 409, aunque cada
+unidad original sigue perfectamente contabilizada.
+
+`Stock.total_value` (decimal(26,4) — más ancho que el propio decimal(15,4) de
+`on_hand`/`weighted_avg_cost`; su producto puede necesitar hasta 22 dígitos enteros incluso cuando
+cada factor por separado cabe en los 11 de su propia columna) es la solución: un acumulador de valor
+*exacto*, mantenido de forma
+puramente aditiva junto al `weighted_avg_cost` redondeado, nunca él mismo redondeado y luego
+reconstruido:
+
+-   `Stock::applyWeightedAverageCost()` (mezcla de entrada) llama a
+    `WeightedAverageCostCalculator::addValue()` para sumar el valor evidenciado exacto de la cantidad
+    recién recibida, y luego deriva `weighted_avg_cost` de forma fresca vía `averageCost()` — **no**
+    `blend()`, que toma el promedio previo *redondeado* como entrada y reintroduciría el mismo modo
+    de falla por redondeo acumulado para la recepción normal hacia adelante que el docblock de
+    `subtractValue()` describe para la reversión (p. ej., dos lotes de 10,000 unidades a 0.0001 y
+    luego a 0.0002 redondean el promedio guardado a 0.0002; mezclar un tercer lote de 10,000 unidades
+    a 0.0001 desde ese 0.0002 redondeado da 0.0002 otra vez, mientras que la proporción real, 4.0000
+    ÷ 30,000, redondea a 0.0001). `blend()` en sí se mantiene como utilidad independiente, todavía
+    correcta — simplemente ya no es cómo `Stock` calcula su propio promedio.
+-   `Stock::decreaseOnHand()` (consumo, salida por transferencia, una reversión genérica de
+    movimiento) resta `cantidad * el promedio actual` de `total_value` — correcto porque ninguno de
+    estos llamadores cambia jamás el promedio en sí, así que el promedio siempre representa la
+    proporción real valor/cantidad de lo que queda en pie. Ese producto se limita para no exceder
+    nunca lo que queda: `weighted_avg_cost` es una tasa *redondeada* mientras que `total_value` es
+    exacto, así que en un agotamiento total en particular la tasa redondeada multiplicada por la
+    cantidad total no necesariamente iguala al acumulador exacto — el límite absorbe la diferencia
+    (a lo sumo medio centavo por unidad) como una pérdida de redondeo en vez de llevar `total_value`
+    a negativo transitoriamente y violar `stock_total_value_nonnegative`.
+-   `Stock::restoreValueAtCurrentAverage()` es la contraparte simétrica para una restauración simple
+    de cantidad que no es una nueva recepción con costo (`StockMovementReverser` deshaciendo la
+    disminución del lado origen de una Transferencia — el promedio sigue intencionalmente sin
+    tocarse ahí, según el párrafo anterior).
+-   `Stock::reverseWeightedAverageCost()` (reversión de Recepción de compra) llama a
+    `WeightedAverageCostCalculator::subtractValue()` — la contraparte de reversión de `addValue()` —
+    directamente contra el acumulador exacto, usando el mismo par cantidad/costo unitario que usó la
+    llamada de entrada original, leído de vuelta desde la evidencia inmutable de `StockMovementLine`
+    del movimiento registrado, nunca vuelto a derivar del promedio redondeado. `weighted_avg_cost` se
+    recalcula entonces de forma fresca vía `averageCost()`, un único paso de redondeo desde el
+    acumulador exacto, nunca desde un número ya redondeado antes.
+
+Un llamador que crea una fila de `Stock` directamente (seeders, factories, tests) con un
+`weighted_avg_cost` explícito pero sin `total_value` lo recibe por defecto como `on_hand *
+weighted_avg_cost` mediante un listener `saving` del modelo — en `saving`, no en `creating`, porque
+el propio listener `creating` de `HasPublicId` devuelve un valor verdadero que detiene ese evento
+(que detiene por defecto) antes de que un segundo listener llegue a ejecutarse (ver
+`StockMovementLine::booted()` para la misma trampa ya documentada).
+
+`subtractValue()` devuelve `null` — expuesto como `ReceiptReversalBoundaryException` (409) — para
+los dos casos que no se pueden reconciliar sin aproximar: la remoción dejaría un valor residual
+distinto de cero detrás de un saldo completamente vaciado, o llevaría el acumulador a negativo. Ambos
+ocurren solo cuando el consumo intermedio ya "gastó" más del valor evidenciado de esta recepción del
+que su propia porción de cantidad restante justificaría bajo un promedio sin rastreo de lotes — el
+sistema rechaza en vez de descartar o inventar valor silenciosamente. Ver
+`doc/architecture/purchasing/purchase-receipts.es.md` § "Registro" y
+`WeightedAverageCostCalculatorTest`/`ReceiptReversalTest` para los escenarios exactos (reversión
+inmediata total, reversión después de una segunda Recepción, reversión que sobrevive o es bloqueada
+por consumo parcial, reversión después de una Transferencia, costos cero/fraccionarios, y una cadena
+de reversiones secuenciales que una reconstrucción desde el promedio redondeado habría rechazado
+incorrectamente).
+
+**Cuatro correcciones de precisión adicionales encontradas en revisión (#579 PR #626):**
+
+-   **Totales exactos autoritativos, no `cantidad * tasa`.** `applyWeightedAverageCost()`/
+    `reverseWeightedAverageCost()` aceptan un `$lineValue` exacto opcional —
+    `WeightedAverageCostCalculator::addExactValue()`/`subtractExactValue()` lo suman/restan
+    directamente en vez de la reconstrucción `cantidad * tasa` propia de `addValue()`/`subtractValue()`.
+    Un documento que deriva su tasa de su propio total exacto autoritativo (el `net_acquisition_amount`
+    de una Recepción de compra, el total calculado de un Saldo Inicial) debe pasar ese total —
+    multiplicar la tasa ya redondeada de vuelta por la cantidad no lo recupera (una recepción de 240
+    unidades por exactamente 1,000 deriva una tasa de 4.1667, y `240 * 4.1667 = 1000.0080`).
+    `InventoryEntryPostingService::post()` y `ReceiptService::reverseReceiptLine()` pasan el
+    `line_total` del propio `StockMovementLine` del movimiento registrado exactamente por esta razón.
+    Una Transferencia no tiene un valor más autoritativo que `cantidad * source_unit_cost` en sí
+    misma, así que omite `$lineValue`.
+-   **El modelo de lectura de Existencias/Stock lee `total_value` directamente.**
+    `AssignmentAwareStockProjection` selecciona y agrega `stock.total_value` en vez de recalcular
+    `on_hand * weighted_avg_cost` — todo el propósito del acumulador exacto se pierde si el lado de
+    lectura sigue reconstruyendo desde la tasa redondeada (30,000 unidades con un valor exacto de
+    4.0000 reportarían `30,000 * 0.0001 = 3.0000`).
+-   **La reversión de una Transferencia deshace el valor exacto registrado en ambos extremos.**
+    `StockMovementReverser` ahora lee el propio `StockMovementLine` del movimiento original y pasa su
+    `unit_cost`/`line_total` a `reverseWeightedAverageCost()` (destino) y
+    `restoreValueAtCurrentAverage()` (origen), en vez del promedio *actual* de cada extremo — que, una
+    vez que el destino mezcló un costo diferente, generalmente ya no es el valor que la Transferencia
+    en sí movió (mover 5 unidades de 10 @ 10 hacia 10 @ 20 conserva un total de 300; deshacer al
+    promedio actual de cada extremo — 16.6667 en el destino, 10 en el origen — pierde valor
+    silenciosamente en un ciclo inmediato de registro/reversión). El movimiento compensatorio que esto
+    crea ahora también lleva su propio `StockMovementLine` reflejado — dado que #579 ya bloquea
+    revertir un movimiento `PURCHASE_RECEIPT` por esta vía genérica, este reversor solo lo necesita en
+    la práctica para movimientos `TRANSFER`, pero hacerlo incondicionalmente mantiene evidenciada de
+    la misma forma toda reversión que esta clase produzca.
+-   **El backfill de la migración suma el libro mayor de movimientos, no `on_hand *
+    weighted_avg_cost`.** Una fila de Stock anterior a `total_value` la recibe rellenada desde
+    `SUM(stock_movement_lines.line_total)` a través de cada movimiento `POSTED`/`REVERSED` que toca
+    ese par (ubicación, variante) — con signo positivo en el extremo destino, negativo en el origen —
+    así que un movimiento original y su reversión compensatoria posterior se cancelan exactamente a
+    cero, y la misma reconstrucción por tasa redondeada que este acumulador existe para evitar tampoco
+    contamina las filas heredadas. Solo una fila de Stock sin evidencia de movimiento alguna (sembrada
+    directamente, sin pasar por ningún servicio de registro) recurre a la aproximación previa
+    `on_hand * weighted_avg_cost`.
+
+**Tres correcciones de precisión adicionales encontradas en una segunda pasada de revisión (#579 PR
+#626):**
+
+-   **Un agotamiento total siempre pone el acumulador en cero, incluso cuando la tasa redondeada lo
+    *subestima*.** El clamp `min(round(cantidad * weighted_avg_cost, 4), total_value)` de
+    `decreaseOnHand()` solo protege contra el caso en que la tasa redondeada *excede* lo que queda —
+    no hace nada cuando la tasa lo subestima en cambio (30,000 unidades con un `total_value` exacto de
+    4.0000 almacenan un promedio redondeado de 0.0001, así que agotar las 30,000 a esa tasa calcula
+    `30,000 * 0.0001 = 3.0000`, una unidad completa de menos). Sin corregir, ese residuo de 1.0000
+    queda varado en una fila vaciada e infla silenciosamente el promedio mezclado de la siguiente
+    recepción. `decreaseOnHand()` ahora remueve el acumulador *completo* siempre que la disminución
+    vacíe la fila (`resultingOnHand === 0`), sin importar lo que calcule la tasa redondeada, y solo
+    recurre a la remoción con clamp basada en tasa para una disminución parcial.
+-   **Una entrada sin costo también debe crecer `total_value`.** Un costo nulo en una cantidad
+    entrante (p. ej. un Saldo Inicial sin costo conocido) está documentado para dejar
+    `weighted_avg_cost` sin tocar — pero `on_hand` igual crece, así que `total_value` debe crecer con
+    él al promedio *retenido*, o el acumulador diverge silenciosamente de `on_hand *
+    weighted_avg_cost` en el momento en que esa cantidad llega (10 unidades sin costo agregadas a 10
+    unidades con WAC 4 deben reportar `total_value = 80`, no el 40 sin cambio).
+    `InventoryEntryPostingService::post()` ahora llama a `restoreValueAtCurrentAverage()` en la ruta
+    de costo nulo — el mismo método que usa la reversión de una Transferencia para restaurar cantidad
+    sin cambiar el promedio — en vez de dejar `total_value` intacto.
+-   **El backfill de la migración limita a cero una suma del libro mayor con bases de redondeo
+    desiguales.** Las líneas entrantes y salientes de `stock_movement_lines.line_total` no se
+    registran sobre la misma base de valorización: la de una Recepción es su total exacto de
+    adquisición, mientras que la de `StockOutService` es `baseQuantity *` el `weighted_avg_cost` ya
+    redondeado a escala 4. Una recepción heredada de exactamente 240 unidades por 1,000.0000 seguida
+    de una salida total de 240 unidades a la WAC resultante (4.1667) da como resultado
+    `1000.0000 - 1000.0080 = -0.0080` — un residuo negativo puramente por ese desajuste de redondeo,
+    que el CHECK `stock_total_value_nonnegative` rechazaría en medio de la migración. El backfill
+    ahora envuelve la suma del libro mayor (y su respaldo sin evidencia) en `GREATEST(..., 0)`,
+    reconciliando ese residuo contra el saldo actual de la misma forma en que `decreaseOnHand()` nunca
+    deja que el acumulador en tiempo de ejecución se vuelva negativo.
+
+Convertir el acumulador a `float` de PHP antes de cada llamada a bcmath sigue siendo una limitación
+conocida y aceptada por encima de aproximadamente 9×10¹⁵ (el techo de precisión entera de float64) —
+la misma deuda de migración de float a `Decimal`, preexistente y rastreada por separado, que `#415` ya
+posee para la firma propia de `blend()` (ver el párrafo de apertura de esta sección); ninguna
+combinación realista de cantidad/costo de inventario se le acerca.
 
 ### 3.10 Umbrales de reabastecimiento, por Ubicación de Inventario (#439)
 
