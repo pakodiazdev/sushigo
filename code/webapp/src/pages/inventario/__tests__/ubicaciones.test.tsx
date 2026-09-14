@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (config: unknown) => config,
+  createLazyFileRoute: () => (config: unknown) => config,
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -45,7 +46,7 @@ vi.mock('@/components/ui/toast-context', () => ({
   useToast: () => ({ showSuccess: vi.fn(), showError: vi.fn() }),
 }))
 
-import { InventoryLocationsPage } from '../ubicaciones'
+import { InventoryLocationsPage } from '../ubicaciones.lazy'
 
 describe('InventoryLocationsPage — state contract', () => {
   afterEach(() => {

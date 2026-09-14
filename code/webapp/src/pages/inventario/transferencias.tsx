@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { StockTransfersPage } from '@/features/inventory/transfers'
 import { requirePermission } from '@/lib/route-guards'
 
 export const Route = createFileRoute('/inventario/transferencias')({
@@ -11,5 +10,4 @@ export const Route = createFileRoute('/inventario/transferencias')({
   // location lookup does 403 (a custom role without inventory_locations.view),
   // StockTransferForm now shows an explanatory banner instead of empty selects.
   beforeLoad: requirePermission('stock.view'),
-  component: StockTransfersPage,
 })

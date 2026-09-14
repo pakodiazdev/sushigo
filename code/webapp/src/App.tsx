@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { BranchSelectionDialog } from '@/components/auth';
+import { RoutePendingFallback, RouteErrorFallback } from '@/components/routing/route-fallbacks';
 import { routeTree } from './routeTree.gen';
 
 const queryClient = new QueryClient({
@@ -22,6 +23,10 @@ const router = createRouter({
   context: {
     queryClient,
   },
+  // Router-wide loading/failure boundary for lazily-loaded route chunks (#577) —
+  // one shared pair instead of each `.lazy.tsx` route declaring its own.
+  defaultPendingComponent: RoutePendingFallback,
+  defaultErrorComponent: RouteErrorFallback,
 });
 
 declare module '@tanstack/react-router' {

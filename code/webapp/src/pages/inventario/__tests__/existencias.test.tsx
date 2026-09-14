@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (config: unknown) => config,
+  createLazyFileRoute: () => (config: unknown) => config,
 }))
 
 vi.mock('@tanstack/react-query', () => ({
@@ -79,7 +80,7 @@ vi.mock('@/components/ui/slide-panel', () => ({
     isOpen ? <div data-testid="slide-panel">{children}</div> : null,
 }))
 
-import { StockDashboardPage } from '../existencias'
+import { StockDashboardPage } from '../existencias.lazy'
 
 describe('Existencias — Opening Balance entry point (#570)', () => {
   beforeEach(() => {
