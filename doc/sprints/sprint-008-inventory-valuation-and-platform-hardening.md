@@ -6,11 +6,11 @@ status: In Progress
 created: 2026-09-09
 started: 2026-09-09
 completed:
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 
 base_branch: main
 base_commit: 6c5a0353
-scope_issues: 10
+scope_issues: 11
 
 github_project: SushiGo Admin (#7)
 github_milestone:
@@ -28,7 +28,7 @@ next:
 
 ## 1. Executive Summary
 
-Sprint 008 contains **ten Issues** estimated at **39.5h optimistic / 87h pessimistic**. It is a
+Sprint 008 contains **eleven Issues** estimated at **40h optimistic / 90h pessimistic**. It is a
 consolidation sprint: every Issue is a follow-up from the Sprint 5 or Sprint 6 engineering review
 or from a Sprint 7 closure disposition, and none introduces a new user-facing capability.
 
@@ -49,10 +49,10 @@ lists on lookup routes with an explicit reference-data access contract that pres
 privilege; **#581** corrects Inventory OpenAPI so generated clients describe the ULID identifiers
 the application actually accepts and emits; **#576** and **#577** finish the two Technical Tasks
 #441 deferred (shared loading/empty/error/permission states plus a Spanish-copy sweep, and
-evidence-backed route-level lazy loading); and **#545 / #546 / #550** restore three more quarantined
-Cypress specs and remove their `this.skip()` guards.
+evidence-backed route-level lazy loading); and **#535 / #545 / #546 / #550** restore four more
+quarantined Cypress specs and remove their `this.skip()` guards.
 
-Execution runs in four rounds so at most one writer owns each shared surface: the three quarantined
+Execution runs in four rounds so at most one writer owns each shared surface: the four quarantined
 specs and the #415 field inventory start immediately, #415's primitive lands before #579's final
 arithmetic, and the independent hardening lanes (#575, #580, #581) plus the Inventory UX lanes
 (#576, #577) proceed in parallel on non-overlapping file surfaces.
@@ -104,7 +104,7 @@ Repository base for planning: `main` at `6c5a0353`.
 **Sprint Goal:** Make every domain-relevant monetary and inventory-valuation calculation exact and
 reconcilable — including after a Purchase Receipt reversal — and pay down the highest-value
 Inventory engineering-review debt (movement-line duplication, lookup authorization, OpenAPI
-identifier accuracy, UX state consistency) and three quarantined Cypress specs, without adding a
+identifier accuracy, UX state consistency) and four quarantined Cypress specs, without adding a
 new business capability or changing any business price or cost.
 
 ## 4. Sprint Timeline
@@ -119,7 +119,7 @@ new business capability or changing any business price or cost.
 | Completed | — |
 | Active workdays | — |
 
-The ten Issues are on **SushiGo Admin**, labeled `sprint-8`, and are assigned to the **Sprint 8**
+The eleven Issues are on **SushiGo Admin**, labeled `sprint-8`, and are assigned to the **Sprint 8**
 Project iteration created during promotion.
 
 ## 5. Scope
@@ -135,10 +135,11 @@ Project iteration created during promotion.
 | ⏳ | #581 | Align Inventory OpenAPI identifiers with public ULID contracts | Product engineering | P2 | S | 2h | 5h |
 | ✅ | #576 | Standardize Inventory loading, empty, error states and Spanish copy | Product engineering | P2 | M | 5h | 10h |
 | ✅ | #577 | Introduce route-level lazy loading starting with Inventory | Product engineering | P2 | M | 3h | 7h |
+| ✅ | #535 | Fix quarantined Cypress spec: attendance-absent-stat-card.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
 | ⏳ | #545 | Fix quarantined Cypress spec: item-media-gallery-uploader.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
 | ⏳ | #546 | Fix quarantined Cypress spec: price-lists.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
 | ⏳ | #550 | Fix quarantined Cypress spec: suppliers-catalog.cy.ts | Dev platform | P1 | S | 0.5h | 3h |
-|  |  | **Total** |  |  |  | **39.5h** | **87h** |
+|  |  | **Total** |  |  |  | **40h** | **90h** |
 
 **Capabilities this scope delivers:**
 
@@ -165,8 +166,8 @@ Project iteration created during promotion.
 - A documented, reusable TanStack Router lazy-route convention applied to `/inventario/*` with a
   measured bundle baseline/after, an accessible chunk-load boundary with retry, and preserved
   `beforeLoad` guards and legacy redirects.
-- Restored `item-media-gallery-uploader`, `price-lists`, and `suppliers-catalog` Cypress coverage
-  with their `#490` quarantine guards removed and green in CI.
+- Restored `attendance-absent-stat-card`, `item-media-gallery-uploader`, `price-lists`, and
+  `suppliers-catalog` Cypress coverage with their `#490` quarantine guards removed and green in CI.
 
 ### 5.2 Excluded
 
@@ -182,14 +183,14 @@ Project iteration created during promotion.
   vendor chunking without measurement.
 - Redesigning Inventory information architecture or business workflows.
 - Changing database primary keys or URL shapes unrelated to identifier type.
-- The remaining quarantined specs outside this sprint's three (`#535`–`#543`, `#551`–`#558`,
+- The remaining quarantined specs outside this sprint's four (`#536`–`#543`, `#551`–`#558`,
   `#561`) and unrelated deferred debt (`#85`, `#276`, `#450`).
 
 ### 5.3 Scope Changes
 
 | Date | Status | Item | Change | Reason |
 |---|---|---|---|---|
-| — | — | — | None | Sprint not started; no additions, removals, deprecations, or cancellations yet |
+| 2026-09-13 | ✅ | #535 | Added to sprint scope | User request during `/issue-no-review #535` — bundle this fourth quarantined-spec fix (`attendance-absent-stat-card.cy.ts`) alongside the sprint's other three instead of leaving it for a later sprint; same shape/size as #545/#546/#550, no file-conflict surface with the rest of the sprint |
 
 ### 5.4 Opportunistic Work
 
@@ -206,7 +207,7 @@ Project iteration created during promotion.
 | **Critical** | #415, #579 | Financial-arithmetic correctness foundation and quantity/value reconciliation — every future valuation, adjustment, return, and reporting path depends on both; #579 is the highest-priority unresolved Sprint 5 review finding |
 | **High** | #575, #580 | Data integrity (one persisted source of truth for movement Variant/quantity) and least-privilege authorization (lookup access decoupled from catalog management before more workflows consume it) |
 | **Medium** | #581, #576, #577 | API-contract accuracy, Inventory UX state/accessibility consistency, and a measurable initial-bundle reduction with a reusable lazy-route convention |
-| **Low** | #545, #546, #550 | Conflict-free quarantined-spec restoration; each owns one Cypress file and can fill agent capacity without displacing higher-value work |
+| **Low** | #535, #545, #546, #550 | Conflict-free quarantined-spec restoration; each owns one Cypress file and can fill agent capacity without displacing higher-value work |
 
 ### Ordering principle
 
@@ -219,15 +220,16 @@ Project iteration created during promotion.
 
 ### Round 0 — Restore the affected E2E baseline
 
-Each spec owns a different Cypress file, so all three may run concurrently. They gate nothing and
+Each spec owns a different Cypress file, so all four may run concurrently. They gate nothing and
 can be picked up whenever agent capacity is free.
 
 | Lane | Issue | Owns | Opt. | Pess. |
 |---|---:|---|---:|---:|
+| T0 | #535 | `cypress/e2e/attendance-absent-stat-card.cy.ts` | 0.5h | 3h |
 | T1 | #545 | `cypress/e2e/item-media-gallery-uploader.cy.ts` | 0.5h | 3h |
 | T2 | #546 | `cypress/e2e/price-lists.cy.ts` | 0.5h | 3h |
 | T3 | #550 | `cypress/e2e/suppliers-catalog.cy.ts` | 0.5h | 3h |
-|  |  | **Round effort** | **1.5h** | **9h** |
+|  |  | **Round effort** | **2h** | **12h** |
 
 Each fix must remove its `#490` `this.skip()` guard and prove the spec against a fresh isolated
 stack and the CI `e2e-ci` shard.
@@ -349,7 +351,7 @@ calendar without forcing two agents onto the same file.
 | Canonical `/inventario/*` route files | #576, #577 | #577 owns the route-module split (metadata/guard/loader vs. lazy page component); #576 owns state markup + copy inside the page components; agree the split before editing a shared route file |
 | Shared Inventory list/detail scaffolding (`InventoryListLayout`, `CrudSlidePanels`, `StatusFilterSelect`) | #576 only | #576 extends the scaffolding; #577 imports it unchanged |
 | Bilingual Inventory / Purchase Receipt architecture docs + TypeScript money helpers | #415, #575, #579, #581 | Each Issue updates only the behavior it ships; #415 owns the money-helper module, others import it |
-| Cypress specs | #545, #546, #550 | One file each; no overlap; later functional Issues extend the restored green spec rather than re-quarantining it |
+| Cypress specs | #535, #545, #546, #550 | One file each; no overlap; later functional Issues extend the restored green spec rather than re-quarantining it |
 
 ### Conflict methodology
 
@@ -367,11 +369,11 @@ boundary (`doc/conventions/sprints.md` §10) — not held to closure.
 
 | Round | Issue count | Opt. total | Pess. total | Tracked total | vs Opt. | vs Pess. |
 |---|---:|---:|---:|---:|---:|---:|
-| 0 — Restore E2E baseline | 3 | 1.5h | 9h | — | — | — |
+| 0 — Restore E2E baseline | 4 | 2h | 12h | — | — | — |
 | 1 — Financial foundation | 1 | 12h | 24h | — | — | — |
 | 2 — Valuation + independent hardening | 4 | 18h | 37h | — | — | — |
 | 3 — Inventory UX | 2 | 8h | 17h | — | — | — |
-| **Grand total** | **10** | **39.5h** | **87h** | **—** | **—** | **—** |
+| **Grand total** | **11** | **40h** | **90h** | **—** | **—** | **—** |
 
 ```text
 vs Opt.  = Tracked total − Optimistic total
@@ -410,7 +412,7 @@ Computed once at closure from every Issue's `## 📅 Sessions` array.
 Confidence is rated **medium**. The estimates are Issue-body sizing, not fresh technical scoping,
 but every Issue is a well-understood review follow-up with a named target contract:
 
-- **Higher confidence** — #575, #580, #581, #545, #546, #550: each has a bounded, already-mapped
+- **Higher confidence** — #575, #580, #581, #535, #545, #546, #550: each has a bounded, already-mapped
   surface (movement-line schema, lookup-route middleware, the generated OpenAPI document, one
   Cypress file). The Inventory series (Sprints 4–7) has consistently landed this class of Issue at
   ~40–60% of its optimistic estimate because the contract already exists to modify.
@@ -441,6 +443,7 @@ but every Issue is a well-understood review follow-up with a named target contra
 | ✅ | #550 | Root-caused the `suppliers-catalog.cy.ts` failure to a backend defect, not test fragility — `GET /inventory/products/{id}/variants` rejected `is_active=true` with the bare `boolean` rule. Added `ListVariantsRequest` mirroring `ListProductsRequest`'s boolean-string tolerance, restored not-found-before-validation-error precedence on an unknown product id, then removed the #490 `this.skip()` guard. | PR #617 | — | 19m | 53/53 `ProductVariantCrudTest` assertions passing (3 new cases: boolean-string `is_active`, unsupported `is_active` value still 422, unknown product + invalid filter still 404); Pint clean; 1 Codex review thread (invalid-boolean silently nulled) + 1 manually-reported not-found-precedence finding, both fixed and resolved. |
 | ✅ | #553 | Opportunistic (§5.4): restored `schedule-indefinite-summary.cy.ts` by scrolling directly to grouped-day and compact-range text, avoiding fixed-header scroll overshoot. Removed quarantine and the non-retriable navigation warm-up; PR ready, merge pending | PR #629 | — | 1.3h | Prior implementation evidence reports 3/3 cases passing, two CI runs green and two additional cold-cache local runs after removing the warm-up; 1/1 Codex thread resolved; finish-pr ESLint: 0 errors (31 warnings), TypeScript clean; final promoted CI checked on PR #629 |
 | ✅ | #554 | Granted admin all Cash Adjustments permissions in all three seeders, restored cash-register code-suggestion E2E coverage, moved Devtools to the desktop top-left while hiding its launcher below lg to keep mobile navigation accessible, and made the spec's `test:reset` retry-safe against CI's `retries=2`. PR ready, merge pending | PR #631 | — | 0.3h | Prior implementation evidence: 123 CashAdjustments/seeder tests (321 assertions), AdminRoleCashAccessTest (2 tests, 31 assertions), 3 Chrome runs + 1 Electron run passing. Finish-pr: Pint passed (1340 files); ESLint 0 errors (32 warnings); TypeScript passed; 2/2 Codex review threads (Devtools/mobile-menu overlap, Cypress retry-state leak) addressed and resolved. Final promoted CI validation pending. |
+| ✅ | #535 | Root-caused the "employee name clipped by a parent" failure to a missing `scrollIntoView()` — the "Total" tab and broad default view render all 10 employees `AttendanceTestSeeder` creates (this spec's own seeder only layers attendance records on top of a subset), overflowing the viewport inside the scrollable `<main>` panel. Added `scrollIntoView()` calls matching the pattern already used by every other attendance spec, corrected the file's header comment, and removed the `#490` `this.skip()` quarantine guard. | PR #628 | — | 18m | 10/10 Cypress tests passing, run twice in a row against a fresh `make e2e WORKSPACE=sushigo-b` stack to confirm reliability; ESLint/TypeScript clean; 3 Codex review threads resolved (a stale sprint-evidence row, a Total-tab test only asserting 5 of 10 employees, and the §5.1/§13 status-table mismatch that followed from the first); rebased once past 3 concurrently-merged quarantined-spec PRs (`#553`, `#554`, `#577`) touching the same sprint doc; PR ready, merge pending. |
 
 ### Risks and Mitigations
 
@@ -463,7 +466,7 @@ but every Issue is a well-understood review follow-up with a named target contra
 | Persisted sources of truth for movement Variant/qty | 2 (header + line) | 1 (header) | — | ⏳ |
 | Lookup routes with per-workflow OR-permission lists | Growing (`items.view \| suppliers.manage \| …`) | 0 (one reference-data contract) | — | ⏳ |
 | Inventory OpenAPI identifiers wrong vs. runtime | Some integer-ID path params/schemas | 0 | — | ⏳ |
-| Quarantined Cypress specs (this sprint's three) | 3 skipped | 0 | — | ⏳ |
+| Quarantined Cypress specs (this sprint's four) | 4 skipped | 0 | — | ⏳ |
 | Tests passing | 100% on `main` | 100% | — | ⏳ |
 | New-code coverage (SonarCloud) | ≥ 80% | ≥ 80% | — | ⏳ |
 
@@ -493,7 +496,7 @@ _To be completed at closure._
 
 ## 18. Sprint Closure Checklist
 
-- [ ] All ten Issues (`#415`, `#545`, `#546`, `#550`, `#575`, `#576`, `#577`, `#579`, `#580`, `#581`) are merged and Done.
+- [ ] All eleven Issues (`#415`, `#535`, `#545`, `#546`, `#550`, `#575`, `#576`, `#577`, `#579`, `#580`, `#581`) are merged and Done.
 - [ ] No domain-relevant monetary calculation depends on binary floating point; DB/API/PHP/TS agree on scale and representation, and existing data migrated and rolled back without precision loss.
 - [ ] Quantity and inventory value reconcile after every supported Purchase Receipt reversal scenario, with append-only evidence and explicit intervening-operation boundaries.
 - [ ] Movement Variant + base quantity has one persisted source of truth; existing movements remain readable and reversible; rollback is exact.
@@ -501,7 +504,7 @@ _To be completed at closure._
 - [ ] Generated OpenAPI describes every external Inventory identifier as a ULID string; the regression check fails on a reintroduced integer-ID schema.
 - [ ] Every canonical Inventory screen has explicit loading/empty/error/permission behavior with consistent Spanish copy and accessibility.
 - [ ] `/inventario/*` page components load as lazy route chunks with preserved guards/redirects and a measured bundle baseline/after; the convention is documented and reusable.
-- [ ] The `item-media-gallery-uploader`, `price-lists`, and `suppliers-catalog` quarantine guards are removed and the specs are green in CI.
+- [ ] The `attendance-absent-stat-card`, `item-media-gallery-uploader`, `price-lists`, and `suppliers-catalog` quarantine guards are removed and the specs are green in CI.
 - [ ] Full Inventory API regression, frontend tests, lint, typecheck, and affected Cypress paths are green; SonarCloud new-code coverage ≥ 80% for every Issue.
 - [ ] Architecture, financial-contract, OpenAPI, and frontend-convention documentation reflect as-built behavior.
 - [ ] Estimates, tracked effort, wall-clock overlap, parallelization factor, peak concurrency, evidence, quality results, and lessons are consolidated (§10, §11, §14–§16 of `doc/conventions/sprints.md`).
@@ -580,8 +583,8 @@ cross-Issue summary.
 - Route tests proving every canonical and legacy Inventory URL resolves to the same authorized
   destination, plus lazy-load / chunk-load-failure-and-retry / permission-denial / deep-link
   coverage (#577).
-- Restored `item-media-gallery-uploader` / `price-lists` / `suppliers-catalog` specs run without
-  skip guards and green in CI (#545, #546, #550).
+- Restored `attendance-absent-stat-card` / `item-media-gallery-uploader` / `price-lists` /
+  `suppliers-catalog` specs run without skip guards and green in CI (#535, #545, #546, #550).
 - ESLint and TypeScript clean for every frontend Issue.
 
 ### Required invariants
