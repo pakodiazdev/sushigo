@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { MovementsPage } from '@/features/inventory/movements'
 import { requirePermission } from '@/lib/route-guards'
 import type { MovementsSearch } from '@/features/inventory/movements/hooks/use-movements-page'
 
@@ -30,7 +29,6 @@ export const Route = createFileRoute('/inventario/movimientos')({
   // The immutable ledger is a pure read — reuse stock.view, the same gate the
   // Stock dashboard and query endpoints carry (#574).
   beforeLoad: requirePermission('stock.view'),
-  component: MovementsPage,
   validateSearch: (search: Record<string, unknown>): MovementsSearch => {
     const reason = str(search.reason)
     const status = str(search.status)

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { computeStockSummary } from '../existencias'
+import { computeStockSummary } from '../existencias.lazy'
 import type { Stock } from '@/types/inventory'
 
 function row(overrides: Partial<Stock>): Stock {
