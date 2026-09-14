@@ -282,6 +282,10 @@ class PermissionSeeder extends LockedSeeder
                             ->orWhere('name', 'like', 'price_list%')
                             ->orWhere('name', 'like', self::MEDIA_WILDCARD)
                             ->orWhere('name', 'like', 'audit-logs.%')
+                            // Cash Adjustments module — cash_registers.%, cash_terminals.%,
+                            // cash_sessions.%, cash_adjustments.%, cash_expenses.%.
+                            ->orWhere('name', 'like', 'cash_%')
+                            ->orWhere('name', 'like', 'bank_accounts.%')
                             ->orWhereIn('name', ['units_of_measure.manage', 'punctuality.manage', 'holidays.manage', 'payroll.preview', 'payroll.close', 'payroll.reopen', 'payroll.reclose', 'overtime.manage', 'vacation-policy.manage']);
                     })
                     ->get()

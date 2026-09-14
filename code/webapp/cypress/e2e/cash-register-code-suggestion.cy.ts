@@ -13,19 +13,16 @@ const { email, password } = users.admin
 
 const registerName = 'Cypress Caja Código Sugerido'
 
-// ⚠️ QUARANTINED per #490 → see #554 (CI-only failure; passes locally). Fails against a fresh stack:
-// CI-only (spec added by #498, never run locally in this pass): generic 10s retry timeout at cash-register-code-suggestion.cy.ts:32 — needs a look at what element/assertion stalls under the CI stack.
-// Remove this guard when #554 is fixed.
-before(function () {
-  this.skip()
-})
-
-before(() => {
-  cy.task('test:reset', null, { timeout: 60_000 })
-})
-
 describe('Cash Register code suggestion', () => {
   beforeEach(() => {
+    // Reset per attempt, not once per file: CI runs `retries=2` and Cypress re-runs
+    // beforeEach() — but not before() — on a retry. If an attempt created REG-001 and
+    // then failed on a later assertion, a before()-scoped reset would leave that row
+    // behind, the next suggestion would be REG-002, and the retry could never recover
+    // from the original transient failure. There is a single test here, so the green
+    // path still pays for exactly one reset.
+    cy.task('test:reset', null, { timeout: 60_000 })
+
     cy.loginByApi(email, password)
     cy.visitWithAuth('/cash/registers')
     cy.contains('Cajas Registradoras', { timeout: 10_000 }).should('be.visible')
