@@ -19,3 +19,4 @@ Format modeled on the same convention used in
 | [TD-04](decisions/td-04-domain-oriented-frontend-structure.md) | Frontend code is organized by business domain through incremental migration | Frontend |
 | [TD-05](decisions/td-05-monetary-precision-and-rounding.md) | Monetary amounts use two decimals while unit rates retain higher precision | Finance / Inventory |
 | [TD-06](decisions/td-06-unified-ci-dag.md) | One orchestrated PR CI run with a single stable `ci-gate` and title-driven execution modes | Dev Platform / CI |
+| [TD-07](decisions/td-07-environment-release-promotion-contract.md) | QA previews branches pre-merge; Production and Demo auto-deploy separate hardened/convenience images from `main` | Dev Platform / Deployment |

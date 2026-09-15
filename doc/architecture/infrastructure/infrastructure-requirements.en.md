@@ -5,6 +5,24 @@
 **Status:** Active
 **Relates to:** Tasks #040–#046 · Architecture doc `infrastructure.en.md`
 
+> ⚠️ **RN-02 is superseded; RN-08/RN-09/DC-03 are realigned, not superseded — read
+> [TD-07](../../decisions/td-07-environment-release-promotion-contract.md) and
+> [`doc/conventions/ci/deployment.md`](../../conventions/ci/deployment.md) for the current detail.**
+> **RN-08/RN-09** (a feature branch must deploy to `preview.sushigo-romita.com` and be manually
+> verified before merge) is exactly what TD-07 calls "QA" — kept manual and decoupled from the
+> automated pipeline, on purpose. **DC-03** (a production deployment builds an image, pushes it,
+> deploys a new revision, and runs migrations) still describes the right shape for TD-07's
+> automatic Production pipeline; TD-07 adds detail this document doesn't have (a hardened `prod`
+> build target excluding devdebug/demo-login code, digest-once-resolved release identity,
+> concurrency/ancestry guards, a `--no-traffic` health check before the traffic shift) rather than
+> replacing the shape. **RN-02** (infrastructure-only changes must not trigger any linter/test
+> workflow) genuinely is stale, superseded earlier by
+> [TD-06](../../decisions/td-06-unified-ci-dag.md): `ci.yml` deliberately runs `api-ci`/`webapp-ci`
+> when `infra_changed` is true, on any scope (see
+> [`pipeline.md`](../../conventions/ci/pipeline.md) → "Title / draft-state edits"). This document
+> has not been reconciled with TD-07 or TD-06 beyond these callouts — do not treat the remaining
+> sections as verified current.
+
 ---
 
 ## PART A — Context and Justification
