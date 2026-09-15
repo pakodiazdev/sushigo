@@ -29,6 +29,20 @@ on:
         required: false
         type: string
         default: ''
+    # Consumed by ci.yml's publish-badges job (main-branch pushes only) to render the
+    # self-hosted backend Lint/Test badges — see .github/scripts/ci-badges/.
+    outputs:
+      lint_result:
+        description: 'Pint check-mode outcome (success | failure)'
+        value: ${{ jobs.lint.outputs.result }}
+      unit_tests:
+        value: ${{ jobs.api-junit-merge.outputs.unit_tests }}
+      unit_assertions:
+        value: ${{ jobs.api-junit-merge.outputs.unit_assertions }}
+      feature_tests:
+        value: ${{ jobs.api-junit-merge.outputs.feature_tests }}
+      feature_assertions:
+        value: ${{ jobs.api-junit-merge.outputs.feature_assertions }}
 
 jobs:
   swagger:
@@ -62,6 +76,8 @@ jobs:
   lint:
     name: api-lint
     runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.set-result.outputs.result }}
     defaults:
       run:
         working-directory: code/api
@@ -80,6 +96,13 @@ jobs:
 
       - name: Run PHP Pint (check mode)
         run: ./vendor/bin/pint --test
+
+      # `job.status` reflects the job's aggregate outcome so far — still meaningful here even
+      # though Pint is currently the job's last real step, and it survives being reordered.
+      - name: Set result output
+        id: set-result
+        if: always()
+        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"
 
   api-tests:
     name: api-tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
@@ -219,6 +242,11 @@ jobs:
     needs: api-tests
     if: always()
     continue-on-error: true
+    outputs:
+      unit_tests: ${{ steps.badge-count.outputs.unit_tests }}
+      unit_assertions: ${{ steps.badge-count.outputs.unit_assertions }}
+      feature_tests: ${{ steps.badge-count.outputs.feature_tests }}
+      feature_assertions: ${{ steps.badge-count.outputs.feature_assertions }}
     defaults:
       run:
         working-directory: code/api
@@ -244,6 +272,15 @@ jobs:
         working-directory: .
         continue-on-error: true
         run: node .github/scripts/test-timing/generate.js code/api/test-results-shard-*.xml
+
+      # Feeds ci.yml's publish-badges job — counts survive even on a failing/partial run so
+      # the backend Test badge still shows real numbers, not just red.
+      - name: Count PHPUnit tests/assertions (Unit vs Feature)
+        id: badge-count
+        if: always()
+        working-directory: .
+        continue-on-error: true
+        run: node .github/scripts/ci-badges/count-phpunit.js code/api/test-results-shard-*.xml
 
   # coverage + Sonar only on a full-scope run; a [ci-check] loop skips both.
   api-coverage-merge:

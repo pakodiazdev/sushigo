@@ -16,7 +16,8 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
 
 **Backend Quality:**
 
-[![CI](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml/badge.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml)
+[![Lint](https://raw.githubusercontent.com/pakodiazdev/sushigo/badges/api-lint.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml)
+[![Tests](https://raw.githubusercontent.com/pakodiazdev/sushigo/badges/api-tests.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-api&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-api)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-api&metric=coverage)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-api)
 
@@ -30,7 +31,8 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
 
 **Frontend Quality:**
 
-[![CI](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml/badge.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml)
+[![Lint](https://raw.githubusercontent.com/pakodiazdev/sushigo/badges/webapp-lint.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml)
+[![Tests](https://raw.githubusercontent.com/pakodiazdev/sushigo/badges/webapp-tests.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-webapp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-webapp)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pakodiazdev_sushigo-webapp&metric=coverage)](https://sonarcloud.io/summary/new_code?id=pakodiazdev_sushigo-webapp)
 
@@ -42,6 +44,12 @@ SushiGo is the operations platform for a single restaurant tenant inside the Com
 ![TanStack Router](https://img.shields.io/badge/TanStack%20Router-1-FF4154?logo=reactrouter&logoColor=white)
 ![Zustand](https://img.shields.io/badge/Zustand-5-443E38?logo=react&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-06B6D4?logo=tailwindcss&logoColor=white)
+
+---
+
+**End-to-End Quality:**
+
+[![Cypress](https://raw.githubusercontent.com/pakodiazdev/sushigo/badges/cypress.svg)](https://github.com/pakodiazdev/sushigo/actions/workflows/ci.yml)
 
 ---
 

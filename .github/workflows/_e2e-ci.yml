@@ -31,6 +31,12 @@ on:
         required: false
         type: string
         default: ''
+    # Consumed by ci.yml's publish-badges job (main-branch pushes only) to render the
+    # self-hosted Cypress badge — see .github/scripts/ci-badges/.
+    outputs:
+      spec_count:
+        description: 'Number of Cypress specs resolved for this run'
+        value: ${{ jobs.plan.outputs.spec_count }}
 
 jobs:
   plan:

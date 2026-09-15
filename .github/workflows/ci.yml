@@ -232,6 +232,7 @@ jobs:
           node --test .github/scripts/test-timing/tests/*.test.js
           node --test .github/scripts/ci-analyze/tests/*.test.js
           node --test .github/scripts/sprint-audit/tests/*.test.js
+          node --test .github/scripts/ci-badges/tests/*.test.js
 
   e2e-ci:
     name: e2e-ci
@@ -251,6 +252,77 @@ jobs:
       selection: ${{ needs.analyze-pr.outputs.e2e_selection }}
       specs: ${{ needs.analyze-pr.outputs.e2e_specs }}
     secrets: inherit
+
+  # Renders the self-hosted CI badges (backend/frontend Lint+Test, Cypress specs) from this
+  # run's job results and pushes them to the dedicated `badges` branch (#462) — the same
+  # branch and amend/force-push pattern update-iteration-progress.yml already uses. Runs only
+  # on a push to main, never on a PR, and never blocks ci-gate (it isn't in ci-gate's `needs`).
+  # A surface ci.yml legitimately skipped this push (e.g. a webapp-only change skips api-ci)
+  # leaves its existing badge file untouched — see .github/scripts/ci-badges/generate.js.
+  publish-badges:
+    name: publish-badges
+    needs: [api-ci, webapp-ci, e2e-ci]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run unit tests
+        run: node --test .github/scripts/ci-badges/tests/*.test.js
+
+      - name: Generate badge SVGs
+        env:
+          API_RESULT: ${{ needs.api-ci.result }}
+          API_LINT_RESULT: ${{ needs.api-ci.outputs.lint_result }}
+          API_UNIT_TESTS: ${{ needs.api-ci.outputs.unit_tests }}
+          API_UNIT_ASSERTIONS: ${{ needs.api-ci.outputs.unit_assertions }}
+          API_FEATURE_TESTS: ${{ needs.api-ci.outputs.feature_tests }}
+          API_FEATURE_ASSERTIONS: ${{ needs.api-ci.outputs.feature_assertions }}
+          WEBAPP_RESULT: ${{ needs.webapp-ci.result }}
+          WEBAPP_LINT_RESULT: ${{ needs.webapp-ci.outputs.lint_result }}
+          WEBAPP_TESTS_TOTAL: ${{ needs.webapp-ci.outputs.tests_total }}
+          E2E_RESULT: ${{ needs.e2e-ci.result }}
+          E2E_SPEC_COUNT: ${{ needs.e2e-ci.outputs.spec_count }}
+        run: node .github/scripts/ci-badges/generate.js
+
+      - name: Amend and force-push badges to the badges branch
+        run: |
+          # Same rationale as update-iteration-progress.yml: `badges` is a dedicated orphan
+          # branch holding nothing but generated SVGs, so amending its single commit on every
+          # run is safe here in a way it would not be on a branch other people build on.
+          mkdir -p /tmp/ci-badges
+          cp .github/badges/*.svg /tmp/ci-badges/ 2>/dev/null || true
+
+          git fetch origin badges
+          git checkout -B badges origin/badges
+
+          shopt -s nullglob
+          changed=0
+          for f in /tmp/ci-badges/*.svg; do
+            name="$(basename "$f")"
+            cp "$f" "$name"
+            git add "$name"
+            changed=1
+          done
+
+          if [ "$changed" -eq 0 ] || git diff --cached --quiet; then
+            echo "No badge changed — nothing to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --amend --reset-author -m "🔧 [#647] - Regenerate CI status badges 📊" \
+            -m "- 📊 Updated backend/frontend Lint+Test and Cypress badges from this push's CI run"
+          git push --force origin badges
 
   # The one and only required check. Its name never changes, so branch protection never
   # needs editing when a shard count changes inside a reusable workflow.

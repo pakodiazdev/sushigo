@@ -26,11 +26,21 @@ on:
         required: false
         type: string
         default: ''
+    # Consumed by ci.yml's publish-badges job (main-branch pushes only) to render the
+    # self-hosted frontend Lint/Test badges — see .github/scripts/ci-badges/.
+    outputs:
+      lint_result:
+        description: 'ESLint + typecheck outcome (success | failure)'
+        value: ${{ jobs.lint.outputs.result }}
+      tests_total:
+        value: ${{ jobs.webapp-test-count.outputs.tests_total }}
 
 jobs:
   lint:
     name: webapp-lint
     runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.set-result.outputs.result }}
     defaults:
       run:
         working-directory: code/webapp
@@ -56,6 +66,13 @@ jobs:
 
       - name: Run TypeScript check
         run: npm run typecheck
+
+      # `job.status` reflects the job's aggregate outcome so far — still meaningful here even
+      # though typecheck is currently the job's last real step, and it survives being reordered.
+      - name: Set result output
+        id: set-result
+        if: always()
+        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"
 
   webapp-tests:
     name: webapp-tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
@@ -86,9 +103,13 @@ jobs:
       # Sharded across 4 parallel jobs — a single-process full run with V8 coverage
       # accumulates enough GC pressure to hang low-resource runners. Shards write a blob
       # report; webapp-coverage-merge stitches them into one report for SonarCloud.
+      # `--outputFile.json=` (keyed, not the bare `--outputFile=`) keeps the json reporter's
+      # output from colliding with blob's own file — a bare shared --outputFile silently lets
+      # one reporter's write clobber the other's. The json report feeds the frontend Test badge
+      # (webapp-test-count below); it is not used for coverage.
       - name: Run Vitest shard with coverage (full scope)
         if: inputs.test_scope == 'full'
-        run: npx vitest run --coverage --reporter=blob --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        run: npx vitest run --coverage --reporter=blob --reporter=json --outputFile.json=vitest-results-shard-${{ matrix.shard }}.json --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       # changed scope ([ci-check]): only the PR's own changed *.test.ts(x), no coverage,
       # no blob report, no Sonar downstream — a fast loop. Zero resolved files => no-op.
@@ -124,6 +145,52 @@ jobs:
           path: code/webapp/.vitest-reports/
           include-hidden-files: true
           retention-days: 1
+
+      # `if: always()` — uploaded even on a failing shard so the Test badge still reflects a
+      # real (if lower) count instead of going stale, mirroring api-junit-merge's own approach.
+      - name: Upload JSON test-count report
+        if: always() && inputs.test_scope == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-json-report-${{ matrix.shard }}
+          path: code/webapp/vitest-results-shard-${{ matrix.shard }}.json
+          retention-days: 1
+
+  # Auxiliary reporting only, feeds ci.yml's publish-badges job — never a merge gate. Runs
+  # regardless of webapp-tests' result, same as _api-ci.yml's api-junit-merge.
+  webapp-test-count:
+    name: webapp-test-count
+    runs-on: ubuntu-latest
+    needs: webapp-tests
+    if: always()
+    continue-on-error: true
+    outputs:
+      tests_total: ${{ steps.badge-count.outputs.tests_total }}
+    defaults:
+      run:
+        working-directory: code/webapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download per-shard JSON test-count reports
+        uses: actions/download-artifact@v4
+        with:
+          path: code/webapp
+          pattern: webapp-json-report-*
+          merge-multiple: true
+
+      - name: Count Vitest tests
+        id: badge-count
+        if: always()
+        working-directory: .
+        continue-on-error: true
+        run: node .github/scripts/ci-badges/count-vitest.js code/webapp/vitest-results-shard-*.json
 
   # coverage + Sonar only on a full-scope run; a [ci-check] loop skips both.
   webapp-coverage-merge:
