@@ -80,18 +80,23 @@ function getCard(lastName: string, firstName: string) {
     .scrollIntoView();
 }
 
+// Scopes a query to the open "Cerrar día" wizard. Assertions like
+// cy.contains("Salida") are otherwise ambiguous: an employee card behind the
+// panel can carry a "Salida comida" (lunch check-out) time row that also
+// matches the substring, and — once the modal-opening "Cerrar día" button's
+// own scrollIntoView() has scrolled the page's main content area back up —
+// that background row can be the only one Cypress finds still on-screen,
+// failing with "clipped by a parent element" instead of ever inspecting the
+// (fully visible) wizard content. See #536.
+function getCloseDayPanel() {
+  return cy.contains("h2", "Cerrar día").closest("div.fixed.inset-0.z-50");
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // 1. Happy path — All employees completed their day flow
 //    Wizard goes directly to confirm step (no pending lunch returns)
 //    EMP-005, EMP-006 → returned | EMP-007, EMP-008 → pending (absence)
 // ══════════════════════════════════════════════════════════════════════════════
-
-// ⚠️ QUARANTINED per #490 → see #536. Fails against a fresh stack:
-// "closes the day" test fails: a status <span> "not visible because clipped by a parent element" (overflow/scroll).
-// Remove this guard when #536 is fixed.
-before(function () {
-  this.skip()
-})
 
 describe("Close day — Happy path (no pending lunch returns)", () => {
   beforeEach(() => {
@@ -115,17 +120,19 @@ describe("Close day — Happy path (no pending lunch returns)", () => {
     cy.contains("button", "Cerrar día").scrollIntoView().click();
 
     // ── Assert: Should go directly to confirm step (no pending lunches) ──
-    cy.contains("Confirmar cierre del día", { timeout: 5_000 }).should(
-      "be.visible",
-    );
+    getCloseDayPanel().within(() => {
+      cy.contains("Confirmar cierre del día", { timeout: 5_000 }).should(
+        "be.visible",
+      );
 
-    // Verify the summary shows employees who will get check-out
-    cy.contains("Salida").should("be.visible");
-    cy.contains("Roberto Sánchez").should("be.visible");
-    cy.contains("Laura Torres").should("be.visible");
+      // Verify the summary shows employees who will get check-out
+      cy.contains("Salida").should("be.visible");
+      cy.contains("Roberto Sánchez").should("be.visible");
+      cy.contains("Laura Torres").should("be.visible");
 
-    // Verify absences section
-    cy.contains("Falta").should("be.visible");
+      // Verify absences section
+      cy.contains("Falta").should("be.visible");
+    });
 
     // Set close time to 22:00 (end of shift)
     cy.get('input[type="time"]')
@@ -203,11 +210,13 @@ describe("Close day — With pending lunch returns (se le pasó al encargado)", 
     cy.contains("button", "Siguiente").click();
 
     // ── Assert Step 2: Confirm close ──
-    cy.contains("Paso 2 de 2", { timeout: 5_000 }).should("be.visible");
-    cy.contains("Confirmar cierre").should("be.visible");
+    getCloseDayPanel().within(() => {
+      cy.contains("Paso 2 de 2", { timeout: 5_000 }).should("be.visible");
+      cy.contains("Confirmar cierre").should("be.visible");
 
-    // Check-outs section should list employees who will get checked out
-    cy.contains("Salida").should("be.visible");
+      // Check-outs section should list employees who will get checked out
+      cy.contains("Salida").should("be.visible");
+    });
 
     // Set close time
     cy.get('input[type="time"]')
