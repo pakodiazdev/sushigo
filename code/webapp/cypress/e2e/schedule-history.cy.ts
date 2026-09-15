@@ -20,13 +20,6 @@ const { email: adminEmail, password: adminPassword } = users.admin
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
-// ⚠️ QUARANTINED per #490 → see #557 (CI-only failure; passes locally). Fails against a fresh stack:
-// CI-only (passes locally on Electron): an <h3.flex.items-center.gap-2.text-sm.font-semibold> section heading is "not visible" after 15s (schedule-history.cy.ts) — same overlay/scroll signature as #553, only reproduces on the fresh CI stack under Chromium.
-// Remove this guard when #557 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })
@@ -57,8 +50,13 @@ describe('Schedule History', () => {
     cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
 
     // ── 2. Open schedule dialog ──────────────────────────────────────────────
-    cy.contains('Horario activo', { timeout: 10_000 }).scrollIntoView().should('be.visible')
-    cy.contains('button', 'Ver horario').scrollIntoView().click()
+    // Scroll straight to the "Ver horario" button itself, not the "Horario
+    // activo" heading above it — a separate scroll-then-check on the heading
+    // raced other panel content still loading above it on the fresh CI stack
+    // (Chromium) and could land the heading behind the panel's fixed header
+    // even though the button below it was already actionable; see #553 (same
+    // signature) and #557.
+    cy.contains('button', 'Ver horario', { timeout: 10_000 }).scrollIntoView().click()
 
     // Dialog should open with tabs
     cy.contains('dialog', 'Horarios', { timeout: 5_000 }).should('be.visible')
