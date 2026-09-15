@@ -9,9 +9,19 @@
  *
  * DB reset strategy
  * ─────────────────
- * • before()     → cy.task('test:reset', 'attendance') ONCE per file.
- * • beforeEach() → login via API + navigate to /attendance.
- * • Each it() uses a DIFFERENT employee — no slot is reused.
+ * • beforeEach() → cy.task('test:reset', 'attendance'), then login via API +
+ *   navigate to /attendance. Each `it()` calls markFalta() on its own employee
+ *   to reach the "Falta" precondition itself (see "Justificar Falta" below,
+ *   which re-marks García, María as Falta even though an earlier test already
+ *   left her that way) — a file-level `before()` that seeds ONCE would leave
+ *   that second call with no "Marcar falta" button to click, since the first
+ *   test's side effect is still on the card. A per-test reset also matches
+ *   CI's retries=2: it re-runs `beforeEach()` on a retry but not a file-level
+ *   `before()`, so a failed attempt's residual state would otherwise leak into
+ *   the retry. See #537.
+ * • Employees are shared across `it()`s (all use García, María except the
+ *   "Justificar de inmediato" case) precisely because each test re-establishes
+ *   its own precondition instead of relying on a previous test's leftover state.
  *
  * Employees used:
  *   EMP-002  García, María     → marked as ABSENCE (Falta)
@@ -26,26 +36,26 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
-// ⚠️ QUARANTINED per #490 → see #537. Fails against a fresh stack:
-// "Justificar Falta" test fails: `[data-testid='btn-mark-falta']` never found inside García, María's card (data/flow or selector).
-// Remove this guard when #537 is fixed.
-before(function () {
-  this.skip()
-})
-
-before(() => {
-  cy.task("test:reset", "attendance", { timeout: 60_000 });
-});
-
 // Test time: 14:30 CDMX
 const TEST_TIME_ISO = "2026-04-02T14:30:00-06:00";
 const TEST_TIME_UTC = new Date("2026-04-02T20:30:00Z");
 
 beforeEach(() => {
+  cy.task("test:reset", "attendance", { timeout: 60_000 });
+
   cy.intercept({ url: /\/api\/v1\// }, (req) => {
     req.headers["X-Test-Time"] = TEST_TIME_ISO;
     req.continue();
   }).as("apiWithTestTime");
+
+  // Every employee card mounts its own (hidden) RegisterLeaveDialog
+  // unconditionally, and useRegisterLeaveDialog() calls useLeaveTypes()
+  // un-gated by isOpen — so this GET fires once, immediately on page mount,
+  // not when a test later opens the "Registrar ausencia" dialog. Registering
+  // the intercept here, before the visit, is what lets cy.wait("@leaveTypesLoad")
+  // reliably observe it later in a test body instead of racing an already
+  // in-flight (or already-completed) request. See #537.
+  cy.intercept("GET", "**/leave-types*").as("leaveTypesLoad");
 
   cy.loginByApi(adminEmail, adminPassword);
   cy.visitWithAuth("/attendance");
@@ -127,7 +137,6 @@ describe("Day Status — Justificar Falta", () => {
       cy.contains("Falta", { timeout: 10_000 }).should("be.visible");
     });
 
-    cy.intercept("GET", "**/leave-types*").as("leaveTypesLoad");
     cy.intercept("POST", "**/leaves").as("registerLeave");
 
     getCard("García", "María")
@@ -156,7 +165,6 @@ describe("Day Status — Justificar Falta", () => {
 describe("Day Status — Justificar de inmediato", () => {
   it("abre el diálogo de registrar ausencia al elegir 'Justificar ahora'", () => {
     cy.intercept("GET", "**/attendances/today*").as("refetchAttendance");
-    cy.intercept("GET", "**/leave-types*").as("leaveTypesLoad");
     cy.intercept("POST", "**/leaves").as("registerLeave");
 
     cy.contains("p", "López, Pedro")
