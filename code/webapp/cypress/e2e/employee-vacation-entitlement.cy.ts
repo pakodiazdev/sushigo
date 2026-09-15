@@ -37,13 +37,6 @@ function scrollToVacation() {
 
 // ── Suite setup ───────────────────────────────────────────────────────────────
 
-// ⚠️ QUARANTINED per #490 → see #541. Fails against a fresh stack:
-// Happy-path test fails: entitlement <p> is `position: fixed` and "covered by" the blue DevDebugger bar (`<div class="bg-blue-600 ...">`).
-// Remove this guard when #541 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })
@@ -51,6 +44,18 @@ before(() => {
 beforeEach(() => {
   cy.loginByApi(email, password)
   cy.visitWithAuth('/employees')
+
+  // On a cold/fresh stack, this page's first paint (and therefore Layout's
+  // sibling DevDebugger, which mounts visible by default) can lag behind
+  // cy.visitWithAuth() returning — Vite still has to transform this route's
+  // chunk on demand. closeDevDebugger() only acts if the debugger is already
+  // in the DOM, so calling it before that first paint silently no-ops, and
+  // the debugger then appears — uncontested — a moment later, covering the
+  // entitlement summary this spec asserts on. Waiting for real page content
+  // (the employees table, which can only render after Layout itself has)
+  // guarantees the debugger has already had its chance to mount before we
+  // try to close it. See #541.
+  cy.contains('tr', 'EMP-001', { timeout: 10_000 }).should('be.visible')
   cy.closeDevDebugger()
 })
 
@@ -60,14 +65,22 @@ it('auto-generates the reached anniversary entitlement when Vacaciones is opened
   openEmp001Detail()
   scrollToVacation()
 
-  cy.contains('h3', 'Vacaciones').should('be.visible')
-  cy.contains('LFT México 2022').should('be.visible')
+  // Scoped to the Vacaciones section itself: the entitlement table's "Días
+  // ganados" cell isn't the only "12" on the panel — the employee header's
+  // phone number field (e.g. "+52 55 1234 ...") also contains that substring,
+  // and once scrollToVacation() scrolls it out of the panel's own scrollable
+  // viewport, cy.contains('12') can resolve to that now off-screen field
+  // instead of the entitlement row. See #541.
+  cy.get('[data-testid="vacation-section"]').within(() => {
+    cy.contains('h3', 'Vacaciones').should('be.visible')
+    cy.contains('LFT México 2022').should('be.visible')
 
-  // 1 completed seniority year → summary shows tenure and next anniversary date
-  cy.contains('1 año de antigüedad').should('be.visible')
-  cy.contains('Próximo aniversario:').should('be.visible')
+    // 1 completed seniority year → summary shows tenure and next anniversary date
+    cy.contains('1 año de antigüedad').should('be.visible')
+    cy.contains('Próximo aniversario:').should('be.visible')
 
-  // 1 completed seniority year → 12 days (LFT year 1), generated automatically
-  cy.contains('12').should('be.visible')
-  cy.contains('Regla aplicada: LFT México 2022').should('be.visible')
+    // 1 completed seniority year → 12 days (LFT year 1), generated automatically
+    cy.contains('12').should('be.visible')
+    cy.contains('Regla aplicada: LFT México 2022').should('be.visible')
+  })
 })
