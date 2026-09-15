@@ -28,6 +28,12 @@ name: CI
 # surface's step order and quality logic isolated and reusable — they are NOT separate runs.
 # Branch protection requires only `ci-gate`. deploy-preview / update-iteration-progress /
 # wif-smoke-test stay independent (not PR validation).
+#
+# On a push to `main` only, once `ci-gate` is green, two more jobs run: `release-build-preview`
+# and `release-build-prod-cloudrun` (#633, per TD-07). Each calls the reusable
+# `_release-build.yml` once, building and pushing its own immutable, commit-SHA-tagged image to
+# Artifact Registry — never a shared universal image. Neither job can ever run for a PR, and
+# neither runs if `ci-gate` didn't pass.
 
 on:
   pull_request:
@@ -388,3 +394,38 @@ jobs:
             echo "::error::one or more applicable branches did not pass."
           fi
           exit $rc
+
+  # Builds and publishes the `preview`-target release image (#633, per TD-07) — the one Demo
+  # (#635) and QA's manual deploy-preview.yml both consume. Runs only on a push to `main`, only
+  # after `ci-gate` actually passed; never for a PR. A cancelled/skipped ci-gate is not success,
+  # so this never fires on anything less than a fully green gate.
+  release-build-preview:
+    name: release-build-preview
+    needs: ci-gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.ci-gate.result == 'success'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      target: preview
+      image_name: ${{ vars.IMAGE_NAME_PREVIEW }}
+      login_with_devdebug: "true"
+    secrets: inherit
+
+  # Builds and publishes the `prod-cloudrun`-target release image (#633, per TD-07) — the
+  # hardened, devdebug-free image Production (#636) consumes. Same gating as
+  # release-build-preview above; the two are independent parallel builds, not a chain.
+  release-build-prod-cloudrun:
+    name: release-build-prod-cloudrun
+    needs: ci-gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.ci-gate.result == 'success'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      target: prod-cloudrun
+      image_name: ${{ vars.IMAGE_NAME_PROD }}
+      login_with_devdebug: "false"
+    secrets: inherit

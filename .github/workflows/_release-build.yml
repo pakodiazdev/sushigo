@@ -1,0 +1,113 @@
+name: _release-build
+
+# Reusable release-build workflow (#633, per TD-07 — doc/decisions/td-07-environment-release-
+# promotion-contract.md). Called by ci.yml only after `ci-gate` succeeds on a push to `main`,
+# once per build target (`preview`, `prod-cloudrun`) — see ci.yml's `release-build-preview` /
+# `release-build-prod-cloudrun` jobs. Builds exactly one immutable image per target per commit,
+# tagged `release-<short-sha>`, and exposes its Artifact Registry digest as an output for the
+# downstream Demo (#635) / Production (#636) deploy pipelines to consume. Neither of those
+# pipelines may rebuild the application image — this workflow is the only place that does.
+#
+# This workflow never runs for a PR and never runs unless the caller's ci-gate already passed —
+# see ci.yml's `if:` on the calling jobs. It checks out `github.sha` (the exact commit this run's
+# `push` event carries — never "whatever HEAD happens to be").
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: "Docker build target: preview | prod-cloudrun"
+        required: true
+        type: string
+      image_name:
+        description: "Artifact Registry image name for this target (e.g. sushigo-api-preview)"
+        required: true
+        type: string
+      login_with_devdebug:
+        description: "Value for the VITE_LOGIN_WITH_DEVDEBUG build-arg ('true' | 'false')"
+        required: true
+        type: string
+    outputs:
+      digest:
+        description: "Immutable Artifact Registry digest (sha256:...) of the built image"
+        value: ${{ jobs.build.outputs.digest }}
+      image_uri:
+        description: "Fully-qualified image URI, tagged by commit SHA (not the digest form)"
+        value: ${{ jobs.build.outputs.image_uri }}
+
+jobs:
+  build:
+    name: build (${{ inputs.target }})
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+      image_uri: ${{ steps.image.outputs.image_uri }}
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      AR_LOCATION: ${{ vars.AR_LOCATION }}
+      AR_REPO: ${{ vars.AR_REPO }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+    steps:
+      - name: Checkout the exact commit that passed ci-gate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Auth to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker auth for Artifact Registry
+        run: |
+          set -euo pipefail
+          gcloud auth configure-docker "${AR_LOCATION}-docker.pkg.dev" --quiet
+
+      - name: Compute image URI
+        id: image
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse --short=12 HEAD)"
+          IMAGE_URI="${AR_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:release-${SHA}"
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+      - name: Build image
+        run: |
+          set -euo pipefail
+          docker build \
+            -f docker/app/Dockerfile \
+            --target "${{ inputs.target }}" \
+            --build-arg API_URL="${{ vars.API_URL_PREVIEW }}" \
+            --build-arg VITE_LOGIN_WITH_DEVDEBUG="${{ inputs.login_with_devdebug }}" \
+            -t "${IMAGE_URI}" \
+            .
+
+      - name: Push image and capture digest
+        id: push
+        run: |
+          set -euo pipefail
+          docker push "${IMAGE_URI}"
+          DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_URI}" | sed 's/^.*@//')"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Release summary
+        if: always()
+        run: |
+          {
+            echo "### 📦 Release build — \`${{ inputs.target }}\`"
+            echo ""
+            echo "- **Commit**: \`${{ github.sha }}\`"
+            echo "- **Image**: \`${IMAGE_URI}\`"
+            echo "- **Digest**: \`${{ steps.push.outputs.digest }}\`"
+            echo "- **Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -76,9 +76,16 @@ COPY ./code/webapp/package.json ./code/webapp/package-lock.json ./
 RUN npm ci
 
 # Stage para hacer build del frontend
+#
+# VITE_LOGIN_WITH_DEVDEBUG gates the demo/dev-debug login UI at build time
+# (see code/webapp/src/components/dev/dev-login-enabled.ts). Default false —
+# the release-build workflow (#633) passes `true` explicitly only for the
+# `preview` target's build; `prod-cloudrun` never overrides it (TD-07).
 FROM npm_deps AS node_builder
 ARG API_URL
+ARG VITE_LOGIN_WITH_DEVDEBUG=false
 ENV VITE_API_URL=${API_URL}
+ENV VITE_LOGIN_WITH_DEVDEBUG=${VITE_LOGIN_WITH_DEVDEBUG}
 COPY ./code/webapp /webapp
 RUN npm run generate
 RUN npm run build
@@ -136,6 +143,29 @@ RUN chown -R www-data:www-data /var/www/html/api \
 # para que usen las variables de entorno reales del runtime
 
 FROM prod AS preview
+
+COPY ./docker/app/config/preview/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+COPY --from=node_builder /webapp/dist /var/www/html/webapp
+
+COPY ./docker/app/config/preview/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+CMD [ "bash", "/usr/local/bin/entrypoint.sh" ]
+
+# prod-cloudrun (#633, per TD-07): the hardened Cloud-Run-ready target for
+# Production. Built the same way `preview` is (webapp build, unified vhost,
+# Cloud Run entrypoint) but with the devdebug/demo-login code physically
+# removed — not merely disabled at runtime. This is defense in depth on top
+# of the existing runtime gates (environment() check, DevLoginGuard's
+# hard-fail on "production"), not a replacement for them.
+FROM prod AS prod-cloudrun
+
+RUN rm -rf \
+    /var/www/html/api/app/Http/Controllers/Api/V1/Dev \
+    /var/www/html/api/app/Support/DevLoginGuard.php \
+    /var/www/html/api/routes/api/dev.php
 
 COPY ./docker/app/config/preview/000-default.conf /etc/apache2/sites-available/000-default.conf
 

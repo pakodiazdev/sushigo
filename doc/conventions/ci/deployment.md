@@ -313,20 +313,23 @@ needs a separately-planned maintenance procedure instead.
 These are named here so the issues that build the actual workflows (out of scope for TD-07 itself)
 have a concrete starting checklist:
 
-- [ ] Extract the inline dev-route block (`api.php` lines 13-48) into its own `routes/api/dev.php`
+- [x] Extract the inline dev-route block (`api.php` lines 13-48) into its own `routes/api/dev.php`
       — with a `file_exists()`-guarded conditional include, **not** the unconditional `require`
       pattern every other route group uses, so `prod-cloudrun`'s build (which removes the file)
-      doesn't crash route caching at Production startup.
-- [ ] Add a new `prod-cloudrun` Dockerfile stage (built the same way `preview` is — webapp copy,
+      doesn't crash route caching at Production startup. *(#633)*
+- [x] Add a new `prod-cloudrun` Dockerfile stage (built the same way `preview` is — webapp copy,
       unified vhost, Cloud Run entrypoint — do not retrofit the existing `prod` stage, which is
       API-only and not Cloud-Run-deployable) that excludes `routes/api/dev.php`,
       `app/Http/Controllers/Api/V1/Dev/`, and `app/Support/DevLoginGuard.php` from what it copies —
       `preview` keeps including them. Confirm the built image genuinely lacks the code (not just
-      lacks it being reachable) before wiring this to Production's deploy workflow.
-- [ ] Give `prod-cloudrun` and `preview` **separate `node_builder` frontend build stages**, each
+      lacks it being reachable) before wiring this to Production's deploy workflow. *(#633)*
+- [x] Give `prod-cloudrun` and `preview` **separate `node_builder` frontend build stages**, each
       setting `VITE_LOGIN_WITH_DEVDEBUG` accordingly — a shared webapp build ships Demo's login UI
       into Production's bundle (or drops it from Demo too), same hazard as the backend exclusion
-      above, just on the frontend side.
+      above, just on the frontend side. *(#633 — implemented as one parameterized `node_builder`
+      stage built via two separate `docker build --target` invocations, each passing its own
+      `VITE_LOGIN_WITH_DEVDEBUG` build-arg, rather than two duplicated stage definitions; same
+      per-target build isolation the item requires, see the release-build workflow's own note.)*
 - [ ] Add `--set-secrets`/`--update-secrets`/`--set-env-vars` mappings to every environment's
       deploy command (DB credentials, `APP_KEY`, `APP_URL`, and the OAuth key pair at the exact
       `/run/secrets/oauth_{private,public}/value.key` paths `entrypoint.sh` expects) — granting the
@@ -351,11 +354,14 @@ have a concrete starting checklist:
       secrets/variables (no required reviewers on any of them, per TD-07).
 - [ ] Point `demo.sushigo-romita.com` and `admin.sushigo-romita.com` at their respective Cloud Run
       services (domain mapping, same mechanism already used for `preview.sushigo-romita.com`).
-- [ ] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on
-      `main`, distinct from the existing manual `deploy-preview.yml`, which keeps driving QA) and
-      the deploy-to-Demo / deploy-to-Production workflows.
-- [ ] Resolve each release's digest exactly once, in its build job, and thread it through as a job
+- [x] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on
+      `main`, distinct from the existing manual `deploy-preview.yml`, which keeps driving QA) —
+      `_release-build.yml`, called from `ci.yml`'s `release-build-preview` /
+      `release-build-prod-cloudrun` jobs. *(#633)* The deploy-to-Demo / deploy-to-Production
+      workflows that consume each build's digest are still open (#635/#636).
+- [x] Resolve each release's digest exactly once, in its build job, and thread it through as a job
       output/artifact to that image's deploy job — do not let the deploy job re-resolve the tag.
+      *(#633 — `_release-build.yml`'s `digest` output; #635/#636 still need to actually consume it.)*
 - [ ] Give Demo's and Production's **full chains (migration + deploy)** their own `concurrency`
       group each (queued, not parallel) so two runs against the same environment never execute
       simultaneously — migration step included, not just deploy.
