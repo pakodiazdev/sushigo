@@ -21,13 +21,6 @@ const today = new Date().toISOString().slice(0, 10)
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
-// ⚠️ QUARANTINED per #490 → see #542. Fails against a fresh stack:
-// "Editar horario activo" test fails: content 'Editar' never found inside the edit <dialog> (dialog content / selector).
-// Remove this guard when #542 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })
@@ -311,9 +304,17 @@ describe('Editar horario activo', () => {
   })
 
   it('permite editar el horario activo sin crear una nueva versión', () => {
-    // ── 1. Seleccionar empleado Carlos Mendoza (EMP-001) que tiene horario ────
-    cy.contains('tr', 'EMP-001', { timeout: 10_000 }).find('button[title="Ver detalle"]').click()
-    cy.contains('tr', 'EMP-001').should('exist')
+    // ── 1. Seleccionar empleado María García (EMP-002), no EMP-001 ───────────
+    // "Nuevo horario pre-llenado" (arriba en este mismo archivo) ya programó
+    // un nuevo horario futuro para EMP-001, lo que cierra su horario activo
+    // actual (effective_to deja de ser null). renderEditButton() en
+    // schedule-dialog.tsx solo muestra "Editar" cuando el horario mostrado
+    // sigue abierto (effective_to === null) — por diseño, un horario ya
+    // reemplazado por uno futuro no se edita in place. Usamos EMP-002, que
+    // ningún otro test de este archivo toca, para probar el caso real que
+    // este test cubre: editar un horario activo que aún no tiene sucesor. Ver #542.
+    cy.contains('tr', 'EMP-002', { timeout: 10_000 }).find('button[title="Ver detalle"]').click()
+    cy.contains('tr', 'EMP-002').should('exist')
 
     // ── 2. Abrir diálogo de horario ────────────────────────────────────────────
     cy.contains('button', /Ver horario/i, { timeout: 10_000 }).click()
@@ -324,7 +325,7 @@ describe('Editar horario activo', () => {
 
     // ── 2b. Registrar cuántas versiones tiene el historial antes de editar ─────
     // (no asumimos un valor fijo: otros tests del archivo pueden haber creado
-    // versiones adicionales del horario de EMP-001 antes de este)
+    // versiones adicionales del horario de EMP-002 antes de este)
     cy.get('dialog').contains('button', 'Historial').click()
     cy.get('.rounded.border.bg-card', { timeout: 10_000 }).its('length').as('historyCountBefore')
     cy.get('dialog').contains('button', 'Configuración').click()
