@@ -5,6 +5,25 @@
 **Estado:** Activo
 **Relacionado con:** Tasks #040–#046 · Doc de arquitectura `infrastructure.es.md`
 
+> ⚠️ **RN-02 está superada; RN-08/RN-09/DC-03 quedaron realineadas, no superadas — ver
+> [TD-07](../../decisions/td-07-environment-release-promotion-contract.md) y
+> [`doc/conventions/ci/deployment.md`](../../conventions/ci/deployment.md) para el detalle vigente.**
+> **RN-08/RN-09** (una feature branch debe desplegarse en `preview.sushigo-romita.com` y verificarse
+> manualmente antes del merge) es exactamente lo que TD-07 llama "QA" — se mantiene manual y
+> desacoplada del pipeline automático, a propósito. **DC-03** (un despliegue a producción construye
+> una imagen, la sube, despliega una revisión nueva y corre migraciones) sigue describiendo la forma
+> correcta del pipeline automático de Producción de TD-07; TD-07 agrega detalle que este documento
+> no tiene (un target de build `prod` endurecido que excluye el código devdebug/demo-login,
+> identidad de release resuelta una sola vez por digest, guardas de concurrencia/ancestry, un
+> health check `--no-traffic` antes del cambio de tráfico) en vez de reemplazar la forma. **RN-02**
+> (los cambios solo de infraestructura no deben detonar ningún workflow de linter/tests) sí está
+> genuinamente desactualizada, superada antes por
+> [TD-06](../../decisions/td-06-unified-ci-dag.md): `ci.yml` deliberadamente ejecuta
+> `api-ci`/`webapp-ci` cuando `infra_changed` es verdadero, en cualquier scope (ver
+> [`pipeline.md`](../../conventions/ci/pipeline.md) → "Title / draft-state edits"). Este documento
+> no se ha reconciliado con TD-07 ni TD-06 más allá de estas notas — no asumir que el resto de las
+> secciones está verificado como vigente.
+
 ---
 
 ## PARTE A — Contexto y Justificación

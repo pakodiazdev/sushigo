@@ -201,7 +201,9 @@ job.
 
 `deploy-preview.yml`, `update-iteration-progress.yml` (badge), and `wif-smoke-test.yml` are
 operational workflows, not PR validation — they are **not** part of this DAG and remain
-independently runnable.
+independently runnable. See [`deployment.md`](./deployment.md) for the environment and
+release-promotion contract ([TD-07](../../decisions/td-07-environment-release-promotion-contract.md))
+these operational workflows implement.
 
 ---
 

@@ -4,6 +4,20 @@
 
 Este documento describe la infraestructura de despliegue, la estrategia de ramas y el pipeline CI/CD de la plataforma SushiGo. Cubre el estado actual y el pipeline automatizado objetivo que se implementa mediante los tasks #040–#046.
 
+> ⚠️ **Las filas de Preview/Producción en §2 son direccionalmente correctas pero incompletas — ver
+> [TD-07](../../decisions/td-07-environment-release-promotion-contract.md) y
+> [`doc/conventions/ci/deployment.md`](../../conventions/ci/deployment.md) para el detalle vigente.**
+> "Preview: manual, desde una feature branch, después del review del PR" y "Producción: automático,
+> al mergear a `main`" siguen siendo correctas bajo TD-07 — esa parte nunca quedó superada. Lo que
+> falta aquí: un tercer ambiente (**Demo**, también automático sobre `main`, que no aparece en la
+> tabla); el hecho de que Producción y Demo construyen y despliegan **dos imágenes Docker
+> distintas** desde el mismo commit (un target `prod` endurecido que excluye físicamente el código
+> devdebug/demo-login, y un target `preview` de conveniencia que sí lo incluye, usado tanto por
+> Preview/QA como por Demo); y las guardas de identidad de release, concurrencia/ancestry, health
+> check y rollback que TD-07 agrega sobre la descripción básica del disparador de abajo.
+> `doc/conventions/ci/deployment.md` es la referencia operativa vigente; las secciones de abajo
+> (§2, §4–§7) no se han reconciliado con él más allá de esta nota.
+
 ---
 
 ## 2. Ambientes

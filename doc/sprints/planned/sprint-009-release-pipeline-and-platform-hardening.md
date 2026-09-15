@@ -21,10 +21,10 @@ next:
 
 # Sprint 009 — Release Pipeline & Platform Hardening
 
-> Turn the existing manual Cloud Run "preview" deploy into one immutable-image release pipeline
-> promoted automatically across QA, Demo, and Production, with a Production backup/restore/
-> observability baseline — plus PHP runtime-contract enforcement and five more restored quarantined
-> Cypress specs.
+> Keep the existing manual Cloud Run "preview" deploy as QA's own pre-merge validation tool, and add
+> two independent, automatic release pipelines from `main` — a hardened image for Production and a
+> convenience image for Demo — with a Production backup/restore/observability baseline, plus PHP
+> runtime-contract enforcement and five more restored quarantined Cypress specs.
 
 ## 1. Executive Summary
 
@@ -37,15 +37,24 @@ The release-pipeline chain is the sprint's critical path and its principal value
 
 - **#632** defines the authoritative QA/Demo/Production environment and release-promotion contract
   (domains, data policy, secret boundaries, release identity, migration ownership, rollback
-  semantics) before any of it is implemented.
-- **#633** builds the single immutable release image (commit SHA + digest) that every downstream
-  environment consumes without rebuilding.
-- **#634** automatically deploys that image to `preview.sushigo-romita.com` (QA) and gates
-  promotion on deployment health checks and smoke tests.
-- **#635** and **#636** promote the exact QA-validated digest to the public Demo
-  (`demo.sushigo-romita.com`) and to real Production (`admin.sushigo-romita.com`) respectively —
-  Production adds an explicit one-shot migration step, an initial GitHub Environment approval gate,
-  and revision-based rollback.
+  semantics) before any of it is implemented. Per
+  [TD-07](../../decisions/td-07-environment-release-promotion-contract.md), QA stays a **manual**,
+  branch-addressable pre-merge tool (today's `deploy-preview.yml`, kept), decoupled entirely from
+  the automated pipeline; Production and Demo are two **independent** automated pipelines, both
+  triggered by green `main`, that build and deploy **different images** from the same commit — a
+  hardened `prod-cloudrun`-target image (Production only, with the devdebug/demo-login code physically
+  excluded) and a convenience `preview`-target image (QA and Demo, which includes it).
+- **#633** builds **two** release images per green `main` commit (`sushigo-api-prod` and
+  `sushigo-api-preview`), each resolved to an immutable digest exactly once and never rebuilt
+  per-deploy within its own lineage.
+- **#634** formalizes the existing manual `deploy-preview.yml` as QA's dedicated workflow — no
+  change to its manual, any-branch trigger; it does not gate or feed Demo or Production.
+- **#635** and **#636** each independently build/deploy their own image directly from `main` —
+  Demo the `preview`-target image, Production the `prod-cloudrun`-target image — with their own
+  concurrency/ancestry guards, post-deploy health check, and (Production) an explicit one-shot
+  migration step and revision-based rollback. Per TD-07, both promote automatically — no GitHub
+  Environment approval gate — with the fast Cloud Run revision rollback as the compensating
+  control.
 - **#637** establishes the minimum Production reliability baseline (automated backups, a proven
   restore drill, rollback documentation, uptime/health alerting) that must exist before SushiGo
   Admin carries real operational data.
@@ -98,11 +107,12 @@ Repository base for planning: `main` at `1116db34`.
 
 ## 3. Sprint Goal
 
-**Sprint Goal:** Ship one immutable-image release pipeline that promotes a validated `main` commit
-through QA, Demo, and Production with a working backup/restore/observability baseline, while
+**Sprint Goal:** Ship two independent, automatic release pipelines (Production hardened, Demo
+convenience) that each deploy a validated `main` commit directly, keep QA as a manual pre-merge
+preview tool, and stand up a working backup/restore/observability baseline for Production, while
 enforcing the declared PHP runtime contract and clearing five more quarantined Cypress specs and
 three small carried-over follow-ups — without onboarding real customer data beyond the initial
-approval-gated Production rollout.
+automatically-promoted Production rollout (TD-07).
 
 ## 4. Sprint Timeline
 
@@ -146,17 +156,28 @@ promotion.
 Investment mix: dev-platform 12 (`#632`, `#633`, `#634`, `#636`, `#638`, `#612`, `#647`, `#536`,
 `#537`, `#541`, `#542`, `#557`) · product-engineering 3 (`#635`, `#637`, `#624`) · product 1 (`#613`).
 
+> **Titles above for `#633`–`#636` are as originally filed, before TD-07 was revised to decouple QA
+> from the automated pipeline and split the release image in two.** `#633` now covers building
+> *two* images (`sushigo-api-prod` + `sushigo-api-preview`), not one; `#634` now covers formalizing
+> `deploy-preview.yml` as QA's manual workflow, not automating QA deployment; `#635`/`#636` now
+> each deploy their own independently-built image, not a "QA-validated digest." Whoever picks up
+> each Issue should re-scope its body against the current TD-07/`deployment.md` before starting —
+> see "1. Executive Summary" above for the corrected shape of each.
+
 **Capabilities this scope delivers:**
 
 - One documented, authoritative QA/Demo/Production environment and release-identity contract with
   explicit data, secret, and trust boundaries per environment.
-- A single immutable release image (commit SHA + digest) built once after green `main` CI and
-  promoted unchanged across every downstream environment.
-- Automatic QA deployment gated on deployment health checks and a minimal authenticated smoke
-  suite.
-- A public, isolated, resettable Demo environment safe to share externally.
-- Automated, approval-gated Production deployment with an explicit migration step, revision-based
-  rollback, and traffic promotion only after migration + smoke success.
+- Two immutable release images (commit SHA + digest each) built once per green `main` CI run — a
+  hardened `prod-cloudrun` image with the devdebug/demo-login code physically excluded, and a convenience
+  `preview` image that includes it — never rebuilt per deploy within either's own lineage.
+- QA kept as the existing manual, any-branch preview deploy, decoupled from the automated pipeline,
+  for pre-merge validation.
+- A public, isolated, resettable Demo environment (its own auto-deployed `preview`-target image,
+  including the one-click/global-password demo login) safe to share externally.
+- Automated Production deployment (no manual approval gate — TD-07) of its own hardened `prod-cloudrun`-target
+  image, with an explicit migration step, revision-based rollback, and traffic promotion only after
+  migration + health-check success.
 - A Production reliability baseline: automated backups, a proven restore drill, rollback/incident
   runbook, and baseline uptime/error alerting.
 - CI mechanically enforcing the repository's declared PHP compatibility floor.
@@ -169,8 +190,12 @@ Investment mix: dev-platform 12 (`#632`, `#633`, `#634`, `#636`, `#638`, `#612`,
 ### 5.2 Excluded
 
 - Multi-region or high-availability architecture for any environment.
-- Zero-click Production promotion; the initial rollout keeps a GitHub Environment approval gate by
-  design (`#636`), to be reconsidered after several stable releases.
+- A GitHub Environment manual approval gate before Production deploys — superseded by
+  [TD-07](../../decisions/td-07-environment-release-promotion-contract.md): the initial rollout
+  promotes automatically on green `main` after Production's own post-deploy health check passes,
+  trading the pre-deploy human gate for faster iteration, with the fast Cloud Run revision rollback
+  as the compensating control (`#636`); this is a deliberate, revisitable choice, not an
+  oversight — see TD-07's "Alternatives considered".
 - Automatic rollback of arbitrary database schema/data migrations — application-revision rollback
   and database restore stay explicitly distinct (`#636`, `#637`).
 - Full APM/error-tracking vendor rollout or a complete SRE observability platform (`#637`).
@@ -202,15 +227,16 @@ _None yet — this sprint has not started._
 | Tier | Issues | Rationale |
 |---|---|---|
 | **Critical** | #632, #633, #636, #637 | The environment/release contract and Production delivery + reliability baseline are the actual precondition for SushiGo Admin to carry real restaurant data at all |
-| **High** | #634, #638, #536, #537, #541, #542, #557 | QA is the hard gate every later promotion depends on; the PHP contract closes a real Sprint 8 review finding; the five quarantined specs restore CI coverage the suite is currently missing |
+| **High** | #634, #638, #536, #537, #541, #542, #557 | QA is the pre-merge validation tool every feature branch relies on before it can safely reach `main` (no longer a gate Demo/Production depend on — see TD-07); the PHP contract closes a real Sprint 8 review finding; the five quarantined specs restore CI coverage the suite is currently missing |
 | **Medium** | #635, #613 | Public Demo has real portfolio/business value but is not core restaurant operation; the Stock Transfer preview is a small, already-deferred UX convenience |
 | **Low** | #624, #612, #647 | Copy-only translation follow-up, a non-blocking CI evidence artifact, and restored badge visibility — valid work with no urgency |
 
 ### Ordering principle
 
-> **The release-pipeline chain is value-ordered by its own hard dependencies (contract → image →
-> QA → Demo/Production → reliability baseline); every other Issue is conflict-free filler that
-> starts immediately and never displaces the chain.**
+> **The release-pipeline chain is value-ordered by its own hard dependencies (contract → images →
+> {QA, Demo, Production in parallel} → reliability baseline); every other Issue is conflict-free
+> filler that starts immediately and never displaces the chain.** QA no longer gates Demo or
+> Production — per TD-07, all three can start as soon as `#633`'s image-build workflows exist.
 
 ## 7. Route A — Execution Rounds
 
@@ -247,32 +273,26 @@ fresh isolated stack and the CI `e2e-ci` shard, exactly as Sprint 008's Round 0 
 Nothing downstream in the release-pipeline chain should start implementation before this contract
 is written — it is the definition every later Issue implements against.
 
-### Round 2 — Immutable release image
+### Round 2 — Two immutable release images
 
 | Lane | Issue | Starts after | Primary file ownership | Opt. | Pess. |
 |---|---:|---|---|---:|---:|
-| B | #633 | #632 | New/refactored release-build workflow, Artifact Registry publish step, frontend same-origin API config | 3h | 6h |
+| B | #633 | #632 | New `prod-cloudrun` (hardened) and `preview` (convenience) release-build workflows, Artifact Registry publish steps, `prod-cloudrun` build-time exclusion of `routes/api/dev.php`/`app/Http/Controllers/Api/V1/Dev/`/`DevLoginGuard.php`, frontend same-origin API config | 3h | 6h |
 |  |  |  | **Round effort** | **3h** | **6h** |
 
-### Round 3 — QA automatic deploy
+### Round 3 — QA, Demo, Production (parallel)
+
+Per TD-07, QA no longer gates Demo or Production — all three start as soon as `#633`'s image-build
+workflows exist, and none depends on either of the others:
 
 | Lane | Issue | Starts after | Primary file ownership | Opt. | Pess. |
 |---|---:|---|---|---:|---:|
-| C | #634 | #633 | `deploy-preview.yml` refactor into a reusable QA deployment workflow, QA smoke suite | 3h | 6h |
-|  |  |  | **Round effort** | **3h** | **6h** |
+| C | #634 | #633 | `deploy-preview.yml` formalized as QA's dedicated manual workflow (any branch, `workflow_dispatch`) — no automated trigger, no smoke-gate role | 3h | 6h |
+| D | #635 | #633 | Demo Cloud Run service/DB provisioning, `preview`-target auto-deploy from `main`, `DemoSeeder`, reset workflow, one-click/global-password demo login UX | 4h | 8h |
+| E | #636 | #633 | Production Cloud Run service/DB provisioning, `prod-cloudrun`-target auto-deploy from `main`, migration-release step, rollback (no approval gate — TD-07) | 7h | 14h |
+|  |  |  | **Round effort** | **14h** | **28h** |
 
-### Round 4 — Demo and Production (parallel)
-
-Both Issues promote the same QA-validated digest to disjoint infrastructure (different Cloud Run
-services, databases, and domains), so they run concurrently once #634 is green.
-
-| Lane | Issue | Starts after | Primary file ownership | Opt. | Pess. |
-|---|---:|---|---|---:|---:|
-| D | #635 | #634 | Demo Cloud Run service/DB provisioning, `DemoSeeder`, reset workflow | 4h | 8h |
-| E | #636 | #634 | Production Cloud Run service/DB provisioning, migration-release step, approval gate, rollback | 7h | 14h |
-|  |  |  | **Round effort** | **11h** | **22h** |
-
-### Round 5 — Production reliability baseline
+### Round 4 — Production reliability baseline
 
 | Lane | Issue | Starts after | Primary file ownership | Opt. | Pess. |
 |---|---:|---|---|---:|---:|
@@ -287,16 +307,13 @@ Reason: #633 builds the release image against the environment/release-identity c
 defines (commit-SHA + digest identity, promotion gates, migration ownership). Implementing the
 build stage before that contract exists risks building on undefined semantics.
 
-#633 (Round 2) → #634 (Round 3)
-Reason: #634 must automatically deploy the exact immutable digest #633 publishes — it cannot
-automate QA deployment without a release artifact to consume.
+#633 (Round 2) → #634, #635, and #636 (Round 3, parallel)
+Reason: per TD-07, QA is decoupled from the automated pipeline — #634 only needs the `preview`
+build target to exist, the same target #635 (Demo) also deploys automatically from `main`, and
+#636 (Production) needs the `prod-cloudrun` build target. None of the three depends on either of the others
+finishing; #633 is the only real precondition for all three.
 
-#634 (Round 3) → #635 and #636 (Round 4)
-Reason: both #635 (Demo) and #636 (Production) explicitly promote "the exact immutable release
-image digest that passed QA" per their own Objective/Acceptance Criteria — QA's smoke-tested green
-digest is the input each of them consumes, not a fresh build.
-
-#636 (Round 4) → #637 (Round 5)
+#636 (Round 3) → #637 (Round 4)
 Reason: #637 configures automated backups, a restore drill, rollback documentation, and alerting
 against the real Production Cloud Run service and database #636 provisions — there is nothing to
 back up or monitor until Production exists.
@@ -317,7 +334,7 @@ No other product-level dependency exists among the fifteen Issues; every Round 0
 |---|---|---|---|
 | `features/inventory/transfers/components/stock-transfer-form.tsx` | #613, #624 | 0, 0 | #613 (behavior) lands first; #624 (copy-only) rebases after — see §8 |
 | `doc/conventions/ci/pipeline.md` | #612, #638 | 0, 0 | Both are documentation-only additions to the same CI reference doc; coordinate which lands first to avoid a trivial merge conflict — no shared runtime logic |
-| `.github/workflows/deploy-preview.yml` | #633 (indirectly, via same-origin API config), #634 (direct refactor) | 2, 3 | #634 owns this file's refactor; #633 only touches shared frontend/API config it depends on, not the workflow itself — sequenced by §8, not a same-round conflict |
+| `.github/workflows/deploy-preview.yml` | #633 (indirectly, via same-origin API config), #634 (direct refactor) | 2, 3 | #634 owns this file's refactor into QA's dedicated workflow; #633 only touches shared frontend/API config it depends on, not the workflow itself — sequenced by §8, not a same-round conflict |
 | `.github/workflows/_api-ci.yml` | #638, #647 | 0, 0 | #647 adds a `lint` job output + an `api-junit-merge` counting step; #638 may touch the PHP setup/version steps in the same file. Neither owns the other's addition — land whichever merges first, then rebase the second onto it; the changes don't overlap line-for-line |
 
 ### Conflict methodology
@@ -336,10 +353,9 @@ boundary (`doc/conventions/sprints.md` §10) — not held to closure.
 |---|---:|---:|---:|---:|---:|---:|
 | 0 — Independent conflict-free work | 10 | 11.75h | 39h | — | — | — |
 | 1 — Environment & release contract | 1 | 2h | 4h | — | — | — |
-| 2 — Immutable release image | 1 | 3h | 6h | — | — | — |
-| 3 — QA automatic deploy | 1 | 3h | 6h | — | — | — |
-| 4 — Demo and Production | 2 | 11h | 22h | — | — | — |
-| 5 — Production reliability baseline | 1 | 3h | 6h | — | — | — |
+| 2 — Two immutable release images | 1 | 3h | 6h | — | — | — |
+| 3 — QA, Demo, Production (parallel) | 3 | 14h | 28h | — | — | — |
+| 4 — Production reliability baseline | 1 | 3h | 6h | — | — | — |
 | **Grand total** | **16** | **33.75h** | **80h** | **—** | **—** | **—** |
 
 ```text
@@ -406,7 +422,7 @@ _Empty — this sprint has not started. Filled in as each Issue merges, mirrorin
 |---|---:|---:|---:|---|
 | Manual/undocumented preview deploy | Only manual `deploy-preview.yml` trigger | Automated QA/Demo/Production promotion chain | — | ⏳ |
 | Environments with an explicit data/secret boundary | 0 documented | 3 (QA, Demo, Production) | — | ⏳ |
-| Release artifact rebuilt per environment | Yes (drift risk) | 0 (one immutable digest promoted everywhere) | — | ⏳ |
+| Release artifact rebuilt per deploy within an environment's own lineage | Yes (drift risk) | 0 (Production and Demo each build once per `main` commit, promoted unchanged within their own lineage) | — | ⏳ |
 | Production backup/restore drill performed | Never | 1 successful drill documented | — | ⏳ |
 | `composer.json` PHP floor vs. CI-validated runtime | Declared `^8.2`, CI validates 8.5 only | Declared floor mechanically enforced in CI | — | ⏳ |
 | Quarantined Cypress specs (this sprint's five) | 5 skipped | 0 | — | ⏳ |
@@ -443,15 +459,18 @@ _To be completed at closure._
       `#638`, `#647`, `#536`, `#537`, `#541`, `#542`, `#557`) are merged and Done.
 - [ ] QA, Demo, and Production each have a documented, distinct data/secret boundary and the
       release-identity contract is implemented as designed (`#632`).
-- [ ] A green `main` CI run produces exactly one immutable, digest-addressable release image
-      consumed unchanged by every downstream environment (`#633`).
-- [ ] QA deployment is automatic, gated on deployment health checks and smoke tests, and blocks
-      promotion on failure (`#634`).
-- [ ] Demo is publicly reachable over HTTPS, runs the QA-validated digest, has fully isolated data/
-      secrets, and can be reset deterministically (`#635`).
-- [ ] Production is reachable over HTTPS, runs the QA/Demo-validated digest, migrations run as an
-      explicit release step, traffic promotes only after migration + smoke success, and application
-      rollback is documented and exercised (`#636`).
+- [ ] A green `main` CI run produces two immutable, digest-addressable release images (`prod-cloudrun`
+      hardened, `preview` convenience), each consumed unchanged within its own lineage, never
+      rebuilt per deploy (`#633`).
+- [ ] QA deployment stays manual (`workflow_dispatch`, any branch), decoupled from the automated
+      pipeline, used for pre-merge validation (`#634`).
+- [ ] Demo is publicly reachable over HTTPS, auto-deploys its own `preview`-target image on green
+      `main`, has fully isolated data/secrets, offers the one-click/global-password demo login, and
+      can be reset deterministically (`#635`).
+- [ ] Production is reachable over HTTPS, auto-deploys its own `prod-cloudrun`-target image (devdebug/demo-
+      login code physically excluded) on green `main`, migrations run as an explicit release step,
+      traffic promotes only after migration + health-check success, and application rollback is
+      documented and exercised (`#636`).
 - [ ] Production has automated backups with documented retention, a successful non-production
       restore drill, and baseline uptime/error alerting (`#637`).
 - [ ] Composer, Docker/runtime docs, and CI agree on one authoritative minimum PHP version, and a
